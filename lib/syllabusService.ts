@@ -16,6 +16,21 @@ const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const CACHE_VERSION = '13'; // v13: Assessment-required flag for report prompts
 const CACHE_VERSION_KEY = 'dfp-syllabus-cache-version';
 
+function getSessionAuthHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  const sessionToken = window.localStorage.getItem('dfp_session_token') || '';
+  return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
+}
+
+async function getApiErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const err = await response.json();
+    return err.message || err.error || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 // ============================================================================
 // CACHE HELPERS
 // ============================================================================
@@ -142,7 +157,7 @@ export async function loadSyllabusFromDB(): Promise<SyllabusLoadResult> {
     console.log('📚 [Syllabus] Fetching from database...');
     const response = await fetch(`${API_BASE}/syllabus`, {
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getSessionAuthHeaders() },
     });
 
     if (!response.ok) {
@@ -199,13 +214,12 @@ export async function createSyllabusItem(
   const response = await fetch(`${API_BASE}/syllabus`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getSessionAuthHeaders() },
     body: JSON.stringify({ ...item, changeReason }),
   });
 
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error || 'Failed to create syllabus item');
+    throw new Error(await getApiErrorMessage(response, 'Failed to create syllabus item'));
   }
 
   const data = await response.json();
@@ -221,13 +235,12 @@ export async function updateSyllabusItem(
   const response = await fetch(`${API_BASE}/syllabus/${id}`, {
     method: 'PUT',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getSessionAuthHeaders() },
     body: JSON.stringify({ ...updates, changeReason }),
   });
 
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error || 'Failed to update syllabus item');
+    throw new Error(await getApiErrorMessage(response, 'Failed to update syllabus item'));
   }
 
   const data = await response.json();
@@ -242,13 +255,12 @@ export async function deleteSyllabusItem(
   const response = await fetch(`${API_BASE}/syllabus/${id}`, {
     method: 'DELETE',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getSessionAuthHeaders() },
     body: JSON.stringify({ changeReason }),
   });
 
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error || 'Failed to delete syllabus item');
+    throw new Error(await getApiErrorMessage(response, 'Failed to delete syllabus item'));
   }
 
   clearSyllabusCache(); // Invalidate cache after change
