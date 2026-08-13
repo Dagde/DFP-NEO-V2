@@ -192,9 +192,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
   };
 
   const handleDownloadLoginDiagnostic = () => {
-    if (!lastLoginDiagnostic) return;
+    let browserTrace: any[] = [];
+    try {
+      const stored = JSON.parse(localStorage.getItem('neo_dfp_data_diag') || '[]');
+      browserTrace = Array.isArray(stored) ? stored : [];
+    } catch {
+      browserTrace = [];
+    }
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    downloadJsonFile(`dfp-login-activation-diagnostics_${timestamp}.json`, lastLoginDiagnostic);
+    downloadJsonFile(`dfp-login-activation-diagnostics_${timestamp}.json`, {
+      generatedAt: new Date().toISOString(),
+      source: 'login-screen',
+      currentUserIdAttempt: userId.trim(),
+      currentPasswordLength: password.length,
+      lastLoginDiagnostic,
+      browserTrace: browserTrace.slice(-80),
+      note: 'This diagnostic intentionally excludes the supplied password text.',
+    });
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -287,15 +301,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
                 </div>
               )}
 
-              {lastLoginDiagnostic && (
-                <button
-                  type="button"
-                  onClick={handleDownloadLoginDiagnostic}
-                  className="w-full rounded border border-amber-500/50 bg-amber-900/30 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-800/50"
-                >
-                  Download Login Diagnostics
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleDownloadLoginDiagnostic}
+                className="w-full rounded border border-amber-500/50 bg-amber-900/30 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-800/50"
+              >
+                Download Login Diagnostics
+              </button>
 
               <button
                 type="submit"

@@ -639,9 +639,23 @@ const LoginModal = ({ onLoginSuccess }) => {
     }
   };
   const handleDownloadLoginDiagnostic = () => {
-    if (!lastLoginDiagnostic) return;
+    let browserTrace = [];
+    try {
+      const stored = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
+      browserTrace = Array.isArray(stored) ? stored : [];
+    } catch {
+      browserTrace = [];
+    }
     const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    downloadJsonFile$2(`dfp-login-activation-diagnostics_${timestamp}.json`, lastLoginDiagnostic);
+    downloadJsonFile$2(`dfp-login-activation-diagnostics_${timestamp}.json`, {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      source: "login-screen",
+      currentUserIdAttempt: userId.trim(),
+      currentPasswordLength: password.length,
+      lastLoginDiagnostic,
+      browserTrace: browserTrace.slice(-80),
+      note: "This diagnostic intentionally excludes the supplied password text."
+    });
   };
   const handleForgotPassword = async (e) => {
     e.preventDefault();
@@ -710,7 +724,7 @@ const LoginModal = ({ onLoginSuccess }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-red-400 flex-shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-red-300", children: error })
       ] }),
-      lastLoginDiagnostic && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           type: "button",
