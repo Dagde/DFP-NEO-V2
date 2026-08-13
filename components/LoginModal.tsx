@@ -32,6 +32,18 @@ function pushAuthDiag(stage: string, details: Record<string, any> = {}): void {
   }
 }
 
+function downloadJsonFile(filename: string, payload: unknown): void {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 interface LoginModalProps {
   onLoginSuccess: (user: AuthUser, sessionToken: string) => void;
 }
@@ -115,8 +127,16 @@ export async function loginUser(userId: string, password: string): Promise<{ use
     hasUser: Boolean(data?.user),
     userId: data?.user?.userId || data?.user?.id || userId,
     mustChangePassword: Boolean(data?.mustChangePassword),
+    error: data?.error || null,
+    message: data?.message || null,
+    diagnostic: data?.diagnostic || null,
   });
-  if (!res.ok) throw new Error(data.message || 'Login failed');
+  if (!res.ok) {
+    const error = new Error(data.message || 'Login failed') as Error & { diagnostic?: any; response?: any };
+    error.diagnostic = data?.diagnostic || null;
+    error.response = data || null;
+    throw error;
+  }
   return data;
 }
 
@@ -135,6 +155,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [lastLoginDiagnostic, setLastLoginDiagnostic] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotUserId, setForgotUserId] = useState('');
@@ -144,6 +165,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLastLoginDiagnostic(null);
     setLoading(true);
 
     try {
@@ -154,9 +176,25 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
       onLoginSuccess(result.user, result.sessionToken);
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
+      setLastLoginDiagnostic({
+        generatedAt: new Date().toISOString(),
+        source: 'login-screen',
+        userIdAttempt: userId.trim(),
+        serverDiagnostic: err?.diagnostic || null,
+        serverResponse: err?.response ? {
+          error: err.response.error || null,
+          message: err.response.message || null,
+        } : null,
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDownloadLoginDiagnostic = () => {
+    if (!lastLoginDiagnostic) return;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadJsonFile(`dfp-login-activation-diagnostics_${timestamp}.json`, lastLoginDiagnostic);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -247,6 +285,16 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
                   </svg>
                   <p className="text-xs text-red-300">{error}</p>
                 </div>
+              )}
+
+              {lastLoginDiagnostic && (
+                <button
+                  type="button"
+                  onClick={handleDownloadLoginDiagnostic}
+                  className="w-full rounded border border-amber-500/50 bg-amber-900/30 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-800/50"
+                >
+                  Download Login Diagnostics
+                </button>
               )}
 
               <button

@@ -506,6 +506,49 @@ function normaliseActivationCredentialAttempt(value) {
   return String(value || '').replace(/\s+/g, '').trim();
 }
 
+function getActivationStatusForUser(user) {
+  if (!user) return 'NO_USER';
+  if (user.activationCodeUsedAt) return 'USED';
+  if (user.activationCodeHash) {
+    return user.activationCodeExpiresAt && new Date(user.activationCodeExpiresAt).getTime() <= Date.now()
+      ? 'EXPIRED'
+      : 'PENDING';
+  }
+  return user.mustChangePassword ? 'PASSWORD_CHANGE_REQUIRED' : 'NONE';
+}
+
+function buildActivationLoginDiagnostic({ loginUserId, password, user, expectedLength = null }) {
+  const rawPassword = String(password || '');
+  const normalisedPassword = normaliseActivationCredentialAttempt(rawPassword);
+  const cleanLoginUserId = normalisePersonnelId(loginUserId);
+  return {
+    generatedAt: new Date().toISOString(),
+    suppliedUserId: String(loginUserId || '').trim(),
+    normalisedSuppliedPersonnelId: cleanLoginUserId,
+    userFound: Boolean(user),
+    matchedUserId: user?.userId || null,
+    matchedUsername: user?.username || null,
+    matchedEmail: user?.email || null,
+    matchedName: [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || null,
+    isActive: user ? Boolean(user.isActive) : null,
+    mustChangePassword: user ? Boolean(user.mustChangePassword) : null,
+    hasActivationCodeHash: Boolean(user?.activationCodeHash),
+    activationStatus: getActivationStatusForUser(user),
+    activationExpiresAt: user?.activationCodeExpiresAt || null,
+    activationUsedAt: user?.activationCodeUsedAt || null,
+    activationAttemptCount: Number(user?.activationAttemptCount || 0),
+    activationLockedUntil: user?.activationLockedUntil || null,
+    suppliedPasswordLength: rawPassword.length,
+    normalisedPasswordLength: normalisedPassword.length,
+    expectedActivationCredentialLength: expectedLength,
+    passwordStartsWithSuppliedPersonnelId: cleanLoginUserId ? normalisedPassword.startsWith(cleanLoginUserId) : null,
+    suppliedActivationSuffixLength: cleanLoginUserId && normalisedPassword.startsWith(cleanLoginUserId)
+      ? normalisedPassword.length - cleanLoginUserId.length
+      : null,
+    note: 'This diagnostic intentionally excludes the supplied password, activation code, and stored password/hash.',
+  };
+}
+
 function getActivationExpiryDate(configuredHours = null) {
   const hours = Math.max(1, Math.min(168, Number(process.env.DFP_ACTIVATION_EXPIRY_HOURS || configuredHours || 24) || 24));
   return new Date(Date.now() + hours * 60 * 60 * 1000);
@@ -8222,13 +8265,16 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
     );
 
     if (!users || users.length === 0 || !users[0].password) {
+      const diagnostic = buildActivationLoginDiagnostic({ loginUserId, password, user: null });
       await writeSecurityAuditEvent(db, req, 'LOGIN_FAILED', 'warning', 'Direct login failed', {
         reason: 'invalid_credentials',
         suppliedUserId: String(loginUserId || '').slice(0, 120),
+        diagnostic,
       });
       return res.status(401).json({
         error: 'Invalid credentials',
         message: 'Invalid User ID or password',
+        diagnostic,
       });
     }
 
@@ -8253,29 +8299,37 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
       const cleanLoginUserId = normalisePersonnelId(loginUserId);
       activationCredentialExpectedLength = cleanLoginUserId ? cleanLoginUserId.length + 12 : null;
       if (user.activationCodeUsedAt) {
+        const diagnostic = buildActivationLoginDiagnostic({ loginUserId, password, user, expectedLength: activationCredentialExpectedLength });
         await writeSecurityAuditEvent(db, req, 'LOGIN_BLOCKED', 'warning', 'Activation login blocked after code use', {
           reason: 'activation_code_already_used',
           userId: user.userId || user.username || user.id,
+          diagnostic,
         });
         return res.status(403).json({
           error: 'Activation already used',
           message: 'This activation code has already been used. Ask an administrator to reissue account activation.',
+          diagnostic,
         });
       }
       if (user.activationLockedUntil && new Date(user.activationLockedUntil).getTime() > Date.now()) {
+        const diagnostic = buildActivationLoginDiagnostic({ loginUserId, password, user, expectedLength: activationCredentialExpectedLength });
         return res.status(429).json({
           error: 'Activation locked',
           message: 'Too many failed activation attempts. Try again later or ask an administrator to reissue account activation.',
+          diagnostic,
         });
       }
       if (user.activationCodeExpiresAt && new Date(user.activationCodeExpiresAt).getTime() <= Date.now()) {
+        const diagnostic = buildActivationLoginDiagnostic({ loginUserId, password, user, expectedLength: activationCredentialExpectedLength });
         await writeSecurityAuditEvent(db, req, 'LOGIN_BLOCKED', 'warning', 'Activation login blocked after expiry', {
           reason: 'activation_code_expired',
           userId: user.userId || user.username || user.id,
+          diagnostic,
         });
         return res.status(403).json({
           error: 'Activation expired',
           message: 'This activation code has expired. Ask an administrator to reissue account activation.',
+          diagnostic,
         });
       }
       const rawActivationAttempt = String(password || '');
@@ -8300,16 +8354,19 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
       validPassword = await bcrypt.compare(password, user.password);
     }
     if (!validPassword) {
+      const diagnostic = buildActivationLoginDiagnostic({ loginUserId, password, user, expectedLength: activationCredentialExpectedLength });
       await writeSecurityAuditEvent(db, req, 'LOGIN_FAILED', 'warning', 'Direct login failed', {
         reason: 'invalid_credentials',
         suppliedUserId: String(loginUserId || '').slice(0, 120),
         userId: user.userId || user.username || user.id,
+        diagnostic,
       });
       return res.status(401).json({
         error: 'Invalid credentials',
         message: user.mustChangePassword && user.activationCodeHash
           ? `Activation login failed. Enter your Personnel ID in the User ID field, then enter your Personnel ID immediately followed by the full activation code from the email in the password field. Do not add spaces.${activationCredentialExpectedLength ? ` The password field should be ${activationCredentialExpectedLength} characters for this activation email.` : ''}`
           : 'Invalid User ID or password',
+        diagnostic,
       });
     }
     if (usedActivationCredential) {
@@ -8869,6 +8926,118 @@ app.get('/api/admin/direct-person-account', adminSensitiveRateLimit, async (req,
   } catch (error) {
     console.error('❌ GET /api/admin/direct-person-account error:', error);
     res.status(500).json({ error: 'Account lookup failed', message: 'Failed to load account access details' });
+  }
+});
+
+app.get('/api/admin/direct-person-account-diagnostics', adminSensitiveRateLimit, async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const person = await findPersonForAccount(context.db, req.query?.personType, req.query?.personId);
+    if (!person) {
+      return res.status(404).json({ error: 'Not found', message: 'Staff or trainee record not found' });
+    }
+    const record = person.record;
+    const personnelId = normalisePersonnelId(record.idNumber);
+    const email = String(record.email || '').trim();
+    const linkedUserRows = record.userId ? await context.db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+              "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+              "activationAttemptCount", "activationLockedUntil", "lastLogin", "createdAt"
+       FROM "User"
+       WHERE id = $1
+       LIMIT 1`,
+      record.userId
+    ) : [];
+    const userIdRows = personnelId ? await context.db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+              "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+              "activationAttemptCount", "activationLockedUntil", "lastLogin", "createdAt"
+       FROM "User"
+       WHERE "userId" = $1 OR username = $1
+       LIMIT 5`,
+      personnelId
+    ) : [];
+    const emailRows = email ? await context.db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+              "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+              "activationAttemptCount", "activationLockedUntil", "lastLogin", "createdAt"
+       FROM "User"
+       WHERE LOWER(email) = LOWER($1)
+       LIMIT 5`,
+      email
+    ) : [];
+    const linkedUser = linkedUserRows?.[0] || null;
+    const userByPersonnelId = userIdRows?.[0] || null;
+    const matchingEmailDifferentAccount = emailRows.filter(row => row.id !== linkedUser?.id && row.id !== userByPersonnelId?.id);
+    const linkedPersonnelId = linkedUser ? await findLinkedPersonnelId(context.db, linkedUser.id) : '';
+    const userByPersonnelLinkedId = userByPersonnelId ? await findLinkedPersonnelId(context.db, userByPersonnelId.id) : '';
+    const sanitiseUser = (user, linkedId = '') => user ? ({
+      id: user.id,
+      userId: user.userId || null,
+      username: user.username || null,
+      email: user.email || null,
+      displayName: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || null,
+      role: user.role || null,
+      isActive: Boolean(user.isActive),
+      mustChangePassword: Boolean(user.mustChangePassword),
+      hasActivationCodeHash: Boolean(user.activationCodeHash),
+      activationStatus: getActivationStatusForUser(user),
+      activationExpiresAt: user.activationCodeExpiresAt || null,
+      activationSentAt: user.activationCodeSentAt || null,
+      activationUsedAt: user.activationCodeUsedAt || null,
+      activationAttemptCount: Number(user.activationAttemptCount || 0),
+      activationLockedUntil: user.activationLockedUntil || null,
+      lastLogin: user.lastLogin || null,
+      linkedPersonnelId: linkedId || '',
+    }) : null;
+    const findings = [];
+    if (!personnelId) findings.push('Profile has no Personnel ID.');
+    if (!email) findings.push('Profile has no email address.');
+    if (linkedUser && normalisePersonnelId(linkedUser.userId || linkedUser.username) !== personnelId) {
+      findings.push(`Linked User ID ${linkedUser.userId || linkedUser.username || 'unknown'} does not match profile Personnel ID ${personnelId}.`);
+    }
+    if (userByPersonnelId && record.userId && userByPersonnelId.id !== record.userId) {
+      findings.push(`Personnel ID ${personnelId} belongs to a different User row than the profile link.`);
+    }
+    if (matchingEmailDifferentAccount.length) {
+      findings.push(`Email ${email} is also used by another login account.`);
+    }
+    if ((linkedUser || userByPersonnelId)?.activationLockedUntil && new Date((linkedUser || userByPersonnelId).activationLockedUntil).getTime() > Date.now()) {
+      findings.push('Activation is temporarily locked because of failed attempts.');
+    }
+    if ((linkedUser || userByPersonnelId)?.activationCodeExpiresAt && new Date((linkedUser || userByPersonnelId).activationCodeExpiresAt).getTime() <= Date.now()) {
+      findings.push('Activation code has expired.');
+    }
+    res.json({
+      generatedAt: new Date().toISOString(),
+      diagnostic: 'direct-person-account-activation',
+      personType: person.type,
+      person: {
+        id: record.id,
+        name: record.fullName || record.name || '',
+        course: record.course || '',
+        unit: record.unit || '',
+        idNumber: record.idNumber || null,
+        normalisedPersonnelId: personnelId,
+        email,
+        linkedUserRowId: record.userId || null,
+        isActive: Boolean(record.isActive),
+      },
+      expectedLogin: {
+        userIdField: personnelId || null,
+        passwordFormat: personnelId ? `${personnelId} + emailed activation code` : null,
+        expectedPasswordLength: personnelId ? personnelId.length + 12 : null,
+      },
+      linkedUser: sanitiseUser(linkedUser, linkedPersonnelId),
+      userByPersonnelId: sanitiseUser(userByPersonnelId, userByPersonnelLinkedId),
+      usersByEmail: emailRows.map(user => sanitiseUser(user, user.id === linkedUser?.id ? linkedPersonnelId : user.id === userByPersonnelId?.id ? userByPersonnelLinkedId : '')),
+      findings,
+      note: 'This diagnostic intentionally excludes activation codes, passwords, and stored password/hash values.',
+    });
+  } catch (error) {
+    console.error('❌ GET /api/admin/direct-person-account-diagnostics error:', error);
+    res.status(500).json({ error: 'Account diagnostics failed', message: 'Failed to build account activation diagnostics' });
   }
 });
 

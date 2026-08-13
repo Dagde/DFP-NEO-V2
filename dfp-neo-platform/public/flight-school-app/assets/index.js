@@ -505,6 +505,17 @@ function pushAuthDiag(stage, details = {}) {
   } catch {
   }
 }
+function downloadJsonFile$2(filename, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 async function checkSession(token) {
   const startedAt = performance.now();
   pushAuthDiag("auth:session-check:start", {
@@ -569,9 +580,17 @@ async function loginUser(userId, password) {
     ok: res.ok,
     hasUser: Boolean(data?.user),
     userId: data?.user?.userId || data?.user?.id || userId,
-    mustChangePassword: Boolean(data?.mustChangePassword)
+    mustChangePassword: Boolean(data?.mustChangePassword),
+    error: data?.error || null,
+    message: data?.message || null,
+    diagnostic: data?.diagnostic || null
   });
-  if (!res.ok) throw new Error(data.message || "Login failed");
+  if (!res.ok) {
+    const error = new Error(data.message || "Login failed");
+    error.diagnostic = data?.diagnostic || null;
+    error.response = data || null;
+    throw error;
+  }
   return data;
 }
 async function logoutUser(token) {
@@ -587,6 +606,7 @@ const LoginModal = ({ onLoginSuccess }) => {
   const [userId, setUserId] = reactExports.useState("");
   const [password, setPassword] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
+  const [lastLoginDiagnostic, setLastLoginDiagnostic] = reactExports.useState(null);
   const [loading, setLoading] = reactExports.useState(false);
   const [showForgotPassword, setShowForgotPassword] = reactExports.useState(false);
   const [forgotUserId, setForgotUserId] = reactExports.useState("");
@@ -595,6 +615,7 @@ const LoginModal = ({ onLoginSuccess }) => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setLastLoginDiagnostic(null);
     setLoading(true);
     try {
       const result = await loginUser(userId.trim(), password);
@@ -603,9 +624,24 @@ const LoginModal = ({ onLoginSuccess }) => {
       onLoginSuccess(result.user, result.sessionToken);
     } catch (err) {
       setError(err.message || "Login failed. Please check your credentials.");
+      setLastLoginDiagnostic({
+        generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        source: "login-screen",
+        userIdAttempt: userId.trim(),
+        serverDiagnostic: err?.diagnostic || null,
+        serverResponse: err?.response ? {
+          error: err.response.error || null,
+          message: err.response.message || null
+        } : null
+      });
     } finally {
       setLoading(false);
     }
+  };
+  const handleDownloadLoginDiagnostic = () => {
+    if (!lastLoginDiagnostic) return;
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+    downloadJsonFile$2(`dfp-login-activation-diagnostics_${timestamp}.json`, lastLoginDiagnostic);
   };
   const handleForgotPassword = async (e) => {
     e.preventDefault();
@@ -674,6 +710,15 @@ const LoginModal = ({ onLoginSuccess }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-red-400 flex-shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-red-300", children: error })
       ] }),
+      lastLoginDiagnostic && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: handleDownloadLoginDiagnostic,
+          className: "w-full rounded border border-amber-500/50 bg-amber-900/30 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-800/50",
+          children: "Download Login Diagnostics"
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
@@ -24379,6 +24424,17 @@ const readErrorMessage = async (response, fallback) => {
     return fallback;
   }
 };
+const downloadJsonFile$1 = (filename, payload) => {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 const AccountAccessPanel = ({
   personType,
   personId,
@@ -24475,6 +24531,27 @@ const AccountAccessPanel = ({
       setWorking(false);
     }
   };
+  const handleDownloadDiagnostics = async () => {
+    setWorking(true);
+    setMessage("");
+    setError("");
+    try {
+      const params = new URLSearchParams({ personType, personId: lookupId });
+      const response = await fetch(`/api/admin/direct-person-account-diagnostics?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${sessionToken}` }
+      });
+      if (!response.ok) throw new Error(await readErrorMessage(response, "Failed to download account diagnostics"));
+      const data = await response.json();
+      const safeName = String(name || data?.person?.name || "person").replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "person";
+      const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+      downloadJsonFile$1(`dfp-account-activation-diagnostics_${safeName}_${timestamp}.json`, data);
+      setMessage("Account activation diagnostics downloaded.");
+    } catch (err) {
+      setError(err?.message || "Failed to download account diagnostics");
+    } finally {
+      setWorking(false);
+    }
+  };
   const user = payload?.user || null;
   const activationStatus = String(user?.activationStatus || "NONE").toUpperCase();
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-sky-700/40 bg-sky-950/20 p-3 space-y-3", children: [
@@ -24543,6 +24620,16 @@ const AccountAccessPanel = ({
             disabled: working || loading,
             className: "rounded border border-gray-600 bg-gray-800/60 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700/70 disabled:cursor-not-allowed disabled:opacity-50",
             children: "Refresh"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleDownloadDiagnostics,
+            disabled: working || loading,
+            className: "rounded border border-amber-500/50 bg-amber-900/30 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-800/50 disabled:cursor-not-allowed disabled:opacity-50",
+            children: "Diag"
           }
         )
       ] })

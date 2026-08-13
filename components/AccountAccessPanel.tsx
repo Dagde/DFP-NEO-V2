@@ -71,6 +71,18 @@ const readErrorMessage = async (response: Response, fallback: string): Promise<s
   }
 };
 
+const downloadJsonFile = (filename: string, payload: unknown) => {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
 const AccountAccessPanel: React.FC<AccountAccessPanelProps> = ({
   personType,
   personId,
@@ -175,6 +187,28 @@ const AccountAccessPanel: React.FC<AccountAccessPanelProps> = ({
     }
   };
 
+  const handleDownloadDiagnostics = async () => {
+    setWorking(true);
+    setMessage('');
+    setError('');
+    try {
+      const params = new URLSearchParams({ personType, personId: lookupId });
+      const response = await fetch(`/api/admin/direct-person-account-diagnostics?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      if (!response.ok) throw new Error(await readErrorMessage(response, 'Failed to download account diagnostics'));
+      const data = await response.json();
+      const safeName = String(name || data?.person?.name || 'person').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'person';
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      downloadJsonFile(`dfp-account-activation-diagnostics_${safeName}_${timestamp}.json`, data);
+      setMessage('Account activation diagnostics downloaded.');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to download account diagnostics');
+    } finally {
+      setWorking(false);
+    }
+  };
+
   const user = payload?.user || null;
   const activationStatus = String(user?.activationStatus || 'NONE').toUpperCase();
 
@@ -252,6 +286,14 @@ const AccountAccessPanel: React.FC<AccountAccessPanelProps> = ({
               className="rounded border border-gray-600 bg-gray-800/60 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700/70 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Refresh
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadDiagnostics}
+              disabled={working || loading}
+              className="rounded border border-amber-500/50 bg-amber-900/30 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-800/50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Diag
             </button>
           </div>
         </>
