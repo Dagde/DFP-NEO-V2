@@ -28137,6 +28137,18 @@ const TraineeBulkUploadFlyout = ({
     });
     return Array.from(courseNames).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
   }, [courseColors, courses]);
+  const selectableCourses = reactExports.useMemo(() => {
+    const courseNames = /* @__PURE__ */ new Set();
+    activeCourses.forEach((course) => {
+      const clean = String(course || "").trim();
+      if (clean) courseNames.add(clean);
+    });
+    coursesFromFile.forEach((course) => {
+      const clean = String(course || "").trim();
+      if (clean) courseNames.add(clean);
+    });
+    return Array.from(courseNames).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
+  }, [activeCourses, coursesFromFile]);
   const canIssueAccountActivations = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_"));
   const handleFile = (selectedFile) => {
     if (!selectedFile) return;
@@ -28348,7 +28360,7 @@ const TraineeBulkUploadFlyout = ({
     showCourseSelection && /* @__PURE__ */ jsxRuntimeExports.jsx(
       CourseSelectionFlyout,
       {
-        courses: coursesFromFile.length > 0 ? coursesFromFile : activeCourses,
+        courses: selectableCourses,
         updateType,
         onConfirm: processRows,
         onClose: () => setShowCourseSelection(false)

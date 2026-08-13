@@ -183,6 +183,18 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         });
         return Array.from(courseNames).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
     }, [courseColors, courses]);
+    const selectableCourses = useMemo(() => {
+        const courseNames = new Set<string>();
+        activeCourses.forEach(course => {
+            const clean = String(course || '').trim();
+            if (clean) courseNames.add(clean);
+        });
+        coursesFromFile.forEach(course => {
+            const clean = String(course || '').trim();
+            if (clean) courseNames.add(clean);
+        });
+        return Array.from(courseNames).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    }, [activeCourses, coursesFromFile]);
     const canIssueAccountActivations = ['ADMIN', 'SUPER_ADMIN'].includes(String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_'));
 
     const handleFile = (selectedFile?: File | null) => {
@@ -404,7 +416,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             )}
             {showCourseSelection && (
                 <CourseSelectionFlyout
-                    courses={coursesFromFile.length > 0 ? coursesFromFile : activeCourses}
+                    courses={selectableCourses}
                     updateType={updateType}
                     onConfirm={processRows}
                     onClose={() => setShowCourseSelection(false)}
