@@ -33,6 +33,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -520,6 +521,157 @@ async function findLinkedPersonnelId(db, userDbId) {
     userDbId
   );
   return normalisePersonnelId(rows?.[0]?.personnelId);
+}
+
+function getBooleanEnv(value, fallback = false) {
+  const clean = String(value ?? '').trim().toLowerCase();
+  if (!clean) return fallback;
+  if (['1', 'true', 'yes', 'on'].includes(clean)) return true;
+  if (['0', 'false', 'no', 'off'].includes(clean)) return false;
+  return fallback;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getSmtpConfig() {
+  const host = getConfiguredSecret('DFP_SMTP_HOST', ['SMTP_HOST']);
+  const secureEnv = process.env.DFP_SMTP_SECURE ?? process.env.SMTP_SECURE;
+  const secure = getBooleanEnv(secureEnv, false);
+  const rawPort = String(process.env.DFP_SMTP_PORT || process.env.SMTP_PORT || '').trim();
+  const port = Number(rawPort || (secure ? 465 : 587));
+  const user = getConfiguredSecret('DFP_SMTP_USER', ['SMTP_USER']);
+  const pass = getConfiguredSecret('DFP_SMTP_PASS', ['SMTP_PASS']);
+  const from = getConfiguredSecret('DFP_SMTP_FROM', ['SMTP_FROM', 'MAIL_FROM']);
+  const appUrl = (
+    process.env.DFP_APP_URL
+    || process.env.PUBLIC_APP_URL
+    || process.env.APP_URL
+    || 'https://app.dfp-neo.com'
+  ).trim().replace(/\/+$/, '');
+  const missing = [];
+  if (!host) missing.push('DFP_SMTP_HOST');
+  if (!Number.isFinite(port) || port <= 0) missing.push('DFP_SMTP_PORT');
+  if (!from) missing.push('DFP_SMTP_FROM');
+  if ((user && !pass) || (!user && pass)) missing.push('DFP_SMTP_USER and DFP_SMTP_PASS');
+  return {
+    configured: missing.length === 0,
+    missing,
+    host,
+    port,
+    secure,
+    user,
+    pass,
+    from,
+    appUrl,
+  };
+}
+
+function createActivationMailTransport(config) {
+  return nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    auth: config.user ? { user: config.user, pass: config.pass } : undefined,
+    requireTLS: getBooleanEnv(process.env.DFP_SMTP_REQUIRE_TLS, false),
+    tls: {
+      rejectUnauthorized: getBooleanEnv(process.env.DFP_SMTP_REJECT_UNAUTHORIZED, true),
+    },
+  });
+}
+
+function formatActivationExpiry(expiresAt) {
+  try {
+    return new Intl.DateTimeFormat('en-AU', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: process.env.DFP_ACTIVATION_EMAIL_TIME_ZONE || 'Australia/Melbourne',
+    }).format(expiresAt);
+  } catch {
+    return expiresAt.toISOString();
+  }
+}
+
+function buildActivationEmail({ target, suffix, expiresAt, appUrl }) {
+  const displayName = [target.firstName, target.lastName].filter(Boolean).join(' ').trim()
+    || target.userId
+    || target.username
+    || 'DFP NEO user';
+  const userId = target.userId || target.username;
+  const expiryLabel = formatActivationExpiry(expiresAt);
+  const signInUrl = appUrl || 'https://app.dfp-neo.com';
+  const examplePersonnelId = '1234567';
+  const exampleSuffix = 'mnlkpo$q';
+  const exampleCredential = `${examplePersonnelId}${exampleSuffix}`;
+  const text = [
+    `Hello ${displayName},`,
+    '',
+    'Your DFP NEO account has been created.',
+    '',
+    `User ID: ${userId}`,
+    `Activation code: ${suffix}`,
+    '',
+    'To sign in for the first time, enter your User ID, then enter your activation credential in the password field.',
+    'Your activation credential is your Personnel ID followed immediately by the activation code above.',
+    '',
+    `Example only: if your Personnel ID was ${examplePersonnelId} and your activation code was ${exampleSuffix}, you would enter ${exampleCredential}.`,
+    '',
+    'For security, this email does not state your Personnel ID.',
+    `This activation code expires at ${expiryLabel}.`,
+    '',
+    `Sign in: ${signInUrl}`,
+  ].join('\n');
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.45;color:#172033;max-width:640px">
+      <p>Hello ${escapeHtml(displayName)},</p>
+      <p>Your DFP NEO account has been created.</p>
+      <p><strong>User ID:</strong> ${escapeHtml(userId)}</p>
+      <p><strong>Activation code:</strong> <code style="font-size:16px">${escapeHtml(suffix)}</code></p>
+      <p>To sign in for the first time, enter your User ID, then enter your activation credential in the password field.</p>
+      <p>Your activation credential is your Personnel ID followed immediately by the activation code above.</p>
+      <p><strong>Example only:</strong> if your Personnel ID was ${escapeHtml(examplePersonnelId)} and your activation code was ${escapeHtml(exampleSuffix)}, you would enter <code>${escapeHtml(exampleCredential)}</code>.</p>
+      <p>For security, this email does not state your Personnel ID.</p>
+      <p>This activation code expires at ${escapeHtml(expiryLabel)}.</p>
+      <p><a href="${escapeHtml(signInUrl)}">Sign in to DFP NEO</a></p>
+    </div>
+  `;
+  return {
+    subject: 'Activate your DFP NEO account',
+    text,
+    html,
+  };
+}
+
+async function sendActivationEmail({ target, suffix, expiresAt }) {
+  const config = getSmtpConfig();
+  if (!config.configured) {
+    const error = new Error(`SMTP is not configured: ${config.missing.join(', ')}`);
+    error.code = 'SMTP_NOT_CONFIGURED';
+    error.missing = config.missing;
+    throw error;
+  }
+  const transporter = createActivationMailTransport(config);
+  const email = buildActivationEmail({ target, suffix, expiresAt, appUrl: config.appUrl });
+  const info = await transporter.sendMail({
+    from: config.from,
+    to: target.email,
+    subject: email.subject,
+    text: email.text,
+    html: email.html,
+  });
+  return {
+    method: 'email',
+    email: target.email,
+    messageId: info.messageId || null,
+    accepted: Array.isArray(info.accepted) ? info.accepted : [],
+    rejected: Array.isArray(info.rejected) ? info.rejected : [],
+  };
 }
 
 async function runPrismaRuntimeMaintenance(db) {
@@ -8290,7 +8442,9 @@ app.post('/api/admin/direct-issue-activation', adminSensitiveRateLimit, async (r
       return res.status(400).json({ error: 'Invalid request', message: 'Target user is required' });
     }
     const users = await context.db.$queryRawUnsafe(
-      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive"
+      `SELECT id, "userId", username, email, password, "firstName", "lastName", role, "isActive", "mustChangePassword",
+              "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+              "activationAttemptCount", "activationLockedUntil"
        FROM "User"
        WHERE "userId" = $1 OR username = $1 OR id = $1
        LIMIT 1`,
@@ -8317,7 +8471,8 @@ app.post('/api/admin/direct-issue-activation', adminSensitiveRateLimit, async (r
     const activationCodeHash = await bcrypt.hash(activationCredential, 12);
     const activationExpiresAt = getActivationExpiryDate();
     const randomBlockedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
-    const updated = await context.db.$queryRawUnsafe(
+    let updated = null;
+    updated = await context.db.$queryRawUnsafe(
       `UPDATE "User"
        SET password = $1,
            "mustChangePassword" = true,
@@ -8337,19 +8492,62 @@ app.post('/api/admin/direct-issue-activation', adminSensitiveRateLimit, async (r
       activationExpiresAt.toISOString(),
       target.id
     );
+    let delivery = null;
+    try {
+      delivery = await sendActivationEmail({ target, suffix, expiresAt: activationExpiresAt });
+    } catch (emailError) {
+      await context.db.$executeRawUnsafe(
+        `UPDATE "User"
+         SET password = $1,
+             "mustChangePassword" = $2,
+             "activationCodeHash" = $3,
+             "activationCodeExpiresAt" = $4::timestamp,
+             "activationCodeSentAt" = $5::timestamp,
+             "activationCodeUsedAt" = $6::timestamp,
+             "activationAttemptCount" = $7,
+             "activationLockedUntil" = $8::timestamp,
+             "updatedAt" = NOW()
+         WHERE id = $9`,
+        target.password,
+        Boolean(target.mustChangePassword),
+        target.activationCodeHash || null,
+        target.activationCodeExpiresAt ? new Date(target.activationCodeExpiresAt).toISOString() : null,
+        target.activationCodeSentAt ? new Date(target.activationCodeSentAt).toISOString() : null,
+        target.activationCodeUsedAt ? new Date(target.activationCodeUsedAt).toISOString() : null,
+        Number(target.activationAttemptCount || 0),
+        target.activationLockedUntil ? new Date(target.activationLockedUntil).toISOString() : null,
+        target.id
+      );
+      await writeSecurityAuditEvent(context.db, req, 'ACCOUNT_ACTIVATION_EMAIL_FAILED', 'warning', 'Account activation email failed', {
+        targetUserId: target.userId || target.username || target.id,
+        email: target.email,
+        reason: emailError.message || 'Email delivery failed',
+        code: emailError.code || '',
+        missing: emailError.missing || [],
+      });
+      const status = emailError.code === 'SMTP_NOT_CONFIGURED' ? 503 : 502;
+      return res.status(status).json({
+        error: emailError.code === 'SMTP_NOT_CONFIGURED' ? 'Email not configured' : 'Email delivery failed',
+        message: emailError.code === 'SMTP_NOT_CONFIGURED'
+          ? `Activation email could not be sent because SMTP is not configured: ${(emailError.missing || []).join(', ')}`
+          : 'Activation email could not be sent. No activation code was left active for this user.',
+        missing: emailError.missing || undefined,
+      });
+    }
     await writeSecurityAuditEvent(context.db, req, 'ACCOUNT_ACTIVATION_ISSUED', 'info', 'Account activation issued', {
       targetUserId: target.userId || target.username || target.id,
+      email: target.email,
       expiresAt: activationExpiresAt.toISOString(),
+      messageId: delivery.messageId,
     });
     res.json({
       success: true,
       user: toDirectAdminUser(updated[0]),
       delivery: {
-        method: 'email-pending',
-        email: target.email,
+        ...delivery,
         activationSuffix: process.env.DFP_EXPOSE_ACTIVATION_SUFFIX_FOR_TESTING === 'true' ? suffix : undefined,
         expiresAt: activationExpiresAt.toISOString(),
-        instruction: 'Email delivery is implemented in the next step. The final activation credential is the Personnel ID followed immediately by this suffix.',
+        instruction: 'Activation email sent. The user signs in with their Personnel ID followed immediately by the emailed activation code.',
       },
     });
   } catch (error) {
