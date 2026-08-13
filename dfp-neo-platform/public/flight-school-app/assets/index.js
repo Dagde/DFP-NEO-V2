@@ -87175,6 +87175,21 @@ const getServiceCountLabels = (serviceDefinitions = []) => {
     labels[2] || "Group 3"
   ];
 };
+const normaliseCourseScopeToken = (value) => String(value || "").trim().toUpperCase();
+const splitCourseUnitCodes = (value) => Array.from(new Set(
+  String(value || "").split(/[+,/]/).map(normaliseCourseScopeToken).filter(Boolean)
+));
+const downloadJsonFile = (filename, payload) => {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 const CoursesManagementView = ({
   courses,
   courseColors,
@@ -87216,6 +87231,68 @@ const CoursesManagementView = ({
     });
     return groups;
   }, [courses, courseColors]);
+  const handleDownloadCourseScopeDiagnostics = () => {
+    const activeContextUnits = splitCourseUnitCodes(activeUnitCode);
+    const activeContextUnitSet = new Set(activeContextUnits);
+    const activeCourseNames = Object.values(groupedCourses).flat().map((course) => course.name);
+    const visibleCourseSet = new Set(activeCourseNames);
+    const platformUnits = (platformConfig?.units || []).map((unit) => ({
+      code: String(unit?.code || "").trim(),
+      name: String(unit?.name || "").trim(),
+      status: String(unit?.status || "ACTIVE").trim(),
+      locationCode: String(unit?.locationCode || "").trim(),
+      operationalModel: String(unit?.operationalModel || unit?.settings?.operationalModel || "").trim()
+    }));
+    const courseDiagnostics = courses.map((course) => {
+      const courseUnits = splitCourseUnitCodes(course.unit);
+      const hasCourseColor = Object.prototype.hasOwnProperty.call(courseColors, course.name);
+      const unitMatchesActiveContext = courseUnits.length > 0 && activeContextUnitSet.size > 0 ? courseUnits.some((unit) => activeContextUnitSet.has(unit)) : false;
+      return {
+        name: course.name,
+        code: course.code || "",
+        location: course.location || "",
+        unit: course.unit || "",
+        parsedUnits: courseUnits,
+        lmpType: course.lmpType || "",
+        academicLmpType: course.academicLmpType || "",
+        status: course.status || "",
+        hasCourseColor,
+        visibleOnCoursesManagement: visibleCourseSet.has(course.name),
+        unitMatchesActiveContext,
+        expectedVisibleForActiveUnit: hasCourseColor && unitMatchesActiveContext,
+        visibilityMismatch: visibleCourseSet.has(course.name) !== (hasCourseColor && unitMatchesActiveContext),
+        reasonVisibleNow: visibleCourseSet.has(course.name) ? "CoursesManagementView received this course and courseColors contains its name." : "Not visible in groupedCourses."
+      };
+    });
+    const payload = {
+      diagnostic: "courses-management-scope",
+      version: "CCH 8.148",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      activeContext: {
+        activeLocationCode,
+        activeUnitCode,
+        parsedActiveUnitCodes: activeContextUnits,
+        operationalModel,
+        locations,
+        units
+      },
+      counts: {
+        coursesProp: courses.length,
+        courseColorKeys: Object.keys(courseColors).length,
+        archivedCourseKeys: Object.keys(archivedCourses).length,
+        visibleCoursesManagement: activeCourseNames.length,
+        visibilityMismatches: courseDiagnostics.filter((course) => course.visibilityMismatch).length
+      },
+      visibleCourseNames: activeCourseNames,
+      courseColorKeys: Object.keys(courseColors).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })),
+      platformUnits,
+      courses: courseDiagnostics
+    };
+    const locationPart = normaliseCourseScopeToken(activeLocationCode) || "LOCATION";
+    const unitPart = (activeContextUnits.join("-") || normaliseCourseScopeToken(activeUnitCode) || "UNIT").replace(/[^A-Z0-9-]/g, "-");
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+    downloadJsonFile(`dfp-course-scope-diagnostics_${locationPart}_${unitPart}_${timestamp}.json`, payload);
+  };
   const handleDeleteClick = async (courseName) => {
     setCourseToDelete(courseName);
     setShowPinDialog(true);
@@ -87367,6 +87444,14 @@ const CoursesManagementView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage active and archived courses" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleDownloadCourseScopeDiagnostics,
+            className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#38bdf8" }, children: "Diag" })
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
