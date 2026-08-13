@@ -97,19 +97,16 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
   });
   const personByName = new Map<string, PersonIdentityRecord[]>();
   const surnameCounts = new Map<string, number>();
-  const surnameInitialCounts = new Map<string, number>();
   const surnameFirstNameCounts = new Map<string, number>();
 
   uniquePeople.forEach(person => {
     const displayName = getPersonDisplayName(person);
-    const { surname, firstName, firstInitial } = getNameParts(displayName);
+    const { surname, firstName } = getNameParts(displayName);
     const nameKey = normalisePersonName(displayName);
     const surnameKey = normalisePersonName(surname);
-    const initialKey = `${surnameKey}|${firstInitial}`;
     const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
     if (nameKey) personByName.set(nameKey, [...(personByName.get(nameKey) || []), person]);
     if (surnameKey) surnameCounts.set(surnameKey, (surnameCounts.get(surnameKey) || 0) + 1);
-    if (surnameKey && firstInitial) surnameInitialCounts.set(initialKey, (surnameInitialCounts.get(initialKey) || 0) + 1);
     if (surnameKey && firstName) surnameFirstNameCounts.set(firstNameKey, (surnameFirstNameCounts.get(firstNameKey) || 0) + 1);
   });
 
@@ -123,12 +120,12 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
     const cleaned = stripPersonContext(name);
     if (!cleaned) return '';
     const person = findPerson(cleaned);
-    const { surname, firstInitial } = getNameParts(cleaned);
+    const { surname, firstName, firstInitial } = getNameParts(cleaned);
     const surnameKey = normalisePersonName(surname);
-    const initialKey = `${surnameKey}|${firstInitial}`;
+    const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
     if (!surnameKey || (surnameCounts.get(surnameKey) || 0) <= 1) return surname || cleaned;
     const base = [surname, firstInitial].filter(Boolean).join(' ');
-    if ((surnameInitialCounts.get(initialKey) || 0) <= 1) return base || surname || cleaned;
+    if ((surnameFirstNameCounts.get(firstNameKey) || 0) <= 1) return base || surname || cleaned;
     const suffix = getLastThreeIdDigits(person);
     return suffix ? `${base} · ${suffix}` : base || surname || cleaned;
   };
