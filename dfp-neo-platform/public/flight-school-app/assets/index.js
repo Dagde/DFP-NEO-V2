@@ -27852,7 +27852,8 @@ const CourseSelectionFlyout = ({
   courses,
   onConfirm,
   onClose,
-  updateType
+  updateType,
+  onDownloadDiagnostics
 }) => {
   const [selectedCourse, setSelectedCourse] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
@@ -27910,7 +27911,16 @@ const CourseSelectionFlyout = ({
         ] })
       ] }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex flex-wrap justify-end gap-3", children: [
+      onDownloadDiagnostics && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: onDownloadDiagnostics,
+          className: "px-4 py-2 bg-gray-700 text-sky-300 rounded-md hover:bg-gray-600 transition-colors text-sm font-semibold",
+          children: "Diag"
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
@@ -27994,6 +28004,18 @@ const UpdateSummaryFlyout = ({ summary, onClose }) => {
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "OK" }) })
   ] }) });
+};
+const normaliseDiagnosticToken = (value) => String(value || "").trim().toUpperCase();
+const downloadJsonFile = (filename, payload) => {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 const getValueFromRow$1 = (row, possibleKeys) => {
   for (const key of possibleKeys) {
@@ -28107,6 +28129,7 @@ const TraineeBulkUploadFlyout = ({
   onClose,
   traineesData,
   syllabusDetails,
+  courseColors,
   courses = [],
   allowedCourses = [],
   onBulkUpdateTrainees,
@@ -28152,6 +28175,80 @@ const TraineeBulkUploadFlyout = ({
     return Array.from(courseNames).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
   }, [activeCourses, coursesFromFile]);
   const canIssueAccountActivations = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_"));
+  const handleDownloadCoursePickerDiagnostics = () => {
+    const allowedCourseSet = new Set(allowedCourses.map(normaliseDiagnosticToken).filter(Boolean));
+    const activeCourseSet = new Set(activeCourses.map(normaliseDiagnosticToken).filter(Boolean));
+    const fileCourseSet = new Set(coursesFromFile.map(normaliseDiagnosticToken).filter(Boolean));
+    const selectableCourseSet = new Set(selectableCourses.map(normaliseDiagnosticToken).filter(Boolean));
+    const rawCourseNames = courses.map((course) => String(course?.name || course?.code || course?.number || "").trim()).filter(Boolean);
+    const rawCourseSet = new Set(rawCourseNames.map(normaliseDiagnosticToken));
+    const rawCourseRecords = courses.map((course) => {
+      const displayName = String(course?.name || course?.code || course?.number || "").trim();
+      const normalisedName = normaliseDiagnosticToken(displayName);
+      return {
+        displayName,
+        normalisedName,
+        name: course?.name || "",
+        code: course?.code || "",
+        number: course?.number || "",
+        unit: course?.unit || "",
+        location: course?.location || "",
+        status: course?.status || "",
+        lmpType: course?.lmpType || "",
+        academicLmpType: course?.academicLmpType || "",
+        inAllowedCourses: allowedCourseSet.has(normalisedName),
+        inActiveCoursesAfterMerge: activeCourseSet.has(normalisedName),
+        inSelectableCourses: selectableCourseSet.has(normalisedName),
+        inclusionSource: [
+          allowedCourseSet.has(normalisedName) ? "allowedCourses" : "",
+          rawCourseSet.has(normalisedName) ? "coursesProp" : "",
+          fileCourseSet.has(normalisedName) ? "uploadedFile" : ""
+        ].filter(Boolean)
+      };
+    });
+    const selectableDetails = selectableCourses.map((course) => {
+      const normalisedName = normaliseDiagnosticToken(course);
+      const matchingRecords = rawCourseRecords.filter((record) => record.normalisedName === normalisedName);
+      return {
+        course,
+        normalisedName,
+        fromAllowedCourses: allowedCourseSet.has(normalisedName),
+        fromCoursesProp: rawCourseSet.has(normalisedName),
+        fromUploadedFileFallback: fileCourseSet.has(normalisedName) && activeCourseSet.size === 0,
+        matchingCourseRecords: matchingRecords,
+        likelyReasonVisible: allowedCourseSet.has(normalisedName) ? "Included because CourseRosterView allowedCourses includes it." : rawCourseSet.has(normalisedName) ? "Included because TraineeBulkUploadFlyout merged the full courses prop into the picker." : fileCourseSet.has(normalisedName) ? "Included from the uploaded file because no active app courses were available." : "Included from an unknown course source."
+      };
+    });
+    const payload = {
+      diagnostic: "trainee-bulk-upload-course-picker",
+      version: "CCH 8.152",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      updateType,
+      file: file ? { name: file.name, size: file.size, type: file.type || "" } : null,
+      counts: {
+        allowedCourses: allowedCourses.length,
+        rawCourseRecords: courses.length,
+        rawCourseNames: rawCourseNames.length,
+        coursesFromUploadedFile: coursesFromFile.length,
+        activeCoursesAfterMerge: activeCourses.length,
+        selectableCourses: selectableCourses.length,
+        selectableCoursesNotAllowed: selectableDetails.filter((course) => !course.fromAllowedCourses).length,
+        selectableCoursesFromFullCoursesPropOnly: selectableDetails.filter((course) => !course.fromAllowedCourses && course.fromCoursesProp).length
+      },
+      arrays: {
+        allowedCourses,
+        rawCourseNames,
+        coursesFromUploadedFile: coursesFromFile,
+        activeCoursesAfterMerge: activeCourses,
+        selectableCourses,
+        courseColorKeys: Object.keys(courseColors).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }))
+      },
+      selectableDetails,
+      rawCourseRecords
+    };
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+    downloadJsonFile(`dfp-trainee-upload-course-picker-diagnostics_${timestamp}.json`, payload);
+  };
   const handleFile = (selectedFile) => {
     if (!selectedFile) return;
     if (!/\.(xlsx|xls|csv)$/i.test(selectedFile.name)) {
@@ -28365,7 +28462,8 @@ const TraineeBulkUploadFlyout = ({
         courses: selectableCourses,
         updateType,
         onConfirm: processRows,
-        onClose: () => setShowCourseSelection(false)
+        onClose: () => setShowCourseSelection(false),
+        onDownloadDiagnostics: handleDownloadCoursePickerDiagnostics
       }
     ),
     summary && /* @__PURE__ */ jsxRuntimeExports.jsx(

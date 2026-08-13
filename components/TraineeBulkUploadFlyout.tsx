@@ -14,7 +14,7 @@ interface TraineeBulkUploadFlyoutProps {
     traineesData: Trainee[];
     syllabusDetails: SyllabusItemDetail[];
     courseColors: { [key: string]: string };
-    courses?: Array<{ name?: string; code?: string; number?: string }>;
+    courses?: Array<{ name?: string; code?: string; number?: string; unit?: string; location?: string; status?: string; lmpType?: string; academicLmpType?: string }>;
     allowedCourses?: string[];
     onBulkUpdateTrainees: (trainees: Trainee[]) => void | Promise<void>;
     onReplaceTrainees: (trainees: Trainee[]) => void | Promise<void>;
@@ -28,6 +28,20 @@ type UploadActivationSummary = {
     sent: number;
     skipped: number;
     failed: number;
+};
+
+const normaliseDiagnosticToken = (value: unknown): string => String(value || '').trim().toUpperCase();
+
+const downloadJsonFile = (filename: string, payload: unknown) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 };
 
 const getValueFromRow = (row: any, possibleKeys: string[]): any => {
@@ -153,6 +167,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     onClose,
     traineesData,
     syllabusDetails,
+    courseColors,
     courses = [],
     allowedCourses = [],
     onBulkUpdateTrainees,
@@ -199,6 +214,89 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         return Array.from(courseNames).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
     }, [activeCourses, coursesFromFile]);
     const canIssueAccountActivations = ['ADMIN', 'SUPER_ADMIN'].includes(String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_'));
+
+    const handleDownloadCoursePickerDiagnostics = () => {
+        const allowedCourseSet = new Set(allowedCourses.map(normaliseDiagnosticToken).filter(Boolean));
+        const activeCourseSet = new Set(activeCourses.map(normaliseDiagnosticToken).filter(Boolean));
+        const fileCourseSet = new Set(coursesFromFile.map(normaliseDiagnosticToken).filter(Boolean));
+        const selectableCourseSet = new Set(selectableCourses.map(normaliseDiagnosticToken).filter(Boolean));
+        const rawCourseNames = courses
+            .map(course => String(course?.name || course?.code || course?.number || '').trim())
+            .filter(Boolean);
+        const rawCourseSet = new Set(rawCourseNames.map(normaliseDiagnosticToken));
+        const rawCourseRecords = courses.map(course => {
+            const displayName = String(course?.name || course?.code || course?.number || '').trim();
+            const normalisedName = normaliseDiagnosticToken(displayName);
+            return {
+                displayName,
+                normalisedName,
+                name: course?.name || '',
+                code: course?.code || '',
+                number: course?.number || '',
+                unit: course?.unit || '',
+                location: course?.location || '',
+                status: course?.status || '',
+                lmpType: course?.lmpType || '',
+                academicLmpType: course?.academicLmpType || '',
+                inAllowedCourses: allowedCourseSet.has(normalisedName),
+                inActiveCoursesAfterMerge: activeCourseSet.has(normalisedName),
+                inSelectableCourses: selectableCourseSet.has(normalisedName),
+                inclusionSource: [
+                    allowedCourseSet.has(normalisedName) ? 'allowedCourses' : '',
+                    rawCourseSet.has(normalisedName) ? 'coursesProp' : '',
+                    fileCourseSet.has(normalisedName) ? 'uploadedFile' : '',
+                ].filter(Boolean),
+            };
+        });
+        const selectableDetails = selectableCourses.map(course => {
+            const normalisedName = normaliseDiagnosticToken(course);
+            const matchingRecords = rawCourseRecords.filter(record => record.normalisedName === normalisedName);
+            return {
+                course,
+                normalisedName,
+                fromAllowedCourses: allowedCourseSet.has(normalisedName),
+                fromCoursesProp: rawCourseSet.has(normalisedName),
+                fromUploadedFileFallback: fileCourseSet.has(normalisedName) && activeCourseSet.size === 0,
+                matchingCourseRecords: matchingRecords,
+                likelyReasonVisible: allowedCourseSet.has(normalisedName)
+                    ? 'Included because CourseRosterView allowedCourses includes it.'
+                    : rawCourseSet.has(normalisedName)
+                        ? 'Included because TraineeBulkUploadFlyout merged the full courses prop into the picker.'
+                        : fileCourseSet.has(normalisedName)
+                            ? 'Included from the uploaded file because no active app courses were available.'
+                            : 'Included from an unknown course source.',
+            };
+        });
+        const payload = {
+            diagnostic: 'trainee-bulk-upload-course-picker',
+            version: 'CCH 8.152',
+            generatedAt: new Date().toISOString(),
+            updateType,
+            file: file ? { name: file.name, size: file.size, type: file.type || '' } : null,
+            counts: {
+                allowedCourses: allowedCourses.length,
+                rawCourseRecords: courses.length,
+                rawCourseNames: rawCourseNames.length,
+                coursesFromUploadedFile: coursesFromFile.length,
+                activeCoursesAfterMerge: activeCourses.length,
+                selectableCourses: selectableCourses.length,
+                selectableCoursesNotAllowed: selectableDetails.filter(course => !course.fromAllowedCourses).length,
+                selectableCoursesFromFullCoursesPropOnly: selectableDetails.filter(course => !course.fromAllowedCourses && course.fromCoursesProp).length,
+            },
+            arrays: {
+                allowedCourses,
+                rawCourseNames,
+                coursesFromUploadedFile: coursesFromFile,
+                activeCoursesAfterMerge: activeCourses,
+                selectableCourses,
+                courseColorKeys: Object.keys(courseColors).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
+            },
+            selectableDetails,
+            rawCourseRecords,
+        };
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        downloadJsonFile(`dfp-trainee-upload-course-picker-diagnostics_${timestamp}.json`, payload);
+    };
 
     const handleFile = (selectedFile?: File | null) => {
         if (!selectedFile) return;
@@ -423,6 +521,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
                     updateType={updateType}
                     onConfirm={processRows}
                     onClose={() => setShowCourseSelection(false)}
+                    onDownloadDiagnostics={handleDownloadCoursePickerDiagnostics}
                 />
             )}
             {summary && (

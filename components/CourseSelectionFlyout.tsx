@@ -5,13 +5,15 @@ interface CourseSelectionFlyoutProps {
   onConfirm: (selectedCourse: string) => void | Promise<void>;
   onClose: () => void;
   updateType: 'bulk' | 'minor';
+  onDownloadDiagnostics?: () => void;
 }
 
 const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({ 
   courses, 
   onConfirm, 
   onClose,
-  updateType 
+  updateType,
+  onDownloadDiagnostics,
 }) => {
     const [selectedCourse, setSelectedCourse] = useState<string>('');
     const [error, setError] = useState('');
@@ -87,7 +89,16 @@ const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({
                         </div>
                     )}
                 </div>
-                <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
+                <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex flex-wrap justify-end gap-3">
+                    {onDownloadDiagnostics && (
+                        <button
+                            type="button"
+                            onClick={onDownloadDiagnostics}
+                            className="px-4 py-2 bg-gray-700 text-sky-300 rounded-md hover:bg-gray-600 transition-colors text-sm font-semibold"
+                        >
+                            Diag
+                        </button>
+                    )}
                     <button 
                         type="button" 
                         onClick={onClose} 
