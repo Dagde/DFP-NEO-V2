@@ -24643,7 +24643,7 @@ const AccountAccessPanel = ({
             onClick: handleDownloadDiagnostics,
             disabled: working || loading,
             className: "rounded border border-amber-500/50 bg-amber-900/30 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-800/50 disabled:cursor-not-allowed disabled:opacity-50",
-            children: "Diag"
+            children: "Download Account Diagnostics"
           }
         )
       ] })
