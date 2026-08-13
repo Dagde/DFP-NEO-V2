@@ -28047,6 +28047,13 @@ const getNum = (row, keys) => {
   const num = parseFloat(String(val).replace(/[A-Za-z]/g, "").trim());
   return Number.isFinite(num) ? num : void 0;
 };
+const parsePersonList = (value) => {
+  const clean = String(value || "").trim();
+  if (!clean) return [];
+  if (clean.includes(";")) return clean.split(";").map((item) => item.trim()).filter(Boolean);
+  if (clean.includes("\n")) return clean.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+  return [clean];
+};
 const parseBoolean = (value) => {
   if (typeof value === "boolean") return value;
   if (typeof value === "string") return value.trim().toLowerCase() === "true";
@@ -28078,12 +28085,14 @@ const parseTraineeRow = (row) => {
     const course = getStr(row, ["Course"]);
     if (course) parsed.course = course;
   }
-  const lmpType = getStr(row, ["LMP", "lmpType"]);
+  const lmpType = getStr(row, ["LMP", "LMP Type", "lmpType"]);
   if (lmpType) parsed.lmpType = lmpType;
+  const academicLmpType = getStr(row, ["Academic LMP", "Academic LMP Type", "academicLmpType"]);
+  if (academicLmpType) parsed.academicLmpType = academicLmpType;
   const rank = getStr(row, ["Rank"]);
   if (rank) parsed.rank = rank;
-  const callsign = getStr(row, ["Callsign", "callsign"]);
-  if (callsign) parsed.callsignNumber = parseInt(callsign, 10) || void 0;
+  const callsign = getStr(row, ["Callsign", "Trainee Callsign", "traineeCallsign", "callsign"]);
+  if (callsign) parsed.traineeCallsign = callsign;
   const serviceRaw = getStr(row, ["Service"]);
   if (serviceRaw) {
     parsed.service = serviceRaw.trim();
@@ -28108,9 +28117,9 @@ const parseTraineeRow = (row) => {
   const email = getStr(row, ["Email"]);
   if (email) parsed.email = email;
   const primary = getStr(row, ["Primary Instructor", "primaryInstructor"]);
-  if (primary) parsed.primaryInstructor = primary.split(",").map((s) => s.trim()).filter(Boolean);
+  if (primary) parsed.primaryInstructor = parsePersonList(primary);
   const secondary = getStr(row, ["Secondary Instructor", "secondaryInstructor"]);
-  if (secondary) parsed.secondaryInstructor = secondary.split(",").map((s) => s.trim()).filter(Boolean);
+  if (secondary) parsed.secondaryInstructor = parsePersonList(secondary);
   const permissions = getStr(row, ["Permissions", "permissions"]);
   if (permissions) parsed.permissions = permissions.split(/\r?\n/).map((p) => p.trim()).filter(Boolean);
   const isPaused = getValueFromRow$1(row, ["Is Paused", "isPaused"]);
@@ -28360,7 +28369,14 @@ const TraineeBulkUploadFlyout = ({
     const parsedRows = rows.map(parseTraineeRow);
     const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
     const skipped = rows.length - validRows.length;
-    const newTrainees = validRows.map((trainee) => ({ ...trainee, course, fullName: `${trainee.name} – ${course}` }));
+    const uploadedCourses = Array.from(new Set(validRows.map((trainee) => String(trainee.course || "").trim()).filter(Boolean)));
+    const mismatchedCourses = uploadedCourses.filter((uploadedCourse) => uploadedCourse !== course);
+    if (mismatchedCourses.length > 0) {
+      throw new Error(
+        `This file contains trainee rows for ${mismatchedCourses.join(", ")}, but you selected ${course}. The upload has been stopped so trainees are not moved into the wrong course. Select ${mismatchedCourses[0]} or use a file whose Course column is ${course}.`
+      );
+    }
+    const newTrainees = validRows.map((trainee) => ({ ...trainee, uploadedCourse: trainee.course || "", course, fullName: `${trainee.name} – ${course}` }));
     const activationRequested = issueAccountActivations && canIssueAccountActivations;
     if (activationRequested) {
       const missingEmail = newTrainees.filter((trainee) => !String(trainee.email || "").trim());
@@ -126070,10 +126086,22 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         const err = await response.text();
         console.error("❌ [handleReplaceTrainees] DB save failed. Status:", response.status, "Body:", err);
         setSuccessMessage(`Warning: Trainees replaced in session but DB save failed (${response.status}). Check console.`);
+        let message = `Database save failed (${response.status}).`;
+        try {
+          const parsed = JSON.parse(err);
+          message = parsed.message || parsed.error || message;
+          if (Array.isArray(parsed.details) && parsed.details.length > 0) {
+            message = `${message} ${parsed.details.join(" ")}`;
+          }
+        } catch {
+          if (err) message = err;
+        }
+        throw new Error(message);
       }
     } catch (err) {
       console.error("❌ [handleReplaceTrainees] DB save exception:", err);
       setSuccessMessage(`Warning: DB save error — ${err.message}`);
+      throw err;
     }
   }, [handleDatabaseDataChanged]);
   const [liveSyncEnabled, setLiveSyncEnabled] = reactExports.useState(() => {

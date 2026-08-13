@@ -41196,10 +41196,22 @@ appliedUpdates.forEach(update => {
                 const err = await response.text();
                 console.error('❌ [handleReplaceTrainees] DB save failed. Status:', response.status, 'Body:', err);
                 setSuccessMessage(`Warning: Trainees replaced in session but DB save failed (${response.status}). Check console.`);
+                let message = `Database save failed (${response.status}).`;
+                try {
+                    const parsed = JSON.parse(err);
+                    message = parsed.message || parsed.error || message;
+                    if (Array.isArray(parsed.details) && parsed.details.length > 0) {
+                        message = `${message} ${parsed.details.join(' ')}`;
+                    }
+                } catch {
+                    if (err) message = err;
+                }
+                throw new Error(message);
             }
         } catch (err) {
             console.error('❌ [handleReplaceTrainees] DB save exception:', err);
             setSuccessMessage(`Warning: DB save error — ${(err as Error).message}`);
+            throw err;
         }
     }, [handleDatabaseDataChanged]);
 

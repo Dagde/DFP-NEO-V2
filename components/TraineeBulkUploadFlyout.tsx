@@ -74,6 +74,14 @@ const getNum = (row: any, keys: string[]) => {
     return Number.isFinite(num) ? num : undefined;
 };
 
+const parsePersonList = (value?: string): string[] => {
+    const clean = String(value || '').trim();
+    if (!clean) return [];
+    if (clean.includes(';')) return clean.split(';').map(item => item.trim()).filter(Boolean);
+    if (clean.includes('\n')) return clean.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
+    return [clean];
+};
+
 const parseBoolean = (value: any): boolean => {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') return value.trim().toLowerCase() === 'true';
@@ -109,12 +117,14 @@ const parseTraineeRow = (row: any): Partial<Trainee> | null => {
         if (course) parsed.course = course;
     }
 
-    const lmpType = getStr(row, ['LMP', 'lmpType']);
+    const lmpType = getStr(row, ['LMP', 'LMP Type', 'lmpType']);
     if (lmpType) parsed.lmpType = lmpType;
+    const academicLmpType = getStr(row, ['Academic LMP', 'Academic LMP Type', 'academicLmpType']);
+    if (academicLmpType) parsed.academicLmpType = academicLmpType;
     const rank = getStr(row, ['Rank']);
     if (rank) parsed.rank = rank as TraineeRank;
-    const callsign = getStr(row, ['Callsign', 'callsign']);
-    if (callsign) parsed.callsignNumber = parseInt(callsign, 10) || undefined;
+    const callsign = getStr(row, ['Callsign', 'Trainee Callsign', 'traineeCallsign', 'callsign']);
+    if (callsign) parsed.traineeCallsign = callsign;
     const serviceRaw = getStr(row, ['Service']);
     if (serviceRaw) {
         parsed.service = serviceRaw.trim();
@@ -139,9 +149,9 @@ const parseTraineeRow = (row: any): Partial<Trainee> | null => {
     const email = getStr(row, ['Email']);
     if (email) parsed.email = email;
     const primary = getStr(row, ['Primary Instructor', 'primaryInstructor']);
-    if (primary) parsed.primaryInstructor = primary.split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (primary) parsed.primaryInstructor = parsePersonList(primary);
     const secondary = getStr(row, ['Secondary Instructor', 'secondaryInstructor']);
-    if (secondary) parsed.secondaryInstructor = secondary.split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (secondary) parsed.secondaryInstructor = parsePersonList(secondary);
     const permissions = getStr(row, ['Permissions', 'permissions']);
     if (permissions) parsed.permissions = permissions.split(/\r?\n/).map((p: string) => p.trim()).filter(Boolean);
     const isPaused = getValueFromRow(row, ['Is Paused', 'isPaused']);
@@ -414,7 +424,15 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         const parsedRows = rows.map(parseTraineeRow);
         const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
         const skipped = rows.length - validRows.length;
-        const newTrainees = validRows.map(trainee => ({ ...trainee, course, fullName: `${trainee.name} – ${course}` } as Trainee));
+        const uploadedCourses = Array.from(new Set(validRows.map(trainee => String(trainee.course || '').trim()).filter(Boolean)));
+        const mismatchedCourses = uploadedCourses.filter(uploadedCourse => uploadedCourse !== course);
+        if (mismatchedCourses.length > 0) {
+            throw new Error(
+                `This file contains trainee rows for ${mismatchedCourses.join(', ')}, but you selected ${course}. ` +
+                `The upload has been stopped so trainees are not moved into the wrong course. Select ${mismatchedCourses[0]} or use a file whose Course column is ${course}.`
+            );
+        }
+        const newTrainees = validRows.map(trainee => ({ ...trainee, uploadedCourse: trainee.course || '', course, fullName: `${trainee.name} – ${course}` } as Trainee & { uploadedCourse?: string }));
         const activationRequested = issueAccountActivations && canIssueAccountActivations;
 
         if (activationRequested) {

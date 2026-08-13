@@ -6516,6 +6516,27 @@ app.post('/api/trainees/bulk', async (req, res) => {
     let skippedCount = 0;
     const results = [];
     const seenUploadIdNumbers = new Set();
+    const selectedCourse = String(course || '').trim();
+
+    if (replaceAll && selectedCourse) {
+      const uploadedCourseNames = [...new Set(
+        trainees
+          .map(t => String(t.uploadedCourse || t.originalCourse || '').trim())
+          .filter(Boolean)
+      )];
+      const mismatchedUploadedCourses = uploadedCourseNames.filter(uploadedCourse => uploadedCourse !== selectedCourse);
+      if (mismatchedUploadedCourses.length > 0) {
+        return res.status(409).json({
+          error: 'Uploaded course does not match selected course',
+          message: `This file contains trainee rows for ${mismatchedUploadedCourses.join(', ')}, but the selected replacement course is ${selectedCourse}. The upload was stopped so trainees are not moved into the wrong course.`,
+          details: [
+            `Selected course: ${selectedCourse}`,
+            `Course values found in uploaded rows: ${uploadedCourseNames.join(', ') || 'none'}`,
+            'Open the correct spreadsheet or select the course shown in the file before replacing course data.',
+          ],
+        });
+      }
+    }
 
     // If replaceAll and course is specified, mark all existing trainees in that course as inactive first
     if (replaceAll && course) {
