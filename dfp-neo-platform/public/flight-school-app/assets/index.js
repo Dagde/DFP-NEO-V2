@@ -21224,7 +21224,6 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
         date: item.date,
         instructorName: item.instructor,
         overallGrade: item.score === 5 ? "No Grade" : item.score,
-        // Type cast to Pt051OverallGrade
         overallResult: item.score === 5 ? "P" : null,
         dcoResult: item.score === 5 ? "DCO" : void 0,
         overallComments: item.notes,

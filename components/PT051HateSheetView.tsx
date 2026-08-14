@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trainee } from '../types';
 import { Score } from '../types';
-import { Pt051Assessment } from '../types';
+import { TrainingReportAssessment } from '../types';
 import {
   DEFAULT_TRAINING_REPORT_TERMINOLOGY,
   getTrainingReportCompletionResultOptions,
@@ -15,7 +15,7 @@ import {
 interface TrainingReportHateSheetViewProps {
   trainee: Trainee;
   lmpScores: Score[];
-  assessments: Pt051Assessment[];
+  assessments: TrainingReportAssessment[];
   onSelectLmpScore: (score: Score) => void;
   reportName?: string;
   trainingReportTerminology?: Partial<TrainingReportTerminology> | null;

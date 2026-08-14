@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Pt051Assessment, Trainee, SyllabusItemDetail } from '../types';
+import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, TrainingReportAssessment, Trainee, SyllabusItemDetail } from '../types';
 import TafWeatherWidget from './TafWeatherWidget';
 import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
@@ -15,8 +15,8 @@ interface MyDashboardProps {
     onSelectMyCurrency: () => void;
     onSelectMySct: () => void;
     sctRequests: SctRequest[];
-    pt051Assessments: Map<string, Pt051Assessment>;
-    onSelectPt051: (assessment: Pt051Assessment) => void;
+    pt051Assessments: Map<string, TrainingReportAssessment>;
+    onSelectPt051: (assessment: TrainingReportAssessment) => void;
     syllabusDetails?: SyllabusItemDetail[];
     suppressedPt051EventIds?: string[];
     trainingReportsToComplete?: Array<{ report: AirCombatTrainingReport; staff: Instructor }>;
@@ -823,7 +823,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     scores: [],
                     isCompleted: false,
                     groundSchoolAssessment: { isAssessment: false },
-                } as Pt051Assessment;
+                } as TrainingReportAssessment;
             });
         return [...storedIncomplete, ...dueScheduledReports]
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

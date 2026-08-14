@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trainee, Score, Pt051Assessment, SyllabusItemDetail } from '../types';
+import { Trainee, Score, TrainingReportAssessment, SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
@@ -32,13 +32,13 @@ const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
 interface HateSheetViewProps {
     trainee: Trainee;
     lmpScores: Score[];
-    assessments: Pt051Assessment[];
+    assessments: TrainingReportAssessment[];
     pt051Events: any[];
     traineeLmp?: SyllabusItemDetail[];
     userProfile: any;
     refreshEvents?: () => void;
     onSelectLmpScore: (score: Score) => void;
-    onSelectPt051: (assessment: Pt051Assessment) => void;
+    onSelectPt051: (assessment: TrainingReportAssessment) => void;
     onBackToRoster: () => void;
     onInsertPt051: (insertIndex: number, targetDate: string) => void;
     canEditPt051?: boolean;
@@ -312,14 +312,14 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             }
 
             // Create a mock training report assessment for the LMP Score
-            const mockAssessment: Pt051Assessment = {
+            const mockAssessment: TrainingReportAssessment = {
                 id: `mock-${item.event}`,
                 traineeFullName: trainee.fullName,
                 eventId: `score-${trainee.id || trainee.fullName}-${item.event}-${item.date || 'undated'}`,
                 flightNumber: item.event,
                 date: item.date,
                 instructorName: item.instructor,
-                overallGrade: item.score === 5 ? 'No Grade' : item.score as any, // Type cast to Pt051OverallGrade
+                overallGrade: item.score === 5 ? 'No Grade' : item.score as any,
                 overallResult: item.score === 5 ? 'P' : null,
                 dcoResult: item.score === 5 ? 'DCO' : undefined,
                 overallComments: item.notes,
@@ -331,7 +331,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             };
             onSelectPt051(mockAssessment);
         } else if (item.type === 'Training Report') {
-            onSelectPt051(item as Pt051Assessment);
+            onSelectPt051(item as TrainingReportAssessment);
         }
     };
 

@@ -600,6 +600,13 @@ export interface Pt051Assessment {
   };
 }
 
+// Use these names in new UI and application code. The Pt051* types above remain
+// for compatibility with existing persisted records and API payloads.
+export type TrainingReportNumericGrade = Pt051NumericGrade;
+export type TrainingReportGrade = Pt051Grade;
+export type TrainingReportOverallGrade = Pt051OverallGrade;
+export type TrainingReportAssessment = Pt051Assessment;
+
 export interface Conflict {
   conflictingEvent: ScheduleEvent;
   newEvent: ScheduleEvent;
