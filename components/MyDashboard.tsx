@@ -224,6 +224,17 @@ const downloadDashboardJsonFile = (filename: string, payload: unknown): void => 
     URL.revokeObjectURL(url);
 };
 
+const getDashboardTrainingReportSuppressionIds = (report: AirCombatTrainingReport): string[] => {
+    const traineeName = String(report.traineeFullName || '').trim();
+    return [
+        report.id,
+        report.eventId,
+        report.eventCode,
+        report.eventId ? `dashboard-due-${report.eventId}-${normaliseDashboardContactName(traineeName)}` : '',
+        report.eventId ? `pt051-${report.eventId}-${traineeName}` : '',
+    ].map(value => String(value || '').trim()).filter(Boolean);
+};
+
 const toDashboardContactDisplayName = (name: string, rank?: string): string => {
     const [lastName, firstName] = String(name || '').split(',').map(part => part.trim());
     const displayName = firstName ? `${lastName}, ${firstName}` : name;
@@ -818,6 +829,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [events, pt051Assessments, suppressedPt051EventIds, syllabusDetails, userName]);
 
+    const visibleTrainingReportsToComplete = React.useMemo(() => {
+        const suppressedEventIds = new Set(suppressedPt051EventIds.map(value => String(value || '').trim()).filter(Boolean));
+        if (suppressedEventIds.size === 0) return trainingReportsToComplete;
+        return trainingReportsToComplete.filter(entry => (
+            !getDashboardTrainingReportSuppressionIds(entry.report).some(candidateId => suppressedEventIds.has(candidateId))
+        ));
+    }, [suppressedPt051EventIds, trainingReportsToComplete]);
+
     const downloadReportCompletionDiagnostics = () => {
         const fullUserName = toDashboardSurnameFirstName(userName);
         const fullUserKey = normaliseDashboardContactName(fullUserName);
@@ -885,13 +904,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 };
             });
         const staffQueueRows = trainingReportsToComplete.map(entry => {
-            const candidateIds = [
-                entry.report.id,
-                entry.report.eventId,
-                entry.report.eventCode,
-                `dashboard-due-${entry.report.eventId}-${normaliseDashboardContactName((entry.report as any).traineeFullName)}`,
-                `pt051-${entry.report.eventId}-${(entry.report as any).traineeFullName || ''}`,
-            ].map(value => String(value || '').trim()).filter(Boolean);
+            const candidateIds = getDashboardTrainingReportSuppressionIds(entry.report);
             return {
                 source: 'trainingReportsToComplete',
                 report: {
@@ -918,7 +931,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 },
                 candidateIds,
                 suppressedMatches: candidateIds.filter(candidateId => suppressedEventIds.has(candidateId)),
-                visibleInReportsToComplete: true,
+                visibleInReportsToComplete: visibleTrainingReportsToComplete.some(visibleEntry => visibleEntry.report.id === entry.report.id),
             };
         });
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -932,7 +945,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             },
             counts: {
                 visiblePt051Reports: incompletePt051s.length,
-                visibleStaffTrainingReports: trainingReportsToComplete.length,
+                visibleStaffTrainingReports: visibleTrainingReportsToComplete.length,
+                rawStaffTrainingReports: trainingReportsToComplete.length,
                 pt051AssessmentMapEntries: pt051Assessments.size,
                 scheduledEventsForDashboard: events.length,
                 suppressedIds: suppressedPt051EventIds.length,
@@ -1312,7 +1326,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                             Diag
                         </button>
                     </div>
-                    {incompletePt051s.length > 0 || trainingReportsToComplete.length > 0 ? (
+                    {incompletePt051s.length > 0 || visibleTrainingReportsToComplete.length > 0 ? (
                         <ul className="space-y-2">
                             {incompletePt051s.map(assessment => (
                                 <li key={assessment.id} className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors">
@@ -1335,7 +1349,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     </button>
                                 </li>
                             ))}
-                            {trainingReportsToComplete.map(entry => (
+                            {visibleTrainingReportsToComplete.map(entry => (
                                 <li key={entry.report.id} className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors">
                                     <div className="flex items-center gap-2">
                                     <button
