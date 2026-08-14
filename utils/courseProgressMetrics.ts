@@ -1,4 +1,4 @@
-import { Course, Pt051Assessment, SyllabusItemDetail, Trainee } from '../types';
+import { Course, SyllabusItemDetail, Trainee, TrainingReportAssessment } from '../types';
 
 export interface CourseRiskThresholds {
     onTrackMax: number;
@@ -50,15 +50,15 @@ const getEventCode = (item: SyllabusItemDetail) => (item.code || item.id || '').
 
 const normaliseName = (name: string) => name.replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, '').trim();
 
-const getAssessmentDate = (assessment: Pt051Assessment) => {
+const getAssessmentDate = (assessment: TrainingReportAssessment) => {
     if (!assessment.date) return null;
     const date = new Date(`${assessment.date}T00:00:00`);
     return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const getAssessmentEventCode = (assessment: Pt051Assessment) => (assessment.flightNumber || assessment.eventId || '').trim();
+const getAssessmentEventCode = (assessment: TrainingReportAssessment) => (assessment.flightNumber || assessment.eventId || '').trim();
 
-const isCompletedPt051 = (assessment: Pt051Assessment) => {
+const isCompletedTrainingReport = (assessment: TrainingReportAssessment) => {
     return assessment.isCompleted !== false && typeof assessment.overallGrade === 'number';
 };
 
@@ -66,13 +66,13 @@ const getCompletedEventDates = (
     trainee: Trainee,
     validEventCodes: Set<string>,
     eventIdToCode: Map<string, string>,
-    pt051Assessments: Map<string, Pt051Assessment>
+    pt051Assessments: Map<string, TrainingReportAssessment>
 ) => {
     const traineeNames = new Set([trainee.fullName, trainee.name, normaliseName(trainee.fullName), normaliseName(trainee.name)].filter(Boolean));
     const completed = new Map<string, Date>();
 
     pt051Assessments.forEach(assessment => {
-        if (!isCompletedPt051(assessment)) return;
+        if (!isCompletedTrainingReport(assessment)) return;
         if (!traineeNames.has(assessment.traineeFullName) && !traineeNames.has(normaliseName(assessment.traineeFullName))) return;
 
         const rawEventCode = getAssessmentEventCode(assessment);
@@ -114,7 +114,7 @@ export const calculateCourseProgressMetric = (
     course: Course,
     allTrainees: Trainee[],
     traineeLMPs: Map<string, SyllabusItemDetail[]>,
-    pt051Assessments: Map<string, Pt051Assessment>,
+    pt051Assessments: Map<string, TrainingReportAssessment>,
     thresholds: CourseRiskThresholds
 ): CourseProgressMetric => {
     const courseTrainees = allTrainees.filter(trainee => trainee.course === course.name && !trainee.isPaused);

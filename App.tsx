@@ -5041,7 +5041,7 @@ import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from
 import { mergeWithInitialCurrencies } from './data/currencies';
 
 // --- TRAINING REPORT STRUCTURE ---
-const PT051_STRUCTURE = [
+const TRAINING_REPORT_STRUCTURE = [
   { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
   { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
   { category: 'Takeoff', elements: ['Stationary'] },
@@ -5053,7 +5053,7 @@ const PT051_STRUCTURE = [
   { category: 'Domestics', elements: ['Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'] },
 ];
 
-const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
+const ALL_ELEMENTS = TRAINING_REPORT_STRUCTURE.flatMap(cat => cat.elements);
 
 const stripCourseDetailsFromLoginName = (value?: string | null): string => {
     return String(value || '')

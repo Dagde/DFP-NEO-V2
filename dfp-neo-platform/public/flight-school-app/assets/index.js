@@ -21060,7 +21060,7 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
     }
   ) });
 };
-const TRAINING_REPORT_STRUCTURE$1 = [
+const TRAINING_REPORT_STRUCTURE$2 = [
   { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
   { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
   { category: "Takeoff", elements: ["Stationary"] },
@@ -21071,7 +21071,7 @@ const TRAINING_REPORT_STRUCTURE$1 = [
   { category: "Landing", elements: ["Landing", "Crosswind"] },
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
-const ALL_ELEMENTS$1 = TRAINING_REPORT_STRUCTURE$1.flatMap((cat) => cat.elements);
+const ALL_ELEMENTS$1 = TRAINING_REPORT_STRUCTURE$2.flatMap((cat) => cat.elements);
 const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, instructorLabel: instructorLabel2 = "Instructor" }) => {
   const { isFrozen } = useSystemFreeze();
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
@@ -22698,7 +22698,7 @@ const formatTrainingReportInstructorDisplay = (instructors, value) => {
   if (matchedInstructor) return formatTrainingReportInstructorLabel(matchedInstructor);
   return stripReportInstructorMetadata(value);
 };
-const TRAINING_REPORT_STRUCTURE = [
+const TRAINING_REPORT_STRUCTURE$1 = [
   { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
   { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
   { category: "Takeoff", elements: ["Stationary"] },
@@ -22709,7 +22709,7 @@ const TRAINING_REPORT_STRUCTURE = [
   { category: "Landing", elements: ["Landing", "Crosswind"] },
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
-TRAINING_REPORT_STRUCTURE.flatMap((cat) => cat.elements);
+TRAINING_REPORT_STRUCTURE$1.flatMap((cat) => cat.elements);
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY$1 = "__scoringMatrixElementGroups";
 const SCORING_MATRIX_ELEMENT_LIST_KEY$2 = "__scoringMatrixElements";
 const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST", "Notes"];
@@ -22795,13 +22795,13 @@ const normaliseAssessedElements$1 = (elements, phraseBank) => {
   });
   return selected;
 };
-const getDefaultElementGroup = (element) => TRAINING_REPORT_STRUCTURE.find(
+const getDefaultElementGroup = (element) => TRAINING_REPORT_STRUCTURE$1.find(
   (category) => category.elements.some((candidate) => candidate.toLowerCase() === element.toLowerCase())
 )?.category || "Additional Elements";
 const buildAssessmentStructure = (elements, phraseBank) => {
   const selectedElements = normaliseAssessedElements$1(elements, phraseBank);
   const { groups: configuredGroups, hasExplicitGroups } = getConfiguredReportElementGroups(phraseBank);
-  const categoryOrder = hasExplicitGroups ? [] : TRAINING_REPORT_STRUCTURE.map((category) => category.category);
+  const categoryOrder = hasExplicitGroups ? [] : TRAINING_REPORT_STRUCTURE$1.map((category) => category.category);
   const grouped = /* @__PURE__ */ new Map();
   selectedElements.forEach((element) => {
     const configuredGroup = String(configuredGroups[element] || "").trim();
@@ -85952,14 +85952,14 @@ const getAssessmentDate = (assessment) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 const getAssessmentEventCode = (assessment) => (assessment.flightNumber || assessment.eventId || "").trim();
-const isCompletedPt051 = (assessment) => {
+const isCompletedTrainingReport = (assessment) => {
   return assessment.isCompleted !== false && typeof assessment.overallGrade === "number";
 };
 const getCompletedEventDates = (trainee, validEventCodes, eventIdToCode, pt051Assessments) => {
   const traineeNames = new Set([trainee.fullName, trainee.name, normaliseName(trainee.fullName), normaliseName(trainee.name)].filter(Boolean));
   const completed = /* @__PURE__ */ new Map();
   pt051Assessments.forEach((assessment) => {
-    if (!isCompletedPt051(assessment)) return;
+    if (!isCompletedTrainingReport(assessment)) return;
     if (!traineeNames.has(assessment.traineeFullName) && !traineeNames.has(normaliseName(assessment.traineeFullName))) return;
     const rawEventCode = getAssessmentEventCode(assessment);
     const eventCode2 = eventIdToCode.get(rawEventCode) || rawEventCode;
@@ -97205,7 +97205,7 @@ const personMatchesConfiguredLocation = (platformConfig, person, selectedLocatio
   }
   return !personLocation;
 };
-const PT051_STRUCTURE = [
+const TRAINING_REPORT_STRUCTURE = [
   { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
   { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
   { category: "Takeoff", elements: ["Stationary"] },
@@ -97216,7 +97216,7 @@ const PT051_STRUCTURE = [
   { category: "Landing", elements: ["Landing", "Crosswind"] },
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
-const ALL_ELEMENTS = PT051_STRUCTURE.flatMap((cat) => cat.elements);
+const ALL_ELEMENTS = TRAINING_REPORT_STRUCTURE.flatMap((cat) => cat.elements);
 const stripCourseDetailsFromLoginName = (value) => {
   return String(value || "").replace(/\s*[-–—]\s*(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, "").replace(/\s+\b(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, "").replace(/\s{2,}/g, " ").trim();
 };

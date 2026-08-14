@@ -12797,7 +12797,7 @@ app.delete('/api/cancellation-codes/:code', async (req, res) => {
 // HISTORICAL DATA PERSISTENCE ENDPOINTS
 // ============================================================
 
-// GET /api/historical-data - Load persisted publishedSchedules + pt051Assessments
+// GET /api/historical-data - Load persisted published schedules and Training Reports.
 app.get('/api/historical-data', async (req, res) => {
   try {
     if (!validateSeedEndpointSecret(req, res)) return;
@@ -12809,7 +12809,7 @@ app.get('/api/historical-data', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Load pt051Assessments backup
+    // Compatibility backup type retained for historical Training Reports.
     const pt051Backup = await db.dataBackup.findFirst({
       where: { type: 'historical_pt051_assessments' },
       orderBy: { createdAt: 'desc' }
@@ -12832,7 +12832,7 @@ app.get('/api/historical-data', async (req, res) => {
   }
 });
 
-// POST /api/historical-data/save - Save publishedSchedules + pt051Assessments
+// POST /api/historical-data/save - Save published schedules and Training Reports.
 app.post('/api/historical-data/save', async (req, res) => {
   try {
     if (!validateSeedEndpointSecret(req, res)) return;

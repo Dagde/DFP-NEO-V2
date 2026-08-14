@@ -345,7 +345,7 @@ model DailySnapshot {
   scheduleEvents   Json     // All published schedule events for that date
   staffEvents      Json     // Staff/instructor events filtered from schedule
   traineeEvents    Json     // Trainee events filtered from schedule
-  pt051Assessments Json     // Full PT-051 assessment records as of that date
+  pt051Assessments Json     // Legacy Training Report records as of that date
   traineeProfiles  Json     // Trainee profiles with performance history
   staffProfiles    Json     @default("[]") // Staff assigned to the unit/location as of that snapshot date
   lmpCompletedIds  Json     // { traineeFullName: string[] } - completedEventIds per trainee
