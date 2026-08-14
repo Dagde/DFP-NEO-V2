@@ -64,6 +64,10 @@ import {
     getUnitTrainingReportTerminology,
     type TrainingReportTemplate,
 } from './utils/trainingReportTerminology';
+import {
+    loadSuppressedTrainingReportEventIds,
+    saveSuppressedTrainingReportEventIds,
+} from './utils/trainingReportCompatibility';
 import { getSctTerminology } from './utils/sctTerminology';
 import { buildCompactPersonNameResolver, formatPersonOptionLabel, getPersonDisplayName, getPersonIdentityDedupeKey, normalisePersonName, type PersonIdentityRecord } from './utils/personIdentity';
 import {
@@ -29003,12 +29007,7 @@ const App: React.FC = () => {
     const [trainingReportRecentLogEvents, setTrainingReportRecentLogEvents] = useState<ScheduleEvent[]>([]);
     const [loadedPt051Keys, setLoadedPt051Keys] = useState<Set<string>>(new Set());
     const [suppressedDashboardPt051EventIds, setSuppressedDashboardPt051EventIds] = useState<string[]>(() => {
-        try {
-            const parsed = JSON.parse(localStorage.getItem('dfp_dashboard_suppressed_pt051_event_ids_v1') || '[]');
-            return Array.isArray(parsed) ? parsed.map(value => String(value || '').trim()).filter(Boolean) : [];
-        } catch {
-            return [];
-        }
+        return loadSuppressedTrainingReportEventIds();
     });
     const suppressDeletedPt051Report = React.useCallback((candidateIds: Array<string | number | null | undefined>) => {
         const cleanedCandidateIds = candidateIds
@@ -29018,11 +29017,7 @@ const App: React.FC = () => {
         setSuppressedDashboardPt051EventIds(prev => {
             const updated = Array.from(new Set([...prev, ...cleanedCandidateIds]));
             if (updated.length === prev.length) return prev;
-            try {
-                localStorage.setItem('dfp_dashboard_suppressed_pt051_event_ids_v1', JSON.stringify(updated));
-            } catch {
-                // Best effort only; state still suppresses regeneration for this session.
-            }
+            saveSuppressedTrainingReportEventIds(updated);
             return updated;
         });
     }, []);
@@ -29034,11 +29029,7 @@ const App: React.FC = () => {
         setSuppressedDashboardPt051EventIds(prev => {
             const updated = prev.filter(value => !cleanedCandidateIds.has(String(value || '').trim()));
             if (updated.length === prev.length) return prev;
-            try {
-                localStorage.setItem('dfp_dashboard_suppressed_pt051_event_ids_v1', JSON.stringify(updated));
-            } catch {
-                // Best effort only; state still restores visibility for this session.
-            }
+            saveSuppressedTrainingReportEventIds(updated);
             return updated;
         });
     }, []);

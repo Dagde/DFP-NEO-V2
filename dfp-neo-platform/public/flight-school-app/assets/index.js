@@ -4920,6 +4920,28 @@ const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) =
   const source = hasUnitPhraseBank ? unit?.settings?.trainingReportPhraseBank : hasOrganisationPhraseBank ? organisationPhraseBank : fallbackPhraseBank || DEFAULT_PHRASE_BANK;
   return JSON.parse(JSON.stringify(source || {}));
 };
+const LEGACY_SUPPRESSED_TRAINING_REPORT_EVENT_IDS_STORAGE_KEY = "dfp_dashboard_suppressed_pt051_event_ids_v1";
+const normaliseSuppressedEventIds = (value) => Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
+const loadSuppressedTrainingReportEventIds = () => {
+  if (typeof window === "undefined") return [];
+  try {
+    return normaliseSuppressedEventIds(
+      JSON.parse(window.localStorage.getItem(LEGACY_SUPPRESSED_TRAINING_REPORT_EVENT_IDS_STORAGE_KEY) || "[]")
+    );
+  } catch {
+    return [];
+  }
+};
+const saveSuppressedTrainingReportEventIds = (eventIds) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      LEGACY_SUPPRESSED_TRAINING_REPORT_EVENT_IDS_STORAGE_KEY,
+      JSON.stringify(normaliseSuppressedEventIds(eventIds))
+    );
+  } catch {
+  }
+};
 const DEFAULT_SCT_TERMINOLOGY$1 = {
   shortLabel: "ContT",
   longLabel: "Continuation Training"
@@ -116696,12 +116718,7 @@ ${"=".repeat(60)}`);
   const [trainingReportRecentLogEvents, setTrainingReportRecentLogEvents] = reactExports.useState([]);
   const [loadedPt051Keys, setLoadedPt051Keys] = reactExports.useState(/* @__PURE__ */ new Set());
   const [suppressedDashboardPt051EventIds, setSuppressedDashboardPt051EventIds] = reactExports.useState(() => {
-    try {
-      const parsed = JSON.parse(localStorage.getItem("dfp_dashboard_suppressed_pt051_event_ids_v1") || "[]");
-      return Array.isArray(parsed) ? parsed.map((value) => String(value || "").trim()).filter(Boolean) : [];
-    } catch {
-      return [];
-    }
+    return loadSuppressedTrainingReportEventIds();
   });
   const suppressDeletedPt051Report = React.useCallback((candidateIds) => {
     const cleanedCandidateIds = candidateIds.map((value) => String(value || "").trim()).filter(Boolean);
@@ -116709,10 +116726,7 @@ ${"=".repeat(60)}`);
     setSuppressedDashboardPt051EventIds((prev) => {
       const updated = Array.from(/* @__PURE__ */ new Set([...prev, ...cleanedCandidateIds]));
       if (updated.length === prev.length) return prev;
-      try {
-        localStorage.setItem("dfp_dashboard_suppressed_pt051_event_ids_v1", JSON.stringify(updated));
-      } catch {
-      }
+      saveSuppressedTrainingReportEventIds(updated);
       return updated;
     });
   }, []);
@@ -116722,10 +116736,7 @@ ${"=".repeat(60)}`);
     setSuppressedDashboardPt051EventIds((prev) => {
       const updated = prev.filter((value) => !cleanedCandidateIds.has(String(value || "").trim()));
       if (updated.length === prev.length) return prev;
-      try {
-        localStorage.setItem("dfp_dashboard_suppressed_pt051_event_ids_v1", JSON.stringify(updated));
-      } catch {
-      }
+      saveSuppressedTrainingReportEventIds(updated);
       return updated;
     });
   }, []);
