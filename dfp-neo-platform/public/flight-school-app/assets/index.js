@@ -38894,6 +38894,17 @@ const MyDashboard = ({
     if (suppressedEventIds.size === 0) return trainingReportsToComplete;
     return trainingReportsToComplete.filter((entry) => !getDashboardTrainingReportSuppressionIds(entry.report).some((candidateId) => suppressedEventIds.has(candidateId)));
   }, [suppressedPt051EventIds, trainingReportsToComplete]);
+  const visiblePt051ReportsToComplete = React.useMemo(() => {
+    if (visibleTrainingReportsToComplete.length === 0) return incompletePt051s;
+    const staffReportEventIds = new Set(visibleTrainingReportsToComplete.map((entry) => String(entry.report.eventId || "").trim()).filter(Boolean));
+    const staffReportCodeDates = new Set(visibleTrainingReportsToComplete.map((entry) => `${String(entry.report.eventCode || "").trim().toUpperCase()}::${String(entry.report.date || "").trim()}`).filter((value) => !value.startsWith("::") && !value.endsWith("::")));
+    return incompletePt051s.filter((assessment) => {
+      const eventId = String(assessment.eventId || "").trim();
+      if (eventId && staffReportEventIds.has(eventId)) return false;
+      const codeDate = `${String(assessment.flightNumber || "").trim().toUpperCase()}::${String(assessment.date || "").trim()}`;
+      return !staffReportCodeDates.has(codeDate);
+    });
+  }, [incompletePt051s, visibleTrainingReportsToComplete]);
   const downloadReportCompletionDiagnostics = () => {
     const fullUserName = toDashboardSurnameFirstName(userName);
     const fullUserKey = normaliseDashboardContactName(fullUserName);
@@ -38919,7 +38930,7 @@ const MyDashboard = ({
         instructorMatchesCurrentUser: normaliseDashboardContactName(assessment.instructorName) === fullUserKey,
         candidateIds,
         suppressedMatches: candidateIds.filter((candidateId) => suppressedEventIds.has(candidateId)),
-        visibleInReportsToComplete: incompletePt051s.some((item) => item.id === assessment.id || item.eventId === assessment.eventId)
+        visibleInReportsToComplete: visiblePt051ReportsToComplete.some((item) => item.id === assessment.id || item.eventId === assessment.eventId)
       };
     });
     const scheduleRows = events.filter((event) => !isDashboardStandbyEvent(event)).map((event) => {
@@ -38999,7 +39010,8 @@ const MyDashboard = ({
         fullUserKey
       },
       counts: {
-        visiblePt051Reports: incompletePt051s.length,
+        visiblePt051Reports: visiblePt051ReportsToComplete.length,
+        rawPt051Reports: incompletePt051s.length,
         visibleStaffTrainingReports: visibleTrainingReportsToComplete.length,
         rawStaffTrainingReports: trainingReportsToComplete.length,
         pt051AssessmentMapEntries: pt051Assessments.size,
@@ -39007,7 +39019,7 @@ const MyDashboard = ({
         suppressedIds: suppressedPt051EventIds.length
       },
       suppressedPt051EventIds,
-      visiblePt051Reports: incompletePt051s.map((item) => ({
+      visiblePt051Reports: visiblePt051ReportsToComplete.map((item) => ({
         id: item.id,
         eventId: item.eventId,
         flightNumber: item.flightNumber,
@@ -39344,8 +39356,8 @@ const MyDashboard = ({
             }
           )
         ] }),
-        incompletePt051s.length > 0 || visibleTrainingReportsToComplete.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-2", children: [
-          incompletePt051s.map((assessment) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        visiblePt051ReportsToComplete.length > 0 || visibleTrainingReportsToComplete.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-2", children: [
+          visiblePt051ReportsToComplete.map((assessment) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: () => onSelectPt051(assessment),
