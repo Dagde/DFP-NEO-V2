@@ -46840,26 +46840,20 @@ appliedUpdates.forEach(update => {
                             }
                             logRoutineAppDebug('🗑️ App.tsx: onDeleteAssessment called with ID:', assessmentId);
                             const deleteEventId = eventForPt051.id || existingAssessment?.eventId || assessmentId;
+                            const dashboardDueNameKey = String(selectedTraineeForHateSheet.fullName || '')
+                                .replace(/[‐‑‒–—]/g, '-')
+                                .replace(/\s+/g, ' ')
+                                .trim()
+                                .toLowerCase();
                             const deleteCandidateIds = Array.from(new Set([
                                 eventForPt051.id,
                                 existingAssessment?.eventId,
                                 existingAssessment?.id,
                                 assessmentId,
                                 deleteEventId,
+                                `pt051-${deleteEventId}-${selectedTraineeForHateSheet.fullName}`,
+                                `dashboard-due-${deleteEventId}-${dashboardDueNameKey}`,
                             ].map(value => String(value || '').trim()).filter(Boolean)));
-                            const suppressDashboardDueReport = () => {
-                                if (deleteCandidateIds.length === 0) return;
-                                setSuppressedDashboardPt051EventIds(prev => {
-                                    const updated = Array.from(new Set([...prev, ...deleteCandidateIds]));
-                                    if (updated.length === prev.length) return prev;
-                                    try {
-                                        localStorage.setItem('dfp_dashboard_suppressed_pt051_event_ids_v1', JSON.stringify(updated));
-                                    } catch {
-                                        // Best effort only; state still suppresses the row for this session.
-                                    }
-                                    return updated;
-                                });
-                            };
                             const apiBase = getApiBaseUrl();
                             const response = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(deleteEventId)}`, {
                                 method: 'DELETE',
@@ -46878,7 +46872,7 @@ appliedUpdates.forEach(update => {
                                 }
                                 logRoutineAppDebug(`[Training Report] Suppressing unsaved dashboard due report ${deleteEventId} after database returned 404.`);
                             }
-                            suppressDashboardDueReport();
+                            suppressDeletedPt051Report(deleteCandidateIds);
 
                             // Find and delete the training report assessment from local state after the database delete succeeds.
                             const assessmentKey = `pt051-${deleteEventId}-${selectedTraineeForHateSheet.fullName}`;
