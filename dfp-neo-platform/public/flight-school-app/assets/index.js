@@ -38824,14 +38824,15 @@ const MyDashboard = ({
       (assessment) => !assessment.isCompleted && normaliseDashboardContactName(assessment.instructorName) === fullUserKey
     );
     const dueScheduledReports = events.filter((event) => !isDashboardStandbyEvent(event)).map((event) => ({ event, detail: findDashboardSyllabusDetail(event, syllabusDetails) })).filter(({ event, detail }) => {
-      if (suppressedEventIds.has(event.id)) return false;
+      const traineeName = String(event.student || event.traineeFullName || "").trim();
+      if (!traineeName) return false;
+      const derivedAssessmentId = `dashboard-due-${event.id}-${normaliseDashboardContactName(traineeName)}`;
+      if (suppressedEventIds.has(event.id) || suppressedEventIds.has(derivedAssessmentId)) return false;
       if (!isDashboardGroundOrProceduralEvent(event, detail)) return false;
       if (detail && detail.assessmentRequired !== true) return false;
       if (!detail && event.assessmentRequired !== true) return false;
       const assignedInstructor = normaliseDashboardContactName(event.instructor || event.pilot || event.fixedCrewPic);
       if (!assignedInstructor || assignedInstructor !== fullUserKey) return false;
-      const traineeName = String(event.student || event.traineeFullName || "").trim();
-      if (!traineeName) return false;
       const finishTime = getDashboardEventFinishTime(event);
       if (!finishTime || finishTime.getTime() > Date.now()) return false;
       const assessmentKey = `${event.id}::${normaliseDashboardContactName(traineeName)}`;
@@ -131177,13 +131178,19 @@ ${error instanceof Error ? error.message : String(error)}`,
                   return;
                 }
                 logRoutineAppDebug("🗑️ App.tsx: onDeleteAssessment called with ID:", assessmentId);
-                const deleteEventId = existingAssessment?.eventId || eventForPt051.id || assessmentId;
+                const deleteEventId = eventForPt051.id || existingAssessment?.eventId || assessmentId;
+                const deleteCandidateIds = Array.from(new Set([
+                  eventForPt051.id,
+                  existingAssessment?.eventId,
+                  existingAssessment?.id,
+                  assessmentId,
+                  deleteEventId
+                ].map((value) => String(value || "").trim()).filter(Boolean)));
                 const suppressDashboardDueReport = () => {
-                  const nextEventId = String(deleteEventId || "").trim();
-                  if (!nextEventId) return;
+                  if (deleteCandidateIds.length === 0) return;
                   setSuppressedDashboardPt051EventIds((prev) => {
-                    if (prev.includes(nextEventId)) return prev;
-                    const updated = [...prev, nextEventId];
+                    const updated = Array.from(/* @__PURE__ */ new Set([...prev, ...deleteCandidateIds]));
+                    if (updated.length === prev.length) return prev;
                     try {
                       localStorage.setItem("dfp_dashboard_suppressed_pt051_event_ids_v1", JSON.stringify(updated));
                     } catch {
@@ -131216,7 +131223,7 @@ ${errorText || `HTTP ${response.status}`}`,
                 const updatedAssessments = new Map(pt051Assessments);
                 const deleted = updatedAssessments.delete(assessmentKey2);
                 Array.from(updatedAssessments.entries()).forEach(([key, assessment]) => {
-                  if (assessment.traineeFullName === selectedTraineeForHateSheet.fullName && (assessment.eventId === deleteEventId || assessment.id === assessmentId)) {
+                  if (assessment.traineeFullName === selectedTraineeForHateSheet.fullName && (deleteCandidateIds.includes(String(assessment.eventId || "").trim()) || deleteCandidateIds.includes(String(assessment.id || "").trim()))) {
                     updatedAssessments.delete(key);
                   }
                 });

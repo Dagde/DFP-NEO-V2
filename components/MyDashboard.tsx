@@ -758,14 +758,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .filter(event => !isDashboardStandbyEvent(event))
             .map(event => ({ event, detail: findDashboardSyllabusDetail(event, syllabusDetails) }))
             .filter(({ event, detail }) => {
-                if (suppressedEventIds.has(event.id)) return false;
+                const traineeName = String(event.student || (event as any).traineeFullName || '').trim();
+                if (!traineeName) return false;
+                const derivedAssessmentId = `dashboard-due-${event.id}-${normaliseDashboardContactName(traineeName)}`;
+                if (suppressedEventIds.has(event.id) || suppressedEventIds.has(derivedAssessmentId)) return false;
                 if (!isDashboardGroundOrProceduralEvent(event, detail)) return false;
                 if (detail && detail.assessmentRequired !== true) return false;
                 if (!detail && (event as any).assessmentRequired !== true) return false;
                 const assignedInstructor = normaliseDashboardContactName(event.instructor || event.pilot || event.fixedCrewPic);
                 if (!assignedInstructor || assignedInstructor !== fullUserKey) return false;
-                const traineeName = String(event.student || (event as any).traineeFullName || '').trim();
-                if (!traineeName) return false;
                 const finishTime = getDashboardEventFinishTime(event);
                 if (!finishTime || finishTime.getTime() > Date.now()) return false;
                 const assessmentKey = `${event.id}::${normaliseDashboardContactName(traineeName)}`;

@@ -46768,13 +46768,19 @@ appliedUpdates.forEach(update => {
                                 return;
                             }
                             logRoutineAppDebug('🗑️ App.tsx: onDeleteAssessment called with ID:', assessmentId);
-                            const deleteEventId = existingAssessment?.eventId || eventForPt051.id || assessmentId;
+                            const deleteEventId = eventForPt051.id || existingAssessment?.eventId || assessmentId;
+                            const deleteCandidateIds = Array.from(new Set([
+                                eventForPt051.id,
+                                existingAssessment?.eventId,
+                                existingAssessment?.id,
+                                assessmentId,
+                                deleteEventId,
+                            ].map(value => String(value || '').trim()).filter(Boolean)));
                             const suppressDashboardDueReport = () => {
-                                const nextEventId = String(deleteEventId || '').trim();
-                                if (!nextEventId) return;
+                                if (deleteCandidateIds.length === 0) return;
                                 setSuppressedDashboardPt051EventIds(prev => {
-                                    if (prev.includes(nextEventId)) return prev;
-                                    const updated = [...prev, nextEventId];
+                                    const updated = Array.from(new Set([...prev, ...deleteCandidateIds]));
+                                    if (updated.length === prev.length) return prev;
                                     try {
                                         localStorage.setItem('dfp_dashboard_suppressed_pt051_event_ids_v1', JSON.stringify(updated));
                                     } catch {
@@ -46811,7 +46817,7 @@ appliedUpdates.forEach(update => {
                             Array.from(updatedAssessments.entries()).forEach(([key, assessment]) => {
                                 if (
                                     assessment.traineeFullName === selectedTraineeForHateSheet.fullName &&
-                                    (assessment.eventId === deleteEventId || assessment.id === assessmentId)
+                                    (deleteCandidateIds.includes(String(assessment.eventId || '').trim()) || deleteCandidateIds.includes(String(assessment.id || '').trim()))
                                 ) {
                                     updatedAssessments.delete(key);
                                 }
