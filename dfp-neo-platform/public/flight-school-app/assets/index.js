@@ -9064,7 +9064,7 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   const isAuthoSigned = !!(event.authoSignedBy || event.isVerbalAuth);
   const isUnsigned = !isAuthoSigned && !event.captainSignedBy;
   if (isFullySigned) {
-    return "text-green-400";
+    return "";
   }
   const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
   const endTime = event.startTime + event.duration;

@@ -199,7 +199,7 @@ const getAuthorizationTextColorClass = (
     const isUnsigned = !isAuthoSigned && !event.captainSignedBy;
 
     if (isFullySigned) {
-        return 'text-green-400';
+        return '';
     }
 
     // Use UTC methods since currentTime is already timezone-adjusted (same as vertical time line)
