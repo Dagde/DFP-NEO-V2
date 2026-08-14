@@ -885,7 +885,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     pdf.addPage();
                 }
                 
-                // Render the training report form using native PDF text
+                // Render the configured training report form using native PDF text.
                 renderPT051ToPDF(pdf, event);
                 
                 isFirstPage = false;

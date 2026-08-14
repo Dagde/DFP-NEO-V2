@@ -2979,7 +2979,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         const currentDate = new Date().toISOString().split('T')[0];
         const instructor = event.instructor || 'System';
         
-        // Create PT051 assessments for each trainee
+        // Create training report assessments for each trainee.
         if (onSavePT051Assessment) {
             confirmedTrainees.forEach(trainee => {
                 const assessment = {

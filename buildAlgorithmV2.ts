@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
  * ELCE (Effective Last Completed Event) Logic
  * 
  * Simple Example: A trainee flew BGF2 today and finished the flight at 1100.
- * The paperwork (PT-051) has not been entered yet, so the system still shows
+ * The training report has not been entered yet, so the system still shows
  * their last completed event as BGF1. When building tomorrow's program, the
  * scheduler looks at today's DFP and sees that the trainee had a scheduled
  * event (BGF2) that:
@@ -20,7 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
  * 
  * Therefore, the system treats BGF2 as the trainee's "Effective Last Completed
  * Event" (ELCE). This ensures the Next Event for tomorrow is correctly set to
- * BGF3, even though paperwork for BGF2 has not been entered yet.
+ * BGF3, even though the report for BGF2 has not been entered yet.
  */
 
 interface ELCEResult {
@@ -31,7 +31,7 @@ interface ELCEResult {
 
 /**
  * Get Effective Last Completed Event from today's DFP
- * Checks if trainee has scheduled events that have finished but not yet recorded in PT-051
+ * Checks if trainee has scheduled events that have finished but are not yet recorded in a training report.
  */
 export const getEffectiveLastCompletedEvent = (
     traineeName: string,
@@ -83,7 +83,7 @@ export const getEffectiveLastCompletedEvent = (
  * ELCE result sourced from the EventCompletion DB table.
  *
  * This is the preferred ELCE source for the build algorithm because it is
- * written the moment the post-flight form is saved — before the PT-051 Score
+ * written the moment the post-flight form is saved, before the training report
  * record is entered.  This ensures the next-event pointer is correct even
  * when paperwork is delayed.
  *
@@ -106,7 +106,7 @@ export interface DbElceResult {
  *
  *   1. DB-backed ELCE (preferred):  A pre-fetched DbElceResult from the
  *      EventCompletion table, populated by the post-flight form save.  This
- *      covers the case where the sortie finished but PT-051 has not been entered.
+ *      covers the case where the sortie finished but the training report has not been entered.
  *
  *   2. DFP schedule scan (legacy fallback):  The original approach that scans
  *      yesterday's DFP JSON for events whose end-time has passed.  Still used
@@ -120,7 +120,7 @@ export interface DbElceResult {
  *
  * @param trainee          The trainee to compute next events for
  * @param traineeLMPs      Map of trainee full name to ordered syllabus items
- * @param scores           Map of trainee full name to PT-051 Score records
+ * @param scores           Map of trainee full name to training report score records
  * @param masterSyllabus   Fallback syllabus when no individual LMP exists
  * @param todaysDfp        All schedule events (used for legacy DFP-scan fallback)
  * @param buildDate        ISO date YYYY-MM-DD of the day being built

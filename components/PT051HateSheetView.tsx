@@ -12,7 +12,7 @@ import {
   type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
 
-interface PT051HateSheetViewProps {
+interface TrainingReportHateSheetViewProps {
   trainee: Trainee;
   lmpScores: Score[];
   assessments: Pt051Assessment[];
@@ -31,7 +31,7 @@ const getMissionStatusDisplayLabel = (
   return status || '';
 };
 
-const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
+const TrainingReportHateSheetView: React.FC<TrainingReportHateSheetViewProps> = ({
   trainee,
   lmpScores,
   assessments,
@@ -168,4 +168,4 @@ const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
   );
 };
 
-export default PT051HateSheetView;
+export default TrainingReportHateSheetView;

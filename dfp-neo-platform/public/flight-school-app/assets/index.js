@@ -21108,7 +21108,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
       if (!isUnassessed) return true;
       return mostRecentKeys.has(assessment.id);
     });
-    const pt051Items = finalAssessments.map((assessment) => ({ ...assessment, type: "PT-051" }));
+    const pt051Items = finalAssessments.map((assessment) => ({ ...assessment, type: "Training Report" }));
     const visiblePt051Keys = new Set(finalAssessments.map(
       (assessment) => `${assessment.traineeFullName}|||${assessment.flightNumber}|||${assessment.date || ""}`
     ));
@@ -21137,8 +21137,8 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
       const bHasOrder = bOrder !== void 0;
       if (aHasOrder && bHasOrder) {
         if (aOrder !== bOrder) return aOrder - bOrder;
-        const aTypeOrder = a.type === "PT-051" ? 0 : 1;
-        const bTypeOrder = b.type === "PT-051" ? 0 : 1;
+        const aTypeOrder = a.type === "Training Report" ? 0 : 1;
+        const bTypeOrder = b.type === "Training Report" ? 0 : 1;
         if (aTypeOrder !== bTypeOrder) return aTypeOrder - bTypeOrder;
       }
       if (aHasOrder !== bHasOrder) {
@@ -21155,14 +21155,14 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
     });
     return combined;
   }, [lmpScores, assessments, traineeLmp]);
-  const getTypeDisplayLabel = (type) => type === "PT-051" ? trainingReportName : type;
-  const getTypeDisplayTitle = (type) => type === "PT-051" ? trainingReportName : type;
+  const getTypeDisplayLabel = (type) => type === "Training Report" ? trainingReportName : type;
+  const getTypeDisplayTitle = (type) => type === "Training Report" ? trainingReportName : type;
   const getScoreDisplay = (item) => {
     let score = null;
     let isDoubleMarginal = false;
     if (item.type === "LMP Score") {
       score = item.score;
-    } else if (item.type === "PT-051") {
+    } else if (item.type === "Training Report") {
       score = item.overallGrade;
     }
     if (score === null || score === void 0 || score === "No Grade") {
@@ -21197,7 +21197,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
     return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-3 py-1 text-sm font-bold rounded-full ${colorClass}`, children: score });
   };
   const getStatusDisplay = (item) => {
-    if (item.type !== "PT-051") {
+    if (item.type !== "Training Report") {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-500", children: "-" });
     }
     const statusCode = String(item.dcoResult || "").trim().toUpperCase();
@@ -21236,7 +21236,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
         // Properly structured scores array
       };
       onSelectPt051(mockAssessment);
-    } else if (item.type === "PT-051") {
+    } else if (item.type === "Training Report") {
       onSelectPt051(item);
     }
   };
@@ -130745,7 +130745,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               const trainee = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
               logRoutineAppDebug("Found trainee:", trainee);
               if (event && trainee) {
-                logRoutineAppDebug("✅ Setting event and trainee, navigating to PT051");
+                logRoutineAppDebug("Setting event and trainee, navigating to Training Report");
                 if (String(assessment.id || "").startsWith("dashboard-due-")) {
                   const assessmentKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
                   setPt051Assessments((prev) => {
@@ -130763,7 +130763,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 setEventForPt051(event);
                 setSelectedTraineeForHateSheet(trainee);
                 setTimeout(() => {
-                  logRoutineAppDebug("🚀 Navigating to PT051 view");
+                  logRoutineAppDebug("Navigating to Training Report view");
                   handleNavigation("PT051");
                 }, 0);
               } else {
@@ -130791,7 +130791,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   setEventForPt051(fallbackEvent);
                   setSelectedTraineeForHateSheet(trainee);
                   setTimeout(() => {
-                    logRoutineAppDebug("🚀 Navigating to PT051 view (fallback)");
+                    logRoutineAppDebug("Navigating to Training Report view (fallback)");
                     handleNavigation("PT051");
                   }, 0);
                 } else {
@@ -130812,7 +130812,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                     setEventForPt051(secondaryFallbackEvent);
                     setSelectedTraineeForHateSheet(trainee);
                     setTimeout(() => {
-                      logRoutineAppDebug("🚀 Navigating to PT051 view (secondary fallback)");
+                      logRoutineAppDebug("Navigating to Training Report view (secondary fallback)");
                       handleNavigation("PT051");
                     }, 0);
                   } else {
@@ -130845,7 +130845,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                       setEventForPt051(mockEvent);
                       setSelectedTraineeForHateSheet(trainee);
                       setTimeout(() => {
-                        logRoutineAppDebug("🚀 Navigating to PT051 view (mock event)");
+                        logRoutineAppDebug("Navigating to Training Report view (mock event)");
                         handleNavigation("PT051");
                       }, 0);
                     }
@@ -131603,7 +131603,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
             `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}-${existingAssessment?.overallGrade ?? "none"}`
           );
         }
-        console.error("❌ PT051 View Error - Missing context:", {
+        console.error("Training Report view error - missing context:", {
           eventForPt051,
           selectedTraineeForHateSheet,
           view

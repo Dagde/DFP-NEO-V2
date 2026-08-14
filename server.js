@@ -13052,7 +13052,6 @@ app.post('/api/historical-data/seed', async (req, res) => {
     const traineeCompletedEvents = {}; // { traineeId: Set<string> }
 
     // Training report ALL_ELEMENTS - exact 22 elements matching the shared report structure.
-    // This must match exactly: PT051_STRUCTURE.flatMap(cat => cat.elements)
     const ALL_ELEMENTS = [
       // Core Dimensions
       'Airmanship', 'Preparation', 'Technique',
@@ -16389,7 +16388,7 @@ async function migrateLegacyPerformanceIntoTraineePerformance(db, options = {}) 
       return { ...summary, skipped: 0, alreadyRan: true, marker: marker.data };
     }
   } catch (markerErr) {
-    console.warn('[PT051 Migration] Could not read migration marker:', markerErr.message);
+    console.warn('[Training Report Migration] Could not read migration marker:', markerErr.message);
   }
 
   try {
@@ -16461,13 +16460,13 @@ async function migrateLegacyPerformanceIntoTraineePerformance(db, options = {}) 
         },
       });
     } catch (saveMarkerErr) {
-      console.warn('[PT051 Migration] Could not save migration marker:', saveMarkerErr.message);
+      console.warn('[Training Report Migration] Could not save migration marker:', saveMarkerErr.message);
     }
 
-    console.log(`[PT051 Migration] candidates=${summary.sources.candidateAssessments}, inserted=${summary.inserted}, updatedEmpty=${summary.updatedEmpty}, preserved=${summary.preservedExisting}, skipped=${summary.skipped}`);
+    console.log(`[Training Report Migration] candidates=${summary.sources.candidateAssessments}, inserted=${summary.inserted}, updatedEmpty=${summary.updatedEmpty}, preserved=${summary.preservedExisting}, skipped=${summary.skipped}`);
     return summary;
   } catch (err) {
-    console.error('❌ PT051 legacy migration failed:', err.message);
+    console.error('Training report legacy migration failed:', err.message);
     return { ...summary, success: false, error: err.message };
   }
 }

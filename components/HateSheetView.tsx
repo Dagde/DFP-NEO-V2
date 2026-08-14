@@ -138,7 +138,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                   return mostRecentKeys.has(assessment.id);
               });
 
-           const pt051Items = finalAssessments.map(assessment => ({ ...assessment, type: 'PT-051' as const }));
+           const pt051Items = finalAssessments.map(assessment => ({ ...assessment, type: 'Training Report' as const }));
            const visiblePt051Keys = new Set(finalAssessments.map(assessment =>
                `${assessment.traineeFullName}|||${assessment.flightNumber}|||${assessment.date || ''}`
            ));
@@ -180,8 +180,8 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
 
                if (aHasOrder && bHasOrder) {
                    if (aOrder !== bOrder) return aOrder - bOrder;
-                   const aTypeOrder = a.type === 'PT-051' ? 0 : 1;
-                   const bTypeOrder = b.type === 'PT-051' ? 0 : 1;
+                   const aTypeOrder = a.type === 'Training Report' ? 0 : 1;
+                   const bTypeOrder = b.type === 'Training Report' ? 0 : 1;
                    if (aTypeOrder !== bTypeOrder) return aTypeOrder - bTypeOrder;
                }
 
@@ -203,12 +203,12 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
            return combined;
        }, [lmpScores, assessments, traineeLmp]);
 
-    const getTypeDisplayLabel = (type: 'LMP Score' | 'PT-051') => (
-        type === 'PT-051' ? trainingReportName : type
+    const getTypeDisplayLabel = (type: 'LMP Score' | 'Training Report') => (
+        type === 'Training Report' ? trainingReportName : type
     );
 
-    const getTypeDisplayTitle = (type: 'LMP Score' | 'PT-051') => (
-        type === 'PT-051' ? trainingReportName : type
+    const getTypeDisplayTitle = (type: 'LMP Score' | 'Training Report') => (
+        type === 'Training Report' ? trainingReportName : type
     );
 
     const getScoreDisplay = (item: (typeof combinedHistory)[0]) => {
@@ -217,7 +217,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
 
         if (item.type === 'LMP Score') {
             score = item.score;
-        } else if (item.type === 'PT-051') {
+        } else if (item.type === 'Training Report') {
             score = item.overallGrade;
         }
 
@@ -269,7 +269,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
     };
 
     const getStatusDisplay = (item: (typeof combinedHistory)[0]) => {
-        if (item.type !== 'PT-051') {
+        if (item.type !== 'Training Report') {
             return <span className="text-sm text-gray-500">-</span>;
         }
 
@@ -330,7 +330,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                 })) // Properly structured scores array
             };
             onSelectPt051(mockAssessment);
-        } else if (item.type === 'PT-051') {
+        } else if (item.type === 'Training Report') {
             onSelectPt051(item as Pt051Assessment);
         }
     };

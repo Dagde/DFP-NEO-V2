@@ -46150,7 +46150,7 @@ appliedUpdates.forEach(update => {
                                 logRoutineAppDebug('Found trainee:', trainee);
 
                                 if (event && trainee) {
-                                    logRoutineAppDebug('✅ Setting event and trainee, navigating to PT051');
+                                    logRoutineAppDebug('Setting event and trainee, navigating to Training Report');
                                     if (String(assessment.id || '').startsWith('dashboard-due-')) {
                                         const assessmentKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
                                         setPt051Assessments(prev => {
@@ -46170,7 +46170,7 @@ appliedUpdates.forEach(update => {
                                     setSelectedTraineeForHateSheet(trainee);
                                     // Use setTimeout to ensure state is set before navigation
                                     setTimeout(() => {
-                                        logRoutineAppDebug('🚀 Navigating to PT051 view');
+                                        logRoutineAppDebug('Navigating to Training Report view');
                                         handleNavigation('PT051');
                                     }, 0);
                                 } else {
@@ -46205,7 +46205,7 @@ appliedUpdates.forEach(update => {
                                         setEventForPt051(fallbackEvent);
                                         setSelectedTraineeForHateSheet(trainee);
                                         setTimeout(() => {
-                                            logRoutineAppDebug('🚀 Navigating to PT051 view (fallback)');
+                                            logRoutineAppDebug('Navigating to Training Report view (fallback)');
                                             handleNavigation('PT051');
                                         }, 0);
                                     } else {
@@ -46230,7 +46230,7 @@ appliedUpdates.forEach(update => {
                                             setEventForPt051(secondaryFallbackEvent);
                                             setSelectedTraineeForHateSheet(trainee);
                                             setTimeout(() => {
-                                                logRoutineAppDebug('🚀 Navigating to PT051 view (secondary fallback)');
+                                                logRoutineAppDebug('Navigating to Training Report view (secondary fallback)');
                                                 handleNavigation('PT051');
                                             }, 0);
                                         } else {
@@ -46270,7 +46270,7 @@ appliedUpdates.forEach(update => {
                                                 setEventForPt051(mockEvent);
                                                 setSelectedTraineeForHateSheet(trainee);
                                                 setTimeout(() => {
-                                                    logRoutineAppDebug('🚀 Navigating to PT051 view (mock event)');
+                                                    logRoutineAppDebug('Navigating to Training Report view (mock event)');
                                                     handleNavigation('PT051');
                                                 }, 0);
                                             }
@@ -47064,7 +47064,7 @@ appliedUpdates.forEach(update => {
                         canEditPt051={canEditTraineePt051(selectedTraineeForHateSheet)}
                     />;
                 }
-                console.error('❌ PT051 View Error - Missing context:', {
+                console.error('Training Report view error - missing context:', {
                     eventForPt051,
                     selectedTraineeForHateSheet,
                     view

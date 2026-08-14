@@ -592,7 +592,7 @@ export interface Pt051Assessment {
     grade: Pt051Grade | null;
     comment: string;
   }[];
-  isCompleted?: boolean; // Track if PT-051 has been edited and saved
+  isCompleted?: boolean; // Track whether the training report has been edited and saved.
   // Ground School Assessment
   groundSchoolAssessment?: {
     isAssessment: boolean;
