@@ -48733,25 +48733,9 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
   };
   const fields = [
     {
-      key: "atRiskAvgGrade",
-      label: "At-Risk Threshold",
-      desc: "Average grade BELOW which a trainee is classified as At-Risk. E.g. 3.2 means any trainee averaging below 3.2 is flagged.",
-      min: 1,
-      max: 4.5,
-      step: 0.1
-    },
-    {
       key: "normalAvgGrade",
       label: "Normal / Watch Boundary",
       desc: "Whole-course average at or above which a trainee is Normal instead of Watch. This is the overall average, not recent trend performance.",
-      min: 2.5,
-      max: 4.5,
-      step: 0.1
-    },
-    {
-      key: "worseningRecentAvgGrade",
-      label: "Worsening Trend Recent Average",
-      desc: "Recent average below which a trainee with a worsening trend is escalated. This stays separate from Normal / Watch because it measures recent performance only.",
       min: 2.5,
       max: 4.5,
       step: 0.1
@@ -48910,70 +48894,102 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto", children: [
           error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200", children: error }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "At-Risk Criteria" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-slate-400", children: "At Risk is controlled by the course average threshold. The other enabled signals move trainees into Monitor so the At Risk count follows the threshold you set." })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 py-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-slate-400", children: "Minimum data" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-between gap-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "At-Risk Criteria" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-slate-400", children: "At Risk is controlled by the low course average threshold. The other enabled signals move trainees into Monitor, so each rule can be switched on or off without changing the At Risk count." })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 space-y-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-slate-700 bg-slate-950/60 px-3 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-semibold text-gray-200", children: "Minimum Data" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-slate-500", children: "Minimum number of assessments before At-Risk or Monitor rules are applied." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "range",
+                      min: 1,
+                      max: 10,
+                      step: 1,
+                      value: local.minAssessmentsForRisk,
+                      onChange: (e) => set("minAssessmentsForRisk", e.target.value),
+                      className: "w-32 accent-blue-500"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 1,
+                      max: 10,
+                      step: 1,
+                      value: local.minAssessmentsForRisk,
+                      onChange: (e) => set("minAssessmentsForRisk", e.target.value),
+                      className: "w-16 bg-gray-800 border border-gray-600 text-white text-sm rounded px-2 py-0.5 text-center focus:outline-none focus:border-blue-500"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-14 text-left text-[11px] text-slate-500", children: "reports" })
+                ] })
+              ] }) }),
+              atRiskCriteria.map((criteria) => {
+                const enabled = Boolean(local[criteria.enabledKey]);
+                return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
                   {
-                    type: "number",
-                    min: 1,
-                    max: 10,
-                    step: 1,
-                    value: local.minAssessmentsForRisk,
-                    onChange: (e) => set("minAssessmentsForRisk", e.target.value),
-                    className: "w-14 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-center text-sm text-white focus:outline-none focus:border-cyan-400"
-                  }
-                )
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-2", children: atRiskCriteria.map((criteria) => {
-              const enabled = Boolean(local[criteria.enabledKey]);
-              return /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "label",
-                {
-                  className: `rounded-lg border p-3 transition-colors ${enabled ? "border-cyan-500/35 bg-slate-900/80" : "border-slate-700 bg-slate-950/60"}`,
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        checked: enabled,
-                        onChange: (e) => setBool(criteria.enabledKey, e.target.checked),
-                        className: "mt-1 h-4 w-4 accent-cyan-500"
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-slate-100", children: criteria.title }),
-                        criteria.control && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            "input",
-                            {
-                              type: "number",
-                              min: criteria.control.min,
-                              max: criteria.control.max,
-                              step: criteria.control.step,
-                              value: local[criteria.control.key],
-                              disabled: !enabled,
-                              onChange: (e) => set(criteria.control.key, e.target.value),
-                              className: "w-16 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-center text-xs text-white disabled:opacity-40 focus:outline-none focus:border-cyan-400"
-                            }
-                          ),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] text-slate-500", children: criteria.control.suffix })
+                    className: `rounded-md border px-3 py-3 transition-colors ${enabled ? "border-cyan-500/35 bg-slate-900/80" : "border-slate-700 bg-slate-950/60"}`,
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-4", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-w-0 flex-1 items-start gap-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "checkbox",
+                            checked: enabled,
+                            onChange: (e) => setBool(criteria.enabledKey, e.target.checked),
+                            className: "mt-0.5 h-4 w-4 accent-cyan-500"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-slate-100", children: criteria.title }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `ml-2 text-[11px] uppercase tracking-wide ${enabled ? "text-cyan-300" : "text-slate-600"}`, children: enabled ? "On" : "Off" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-slate-500", children: criteria.detail })
                         ] })
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-slate-500", children: criteria.detail })
+                      criteria.control && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "range",
+                            min: criteria.control.min,
+                            max: criteria.control.max,
+                            step: criteria.control.step,
+                            value: local[criteria.control.key],
+                            disabled: !enabled,
+                            onChange: (e) => set(criteria.control.key, e.target.value),
+                            className: "w-32 accent-blue-500 disabled:opacity-40"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "number",
+                            min: criteria.control.min,
+                            max: criteria.control.max,
+                            step: criteria.control.step,
+                            value: local[criteria.control.key],
+                            disabled: !enabled,
+                            onChange: (e) => set(criteria.control.key, e.target.value),
+                            className: "w-16 bg-gray-800 border border-gray-600 text-white text-sm rounded px-2 py-0.5 text-center disabled:opacity-40 focus:outline-none focus:border-blue-500"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-14 text-left text-[11px] text-slate-500", children: criteria.control.suffix })
+                      ] })
                     ] })
-                  ] })
-                },
-                criteria.enabledKey
-              );
-            }) })
+                  },
+                  criteria.enabledKey
+                );
+              })
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-5 md:grid-cols-2", children: fields.map((f) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-1", children: [

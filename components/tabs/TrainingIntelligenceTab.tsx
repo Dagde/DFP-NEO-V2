@@ -1213,21 +1213,9 @@ const ThresholdSettingsPanel: React.FC<{
 
   const fields: Array<{ key: keyof TIEThresholds; label: string; desc: string; min: number; max: number; step: number }> = [
     {
-      key: 'atRiskAvgGrade',
-      label: 'At-Risk Threshold',
-      desc: 'Average grade BELOW which a trainee is classified as At-Risk. E.g. 3.2 means any trainee averaging below 3.2 is flagged.',
-      min: 1.0, max: 4.5, step: 0.1,
-    },
-    {
       key: 'normalAvgGrade',
       label: 'Normal / Watch Boundary',
       desc: 'Whole-course average at or above which a trainee is Normal instead of Watch. This is the overall average, not recent trend performance.',
-      min: 2.5, max: 4.5, step: 0.1,
-    },
-    {
-      key: 'worseningRecentAvgGrade',
-      label: 'Worsening Trend Recent Average',
-      desc: 'Recent average below which a trainee with a worsening trend is escalated. This stays separate from Normal / Watch because it measures recent performance only.',
       min: 2.5, max: 4.5, step: 0.1,
     },
     {
@@ -1377,66 +1365,98 @@ const ThresholdSettingsPanel: React.FC<{
 
           <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-4">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0">
                 <h4 className="text-sm font-semibold text-white">At-Risk Criteria</h4>
                 <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                  At Risk is controlled by the course average threshold. The other enabled signals move trainees into Monitor so the At Risk count follows the threshold you set.
+                  At Risk is controlled by the low course average threshold. The other enabled signals move trainees into Monitor, so each rule can be switched on or off without changing the At Risk count.
                 </p>
-              </div>
-              <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 py-2">
-                <span className="text-xs text-slate-400">Minimum data</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  step={1}
-                  value={local.minAssessmentsForRisk}
-                  onChange={e => set('minAssessmentsForRisk', e.target.value)}
-                  className="w-14 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-center text-sm text-white focus:outline-none focus:border-cyan-400"
-                />
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="mt-4 space-y-3">
+              <div className="rounded-md border border-slate-700 bg-slate-950/60 px-3 py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <label className="text-sm font-semibold text-gray-200">Minimum Data</label>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                      Minimum number of assessments before At-Risk or Monitor rules are applied.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={local.minAssessmentsForRisk}
+                      onChange={e => set('minAssessmentsForRisk', e.target.value)}
+                      className="w-32 accent-blue-500"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={local.minAssessmentsForRisk}
+                      onChange={e => set('minAssessmentsForRisk', e.target.value)}
+                      className="w-16 bg-gray-800 border border-gray-600 text-white text-sm rounded px-2 py-0.5 text-center focus:outline-none focus:border-blue-500"
+                    />
+                    <span className="w-14 text-left text-[11px] text-slate-500">reports</span>
+                  </div>
+                </div>
+              </div>
               {atRiskCriteria.map(criteria => {
                 const enabled = Boolean(local[criteria.enabledKey]);
                 return (
-                  <label
+                  <div
                     key={criteria.enabledKey}
-                    className={`rounded-lg border p-3 transition-colors ${
+                    className={`rounded-md border px-3 py-3 transition-colors ${
                       enabled ? 'border-cyan-500/35 bg-slate-900/80' : 'border-slate-700 bg-slate-950/60'
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={enabled}
-                        onChange={e => setBool(criteria.enabledKey, e.target.checked)}
-                        className="mt-1 h-4 w-4 accent-cyan-500"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <label className="flex min-w-0 flex-1 items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={enabled}
+                          onChange={e => setBool(criteria.enabledKey, e.target.checked)}
+                          className="mt-0.5 h-4 w-4 accent-cyan-500"
+                        />
+                        <div className="min-w-0">
                           <span className="text-sm font-semibold text-slate-100">{criteria.title}</span>
-                          {criteria.control && (
-                            <span className="flex items-center gap-1">
-                              <input
-                                type="number"
-                                min={criteria.control.min}
-                                max={criteria.control.max}
-                                step={criteria.control.step}
-                                value={local[criteria.control.key] as number}
-                                disabled={!enabled}
-                                onChange={e => set(criteria.control!.key, e.target.value)}
-                                className="w-16 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-center text-xs text-white disabled:opacity-40 focus:outline-none focus:border-cyan-400"
-                              />
-                              <span className="text-[11px] text-slate-500">{criteria.control.suffix}</span>
-                            </span>
-                          )}
+                          <span className={`ml-2 text-[11px] uppercase tracking-wide ${enabled ? 'text-cyan-300' : 'text-slate-600'}`}>
+                            {enabled ? 'On' : 'Off'}
+                          </span>
+                          <p className="mt-1 text-xs leading-relaxed text-slate-500">{criteria.detail}</p>
                         </div>
-                        <p className="mt-1 text-xs leading-relaxed text-slate-500">{criteria.detail}</p>
-                      </div>
+                      </label>
+                      {criteria.control && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min={criteria.control.min}
+                            max={criteria.control.max}
+                            step={criteria.control.step}
+                            value={local[criteria.control.key] as number}
+                            disabled={!enabled}
+                            onChange={e => set(criteria.control!.key, e.target.value)}
+                            className="w-32 accent-blue-500 disabled:opacity-40"
+                          />
+                          <input
+                            type="number"
+                            min={criteria.control.min}
+                            max={criteria.control.max}
+                            step={criteria.control.step}
+                            value={local[criteria.control.key] as number}
+                            disabled={!enabled}
+                            onChange={e => set(criteria.control!.key, e.target.value)}
+                            className="w-16 bg-gray-800 border border-gray-600 text-white text-sm rounded px-2 py-0.5 text-center disabled:opacity-40 focus:outline-none focus:border-blue-500"
+                          />
+                          <span className="w-14 text-left text-[11px] text-slate-500">{criteria.control.suffix}</span>
+                        </div>
+                      )}
                     </div>
-                  </label>
+                  </div>
                 );
               })}
             </div>
