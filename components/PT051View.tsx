@@ -4,7 +4,6 @@ import { jsPDF } from 'jspdf';
 import { Trainee, ScheduleEvent, Pt051Assessment, Pt051Grade, Instructor, Pt051OverallGrade, Score, SyllabusItemDetail, PhraseBank } from '../types';
 import AuditButton from './AuditButton';
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
-import { formatPersonOptionLabel } from '../utils/personIdentity';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
 import {
     DEFAULT_TRAINING_REPORT_TEMPLATE,
@@ -161,6 +160,59 @@ const DraftTextArea = ({
             style={minHeight ? { minHeight } : undefined}
         />
     );
+};
+
+const normaliseReportInstructorText = (value: unknown): string =>
+    String(value || '').trim().replace(/\s+/g, ' ');
+
+const stripReportInstructorMetadata = (value: unknown): string => {
+    const text = normaliseReportInstructorText(value);
+    if (!text) return '';
+    const withoutId = text.replace(/\s+-\s+ID\b.*$/i, '').trim();
+    const parts = withoutId.split(/\s+-\s+/).map(part => part.trim()).filter(Boolean);
+    if (parts.length >= 2 && parts[1].includes(',')) {
+        return `${parts[0]} ${parts[1]}`.trim();
+    }
+    return withoutId.replace(/\s+-\s+(Pilot|Instructor|QFI|FI|Staff|Trainee|Student)\b.*$/i, '').trim();
+};
+
+const formatTrainingReportInstructorLabel = (instructor?: Pick<Instructor, 'rank' | 'name'> | null): string => {
+    if (!instructor) return '';
+    return [instructor.rank, instructor.name]
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+        .join(' ');
+};
+
+const findTrainingReportInstructor = (instructors: Instructor[], value: unknown): Instructor | undefined => {
+    const text = normaliseReportInstructorText(value);
+    if (!text) return undefined;
+    const lowered = text.toLowerCase();
+    const stripped = stripReportInstructorMetadata(value).toLowerCase();
+    return instructors.find(instructor => {
+        const name = normaliseReportInstructorText(instructor.name).toLowerCase();
+        const rankName = formatTrainingReportInstructorLabel(instructor).toLowerCase();
+        const legacyLabel = [
+            instructor.rank,
+            instructor.name,
+            instructor.role,
+            instructor.unit,
+            instructor.idNumber ? `ID ${instructor.idNumber}` : '',
+        ].map(part => String(part || '').trim()).filter(Boolean).join(' - ').toLowerCase();
+        return lowered === name || lowered === rankName || lowered === legacyLabel || stripped === name || stripped === rankName;
+    });
+};
+
+const normaliseTrainingReportInstructorValue = (instructors: Instructor[], value: unknown): string => {
+    const matchedInstructor = findTrainingReportInstructor(instructors, value);
+    if (matchedInstructor) return matchedInstructor.name;
+    return stripReportInstructorMetadata(value);
+};
+
+const formatTrainingReportInstructorDisplay = (instructors: Instructor[], value: unknown): string => {
+    const matchedInstructor = findTrainingReportInstructor(instructors, value);
+    if (matchedInstructor) return formatTrainingReportInstructorLabel(matchedInstructor);
+    return stripReportInstructorMetadata(value);
 };
 
 const PT051_STRUCTURE = [
@@ -675,7 +727,10 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
     }, [currentEvent?.eventType, currentEvent?.type, event.eventType, event.type, syllabusEvent?.resourceType, syllabusEvent?.type]);
     const [assessment, setAssessment] = useState(() => {
         if (initialAssessment) {
-            return initialAssessment;
+            return {
+                ...initialAssessment,
+                instructorName: normaliseTrainingReportInstructorValue(instructors, initialAssessment.instructorName),
+            };
         }
         return {
             id: uuidv4(),
@@ -683,7 +738,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             eventId: event.id,
             flightNumber: event.flightNumber,
             date: event.date,
-            instructorName: event.instructor || '',
+            instructorName: normaliseTrainingReportInstructorValue(instructors, event.instructor),
             scores: assessmentElements.map(element => ({
                 element,
                 grade: null,
@@ -706,6 +761,20 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         });
     }, [assessmentElements]);
 
+    useEffect(() => {
+        if (instructors.length === 0) return;
+        setAssessment(prev => {
+            const normalisedInstructorName = normaliseTrainingReportInstructorValue(instructors, prev.instructorName);
+            if (!normalisedInstructorName || normalisedInstructorName === prev.instructorName) return prev;
+            return { ...prev, instructorName: normalisedInstructorName };
+        });
+        setCommentFields(prev => {
+            const normalisedQfi = normaliseTrainingReportInstructorValue(instructors, prev.QFI);
+            if (!normalisedQfi || normalisedQfi === prev.QFI) return prev;
+            return { ...prev, QFI: normalisedQfi };
+        });
+    }, [instructors]);
+
     const handleEventUpdate = (updates: Partial<ScheduleEvent>) => {
         const updatedEvent = { ...currentEvent, ...updates };
         setCurrentEvent(updatedEvent);
@@ -717,7 +786,9 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
     const [commentFields, setCommentFields] = useState(() => {
         const parsed = parseComments((initialAssessment as any)?.comments || initialAssessment?.overallComments, commentSectionLabels);
         if (!parsed.QFI && event.instructor) {
-            parsed.QFI = event.instructor;
+            parsed.QFI = normaliseTrainingReportInstructorValue(instructors, event.instructor);
+        } else if (parsed.QFI) {
+            parsed.QFI = normaliseTrainingReportInstructorValue(instructors, parsed.QFI);
         }
         parsed.Notes = stripGeneratedFollowUpNotes(parsed.Notes || '');
         return parsed;
@@ -891,11 +962,16 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
     };
 
     const handleCommentFieldChange = (key: typeof COMMENT_SECTIONS[number], value: string) => {
-        setCommentFields(prev => ({ ...prev, [key]: key === 'Notes' ? stripGeneratedFollowUpNotes(value, getFollowUpNotesPrefix()) : value }));
+        const nextValue = key === 'QFI'
+            ? normaliseTrainingReportInstructorValue(instructors, value)
+            : key === 'Notes'
+                ? stripGeneratedFollowUpNotes(value, getFollowUpNotesPrefix())
+                : value;
+        setCommentFields(prev => ({ ...prev, [key]: nextValue }));
         
         // Mirror QFI field to instructorName field
         if (key === 'QFI') {
-            setAssessment(prev => ({ ...prev, instructorName: value }));
+            setAssessment(prev => ({ ...prev, instructorName: nextValue }));
         }
     };
 
@@ -955,9 +1031,10 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
 
     // Handle instructor name change (mirror to QFI)
     const handleInstructorNameChange = (value: string) => {
-        setAssessment(prev => ({ ...prev, instructorName: value }));
+        const nextValue = normaliseTrainingReportInstructorValue(instructors, value);
+        setAssessment(prev => ({ ...prev, instructorName: nextValue }));
         // Mirror to QFI field
-        setCommentFields(prev => ({ ...prev, QFI: value }));
+        setCommentFields(prev => ({ ...prev, QFI: nextValue }));
     };
 
     // Time handling functions for simplified hhmm input
@@ -1284,7 +1361,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                 ['Course', trainee.course || 'N/A'],
                 [printOverviewFields.date, displayReportDate || 'N/A'],
                 [printOverviewFields.timing, `${formatTime(startTime)} - ${formatTime(endTime)}`],
-                [printOverviewFields.assessor, assessment.instructorName || event.instructor || 'N/A'],
+                [printOverviewFields.assessor, formatTrainingReportInstructorDisplay(instructors, assessment.instructorName || event.instructor) || 'N/A'],
                 [printOverviewFields.resource, formatTrainingReportResource(currentEvent.resourceId || event.resourceId)],
                 [printOverviewFields.callsign, currentEvent.callsign || event.callsign || 'N/A'],
                 [printOverviewFields.unit, trainee.unit || 'N/A'],
@@ -1299,7 +1376,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             ]);
 
             addSectionTitle(printReportTemplate.modules.comments.title || 'Comments');
-            addWrappedText(resolveReportAssessorDisplayLabel(printCommentFieldsConfig.assessor, instructorLabel), commentFields.QFI || 'N/A');
+            addWrappedText(resolveReportAssessorDisplayLabel(printCommentFieldsConfig.assessor, instructorLabel), formatTrainingReportInstructorDisplay(instructors, commentFields.QFI) || 'N/A');
             addWrappedText(printCommentFieldsConfig.weather, commentFields.Weather || 'N/A');
             addWrappedText(printCommentFieldsConfig.profile, commentFields.Profile || 'N/A');
             addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || 'N/A');
@@ -1636,7 +1713,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                      <option value="">Select instructor...</option>
                                      {unitInstructors.map(instructor => (
                                          <option key={instructor.idNumber} value={instructor.name}>
-                                             {formatPersonOptionLabel(instructor)}
+                                             {formatTrainingReportInstructorLabel(instructor)}
                                          </option>
                                      ))}
                                  </select>
@@ -1977,7 +2054,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                     <option value="">Select instructor...</option>
                                     {unitInstructors.map(instructor => (
                                         <option key={instructor.idNumber} value={instructor.name}>
-                                            {formatPersonOptionLabel(instructor)}
+                                            {formatTrainingReportInstructorLabel(instructor)}
                                         </option>
                                     ))}
                                 </select>

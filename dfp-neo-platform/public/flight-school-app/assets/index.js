@@ -22634,6 +22634,49 @@ const DraftTextArea$1 = ({
     }
   );
 };
+const normaliseReportInstructorText = (value) => String(value || "").trim().replace(/\s+/g, " ");
+const stripReportInstructorMetadata = (value) => {
+  const text = normaliseReportInstructorText(value);
+  if (!text) return "";
+  const withoutId = text.replace(/\s+-\s+ID\b.*$/i, "").trim();
+  const parts = withoutId.split(/\s+-\s+/).map((part) => part.trim()).filter(Boolean);
+  if (parts.length >= 2 && parts[1].includes(",")) {
+    return `${parts[0]} ${parts[1]}`.trim();
+  }
+  return withoutId.replace(/\s+-\s+(Pilot|Instructor|QFI|FI|Staff|Trainee|Student)\b.*$/i, "").trim();
+};
+const formatTrainingReportInstructorLabel = (instructor) => {
+  if (!instructor) return "";
+  return [instructor.rank, instructor.name].map((value) => String(value || "").trim()).filter(Boolean).join(" ");
+};
+const findTrainingReportInstructor = (instructors, value) => {
+  const text = normaliseReportInstructorText(value);
+  if (!text) return void 0;
+  const lowered = text.toLowerCase();
+  const stripped = stripReportInstructorMetadata(value).toLowerCase();
+  return instructors.find((instructor) => {
+    const name = normaliseReportInstructorText(instructor.name).toLowerCase();
+    const rankName = formatTrainingReportInstructorLabel(instructor).toLowerCase();
+    const legacyLabel = [
+      instructor.rank,
+      instructor.name,
+      instructor.role,
+      instructor.unit,
+      instructor.idNumber ? `ID ${instructor.idNumber}` : ""
+    ].map((part) => String(part || "").trim()).filter(Boolean).join(" - ").toLowerCase();
+    return lowered === name || lowered === rankName || lowered === legacyLabel || stripped === name || stripped === rankName;
+  });
+};
+const normaliseTrainingReportInstructorValue = (instructors, value) => {
+  const matchedInstructor = findTrainingReportInstructor(instructors, value);
+  if (matchedInstructor) return matchedInstructor.name;
+  return stripReportInstructorMetadata(value);
+};
+const formatTrainingReportInstructorDisplay = (instructors, value) => {
+  const matchedInstructor = findTrainingReportInstructor(instructors, value);
+  if (matchedInstructor) return formatTrainingReportInstructorLabel(matchedInstructor);
+  return stripReportInstructorMetadata(value);
+};
 const PT051_STRUCTURE$1 = [
   { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
   { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
@@ -23028,7 +23071,10 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
   }, [currentEvent?.eventType, currentEvent?.type, event.eventType, event.type, syllabusEvent?.resourceType, syllabusEvent?.type]);
   const [assessment, setAssessment] = reactExports.useState(() => {
     if (initialAssessment) {
-      return initialAssessment;
+      return {
+        ...initialAssessment,
+        instructorName: normaliseTrainingReportInstructorValue(instructors, initialAssessment.instructorName)
+      };
     }
     return {
       id: v4(),
@@ -23036,7 +23082,7 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
       eventId: event.id,
       flightNumber: event.flightNumber,
       date: event.date,
-      instructorName: event.instructor || "",
+      instructorName: normaliseTrainingReportInstructorValue(instructors, event.instructor),
       scores: assessmentElements.map((element) => ({
         element,
         grade: null,
@@ -23055,6 +23101,19 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
       return { ...prev, scores: [...prev.scores, ...missingScores] };
     });
   }, [assessmentElements]);
+  reactExports.useEffect(() => {
+    if (instructors.length === 0) return;
+    setAssessment((prev) => {
+      const normalisedInstructorName = normaliseTrainingReportInstructorValue(instructors, prev.instructorName);
+      if (!normalisedInstructorName || normalisedInstructorName === prev.instructorName) return prev;
+      return { ...prev, instructorName: normalisedInstructorName };
+    });
+    setCommentFields((prev) => {
+      const normalisedQfi = normaliseTrainingReportInstructorValue(instructors, prev.QFI);
+      if (!normalisedQfi || normalisedQfi === prev.QFI) return prev;
+      return { ...prev, QFI: normalisedQfi };
+    });
+  }, [instructors]);
   const handleEventUpdate = (updates) => {
     const updatedEvent = { ...currentEvent, ...updates };
     setCurrentEvent(updatedEvent);
@@ -23065,7 +23124,9 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
   const [commentFields, setCommentFields] = reactExports.useState(() => {
     const parsed = parseComments(initialAssessment?.comments || initialAssessment?.overallComments, commentSectionLabels);
     if (!parsed.QFI && event.instructor) {
-      parsed.QFI = event.instructor;
+      parsed.QFI = normaliseTrainingReportInstructorValue(instructors, event.instructor);
+    } else if (parsed.QFI) {
+      parsed.QFI = normaliseTrainingReportInstructorValue(instructors, parsed.QFI);
     }
     parsed.Notes = stripGeneratedFollowUpNotes$1(parsed.Notes || "");
     return parsed;
@@ -23214,9 +23275,10 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
     }));
   };
   const handleCommentFieldChange = (key, value) => {
-    setCommentFields((prev) => ({ ...prev, [key]: key === "Notes" ? stripGeneratedFollowUpNotes$1(value, getFollowUpNotesPrefix()) : value }));
+    const nextValue = key === "QFI" ? normaliseTrainingReportInstructorValue(instructors, value) : key === "Notes" ? stripGeneratedFollowUpNotes$1(value, getFollowUpNotesPrefix()) : value;
+    setCommentFields((prev) => ({ ...prev, [key]: nextValue }));
     if (key === "QFI") {
-      setAssessment((prev) => ({ ...prev, instructorName: value }));
+      setAssessment((prev) => ({ ...prev, instructorName: nextValue }));
     }
   };
   const isSimulatorReportEvent = reactExports.useMemo(() => {
@@ -23256,8 +23318,9 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
     return instructors.filter((instructor) => instructor.unit === trainee.unit);
   }, [instructors, trainee.unit]);
   const handleInstructorNameChange = (value) => {
-    setAssessment((prev) => ({ ...prev, instructorName: value }));
-    setCommentFields((prev) => ({ ...prev, QFI: value }));
+    const nextValue = normaliseTrainingReportInstructorValue(instructors, value);
+    setAssessment((prev) => ({ ...prev, instructorName: nextValue }));
+    setCommentFields((prev) => ({ ...prev, QFI: nextValue }));
   };
   const formatTimeToHHMM2 = (timeInHours) => {
     if (timeInHours === null || timeInHours === void 0) return "";
@@ -23529,7 +23592,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
         ["Course", trainee.course || "N/A"],
         [printOverviewFields.date, displayReportDate || "N/A"],
         [printOverviewFields.timing, `${formatTime$6(startTime)} - ${formatTime$6(endTime)}`],
-        [printOverviewFields.assessor, assessment.instructorName || event.instructor || "N/A"],
+        [printOverviewFields.assessor, formatTrainingReportInstructorDisplay(instructors, assessment.instructorName || event.instructor) || "N/A"],
         [printOverviewFields.resource, formatTrainingReportResource(currentEvent.resourceId || event.resourceId)],
         [printOverviewFields.callsign, currentEvent.callsign || event.callsign || "N/A"],
         [printOverviewFields.unit, trainee.unit || "N/A"]
@@ -23542,7 +23605,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
         [printOverallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : "Not assessed"]
       ]);
       addSectionTitle(printReportTemplate.modules.comments.title || "Comments");
-      addWrappedText(resolveReportAssessorDisplayLabel(printCommentFieldsConfig.assessor, instructorLabel2), commentFields.QFI || "N/A");
+      addWrappedText(resolveReportAssessorDisplayLabel(printCommentFieldsConfig.assessor, instructorLabel2), formatTrainingReportInstructorDisplay(instructors, commentFields.QFI) || "N/A");
       addWrappedText(printCommentFieldsConfig.weather, commentFields.Weather || "N/A");
       addWrappedText(printCommentFieldsConfig.profile, commentFields.Profile || "N/A");
       addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || "N/A");
@@ -23868,7 +23931,7 @@ This action cannot be undone.`;
                     className: "text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-[calc(100%+20px)] focus:ring-1 focus:ring-sky-500",
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
-                      unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: formatPersonOptionLabel(instructor) }, instructor.idNumber))
+                      unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: formatTrainingReportInstructorLabel(instructor) }, instructor.idNumber))
                     ]
                   }
                 ) })
@@ -24211,7 +24274,7 @@ This action cannot be undone.`;
                     className: "w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500",
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
-                      unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: formatPersonOptionLabel(instructor) }, instructor.idNumber))
+                      unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: formatTrainingReportInstructorLabel(instructor) }, instructor.idNumber))
                     ]
                   }
                 ) })
