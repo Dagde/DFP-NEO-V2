@@ -582,6 +582,34 @@ async function findLinkedPersonnelId(db, userDbId) {
   return normalisePersonnelId(rows?.[0]?.personnelId);
 }
 
+async function repairSessionPersonLink(db, user) {
+  const personnelId = normalisePersonnelId(user?.userId || user?.username);
+  if (!personnelId || !user?.id) return;
+
+  const staffRows = await db.$queryRawUnsafe(
+    `SELECT id, "userId" FROM "Personnel" WHERE "idNumber"::text = $1 LIMIT 2`,
+    personnelId
+  );
+  const traineeRows = await db.$queryRawUnsafe(
+    `SELECT id, "userId" FROM "Trainee" WHERE "idNumber"::text = $1 LIMIT 2`,
+    personnelId
+  );
+  const matches = [
+    ...(staffRows || []).map((row) => ({ ...row, type: 'staff' })),
+    ...(traineeRows || []).map((row) => ({ ...row, type: 'trainee' })),
+  ];
+
+  // A session can repair only an unambiguous, currently unlinked profile whose Personnel ID matches its own login.
+  if (matches.length !== 1 || matches[0].userId) return;
+  const target = matches[0];
+  const table = target.type === 'staff' ? 'Personnel' : 'Trainee';
+  await db.$executeRawUnsafe(
+    `UPDATE "${table}" SET "userId" = $1 WHERE id = $2 AND "userId" IS NULL`,
+    user.id,
+    target.id
+  );
+}
+
 function getBooleanEnv(value, fallback = false) {
   const clean = String(value ?? '').trim().toLowerCase();
   if (!clean) return fallback;
@@ -8537,6 +8565,8 @@ app.get('/api/auth/direct-session', async (req, res) => {
       await db.$executeRawUnsafe(`DELETE FROM "Session" WHERE "sessionToken" = $1`, sessionToken);
       return res.status(401).json({ error: 'Token expired', message: 'Session has expired' });
     }
+
+    await repairSessionPersonLink(db, session);
 
     return res.json({
       user: {

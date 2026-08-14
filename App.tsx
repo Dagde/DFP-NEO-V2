@@ -24260,7 +24260,27 @@ const App: React.FC = () => {
     // Current User State (for permission checking)
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
     const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = useState(0);
-    const matchedCurrentStaffUser = instructorsData.find(inst => inst.name === currentUserName);
+    const signedInIdentityKeys = [
+        authUser?.id,
+        authUser?.userId,
+        authUser?.username,
+        sessionUser?.userId,
+        sessionUser?.username,
+    ].map(value => String(value || '').trim()).filter(Boolean);
+    const signedInNameKeys = [
+        currentUserName,
+        authUser ? formatAuthLoginName(authUser) : '',
+        authUser?.displayName,
+        authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
+        authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
+    ].filter(Boolean);
+    const matchedCurrentStaffUser = instructorsData.find(inst => {
+        const staffIdentityKeys = [inst.id, inst.idNumber]
+            .map(value => String(value || '').trim())
+            .filter(Boolean);
+        return staffIdentityKeys.some(key => signedInIdentityKeys.includes(key))
+            || signedInNameKeys.some(name => personnelNamesMatch(inst.name, name));
+    });
     const currentUser = matchedCurrentStaffUser || instructorsData[0];
     const signedInDisplayName = authUser ? formatAuthLoginName(authUser) : currentUserName;
 
