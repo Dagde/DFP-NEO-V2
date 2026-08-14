@@ -121753,14 +121753,14 @@ ${error instanceof Error ? error.message : String(error)}`,
     } catch {
     }
   };
-  const persistScheduleForDate = (targetDate, allEventsForDate, baselineEventsForDate) => {
+  const persistScheduleForDate = async (targetDate, allEventsForDate, baselineEventsForDate) => {
     if (allEventsForDate.some((e) => e.isHistoricalSeed === true)) {
       logScheduleDebug("[Persist] Skipped seed data for", targetDate);
-      return;
+      return false;
     }
     if (allEventsForDate.length === 0 && (!baselineEventsForDate || baselineEventsForDate.length === 0)) {
       logScheduleDebug("[Persist] No events for", targetDate, "- nothing to persist");
-      return;
+      return false;
     }
     const apiBase = getApiBaseUrl();
     const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
@@ -121846,21 +121846,26 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     logScheduleDebug(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
     cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
-    fetch(`${apiBase}/daily-snapshot/save`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(snapshotPayload)
-    }).then((res) => res.json()).then((result) => {
+    try {
+      const response = await fetch(`${apiBase}/daily-snapshot/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snapshotPayload)
+      });
+      const result = await response.json().catch(() => ({}));
       if (result.success) {
         loadedSnapshotDates.current.add(snapshotKey);
         cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
         logScheduleDebug(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events`);
+        return true;
       } else {
-        console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
+        console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error || result.details || response.status);
+        return false;
       }
-    }).catch((err) => {
+    } catch (err) {
       console.warn(`⚠️ [Persist] Could not save snapshot for ${targetDate}:`, err);
-    });
+      return false;
+    }
   };
   const persistPt051AssessmentsForDate = async (targetDate, assessmentsMap) => {
     logScheduleDebug(`[Training Report] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
@@ -122424,23 +122429,37 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     if (isNextDay) {
       setNextDayBuildEvents((prev) => prev.filter((e) => !deletedEventIds.has(e.id)));
     } else {
-      setPublishedSchedules((prev) => {
-        const nextSchedules = { ...prev };
-        Object.entries(prev).forEach(([scheduleDate, scheduleEvents]) => {
-          const newScheduleForDate = scheduleEvents.filter((e) => !isSameDeploymentToDelete(e));
-          if (newScheduleForDate.length !== scheduleEvents.length) {
-            nextSchedules[scheduleDate] = newScheduleForDate;
-            persistScheduleForDate(scheduleDate, newScheduleForDate, scheduleEvents);
-          }
-        });
-        if (!isDeploymentDelete) {
-          const scheduleForDate = prev[eventDate] || [];
-          const newScheduleForDate = scheduleForDate.filter((e) => e.id !== selectedEvent.id);
-          nextSchedules[eventDate] = newScheduleForDate;
-          persistScheduleForDate(eventDate, newScheduleForDate, scheduleForDate);
+      const currentSchedules = publishedSchedulesRef.current || {};
+      const nextSchedules = { ...currentSchedules };
+      const persistenceTasks = [];
+      Object.entries(currentSchedules).forEach(([scheduleDate, scheduleEvents]) => {
+        const newScheduleForDate = scheduleEvents.filter(
+          (e) => isDeploymentDelete ? !isSameDeploymentToDelete(e) : scheduleDate === eventDate ? e.id !== selectedEvent.id : true
+        );
+        if (newScheduleForDate.length !== scheduleEvents.length) {
+          nextSchedules[scheduleDate] = newScheduleForDate;
+          persistenceTasks.push(persistScheduleForDate(scheduleDate, newScheduleForDate, scheduleEvents));
         }
-        return nextSchedules;
       });
+      if (persistenceTasks.length === 0) {
+        await showDarkAlert2(
+          `The event could not be removed because it was not found in the saved schedule for ${eventDate}. Refresh the DFP and try again.`,
+          "Delete Failed",
+          "error"
+        );
+        return;
+      }
+      setPublishedSchedules(nextSchedules);
+      publishedSchedulesRef.current = nextSchedules;
+      const persistedResults = await Promise.all(persistenceTasks);
+      if (persistedResults.some((result) => !result)) {
+        await showDarkAlert2(
+          "The event was removed from the screen, but the schedule save failed. Refresh the DFP before making further changes, then try the delete again.",
+          "Delete Save Failed",
+          "error"
+        );
+        return;
+      }
     }
     if (!isNextDay) {
       logRoutineAppDebug("📋 Triggering training report sync after event deletion...");

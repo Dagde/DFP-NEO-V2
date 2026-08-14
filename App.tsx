@@ -35514,15 +35514,15 @@ const App: React.FC = () => {
     // persistScheduleForDate: saves the full schedule for a date to the DB.
     // Pass allEventsForDate directly (after setPublishedSchedules has been called)
     // to avoid race conditions with React's async state updates.
-    const persistScheduleForDate = (targetDate: string, allEventsForDate: ScheduleEvent[], baselineEventsForDate?: ScheduleEvent[]) => {
+    const persistScheduleForDate = async (targetDate: string, allEventsForDate: ScheduleEvent[], baselineEventsForDate?: ScheduleEvent[]): Promise<boolean> => {
         // Skip seed data
         if (allEventsForDate.some((e: any) => e.isHistoricalSeed === true)) {
             logScheduleDebug('[Persist] Skipped seed data for', targetDate);
-            return;
+            return false;
         }
         if (allEventsForDate.length === 0 && (!baselineEventsForDate || baselineEventsForDate.length === 0)) {
             logScheduleDebug('[Persist] No events for', targetDate, '- nothing to persist');
-            return;
+            return false;
         }
 
         const apiBase = getApiBaseUrl();
@@ -35623,24 +35623,26 @@ const App: React.FC = () => {
 
         logScheduleDebug(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
         cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
-        fetch(`${apiBase}/daily-snapshot/save`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(snapshotPayload),
-        })
-        .then(res => res.json())
-        .then(result => {
+        try {
+            const response = await fetch(`${apiBase}/daily-snapshot/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(snapshotPayload),
+            });
+            const result = await response.json().catch(() => ({}));
             if (result.success) {
                 loadedSnapshotDates.current.add(snapshotKey);
                 cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
                 logScheduleDebug(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events`);
+                return true;
             } else {
-                console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
+                console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error || result.details || response.status);
+                return false;
             }
-        })
-        .catch(err => {
+        } catch (err) {
             console.warn(`⚠️ [Persist] Could not save snapshot for ${targetDate}:`, err);
-        });
+            return false;
+        }
     };
     // ────────────────────────────────────────────────────────────────────────────
 
@@ -36361,23 +36363,42 @@ const App: React.FC = () => {
         if (isNextDay) {
             setNextDayBuildEvents(prev => prev.filter(e => !deletedEventIds.has(e.id)));
         } else {
-            setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
-                const nextSchedules = { ...prev };
-                Object.entries(prev).forEach(([scheduleDate, scheduleEvents]) => {
-                    const newScheduleForDate = scheduleEvents.filter(e => !isSameDeploymentToDelete(e));
-                    if (newScheduleForDate.length !== scheduleEvents.length) {
-                        nextSchedules[scheduleDate] = newScheduleForDate;
-                        persistScheduleForDate(scheduleDate, newScheduleForDate, scheduleEvents);
-                    }
-                });
-                if (!isDeploymentDelete) {
-                    const scheduleForDate = prev[eventDate] || [];
-                    const newScheduleForDate = scheduleForDate.filter(e => e.id !== selectedEvent.id);
-                    nextSchedules[eventDate] = newScheduleForDate;
-                    persistScheduleForDate(eventDate, newScheduleForDate, scheduleForDate);
+            const currentSchedules = publishedSchedulesRef.current || {};
+            const nextSchedules = { ...currentSchedules };
+            const persistenceTasks: Array<Promise<boolean>> = [];
+
+            Object.entries(currentSchedules).forEach(([scheduleDate, scheduleEvents]) => {
+                const newScheduleForDate = scheduleEvents.filter(e => isDeploymentDelete
+                    ? !isSameDeploymentToDelete(e)
+                    : scheduleDate === eventDate ? e.id !== selectedEvent.id : true
+                );
+                if (newScheduleForDate.length !== scheduleEvents.length) {
+                    nextSchedules[scheduleDate] = newScheduleForDate;
+                    persistenceTasks.push(persistScheduleForDate(scheduleDate, newScheduleForDate, scheduleEvents));
                 }
-                return nextSchedules;
             });
+
+            if (persistenceTasks.length === 0) {
+                await showDarkAlert(
+                    `The event could not be removed because it was not found in the saved schedule for ${eventDate}. Refresh the DFP and try again.`,
+                    'Delete Failed',
+                    'error'
+                );
+                return;
+            }
+
+            setPublishedSchedules(nextSchedules);
+            publishedSchedulesRef.current = nextSchedules;
+
+            const persistedResults = await Promise.all(persistenceTasks);
+            if (persistedResults.some(result => !result)) {
+                await showDarkAlert(
+                    'The event was removed from the screen, but the schedule save failed. Refresh the DFP before making further changes, then try the delete again.',
+                    'Delete Save Failed',
+                    'error'
+                );
+                return;
+            }
         }
 
         // NEW APPROACH: Trigger training report sync after deletion (only for Active DFP)
