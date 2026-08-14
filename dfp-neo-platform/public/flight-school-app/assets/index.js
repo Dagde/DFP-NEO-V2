@@ -31968,18 +31968,29 @@ ${swapNote}` : swapNote
     return options;
   }, []);
   const traineeObject = reactExports.useMemo(() => {
-    const traineeFullName = event.flightType === "Dual" ? event.student : event.pilot;
-    if (!traineeFullName) return null;
-    return traineesData.find((t) => t.fullName === traineeFullName) || null;
-  }, [event.flightType, event.student, event.pilot, traineesData]);
+    const traineeRole = event.flightType === "Dual" ? "student" : "pilot";
+    const traineeName = event.flightType === "Dual" ? event.student : event.pilot;
+    const traineeRef = event.personnelRefs?.find((ref) => ref.personType === "trainee" && ref.role === traineeRole);
+    if (traineeRef?.id || traineeRef?.idNumber) {
+      const matchedByIdentity = traineesData.find((trainee) => traineeRef.id && String(trainee.id || "") === String(traineeRef.id) || traineeRef.idNumber && String(trainee.idNumber || "") === String(traineeRef.idNumber));
+      if (matchedByIdentity) return matchedByIdentity;
+    }
+    if (!traineeName) return null;
+    return traineesData.find((trainee) => trainee.fullName === traineeName || trainee.name === traineeName) || null;
+  }, [event.flightType, event.personnelRefs, event.pilot, event.student, traineesData]);
   const trainingReportStaffObject = reactExports.useMemo(() => {
+    const instructorRef = event.personnelRefs?.find((ref) => ref.personType === "staff" && ref.role === "instructor");
+    if (instructorRef?.id || instructorRef?.idNumber) {
+      const matchedByIdentity = instructorsData.find((instructor) => instructorRef.id && String(instructor.id || "") === String(instructorRef.id) || instructorRef.idNumber && String(instructor.idNumber || "") === String(instructorRef.idNumber));
+      if (matchedByIdentity) return matchedByIdentity;
+    }
     const candidateNames = [event.fixedCrewPic, event.pilot, event.crew, event.instructor].map((name) => String(name || "").trim()).filter(Boolean);
     for (const candidateName of candidateNames) {
       const staff = instructorsData.find((instructor) => instructor.name === candidateName);
       if (staff) return staff;
     }
     return null;
-  }, [event.crew, event.fixedCrewPic, event.instructor, event.pilot, instructorsData]);
+  }, [event.crew, event.fixedCrewPic, event.instructor, event.personnelRefs, event.pilot, instructorsData]);
   const handleSyllabusFocus = () => {
     if (isOracleContext && !crew[0]?.student && !crew[0]?.instructor) {
       setSyllabusSelectionError(true);
@@ -31997,7 +32008,11 @@ ${swapNote}` : swapNote
   };
   const handlePt051Click = () => {
     if (traineeObject) {
-      onOpenPt051(traineeObject);
+      onOpenPt051(traineeObject, {
+        ...event,
+        instructor: trainingReportStaffObject?.name || event.instructor,
+        student: traineeObject.fullName || traineeObject.name || event.student
+      });
       onClose();
     }
   };
@@ -119271,8 +119286,8 @@ ${"=".repeat(60)}`);
           const rows = await response.json();
           if (Array.isArray(rows)) {
             assessment = rows.find(
-              (row) => row.flightNumber === event.flightNumber && (!event.date || !row.date || row.date === event.date)
-            ) || rows.find((row) => row.flightNumber === event.flightNumber) || null;
+              (row) => row.traineeFullName === trainee.fullName && row.flightNumber === event.flightNumber && (!event.date || !row.date || row.date === event.date)
+            ) || rows.find((row) => row.traineeFullName === trainee.fullName && row.flightNumber === event.flightNumber) || null;
           }
         }
       }
@@ -132843,14 +132858,14 @@ Do you want to replace the existing entry?`,
           onNavigateToSyllabus: (id) => {
             onNavigateToSyllabus(id);
           },
-          onOpenPt051: (trainee) => {
+          onOpenPt051: (trainee, reportEvent) => {
             if (!canViewTraineePt051(trainee)) {
               denyPlatformAction(`${configuredTrainingReportDisplayName} record`);
               return;
             }
-            setEventForPt051(selectedEvent);
+            setEventForPt051(reportEvent);
             setSelectedTraineeForHateSheet(trainee);
-            logAudit("Flight Detail", "View", `Viewed ${configuredTrainingReportDisplayName} for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
+            logAudit("Flight Detail", "View", `Viewed ${configuredTrainingReportDisplayName} for ${trainee.fullName} - Event: ${reportEvent.flightNumber} (${reportEvent.date})`);
             handleNavigation("PT051");
           },
           trainingReportDisplayName: getTrainingReportDisplayNameForUnit(

@@ -32284,9 +32284,13 @@ const App: React.FC = () => {
                     const rows = await response.json();
                     if (Array.isArray(rows)) {
                         assessment = rows.find((row: Pt051Assessment) =>
+                            row.traineeFullName === trainee.fullName &&
                             row.flightNumber === event.flightNumber &&
                             (!event.date || !row.date || row.date === event.date)
-                        ) || rows.find((row: Pt051Assessment) => row.flightNumber === event.flightNumber) || null;
+                        ) || rows.find((row: Pt051Assessment) => (
+                            row.traineeFullName === trainee.fullName &&
+                            row.flightNumber === event.flightNumber
+                        )) || null;
                     }
                 }
             }
@@ -48390,15 +48394,15 @@ appliedUpdates.forEach(update => {
                     onNavigateToSyllabus={(id) => {
                         onNavigateToSyllabus(id);
                     }}
-                    onOpenPt051={(trainee) => {
+                    onOpenPt051={(trainee, reportEvent) => {
                         if (!canViewTraineePt051(trainee)) {
                             denyPlatformAction(`${configuredTrainingReportDisplayName} record`);
                             return;
                         }
-                        setEventForPt051(selectedEvent);
+                        setEventForPt051(reportEvent);
                         setSelectedTraineeForHateSheet(trainee);
 
-                        logAudit('Flight Detail', 'View', `Viewed ${configuredTrainingReportDisplayName} for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
+                        logAudit('Flight Detail', 'View', `Viewed ${configuredTrainingReportDisplayName} for ${trainee.fullName} - Event: ${reportEvent.flightNumber} (${reportEvent.date})`);
 
                         handleNavigation('PT051');
                     }}
