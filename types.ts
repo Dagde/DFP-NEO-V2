@@ -268,6 +268,7 @@ export interface AirCombatTrainingReport {
   resourceId?: string;
   callsign?: string;
   instructorName?: string;
+  traineeFullName?: string;
   dashboardAssigneeName?: string;
   overallGrade?: string;
   overallResult?: '' | 'P' | 'F';

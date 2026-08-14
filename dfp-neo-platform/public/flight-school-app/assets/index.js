@@ -39042,7 +39042,7 @@ const MyDashboard = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
-                onClick: () => setStaffPickerEntry({ ...entry, mode: "open" }),
+                onClick: () => onSelectTrainingReport?.(entry),
                 className: "min-w-0 flex-1 text-left",
                 children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
@@ -119380,6 +119380,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       resourceId: sourceEvent.resourceId,
       callsign: sourceEvent.callsign || staff.callsign,
       instructorName: sourceEvent.instructor || existingReport?.instructorName || currentUserName,
+      traineeFullName: existingReport?.traineeFullName || sourceEvent.student || "",
       overallGrade: existingReport?.overallGrade || "",
       overallResult: existingReport?.overallResult || "",
       dcoResult,
@@ -130236,6 +130237,63 @@ ${error instanceof Error ? error.message : String(error)}`,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             currentLocationCode: activeLocationSolarProfile.code,
             onSelectTrainingReport: (entry) => {
+              const dashboardReport = entry.report;
+              const reportCode = normaliseDashboardContextCode(dashboardReport.eventCode);
+              const reportDate = String(dashboardReport.date || "").trim();
+              const allDashboardReportEvents = [
+                ...eventsForDate,
+                ...allPublishedEvents
+              ].filter((event, index, list) => event?.id && list.findIndex((candidate) => candidate.id === event.id) === index);
+              const linkedEvent = allDashboardReportEvents.find((event) => event.id === dashboardReport.eventId) || allDashboardReportEvents.find((event) => normaliseDashboardContextCode(event.flightNumber || event.eventCode) === reportCode && (!reportDate || String(event.date || date || "").trim() === reportDate) && (!dashboardReport.instructorName || normaliseDashboardName(event.instructor) === normaliseDashboardName(dashboardReport.instructorName) || normaliseDashboardName(event.pilot) === normaliseDashboardName(dashboardReport.instructorName) || normaliseDashboardName(entry.staff.name) === normaliseDashboardName(dashboardReport.instructorName)));
+              const linkedTraineeName = String(
+                dashboardReport.traineeFullName || linkedEvent?.student || linkedEvent?.traineeFullName || ""
+              ).trim();
+              const linkedTrainee = linkedTraineeName ? allTraineesData.find((trainee) => normaliseDashboardName(trainee.fullName || trainee.name) === normaliseDashboardName(linkedTraineeName)) : null;
+              if (normaliseOperationalModel(activeOperationalModel) === "flight_school" && linkedEvent && linkedTrainee) {
+                const existingAssessment = Array.from(pt051Assessments.values()).find((assessment) => assessment.traineeFullName === linkedTrainee.fullName && (assessment.eventId === linkedEvent.id || normaliseDashboardContextCode(assessment.flightNumber) === reportCode && String(assessment.date || "") === String(linkedEvent.date || dashboardReport.date || date || "")));
+                const assessmentForReport = existingAssessment || {
+                  id: `pt051-${linkedEvent.id}-${linkedTrainee.fullName}`,
+                  traineeFullName: linkedTrainee.fullName,
+                  eventId: linkedEvent.id,
+                  flightNumber: linkedEvent.flightNumber || dashboardReport.eventCode,
+                  date: linkedEvent.date || dashboardReport.date || date,
+                  instructorName: linkedEvent.instructor || dashboardReport.instructorName || entry.staff.name,
+                  overallGrade: null,
+                  overallResult: null,
+                  dcoResult: dashboardReport.dcoResult || "",
+                  overallComments: "",
+                  startTime: Number(linkedEvent.startTime || dashboardReport.startTime || 0),
+                  duration: Number(linkedEvent.duration || dashboardReport.duration || 0),
+                  endTime: Number(linkedEvent.startTime || dashboardReport.startTime || 0) + Number(linkedEvent.duration || dashboardReport.duration || 0),
+                  scores: ALL_ELEMENTS.map((element) => ({
+                    element,
+                    grade: null,
+                    comment: ""
+                  })),
+                  isCompleted: false,
+                  groundSchoolAssessment: { isAssessment: false }
+                };
+                pushDashboardReportDiag("dashboard:training-report-open-direct", {
+                  reportId: dashboardReport.id,
+                  eventId: linkedEvent.id,
+                  eventCode: dashboardReport.eventCode,
+                  traineeFullName: linkedTrainee.fullName,
+                  instructorName: linkedEvent.instructor || dashboardReport.instructorName || entry.staff.name,
+                  usedExistingAssessment: Boolean(existingAssessment)
+                });
+                openPt051FromTraineeProfile(linkedTrainee, assessmentForReport);
+                return;
+              }
+              pushDashboardReportDiag("dashboard:training-report-open-staff-profile-fallback", {
+                reportId: dashboardReport.id,
+                eventId: dashboardReport.eventId || null,
+                eventCode: dashboardReport.eventCode,
+                reportDate: dashboardReport.date,
+                linkedEventFound: Boolean(linkedEvent),
+                linkedTraineeName: linkedTraineeName || null,
+                linkedTraineeFound: Boolean(linkedTrainee),
+                operationalModel: activeOperationalModel
+              });
               const selectedStaff = allInstructorsData.find((staff) => entry.staff.id ? staff.id === entry.staff.id : staff.idNumber === entry.staff.idNumber) || entry.staff;
               const reportAssignee = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(entry.report.dashboardAssigneeName || dashboardUserName)) || dashboardStaff;
               const assessorName = reportAssignee ? `${reportAssignee.rank || ""} ${reportAssignee.name}`.trim() : entry.report.instructorName || entry.report.dashboardAssigneeName || dashboardUserName;

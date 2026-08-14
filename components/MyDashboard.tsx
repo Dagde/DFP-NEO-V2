@@ -1068,7 +1068,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 <li key={entry.report.id} className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors">
                                     <div className="flex items-center gap-2">
                                     <button
-                                        onClick={() => setStaffPickerEntry({ ...entry, mode: 'open' })}
+                                        onClick={() => onSelectTrainingReport?.(entry)}
                                         className="min-w-0 flex-1 text-left"
                                     >
                                         <div className="flex items-center justify-between gap-2">
