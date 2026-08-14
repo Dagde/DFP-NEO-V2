@@ -38334,6 +38334,52 @@ const formatDate$2 = (dateString) => {
 };
 const compareDashboardRank = (left, right) => String(left || "").localeCompare(String(right || ""), void 0, { sensitivity: "base" });
 const normaliseDashboardContactName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+const toDashboardSurnameFirstName = (value) => {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (text.includes(",")) return text;
+  const parts = text.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return text;
+  const surname = parts[parts.length - 1];
+  const firstNames = parts.slice(0, -1).join(" ");
+  return `${surname}, ${firstNames}`;
+};
+const normaliseDashboardCode = (value) => String(value || "").trim().toUpperCase();
+const isDashboardStandbyEvent = (event) => {
+  const values = [
+    event.resourceId,
+    event.flightNumber,
+    event.eventCode,
+    event.type,
+    event.eventType
+  ].map((value) => String(value || "").toUpperCase());
+  return values.some((value) => value.startsWith("STBY") || value.startsWith("BNF-STBY") || value.startsWith("FTD-STBY") || /\bSTBY\b/.test(value) || value.includes("STANDBY"));
+};
+const getDashboardEventCode = (event) => String(event.flightNumber || event.eventCode || "").trim();
+const findDashboardSyllabusDetail = (event, syllabusDetails) => {
+  const code = normaliseDashboardCode(getDashboardEventCode(event));
+  if (!code) return void 0;
+  return syllabusDetails.find((item) => normaliseDashboardCode(item.code) === code || normaliseDashboardCode(item.id) === code);
+};
+const isDashboardGroundOrProceduralEvent = (event, detail) => {
+  const code = normaliseDashboardCode(getDashboardEventCode(event));
+  const eventType = normaliseDashboardCode(event.type || event.eventType);
+  const detailType = normaliseDashboardCode(detail?.type);
+  if (detailType === "FLIGHT" || detailType === "FTD") return false;
+  if (detailType === "GROUND SCHOOL" || detailType === "ACADEMICS") return true;
+  return eventType === "GROUND" || eventType === "CPT" || code.includes("CPT") || code.includes("GND") || code.includes("GROUND");
+};
+const getDashboardEventFinishTime = (event) => {
+  if (!event.date) return null;
+  const start = Number(event.startTime || 0);
+  const duration = Number(event.duration || 0);
+  if (!Number.isFinite(start) || !Number.isFinite(duration)) return null;
+  const [year, month, day] = String(event.date).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const finish = new Date(year, month - 1, day);
+  finish.setMinutes(Math.round((start + duration) * 60));
+  return finish;
+};
 const toDashboardContactDisplayName = (name, rank) => {
   const [lastName, firstName] = String(name || "").split(",").map((part) => part.trim());
   const displayName = firstName ? `${lastName}, ${firstName}` : name;
@@ -38478,6 +38524,8 @@ const MyDashboard = ({
   sctRequests,
   pt051Assessments,
   onSelectPt051,
+  syllabusDetails = [],
+  suppressedPt051EventIds = [],
   trainingReportsToComplete = [],
   onSelectTrainingReport,
   onReassignTrainingReport,
@@ -38766,13 +38814,56 @@ const MyDashboard = ({
   }, [staffOptions, staffPickerEntry]);
   const mySctRequests = sctRequests.filter((req) => req.name === userName.split(" ").reverse().join(", "));
   const incompletePt051s = React.useMemo(() => {
-    const fullUserName = `${userName.split(" ").reverse().join(", ")}`;
-    return Array.from(pt051Assessments.values()).filter(
-      (assessment) => !assessment.isCompleted && assessment.instructorName === fullUserName
-    ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [pt051Assessments, userName]);
+    const fullUserName = toDashboardSurnameFirstName(userName);
+    const fullUserKey = normaliseDashboardContactName(fullUserName);
+    const suppressedEventIds = new Set(suppressedPt051EventIds.map((value) => String(value || "").trim()).filter(Boolean));
+    const assessments = Array.from(pt051Assessments.values());
+    const existingAssessmentKeys = new Set(assessments.map((assessment) => `${assessment.eventId || ""}::${normaliseDashboardContactName(assessment.traineeFullName)}`));
+    const completedAssessmentKeys = new Set(assessments.filter((assessment) => assessment.isCompleted).map((assessment) => `${assessment.eventId || ""}::${normaliseDashboardContactName(assessment.traineeFullName)}`));
+    const storedIncomplete = assessments.filter(
+      (assessment) => !assessment.isCompleted && normaliseDashboardContactName(assessment.instructorName) === fullUserKey
+    );
+    const dueScheduledReports = events.filter((event) => !isDashboardStandbyEvent(event)).map((event) => ({ event, detail: findDashboardSyllabusDetail(event, syllabusDetails) })).filter(({ event, detail }) => {
+      if (suppressedEventIds.has(event.id)) return false;
+      if (!isDashboardGroundOrProceduralEvent(event, detail)) return false;
+      if (detail && detail.assessmentRequired !== true) return false;
+      if (!detail && event.assessmentRequired !== true) return false;
+      const assignedInstructor = normaliseDashboardContactName(event.instructor || event.pilot || event.fixedCrewPic);
+      if (!assignedInstructor || assignedInstructor !== fullUserKey) return false;
+      const traineeName = String(event.student || event.traineeFullName || "").trim();
+      if (!traineeName) return false;
+      const finishTime = getDashboardEventFinishTime(event);
+      if (!finishTime || finishTime.getTime() > Date.now()) return false;
+      const assessmentKey = `${event.id}::${normaliseDashboardContactName(traineeName)}`;
+      if (existingAssessmentKeys.has(assessmentKey) || completedAssessmentKeys.has(assessmentKey)) return false;
+      return true;
+    }).map(({ event }) => {
+      const traineeName = String(event.student || event.traineeFullName || "").trim();
+      const startTime = Number(event.startTime || 0);
+      const duration = Number(event.duration || 0);
+      return {
+        id: `dashboard-due-${event.id}-${normaliseDashboardContactName(traineeName)}`,
+        traineeFullName: traineeName,
+        eventId: event.id,
+        flightNumber: getDashboardEventCode(event),
+        date: event.date,
+        instructorName: fullUserName,
+        overallGrade: null,
+        overallResult: null,
+        dcoResult: "",
+        overallComments: "",
+        startTime,
+        duration,
+        endTime: startTime + duration,
+        scores: [],
+        isCompleted: false,
+        groundSchoolAssessment: { isAssessment: false }
+      };
+    });
+    return [...storedIncomplete, ...dueScheduledReports].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [events, pt051Assessments, suppressedPt051EventIds, syllabusDetails, userName]);
   const EventRow = ({ event }) => {
-    const isStby = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY") || event.resourceId.startsWith("FTD-STBY"));
+    const isStby = isDashboardStandbyEvent(event);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-3 h-3 rounded-full ${event.color}` }),
@@ -116423,6 +116514,14 @@ ${"=".repeat(60)}`);
   const [pendingDashboardTrainingReportContext, setPendingDashboardTrainingReportContext] = reactExports.useState(null);
   const [trainingReportRecentLogEvents, setTrainingReportRecentLogEvents] = reactExports.useState([]);
   const [loadedPt051Keys, setLoadedPt051Keys] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [suppressedDashboardPt051EventIds, setSuppressedDashboardPt051EventIds] = reactExports.useState(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem("dfp_dashboard_suppressed_pt051_event_ids_v1") || "[]");
+      return Array.isArray(parsed) ? parsed.map((value) => String(value || "").trim()).filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  });
   const [selectedPersonForCurrency, setSelectedPersonForCurrency] = reactExports.useState(null);
   const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = reactExports.useState("instructor");
   const [showAuthFlyout, setShowAuthFlyout] = reactExports.useState(false);
@@ -130291,6 +130390,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSelectMySct: handleSelectMySct,
             sctRequests: [...sctFlights, ...sctFtds],
             pt051Assessments,
+            syllabusDetails,
+            suppressedPt051EventIds: suppressedDashboardPt051EventIds,
             trainingReportsToComplete: pendingTrainingReports,
             staffOptions: allInstructorsData,
             messageContactStaffOptions: instructorsData,
@@ -130375,12 +130476,30 @@ ${error instanceof Error ? error.message : String(error)}`,
               logRoutineAppDebug("🔍 Dashboard training report clicked:", assessment);
               logRoutineAppDebug("Looking for event ID:", assessment.eventId);
               logRoutineAppDebug("Total events available:", allPublishedEvents.length);
-              const event = allPublishedEvents.find((e) => e.id === assessment.eventId);
+              const dashboardPt051Events = [
+                ...eventsForDate,
+                ...allPublishedEvents
+              ].filter((event2, index, list) => event2?.id && list.findIndex((candidate) => candidate.id === event2.id) === index);
+              const event = dashboardPt051Events.find((e) => e.id === assessment.eventId);
               logRoutineAppDebug("Found event:", event);
               const trainee = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
               logRoutineAppDebug("Found trainee:", trainee);
               if (event && trainee) {
                 logRoutineAppDebug("✅ Setting event and trainee, navigating to PT051");
+                if (String(assessment.id || "").startsWith("dashboard-due-")) {
+                  const assessmentKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
+                  setPt051Assessments((prev) => {
+                    if (prev.has(assessmentKey)) return prev;
+                    const updated = new Map(prev);
+                    updated.set(assessmentKey, assessment);
+                    return updated;
+                  });
+                  setLoadedPt051Keys((prev) => {
+                    const updated = new Set(prev);
+                    updated.add(`${assessment.eventId}-${assessment.traineeFullName}`);
+                    return updated;
+                  });
+                }
                 setEventForPt051(event);
                 setSelectedTraineeForHateSheet(trainee);
                 setTimeout(() => {
@@ -130403,7 +130522,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   date: assessment.date,
                   instructor: assessment.instructorName
                 });
-                const fallbackEvent = allPublishedEvents.find(
+                const fallbackEvent = dashboardPt051Events.find(
                   (e) => e.flightNumber === assessment.flightNumber && e.date === assessment.date && e.instructor === assessment.instructorName
                 );
                 logRoutineAppDebug("Fallback result:", fallbackEvent);
@@ -130424,7 +130543,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                     matchingInstructors: allPublishedEvents.filter((e) => e.instructor === assessment.instructorName).length
                   });
                   logRoutineAppDebug("🔄 Attempting secondary fallback (flight number + instructor only)...");
-                  const secondaryFallbackEvent = allPublishedEvents.find(
+                  const secondaryFallbackEvent = dashboardPt051Events.find(
                     (e) => e.flightNumber === assessment.flightNumber && e.instructor === assessment.instructorName
                   );
                   if (secondaryFallbackEvent && trainee) {
@@ -131059,21 +131178,39 @@ ${error instanceof Error ? error.message : String(error)}`,
                 }
                 logRoutineAppDebug("🗑️ App.tsx: onDeleteAssessment called with ID:", assessmentId);
                 const deleteEventId = existingAssessment?.eventId || eventForPt051.id || assessmentId;
+                const suppressDashboardDueReport = () => {
+                  const nextEventId = String(deleteEventId || "").trim();
+                  if (!nextEventId) return;
+                  setSuppressedDashboardPt051EventIds((prev) => {
+                    if (prev.includes(nextEventId)) return prev;
+                    const updated = [...prev, nextEventId];
+                    try {
+                      localStorage.setItem("dfp_dashboard_suppressed_pt051_event_ids_v1", JSON.stringify(updated));
+                    } catch {
+                    }
+                    return updated;
+                  });
+                };
                 const apiBase = getApiBaseUrl();
                 const response = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(deleteEventId)}`, {
                   method: "DELETE"
                 });
                 if (!response.ok) {
                   const errorText = await response.text().catch(() => "");
-                  await showDarkAlert2(
-                    `${selectedTrainingReportName} could not be deleted from the database. It has not been removed locally.
+                  const isDashboardDueDraft = String(existingAssessment?.id || assessmentId || "").startsWith("dashboard-due-");
+                  if (!isDashboardDueDraft || response.status !== 404) {
+                    await showDarkAlert2(
+                      `${selectedTrainingReportName} could not be deleted from the database. It has not been removed locally.
 
 ${errorText || `HTTP ${response.status}`}`,
-                    `${selectedTrainingReportName} Delete Failed`,
-                    "error"
-                  );
-                  throw new Error(errorText || `Failed to delete ${selectedTrainingReportName} record (${response.status})`);
+                      `${selectedTrainingReportName} Delete Failed`,
+                      "error"
+                    );
+                    throw new Error(errorText || `Failed to delete ${selectedTrainingReportName} record (${response.status})`);
+                  }
+                  logRoutineAppDebug(`[Training Report] Suppressing unsaved dashboard due report ${deleteEventId} after database returned 404.`);
                 }
+                suppressDashboardDueReport();
                 const assessmentKey2 = `pt051-${deleteEventId}-${selectedTraineeForHateSheet.fullName}`;
                 logRoutineAppDebug("🗑️ App.tsx: Deleting assessment with key:", assessmentKey2);
                 const updatedAssessments = new Map(pt051Assessments);

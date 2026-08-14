@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Pt051Assessment, Trainee } from '../types';
+import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Pt051Assessment, Trainee, SyllabusItemDetail } from '../types';
 import TafWeatherWidget from './TafWeatherWidget';
 import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
@@ -17,6 +17,8 @@ interface MyDashboardProps {
     sctRequests: SctRequest[];
     pt051Assessments: Map<string, Pt051Assessment>;
     onSelectPt051: (assessment: Pt051Assessment) => void;
+    syllabusDetails?: SyllabusItemDetail[];
+    suppressedPt051EventIds?: string[];
     trainingReportsToComplete?: Array<{ report: AirCombatTrainingReport; staff: Instructor }>;
     onSelectTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
     onReassignTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }, assignee: Instructor) => void;
@@ -152,6 +154,63 @@ const formatDashboardStaffName = (staff: Instructor): string => {
 const normaliseDashboardContactName = (value?: string | null): string => (
     String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
 );
+
+const toDashboardSurnameFirstName = (value?: string | null): string => {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    if (text.includes(',')) return text;
+    const parts = text.split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return text;
+    const surname = parts[parts.length - 1];
+    const firstNames = parts.slice(0, -1).join(' ');
+    return `${surname}, ${firstNames}`;
+};
+
+const normaliseDashboardCode = (value?: string | null): string => (
+    String(value || '').trim().toUpperCase()
+);
+
+const isDashboardStandbyEvent = (event: ScheduleEvent): boolean => {
+    const values = [
+        event.resourceId,
+        event.flightNumber,
+        (event as any).eventCode,
+        event.type,
+        (event as any).eventType,
+    ].map(value => String(value || '').toUpperCase());
+    return values.some(value => value.startsWith('STBY') || value.startsWith('BNF-STBY') || value.startsWith('FTD-STBY') || /\bSTBY\b/.test(value) || value.includes('STANDBY'));
+};
+
+const getDashboardEventCode = (event: ScheduleEvent): string => (
+    String(event.flightNumber || (event as any).eventCode || '').trim()
+);
+
+const findDashboardSyllabusDetail = (event: ScheduleEvent, syllabusDetails: SyllabusItemDetail[]): SyllabusItemDetail | undefined => {
+    const code = normaliseDashboardCode(getDashboardEventCode(event));
+    if (!code) return undefined;
+    return syllabusDetails.find(item => normaliseDashboardCode(item.code) === code || normaliseDashboardCode(item.id) === code);
+};
+
+const isDashboardGroundOrProceduralEvent = (event: ScheduleEvent, detail?: SyllabusItemDetail): boolean => {
+    const code = normaliseDashboardCode(getDashboardEventCode(event));
+    const eventType = normaliseDashboardCode(event.type || (event as any).eventType);
+    const detailType = normaliseDashboardCode(detail?.type);
+    if (detailType === 'FLIGHT' || detailType === 'FTD') return false;
+    if (detailType === 'GROUND SCHOOL' || detailType === 'ACADEMICS') return true;
+    return eventType === 'GROUND' || eventType === 'CPT' || code.includes('CPT') || code.includes('GND') || code.includes('GROUND');
+};
+
+const getDashboardEventFinishTime = (event: ScheduleEvent): Date | null => {
+    if (!event.date) return null;
+    const start = Number(event.startTime || 0);
+    const duration = Number(event.duration || 0);
+    if (!Number.isFinite(start) || !Number.isFinite(duration)) return null;
+    const [year, month, day] = String(event.date).split('-').map(Number);
+    if (!year || !month || !day) return null;
+    const finish = new Date(year, month - 1, day);
+    finish.setMinutes(Math.round((start + duration) * 60));
+    return finish;
+};
 
 const toDashboardContactDisplayName = (name: string, rank?: string): string => {
     const [lastName, firstName] = String(name || '').split(',').map(part => part.trim());
@@ -329,6 +388,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     sctRequests, 
     pt051Assessments, 
     onSelectPt051,
+    syllabusDetails = [],
+    suppressedPt051EventIds = [],
     trainingReportsToComplete = [],
     onSelectTrainingReport,
     onReassignTrainingReport,
@@ -678,21 +739,68 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     
     // Get incomplete training report assessments assigned to current user.
     const incompletePt051s = React.useMemo(() => {
-        const fullUserName = `${userName.split(' ').reverse().join(', ')}`; // Convert "Joe Bloggs" to "Bloggs, Joe"
-        return Array.from(pt051Assessments.values())
-            .filter(assessment => 
-                !assessment.isCompleted && 
-                assessment.instructorName === fullUserName
-            )
+        const fullUserName = toDashboardSurnameFirstName(userName);
+        const fullUserKey = normaliseDashboardContactName(fullUserName);
+        const suppressedEventIds = new Set(suppressedPt051EventIds.map(value => String(value || '').trim()).filter(Boolean));
+        const assessments = Array.from(pt051Assessments.values());
+        const existingAssessmentKeys = new Set(assessments.map(assessment => (
+            `${assessment.eventId || ''}::${normaliseDashboardContactName(assessment.traineeFullName)}`
+        )));
+        const completedAssessmentKeys = new Set(assessments
+            .filter(assessment => assessment.isCompleted)
+            .map(assessment => `${assessment.eventId || ''}::${normaliseDashboardContactName(assessment.traineeFullName)}`));
+        const storedIncomplete = assessments
+            .filter(assessment =>
+                !assessment.isCompleted &&
+                normaliseDashboardContactName(assessment.instructorName) === fullUserKey
+            );
+        const dueScheduledReports = events
+            .filter(event => !isDashboardStandbyEvent(event))
+            .map(event => ({ event, detail: findDashboardSyllabusDetail(event, syllabusDetails) }))
+            .filter(({ event, detail }) => {
+                if (suppressedEventIds.has(event.id)) return false;
+                if (!isDashboardGroundOrProceduralEvent(event, detail)) return false;
+                if (detail && detail.assessmentRequired !== true) return false;
+                if (!detail && (event as any).assessmentRequired !== true) return false;
+                const assignedInstructor = normaliseDashboardContactName(event.instructor || event.pilot || event.fixedCrewPic);
+                if (!assignedInstructor || assignedInstructor !== fullUserKey) return false;
+                const traineeName = String(event.student || (event as any).traineeFullName || '').trim();
+                if (!traineeName) return false;
+                const finishTime = getDashboardEventFinishTime(event);
+                if (!finishTime || finishTime.getTime() > Date.now()) return false;
+                const assessmentKey = `${event.id}::${normaliseDashboardContactName(traineeName)}`;
+                if (existingAssessmentKeys.has(assessmentKey) || completedAssessmentKeys.has(assessmentKey)) return false;
+                return true;
+            })
+            .map(({ event }) => {
+                const traineeName = String(event.student || (event as any).traineeFullName || '').trim();
+                const startTime = Number(event.startTime || 0);
+                const duration = Number(event.duration || 0);
+                return {
+                    id: `dashboard-due-${event.id}-${normaliseDashboardContactName(traineeName)}`,
+                    traineeFullName: traineeName,
+                    eventId: event.id,
+                    flightNumber: getDashboardEventCode(event),
+                    date: event.date,
+                    instructorName: fullUserName,
+                    overallGrade: null,
+                    overallResult: null,
+                    dcoResult: '',
+                    overallComments: '',
+                    startTime,
+                    duration,
+                    endTime: startTime + duration,
+                    scores: [],
+                    isCompleted: false,
+                    groundSchoolAssessment: { isAssessment: false },
+                } as Pt051Assessment;
+            });
+        return [...storedIncomplete, ...dueScheduledReports]
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }, [pt051Assessments, userName]);
+    }, [events, pt051Assessments, suppressedPt051EventIds, syllabusDetails, userName]);
 
     const EventRow: React.FC<{event: ScheduleEvent}> = ({event}) => {
-        const isStby = event.resourceId && (
-            event.resourceId.startsWith('STBY') ||
-            event.resourceId.startsWith('BNF-STBY') ||
-            event.resourceId.startsWith('FTD-STBY')
-        );
+        const isStby = isDashboardStandbyEvent(event);
         return (
             <li className="flex items-center justify-between p-3 bg-gray-700/50 rounded-md">
                 <div className="flex items-center space-x-4">

@@ -29002,6 +29002,14 @@ const App: React.FC = () => {
     const [pendingDashboardTrainingReportContext, setPendingDashboardTrainingReportContext] = useState<PendingDashboardTrainingReportContext | null>(null);
     const [trainingReportRecentLogEvents, setTrainingReportRecentLogEvents] = useState<ScheduleEvent[]>([]);
     const [loadedPt051Keys, setLoadedPt051Keys] = useState<Set<string>>(new Set());
+    const [suppressedDashboardPt051EventIds, setSuppressedDashboardPt051EventIds] = useState<string[]>(() => {
+        try {
+            const parsed = JSON.parse(localStorage.getItem('dfp_dashboard_suppressed_pt051_event_ids_v1') || '[]');
+            return Array.isArray(parsed) ? parsed.map(value => String(value || '').trim()).filter(Boolean) : [];
+        } catch {
+            return [];
+        }
+    });
     const [selectedPersonForCurrency, setSelectedPersonForCurrency] = useState<Instructor | Trainee | null>(null);
     const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = useState<'instructor' | 'trainee'>('instructor');
     const [showAuthFlyout, setShowAuthFlyout] = useState(false);
@@ -45902,6 +45910,8 @@ appliedUpdates.forEach(update => {
                             onSelectMySct={handleSelectMySct}
                             sctRequests={[...sctFlights, ...sctFtds]}
                             pt051Assessments={pt051Assessments}
+                            syllabusDetails={syllabusDetails}
+                            suppressedPt051EventIds={suppressedDashboardPt051EventIds}
                             trainingReportsToComplete={pendingTrainingReports}
                             staffOptions={allInstructorsData}
                             messageContactStaffOptions={instructorsData}
@@ -46026,7 +46036,13 @@ appliedUpdates.forEach(update => {
                                 logRoutineAppDebug('Total events available:', allPublishedEvents.length);
 
                                 // Find the event associated with this training report
-                                const event = allPublishedEvents.find(e => e.id === assessment.eventId);
+                                const dashboardPt051Events = [
+                                    ...eventsForDate,
+                                    ...allPublishedEvents,
+                                ].filter((event, index, list) => (
+                                    event?.id && list.findIndex(candidate => candidate.id === event.id) === index
+                                ));
+                                const event = dashboardPt051Events.find(e => e.id === assessment.eventId);
                                 logRoutineAppDebug('Found event:', event);
 
                                 // Find the trainee
@@ -46035,6 +46051,20 @@ appliedUpdates.forEach(update => {
 
                                 if (event && trainee) {
                                     logRoutineAppDebug('✅ Setting event and trainee, navigating to PT051');
+                                    if (String(assessment.id || '').startsWith('dashboard-due-')) {
+                                        const assessmentKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
+                                        setPt051Assessments(prev => {
+                                            if (prev.has(assessmentKey)) return prev;
+                                            const updated = new Map(prev);
+                                            updated.set(assessmentKey, assessment);
+                                            return updated;
+                                        });
+                                        setLoadedPt051Keys(prev => {
+                                            const updated = new Set(prev);
+                                            updated.add(`${assessment.eventId}-${assessment.traineeFullName}`);
+                                            return updated;
+                                        });
+                                    }
                                     // Set state synchronously
                                     setEventForPt051(event);
                                     setSelectedTraineeForHateSheet(trainee);
@@ -46062,7 +46092,7 @@ appliedUpdates.forEach(update => {
                                         instructor: assessment.instructorName
                                     });
 
-                                    const fallbackEvent = allPublishedEvents.find(e =>
+                                    const fallbackEvent = dashboardPt051Events.find(e =>
                                         e.flightNumber === assessment.flightNumber &&
                                         e.date === assessment.date &&
                                         e.instructor === assessment.instructorName
@@ -46089,7 +46119,7 @@ appliedUpdates.forEach(update => {
 
                                         // Try secondary fallback: just flight number and instructor (ignore date)
                                         logRoutineAppDebug('🔄 Attempting secondary fallback (flight number + instructor only)...');
-                                        const secondaryFallbackEvent = allPublishedEvents.find(e =>
+                                        const secondaryFallbackEvent = dashboardPt051Events.find(e =>
                                             e.flightNumber === assessment.flightNumber &&
                                             e.instructor === assessment.instructorName
                                         );
@@ -46739,6 +46769,20 @@ appliedUpdates.forEach(update => {
                             }
                             logRoutineAppDebug('🗑️ App.tsx: onDeleteAssessment called with ID:', assessmentId);
                             const deleteEventId = existingAssessment?.eventId || eventForPt051.id || assessmentId;
+                            const suppressDashboardDueReport = () => {
+                                const nextEventId = String(deleteEventId || '').trim();
+                                if (!nextEventId) return;
+                                setSuppressedDashboardPt051EventIds(prev => {
+                                    if (prev.includes(nextEventId)) return prev;
+                                    const updated = [...prev, nextEventId];
+                                    try {
+                                        localStorage.setItem('dfp_dashboard_suppressed_pt051_event_ids_v1', JSON.stringify(updated));
+                                    } catch {
+                                        // Best effort only; state still suppresses the row for this session.
+                                    }
+                                    return updated;
+                                });
+                            };
                             const apiBase = getApiBaseUrl();
                             const response = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(deleteEventId)}`, {
                                 method: 'DELETE',
@@ -46746,13 +46790,18 @@ appliedUpdates.forEach(update => {
 
                             if (!response.ok) {
                                 const errorText = await response.text().catch(() => '');
-                                await showDarkAlert(
-                                    `${selectedTrainingReportName} could not be deleted from the database. It has not been removed locally.\n\n${errorText || `HTTP ${response.status}`}`,
-                                    `${selectedTrainingReportName} Delete Failed`,
-                                    'error'
-                                );
-                                throw new Error(errorText || `Failed to delete ${selectedTrainingReportName} record (${response.status})`);
+                                const isDashboardDueDraft = String(existingAssessment?.id || assessmentId || '').startsWith('dashboard-due-');
+                                if (!isDashboardDueDraft || response.status !== 404) {
+                                    await showDarkAlert(
+                                        `${selectedTrainingReportName} could not be deleted from the database. It has not been removed locally.\n\n${errorText || `HTTP ${response.status}`}`,
+                                        `${selectedTrainingReportName} Delete Failed`,
+                                        'error'
+                                    );
+                                    throw new Error(errorText || `Failed to delete ${selectedTrainingReportName} record (${response.status})`);
+                                }
+                                logRoutineAppDebug(`[Training Report] Suppressing unsaved dashboard due report ${deleteEventId} after database returned 404.`);
                             }
+                            suppressDashboardDueReport();
 
                             // Find and delete the training report assessment from local state after the database delete succeeds.
                             const assessmentKey = `pt051-${deleteEventId}-${selectedTraineeForHateSheet.fullName}`;
