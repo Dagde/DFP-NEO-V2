@@ -38821,7 +38821,12 @@ const MyDashboard = ({
     const existingAssessmentKeys = new Set(assessments.map((assessment) => `${assessment.eventId || ""}::${normaliseDashboardContactName(assessment.traineeFullName)}`));
     const completedAssessmentKeys = new Set(assessments.filter((assessment) => assessment.isCompleted).map((assessment) => `${assessment.eventId || ""}::${normaliseDashboardContactName(assessment.traineeFullName)}`));
     const storedIncomplete = assessments.filter(
-      (assessment) => !assessment.isCompleted && normaliseDashboardContactName(assessment.instructorName) === fullUserKey
+      (assessment) => !assessment.isCompleted && normaliseDashboardContactName(assessment.instructorName) === fullUserKey && ![
+        assessment.eventId,
+        assessment.id,
+        `dashboard-due-${assessment.eventId}-${normaliseDashboardContactName(assessment.traineeFullName)}`,
+        `pt051-${assessment.eventId}-${assessment.traineeFullName}`
+      ].map((value) => String(value || "").trim()).filter(Boolean).some((candidateId) => suppressedEventIds.has(candidateId))
     );
     const dueScheduledReports = events.filter((event) => !isDashboardStandbyEvent(event)).map((event) => ({ event, detail: findDashboardSyllabusDetail(event, syllabusDetails) })).filter(({ event, detail }) => {
       const traineeName = String(event.student || event.traineeFullName || "").trim();
@@ -116523,6 +116528,19 @@ ${"=".repeat(60)}`);
       return [];
     }
   });
+  const suppressDeletedPt051Report = React.useCallback((candidateIds) => {
+    const cleanedCandidateIds = candidateIds.map((value) => String(value || "").trim()).filter(Boolean);
+    if (cleanedCandidateIds.length === 0) return;
+    setSuppressedDashboardPt051EventIds((prev) => {
+      const updated = Array.from(/* @__PURE__ */ new Set([...prev, ...cleanedCandidateIds]));
+      if (updated.length === prev.length) return prev;
+      try {
+        localStorage.setItem("dfp_dashboard_suppressed_pt051_event_ids_v1", JSON.stringify(updated));
+      } catch {
+      }
+      return updated;
+    });
+  }, []);
   const [selectedPersonForCurrency, setSelectedPersonForCurrency] = reactExports.useState(null);
   const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = reactExports.useState("instructor");
   const [showAuthFlyout, setShowAuthFlyout] = reactExports.useState(false);
@@ -121552,6 +121570,14 @@ ${error instanceof Error ? error.message : String(error)}`,
     await maybePassTrainingReportNotesToNextLmpEvent(assessment);
   };
   const onDeletePT051Assessment = (assessmentId, eventId, traineeFullName) => {
+    const dashboardDueNameKey = String(traineeFullName || "").replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
+    const dashboardDueId = `dashboard-due-${eventId}-${dashboardDueNameKey}`;
+    suppressDeletedPt051Report([
+      eventId,
+      assessmentId,
+      `pt051-${eventId}-${traineeFullName}`,
+      dashboardDueId
+    ]);
     setPt051Assessments((prev) => {
       const updated = new Map(prev);
       updated.delete(`pt051-${eventId}-${traineeFullName}`);
@@ -123245,6 +123271,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     let created = 0;
     let deleted = 0;
     const processedPt051LogicalKeys = /* @__PURE__ */ new Set();
+    const suppressedPt051Ids = new Set(suppressedDashboardPt051EventIds.map((value) => String(value || "").trim()).filter(Boolean));
+    const normalisePt051SuppressionName = (value) => String(value || "").replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
     activeDfpEvents.forEach((event) => {
       const isDutySup = event?.flightNumber?.includes("Duty Sup");
       const isStbyFlightNumber = event?.flightNumber?.toUpperCase().includes("STBY");
@@ -123282,6 +123310,20 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         }
         processedPt051LogicalKeys.add(logicalAssessmentKey);
         const assessmentKey = `${event.id}-${traineeFullName}`;
+        const suppressedCandidateIds = [
+          event.id,
+          `pt051-${assessmentKey}`,
+          `pt051-${event.id}-${traineeFullName}`,
+          `dashboard-due-${event.id}-${normalisePt051SuppressionName(traineeFullName)}`
+        ].map((value) => String(value || "").trim()).filter(Boolean);
+        if (suppressedCandidateIds.some((candidateId) => suppressedPt051Ids.has(candidateId))) {
+          logRoutineAppDebug("⏭️ Skipping deliberately deleted training report:", {
+            eventId: event.id,
+            flightNumber: event.flightNumber,
+            traineeFullName
+          });
+          return;
+        }
         const existingAssessment = Array.from(newAssessments.values()).find(
           (a) => a.eventId === event.id && a.traineeFullName === traineeFullName
         );

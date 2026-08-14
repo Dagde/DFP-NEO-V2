@@ -752,7 +752,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const storedIncomplete = assessments
             .filter(assessment =>
                 !assessment.isCompleted &&
-                normaliseDashboardContactName(assessment.instructorName) === fullUserKey
+                normaliseDashboardContactName(assessment.instructorName) === fullUserKey &&
+                ![
+                    assessment.eventId,
+                    assessment.id,
+                    `dashboard-due-${assessment.eventId}-${normaliseDashboardContactName(assessment.traineeFullName)}`,
+                    `pt051-${assessment.eventId}-${assessment.traineeFullName}`,
+                ].map(value => String(value || '').trim()).filter(Boolean).some(candidateId => suppressedEventIds.has(candidateId))
             );
         const dueScheduledReports = events
             .filter(event => !isDashboardStandbyEvent(event))

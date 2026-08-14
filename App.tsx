@@ -29010,6 +29010,22 @@ const App: React.FC = () => {
             return [];
         }
     });
+    const suppressDeletedPt051Report = React.useCallback((candidateIds: Array<string | number | null | undefined>) => {
+        const cleanedCandidateIds = candidateIds
+            .map(value => String(value || '').trim())
+            .filter(Boolean);
+        if (cleanedCandidateIds.length === 0) return;
+        setSuppressedDashboardPt051EventIds(prev => {
+            const updated = Array.from(new Set([...prev, ...cleanedCandidateIds]));
+            if (updated.length === prev.length) return prev;
+            try {
+                localStorage.setItem('dfp_dashboard_suppressed_pt051_event_ids_v1', JSON.stringify(updated));
+            } catch {
+                // Best effort only; state still suppresses regeneration for this session.
+            }
+            return updated;
+        });
+    }, []);
     const [selectedPersonForCurrency, setSelectedPersonForCurrency] = useState<Instructor | Trainee | null>(null);
     const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = useState<'instructor' | 'trainee'>('instructor');
     const [showAuthFlyout, setShowAuthFlyout] = useState(false);
@@ -35236,6 +35252,18 @@ const App: React.FC = () => {
     };
 
     const onDeletePT051Assessment = (assessmentId: string, eventId: string, traineeFullName: string) => {
+        const dashboardDueNameKey = String(traineeFullName || '')
+            .replace(/[‐‑‒–—]/g, '-')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+        const dashboardDueId = `dashboard-due-${eventId}-${dashboardDueNameKey}`;
+        suppressDeletedPt051Report([
+            eventId,
+            assessmentId,
+            `pt051-${eventId}-${traineeFullName}`,
+            dashboardDueId,
+        ]);
         setPt051Assessments(prev => {
             const updated = new Map(prev);
             updated.delete(`pt051-${eventId}-${traineeFullName}`);
@@ -37309,6 +37337,14 @@ const App: React.FC = () => {
         let created = 0;
         let deleted = 0;
         const processedPt051LogicalKeys = new Set<string>();
+        const suppressedPt051Ids = new Set(suppressedDashboardPt051EventIds.map(value => String(value || '').trim()).filter(Boolean));
+        const normalisePt051SuppressionName = (value: string): string => (
+            String(value || '')
+                .replace(/[‐‑‒–—]/g, '-')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase()
+        );
 
         // FORWARD CHECK: Create training reports for events that don't have them.
         activeDfpEvents.forEach(event => {
@@ -37368,6 +37404,20 @@ const App: React.FC = () => {
                 }
                 processedPt051LogicalKeys.add(logicalAssessmentKey);
                 const assessmentKey = `${event.id}-${traineeFullName}`;
+                const suppressedCandidateIds = [
+                    event.id,
+                    `pt051-${assessmentKey}`,
+                    `pt051-${event.id}-${traineeFullName}`,
+                    `dashboard-due-${event.id}-${normalisePt051SuppressionName(traineeFullName)}`,
+                ].map(value => String(value || '').trim()).filter(Boolean);
+                if (suppressedCandidateIds.some(candidateId => suppressedPt051Ids.has(candidateId))) {
+                    logRoutineAppDebug('⏭️ Skipping deliberately deleted training report:', {
+                        eventId: event.id,
+                        flightNumber: event.flightNumber,
+                        traineeFullName,
+                    });
+                    return;
+                }
 
                 // Check if a training report already exists for this event-trainee combination.
                 const existingAssessment = Array.from(newAssessments.values()).find(
