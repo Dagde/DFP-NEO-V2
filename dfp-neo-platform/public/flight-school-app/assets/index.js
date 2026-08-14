@@ -116705,6 +116705,19 @@ ${"=".repeat(60)}`);
       return updated;
     });
   }, []);
+  const unsuppressDeletedPt051Report = React.useCallback((candidateIds) => {
+    const cleanedCandidateIds = new Set(candidateIds.map((value) => String(value || "").trim()).filter(Boolean));
+    if (cleanedCandidateIds.size === 0) return;
+    setSuppressedDashboardPt051EventIds((prev) => {
+      const updated = prev.filter((value) => !cleanedCandidateIds.has(String(value || "").trim()));
+      if (updated.length === prev.length) return prev;
+      try {
+        localStorage.setItem("dfp_dashboard_suppressed_pt051_event_ids_v1", JSON.stringify(updated));
+      } catch {
+      }
+      return updated;
+    });
+  }, []);
   const [selectedPersonForCurrency, setSelectedPersonForCurrency] = reactExports.useState(null);
   const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = reactExports.useState("instructor");
   const [showAuthFlyout, setShowAuthFlyout] = reactExports.useState(false);
@@ -119790,6 +119803,15 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
     }
     setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
+    const traineeNameKey = String(report.traineeFullName || "").replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
+    unsuppressDeletedPt051Report([
+      report.id,
+      report.eventId,
+      sourceEvent.id,
+      report.eventCode,
+      report.eventId ? `dashboard-due-${report.eventId}-${traineeNameKey}` : "",
+      report.eventId ? `pt051-${report.eventId}-${report.traineeFullName || ""}` : ""
+    ]);
     setSelectedPersonForProfile((prev) => prev && "idNumber" in prev && prev.idNumber === updatedStaff.idNumber ? updatedStaff : prev);
     logAudit(
       "Training Reports",

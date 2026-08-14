@@ -29026,6 +29026,22 @@ const App: React.FC = () => {
             return updated;
         });
     }, []);
+    const unsuppressDeletedPt051Report = React.useCallback((candidateIds: Array<string | number | null | undefined>) => {
+        const cleanedCandidateIds = new Set(candidateIds
+            .map(value => String(value || '').trim())
+            .filter(Boolean));
+        if (cleanedCandidateIds.size === 0) return;
+        setSuppressedDashboardPt051EventIds(prev => {
+            const updated = prev.filter(value => !cleanedCandidateIds.has(String(value || '').trim()));
+            if (updated.length === prev.length) return prev;
+            try {
+                localStorage.setItem('dfp_dashboard_suppressed_pt051_event_ids_v1', JSON.stringify(updated));
+            } catch {
+                // Best effort only; state still restores visibility for this session.
+            }
+            return updated;
+        });
+    }, []);
     const [selectedPersonForCurrency, setSelectedPersonForCurrency] = useState<Instructor | Trainee | null>(null);
     const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = useState<'instructor' | 'trainee'>('instructor');
     const [showAuthFlyout, setShowAuthFlyout] = useState(false);
@@ -32962,6 +32978,19 @@ const App: React.FC = () => {
                 ? ((person as any).id === dbId ? updatedStaff : person)
                 : (person.idNumber === updatedStaff.idNumber ? updatedStaff : person)
         )));
+        const traineeNameKey = String(report.traineeFullName || '')
+            .replace(/[‐‑‒–—]/g, '-')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+        unsuppressDeletedPt051Report([
+            report.id,
+            report.eventId,
+            sourceEvent.id,
+            report.eventCode,
+            report.eventId ? `dashboard-due-${report.eventId}-${traineeNameKey}` : '',
+            report.eventId ? `pt051-${report.eventId}-${report.traineeFullName || ''}` : '',
+        ]);
         setSelectedPersonForProfile(prev => (
             prev && 'idNumber' in prev && prev.idNumber === updatedStaff.idNumber ? updatedStaff : prev
         ));
