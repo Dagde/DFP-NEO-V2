@@ -24257,6 +24257,9 @@ const App: React.FC = () => {
         setSessionUser(null);
     };
 
+    // Session user info (populated from auth)
+    const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string, username?: string} | null>(null);
+
     // Current User State (for permission checking)
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
     const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = useState(0);
@@ -24284,8 +24287,6 @@ const App: React.FC = () => {
     const currentUser = matchedCurrentStaffUser || instructorsData[0];
     const signedInDisplayName = authUser ? formatAuthLoginName(authUser) : currentUserName;
 
-    // Session user info (populated from auth)
-    const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string, username?: string} | null>(null);
     const emergencyQualificationOptions = useMemo(
         () => getQualificationsForOperationalModel(activeStaffQualificationCatalogue, activeOperationalModel),
         [activeOperationalModel, activeStaffQualificationCatalogue],

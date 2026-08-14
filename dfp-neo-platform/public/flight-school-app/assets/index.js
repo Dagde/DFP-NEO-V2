@@ -112684,6 +112684,7 @@ const App = () => {
     setCurrentUserName("Bloggs, Joe");
     setSessionUser(null);
   };
+  const [sessionUser, setSessionUser] = reactExports.useState(null);
   const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
   const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = reactExports.useState(0);
   const signedInIdentityKeys = [
@@ -112706,7 +112707,6 @@ const App = () => {
   });
   const currentUser2 = matchedCurrentStaffUser || instructorsData[0];
   const signedInDisplayName = authUser ? formatAuthLoginName(authUser) : currentUserName;
-  const [sessionUser, setSessionUser] = reactExports.useState(null);
   const emergencyQualificationOptions = reactExports.useMemo(
     () => getQualificationsForOperationalModel(activeStaffQualificationCatalogue, activeOperationalModel),
     [activeOperationalModel, activeStaffQualificationCatalogue]
