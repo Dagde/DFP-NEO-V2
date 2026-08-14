@@ -119870,7 +119870,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       const eventCode2 = normaliseCode2(event.flightNumber || event.eventCode);
       return allInstructorsData.some((staff) => normaliseAirCombatTrainingReports(staff.preferences).some((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && (event.id && report.eventId === event.id || normaliseCode2(report.eventCode) === eventCode2 && String(report.date || "") === String(event.date || date || ""))));
     };
-    eventCompletionsForDate.filter((completion) => completion?.dcoResult === "DCO").forEach((completion) => {
+    eventCompletionsForDate.filter((completion) => completion?.dcoResult === "DCO" || completion?.dcoResult === "DPCO").forEach((completion) => {
       const event = eventByCompletion(completion);
       const reconcileKey = `${date}:${completion.scheduleEventId || completion.id || completion.eventCode || "unknown"}`;
       if (dashboardReportReconcileKeysRef.current.has(reconcileKey)) return;
@@ -119919,7 +119919,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         completionId: completion.id || null,
         instructorName: completion.instructorName || event.instructor || null
       });
-      generateAssessmentRequiredDraftTrainingReport(event, "DCO").catch((error) => {
+      generateAssessmentRequiredDraftTrainingReport(event, completion.dcoResult).catch((error) => {
         pushDashboardReportDiag("dashboard:report-reconcile:create-draft-failed", {
           reconcileKey,
           eventId: event.id,
@@ -131767,9 +131767,9 @@ Do you want to replace the existing entry?`,
                   eventCode: eventForPostFlight?.flightNumber || eventForPostFlight?.eventCode || null,
                   eventDate: eventForPostFlight?.date || null,
                   result: data.result || null,
-                  willAttempt: Boolean(eventForPostFlight && data.result === "DCO")
+                  willAttempt: Boolean(eventForPostFlight && (data.result === "DCO" || data.result === "DPCO"))
                 });
-                if (eventForPostFlight && data.result === "DCO") {
+                if (eventForPostFlight && (data.result === "DCO" || data.result === "DPCO")) {
                   try {
                     await generateAssessmentRequiredDraftTrainingReport(
                       eventForPostFlight,

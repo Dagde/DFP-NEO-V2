@@ -32752,7 +32752,7 @@ const App: React.FC = () => {
 
     const generateAssessmentRequiredDraftTrainingReport = async (
         sourceEvent: ScheduleEvent,
-        dcoResult: 'DCO',
+        dcoResult: 'DCO' | 'DPCO',
     ) => {
         const operationalModel = normaliseOperationalModel(activeOperationalModel);
         const traceBase = {
@@ -33069,7 +33069,7 @@ const App: React.FC = () => {
         };
 
         eventCompletionsForDate
-            .filter((completion: any) => completion?.dcoResult === 'DCO')
+            .filter((completion: any) => completion?.dcoResult === 'DCO' || completion?.dcoResult === 'DPCO')
             .forEach((completion: any) => {
                 const event = eventByCompletion(completion);
                 const reconcileKey = `${date}:${completion.scheduleEventId || completion.id || completion.eventCode || 'unknown'}`;
@@ -33120,7 +33120,7 @@ const App: React.FC = () => {
                     completionId: completion.id || null,
                     instructorName: completion.instructorName || event.instructor || null,
                 });
-                generateAssessmentRequiredDraftTrainingReport(event, 'DCO').catch(error => {
+                generateAssessmentRequiredDraftTrainingReport(event, completion.dcoResult as 'DCO' | 'DPCO').catch(error => {
                     pushDashboardReportDiag('dashboard:report-reconcile:create-draft-failed', {
                         reconcileKey,
                         eventId: event.id,
@@ -47242,13 +47242,13 @@ appliedUpdates.forEach(update => {
                                         eventCode: eventForPostFlight?.flightNumber || eventForPostFlight?.eventCode || null,
                                         eventDate: eventForPostFlight?.date || null,
                                         result: data.result || null,
-                                        willAttempt: Boolean(eventForPostFlight && data.result === 'DCO'),
+                                        willAttempt: Boolean(eventForPostFlight && (data.result === 'DCO' || data.result === 'DPCO')),
                                     });
-                                    if (eventForPostFlight && data.result === 'DCO') {
+                                    if (eventForPostFlight && (data.result === 'DCO' || data.result === 'DPCO')) {
                                         try {
                                             await generateAssessmentRequiredDraftTrainingReport(
                                                 eventForPostFlight,
-                                                data.result as 'DCO'
+                                                data.result as 'DCO' | 'DPCO'
                                             );
                                         } catch (airCombatReportErr) {
                                             console.warn('[PostFlight] Assessment-required draft training report generation failed:', airCombatReportErr);
