@@ -56,6 +56,10 @@ const buildWhereClause = (filters: EventCompletionFilters): Record<string, any> 
   if (filters.isCountedAsElce !== undefined)
     where.isCountedAsElce = filters.isCountedAsElce;
 
+  if (filters.eventDate) {
+    where.eventDate = filters.eventDate;
+  }
+
   // Date range filter
   if (filters.eventDateFrom || filters.eventDateTo) {
     where.eventDate = {};

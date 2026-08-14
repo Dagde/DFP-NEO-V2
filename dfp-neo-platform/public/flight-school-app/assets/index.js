@@ -113040,6 +113040,36 @@ const App = () => {
       assessmentRequired: item.assessmentRequired
     }));
     const bfgOrBgfEvents = activeEvents.filter((event) => normaliseCode2(event.flightNumber || event.eventCode).includes("BGF5") || normaliseCode2(event.flightNumber || event.eventCode).includes("BGF"));
+    const eventCompletionEvaluations = eventCompletionsForDate.map((completion) => {
+      const matchedEvent = activeEvents.find((event) => event.id === completion.scheduleEventId || normaliseCode2(event.flightNumber || event.eventCode) === normaliseCode2(completion.eventCode) && String(event.date || "") === String(completion.eventDate || "") && Math.abs(Number(event.startTime || 0) - Number(completion.startTime || 0)) < 0.01);
+      return {
+        completion: {
+          id: completion.id || null,
+          scheduleEventId: completion.scheduleEventId || null,
+          eventCode: completion.eventCode || null,
+          eventDate: completion.eventDate || null,
+          startTime: completion.startTime ?? null,
+          duration: completion.duration ?? null,
+          traineeFullName: completion.traineeFullName || null,
+          instructorName: completion.instructorName || null,
+          dcoResult: completion.dcoResult || null,
+          createdAt: completion.createdAt || null,
+          updatedAt: completion.updatedAt || null
+        },
+        matchedEvent: matchedEvent ? serialiseEvent(matchedEvent) : null,
+        matchedSyllabus: matchedEvent ? syllabusDetails.filter((item) => item.isActive !== false && normaliseCode2(item.code) === normaliseCode2(matchedEvent.flightNumber || matchedEvent.eventCode)).map((item) => ({
+          id: item.id,
+          code: item.code,
+          type: item.type,
+          lmpType: item.lmpType,
+          module: item.module,
+          phase: item.phase,
+          courses: item.courses || [],
+          isActive: item.isActive,
+          assessmentRequired: item.assessmentRequired
+        })) : []
+      };
+    });
     const matchingBgf5Syllabus = syllabusDetails.filter((item) => normaliseCode2(item.code) === "BGF5").map((item) => ({
       id: item.id,
       code: item.code,
@@ -113082,6 +113112,9 @@ const App = () => {
         acceptedTrainingReportDrafts: reportEvaluations.filter((item) => item.accepted).length,
         bgf5TrainingReportDrafts: reportEvaluations.filter((item) => normaliseCode2(item.report.eventCode) === "BGF5").length,
         acceptedBgf5TrainingReportDrafts: reportEvaluations.filter((item) => item.accepted && normaliseCode2(item.report.eventCode) === "BGF5").length,
+        eventCompletionsForDateCount: eventCompletionsForDate.length,
+        dcoEventCompletionsForDateCount: eventCompletionsForDate.filter((completion) => completion.dcoResult === "DCO").length,
+        bgf5EventCompletionsForDateCount: eventCompletionsForDate.filter((completion) => normaliseCode2(completion.eventCode) === "BGF5").length,
         postFlightAssessmentDraftTraceCount: postFlightAssessmentDraftTrace.length,
         latestPostFlightAssessmentDraftTrace: postFlightAssessmentDraftTrace.slice(-12),
         bgf5RejectReasons: reportEvaluations.filter((item) => normaliseCode2(item.report.eventCode) === "BGF5").map((item) => ({
@@ -113094,6 +113127,7 @@ const App = () => {
       bgfEvents: bfgOrBgfEvents.map(serialiseEvent),
       matchingBgf5Syllabus,
       assessmentRequiredItems,
+      eventCompletionEvaluations,
       reportEvaluations,
       postFlightAssessmentDraftTrace
     };
@@ -114728,6 +114762,8 @@ const App = () => {
   const [scores, setScores] = reactExports.useState(/* @__PURE__ */ new Map());
   const [pt051Assessments, setPt051Assessments] = reactExports.useState(/* @__PURE__ */ new Map());
   const [pt051PerformanceLoading, setPt051PerformanceLoading] = reactExports.useState(true);
+  const [eventCompletionsForDate, setEventCompletionsForDate] = reactExports.useState([]);
+  const dashboardReportReconcileKeysRef = reactExports.useRef(/* @__PURE__ */ new Set());
   const [courses, setCourses] = reactExports.useState([]);
   const [courseColors, setCourseColors] = reactExports.useState({});
   const [archivedCourses, setArchivedCourses] = reactExports.useState({});
@@ -116992,6 +117028,58 @@ ${"=".repeat(60)}`);
     }
     return events2;
   }, [date, publishedSchedules, snapshotDates]);
+  reactExports.useEffect(() => {
+    if (!isAuthenticated || !date) {
+      setEventCompletionsForDate([]);
+      return;
+    }
+    let cancelled = false;
+    const fetchEventCompletionsForDate = async () => {
+      try {
+        const apiBase = getApiBaseUrl();
+        const params = new URLSearchParams({ eventDate: date });
+        const response = await fetch(`${apiBase}/event-completions?${params.toString()}`, {
+          credentials: "include",
+          headers: authSessionToken ? { Authorization: `Bearer ${authSessionToken}` } : void 0
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          pushDashboardReportDiag("dashboard:event-completions-fetch-failed", {
+            date,
+            status: response.status,
+            errorText
+          });
+          if (!cancelled) setEventCompletionsForDate([]);
+          return;
+        }
+        const data = await response.json();
+        const completions = Array.isArray(data?.completions) ? data.completions : [];
+        if (!cancelled) setEventCompletionsForDate(completions);
+        pushDashboardReportDiag("dashboard:event-completions-fetched", {
+          date,
+          count: completions.length,
+          sample: completions.slice(0, 10).map((completion) => ({
+            scheduleEventId: completion.scheduleEventId,
+            eventCode: completion.eventCode,
+            eventDate: completion.eventDate,
+            instructorName: completion.instructorName,
+            traineeFullName: completion.traineeFullName,
+            dcoResult: completion.dcoResult
+          }))
+        });
+      } catch (error) {
+        pushDashboardReportDiag("dashboard:event-completions-fetch-error", {
+          date,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        if (!cancelled) setEventCompletionsForDate([]);
+      }
+    };
+    fetchEventCompletionsForDate();
+    return () => {
+      cancelled = true;
+    };
+  }, [authSessionToken, date, isAuthenticated]);
   const decorateEventWithForwardedPreFlightNotes = reactExports.useCallback((event) => {
     const tileEligible = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
     if (!tileEligible || traineeLMPs.size === 0) return event;
@@ -119354,6 +119442,106 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     logRoutineAppDebug(`[PostFlight] ✅ Draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${dcoResult})`);
   };
+  reactExports.useEffect(() => {
+    if (!isAuthenticated || activeView !== "MyDashboard") return;
+    if (normaliseOperationalModel(activeOperationalModel) !== "flight_school") return;
+    if (eventCompletionsForDate.length === 0 || eventsForDate.length === 0 || allInstructorsData.length === 0 || syllabusDetails.length === 0) return;
+    const normaliseCode2 = (value) => String(value || "").trim().toUpperCase();
+    const activeUnitSet = new Set((activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+")).map(normaliseCode2).filter(Boolean));
+    const isEventInActiveUnitContext = (event) => {
+      if (activeUnitSet.size === 0) return true;
+      const eventUnits = [
+        event.unit,
+        event.unitCode,
+        ...Array.isArray(event.personnelRefs) ? event.personnelRefs.map((ref) => ref.unitCode || ref.unit) : []
+      ].flatMap((value) => String(value || "").split("+")).map(normaliseCode2).filter(Boolean);
+      return eventUnits.length === 0 || eventUnits.some((unitCode) => activeUnitSet.has(unitCode));
+    };
+    const findAssessmentRequiredItem = (event) => {
+      const eventCode2 = normaliseCode2(event.flightNumber || event.eventCode);
+      if (!eventCode2) return null;
+      return syllabusDetails.find((item) => item.isActive !== false && normaliseCode2(item.code) === eventCode2 && item.assessmentRequired === true && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType)) || null;
+    };
+    const eventByCompletion = (completion) => {
+      const completionCode = normaliseCode2(completion.eventCode);
+      const completionDate = String(completion.eventDate || date || "").trim();
+      const completionStart = Number(completion.startTime ?? NaN);
+      return eventsForDate.find((event) => event.id === completion.scheduleEventId) || eventsForDate.find((event) => normaliseCode2(event.flightNumber || event.eventCode) === completionCode && String(event.date || date || "").trim() === completionDate && (Number.isNaN(completionStart) || Math.abs(Number(event.startTime || 0) - completionStart) < 0.01));
+    };
+    const hasExistingReport = (event) => {
+      const eventCode2 = normaliseCode2(event.flightNumber || event.eventCode);
+      return allInstructorsData.some((staff) => normaliseAirCombatTrainingReports(staff.preferences).some((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && (event.id && report.eventId === event.id || normaliseCode2(report.eventCode) === eventCode2 && String(report.date || "") === String(event.date || date || ""))));
+    };
+    eventCompletionsForDate.filter((completion) => completion?.dcoResult === "DCO").forEach((completion) => {
+      const event = eventByCompletion(completion);
+      const reconcileKey = `${date}:${completion.scheduleEventId || completion.id || completion.eventCode || "unknown"}`;
+      if (dashboardReportReconcileKeysRef.current.has(reconcileKey)) return;
+      if (!event) {
+        pushDashboardReportDiag("dashboard:report-reconcile:skipped-event-not-found", {
+          reconcileKey,
+          completion
+        });
+        dashboardReportReconcileKeysRef.current.add(reconcileKey);
+        return;
+      }
+      if (!isEventInActiveUnitContext(event)) {
+        pushDashboardReportDiag("dashboard:report-reconcile:skipped-context", {
+          reconcileKey,
+          eventId: event.id,
+          eventCode: event.flightNumber || event.eventCode || null,
+          eventUnit: event.unit || event.unitCode || null
+        });
+        dashboardReportReconcileKeysRef.current.add(reconcileKey);
+        return;
+      }
+      const matchingItem = findAssessmentRequiredItem(event);
+      if (!matchingItem) {
+        pushDashboardReportDiag("dashboard:report-reconcile:skipped-not-assessment-required", {
+          reconcileKey,
+          eventId: event.id,
+          eventCode: event.flightNumber || event.eventCode || null
+        });
+        dashboardReportReconcileKeysRef.current.add(reconcileKey);
+        return;
+      }
+      if (hasExistingReport(event)) {
+        pushDashboardReportDiag("dashboard:report-reconcile:skipped-existing-report", {
+          reconcileKey,
+          eventId: event.id,
+          eventCode: event.flightNumber || event.eventCode || null
+        });
+        dashboardReportReconcileKeysRef.current.add(reconcileKey);
+        return;
+      }
+      dashboardReportReconcileKeysRef.current.add(reconcileKey);
+      pushDashboardReportDiag("dashboard:report-reconcile:creating-draft", {
+        reconcileKey,
+        eventId: event.id,
+        eventCode: event.flightNumber || event.eventCode || null,
+        completionId: completion.id || null,
+        instructorName: completion.instructorName || event.instructor || null
+      });
+      generateAssessmentRequiredDraftTrainingReport(event, "DCO").catch((error) => {
+        pushDashboardReportDiag("dashboard:report-reconcile:create-draft-failed", {
+          reconcileKey,
+          eventId: event.id,
+          eventCode: event.flightNumber || event.eventCode || null,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      });
+    });
+  }, [
+    activeContextUnitCodes,
+    activeUnitCode,
+    activeOperationalModel,
+    activeView,
+    allInstructorsData,
+    date,
+    eventCompletionsForDate,
+    eventsForDate,
+    isAuthenticated,
+    syllabusDetails
+  ]);
   const handleReassignTrainingReportNotification = async (entry, assignee) => {
     const sourceStaff = allInstructorsData.find((person) => entry.staff.id ? person.id === entry.staff.id : person.idNumber === entry.staff.idNumber) || entry.staff;
     const preferences = { ...sourceStaff.preferences || {} };

@@ -42,6 +42,7 @@ export async function OPTIONS(request: NextRequest) {
  *  - traineeFullName     string
  *  - eventCode           string
  *  - dcoResult           'DCO' | 'DPCO' | 'DNCO'
+ *  - eventDate           YYYY-MM-DD
  *  - eventDateFrom       YYYY-MM-DD
  *  - eventDateTo         YYYY-MM-DD
  *  - isCountedAsElce     'true' | 'false'
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
     const scheduleEventId = searchParams.get('scheduleEventId');
     const eventCode       = searchParams.get('eventCode');
     const dcoResult       = searchParams.get('dcoResult') as DcoResult | null;
+    const eventDate       = searchParams.get('eventDate');
     const eventDateFrom   = searchParams.get('eventDateFrom');
     const eventDateTo     = searchParams.get('eventDateTo');
     const isCountedAsElce = searchParams.get('isCountedAsElce');
@@ -72,6 +74,7 @@ export async function GET(request: NextRequest) {
     if (scheduleEventId) filters.scheduleEventId  = scheduleEventId;
     if (eventCode)       filters.eventCode        = eventCode;
     if (dcoResult)       filters.dcoResult        = dcoResult;
+    if (eventDate)       filters.eventDate        = eventDate;
     if (eventDateFrom)   filters.eventDateFrom    = eventDateFrom;
     if (eventDateTo)     filters.eventDateTo      = eventDateTo;
     if (source)          filters.source           = source;

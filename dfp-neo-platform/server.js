@@ -2715,15 +2715,23 @@ app.post('/api/flight-log', async (req, res) => {
 app.get('/api/event-completions', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { scheduleEventId, traineeId } = req.query;
+    const { scheduleEventId, traineeId, eventDate, eventCode, instructorName, dcoResult } = req.query;
 
     const where = {};
     if (scheduleEventId) where.scheduleEventId = scheduleEventId;
     if (traineeId)       where.traineeId       = traineeId;
+    if (eventDate)       where.eventDate       = eventDate;
+    if (eventCode)       where.eventCode       = eventCode;
+    if (instructorName)  where.instructorName  = instructorName;
+    if (dcoResult)       where.dcoResult       = dcoResult;
 
     const completions = await db.eventCompletion.findMany({
       where,
-      orderBy: { createdAt: 'asc' },
+      orderBy: [
+        { eventDate: 'asc' },
+        { startTime: 'asc' },
+        { createdAt: 'asc' },
+      ],
     });
     console.log(`✅ GET /api/event-completions → ${completions.length} rows`);
     res.json({ completions });

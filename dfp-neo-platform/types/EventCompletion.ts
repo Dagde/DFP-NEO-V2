@@ -132,6 +132,7 @@ export interface EventCompletionFilters {
   eventCode?:       string;
   scheduleEventId?: string;
   dcoResult?:       DcoResult;
+  eventDate?:       string;   // YYYY-MM-DD exact match
   eventDateFrom?:   string;   // YYYY-MM-DD inclusive
   eventDateTo?:     string;   // YYYY-MM-DD inclusive
   isCountedAsElce?: boolean;
