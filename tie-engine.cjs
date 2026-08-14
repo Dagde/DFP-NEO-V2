@@ -298,11 +298,18 @@ async function seedTIEDefaults(db) {
   // Default settings
   const defaults = [
     { key: 'concern_threshold_grade', value: 3, description: 'Grade at or below which an element is flagged as concern (scale 1-5)' },
+    { key: 'normal_avg_grade', value: 3.5, description: 'Whole-course average grade at or above which a trainee is normal instead of watch' },
+    { key: 'worsening_recent_avg_grade', value: 3.5, description: 'Recent average grade below which a worsening trend is flagged for watch' },
+    { key: 'excellent_grade_color_threshold', value: 4.5, description: 'Grade at or above which charts show excellent performance' },
+    { key: 'normal_grade_color_threshold', value: 3.5, description: 'Grade at or above which charts show normal performance' },
+    { key: 'concern_grade_color_threshold', value: 3.0, description: 'Grade at or above which charts show concern performance' },
+    { key: 'critical_low_grade_threshold', value: 2.5, description: 'Grade below which charts show critically low performance' },
+    { key: 'healthy_pass_rate_pct', value: 80, description: 'Pass rate at or above which pass-rate charts show healthy performance' },
     { key: 'min_observations_for_pattern', value: 3, description: 'Minimum training report records before flagging a pattern' },
     { key: 'recency_weight_factor', value: 1.5, description: 'Multiplier applied to most recent 30% of events' },
     { key: 'comment_weight_vs_score', value: 0.4, description: 'Weight of comment tags vs numeric scores (0-1)' },
     { key: 'bottleneck_threshold_pct', value: 40, description: 'Pct of trainees scoring at/below concern threshold to flag bottleneck' },
-    { key: 'over_service_threshold', value: 85, description: 'Avg grade above which an event may be over-serviced' },
+    { key: 'over_service_threshold', value: 4.3, description: 'Avg grade above which an event may be over-serviced' },
     { key: 'at_risk_avg_grade', value: 3.2, description: 'Avg grade below which a trainee is at-risk' },
     { key: 'exceeding_avg_grade', value: 4.2, description: 'Avg grade above which a trainee is exceeding' },
     { key: 'normal_min_grade', value: 3.5, description: 'Avg grade at or above which a trainee is normal when not at-risk or exceeding' },
@@ -328,6 +335,14 @@ async function seedTIEDefaults(db) {
       );
     }
   }
+
+  await safeExec(db, `
+    UPDATE "TIESettings"
+    SET value = $1::jsonb, description = $2::text
+    WHERE key = 'over_service_threshold'
+      AND (value #>> '{}') ~ '^-?[0-9]+([.][0-9]+)?$'
+      AND (value #>> '{}')::numeric > 5
+  `, JSON.stringify(4.3), 'Avg grade above which an event may be over-serviced');
 
   // Comment dictionaries
   const dictionaryCount = await safeQuery(db, `SELECT COUNT(*) as cnt FROM "TIECommentDictionary"`);
@@ -673,24 +688,25 @@ function hasSustainedDecline(grades, count) {
 // ============================================================
 function generateTraineeNarrative(data) {
   const { traineeFullName, totalPt051Count, avgGrade, recentAvg, trend,
-          weakElements, strongElements, negTags, posTags, atRisk, riskReasons } = data;
+          weakElements, strongElements, negTags, posTags, atRisk, riskReasons,
+          minObservations = 3, normalAvgGrade = 3.5, exceedingAvgGrade = 4.2 } = data;
 
   const name = traineeFullName.split(',')[0] || traineeFullName;
   const parts = [];
 
-  if (totalPt051Count < 3) {
+  if (totalPt051Count < minObservations) {
     return `${name} has ${totalPt051Count} training report record(s) on file. Insufficient data for comprehensive analysis.`;
   }
 
   // Overall performance
-  const gradeDesc = avgGrade >= 4.0 ? 'above average' : avgGrade >= 3.5 ? 'average' : 'below average';
+  const gradeDesc = avgGrade >= exceedingAvgGrade ? 'above average' : avgGrade >= normalAvgGrade ? 'average' : 'below average';
   parts.push(`${name}'s overall performance across ${totalPt051Count} training report assessments is ${gradeDesc} with a mean grade of ${avgGrade.toFixed(2)}.`);
 
   // Trend
   if (trend === 'improving') parts.push(`Performance is showing an improving trend over the assessment period.`);
   else if (trend === 'worsening') parts.push(`Performance has been declining over the assessment period — this warrants instructor attention.`);
   else if (trend === 'stable') {
-    if (avgGrade < 3.5) parts.push(`Performance has remained consistently below average with no clear improvement.`);
+    if (avgGrade < normalAvgGrade) parts.push(`Performance has remained consistently below average with no clear improvement.`);
     else parts.push(`Performance has been consistent and stable.`);
   }
 
@@ -728,7 +744,10 @@ function generateTraineeNarrative(data) {
 }
 
 function generateEventNarrative(data) {
-  const { eventCode, courseName, totalAttempts, avgGrade, variance, weakElements, bottleneck, overService } = data;
+  const {
+    eventCode, courseName, totalAttempts, avgGrade, variance, weakElements, bottleneck, overService,
+    normalAvgGrade = 3.5, highVarianceThreshold = 1.0, lowVarianceThreshold = 0.4,
+  } = data;
   const parts = [];
 
   parts.push(`${eventCode} (${courseName}) has ${totalAttempts} recorded assessments with a mean overall grade of ${(avgGrade || 0).toFixed(2)}.`);
@@ -737,13 +756,13 @@ function generateEventNarrative(data) {
     parts.push(`This event is a training bottleneck — a high proportion of trainees are recording weak results, particularly in ${(weakElements || []).slice(0, 2).join(' and ')}.`);
   } else if (overService) {
     parts.push(`Performance in this event is consistently high. This may indicate the event is being over-serviced relative to current trainee capability.`);
-  } else if (avgGrade >= 3.5) {
+  } else if (avgGrade >= normalAvgGrade) {
     parts.push(`Performance is generally satisfactory.`);
   }
 
-  if (variance > 1.0) {
+  if (variance > highVarianceThreshold) {
     parts.push(`Grade variance is high (σ=${variance.toFixed(2)}), suggesting inconsistent outcomes across the trainee population.`);
-  } else if (variance < 0.4) {
+  } else if (variance < lowVarianceThreshold) {
     parts.push(`Very low grade variance suggests this event reliably produces consistent outcomes.`);
   }
 
@@ -873,11 +892,14 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     const CONCERN_THRESHOLD = numberSetting(settings.concern_threshold_grade, 3);
     const MIN_OBS = numberSetting(settings.min_observations_for_pattern, 3);
     const RECENCY_FACTOR = numberSetting(settings.recency_weight_factor, 1.5);
+    const COMMENT_WEIGHT = numberSetting(settings.comment_weight_vs_score, 0.4);
     const BOTTLENECK_PCT = numberSetting(settings.bottleneck_threshold_pct, 40);
     const OVER_SERVICE_AVG = numberSetting(settings.over_service_threshold, 4.3);
     const AT_RISK_AVG = numberSetting(settings.at_risk_avg_grade, 3.2);
     const EXCEEDING_AVG = numberSetting(settings.exceeding_avg_grade, 4.2);
-    const NORMAL_MIN_GRADE = numberSetting(settings.normal_min_grade, 3.5);
+    const NORMAL_AVG = numberSetting(settings.normal_avg_grade, numberSetting(settings.normal_min_grade, 3.5));
+    const HIGH_VARIANCE_THRESHOLD = numberSetting(settings.high_variance_threshold, 1.0);
+    const EXCELLENT_GRADE_THRESHOLD = numberSetting(settings.excellent_grade_color_threshold, EXCEEDING_AVG);
     const AT_RISK_AVERAGE_ENABLED = settingBool(settings.at_risk_average_enabled, true);
     const AT_RISK_SUSTAINED_DECLINE_ENABLED = settingBool(settings.at_risk_sustained_decline_enabled, true);
     const AT_RISK_RECENT_DROP_ENABLED = settingBool(settings.at_risk_recent_drop_enabled, true);
@@ -885,7 +907,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     const AT_RISK_RECURRING_WEAK_ELEMENTS_ENABLED = settingBool(settings.at_risk_recurring_weak_elements_enabled, true);
     const AT_RISK_SUSTAINED_DECLINE_COUNT = numberSetting(settings.at_risk_sustained_decline_count, 3);
     const AT_RISK_RECENT_DROP_THRESHOLD = numberSetting(settings.at_risk_recent_drop_threshold, 0.4);
-    const AT_RISK_LOW_RECENT_GRADE = numberSetting(settings.at_risk_low_recent_grade, 3.2);
+    const WORSENING_RECENT_AVG = numberSetting(settings.worsening_recent_avg_grade, numberSetting(settings.at_risk_low_recent_grade, 3.5));
     const AT_RISK_RECURRING_WEAK_ELEMENT_COUNT = numberSetting(settings.at_risk_recurring_weak_element_count, 3);
     const AT_RISK_MIN_ASSESSMENTS = numberSetting(settings.at_risk_min_assessments, 3);
 
@@ -1103,7 +1125,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         .map(([el]) => el);
 
       const strongElements = Object.entries(elementAvgs)
-        .filter(([, avg]) => avg != null && avg >= 4.0)
+        .filter(([, avg]) => avg != null && avg >= EXCELLENT_GRADE_THRESHOLD)
         .sort((a, b) => b[1] - a[1])
         .map(([el]) => el);
 
@@ -1114,7 +1136,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         .sort((a, b) => a[1] - b[1])
         .map(([k]) => k);
       const strongSkillFamilies = Object.entries(skillScores)
-        .filter(([, v]) => v != null && v >= 4.0)
+        .filter(([, v]) => v != null && v >= EXCELLENT_GRADE_THRESHOLD)
         .sort((a, b) => b[1] - a[1])
         .map(([k]) => k);
 
@@ -1155,13 +1177,13 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       if (enoughDataForRisk && AT_RISK_RECENT_DROP_ENABLED && recentDrop >= AT_RISK_RECENT_DROP_THRESHOLD) {
         monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} is ${recentDrop.toFixed(2)} below overall average`);
       }
-      if (enoughDataForRisk && AT_RISK_LOW_RECENT_ENABLED && recentAvg < AT_RISK_LOW_RECENT_GRADE) {
-        monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} below low-recent-average threshold of ${AT_RISK_LOW_RECENT_GRADE.toFixed(1)}`);
+      if (enoughDataForRisk && AT_RISK_LOW_RECENT_ENABLED && trend === 'worsening' && recentAvg < WORSENING_RECENT_AVG) {
+        monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} below worsening-trend recent-average threshold of ${WORSENING_RECENT_AVG.toFixed(1)}`);
       }
       if (enoughDataForRisk && AT_RISK_RECURRING_WEAK_ELEMENTS_ENABLED && weakElements.length >= AT_RISK_RECURRING_WEAK_ELEMENT_COUNT) {
         monitorReasons.push(`${weakElements.length} weak elements recurring`);
       }
-      if (!enoughDataForRisk && (avgGrade < AT_RISK_AVG || recentAvg < AT_RISK_LOW_RECENT_GRADE || trend === 'worsening')) {
+      if (!enoughDataForRisk && (avgGrade < AT_RISK_AVG || (trend === 'worsening' && recentAvg < WORSENING_RECENT_AVG) || trend === 'worsening')) {
         monitorReasons.push(`Monitor until ${AT_RISK_MIN_ASSESSMENTS} assessments are available`);
       }
 
@@ -1169,7 +1191,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       const monitor = !atRisk && monitorReasons.length > 0;
       const exceeding = avgGrade >= EXCEEDING_AVG && trend !== 'worsening';
 
-      const riskLevel = atRisk ? 'at_risk' : monitor ? 'monitor' : exceeding ? 'exceeding' : (avgGrade >= NORMAL_MIN_GRADE && trend !== 'worsening') ? 'normal' : 'monitor';
+      const riskLevel = atRisk ? 'at_risk' : monitor ? 'monitor' : exceeding ? 'exceeding' : (avgGrade >= NORMAL_AVG && trend !== 'worsening') ? 'normal' : 'monitor';
       const statusReasons = atRisk ? atRiskReasons : monitorReasons;
       if (atRisk) atRiskTrainees.push(traineeFullName);
       if (exceeding) exceedingTrainees.push(traineeFullName);
@@ -1181,7 +1203,10 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         weakElements, strongElements,
         negTags: negTags.slice(0, 5),
         posTags: posTags.slice(0, 5),
-        atRisk, riskReasons: statusReasons
+        atRisk, riskReasons: statusReasons,
+        minObservations: MIN_OBS,
+        normalAvgGrade: NORMAL_AVG,
+        exceedingAvgGrade: EXCEEDING_AVG
       });
 
       // Insert trainee summary
@@ -1277,7 +1302,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         .map(([el, avg]) => ({ element: el, avg: Math.round(avg * 100) / 100 }));
 
       const strongEls = Object.entries(elAvgs)
-        .filter(([, avg]) => avg != null && avg >= 4.0)
+        .filter(([, avg]) => avg != null && avg >= EXCELLENT_GRADE_THRESHOLD)
         .sort((a, b) => b[1] - a[1])
         .map(([el, avg]) => ({ element: el, avg: Math.round(avg * 100) / 100 }));
 
@@ -1309,7 +1334,10 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         eventCode, courseName, totalAttempts: grades.length,
         avgGrade, variance: Math.sqrt(variance),
         weakElements: weakEls.map(e => e.element),
-        bottleneck: isBottleneck, overService: isOverService
+        bottleneck: isBottleneck, overService: isOverService,
+        normalAvgGrade: NORMAL_AVG,
+        highVarianceThreshold: HIGH_VARIANCE_THRESHOLD,
+        lowVarianceThreshold: COMMENT_WEIGHT
       });
 
       // Pass rate: % of attempts with overall grade >= CONCERN_THRESHOLD (grade 3+ = pass)

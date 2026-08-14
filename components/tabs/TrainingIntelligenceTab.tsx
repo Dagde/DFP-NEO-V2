@@ -92,9 +92,16 @@ interface TIEFinding {
 
 interface TIEThresholds {
   atRiskAvgGrade: number;        // avg grade BELOW which trainee is at-risk
+  normalAvgGrade: number;        // avg grade at or above which trainee is normal
+  worseningRecentAvgGrade: number; // recent avg BELOW which worsening trend is at-risk
   exceedingAvgGrade: number;     // avg grade ABOVE which trainee is exceeding
   concernThresholdGrade: number; // grade BELOW which an element is a concern (pass = >= this value)
+  excellentGradeColorThreshold: number;
+  normalGradeColorThreshold: number;
+  concernGradeColorThreshold: number;
+  criticalLowGradeThreshold: number;
   bottleneckThresholdPct: number;// % of trainees below concern threshold to flag event as elevated risk
+  healthyPassRatePct: number;    // pass rate at or above which charts show healthy/green
   highVarianceThreshold: number; // grade std-dev ABOVE which event has high variance
   normalMinGrade: number;
   atRiskAverageEnabled: boolean;
@@ -107,13 +114,24 @@ interface TIEThresholds {
   lowRecentGrade: number;
   recurringWeakElementCount: number;
   minAssessmentsForRisk: number;
+  minObservationsForPattern: number;
+  recencyWeightFactor: number;
+  commentWeightVsScore: number;
+  overServiceGradeThreshold: number; // avg grade above which event may be over-serviced
 }
 
 const DEFAULT_THRESHOLDS: TIEThresholds = {
   atRiskAvgGrade: 3.2,
+  normalAvgGrade: 3.5,
+  worseningRecentAvgGrade: 3.5,
   exceedingAvgGrade: 4.2,
   concernThresholdGrade: 3,
+  excellentGradeColorThreshold: 4.5,
+  normalGradeColorThreshold: 3.5,
+  concernGradeColorThreshold: 3.0,
+  criticalLowGradeThreshold: 2.5,
   bottleneckThresholdPct: 40,
+  healthyPassRatePct: 80,
   highVarianceThreshold: 1.0,
   normalMinGrade: 3.5,
   atRiskAverageEnabled: true,
@@ -126,6 +144,10 @@ const DEFAULT_THRESHOLDS: TIEThresholds = {
   lowRecentGrade: 3.2,
   recurringWeakElementCount: 3,
   minAssessmentsForRisk: 3,
+  minObservationsForPattern: 3,
+  recencyWeightFactor: 1.5,
+  commentWeightVsScore: 0.4,
+  overServiceGradeThreshold: 4.3,
 };
 
 const ThresholdContext = React.createContext<{
@@ -139,20 +161,49 @@ const useThresholds = () => React.useContext(ThresholdContext);
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const gradeColor = (g: number): string => {
-  if (g >= 4.5) return 'text-emerald-400';
-  if (g >= 3.5) return 'text-green-400';
-  if (g >= 3.0) return 'text-yellow-400';
-  if (g >= 2.5) return 'text-orange-400';
+const gradeColor = (g: number, t: TIEThresholds = DEFAULT_THRESHOLDS): string => {
+  if (g >= t.excellentGradeColorThreshold) return 'text-emerald-400';
+  if (g >= t.normalGradeColorThreshold) return 'text-green-400';
+  if (g >= t.concernGradeColorThreshold) return 'text-yellow-400';
+  if (g >= t.criticalLowGradeThreshold) return 'text-orange-400';
   return 'text-red-400';
 };
 
-const gradeBg = (g: number): string => {
-  if (g >= 4.5) return 'bg-emerald-900/40 border-emerald-700';
-  if (g >= 3.5) return 'bg-green-900/40 border-green-700';
-  if (g >= 3.0) return 'bg-yellow-900/40 border-yellow-700';
-  if (g >= 2.5) return 'bg-orange-900/40 border-orange-700';
+const gradeBg = (g: number, t: TIEThresholds = DEFAULT_THRESHOLDS): string => {
+  if (g >= t.excellentGradeColorThreshold) return 'bg-emerald-900/40 border-emerald-700';
+  if (g >= t.normalGradeColorThreshold) return 'bg-green-900/40 border-green-700';
+  if (g >= t.concernGradeColorThreshold) return 'bg-yellow-900/40 border-yellow-700';
+  if (g >= t.criticalLowGradeThreshold) return 'bg-orange-900/40 border-orange-700';
   return 'bg-red-900/40 border-red-700';
+};
+
+const gradeChartColor = (g: number, t: TIEThresholds = DEFAULT_THRESHOLDS): string => {
+  if (g >= t.excellentGradeColorThreshold) return '#34d399';
+  if (g >= t.normalGradeColorThreshold) return '#4ade80';
+  if (g >= t.concernGradeColorThreshold) return '#facc15';
+  if (g >= t.criticalLowGradeThreshold) return '#fb923c';
+  return '#f87171';
+};
+
+const passRateWarningThreshold = (t: TIEThresholds = DEFAULT_THRESHOLDS): number =>
+  Math.max(0, Math.min(100, 100 - t.bottleneckThresholdPct));
+
+const passRateTextColor = (rate: number, t: TIEThresholds = DEFAULT_THRESHOLDS): string => {
+  if (rate >= t.healthyPassRatePct) return 'text-emerald-400';
+  if (rate >= passRateWarningThreshold(t)) return 'text-yellow-400';
+  return 'text-red-400';
+};
+
+const passRateChartColor = (rate: number, t: TIEThresholds = DEFAULT_THRESHOLDS): string => {
+  if (rate >= t.healthyPassRatePct) return '#10b981';
+  if (rate >= passRateWarningThreshold(t)) return '#eab308';
+  return '#ef4444';
+};
+
+const varianceChartColor = (variance: number, t: TIEThresholds = DEFAULT_THRESHOLDS): string => {
+  if (variance > t.highVarianceThreshold) return '#ef4444';
+  if (variance > t.highVarianceThreshold * 0.8) return '#eab308';
+  return '#3b82f6';
 };
 
 const riskBadge = (risk: string): string => {
@@ -234,7 +285,7 @@ const monitorSignalRows = (thresholds: TIEThresholds) => [
     ? `Recent average ${thresholds.recentDropThreshold.toFixed(1)} or more below overall average`
     : null,
   thresholds.atRiskLowRecentEnabled
-    ? `Recent average below ${thresholds.lowRecentGrade.toFixed(1)}`
+    ? `Worsening trend recent average below ${thresholds.worseningRecentAvgGrade.toFixed(1)}`
     : null,
   thresholds.atRiskRecurringWeakElementsEnabled
     ? `${thresholds.recurringWeakElementCount}+ recurring weak elements`
@@ -332,14 +383,14 @@ const evaluateTraineeRisk = (
   if (enoughData && thresholds.atRiskRecentDropEnabled && avgGrade - recentAvg >= thresholds.recentDropThreshold) {
     monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} is ${(avgGrade - recentAvg).toFixed(2)} below overall average`);
   }
-  if (enoughData && thresholds.atRiskLowRecentEnabled && recentAvg < thresholds.lowRecentGrade) {
-    monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} below low-recent-average threshold of ${thresholds.lowRecentGrade.toFixed(1)}`);
+  if (enoughData && thresholds.atRiskLowRecentEnabled && trainee.overallTrend === 'worsening' && recentAvg < thresholds.worseningRecentAvgGrade) {
+    monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} below worsening-trend recent-average threshold of ${thresholds.worseningRecentAvgGrade.toFixed(1)}`);
   }
   if (enoughData && thresholds.atRiskRecurringWeakElementsEnabled && weakElements.length >= thresholds.recurringWeakElementCount) {
     monitorReasons.push(`${weakElements.length} weak elements recurring`);
   }
 
-  if (!enoughData && (avgGrade < thresholds.atRiskAvgGrade || recentAvg < thresholds.lowRecentGrade || trainee.overallTrend === 'worsening')) {
+  if (!enoughData && (avgGrade < thresholds.atRiskAvgGrade || (trainee.overallTrend === 'worsening' && recentAvg < thresholds.worseningRecentAvgGrade) || trainee.overallTrend === 'worsening')) {
     return { riskLevel: 'monitor', reasons: [`Monitor until ${thresholds.minAssessmentsForRisk} assessments are available`] };
   }
   if (atRiskReasons.length > 0) return { riskLevel: 'at_risk', reasons: atRiskReasons };
@@ -347,12 +398,12 @@ const evaluateTraineeRisk = (
   if (avgGrade >= thresholds.exceedingAvgGrade && trainee.overallTrend !== 'worsening') {
     return { riskLevel: 'exceeding', reasons: [] };
   }
-  if (avgGrade >= thresholds.normalMinGrade && trainee.overallTrend !== 'worsening') {
+  if (avgGrade >= thresholds.normalAvgGrade && trainee.overallTrend !== 'worsening') {
     return { riskLevel: 'normal', reasons: [] };
   }
   const reasons: string[] = [];
-  if (avgGrade < thresholds.normalMinGrade) {
-    reasons.push(`Course average ${avgGrade.toFixed(2)} below normal threshold of ${thresholds.normalMinGrade.toFixed(1)}`);
+  if (avgGrade < thresholds.normalAvgGrade) {
+    reasons.push(`Course average ${avgGrade.toFixed(2)} below normal/watch boundary of ${thresholds.normalAvgGrade.toFixed(1)}`);
   }
   if (trainee.overallTrend === 'worsening') {
     reasons.push('Overall trend is worsening');
@@ -365,7 +416,7 @@ const riskReasonLabel = (reason: string): string => {
   if (normalized.includes('below at-risk threshold')) return 'course average below At Risk threshold';
   if (normalized.includes('sustained decline')) return 'sustained decline';
   if (normalized.includes('below overall average')) return 'recent average drop';
-  if (normalized.includes('low-recent-average')) return 'low recent average';
+  if (normalized.includes('worsening-trend recent-average') || normalized.includes('low-recent-average')) return 'worsening trend recent average';
   if (normalized.includes('weak elements')) return 'recurring weak elements';
   if (normalized.includes('monitor until')) return 'not enough assessment history';
   if (normalized.includes('below normal threshold')) return 'course average below Normal threshold';
@@ -400,14 +451,19 @@ const summarizeStatusTriggers = (
 // ── SparkBar ────────────────────────────────────────────────────────────────────
 
 const SparkBar: React.FC<{ value: number; max?: number; colorClass?: string }> = ({ value, max = 5, colorClass }) => {
+  const { thresholds } = useThresholds();
   const pct = Math.min(100, (safeN(value) / max) * 100);
-  const c = colorClass || (value >= 4 ? 'bg-emerald-500' : value >= 3 ? 'bg-yellow-500' : 'bg-red-500');
+  const c = colorClass || (
+    value >= thresholds.excellentGradeColorThreshold ? 'bg-emerald-500' :
+    value >= thresholds.concernGradeColorThreshold ? 'bg-yellow-500' :
+    'bg-red-500'
+  );
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 bg-gray-700 rounded-full h-1.5">
         <div className={`${c} h-1.5 rounded-full`} style={{ width: `${pct}%` }} />
       </div>
-      <span className={`text-xs font-mono w-8 text-right ${gradeColor(value)}`}>{safe(value, 1)}</span>
+      <span className={`text-xs font-mono w-8 text-right ${gradeColor(value, thresholds)}`}>{safe(value, 1)}</span>
     </div>
   );
 };
@@ -425,6 +481,7 @@ const SparkLine: React.FC<{
   yMax?: number;
   showYAxisLabels?: boolean;
 }> = ({ data, labels, width = 100, height = 32, color = '#60a5fa', interactive = false, yMin = 0, yMax = 5, showYAxisLabels = false }) => {
+  const { thresholds } = useThresholds();
   const [tooltip, setTooltip] = React.useState<{ i: number; pageX: number; pageY: number } | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
@@ -441,7 +498,7 @@ const SparkLine: React.FC<{
   const pts = data.map((v, i) => `${getX(i)},${getY(v)}`).join(' ');
 
   const hoveredVal = tooltip !== null ? data[tooltip.i] : null;
-  const gc = (v: number) => v >= 4.5 ? '#34d399' : v >= 3.5 ? '#4ade80' : v >= 3.0 ? '#facc15' : v >= 2.5 ? '#fb923c' : '#f87171';
+  const gc = (v: number) => gradeChartColor(v, thresholds);
 
   const gridSpan = YMAX - YMIN;
   const gridStep = gridSpan <= 1 ? 0.2 : gridSpan <= 2 ? 0.5 : 1;
@@ -553,17 +610,22 @@ const SparkLine: React.FC<{
 // ── HBarChart ───────────────────────────────────────────────────────────────────
 
 const HBarChart: React.FC<{ data: Array<{ label: string; value: number; color?: string }>; max?: number }> = ({ data, max = 5 }) => {
+  const { thresholds } = useThresholds();
   if (!data || data.length === 0) return <p className="text-gray-500 text-sm">No data</p>;
   return (
     <div className="space-y-2">
       {data.map(item => {
         const pct = Math.min(100, (safeN(item.value) / max) * 100);
-        const c = item.color || (item.value >= 4 ? 'bg-emerald-500' : item.value >= 3 ? 'bg-yellow-500' : 'bg-red-500');
+        const c = item.color || (
+          item.value >= thresholds.excellentGradeColorThreshold ? 'bg-emerald-500' :
+          item.value >= thresholds.concernGradeColorThreshold ? 'bg-yellow-500' :
+          'bg-red-500'
+        );
         return (
           <div key={item.label}>
             <div className="flex justify-between text-xs mb-0.5">
               <span className="text-gray-300 truncate max-w-[160px]" title={item.label}>{item.label}</span>
-              <span className={gradeColor(item.value)}>{safe(item.value, 1)}</span>
+              <span className={gradeColor(item.value, thresholds)}>{safe(item.value, 1)}</span>
             </div>
             <div className="bg-gray-700 rounded-full h-1.5">
               <div className={`${c} h-1.5 rounded-full`} style={{ width: `${pct}%` }} />
@@ -760,6 +822,7 @@ const Tag: React.FC<{ text: string; type?: 'red' | 'green' | 'yellow' | 'blue' |
 // ── Grade Progression Modal (interactive, enlarged) ─────────────────────────────
 
 const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: string; trend: string; onClose: () => void }> = ({ data, labels: propLabels, name, trend, onClose }) => {
+  const { thresholds } = useThresholds();
   const [timelineZoom, setTimelineZoom] = React.useState(0);
   const [scoreZoom, setScoreZoom] = React.useState(0);
   const color = trend === 'improving' ? '#10b981' : trend === 'worsening' ? '#ef4444' : '#60a5fa';
@@ -825,7 +888,7 @@ const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: stri
           ] as Array<{label: string; value: number}>).map((s) => (
             <div key={s.label} className="bg-gray-800 rounded-lg px-4 py-3 text-center border border-gray-700">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{s.label}</p>
-              <p className={`text-xl font-bold font-mono ${gradeColor(s.value)}`}>{s.value.toFixed(2)}</p>
+              <p className={`text-xl font-bold font-mono ${gradeColor(s.value, thresholds)}`}>{s.value.toFixed(2)}</p>
             </div>
           ))}
           <div className="bg-gray-800 rounded-lg px-4 py-3 text-center border border-gray-700">
@@ -842,8 +905,8 @@ const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: stri
 
 // ── Grade by Trainee Modal ────────────────────────────────────────────────────────
 
-const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>; max?: number; height?: number; zoomY?: boolean }> = ({
-  data, max = 5, height = 240, zoomY = false
+const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>; max?: number; height?: number; zoomY?: boolean; thresholds?: TIEThresholds }> = ({
+  data, max = 5, height = 240, zoomY = false, thresholds = DEFAULT_THRESHOLDS
 }) => {
   if (!data || data.length === 0) return <p className="text-gray-500 text-sm">No data</p>;
   const bw = Math.max(20, Math.min(52, 800 / data.length));
@@ -883,7 +946,7 @@ const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>
         const bh = Math.max(3, barBot - barTop);
         const x = leftPad + gap + i * (bw + gap);
         const y = barTop;
-        const color = item.value >= 4 ? '#10b981' : item.value >= 3 ? '#eab308' : '#ef4444';
+        const color = gradeChartColor(item.value, thresholds);
         return (
           <g key={i}>
             <rect x={x} y={y} width={bw} height={bh} fill={color} fillOpacity={0.9} rx="3" />
@@ -1009,8 +1072,9 @@ const ColChartModal: React.FC<{
 
 const GradeByTraineeModal: React.FC<{
   trainees: Array<{ label: string; value: number }>;
+  thresholds: TIEThresholds;
   onClose: () => void;
-}> = ({ trainees, onClose }) => {
+}> = ({ trainees, thresholds, onClose }) => {
   const [timelineZoom, setTimelineZoom] = React.useState(0);
   const [scoreZoom, setScoreZoom] = React.useState(0);
   const visibleData = trainees;
@@ -1036,14 +1100,16 @@ const GradeByTraineeModal: React.FC<{
         </div>
         <div className="bg-gray-800 rounded-xl p-5 overflow-x-auto">
           <div style={{ width: timelineZoom === 0 ? '100%' : Math.max(900, visibleData.length * (42 + timelineZoom * 16)) }}>
-            <ColChartExpanded data={visibleData} max={5} height={420} zoomY={scoreZoom > 0} />
+            <ColChartExpanded data={visibleData} max={5} height={420} zoomY={scoreZoom > 0} thresholds={thresholds} />
           </div>
         </div>
         <div className="flex flex-wrap gap-4 mt-4 justify-center text-xs">
           {[
-            { color: '#ef4444', label: 'Below 3.0 — unsatisfactory' },
-            { color: '#eab308', label: '3.0–3.9 — satisfactory' },
-            { color: '#10b981', label: '4.0+ — good / excellent' },
+            { color: '#f87171', label: `Below ${thresholds.criticalLowGradeThreshold.toFixed(1)} - critically low` },
+            { color: '#fb923c', label: `${thresholds.criticalLowGradeThreshold.toFixed(1)}+ - low` },
+            { color: '#facc15', label: `${thresholds.concernGradeColorThreshold.toFixed(1)}+ - concern` },
+            { color: '#4ade80', label: `${thresholds.normalGradeColorThreshold.toFixed(1)}+ - normal` },
+            { color: '#34d399', label: `${thresholds.excellentGradeColorThreshold.toFixed(1)}+ - excellent` },
           ].map(l => (
             <div key={l.label} className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: l.color }} />
@@ -1083,12 +1149,25 @@ const ThresholdSettingsPanel: React.FC<{
     setSaving(true);
     setError(null);
     try {
+      const payload: TIEThresholds = {
+        ...local,
+        // Keep legacy setting keys in sync for older analytics records and code paths.
+        normalMinGrade: local.normalAvgGrade,
+        lowRecentGrade: local.worseningRecentAvgGrade,
+      };
       // Map TIEThresholds keys to DB setting keys
       const mapping: Record<keyof TIEThresholds, string> = {
         atRiskAvgGrade: 'at_risk_avg_grade',
+        normalAvgGrade: 'normal_avg_grade',
+        worseningRecentAvgGrade: 'worsening_recent_avg_grade',
         exceedingAvgGrade: 'exceeding_avg_grade',
         concernThresholdGrade: 'concern_threshold_grade',
+        excellentGradeColorThreshold: 'excellent_grade_color_threshold',
+        normalGradeColorThreshold: 'normal_grade_color_threshold',
+        concernGradeColorThreshold: 'concern_grade_color_threshold',
+        criticalLowGradeThreshold: 'critical_low_grade_threshold',
         bottleneckThresholdPct: 'bottleneck_threshold_pct',
+        healthyPassRatePct: 'healthy_pass_rate_pct',
         highVarianceThreshold: 'high_variance_threshold',
         normalMinGrade: 'normal_min_grade',
         atRiskAverageEnabled: 'at_risk_average_enabled',
@@ -1101,17 +1180,21 @@ const ThresholdSettingsPanel: React.FC<{
         lowRecentGrade: 'at_risk_low_recent_grade',
         recurringWeakElementCount: 'at_risk_recurring_weak_element_count',
         minAssessmentsForRisk: 'at_risk_min_assessments',
+        minObservationsForPattern: 'min_observations_for_pattern',
+        recencyWeightFactor: 'recency_weight_factor',
+        commentWeightVsScore: 'comment_weight_vs_score',
+        overServiceGradeThreshold: 'over_service_threshold',
       };
       const sessionToken = localStorage.getItem('dfp_session_token') || '';
       await Promise.all(
-        (Object.keys(local) as Array<keyof TIEThresholds>).map(async k => {
+        (Object.keys(payload) as Array<keyof TIEThresholds>).map(async k => {
           const response = await fetch('/api/tie/settings', {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
               ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
             },
-            body: JSON.stringify({ key: mapping[k], value: local[k] }),
+            body: JSON.stringify({ key: mapping[k], value: payload[k] }),
           });
           if (!response.ok) {
             const body = await response.text().catch(() => '');
@@ -1119,7 +1202,7 @@ const ThresholdSettingsPanel: React.FC<{
           }
         })
       );
-      onSave({ ...local });
+      onSave({ ...payload });
       setSaved(true);
       setTimeout(() => { setSaved(false); onClose(); }, 1200);
     } catch (err) {
@@ -1136,6 +1219,18 @@ const ThresholdSettingsPanel: React.FC<{
       min: 1.0, max: 4.5, step: 0.1,
     },
     {
+      key: 'normalAvgGrade',
+      label: 'Normal / Watch Boundary',
+      desc: 'Whole-course average at or above which a trainee is Normal instead of Watch. This is the overall average, not recent trend performance.',
+      min: 2.5, max: 4.5, step: 0.1,
+    },
+    {
+      key: 'worseningRecentAvgGrade',
+      label: 'Worsening Trend Recent Average',
+      desc: 'Recent average below which a trainee with a worsening trend is escalated. This stays separate from Normal / Watch because it measures recent performance only.',
+      min: 2.5, max: 4.5, step: 0.1,
+    },
+    {
       key: 'exceedingAvgGrade',
       label: 'Exceeding Threshold',
       desc: 'Average grade ABOVE which a trainee is classified as Exceeding (high performer). E.g. 4.2.',
@@ -1148,10 +1243,40 @@ const ThresholdSettingsPanel: React.FC<{
       min: 1, max: 4, step: 1,
     },
     {
+      key: 'excellentGradeColorThreshold',
+      label: 'Grade Colour: Excellent',
+      desc: 'Grade at or above which charts and scores use the excellent colour.',
+      min: 3.0, max: 5.0, step: 0.1,
+    },
+    {
+      key: 'normalGradeColorThreshold',
+      label: 'Grade Colour: Normal',
+      desc: 'Grade at or above which charts and scores use the normal colour.',
+      min: 2.5, max: 5.0, step: 0.1,
+    },
+    {
+      key: 'concernGradeColorThreshold',
+      label: 'Grade Colour: Concern',
+      desc: 'Grade at or above which charts and scores move out of low/critical and into concern.',
+      min: 1.0, max: 4.0, step: 0.1,
+    },
+    {
+      key: 'criticalLowGradeThreshold',
+      label: 'Grade Colour: Critically Low',
+      desc: 'Grade below this value is shown as critical. Grades from this value up to Concern are shown as low.',
+      min: 1.0, max: 3.0, step: 0.1,
+    },
+    {
       key: 'bottleneckThresholdPct',
       label: 'Elevated Risk % Threshold',
       desc: 'Percentage of trainees scoring below the concern threshold that triggers an event to be flagged as an elevated risk event.',
       min: 10, max: 80, step: 5,
+    },
+    {
+      key: 'healthyPassRatePct',
+      label: 'Healthy Pass Rate Colour',
+      desc: 'Pass rate at or above which pass-rate charts show healthy/green. Yellow sits between this value and the elevated-risk boundary.',
+      min: 50, max: 100, step: 5,
     },
     {
       key: 'highVarianceThreshold',
@@ -1160,10 +1285,28 @@ const ThresholdSettingsPanel: React.FC<{
       min: 0.3, max: 2.5, step: 0.1,
     },
     {
-      key: 'normalMinGrade',
-      label: 'Normal Status Minimum',
-      desc: 'Average grade at or above which a trainee is Normal when they are not At Risk or Exceeding. Lower averages become Monitor.',
-      min: 2.5, max: 4.5, step: 0.1,
+      key: 'minObservationsForPattern',
+      label: 'Minimum Reports Before Alerting',
+      desc: 'Minimum number of training reports required before analytics generates pattern-based findings.',
+      min: 1, max: 10, step: 1,
+    },
+    {
+      key: 'recencyWeightFactor',
+      label: 'Recent Performance Weighting',
+      desc: 'Multiplier applied to recent assessments so current performance carries more weight than older results.',
+      min: 1.0, max: 3.0, step: 0.1,
+    },
+    {
+      key: 'commentWeightVsScore',
+      label: 'Instructor Comment Weighting',
+      desc: 'Weight given to comment tags compared with numeric scores when interpreting training issues.',
+      min: 0, max: 1, step: 0.1,
+    },
+    {
+      key: 'overServiceGradeThreshold',
+      label: 'Over-Service Grade Threshold',
+      desc: 'Average grade at or above which a stable event may be classed as over-serviced.',
+      min: 3.0, max: 5.0, step: 0.1,
     },
   ];
 
@@ -1193,9 +1336,9 @@ const ThresholdSettingsPanel: React.FC<{
     },
     {
       enabledKey: 'atRiskLowRecentEnabled',
-      title: 'Low recent average',
-      detail: 'Moves trainees to Monitor when their most recent assessment window is below the configured recent score floor.',
-      control: { key: 'lowRecentGrade', suffix: 'recent avg', min: 1, max: 4.5, step: 0.1 },
+      title: 'Worsening trend recent average',
+      detail: 'Moves trainees to Monitor when their recent assessment window is below the configured recent score floor and their trend is worsening.',
+      control: { key: 'worseningRecentAvgGrade', suffix: 'recent avg', min: 1, max: 4.5, step: 0.1 },
     },
     {
       enabledKey: 'atRiskRecurringWeakElementsEnabled',
@@ -1347,7 +1490,7 @@ const ThresholdSettingsPanel: React.FC<{
                 <div>
                   <span className="text-yellow-300 font-semibold">Monitor / Watch — </span>
                   <span className="text-gray-400">
-                    Trend, recent-average, or recurring weak-element signals are triggered, or avg grade is below {local.normalMinGrade.toFixed(1)} once not classified At Risk.
+                    Trend, recent-average, or recurring weak-element signals are triggered, or whole-course avg grade is below {local.normalAvgGrade.toFixed(1)} once not classified At Risk.
                     Active monitor signals: {monitorSignalRows(local).join('; ') || 'none selected'}.
                   </span>
                 </div>
@@ -1357,7 +1500,7 @@ const ThresholdSettingsPanel: React.FC<{
                 <div>
                   <span className="text-blue-300 font-semibold">Normal — </span>
                   <span className="text-gray-400">
-                    Avg grade ≥ {local.normalMinGrade.toFixed(1)} and &lt; {local.exceedingAvgGrade.toFixed(1)}.
+                    Whole-course avg grade ≥ {local.normalAvgGrade.toFixed(1)} and &lt; {local.exceedingAvgGrade.toFixed(1)}.
                     Trainee is meeting expectations satisfactorily.
                   </span>
                 </div>
@@ -1464,9 +1607,9 @@ const CourseTab: React.FC<{
     <div className="space-y-5">
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard label="Avg Score" value={safe(avgGrade, 2)} color={gradeColor(avgGrade)} sub="course average" />
+        <StatCard label="Avg Score" value={safe(avgGrade, 2)} color={gradeColor(avgGrade, thresholds)} sub="course average" />
         <StatCard label="Pass Rate" value={`${passRate.toFixed(0)}%`}
-          color={passRate >= 80 ? 'text-emerald-400' : passRate >= 60 ? 'text-yellow-400' : 'text-red-400'}
+          color={passRateTextColor(passRate, thresholds)}
           sub={`trainees avg ≥ ${thresholds.concernThresholdGrade}.0`} />
         <StatCard label="At-Risk" value={atRisk}
           color={atRisk > 0 ? 'text-red-400' : 'text-gray-400'} sub={`of ${trainees.length} trainees`} />
@@ -1581,7 +1724,7 @@ const CourseTab: React.FC<{
                 <span className="w-2 h-2 rounded-full bg-yellow-500 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-400">
                   <span className="text-yellow-300 font-semibold">Monitor: </span>
-                  Trend, recent-average, or recurring weak-element signals are triggered, or avg grade is below <span className="text-white font-mono">{thresholds.normalMinGrade.toFixed(1)}</span> once not classified At Risk.
+                  Trend, recent-average, or recurring weak-element signals are triggered, or whole-course avg grade is below <span className="text-white font-mono">{thresholds.normalAvgGrade.toFixed(1)}</span> once not classified At Risk.
                   {' '}Active monitor signals: {monitorSignalRows(thresholds).join('; ') || 'none selected'}.
                 </span>
               </div>
@@ -1589,7 +1732,7 @@ const CourseTab: React.FC<{
                 <span className="w-2 h-2 rounded-full bg-blue-500 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-400">
                   <span className="text-blue-300 font-semibold">Normal: </span>
-                  Avg grade <span className="text-white font-mono">{thresholds.normalMinGrade.toFixed(1)}</span>–<span className="text-white font-mono">{thresholds.exceedingAvgGrade.toFixed(1)}</span>.
+                  Whole-course avg grade <span className="text-white font-mono">{thresholds.normalAvgGrade.toFixed(1)}</span>–<span className="text-white font-mono">{thresholds.exceedingAvgGrade.toFixed(1)}</span>.
                   {' '}Meeting expectations.
                 </span>
               </div>
@@ -1627,7 +1770,7 @@ const CourseTab: React.FC<{
                   <SparkBar value={safeN(ev.avgOverallGrade)} />
                 </div>
                 <span className="text-xs text-gray-500 w-16 flex-shrink-0 text-right">{ev.totalAttempts} tries</span>
-                {safeN(ev.bottleneckScore) > 0.5 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0">ELEVATED RISK</span>}
+                {safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0">ELEVATED RISK</span>}
               </div>
             ))}
           </div>
@@ -1655,7 +1798,7 @@ const CourseTab: React.FC<{
                 <div className="bg-gray-800 rounded-xl p-4 overflow-x-auto mt-3">
                   <ColChartExpanded
                     data={topByAttempts.map(ev => ({ label: ev.eventCode, value: safeN(ev.avgOverallGrade) }))}
-                    max={5} height={420} />
+                    max={5} height={420} thresholds={thresholds} />
                 </div>
               </div>
             </div>
@@ -1721,12 +1864,12 @@ const CourseTab: React.FC<{
                         return (
                           <td key={sk} className="px-2 py-1.5 text-center">
                             {v !== undefined
-                              ? <span className={`font-mono font-bold ${gradeColor(v)}`}>{safe(v, 1)}</span>
+                              ? <span className={`font-mono font-bold ${gradeColor(v, thresholds)}`}>{safe(v, 1)}</span>
                               : <span className="text-gray-700">&mdash;</span>}
                           </td>
                         );
                       })}
-                      <td className={`px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`}>
+                      <td className={`px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`}>
                         {safe(ev.avgOverallGrade, 2)}
                       </td>
                     </tr>
@@ -1822,6 +1965,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[]; trainingReportDispla
               : namePart.split(/\s+/)[0].trim(); // first word if no comma
             return { label, value: safeN(t.avgOverallGrade) };
           })}
+          thresholds={thresholds}
           onClose={() => setGradeByTraineeModal(false)}
         />
       )}
@@ -1871,8 +2015,8 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[]; trainingReportDispla
                     <tr key={t.id} onClick={() => setSelected(selected?.id === t.id ? null : t)}
                       className={`border-b border-gray-700/50 cursor-pointer transition-colors ${selected?.id === t.id ? 'bg-blue-900/30' : 'hover:bg-gray-700/40'}`}>
                       <td className="px-4 py-2.5 text-gray-200 font-medium">{t.traineeFullName}</td>
-                      <td className={`px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(t.avgOverallGrade))}`}>{safe(t.avgOverallGrade, 2)}</td>
-                      <td className={`px-3 py-2.5 text-center font-mono text-xs ${gradeColor(safeN(t.recentAvgGrade))}`}>{safe(t.recentAvgGrade, 2)}</td>
+                      <td className={`px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(t.avgOverallGrade), thresholds)}`}>{safe(t.avgOverallGrade, 2)}</td>
+                      <td className={`px-3 py-2.5 text-center font-mono text-xs ${gradeColor(safeN(t.recentAvgGrade), thresholds)}`}>{safe(t.recentAvgGrade, 2)}</td>
                       <td className={`px-3 py-2.5 text-center font-bold ${trendColor(t.overallTrend)}`}>{trendIcon(t.overallTrend)}</td>
                       <td className="px-3 py-2.5 text-center text-gray-400">{t.totalPt051Count}</td>
                       <td className="px-3 py-2.5 text-center">
@@ -1945,8 +2089,8 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[]; trainingReportDispla
                         return (
                           <tr key={t.id} className="border-b border-gray-700/40 hover:bg-gray-700/20">
                             <td className="py-1.5 pr-2 text-gray-300 truncate max-w-[90px]">{t.traineeFullName}</td>
-                            <td className={`py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.avgOverallGrade))}`}>{safe(t.avgOverallGrade, 2)}</td>
-                            <td className={`py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.recentAvgGrade))}`}>{safe(t.recentAvgGrade, 2)}</td>
+                            <td className={`py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.avgOverallGrade), thresholds)}`}>{safe(t.avgOverallGrade, 2)}</td>
+                            <td className={`py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.recentAvgGrade), thresholds)}`}>{safe(t.recentAvgGrade, 2)}</td>
                             <td className={`py-1.5 px-2 text-center font-mono ${d > 0.1 ? 'text-emerald-400' : d < -0.1 ? 'text-red-400' : 'text-gray-400'}`}>
                               {d >= 0 ? '+' : ''}{d.toFixed(2)}
                             </td>
@@ -1972,13 +2116,13 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[]; trainingReportDispla
                 </div>
                 <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-200 text-lg leading-none">&times;</button>
               </div>
-              <div className={`rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade))}`}>
+              <div className={`rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade), thresholds)}`}>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-300 text-xs">Average Grade</span>
-                  <span className={`text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade))}`}>{safe(selected.avgOverallGrade, 2)}</span>
+                  <span className={`text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade), thresholds)}`}>{safe(selected.avgOverallGrade, 2)}</span>
                 </div>
                 <div className="flex gap-3 mt-1.5 text-xs text-gray-400">
-                  <span>Recent: <span className={gradeColor(safeN(selected.recentAvgGrade))}>{safe(selected.recentAvgGrade, 2)}</span></span>
+                  <span>Recent: <span className={gradeColor(safeN(selected.recentAvgGrade), thresholds)}>{safe(selected.recentAvgGrade, 2)}</span></span>
                   <span>Trend: <span className={trendColor(selected.overallTrend)}>{trendIcon(selected.overallTrend)} {selected.overallTrend || 'stable'}</span></span>
                 </div>
                 <div className="mt-2">
@@ -1995,14 +2139,14 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[]; trainingReportDispla
                 <div>
                   <div className="flex justify-between text-xs mb-0.5">
                     <span className="text-gray-400">This Trainee</span>
-                    <span className={gradeColor(safeN(selected.avgOverallGrade))}>{safe(selected.avgOverallGrade, 2)}</span>
+                    <span className={gradeColor(safeN(selected.avgOverallGrade), thresholds)}>{safe(selected.avgOverallGrade, 2)}</span>
                   </div>
                   <SparkBar value={safeN(selected.avgOverallGrade)} />
                 </div>
                 <div>
                   <div className="flex justify-between text-xs mb-0.5">
                     <span className="text-gray-400">Course Avg</span>
-                    <span className={gradeColor(courseAvg)}>{safe(courseAvg, 2)}</span>
+                    <span className={gradeColor(courseAvg, thresholds)}>{safe(courseAvg, 2)}</span>
                   </div>
                   <SparkBar value={courseAvg} colorClass="bg-blue-500" />
                 </div>
@@ -2110,19 +2254,12 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
 
   // Derive passRate when DB value is null (old rows pre-fix)
   // Grading scale: 1=Unsatisfactory, 2=Below Standard, 3=Satisfactory(Pass), 4=Above Avg, 5=Exceptional
-  // Pass threshold: grade >= 3 is a PASS. Only grades 1 or 2 are failures.
+  // Pass threshold comes from Analytics Thresholds so user-defined grading rules drive this display.
   //
   // Old DB elevated-risk score was computed with WRONG threshold (counted grade 3 as fail).
   // So the stored score is heavily inflated. We derive pass rate from avgOverallGrade instead:
-  //   - avg = 3.0 means all grades are exactly 3 → 100% pass
-  //   - avg = 2.8 means some grade-2s dragging it down → some failures
-  //   - avg = 2.5 means roughly half grade-2, half grade-3 → ~50% pass
-  // Formula: on a 1-5 scale where pass=3, fail=1or2:
-  //   If avg >= 3.0 → all passing → 100%
-  //   If avg < 3.0 → estimate fail% as (3.0 - avg) / 2.0 * 100
-  //     e.g. avg=2.92 → failPct=(0.08/2)*100=4% → passRate=96%
-  //     e.g. avg=2.5  → failPct=(0.5/2)*100=25% → passRate=75%
-  //     e.g. avg=2.0  → failPct=(1.0/2)*100=50% → passRate=50%
+  // If avg is at/above the configured pass threshold, treat the legacy row as 100% pass.
+  // If avg is below it, estimate the failure fraction from distance below that configured threshold.
   const getPassRate = (ev: TIEEventSummary): number => {
     const stored = safeN(ev.passRate);
     if (stored > 0) return stored;
@@ -2246,12 +2383,12 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                       <div className="flex items-center gap-2">
                         <span className="text-red-400 font-bold text-sm w-5 text-center">#{idx + 1}</span>
                         <span className="text-white font-semibold text-sm">{ev.eventCode}</span>
-                        {safeN(ev.bottleneckScore) > 0.5 && (
+                        {safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 && (
                           <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded">ELEVATED RISK</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className={`text-lg font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade))}`}>
+                        <span className={`text-lg font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`}>
                           {safe(ev.avgOverallGrade, 2)}
                         </span>
                         <span className="text-gray-500 text-xs">{isSelected ? '▲' : '▼'}</span>
@@ -2274,7 +2411,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                       <div>
                         <h4 className="text-red-400 font-semibold text-xs uppercase tracking-wide mb-1.5">Why This Event Is a Struggle</h4>
                         <p className="text-gray-300 text-sm leading-relaxed">
-                          {ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, placing it among the most challenging events in this course.${safeN(ev.bottleneckScore) > 0.5 ? ` It is classified as an elevated risk event because a high proportion of trainees are scoring below the satisfactory threshold.` : ''} ${safeN(ev.gradeVariance) > 1 ? `The high grade variance (${safe(ev.gradeVariance, 2)}) indicates inconsistent performance, suggesting the event exposes gaps in preparation or foundational skills.` : ''}`}
+                          {ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, placing it among the most challenging events in this course.${safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 ? ` It is classified as an elevated risk event because a high proportion of trainees are scoring below the satisfactory threshold.` : ''} ${safeN(ev.gradeVariance) > thresholds.highVarianceThreshold ? `The high grade variance (${safe(ev.gradeVariance, 2)}) indicates inconsistent performance, suggesting the event exposes gaps in preparation or foundational skills.` : ''}`}
                         </p>
                       </div>
 
@@ -2290,7 +2427,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                                 <div key={elName} className="flex items-center justify-between bg-gray-800 rounded px-3 py-1.5">
                                   <span className="text-gray-200 text-sm">{elName}</span>
                                   {elAvg !== null && (
-                                    <span className={`text-sm font-bold font-mono ${gradeColor(elAvg)}`}>{safe(elAvg, 2)}</span>
+                                    <span className={`text-sm font-bold font-mono ${gradeColor(elAvg, thresholds)}`}>{safe(elAvg, 2)}</span>
                                   )}
                                 </div>
                               );
@@ -2315,7 +2452,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                       <div className="grid grid-cols-3 gap-2 pt-1 border-t border-gray-700">
                         <div className="text-center">
                           <p className="text-gray-500 text-xs">Avg Grade</p>
-                          <p className={`text-base font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade))}`}>{safe(ev.avgOverallGrade, 2)}</p>
+                          <p className={`text-base font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`}>{safe(ev.avgOverallGrade, 2)}</p>
                         </div>
                         <div className="text-center">
                           <p className="text-gray-500 text-xs">Attempts</p>
@@ -2366,7 +2503,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                         )}
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className={`text-lg font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade))}`}>
+                        <span className={`text-lg font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`}>
                           {safe(ev.avgOverallGrade, 2)}
                         </span>
                         <span className="text-gray-500 text-xs">{isSelected ? '▲' : '▼'}</span>
@@ -2405,7 +2542,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                                 <div key={elName} className="flex items-center justify-between bg-gray-800 rounded px-3 py-1.5">
                                   <span className="text-gray-200 text-sm">{elName}</span>
                                   {elAvg !== null && (
-                                    <span className={`text-sm font-bold font-mono ${gradeColor(elAvg)}`}>{safe(elAvg, 2)}</span>
+                                    <span className={`text-sm font-bold font-mono ${gradeColor(elAvg, thresholds)}`}>{safe(elAvg, 2)}</span>
                                   )}
                                 </div>
                               );
@@ -2430,7 +2567,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                       <div className="grid grid-cols-3 gap-2 pt-1 border-t border-gray-700">
                         <div className="text-center">
                           <p className="text-gray-500 text-xs">Avg Grade</p>
-                          <p className={`text-base font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade))}`}>{safe(ev.avgOverallGrade, 2)}</p>
+                          <p className={`text-base font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`}>{safe(ev.avgOverallGrade, 2)}</p>
                         </div>
                         <div className="text-center">
                           <p className="text-gray-500 text-xs">Attempts</p>
@@ -2471,18 +2608,18 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                   <tr key={ev.id} onClick={() => setSelected(selected?.id === ev.id ? null : ev)}
                     className={`border-b border-gray-700/50 cursor-pointer transition-colors ${selected?.id === ev.id ? 'bg-blue-900/30' : 'hover:bg-gray-700/40'}`}>
                     <td className="px-4 py-2.5 text-gray-200 font-medium">{ev.eventCode}</td>
-                    <td className={`px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`}>{safe(ev.avgOverallGrade, 2)}</td>
-                    <td className={`px-3 py-2.5 text-center text-xs font-medium ${getPassRate(ev) >= 80 ? 'text-emerald-400' : getPassRate(ev) >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    <td className={`px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`}>{safe(ev.avgOverallGrade, 2)}</td>
+                    <td className={`px-3 py-2.5 text-center text-xs font-medium ${passRateTextColor(getPassRate(ev), thresholds)}`}>
                       {getPassRate(ev).toFixed(0)}%
                     </td>
                     <td className="px-3 py-2.5 text-center text-gray-400">{ev.totalAttempts}</td>
-                    <td className={`px-3 py-2.5 text-center text-xs font-mono ${safeN(ev.gradeVariance) > 1 ? 'text-orange-400' : 'text-gray-400'}`}>{safe(ev.gradeVariance, 2)}</td>
+                    <td className={`px-3 py-2.5 text-center text-xs font-mono ${safeN(ev.gradeVariance) > thresholds.highVarianceThreshold ? 'text-orange-400' : 'text-gray-400'}`}>{safe(ev.gradeVariance, 2)}</td>
                     <td className="px-3 py-2.5 text-center">
                       <SparkBar value={safeN(ev.difficultyScore)} max={1} />
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        {safeN(ev.bottleneckScore) > 0.5 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1 py-0.5 rounded leading-none">ER</span>}
+                        {safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1 py-0.5 rounded leading-none">ER</span>}
                         {ev.overServiceIndicator && <span className="text-xs bg-emerald-900/50 text-emerald-300 border border-emerald-800 px-1 py-0.5 rounded leading-none">LR</span>}
                       </div>
                     </td>
@@ -2533,7 +2670,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                 const data = [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map(ev => ({
                   label: ev.eventCode,
                   value: getPassRate(ev),
-                  color: getPassRate(ev) >= 80 ? '#10b981' : getPassRate(ev) >= 60 ? '#eab308' : '#ef4444',
+                  color: passRateChartColor(getPassRate(ev), thresholds),
                 }));
                 setChartModal({ title: 'Pass Rate by Event (%)', data, max: 100 });
               }}>
@@ -2548,7 +2685,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                     data={[...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map(ev => ({
                       label: ev.eventCode,
                       value: getPassRate(ev),
-                      color: getPassRate(ev) >= 80 ? '#10b981' : getPassRate(ev) >= 60 ? '#eab308' : '#ef4444',
+                      color: passRateChartColor(getPassRate(ev), thresholds),
                     }))}
                     max={100} height={120} />
                 </div>
@@ -2564,7 +2701,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                 const data = [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map(ev => ({
                   label: ev.eventCode,
                   value: safeN(ev.gradeVariance),
-                  color: safeN(ev.gradeVariance) > 1.5 ? '#ef4444' : safeN(ev.gradeVariance) > 0.8 ? '#eab308' : '#3b82f6',
+                  color: varianceChartColor(safeN(ev.gradeVariance), thresholds),
                 }));
                 const maxVal = Math.max(1, ...events.map(e => safeN(e.gradeVariance)));
                 setChartModal({ title: 'Grade Variance by Event (spread indicator)', data, max: maxVal });
@@ -2580,7 +2717,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                     data={[...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map(ev => ({
                       label: ev.eventCode,
                       value: safeN(ev.gradeVariance),
-                      color: safeN(ev.gradeVariance) > 1.5 ? '#ef4444' : safeN(ev.gradeVariance) > 0.8 ? '#eab308' : '#3b82f6',
+                      color: varianceChartColor(safeN(ev.gradeVariance), thresholds),
                     }))}
                     max={Math.max(1, ...events.map(e => safeN(e.gradeVariance)))} height={120} />
                 </div>
@@ -2614,13 +2751,13 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                               return (
                                 <td key={sk} className="px-2 py-1.5 text-center">
                                   {v !== undefined
-                                    ? <span className={`font-mono font-bold ${gradeColor(v)}`}>{safe(v, 1)}</span>
+                                    ? <span className={`font-mono font-bold ${gradeColor(v, thresholds)}`}>{safe(v, 1)}</span>
                                     : <span className="text-gray-700">&mdash;</span>}
                                 </td>
                               );
                             })}
-                            <td className={`px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`}>{safe(ev.avgOverallGrade, 2)}</td>
-                            <td className={`px-2 py-1.5 text-center text-xs ${safeN(ev.passRate) >= 80 ? 'text-emerald-400' : safeN(ev.passRate) >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                            <td className={`px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`}>{safe(ev.avgOverallGrade, 2)}</td>
+                            <td className={`px-2 py-1.5 text-center text-xs ${passRateTextColor(getPassRate(ev), thresholds)}`}>
                               {getPassRate(ev).toFixed(0)}%
                             </td>
                           </tr>
@@ -2645,20 +2782,20 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                 </div>
                 <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-200 text-lg leading-none">&times;</button>
               </div>
-              <div className={`rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade))}`}>
+              <div className={`rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade), thresholds)}`}>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-300 text-xs">Average Grade</span>
-                  <span className={`text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade))}`}>{safe(selected.avgOverallGrade, 2)}</span>
+                  <span className={`text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade), thresholds)}`}>{safe(selected.avgOverallGrade, 2)}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-3 mt-2 text-xs text-gray-400">
-                  <span>Pass Rate: <span className={getPassRate(selected) >= 80 ? 'text-emerald-400' : 'text-yellow-400'}>{getPassRate(selected).toFixed(0)}%</span></span>
+                  <span>Pass Rate: <span className={passRateTextColor(getPassRate(selected), thresholds)}>{getPassRate(selected).toFixed(0)}%</span></span>
                   <span>Attempts: <span className="text-gray-300">{selected.totalAttempts}</span></span>
-                  <span>Variance: <span className={safeN(selected.gradeVariance) > 1 ? 'text-orange-400' : 'text-gray-300'}>{safe(selected.gradeVariance, 2)}</span></span>
+                  <span>Variance: <span className={safeN(selected.gradeVariance) > thresholds.highVarianceThreshold ? 'text-orange-400' : 'text-gray-300'}>{safe(selected.gradeVariance, 2)}</span></span>
                   <span>Difficulty: <span className="text-gray-300">{safe(selected.difficultyScore, 2)}</span></span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5 mt-3">
-                {safeN(selected.bottleneckScore) > 0.5 && <Tag text="Elevated Risk" type="red" />}
+                {safeN(selected.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 && <Tag text="Elevated Risk" type="red" />}
                 {selected.overServiceIndicator && <Tag text="Low Risk" type="green" />}
               </div>
             </div>
@@ -2744,11 +2881,18 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
       if (Object.keys(map).length > 0) {
         setThresholds({
           atRiskAvgGrade: numberSetting(map['at_risk_avg_grade'], DEFAULT_THRESHOLDS.atRiskAvgGrade),
+          normalAvgGrade: numberSetting(map['normal_avg_grade'], numberSetting(map['normal_min_grade'], DEFAULT_THRESHOLDS.normalAvgGrade)),
+          worseningRecentAvgGrade: numberSetting(map['worsening_recent_avg_grade'], numberSetting(map['at_risk_low_recent_grade'], DEFAULT_THRESHOLDS.worseningRecentAvgGrade)),
           exceedingAvgGrade: numberSetting(map['exceeding_avg_grade'], DEFAULT_THRESHOLDS.exceedingAvgGrade),
           concernThresholdGrade: numberSetting(map['concern_threshold_grade'], DEFAULT_THRESHOLDS.concernThresholdGrade),
+          excellentGradeColorThreshold: numberSetting(map['excellent_grade_color_threshold'], DEFAULT_THRESHOLDS.excellentGradeColorThreshold),
+          normalGradeColorThreshold: numberSetting(map['normal_grade_color_threshold'], DEFAULT_THRESHOLDS.normalGradeColorThreshold),
+          concernGradeColorThreshold: numberSetting(map['concern_grade_color_threshold'], DEFAULT_THRESHOLDS.concernGradeColorThreshold),
+          criticalLowGradeThreshold: numberSetting(map['critical_low_grade_threshold'], DEFAULT_THRESHOLDS.criticalLowGradeThreshold),
           bottleneckThresholdPct: numberSetting(map['bottleneck_threshold_pct'], DEFAULT_THRESHOLDS.bottleneckThresholdPct),
+          healthyPassRatePct: numberSetting(map['healthy_pass_rate_pct'], DEFAULT_THRESHOLDS.healthyPassRatePct),
           highVarianceThreshold: numberSetting(map['high_variance_threshold'], DEFAULT_THRESHOLDS.highVarianceThreshold),
-          normalMinGrade: numberSetting(map['normal_min_grade'], DEFAULT_THRESHOLDS.normalMinGrade),
+          normalMinGrade: numberSetting(map['normal_min_grade'], numberSetting(map['normal_avg_grade'], DEFAULT_THRESHOLDS.normalMinGrade)),
           atRiskAverageEnabled: boolSetting(map['at_risk_average_enabled'], DEFAULT_THRESHOLDS.atRiskAverageEnabled),
           atRiskSustainedDeclineEnabled: boolSetting(map['at_risk_sustained_decline_enabled'], DEFAULT_THRESHOLDS.atRiskSustainedDeclineEnabled),
           atRiskRecentDropEnabled: boolSetting(map['at_risk_recent_drop_enabled'], DEFAULT_THRESHOLDS.atRiskRecentDropEnabled),
@@ -2756,9 +2900,13 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
           atRiskRecurringWeakElementsEnabled: boolSetting(map['at_risk_recurring_weak_elements_enabled'], DEFAULT_THRESHOLDS.atRiskRecurringWeakElementsEnabled),
           sustainedDeclineCount: numberSetting(map['at_risk_sustained_decline_count'], DEFAULT_THRESHOLDS.sustainedDeclineCount),
           recentDropThreshold: numberSetting(map['at_risk_recent_drop_threshold'], DEFAULT_THRESHOLDS.recentDropThreshold),
-          lowRecentGrade: numberSetting(map['at_risk_low_recent_grade'], DEFAULT_THRESHOLDS.lowRecentGrade),
+          lowRecentGrade: numberSetting(map['at_risk_low_recent_grade'], numberSetting(map['worsening_recent_avg_grade'], DEFAULT_THRESHOLDS.lowRecentGrade)),
           recurringWeakElementCount: numberSetting(map['at_risk_recurring_weak_element_count'], DEFAULT_THRESHOLDS.recurringWeakElementCount),
           minAssessmentsForRisk: numberSetting(map['at_risk_min_assessments'], DEFAULT_THRESHOLDS.minAssessmentsForRisk),
+          minObservationsForPattern: numberSetting(map['min_observations_for_pattern'], DEFAULT_THRESHOLDS.minObservationsForPattern),
+          recencyWeightFactor: numberSetting(map['recency_weight_factor'], DEFAULT_THRESHOLDS.recencyWeightFactor),
+          commentWeightVsScore: numberSetting(map['comment_weight_vs_score'], DEFAULT_THRESHOLDS.commentWeightVsScore),
+          overServiceGradeThreshold: numberSetting(map['over_service_threshold'], DEFAULT_THRESHOLDS.overServiceGradeThreshold),
         });
       }
     } catch { /* use defaults */ }
@@ -2902,7 +3050,7 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   const atRiskBadge = trainees.filter(t => evaluateTraineeRisk(t, thresholds).riskLevel === 'at_risk').length;
-  const bottleneckBadge = events.filter(e => safeN(e.bottleneckScore) > 0.5).length;
+  const bottleneckBadge = events.filter(e => safeN(e.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100).length;
 
   const tabs = [
     { id: 'course' as const, label: 'Course' },

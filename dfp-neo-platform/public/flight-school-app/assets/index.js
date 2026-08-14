@@ -47794,9 +47794,16 @@ const BuildAnalyticsTab = ({
 };
 const DEFAULT_THRESHOLDS = {
   atRiskAvgGrade: 3.2,
+  normalAvgGrade: 3.5,
+  worseningRecentAvgGrade: 3.5,
   exceedingAvgGrade: 4.2,
   concernThresholdGrade: 3,
+  excellentGradeColorThreshold: 4.5,
+  normalGradeColorThreshold: 3.5,
+  concernGradeColorThreshold: 3,
+  criticalLowGradeThreshold: 2.5,
   bottleneckThresholdPct: 40,
+  healthyPassRatePct: 80,
   highVarianceThreshold: 1,
   normalMinGrade: 3.5,
   atRiskAverageEnabled: true,
@@ -47808,24 +47815,51 @@ const DEFAULT_THRESHOLDS = {
   recentDropThreshold: 0.4,
   lowRecentGrade: 3.2,
   recurringWeakElementCount: 3,
-  minAssessmentsForRisk: 3
+  minAssessmentsForRisk: 3,
+  minObservationsForPattern: 3,
+  recencyWeightFactor: 1.5,
+  commentWeightVsScore: 0.4,
+  overServiceGradeThreshold: 4.3
 };
 const ThresholdContext = React.createContext({ thresholds: DEFAULT_THRESHOLDS, setThresholds: () => {
 } });
 const useThresholds = () => React.useContext(ThresholdContext);
-const gradeColor = (g) => {
-  if (g >= 4.5) return "text-emerald-400";
-  if (g >= 3.5) return "text-green-400";
-  if (g >= 3) return "text-yellow-400";
-  if (g >= 2.5) return "text-orange-400";
+const gradeColor = (g, t = DEFAULT_THRESHOLDS) => {
+  if (g >= t.excellentGradeColorThreshold) return "text-emerald-400";
+  if (g >= t.normalGradeColorThreshold) return "text-green-400";
+  if (g >= t.concernGradeColorThreshold) return "text-yellow-400";
+  if (g >= t.criticalLowGradeThreshold) return "text-orange-400";
   return "text-red-400";
 };
-const gradeBg = (g) => {
-  if (g >= 4.5) return "bg-emerald-900/40 border-emerald-700";
-  if (g >= 3.5) return "bg-green-900/40 border-green-700";
-  if (g >= 3) return "bg-yellow-900/40 border-yellow-700";
-  if (g >= 2.5) return "bg-orange-900/40 border-orange-700";
+const gradeBg = (g, t = DEFAULT_THRESHOLDS) => {
+  if (g >= t.excellentGradeColorThreshold) return "bg-emerald-900/40 border-emerald-700";
+  if (g >= t.normalGradeColorThreshold) return "bg-green-900/40 border-green-700";
+  if (g >= t.concernGradeColorThreshold) return "bg-yellow-900/40 border-yellow-700";
+  if (g >= t.criticalLowGradeThreshold) return "bg-orange-900/40 border-orange-700";
   return "bg-red-900/40 border-red-700";
+};
+const gradeChartColor = (g, t = DEFAULT_THRESHOLDS) => {
+  if (g >= t.excellentGradeColorThreshold) return "#34d399";
+  if (g >= t.normalGradeColorThreshold) return "#4ade80";
+  if (g >= t.concernGradeColorThreshold) return "#facc15";
+  if (g >= t.criticalLowGradeThreshold) return "#fb923c";
+  return "#f87171";
+};
+const passRateWarningThreshold = (t = DEFAULT_THRESHOLDS) => Math.max(0, Math.min(100, 100 - t.bottleneckThresholdPct));
+const passRateTextColor = (rate, t = DEFAULT_THRESHOLDS) => {
+  if (rate >= t.healthyPassRatePct) return "text-emerald-400";
+  if (rate >= passRateWarningThreshold(t)) return "text-yellow-400";
+  return "text-red-400";
+};
+const passRateChartColor = (rate, t = DEFAULT_THRESHOLDS) => {
+  if (rate >= t.healthyPassRatePct) return "#10b981";
+  if (rate >= passRateWarningThreshold(t)) return "#eab308";
+  return "#ef4444";
+};
+const varianceChartColor = (variance, t = DEFAULT_THRESHOLDS) => {
+  if (variance > t.highVarianceThreshold) return "#ef4444";
+  if (variance > t.highVarianceThreshold * 0.8) return "#eab308";
+  return "#3b82f6";
 };
 const riskBadge = (risk) => {
   if (risk === "at_risk") return "bg-red-900/60 text-red-300 border border-red-700";
@@ -47889,7 +47923,7 @@ const riskCriteriaRows = (thresholds) => [
 const monitorSignalRows = (thresholds) => [
   thresholds.atRiskSustainedDeclineEnabled ? `Sustained decline across the last ${thresholds.sustainedDeclineCount} assessments` : null,
   thresholds.atRiskRecentDropEnabled ? `Recent average ${thresholds.recentDropThreshold.toFixed(1)} or more below overall average` : null,
-  thresholds.atRiskLowRecentEnabled ? `Recent average below ${thresholds.lowRecentGrade.toFixed(1)}` : null,
+  thresholds.atRiskLowRecentEnabled ? `Worsening trend recent average below ${thresholds.worseningRecentAvgGrade.toFixed(1)}` : null,
   thresholds.atRiskRecurringWeakElementsEnabled ? `${thresholds.recurringWeakElementCount}+ recurring weak elements` : null
 ].filter(Boolean);
 const TimelineZoomControl = ({ value, onChange, max = 6 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 rounded-md border border-gray-700 bg-gray-950 p-1", children: [
@@ -47973,13 +48007,13 @@ const evaluateTraineeRisk = (trainee, thresholds) => {
   if (enoughData && thresholds.atRiskRecentDropEnabled && avgGrade - recentAvg >= thresholds.recentDropThreshold) {
     monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} is ${(avgGrade - recentAvg).toFixed(2)} below overall average`);
   }
-  if (enoughData && thresholds.atRiskLowRecentEnabled && recentAvg < thresholds.lowRecentGrade) {
-    monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} below low-recent-average threshold of ${thresholds.lowRecentGrade.toFixed(1)}`);
+  if (enoughData && thresholds.atRiskLowRecentEnabled && trainee.overallTrend === "worsening" && recentAvg < thresholds.worseningRecentAvgGrade) {
+    monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} below worsening-trend recent-average threshold of ${thresholds.worseningRecentAvgGrade.toFixed(1)}`);
   }
   if (enoughData && thresholds.atRiskRecurringWeakElementsEnabled && weakElements.length >= thresholds.recurringWeakElementCount) {
     monitorReasons.push(`${weakElements.length} weak elements recurring`);
   }
-  if (!enoughData && (avgGrade < thresholds.atRiskAvgGrade || recentAvg < thresholds.lowRecentGrade || trainee.overallTrend === "worsening")) {
+  if (!enoughData && (avgGrade < thresholds.atRiskAvgGrade || trainee.overallTrend === "worsening" && recentAvg < thresholds.worseningRecentAvgGrade || trainee.overallTrend === "worsening")) {
     return { riskLevel: "monitor", reasons: [`Monitor until ${thresholds.minAssessmentsForRisk} assessments are available`] };
   }
   if (atRiskReasons.length > 0) return { riskLevel: "at_risk", reasons: atRiskReasons };
@@ -47987,12 +48021,12 @@ const evaluateTraineeRisk = (trainee, thresholds) => {
   if (avgGrade >= thresholds.exceedingAvgGrade && trainee.overallTrend !== "worsening") {
     return { riskLevel: "exceeding", reasons: [] };
   }
-  if (avgGrade >= thresholds.normalMinGrade && trainee.overallTrend !== "worsening") {
+  if (avgGrade >= thresholds.normalAvgGrade && trainee.overallTrend !== "worsening") {
     return { riskLevel: "normal", reasons: [] };
   }
   const reasons = [];
-  if (avgGrade < thresholds.normalMinGrade) {
-    reasons.push(`Course average ${avgGrade.toFixed(2)} below normal threshold of ${thresholds.normalMinGrade.toFixed(1)}`);
+  if (avgGrade < thresholds.normalAvgGrade) {
+    reasons.push(`Course average ${avgGrade.toFixed(2)} below normal/watch boundary of ${thresholds.normalAvgGrade.toFixed(1)}`);
   }
   if (trainee.overallTrend === "worsening") {
     reasons.push("Overall trend is worsening");
@@ -48004,7 +48038,7 @@ const riskReasonLabel = (reason) => {
   if (normalized.includes("below at-risk threshold")) return "course average below At Risk threshold";
   if (normalized.includes("sustained decline")) return "sustained decline";
   if (normalized.includes("below overall average")) return "recent average drop";
-  if (normalized.includes("low-recent-average")) return "low recent average";
+  if (normalized.includes("worsening-trend recent-average") || normalized.includes("low-recent-average")) return "worsening trend recent average";
   if (normalized.includes("weak elements")) return "recurring weak elements";
   if (normalized.includes("monitor until")) return "not enough assessment history";
   if (normalized.includes("below normal threshold")) return "course average below Normal threshold";
@@ -48027,14 +48061,16 @@ const summarizeStatusTriggers = (evaluations, status) => {
   return Array.from(counts.entries()).sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0])).slice(0, 3).map(([label, detail]) => ({ label, count: detail.count, names: detail.names }));
 };
 const SparkBar = ({ value, max = 5, colorClass }) => {
+  const { thresholds } = useThresholds();
   const pct = Math.min(100, safeN(value) / max * 100);
-  const c = colorClass || (value >= 4 ? "bg-emerald-500" : value >= 3 ? "bg-yellow-500" : "bg-red-500");
+  const c = colorClass || (value >= thresholds.excellentGradeColorThreshold ? "bg-emerald-500" : value >= thresholds.concernGradeColorThreshold ? "bg-yellow-500" : "bg-red-500");
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-700 rounded-full h-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${c} h-1.5 rounded-full`, style: { width: `${pct}%` } }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs font-mono w-8 text-right ${gradeColor(value)}`, children: safe(value, 1) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs font-mono w-8 text-right ${gradeColor(value, thresholds)}`, children: safe(value, 1) })
   ] });
 };
 const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", interactive = false, yMin = 0, yMax = 5, showYAxisLabels = false }) => {
+  const { thresholds } = useThresholds();
   const [tooltip, setTooltip] = React.useState(null);
   const svgRef = React.useRef(null);
   if (!data || data.length < 2) return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-xs", children: "—" });
@@ -48046,7 +48082,7 @@ const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", 
   const getY = (v) => PAD_TOP + usableH * (1 - Math.max(0, Math.min(1, (v - YMIN) / (YMAX - YMIN))));
   const pts = data.map((v, i) => `${getX(i)},${getY(v)}`).join(" ");
   const hoveredVal = tooltip !== null ? data[tooltip.i] : null;
-  const gc = (v) => v >= 4.5 ? "#34d399" : v >= 3.5 ? "#4ade80" : v >= 3 ? "#facc15" : v >= 2.5 ? "#fb923c" : "#f87171";
+  const gc = (v) => gradeChartColor(v, thresholds);
   const gridSpan = YMAX - YMIN;
   const gridStep = gridSpan <= 1 ? 0.2 : gridSpan <= 2 ? 0.5 : 1;
   const gridLines = interactive ? Array.from(
@@ -48160,14 +48196,15 @@ const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", 
   ] });
 };
 const HBarChart = ({ data, max = 5 }) => {
+  const { thresholds } = useThresholds();
   if (!data || data.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: data.map((item) => {
     const pct = Math.min(100, safeN(item.value) / max * 100);
-    const c = item.color || (item.value >= 4 ? "bg-emerald-500" : item.value >= 3 ? "bg-yellow-500" : "bg-red-500");
+    const c = item.color || (item.value >= thresholds.excellentGradeColorThreshold ? "bg-emerald-500" : item.value >= thresholds.concernGradeColorThreshold ? "bg-yellow-500" : "bg-red-500");
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs mb-0.5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300 truncate max-w-[160px]", title: item.label, children: item.label }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: gradeColor(item.value), children: safe(item.value, 1) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: gradeColor(item.value, thresholds), children: safe(item.value, 1) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700 rounded-full h-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${c} h-1.5 rounded-full`, style: { width: `${pct}%` } }) })
     ] }, item.label);
@@ -48365,6 +48402,7 @@ const Tag = ({ text, type = "gray" }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `border text-xs px-2 py-0.5 rounded ${m[type]}`, children: text });
 };
 const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) => {
+  const { thresholds } = useThresholds();
   const [timelineZoom, setTimelineZoom] = React.useState(0);
   const [scoreZoom, setScoreZoom] = React.useState(0);
   const color = trend === "improving" ? "#10b981" : trend === "worsening" ? "#ef4444" : "#60a5fa";
@@ -48432,7 +48470,7 @@ const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) =>
         { label: "Maximum", value: maxVal }
       ].map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg px-4 py-3 text-center border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 uppercase tracking-wide mb-1", children: s.label }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xl font-bold font-mono ${gradeColor(s.value)}`, children: s.value.toFixed(2) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xl font-bold font-mono ${gradeColor(s.value, thresholds)}`, children: s.value.toFixed(2) })
       ] }, s.label)),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg px-4 py-3 text-center border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 uppercase tracking-wide mb-1", children: "Trend" }),
@@ -48450,7 +48488,8 @@ const ColChartExpanded = ({
   data,
   max = 5,
   height = 240,
-  zoomY = false
+  zoomY = false,
+  thresholds = DEFAULT_THRESHOLDS
 }) => {
   if (!data || data.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No data" });
   const bw = Math.max(20, Math.min(52, 800 / data.length));
@@ -48485,7 +48524,7 @@ const ColChartExpanded = ({
       const bh = Math.max(3, barBot - barTop);
       const x = leftPad + gap + i * (bw + gap);
       const y = barTop;
-      const color = item.value >= 4 ? "#10b981" : item.value >= 3 ? "#eab308" : "#ef4444";
+      const color = gradeChartColor(item.value, thresholds);
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x, y, width: bw, height: bh, fill: color, fillOpacity: 0.9, rx: "3" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: x + bw / 2, y: y - 5, textAnchor: "middle", fontSize: "10", fill: "#e5e7eb", fontWeight: "bold", children: safe(item.value, 2) }),
@@ -48572,7 +48611,7 @@ const ColChartModal = ({ data, max = 100, height = 380, zoomY = false }) => {
     })
   ] });
 };
-const GradeByTraineeModal = ({ trainees, onClose }) => {
+const GradeByTraineeModal = ({ trainees, thresholds, onClose }) => {
   const [timelineZoom, setTimelineZoom] = React.useState(0);
   const [scoreZoom, setScoreZoom] = React.useState(0);
   const visibleData = trainees;
@@ -48597,11 +48636,13 @@ const GradeByTraineeModal = ({ trainees, onClose }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-3xl leading-none ml-1 flex-shrink-0", children: "×" })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-xl p-5 overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: timelineZoom === 0 ? "100%" : Math.max(900, visibleData.length * (42 + timelineZoom * 16)) }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(ColChartExpanded, { data: visibleData, max: 5, height: 420, zoomY: scoreZoom > 0 }) }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-xl p-5 overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: timelineZoom === 0 ? "100%" : Math.max(900, visibleData.length * (42 + timelineZoom * 16)) }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(ColChartExpanded, { data: visibleData, max: 5, height: 420, zoomY: scoreZoom > 0, thresholds }) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-4 mt-4 justify-center text-xs", children: [
-      { color: "#ef4444", label: "Below 3.0 — unsatisfactory" },
-      { color: "#eab308", label: "3.0–3.9 — satisfactory" },
-      { color: "#10b981", label: "4.0+ — good / excellent" }
+      { color: "#f87171", label: `Below ${thresholds.criticalLowGradeThreshold.toFixed(1)} - critically low` },
+      { color: "#fb923c", label: `${thresholds.criticalLowGradeThreshold.toFixed(1)}+ - low` },
+      { color: "#facc15", label: `${thresholds.concernGradeColorThreshold.toFixed(1)}+ - concern` },
+      { color: "#4ade80", label: `${thresholds.normalGradeColorThreshold.toFixed(1)}+ - normal` },
+      { color: "#34d399", label: `${thresholds.excellentGradeColorThreshold.toFixed(1)}+ - excellent` }
     ].map((l) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-3 h-3 rounded-sm flex-shrink-0", style: { backgroundColor: l.color } }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: l.label })
@@ -48626,11 +48667,24 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
     setSaving(true);
     setError(null);
     try {
+      const payload = {
+        ...local,
+        // Keep legacy setting keys in sync for older analytics records and code paths.
+        normalMinGrade: local.normalAvgGrade,
+        lowRecentGrade: local.worseningRecentAvgGrade
+      };
       const mapping = {
         atRiskAvgGrade: "at_risk_avg_grade",
+        normalAvgGrade: "normal_avg_grade",
+        worseningRecentAvgGrade: "worsening_recent_avg_grade",
         exceedingAvgGrade: "exceeding_avg_grade",
         concernThresholdGrade: "concern_threshold_grade",
+        excellentGradeColorThreshold: "excellent_grade_color_threshold",
+        normalGradeColorThreshold: "normal_grade_color_threshold",
+        concernGradeColorThreshold: "concern_grade_color_threshold",
+        criticalLowGradeThreshold: "critical_low_grade_threshold",
         bottleneckThresholdPct: "bottleneck_threshold_pct",
+        healthyPassRatePct: "healthy_pass_rate_pct",
         highVarianceThreshold: "high_variance_threshold",
         normalMinGrade: "normal_min_grade",
         atRiskAverageEnabled: "at_risk_average_enabled",
@@ -48642,18 +48696,22 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
         recentDropThreshold: "at_risk_recent_drop_threshold",
         lowRecentGrade: "at_risk_low_recent_grade",
         recurringWeakElementCount: "at_risk_recurring_weak_element_count",
-        minAssessmentsForRisk: "at_risk_min_assessments"
+        minAssessmentsForRisk: "at_risk_min_assessments",
+        minObservationsForPattern: "min_observations_for_pattern",
+        recencyWeightFactor: "recency_weight_factor",
+        commentWeightVsScore: "comment_weight_vs_score",
+        overServiceGradeThreshold: "over_service_threshold"
       };
       const sessionToken = localStorage.getItem("dfp_session_token") || "";
       await Promise.all(
-        Object.keys(local).map(async (k) => {
+        Object.keys(payload).map(async (k) => {
           const response = await fetch("/api/tie/settings", {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
               ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
             },
-            body: JSON.stringify({ key: mapping[k], value: local[k] })
+            body: JSON.stringify({ key: mapping[k], value: payload[k] })
           });
           if (!response.ok) {
             const body = await response.text().catch(() => "");
@@ -48661,7 +48719,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
           }
         })
       );
-      onSave({ ...local });
+      onSave({ ...payload });
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
@@ -48683,6 +48741,22 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
       step: 0.1
     },
     {
+      key: "normalAvgGrade",
+      label: "Normal / Watch Boundary",
+      desc: "Whole-course average at or above which a trainee is Normal instead of Watch. This is the overall average, not recent trend performance.",
+      min: 2.5,
+      max: 4.5,
+      step: 0.1
+    },
+    {
+      key: "worseningRecentAvgGrade",
+      label: "Worsening Trend Recent Average",
+      desc: "Recent average below which a trainee with a worsening trend is escalated. This stays separate from Normal / Watch because it measures recent performance only.",
+      min: 2.5,
+      max: 4.5,
+      step: 0.1
+    },
+    {
       key: "exceedingAvgGrade",
       label: "Exceeding Threshold",
       desc: "Average grade ABOVE which a trainee is classified as Exceeding (high performer). E.g. 4.2.",
@@ -48699,11 +48773,51 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
       step: 1
     },
     {
+      key: "excellentGradeColorThreshold",
+      label: "Grade Colour: Excellent",
+      desc: "Grade at or above which charts and scores use the excellent colour.",
+      min: 3,
+      max: 5,
+      step: 0.1
+    },
+    {
+      key: "normalGradeColorThreshold",
+      label: "Grade Colour: Normal",
+      desc: "Grade at or above which charts and scores use the normal colour.",
+      min: 2.5,
+      max: 5,
+      step: 0.1
+    },
+    {
+      key: "concernGradeColorThreshold",
+      label: "Grade Colour: Concern",
+      desc: "Grade at or above which charts and scores move out of low/critical and into concern.",
+      min: 1,
+      max: 4,
+      step: 0.1
+    },
+    {
+      key: "criticalLowGradeThreshold",
+      label: "Grade Colour: Critically Low",
+      desc: "Grade below this value is shown as critical. Grades from this value up to Concern are shown as low.",
+      min: 1,
+      max: 3,
+      step: 0.1
+    },
+    {
       key: "bottleneckThresholdPct",
       label: "Elevated Risk % Threshold",
       desc: "Percentage of trainees scoring below the concern threshold that triggers an event to be flagged as an elevated risk event.",
       min: 10,
       max: 80,
+      step: 5
+    },
+    {
+      key: "healthyPassRatePct",
+      label: "Healthy Pass Rate Colour",
+      desc: "Pass rate at or above which pass-rate charts show healthy/green. Yellow sits between this value and the elevated-risk boundary.",
+      min: 50,
+      max: 100,
       step: 5
     },
     {
@@ -48715,11 +48829,35 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
       step: 0.1
     },
     {
-      key: "normalMinGrade",
-      label: "Normal Status Minimum",
-      desc: "Average grade at or above which a trainee is Normal when they are not At Risk or Exceeding. Lower averages become Monitor.",
-      min: 2.5,
-      max: 4.5,
+      key: "minObservationsForPattern",
+      label: "Minimum Reports Before Alerting",
+      desc: "Minimum number of training reports required before analytics generates pattern-based findings.",
+      min: 1,
+      max: 10,
+      step: 1
+    },
+    {
+      key: "recencyWeightFactor",
+      label: "Recent Performance Weighting",
+      desc: "Multiplier applied to recent assessments so current performance carries more weight than older results.",
+      min: 1,
+      max: 3,
+      step: 0.1
+    },
+    {
+      key: "commentWeightVsScore",
+      label: "Instructor Comment Weighting",
+      desc: "Weight given to comment tags compared with numeric scores when interpreting training issues.",
+      min: 0,
+      max: 1,
+      step: 0.1
+    },
+    {
+      key: "overServiceGradeThreshold",
+      label: "Over-Service Grade Threshold",
+      desc: "Average grade at or above which a stable event may be classed as over-serviced.",
+      min: 3,
+      max: 5,
       step: 0.1
     }
   ];
@@ -48744,9 +48882,9 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
     },
     {
       enabledKey: "atRiskLowRecentEnabled",
-      title: "Low recent average",
-      detail: "Moves trainees to Monitor when their most recent assessment window is below the configured recent score floor.",
-      control: { key: "lowRecentGrade", suffix: "recent avg", min: 1, max: 4.5, step: 0.1 }
+      title: "Worsening trend recent average",
+      detail: "Moves trainees to Monitor when their recent assessment window is below the configured recent score floor and their trend is worsening.",
+      control: { key: "worseningRecentAvgGrade", suffix: "recent avg", min: 1, max: 4.5, step: 0.1 }
     },
     {
       enabledKey: "atRiskRecurringWeakElementsEnabled",
@@ -48890,8 +49028,8 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-300 font-semibold", children: "Monitor / Watch — " }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                    "Trend, recent-average, or recurring weak-element signals are triggered, or avg grade is below ",
-                    local.normalMinGrade.toFixed(1),
+                    "Trend, recent-average, or recurring weak-element signals are triggered, or whole-course avg grade is below ",
+                    local.normalAvgGrade.toFixed(1),
                     " once not classified At Risk. Active monitor signals: ",
                     monitorSignalRows(local).join("; ") || "none selected",
                     "."
@@ -48903,8 +49041,8 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-blue-300 font-semibold", children: "Normal — " }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                    "Avg grade ≥ ",
-                    local.normalMinGrade.toFixed(1),
+                    "Whole-course avg grade ≥ ",
+                    local.normalAvgGrade.toFixed(1),
                     " and < ",
                     local.exceedingAvgGrade.toFixed(1),
                     ". Trainee is meeting expectations satisfactorily."
@@ -48982,13 +49120,13 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
   const allSkills = Array.from(new Set(events.flatMap((ev) => Object.keys(parseJ(ev.skillFamilyScores, {})))));
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { label: "Avg Score", value: safe(avgGrade, 2), color: gradeColor(avgGrade), sub: "course average" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { label: "Avg Score", value: safe(avgGrade, 2), color: gradeColor(avgGrade, thresholds), sub: "course average" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         StatCard$1,
         {
           label: "Pass Rate",
           value: `${passRate.toFixed(0)}%`,
-          color: passRate >= 80 ? "text-emerald-400" : passRate >= 60 ? "text-yellow-400" : "text-red-400",
+          color: passRateTextColor(passRate, thresholds),
           sub: `trainees avg ≥ ${thresholds.concernThresholdGrade}.0`
         }
       ),
@@ -49109,8 +49247,8 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-2 h-2 rounded-full bg-yellow-500 mt-0.5 flex-shrink-0" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-300 font-semibold", children: "Monitor: " }),
-                "Trend, recent-average, or recurring weak-element signals are triggered, or avg grade is below ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: thresholds.normalMinGrade.toFixed(1) }),
+                "Trend, recent-average, or recurring weak-element signals are triggered, or whole-course avg grade is below ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: thresholds.normalAvgGrade.toFixed(1) }),
                 " once not classified At Risk.",
                 " ",
                 "Active monitor signals: ",
@@ -49122,8 +49260,8 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-2 h-2 rounded-full bg-blue-500 mt-0.5 flex-shrink-0" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-blue-300 font-semibold", children: "Normal: " }),
-                "Avg grade ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: thresholds.normalMinGrade.toFixed(1) }),
+                "Whole-course avg grade ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: thresholds.normalAvgGrade.toFixed(1) }),
                 "–",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: thresholds.exceedingAvgGrade.toFixed(1) }),
                 ".",
@@ -49169,7 +49307,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
         ev.totalAttempts,
         " tries"
       ] }),
-      safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0", children: "ELEVATED RISK" })
+      safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0", children: "ELEVATED RISK" })
     ] }, ev.id || ev.eventCode)) }) : events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "Event grades not yet computed — run analytics to populate" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No event data — run analytics first" }) }),
     topByAttempts.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       eventAvgExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4", onClick: () => setEventAvgExpanded(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 border border-gray-600 rounded-xl shadow-2xl w-full max-w-6xl p-6", style: { maxHeight: "90vh", overflowY: "auto" }, onClick: (e) => e.stopPropagation(), children: [
@@ -49188,7 +49326,8 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
           {
             data: topByAttempts.map((ev) => ({ label: ev.eventCode, value: safeN(ev.avgOverallGrade) })),
             max: 5,
-            height: 420
+            height: 420,
+            thresholds
           }
         ) })
       ] }) }),
@@ -49224,9 +49363,9 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "text-gray-300 pr-4 py-1.5 whitespace-nowrap font-medium", children: ev.eventCode }),
           allSkills.map((sk) => {
             const v = sf[sk];
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-1.5 text-center", children: v !== void 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-mono font-bold ${gradeColor(v)}`, children: safe(v, 1) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-700", children: "—" }) }, sk);
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-1.5 text-center", children: v !== void 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-mono font-bold ${gradeColor(v, thresholds)}`, children: safe(v, 1) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-700", children: "—" }) }, sk);
           }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`, children: safe(ev.avgOverallGrade, 2) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`, children: safe(ev.avgOverallGrade, 2) })
         ] }, ev.id);
       }) })
     ] }) }) }),
@@ -49300,6 +49439,7 @@ const TraineeTab = ({ trainees, trainingReportDisplayName }) => {
           const label = namePart.includes(",") ? namePart.split(",")[0].trim() : namePart.split(/\s+/)[0].trim();
           return { label, value: safeN(t.avgOverallGrade) };
         }),
+        thresholds,
         onClose: () => setGradeByTraineeModal(false)
       }
     ),
@@ -49357,8 +49497,8 @@ const TraineeTab = ({ trainees, trainingReportDisplayName }) => {
                   className: `border-b border-gray-700/50 cursor-pointer transition-colors ${selected?.id === t.id ? "bg-blue-900/30" : "hover:bg-gray-700/40"}`,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2.5 text-gray-200 font-medium", children: t.traineeFullName }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(t.avgOverallGrade))}`, children: safe(t.avgOverallGrade, 2) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-3 py-2.5 text-center font-mono text-xs ${gradeColor(safeN(t.recentAvgGrade))}`, children: safe(t.recentAvgGrade, 2) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(t.avgOverallGrade), thresholds)}`, children: safe(t.avgOverallGrade, 2) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-3 py-2.5 text-center font-mono text-xs ${gradeColor(safeN(t.recentAvgGrade), thresholds)}`, children: safe(t.recentAvgGrade, 2) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-3 py-2.5 text-center font-bold ${trendColor(t.overallTrend)}`, children: trendIcon(t.overallTrend) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2.5 text-center text-gray-400", children: t.totalPt051Count }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs px-2 py-0.5 rounded-full font-medium ${riskBadge(displayRisk)}`, children: displayRisk === "at_risk" ? "At Risk" : displayRisk === "monitor" ? "Monitor" : displayRisk === "exceeding" ? "Exceeding" : "Normal" }) }),
@@ -49416,8 +49556,8 @@ const TraineeTab = ({ trainees, trainingReportDisplayName }) => {
               const d = safeN(t.recentAvgGrade) - safeN(t.avgOverallGrade);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700/40 hover:bg-gray-700/20", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-1.5 pr-2 text-gray-300 truncate max-w-[90px]", children: t.traineeFullName }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.avgOverallGrade))}`, children: safe(t.avgOverallGrade, 2) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.recentAvgGrade))}`, children: safe(t.recentAvgGrade, 2) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.avgOverallGrade), thresholds)}`, children: safe(t.avgOverallGrade, 2) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.recentAvgGrade), thresholds)}`, children: safe(t.recentAvgGrade, 2) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: `py-1.5 px-2 text-center font-mono ${d > 0.1 ? "text-emerald-400" : d < -0.1 ? "text-red-400" : "text-gray-400"}`, children: [
                   d >= 0 ? "+" : "",
                   d.toFixed(2)
@@ -49436,15 +49576,15 @@ const TraineeTab = ({ trainees, trainingReportDisplayName }) => {
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSelected(null), className: "text-gray-500 hover:text-gray-200 text-lg leading-none", children: "×" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade))}`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade), thresholds)}`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300 text-xs", children: "Average Grade" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade))}`, children: safe(selected.avgOverallGrade, 2) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade), thresholds)}`, children: safe(selected.avgOverallGrade, 2) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 mt-1.5 text-xs text-gray-400", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                 "Recent: ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: gradeColor(safeN(selected.recentAvgGrade)), children: safe(selected.recentAvgGrade, 2) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: gradeColor(safeN(selected.recentAvgGrade), thresholds), children: safe(selected.recentAvgGrade, 2) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                 "Trend: ",
@@ -49462,14 +49602,14 @@ const TraineeTab = ({ trainees, trainingReportDisplayName }) => {
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs mb-0.5", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "This Trainee" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: gradeColor(safeN(selected.avgOverallGrade)), children: safe(selected.avgOverallGrade, 2) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: gradeColor(safeN(selected.avgOverallGrade), thresholds), children: safe(selected.avgOverallGrade, 2) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SparkBar, { value: safeN(selected.avgOverallGrade) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs mb-0.5", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Course Avg" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: gradeColor(courseAvg), children: safe(courseAvg, 2) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: gradeColor(courseAvg, thresholds), children: safe(courseAvg, 2) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SparkBar, { value: courseAvg, colorClass: "bg-blue-500" })
           ] })
@@ -49647,10 +49787,10 @@ const EventsTab = ({ events }) => {
                         idx + 1
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-semibold text-sm", children: ev.eventCode }),
-                      safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded", children: "ELEVATED RISK" })
+                      safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded", children: "ELEVATED RISK" })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-lg font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade))}`, children: safe(ev.avgOverallGrade, 2) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-lg font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`, children: safe(ev.avgOverallGrade, 2) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-xs", children: isSelected ? "▲" : "▼" })
                     ] })
                   ] }),
@@ -49667,7 +49807,7 @@ const EventsTab = ({ events }) => {
             isSelected && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 mx-1 bg-gray-900/80 border border-red-900/40 rounded-lg p-4 space-y-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-red-400 font-semibold text-xs uppercase tracking-wide mb-1.5", children: "Why This Event Is a Struggle" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm leading-relaxed", children: ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, placing it among the most challenging events in this course.${safeN(ev.bottleneckScore) > 0.5 ? ` It is classified as an elevated risk event because a high proportion of trainees are scoring below the satisfactory threshold.` : ""} ${safeN(ev.gradeVariance) > 1 ? `The high grade variance (${safe(ev.gradeVariance, 2)}) indicates inconsistent performance, suggesting the event exposes gaps in preparation or foundational skills.` : ""}` })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm leading-relaxed", children: ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, placing it among the most challenging events in this course.${safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 ? ` It is classified as an elevated risk event because a high proportion of trainees are scoring below the satisfactory threshold.` : ""} ${safeN(ev.gradeVariance) > thresholds.highVarianceThreshold ? `The high grade variance (${safe(ev.gradeVariance, 2)}) indicates inconsistent performance, suggesting the event exposes gaps in preparation or foundational skills.` : ""}` })
               ] }),
               weakEls.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-red-400 font-semibold text-xs uppercase tracking-wide mb-1.5", children: "Assessment Elements Contributing to Low Scores" }),
@@ -49676,7 +49816,7 @@ const EventsTab = ({ events }) => {
                   const elAvg = typeof e === "object" ? e.avg : null;
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between bg-gray-800 rounded px-3 py-1.5", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200 text-sm", children: elName }),
-                    elAvg !== null && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-bold font-mono ${gradeColor(elAvg)}`, children: safe(elAvg, 2) })
+                    elAvg !== null && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-bold font-mono ${gradeColor(elAvg, thresholds)}`, children: safe(elAvg, 2) })
                   ] }, elName);
                 }) })
               ] }),
@@ -49687,7 +49827,7 @@ const EventsTab = ({ events }) => {
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2 pt-1 border-t border-gray-700", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-xs", children: "Avg Grade" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-base font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade))}`, children: safe(ev.avgOverallGrade, 2) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-base font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`, children: safe(ev.avgOverallGrade, 2) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-xs", children: "Attempts" }),
@@ -49728,7 +49868,7 @@ const EventsTab = ({ events }) => {
                       ev.overServiceIndicator && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-emerald-900/50 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded", children: "OVER-SERVICED" })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-lg font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade))}`, children: safe(ev.avgOverallGrade, 2) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-lg font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`, children: safe(ev.avgOverallGrade, 2) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-xs", children: isSelected ? "▲" : "▼" })
                     ] })
                   ] }),
@@ -49754,7 +49894,7 @@ const EventsTab = ({ events }) => {
                   const elAvg = typeof e === "object" ? e.avg : null;
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between bg-gray-800 rounded px-3 py-1.5", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200 text-sm", children: elName }),
-                    elAvg !== null && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-bold font-mono ${gradeColor(elAvg)}`, children: safe(elAvg, 2) })
+                    elAvg !== null && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-bold font-mono ${gradeColor(elAvg, thresholds)}`, children: safe(elAvg, 2) })
                   ] }, elName);
                 }) })
               ] }),
@@ -49765,7 +49905,7 @@ const EventsTab = ({ events }) => {
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2 pt-1 border-t border-gray-700", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-xs", children: "Avg Grade" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-base font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade))}`, children: safe(ev.avgOverallGrade, 2) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-base font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`, children: safe(ev.avgOverallGrade, 2) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-xs", children: "Attempts" }),
@@ -49800,16 +49940,16 @@ const EventsTab = ({ events }) => {
               className: `border-b border-gray-700/50 cursor-pointer transition-colors ${selected?.id === ev.id ? "bg-blue-900/30" : "hover:bg-gray-700/40"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2.5 text-gray-200 font-medium", children: ev.eventCode }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`, children: safe(ev.avgOverallGrade, 2) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: `px-3 py-2.5 text-center text-xs font-medium ${getPassRate(ev) >= 80 ? "text-emerald-400" : getPassRate(ev) >= 60 ? "text-yellow-400" : "text-red-400"}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`, children: safe(ev.avgOverallGrade, 2) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: `px-3 py-2.5 text-center text-xs font-medium ${passRateTextColor(getPassRate(ev), thresholds)}`, children: [
                   getPassRate(ev).toFixed(0),
                   "%"
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2.5 text-center text-gray-400", children: ev.totalAttempts }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-3 py-2.5 text-center text-xs font-mono ${safeN(ev.gradeVariance) > 1 ? "text-orange-400" : "text-gray-400"}`, children: safe(ev.gradeVariance, 2) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-3 py-2.5 text-center text-xs font-mono ${safeN(ev.gradeVariance) > thresholds.highVarianceThreshold ? "text-orange-400" : "text-gray-400"}`, children: safe(ev.gradeVariance, 2) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SparkBar, { value: safeN(ev.difficultyScore), max: 1 }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", children: [
-                  safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1 py-0.5 rounded leading-none", children: "ER" }),
+                  safeN(ev.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1 py-0.5 rounded leading-none", children: "ER" }),
                   ev.overServiceIndicator && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-emerald-900/50 text-emerald-300 border border-emerald-800 px-1 py-0.5 rounded leading-none", children: "LR" })
                 ] }) })
               ]
@@ -49852,7 +49992,7 @@ const EventsTab = ({ events }) => {
                 const data = [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
                   label: ev.eventCode,
                   value: getPassRate(ev),
-                  color: getPassRate(ev) >= 80 ? "#10b981" : getPassRate(ev) >= 60 ? "#eab308" : "#ef4444"
+                  color: passRateChartColor(getPassRate(ev), thresholds)
                 }));
                 setChartModal({ title: "Pass Rate by Event (%)", data, max: 100 });
               },
@@ -49865,7 +50005,7 @@ const EventsTab = ({ events }) => {
                   data: [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map((ev) => ({
                     label: ev.eventCode,
                     value: getPassRate(ev),
-                    color: getPassRate(ev) >= 80 ? "#10b981" : getPassRate(ev) >= 60 ? "#eab308" : "#ef4444"
+                    color: passRateChartColor(getPassRate(ev), thresholds)
                   })),
                   max: 100,
                   height: 120
@@ -49884,7 +50024,7 @@ const EventsTab = ({ events }) => {
                 const data = [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
                   label: ev.eventCode,
                   value: safeN(ev.gradeVariance),
-                  color: safeN(ev.gradeVariance) > 1.5 ? "#ef4444" : safeN(ev.gradeVariance) > 0.8 ? "#eab308" : "#3b82f6"
+                  color: varianceChartColor(safeN(ev.gradeVariance), thresholds)
                 }));
                 const maxVal = Math.max(1, ...events.map((e) => safeN(e.gradeVariance)));
                 setChartModal({ title: "Grade Variance by Event (spread indicator)", data, max: maxVal });
@@ -49898,7 +50038,7 @@ const EventsTab = ({ events }) => {
                   data: [...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map((ev) => ({
                     label: ev.eventCode,
                     value: safeN(ev.gradeVariance),
-                    color: safeN(ev.gradeVariance) > 1.5 ? "#ef4444" : safeN(ev.gradeVariance) > 0.8 ? "#eab308" : "#3b82f6"
+                    color: varianceChartColor(safeN(ev.gradeVariance), thresholds)
                   })),
                   max: Math.max(1, ...events.map((e) => safeN(e.gradeVariance))),
                   height: 120
@@ -49925,10 +50065,10 @@ const EventsTab = ({ events }) => {
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "text-gray-300 pr-4 py-1.5 font-medium whitespace-nowrap", children: ev.eventCode }),
                   allSkills.map((sk) => {
                     const v = sf[sk];
-                    return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-1.5 text-center", children: v !== void 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-mono font-bold ${gradeColor(v)}`, children: safe(v, 1) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-700", children: "—" }) }, sk);
+                    return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-1.5 text-center", children: v !== void 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-mono font-bold ${gradeColor(v, thresholds)}`, children: safe(v, 1) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-700", children: "—" }) }, sk);
                   }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`, children: safe(ev.avgOverallGrade, 2) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: `px-2 py-1.5 text-center text-xs ${safeN(ev.passRate) >= 80 ? "text-emerald-400" : safeN(ev.passRate) >= 60 ? "text-yellow-400" : "text-red-400"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade), thresholds)}`, children: safe(ev.avgOverallGrade, 2) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: `px-2 py-1.5 text-center text-xs ${passRateTextColor(getPassRate(ev), thresholds)}`, children: [
                     getPassRate(ev).toFixed(0),
                     "%"
                   ] })
@@ -49948,15 +50088,15 @@ const EventsTab = ({ events }) => {
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setSelected(null), className: "text-gray-500 hover:text-gray-200 text-lg leading-none", children: "×" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade))}`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade), thresholds)}`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300 text-xs", children: "Average Grade" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade))}`, children: safe(selected.avgOverallGrade, 2) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade), thresholds)}`, children: safe(selected.avgOverallGrade, 2) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-3 mt-2 text-xs text-gray-400", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                 "Pass Rate: ",
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: getPassRate(selected) >= 80 ? "text-emerald-400" : "text-yellow-400", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: passRateTextColor(getPassRate(selected), thresholds), children: [
                   getPassRate(selected).toFixed(0),
                   "%"
                 ] })
@@ -49967,7 +50107,7 @@ const EventsTab = ({ events }) => {
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                 "Variance: ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: safeN(selected.gradeVariance) > 1 ? "text-orange-400" : "text-gray-300", children: safe(selected.gradeVariance, 2) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: safeN(selected.gradeVariance) > thresholds.highVarianceThreshold ? "text-orange-400" : "text-gray-300", children: safe(selected.gradeVariance, 2) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                 "Difficulty: ",
@@ -49976,7 +50116,7 @@ const EventsTab = ({ events }) => {
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-1.5 mt-3", children: [
-            safeN(selected.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: "Elevated Risk", type: "red" }),
+            safeN(selected.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100 && /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: "Elevated Risk", type: "red" }),
             selected.overServiceIndicator && /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: "Low Risk", type: "green" })
           ] })
         ] }),
@@ -50026,11 +50166,18 @@ const TrainingIntelligenceTab = ({ trainingReportDisplayName = "Training Reports
       if (Object.keys(map).length > 0) {
         setThresholds({
           atRiskAvgGrade: numberSetting(map["at_risk_avg_grade"], DEFAULT_THRESHOLDS.atRiskAvgGrade),
+          normalAvgGrade: numberSetting(map["normal_avg_grade"], numberSetting(map["normal_min_grade"], DEFAULT_THRESHOLDS.normalAvgGrade)),
+          worseningRecentAvgGrade: numberSetting(map["worsening_recent_avg_grade"], numberSetting(map["at_risk_low_recent_grade"], DEFAULT_THRESHOLDS.worseningRecentAvgGrade)),
           exceedingAvgGrade: numberSetting(map["exceeding_avg_grade"], DEFAULT_THRESHOLDS.exceedingAvgGrade),
           concernThresholdGrade: numberSetting(map["concern_threshold_grade"], DEFAULT_THRESHOLDS.concernThresholdGrade),
+          excellentGradeColorThreshold: numberSetting(map["excellent_grade_color_threshold"], DEFAULT_THRESHOLDS.excellentGradeColorThreshold),
+          normalGradeColorThreshold: numberSetting(map["normal_grade_color_threshold"], DEFAULT_THRESHOLDS.normalGradeColorThreshold),
+          concernGradeColorThreshold: numberSetting(map["concern_grade_color_threshold"], DEFAULT_THRESHOLDS.concernGradeColorThreshold),
+          criticalLowGradeThreshold: numberSetting(map["critical_low_grade_threshold"], DEFAULT_THRESHOLDS.criticalLowGradeThreshold),
           bottleneckThresholdPct: numberSetting(map["bottleneck_threshold_pct"], DEFAULT_THRESHOLDS.bottleneckThresholdPct),
+          healthyPassRatePct: numberSetting(map["healthy_pass_rate_pct"], DEFAULT_THRESHOLDS.healthyPassRatePct),
           highVarianceThreshold: numberSetting(map["high_variance_threshold"], DEFAULT_THRESHOLDS.highVarianceThreshold),
-          normalMinGrade: numberSetting(map["normal_min_grade"], DEFAULT_THRESHOLDS.normalMinGrade),
+          normalMinGrade: numberSetting(map["normal_min_grade"], numberSetting(map["normal_avg_grade"], DEFAULT_THRESHOLDS.normalMinGrade)),
           atRiskAverageEnabled: boolSetting(map["at_risk_average_enabled"], DEFAULT_THRESHOLDS.atRiskAverageEnabled),
           atRiskSustainedDeclineEnabled: boolSetting(map["at_risk_sustained_decline_enabled"], DEFAULT_THRESHOLDS.atRiskSustainedDeclineEnabled),
           atRiskRecentDropEnabled: boolSetting(map["at_risk_recent_drop_enabled"], DEFAULT_THRESHOLDS.atRiskRecentDropEnabled),
@@ -50038,9 +50185,13 @@ const TrainingIntelligenceTab = ({ trainingReportDisplayName = "Training Reports
           atRiskRecurringWeakElementsEnabled: boolSetting(map["at_risk_recurring_weak_elements_enabled"], DEFAULT_THRESHOLDS.atRiskRecurringWeakElementsEnabled),
           sustainedDeclineCount: numberSetting(map["at_risk_sustained_decline_count"], DEFAULT_THRESHOLDS.sustainedDeclineCount),
           recentDropThreshold: numberSetting(map["at_risk_recent_drop_threshold"], DEFAULT_THRESHOLDS.recentDropThreshold),
-          lowRecentGrade: numberSetting(map["at_risk_low_recent_grade"], DEFAULT_THRESHOLDS.lowRecentGrade),
+          lowRecentGrade: numberSetting(map["at_risk_low_recent_grade"], numberSetting(map["worsening_recent_avg_grade"], DEFAULT_THRESHOLDS.lowRecentGrade)),
           recurringWeakElementCount: numberSetting(map["at_risk_recurring_weak_element_count"], DEFAULT_THRESHOLDS.recurringWeakElementCount),
-          minAssessmentsForRisk: numberSetting(map["at_risk_min_assessments"], DEFAULT_THRESHOLDS.minAssessmentsForRisk)
+          minAssessmentsForRisk: numberSetting(map["at_risk_min_assessments"], DEFAULT_THRESHOLDS.minAssessmentsForRisk),
+          minObservationsForPattern: numberSetting(map["min_observations_for_pattern"], DEFAULT_THRESHOLDS.minObservationsForPattern),
+          recencyWeightFactor: numberSetting(map["recency_weight_factor"], DEFAULT_THRESHOLDS.recencyWeightFactor),
+          commentWeightVsScore: numberSetting(map["comment_weight_vs_score"], DEFAULT_THRESHOLDS.commentWeightVsScore),
+          overServiceGradeThreshold: numberSetting(map["over_service_threshold"], DEFAULT_THRESHOLDS.overServiceGradeThreshold)
         });
       }
     } catch {
@@ -50185,7 +50336,7 @@ const TrainingIntelligenceTab = ({ trainingReportDisplayName = "Training Reports
     if (pollRef.current) clearInterval(pollRef.current);
   }, []);
   const atRiskBadge = trainees.filter((t) => evaluateTraineeRisk(t, thresholds).riskLevel === "at_risk").length;
-  const bottleneckBadge = events.filter((e) => safeN(e.bottleneckScore) > 0.5).length;
+  const bottleneckBadge = events.filter((e) => safeN(e.bottleneckScore) >= thresholds.bottleneckThresholdPct / 100).length;
   const tabs = [
     { id: "course", label: "Course" },
     { id: "trainee", label: "Trainee", badge: atRiskBadge || void 0 },
