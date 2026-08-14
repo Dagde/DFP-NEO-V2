@@ -117052,11 +117052,29 @@ ${"=".repeat(60)}`);
           if (!cancelled) setEventCompletionsForDate([]);
           return;
         }
-        const data = await response.json();
+        const responseText = await response.text();
+        let data = {};
+        try {
+          data = responseText ? JSON.parse(responseText) : {};
+        } catch (parseError) {
+          pushDashboardReportDiag("dashboard:event-completions-non-json-response", {
+            date,
+            status: response.status,
+            url: response.url,
+            contentType: response.headers.get("content-type"),
+            bodyPreview: responseText.slice(0, 300),
+            error: parseError instanceof Error ? parseError.message : String(parseError)
+          });
+          if (!cancelled) setEventCompletionsForDate([]);
+          return;
+        }
         const completions = Array.isArray(data?.completions) ? data.completions : [];
         if (!cancelled) setEventCompletionsForDate(completions);
         pushDashboardReportDiag("dashboard:event-completions-fetched", {
           date,
+          status: response.status,
+          url: response.url,
+          contentType: response.headers.get("content-type"),
           count: completions.length,
           sample: completions.slice(0, 10).map((completion) => ({
             scheduleEventId: completion.scheduleEventId,
@@ -131190,14 +131208,40 @@ Do you want to replace the existing entry?`,
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify(completionPayload)
                     });
+                    const ecResponseText = await ecRes.text();
                     if (ecRes.ok) {
-                      const ecData = await ecRes.json();
+                      let ecData = {};
+                      try {
+                        ecData = ecResponseText ? JSON.parse(ecResponseText) : {};
+                      } catch (parseError) {
+                        pushDashboardReportDiag("postflight:event-completion-non-json-response", {
+                          eventId: eventForPostFlight?.id || null,
+                          eventCode: completionPayload.eventCode,
+                          traineeFullName: completionPayload.traineeFullName,
+                          instructorName: completionPayload.instructorName || null,
+                          status: ecRes.status,
+                          url: ecRes.url,
+                          contentType: ecRes.headers.get("content-type"),
+                          bodyPreview: ecResponseText.slice(0, 300),
+                          error: parseError instanceof Error ? parseError.message : String(parseError)
+                        });
+                        throw parseError;
+                      }
                       logRoutineAppDebug(
                         `[PostFlight] EventCompletion ${ecData.created ? "created" : "updated"} for ${completionPayload.traineeFullName} — ${completionPayload.eventCode} -> ${data.result}`
                       );
                     } else {
-                      const errBody = await ecRes.text();
-                      console.warn("[PostFlight] EventCompletion save failed:", ecRes.status, errBody);
+                      console.warn("[PostFlight] EventCompletion save failed:", ecRes.status, ecResponseText);
+                      pushDashboardReportDiag("postflight:event-completion-save-failed", {
+                        eventId: eventForPostFlight?.id || null,
+                        eventCode: completionPayload.eventCode,
+                        traineeFullName: completionPayload.traineeFullName,
+                        instructorName: completionPayload.instructorName || null,
+                        status: ecRes.status,
+                        url: ecRes.url,
+                        contentType: ecRes.headers.get("content-type"),
+                        bodyPreview: ecResponseText.slice(0, 300)
+                      });
                     }
                   } catch (ecErr) {
                     console.warn("[PostFlight] EventCompletion fetch threw:", ecErr);

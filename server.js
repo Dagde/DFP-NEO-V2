@@ -17311,6 +17311,100 @@ app.post('/api/flight-log', async (req, res) => {
   }
 });
 
+// ── GET /api/event-completions ───────────────────────────────────────────────
+// Accepts: scheduleEventId, traineeId, eventDate, eventCode, instructorName, dcoResult
+app.get('/api/event-completions', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { scheduleEventId, traineeId, eventDate, eventCode, instructorName, dcoResult } = req.query;
+
+    const where = {};
+    if (scheduleEventId) where.scheduleEventId = String(scheduleEventId);
+    if (traineeId)       where.traineeId       = String(traineeId);
+    if (eventDate)       where.eventDate       = String(eventDate);
+    if (eventCode)       where.eventCode       = String(eventCode);
+    if (instructorName)  where.instructorName  = String(instructorName);
+    if (dcoResult)       where.dcoResult       = String(dcoResult);
+
+    const completions = await db.eventCompletion.findMany({
+      where,
+      orderBy: [
+        { eventDate: 'asc' },
+        { startTime: 'asc' },
+        { createdAt: 'asc' },
+      ],
+    });
+    console.log(`✅ GET /api/event-completions filters=${JSON.stringify({ scheduleEventId, traineeId, eventDate, eventCode, instructorName, dcoResult })} → ${completions.length} rows`);
+    res.json({ completions, count: completions.length });
+  } catch (error) {
+    console.error('❌ GET /api/event-completions error:', error);
+    res.status(500).json({ error: 'Failed to fetch event completions', details: error.message });
+  }
+});
+
+// ── POST /api/event-completions (upsert by scheduleEventId) ──────────────────
+app.post('/api/event-completions', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const body = req.body || {};
+    const {
+      scheduleEventId, eventCode, eventDate, eventType,
+      startTime, duration,
+      traineeId, traineeFullName, instructorName,
+      dcoResult, overallGrade, overallResult,
+      aircraftNumber, takeoffTime, landTime, totalFlightTime,
+      isSolo, isDual, isCountedAsElce,
+      recordedBy, source, notes,
+    } = body;
+
+    if (!scheduleEventId || !dcoResult) {
+      return res.status(400).json({ error: 'scheduleEventId and dcoResult are required' });
+    }
+
+    const data = {
+      scheduleEventId,
+      eventCode:       eventCode  || scheduleEventId,
+      eventDate:       eventDate  || new Date().toISOString().slice(0, 10),
+      eventType:       eventType  || 'flight',
+      startTime:       startTime  != null ? parseFloat(startTime)  : 0,
+      duration:        duration   != null ? parseFloat(duration)   : 0,
+      traineeId:       traineeId  || null,
+      traineeFullName: traineeFullName || 'Unknown',
+      instructorName:  instructorName || null,
+      dcoResult,
+      overallGrade:    overallGrade != null ? parseInt(overallGrade) : null,
+      overallResult:   overallResult || null,
+      aircraftNumber:  aircraftNumber || null,
+      takeoffTime:     takeoffTime   || null,
+      landTime:        landTime      || null,
+      totalFlightTime: totalFlightTime != null ? parseFloat(totalFlightTime) : null,
+      isSolo:          !!isSolo,
+      isDual:          !!isDual,
+      isCountedAsElce: isCountedAsElce !== undefined ? !!isCountedAsElce : dcoResult !== 'DNCO',
+      recordedBy:      recordedBy || null,
+      source:          source     || 'post_flight',
+      notes:           notes      || null,
+    };
+
+    const existing = await db.eventCompletion.findUnique({
+      where: { scheduleEventId },
+      select: { id: true },
+    }).catch(() => null);
+
+    const completion = await db.eventCompletion.upsert({
+      where:  { scheduleEventId },
+      create: data,
+      update: data,
+    });
+
+    console.log(`✅ POST /api/event-completions ${existing ? 'updated' : 'created'} id=${completion.id} scheduleEventId=${scheduleEventId} result=${dcoResult}`);
+    res.json({ success: true, completion, created: !existing });
+  } catch (error) {
+    console.error('❌ POST /api/event-completions error:', error);
+    res.status(500).json({ error: 'Failed to save event completion', details: error.message });
+  }
+});
+
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');
