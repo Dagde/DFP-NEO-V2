@@ -3,7 +3,7 @@ import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { jsPDF } from 'jspdf';
-import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, Pt051Assessment, PhraseBank } from '../types';
+import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, TrainingReportAssessment, PhraseBank } from '../types';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import PauseConfirmationFlyout from './PauseConfirmationFlyout';
 import ScheduleWarningFlyout from './ScheduleWarningFlyout';
@@ -13,7 +13,7 @@ import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 import HateSheetView from './HateSheetView';
 import TraineeLmpView from './TraineeLmpView';
-import PT051View from './PT051View';
+import TrainingReportView from './PT051View';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, formatResourceLabel as formatConfiguredResourceLabel, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -96,13 +96,13 @@ interface TraineeProfileFlyoutProps {
   currentUserId?: string;
   currentUserName?: string;
   currentUserRole?: string;
-  pt051Assessments?: Map<string, Pt051Assessment>;
+  pt051Assessments?: Map<string, TrainingReportAssessment>;
   pt051PerformanceLoading?: boolean;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   userProfile?: any;
   initialActiveTab?: 'unavailable' | 'currency' | 'review' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | null;
-  onSelectPt051ForEvent?: (assessment: Pt051Assessment) => void;
-  onSavePt051Assessment?: (assessment: Pt051Assessment) => void;
+  onSelectPt051ForEvent?: (assessment: TrainingReportAssessment) => void;
+  onSavePt051Assessment?: (assessment: TrainingReportAssessment) => void;
   onDeletePt051Assessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
   instructorsData?: Instructor[];
   registerDirtyCheck?: (isDirty: () => boolean, onSave: () => void, onDiscard: () => void) => void;
@@ -503,7 +503,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     // Tab state — null means no tab open
     const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'review' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | null>(initialActiveTab);
-    const [inlinePt051Assessment, setInlinePt051Assessment] = useState<Pt051Assessment | null>(null);
+    const [inlinePt051Assessment, setInlinePt051Assessment] = useState<TrainingReportAssessment | null>(null);
     const [inlinePt051Event, setInlinePt051Event] = useState<ScheduleEvent | null>(null);
     // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
     const [currencyEditState, setCurrencyEditState] = useState<{
@@ -603,7 +603,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         });
         const traineeAssessments = pt051Assessments
             ? Array.from(pt051Assessments.values())
-                .filter((assessment: Pt051Assessment) => assessment.traineeFullName === trainee.fullName)
+                .filter((assessment: TrainingReportAssessment) => assessment.traineeFullName === trainee.fullName)
                 .sort((a, b) => {
                     const dateCompare = String(a.date || '').localeCompare(String(b.date || ''));
                     if (dateCompare !== 0) return dateCompare;
@@ -1683,7 +1683,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         }
     };
 
-    const buildPt051EventFromAssessment = (assessment: Pt051Assessment): ScheduleEvent => {
+    const buildPt051EventFromAssessment = (assessment: TrainingReportAssessment): ScheduleEvent => {
         const lmpItem = currentIndividualLMP?.find(item => {
             const assessmentRefs = new Set([
                 assessment.eventId,
@@ -1754,7 +1754,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         } as ScheduleEvent;
     };
 
-    const openInlinePt051 = (assessment: Pt051Assessment) => {
+    const openInlinePt051 = (assessment: TrainingReportAssessment) => {
         if (!canViewPt051) {
             onAccessDenied?.(`${activeTrainingReportDisplayName} record`);
             return;
@@ -1765,13 +1765,13 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
     };
 
-    const persistInlinePt051Assessment = async (assessment: Pt051Assessment, isAutoSave?: boolean) => {
+    const persistInlinePt051Assessment = async (assessment: TrainingReportAssessment, isAutoSave?: boolean) => {
         if (!canEditPt051) {
             if (!isAutoSave) onAccessDenied?.(`save ${activeTrainingReportDisplayName} assessment`);
             return;
         }
         const eventId = assessment.eventId || inlinePt051Event?.id || `pt051-${trainee.idNumber}-${assessment.flightNumber}-${assessment.date || 'undated'}`;
-        const normalizedAssessment: Pt051Assessment = {
+        const normalizedAssessment: TrainingReportAssessment = {
             ...assessment,
             id: assessment.id || `pt051-${eventId}-${trainee.fullName}`,
             eventId,
@@ -2572,7 +2572,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     {/* ── TRAINING REPORT PERFORMANCE HISTORY TAB (inline) ── */}
                     {activeTab === 'hatesheet' && (() => {
                       const traineeAssessments = pt051Assessments
-                        ? Array.from(pt051Assessments.values()).filter((a: Pt051Assessment) => a.traineeFullName === trainee.fullName)
+                        ? Array.from(pt051Assessments.values()).filter((a: TrainingReportAssessment) => a.traineeFullName === trainee.fullName)
                         : [];
                       return (
                         <div className={card3d + " p-0 overflow-hidden"} style={card3dStyle}>
@@ -2585,7 +2585,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             userProfile={userProfile || {}}
                             refreshEvents={() => {}}
                             onSelectLmpScore={() => {}}
-                            onSelectPt051={(assessment: Pt051Assessment) => {
+                            onSelectPt051={(assessment: TrainingReportAssessment) => {
                               openInlinePt051(assessment);
                               if (onSelectPt051ForEvent) {
                                 logAudit('Performance History', 'View', `Opened embedded Training Report for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`);
@@ -2607,7 +2607,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     {activeTab === 'pt051' && inlinePt051Assessment && inlinePt051Event && (() => {
                       const assessmentKey = `pt051-${inlinePt051Assessment.eventId}-${trainee.fullName}`;
                       const currentAssessment = pt051Assessments?.get(assessmentKey)
-                        || Array.from(pt051Assessments?.values() || []).find((assessment: Pt051Assessment) =>
+                        || Array.from(pt051Assessments?.values() || []).find((assessment: TrainingReportAssessment) =>
                           assessment.traineeFullName === trainee.fullName &&
                           (
                             assessment.eventId === inlinePt051Assessment.eventId ||
@@ -2620,7 +2620,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         || inlinePt051Assessment;
                       return (
                         <div className={card3d + " p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
-                          <PT051View
+                          <TrainingReportView
                             key={`embedded-${inlinePt051Event.id}-${trainee.fullName}-${currentAssessment?.overallGrade ?? 'none'}`}
                             trainee={trainee}
                             event={inlinePt051Event}

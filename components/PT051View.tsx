@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { jsPDF } from 'jspdf';
-import { Trainee, ScheduleEvent, Pt051Assessment, Pt051Grade, Instructor, Pt051OverallGrade, Score, SyllabusItemDetail, PhraseBank } from '../types';
+import { Trainee, ScheduleEvent, TrainingReportAssessment, TrainingReportGrade, Instructor, TrainingReportOverallGrade, Score, SyllabusItemDetail, PhraseBank } from '../types';
 import AuditButton from './AuditButton';
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
@@ -24,12 +24,12 @@ interface TrainingReportViewProps {
     trainee: Trainee;
     event: ScheduleEvent;
     onBack: () => void;
-    onSave: (assessment: Pt051Assessment, isAutoSave?: boolean) => void | Promise<void>;
+    onSave: (assessment: TrainingReportAssessment, isAutoSave?: boolean) => void | Promise<void>;
     onDeleteAssessment?: (assessmentId: string) => void | Promise<void>;
     onEventUpdate?: (event: ScheduleEvent) => void;
-    initialAssessment?: Pt051Assessment;
+    initialAssessment?: TrainingReportAssessment;
     instructors: Instructor[];
-    pt051Assessments: Map<string, Pt051Assessment>;
+    pt051Assessments: Map<string, TrainingReportAssessment>;
     events: ScheduleEvent[];
     lmpScores: Score[];
     syllabusDetails: SyllabusItemDetail[];
@@ -215,7 +215,7 @@ const formatTrainingReportInstructorDisplay = (instructors: Instructor[], value:
     return stripReportInstructorMetadata(value);
 };
 
-const PT051_STRUCTURE = [
+const TRAINING_REPORT_STRUCTURE = [
   { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
   { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
   { category: 'Takeoff', elements: ['Stationary'] },
@@ -227,7 +227,7 @@ const PT051_STRUCTURE = [
   { category: 'Domestics', elements: ['Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'] },
 ];
 
-const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
+const ALL_ELEMENTS = TRAINING_REPORT_STRUCTURE.flatMap(cat => cat.elements);
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
 const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
 const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST', 'Notes'] as const;
@@ -344,7 +344,7 @@ const normaliseAssessedElements = (elements?: string[], phraseBank?: PhraseBank)
 };
 
 const getDefaultElementGroup = (element: string): string => (
-    PT051_STRUCTURE.find(category =>
+    TRAINING_REPORT_STRUCTURE.find(category =>
         category.elements.some(candidate => candidate.toLowerCase() === element.toLowerCase())
     )?.category || 'Additional Elements'
 );
@@ -352,7 +352,7 @@ const getDefaultElementGroup = (element: string): string => (
 const buildAssessmentStructure = (elements?: string[], phraseBank?: PhraseBank) => {
     const selectedElements = normaliseAssessedElements(elements, phraseBank);
     const { groups: configuredGroups, hasExplicitGroups } = getConfiguredReportElementGroups(phraseBank);
-    const categoryOrder = hasExplicitGroups ? [] : PT051_STRUCTURE.map(category => category.category);
+    const categoryOrder = hasExplicitGroups ? [] : TRAINING_REPORT_STRUCTURE.map(category => category.category);
     const grouped = new Map<string, string[]>();
 
     selectedElements.forEach(element => {
@@ -587,38 +587,38 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
     const gradeOptions = useMemo(() => (
         reportTemplate.grades.options.filter((option) => option.enabled !== false && String(option.label || '').trim())
     ), [reportTemplate.grades.options]);
-    const assessmentGradeOptions = useMemo<(Pt051Grade | 'DEMO')[]>(() => [
+    const assessmentGradeOptions = useMemo<(TrainingReportGrade | 'DEMO')[]>(() => [
         ...(reportTemplate.grades.includeDemo ? ['DEMO' as const] : []),
-        ...gradeOptions.map((option) => option.value as Pt051Grade),
+        ...gradeOptions.map((option) => option.value as TrainingReportGrade),
     ], [gradeOptions, reportTemplate.grades.includeDemo]);
-    const overallGradeOptions = useMemo<Pt051OverallGrade[]>(() => [
+    const overallGradeOptions = useMemo<TrainingReportOverallGrade[]>(() => [
         'No Grade',
-        ...gradeOptions.map((option) => option.value as Pt051OverallGrade),
+        ...gradeOptions.map((option) => option.value as TrainingReportOverallGrade),
     ], [gradeOptions]);
     const gradeLabelMap = useMemo(() => (
         new Map(gradeOptions.map((option) => [option.value, option.label]))
     ), [gradeOptions]);
     const isLongGradeScale = gradeOptions.length > 6;
-    const formatLegacyNoGrade = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO' | 'MIN') => (
+    const formatLegacyNoGrade = (grade: TrainingReportOverallGrade | TrainingReportGrade | 'DEMO' | 'MIN') => (
         grade === 'DEMO' ? 'No Grade' : String(grade)
     );
-    const formatGradeOption = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
+    const formatGradeOption = (grade: TrainingReportOverallGrade | TrainingReportGrade | 'DEMO') => {
         if (grade === 'No Grade' || grade === 'DEMO' || grade === 'MIN') return formatLegacyNoGrade(grade);
         const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
         return reportTemplate.grades.showNumbers ? `${grade} - ${label}` : label;
     };
-    const formatGradeValue = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => (
+    const formatGradeValue = (grade: TrainingReportOverallGrade | TrainingReportGrade | 'DEMO') => (
         grade === 'No Grade' ? 'None' : String(grade)
     );
-    const formatGradeText = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
+    const formatGradeText = (grade: TrainingReportOverallGrade | TrainingReportGrade | 'DEMO') => {
         if (grade === 'No Grade') return 'No Grade';
         if (grade === 'DEMO' || grade === 'MIN') return formatLegacyNoGrade(grade);
         return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
     };
-    const formatOverallGradeTileText = (grade: Pt051OverallGrade) => (
+    const formatOverallGradeTileText = (grade: TrainingReportOverallGrade) => (
         grade === 'No Grade' ? 'No Grade' : formatGradeText(grade)
     );
-    const formatGradeHeaderText = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
+    const formatGradeHeaderText = (grade: TrainingReportOverallGrade | TrainingReportGrade | 'DEMO') => {
         const label = formatGradeText(grade);
         const compactLabels: Record<string, string> = {
             Unsatisfactory: 'Un-sat',
@@ -633,7 +633,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         };
         return compactLabels[label] || label;
     };
-    const formatGradeNumber = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
+    const formatGradeNumber = (grade: TrainingReportOverallGrade | TrainingReportGrade | 'DEMO') => {
         if (grade === 'No Grade') return 'None';
         if (grade === 'DEMO' || grade === 'MIN') return formatLegacyNoGrade(grade);
         return String(grade);
@@ -654,7 +654,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
     const [showPhraseModal, setShowPhraseModal] = useState(false);
     const [currentPhraseElement, setCurrentPhraseElement] = useState<string | null>(null);
 
-    const getRadioAccentColor = (grade: Pt051Grade | 'MIN' | 'DEMO') => {
+    const getRadioAccentColor = (grade: TrainingReportGrade | 'MIN' | 'DEMO') => {
         if (grade === 'DEMO') {
             return 'accent-slate-300';
         }
@@ -667,7 +667,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         return 'accent-sky-500';
     };
 
-    const getOverallRadioAccentColor = (grade: Pt051OverallGrade) => {
+    const getOverallRadioAccentColor = (grade: TrainingReportOverallGrade) => {
         if (grade === 0) return 'accent-red-500';
         if (grade === 1) return 'accent-amber-500';
         return 'accent-sky-500';
@@ -747,7 +747,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             overallGrade: null,
             overallResult: null,
             groundSchoolAssessment: { isAssessment: false, result: undefined },
-        } as Pt051Assessment;
+        } as TrainingReportAssessment;
     });
 
     useEffect(() => {
@@ -810,7 +810,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         });
     }, [event.id, event.flightNumber, event.notes, forwardedPreFlightNotes, initialAssessment?.id, initialAssessment?.passNotesToNextEvent, initialAssessment?.trainingReportNotes, trainee.fullName]);
     
-    const [overallGrade, setOverallGrade] = useState<Pt051OverallGrade | null>(initialAssessment?.overallGrade ?? null);
+    const [overallGrade, setOverallGrade] = useState<TrainingReportOverallGrade | null>(initialAssessment?.overallGrade ?? null);
     const [overallResult, setOverallResult] = useState<'P' | 'F' | null>(initialAssessment?.overallResult || null);
     const [autoNotifyChoice, setAutoNotifyChoice] = useState<'notify' | 'skip'>(initialAssessment?.autoNotifyChoice || 'notify');
     const shouldShowAutoNotifyChoice = reportTemplate.autoNotify.enabled && overallResult === 'F';
@@ -898,11 +898,11 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
 
     const previousPerformance = recentPerformanceHistory.length > 0 ? recentPerformanceHistory[0] : null;
 
-    const gradeRequiresRepeatEvent = (grade: Pt051OverallGrade | null) => {
+    const gradeRequiresRepeatEvent = (grade: TrainingReportOverallGrade | null) => {
         return typeof grade === 'number' && reportTemplate.repeatRules.gradesRequiringRepeat.includes(grade);
     };
 
-    const shouldTriggerRepeatedLowPerformance = (grade: Pt051OverallGrade | null) => {
+    const shouldTriggerRepeatedLowPerformance = (grade: TrainingReportOverallGrade | null) => {
         if (typeof grade !== 'number') return false;
         if (reportTemplate.repeatRules.consecutive.enabled && reportTemplate.repeatRules.consecutive.grades.includes(grade)) {
             const previousScores = recentPerformanceHistory
@@ -943,7 +943,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         }
     }, [overallGrade, recentPerformanceHistory, reportTemplate]);
 
-    const handleGradeChange = (element: string, grade: Pt051Grade | 'MIN' | 'DEMO') => {
+    const handleGradeChange = (element: string, grade: TrainingReportGrade | 'MIN' | 'DEMO') => {
         setAssessment(prev => ({
             ...prev,
             scores: prev.scores.some(s => s.element === element)
@@ -1168,7 +1168,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             }
         }
         // Include timing data from currentEvent in the assessment
-        const finalAssessment: Pt051Assessment = {
+        const finalAssessment: TrainingReportAssessment = {
             ...assessment,
             overallGrade,
             overallResult,
@@ -2175,7 +2175,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                                                     name={element}
                                                                     value={String(grade)}
                                                                     checked={score?.grade === grade}
-                                                                    onChange={() => handleGradeChange(element, grade as Pt051Grade)}
+                                                                    onChange={() => handleGradeChange(element, grade as TrainingReportGrade)}
                                                                     disabled={isGroundEvent}
                                                                     className={`h-4 w-4 ${getRadioAccentColor(grade)} bg-gray-700 border-gray-600 focus:ring-sky-500 focus:ring-2 ${isGroundEvent ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                 />
