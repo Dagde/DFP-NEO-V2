@@ -112529,6 +112529,40 @@ const App = () => {
       }
     }
   }
+  function pushDashboardReportDiag(stage, details = {}) {
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      date,
+      school,
+      unit: activeUnitCode,
+      activeView,
+      signedInDisplayName,
+      currentUserName,
+      details
+    };
+    try {
+      const existing = JSON.parse(localStorage.getItem("neo_dashboard_report_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-200);
+      localStorage.setItem("neo_dashboard_report_diag", JSON.stringify(next));
+      window.neoDashboardReportDiag = next;
+    } catch (error) {
+      try {
+        localStorage.removeItem("neo_dashboard_report_diag");
+        window.neoDashboardReportDiag = [entry];
+      } catch {
+      }
+      console.warn("[DASHBOARD-REPORT-DIAG] Could not persist diagnostic entry:", error, entry);
+    }
+  }
+  function readDashboardReportDiagEntries() {
+    try {
+      const stored = JSON.parse(localStorage.getItem("neo_dashboard_report_diag") || "[]");
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  }
   function summariseTrainingReportLmpItems(lmp) {
     const items = Array.isArray(lmp) ? lmp : [];
     const reportItems = items.filter(
@@ -112860,6 +112894,7 @@ const App = () => {
     }
   }
   function buildDashboardReportDiagnosticReport() {
+    const postFlightAssessmentDraftTrace = readDashboardReportDiagEntries();
     const normaliseName2 = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
     const normaliseCode2 = (value) => String(value || "").trim().toUpperCase();
     const sessionDashboardUserName = signedInDisplayName || currentUserName;
@@ -113047,6 +113082,8 @@ const App = () => {
         acceptedTrainingReportDrafts: reportEvaluations.filter((item) => item.accepted).length,
         bgf5TrainingReportDrafts: reportEvaluations.filter((item) => normaliseCode2(item.report.eventCode) === "BGF5").length,
         acceptedBgf5TrainingReportDrafts: reportEvaluations.filter((item) => item.accepted && normaliseCode2(item.report.eventCode) === "BGF5").length,
+        postFlightAssessmentDraftTraceCount: postFlightAssessmentDraftTrace.length,
+        latestPostFlightAssessmentDraftTrace: postFlightAssessmentDraftTrace.slice(-12),
         bgf5RejectReasons: reportEvaluations.filter((item) => normaliseCode2(item.report.eventCode) === "BGF5").map((item) => ({
           reportId: item.report.id,
           staffName: item.staff.name,
@@ -113057,7 +113094,8 @@ const App = () => {
       bgfEvents: bfgOrBgfEvents.map(serialiseEvent),
       matchingBgf5Syllabus,
       assessmentRequiredItems,
-      reportEvaluations
+      reportEvaluations,
+      postFlightAssessmentDraftTrace
     };
   }
   function downloadDashboardReportDiagnosticReport() {
@@ -119121,25 +119159,81 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const generateAssessmentRequiredDraftTrainingReport = async (sourceEvent, dcoResult) => {
     const operationalModel = normaliseOperationalModel(activeOperationalModel);
-    if (operationalModel !== "flight_school" && operationalModel !== "air_combat" && !isFixedCrewLikeOperationalModel(operationalModel)) return;
+    const traceBase = {
+      eventId: sourceEvent.id,
+      eventCode: sourceEvent.flightNumber || sourceEvent.eventCode || null,
+      date: sourceEvent.date,
+      operationalModel,
+      dcoResult,
+      instructor: sourceEvent.instructor || null,
+      pilot: sourceEvent.pilot || null,
+      student: sourceEvent.student || null,
+      fixedCrewPic: sourceEvent.fixedCrewPic || null,
+      personnelRefs: Array.isArray(sourceEvent.personnelRefs) ? sourceEvent.personnelRefs : []
+    };
+    pushDashboardReportDiag("postflight:draft-generator:invoked", traceBase);
+    if (operationalModel !== "flight_school" && operationalModel !== "air_combat" && !isFixedCrewLikeOperationalModel(operationalModel)) {
+      pushDashboardReportDiag("postflight:draft-generator:skipped-operational-model", traceBase);
+      return;
+    }
     const instructorRefName = sourceEvent.personnelRefs?.find((ref) => ref.personType === "staff" && ref.role === "instructor")?.name;
     const fixedCrewPicRefName = sourceEvent.personnelRefs?.find((ref) => ref.personType === "staff" && ref.role === "fixedCrewPic")?.name;
     const pilotStaffRefName = sourceEvent.personnelRefs?.find((ref) => ref.personType === "staff" && ref.role === "pilot")?.name;
     const staffName = operationalModel === "flight_school" ? instructorRefName || sourceEvent.instructor || fixedCrewPicRefName || sourceEvent.fixedCrewPic || pilotStaffRefName || sourceEvent.crew || "" : isFixedCrewLikeOperationalModel(operationalModel) ? fixedCrewPicRefName || sourceEvent.fixedCrewPic || pilotStaffRefName || sourceEvent.pilot || instructorRefName || sourceEvent.instructor || sourceEvent.crew || "" : pilotStaffRefName || sourceEvent.pilot || fixedCrewPicRefName || sourceEvent.fixedCrewPic || instructorRefName || sourceEvent.instructor || sourceEvent.crew || "";
     const eventCode2 = String(sourceEvent.flightNumber || sourceEvent.eventCode || "").trim();
-    if (!staffName || !eventCode2) return;
+    pushDashboardReportDiag("postflight:draft-generator:resolved-staff-candidate", {
+      ...traceBase,
+      instructorRefName: instructorRefName || null,
+      fixedCrewPicRefName: fixedCrewPicRefName || null,
+      pilotStaffRefName: pilotStaffRefName || null,
+      staffName: staffName || null,
+      eventCode: eventCode2
+    });
+    if (!staffName || !eventCode2) {
+      pushDashboardReportDiag("postflight:draft-generator:skipped-missing-staff-or-code", {
+        ...traceBase,
+        staffName: staffName || null,
+        eventCode: eventCode2
+      });
+      return;
+    }
     const staff = allInstructorsData.find((person) => person.name === staffName);
     if (!staff) {
       console.warn(`[PostFlight] Training report skipped: staff not found for ${staffName}`);
+      pushDashboardReportDiag("postflight:draft-generator:skipped-staff-not-found", {
+        ...traceBase,
+        staffName,
+        availableSimilarStaff: allInstructorsData.filter((person) => String(person.name || "").toLowerCase().includes(String(staffName).split(",")[0]?.trim().toLowerCase() || "")).slice(0, 10).map((person) => ({ id: person.id || null, idNumber: person.idNumber, name: person.name, rank: person.rank, unit: person.unit }))
+      });
       return;
     }
     const matchingItem = syllabusDetails.find((item) => item.isActive !== false && String(item.code || "").trim().toUpperCase() === eventCode2.toUpperCase() && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType));
     if (!matchingItem) {
       logRoutineAppDebug(`[PostFlight] Training report skipped: ${eventCode2} is not a course/training package syllabus event`);
+      pushDashboardReportDiag("postflight:draft-generator:skipped-syllabus-not-found", {
+        ...traceBase,
+        staff: { id: staff.id || null, idNumber: staff.idNumber, name: staff.name, rank: staff.rank, unit: staff.unit },
+        eventCode: eventCode2,
+        candidateSyllabusCodes: syllabusDetails.filter((item) => String(item.code || "").trim().toUpperCase().includes(eventCode2.toUpperCase()) || eventCode2.toUpperCase().includes(String(item.code || "").trim().toUpperCase())).slice(0, 12).map((item) => ({ id: item.id, code: item.code, type: item.type, lmpType: item.lmpType, module: item.module, courses: item.courses, isActive: item.isActive, assessmentRequired: item.assessmentRequired }))
+      });
       return;
     }
     if (matchingItem.assessmentRequired !== true) {
       logRoutineAppDebug(`[PostFlight] Training report skipped: ${eventCode2} does not have Assessment required selected`);
+      pushDashboardReportDiag("postflight:draft-generator:skipped-assessment-not-required", {
+        ...traceBase,
+        staff: { id: staff.id || null, idNumber: staff.idNumber, name: staff.name, rank: staff.rank, unit: staff.unit },
+        matchingItem: {
+          id: matchingItem.id,
+          code: matchingItem.code,
+          type: matchingItem.type,
+          lmpType: matchingItem.lmpType,
+          module: matchingItem.module,
+          courses: matchingItem.courses,
+          isActive: matchingItem.isActive,
+          assessmentRequired: matchingItem.assessmentRequired
+        }
+      });
       return;
     }
     const preferences = { ...staff.preferences || {} };
@@ -119206,16 +119300,42 @@ ${error instanceof Error ? error.message : String(error)}`,
     };
     const dbId = updatedStaff.id;
     if (dbId) {
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
+      pushDashboardReportDiag("postflight:draft-generator:patch-personnel-start", {
+        ...traceBase,
+        reportId: report.id,
+        dbId,
+        staffName: staff.name,
+        staffIdNumber: staff.idNumber,
+        hasSessionToken: Boolean(sessionToken)
+      });
       const response = await fetch(`/api/personnel/${dbId}`, {
         method: "PATCH",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        },
         body: JSON.stringify(updatedStaff)
       });
       if (!response.ok) {
         const errorText = await response.text();
+        pushDashboardReportDiag("postflight:draft-generator:patch-personnel-failed", {
+          ...traceBase,
+          reportId: report.id,
+          dbId,
+          staffName: staff.name,
+          status: response.status,
+          errorText
+        });
         throw new Error(errorText || `Failed to save Air Combat post-flight draft report (${response.status})`);
       }
+      pushDashboardReportDiag("postflight:draft-generator:patch-personnel-ok", {
+        ...traceBase,
+        reportId: report.id,
+        dbId,
+        staffName: staff.name
+      });
     }
     setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
     setSelectedPersonForProfile((prev) => prev && "idNumber" in prev && prev.idNumber === updatedStaff.idNumber ? updatedStaff : prev);
@@ -119224,6 +119344,14 @@ ${error instanceof Error ? error.message : String(error)}`,
       existingReport ? "Edit" : "Create",
       `${existingReport ? "Updated" : "Generated"} draft ${report.reportName} from post-flight ${dcoResult} for ${report.staffName} - Event: ${report.eventCode}`
     );
+    pushDashboardReportDiag("postflight:draft-generator:completed", {
+      ...traceBase,
+      reportId: report.id,
+      existingReport: Boolean(existingReport),
+      staffName: staff.name,
+      staffIdNumber: staff.idNumber,
+      eventCode: eventCode2
+    });
     logRoutineAppDebug(`[PostFlight] ✅ Draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${dcoResult})`);
   };
   const handleReassignTrainingReportNotification = async (entry, assignee) => {
@@ -130887,6 +131015,13 @@ Do you want to replace the existing entry?`,
                     console.warn("[PostFlight] EventCompletion fetch threw:", ecErr);
                   }
                 }
+                pushDashboardReportDiag("postflight:on-save:assessment-draft-guard", {
+                  eventId: eventForPostFlight?.id || null,
+                  eventCode: eventForPostFlight?.flightNumber || eventForPostFlight?.eventCode || null,
+                  eventDate: eventForPostFlight?.date || null,
+                  result: data.result || null,
+                  willAttempt: Boolean(eventForPostFlight && data.result === "DCO")
+                });
                 if (eventForPostFlight && data.result === "DCO") {
                   try {
                     await generateAssessmentRequiredDraftTrainingReport(
@@ -130895,6 +131030,11 @@ Do you want to replace the existing entry?`,
                     );
                   } catch (airCombatReportErr) {
                     console.warn("[PostFlight] Assessment-required draft training report generation failed:", airCombatReportErr);
+                    pushDashboardReportDiag("postflight:on-save:assessment-draft-error", {
+                      eventId: eventForPostFlight.id,
+                      eventCode: eventForPostFlight.flightNumber || eventForPostFlight.eventCode || null,
+                      error: airCombatReportErr instanceof Error ? airCombatReportErr.message : String(airCombatReportErr)
+                    });
                   }
                 }
                 if (data.currencyUpdates && Object.keys(data.currencyUpdates).length > 0) {
