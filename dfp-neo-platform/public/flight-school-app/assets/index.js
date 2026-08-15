@@ -83779,6 +83779,8 @@ const SettingsViewWithMenu = (props) => {
     return "Airmanship";
   });
   const [settingsSearch, setSettingsSearch] = reactExports.useState("");
+  const settingsSearchQuery = settingsSearch.trim();
+  const isSearchActive = settingsSearchQuery.length > 0;
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [settingsSearchFocus, setSettingsSearchFocus] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
@@ -83836,6 +83838,7 @@ const SettingsViewWithMenu = (props) => {
     contentScrollRef.current?.scrollTo({ top: restoreScrollTop ?? 0, left: 0, behavior: "auto" });
   }, [activeSection]);
   const settingsDataSearchTermsBySection = reactExports.useMemo(() => {
+    if (!isSearchActive) return {};
     const platformConfig = props.platformConfig || null;
     const platformOrganisations = platformConfig?.organisations || [];
     const platformLocations = platformConfig?.locations || [];
@@ -84023,10 +84026,11 @@ const SettingsViewWithMenu = (props) => {
     props.organisationSettings,
     props.fixedCrewTileColourMode,
     props.emergencyFreezeAuthority,
-    props.currentUserQualificationIds
+    props.currentUserQualificationIds,
+    isSearchActive
   ]);
   const normaliseSearchText = (value) => value.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
-  const getSearchQueryTokens = () => normaliseSearchText(settingsSearch).split(" ").filter(Boolean);
+  const getSearchQueryTokens = () => normaliseSearchText(settingsSearchQuery).split(" ").filter(Boolean);
   const searchTokensMatchText = (tokens, text) => tokens.length > 0 && tokens.every((token) => text.includes(token));
   const getSettingsSearchParts = (section, groupLabel) => [
     groupLabel,
@@ -84166,14 +84170,16 @@ const SettingsViewWithMenu = (props) => {
       cancelled = true;
     };
   }, [activeSection, settingsSearchFocus]);
-  const visibleSettingGroups = sectionGroups.map((group) => ({
+  const visibleSettingGroups = isSearchActive ? sectionGroups.map((group) => ({
     ...group,
     visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label))
-  })).filter((group) => group.visibleSections.length > 0);
+  })).filter((group) => group.visibleSections.length > 0) : sectionGroups.map((group) => ({
+    ...group,
+    visibleSections: group.sections
+  }));
   const hasSettingsMatches = visibleSettingGroups.length > 0;
   const activePlatformTarget = activeSection !== "home" && isPlatformConfigurationMenuSection(activeSection) ? platformSectionTargets[activeSection] : void 0;
   const isPlatformConfigurationActive = Boolean(activePlatformTarget);
-  const isSearchActive = settingsSearch.trim().length > 0;
   const navigateToSettingsSection = (section) => {
     const target = typeof section === "string" ? { section } : section;
     const targetSection = normaliseLegacySettingsSection(String(target.section || ""));

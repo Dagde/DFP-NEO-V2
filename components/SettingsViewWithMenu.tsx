@@ -1177,6 +1177,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return 'Airmanship';
     });
     const [settingsSearch, setSettingsSearch] = useState('');
+    const settingsSearchQuery = settingsSearch.trim();
+    const isSearchActive = settingsSearchQuery.length > 0;
     const [settingsFocusTarget, setSettingsFocusTarget] = useState<{
         unitCode?: string;
         locationCode?: string;
@@ -1264,6 +1266,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     }, [activeSection]);
 
     const settingsDataSearchTermsBySection = useMemo<Partial<Record<SettingsMenuSection, string[]>>>(() => {
+        if (!isSearchActive) return {};
+
         const platformConfig = props.platformConfig || null;
         const platformOrganisations = platformConfig?.organisations || [];
         const platformLocations = platformConfig?.locations || [];
@@ -1454,6 +1458,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         props.fixedCrewTileColourMode,
         props.emergencyFreezeAuthority,
         props.currentUserQualificationIds,
+        isSearchActive,
     ]);
 
     const normaliseSearchText = (value: string): string => (
@@ -1466,7 +1471,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     );
 
     const getSearchQueryTokens = (): string[] => (
-        normaliseSearchText(settingsSearch).split(' ').filter(Boolean)
+        normaliseSearchText(settingsSearchQuery).split(' ').filter(Boolean)
     );
 
     const searchTokensMatchText = (tokens: string[], text: string): boolean => (
@@ -1659,19 +1664,23 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return getAccentClasses(fallback);
     };
 
-    const visibleSettingGroups = sectionGroups
-        .map(group => ({
+    const visibleSettingGroups = isSearchActive
+        ? sectionGroups
+            .map(group => ({
+                ...group,
+                visibleSections: group.sections.filter(section => matchesSettingsSearch(section, group.label)),
+            }))
+            .filter(group => group.visibleSections.length > 0)
+        : sectionGroups.map(group => ({
             ...group,
-            visibleSections: group.sections.filter(section => matchesSettingsSearch(section, group.label)),
-        }))
-        .filter(group => group.visibleSections.length > 0);
+            visibleSections: group.sections,
+        }));
     const hasSettingsMatches = visibleSettingGroups.length > 0;
     const activePlatformTarget =
         activeSection !== 'home' && isPlatformConfigurationMenuSection(activeSection)
             ? platformSectionTargets[activeSection]
             : undefined;
     const isPlatformConfigurationActive = Boolean(activePlatformTarget);
-    const isSearchActive = settingsSearch.trim().length > 0;
     const navigateToSettingsSection = (section: string | {
         section: string;
         focusUnitCode?: string;
