@@ -1211,90 +1211,132 @@ const ThresholdSettingsPanel: React.FC<{
     finally { setSaving(false); }
   };
 
-  const fields: Array<{ key: keyof TIEThresholds; label: string; desc: string; min: number; max: number; step: number }> = [
+  const thresholdGroups: Array<{
+    title: string;
+    usedBy: string;
+    fields: Array<{ key: keyof TIEThresholds; label: string; desc: string; usedBy: string; min: number; max: number; step: number }>;
+  }> = [
     {
-      key: 'normalAvgGrade',
-      label: 'Normal / Watch Boundary',
-      desc: 'Whole-course average at or above which a trainee is Normal instead of Watch. This is the overall average, not recent trend performance.',
-      min: 2.5, max: 4.5, step: 0.1,
+      title: 'Trainee Status Thresholds',
+      usedBy: 'Course Status, Trainee Risk Summary, Dashboard status counts',
+      fields: [
+        {
+          key: 'normalAvgGrade',
+          label: 'Normal / Watch Boundary',
+          desc: 'Whole-course average at or above which a trainee is Normal instead of Watch. This is the overall average, not recent trend performance.',
+          usedBy: 'Course Status chart and trainee status cards',
+          min: 2.5, max: 4.5, step: 0.1,
+        },
+        {
+          key: 'exceedingAvgGrade',
+          label: 'Exceeding Threshold',
+          desc: 'Average grade ABOVE which a trainee is classified as Exceeding (high performer). E.g. 4.2.',
+          usedBy: 'Course Status chart and high-performing trainee counts',
+          min: 3.0, max: 5.0, step: 0.1,
+        },
+      ],
     },
     {
-      key: 'exceedingAvgGrade',
-      label: 'Exceeding Threshold',
-      desc: 'Average grade ABOVE which a trainee is classified as Exceeding (high performer). E.g. 4.2.',
-      min: 3.0, max: 5.0, step: 0.1,
+      title: 'Grade And Assessment Colours',
+      usedBy: 'Training report scores, grade displays, score trend charts',
+      fields: [
+        {
+          key: 'concernThresholdGrade',
+          label: 'Pass / Concern Threshold',
+          desc: 'Grade at or below which an assessment element is flagged as a concern. Grade ≥ this value = PASS. Default is 3 (Satisfactory).',
+          usedBy: 'Pass/fail classification and concern highlighting',
+          min: 1, max: 4, step: 1,
+        },
+        {
+          key: 'excellentGradeColorThreshold',
+          label: 'Grade Colour: Excellent',
+          desc: 'Grade at or above which charts and scores use the excellent colour.',
+          usedBy: 'Grade colour bands and score charts',
+          min: 3.0, max: 5.0, step: 0.1,
+        },
+        {
+          key: 'normalGradeColorThreshold',
+          label: 'Grade Colour: Normal',
+          desc: 'Grade at or above which charts and scores use the normal colour.',
+          usedBy: 'Grade colour bands and score charts',
+          min: 2.5, max: 5.0, step: 0.1,
+        },
+        {
+          key: 'concernGradeColorThreshold',
+          label: 'Grade Colour: Concern',
+          desc: 'Grade at or above which charts and scores move out of low/critical and into concern.',
+          usedBy: 'Grade colour bands and score charts',
+          min: 1.0, max: 4.0, step: 0.1,
+        },
+        {
+          key: 'criticalLowGradeThreshold',
+          label: 'Grade Colour: Critically Low',
+          desc: 'Grade below this value is shown as critical. Grades from this value up to Concern are shown as low.',
+          usedBy: 'Critical score highlighting and low-score charts',
+          min: 1.0, max: 3.0, step: 0.1,
+        },
+      ],
     },
     {
-      key: 'concernThresholdGrade',
-      label: 'Pass / Concern Threshold',
-      desc: 'Grade at or below which an assessment element is flagged as a concern. Grade ≥ this value = PASS. Default is 3 (Satisfactory).',
-      min: 1, max: 4, step: 1,
+      title: 'Course And Event Risk Charts',
+      usedBy: 'Elevated Risk Events, Low Risk Events, pass-rate displays',
+      fields: [
+        {
+          key: 'bottleneckThresholdPct',
+          label: 'Elevated Risk % Threshold',
+          desc: 'Percentage of trainees scoring below the concern threshold that triggers an event to be flagged as an elevated risk event.',
+          usedBy: 'Elevated Risk Events chart',
+          min: 10, max: 80, step: 5,
+        },
+        {
+          key: 'healthyPassRatePct',
+          label: 'Healthy Pass Rate Colour',
+          desc: 'Pass rate at or above which pass-rate charts show healthy/green. Yellow sits between this value and the elevated-risk boundary.',
+          usedBy: 'Pass-rate chart colour bands',
+          min: 50, max: 100, step: 5,
+        },
+        {
+          key: 'highVarianceThreshold',
+          label: 'High Variance Threshold',
+          desc: 'Grade standard deviation above which an event is flagged as high-variance (inconsistent trainee performance).',
+          usedBy: 'Event consistency and variance diagnostics',
+          min: 0.3, max: 2.5, step: 0.1,
+        },
+        {
+          key: 'overServiceGradeThreshold',
+          label: 'Over-Service Grade Threshold',
+          desc: 'Average grade at or above which a stable event may be classed as over-serviced.',
+          usedBy: 'Low Risk Events / over-service analysis',
+          min: 3.0, max: 5.0, step: 0.1,
+        },
+      ],
     },
     {
-      key: 'excellentGradeColorThreshold',
-      label: 'Grade Colour: Excellent',
-      desc: 'Grade at or above which charts and scores use the excellent colour.',
-      min: 3.0, max: 5.0, step: 0.1,
-    },
-    {
-      key: 'normalGradeColorThreshold',
-      label: 'Grade Colour: Normal',
-      desc: 'Grade at or above which charts and scores use the normal colour.',
-      min: 2.5, max: 5.0, step: 0.1,
-    },
-    {
-      key: 'concernGradeColorThreshold',
-      label: 'Grade Colour: Concern',
-      desc: 'Grade at or above which charts and scores move out of low/critical and into concern.',
-      min: 1.0, max: 4.0, step: 0.1,
-    },
-    {
-      key: 'criticalLowGradeThreshold',
-      label: 'Grade Colour: Critically Low',
-      desc: 'Grade below this value is shown as critical. Grades from this value up to Concern are shown as low.',
-      min: 1.0, max: 3.0, step: 0.1,
-    },
-    {
-      key: 'bottleneckThresholdPct',
-      label: 'Elevated Risk % Threshold',
-      desc: 'Percentage of trainees scoring below the concern threshold that triggers an event to be flagged as an elevated risk event.',
-      min: 10, max: 80, step: 5,
-    },
-    {
-      key: 'healthyPassRatePct',
-      label: 'Healthy Pass Rate Colour',
-      desc: 'Pass rate at or above which pass-rate charts show healthy/green. Yellow sits between this value and the elevated-risk boundary.',
-      min: 50, max: 100, step: 5,
-    },
-    {
-      key: 'highVarianceThreshold',
-      label: 'High Variance Threshold',
-      desc: 'Grade standard deviation above which an event is flagged as high-variance (inconsistent trainee performance).',
-      min: 0.3, max: 2.5, step: 0.1,
-    },
-    {
-      key: 'minObservationsForPattern',
-      label: 'Minimum Reports Before Alerting',
-      desc: 'Minimum number of training reports required before analytics generates pattern-based findings.',
-      min: 1, max: 10, step: 1,
-    },
-    {
-      key: 'recencyWeightFactor',
-      label: 'Recent Performance Weighting',
-      desc: 'Multiplier applied to recent assessments so current performance carries more weight than older results.',
-      min: 1.0, max: 3.0, step: 0.1,
-    },
-    {
-      key: 'commentWeightVsScore',
-      label: 'Instructor Comment Weighting',
-      desc: 'Weight given to comment tags compared with numeric scores when interpreting training issues.',
-      min: 0, max: 1, step: 0.1,
-    },
-    {
-      key: 'overServiceGradeThreshold',
-      label: 'Over-Service Grade Threshold',
-      desc: 'Average grade at or above which a stable event may be classed as over-serviced.',
-      min: 3.0, max: 5.0, step: 0.1,
+      title: 'Pattern Weighting',
+      usedBy: 'Trend analysis, weak-element detection, comment-based risk signals',
+      fields: [
+        {
+          key: 'minObservationsForPattern',
+          label: 'Minimum Reports Before Alerting',
+          desc: 'Minimum number of training reports required before analytics generates pattern-based findings.',
+          usedBy: 'Trend and recurring-pattern analytics',
+          min: 1, max: 10, step: 1,
+        },
+        {
+          key: 'recencyWeightFactor',
+          label: 'Recent Performance Weighting',
+          desc: 'Multiplier applied to recent assessments so current performance carries more weight than older results.',
+          usedBy: 'Recent trend and weighted performance analytics',
+          min: 1.0, max: 3.0, step: 0.1,
+        },
+        {
+          key: 'commentWeightVsScore',
+          label: 'Instructor Comment Weighting',
+          desc: 'Weight given to comment tags compared with numeric scores when interpreting training issues.',
+          usedBy: 'Comment trend and training issue analysis',
+          min: 0, max: 1, step: 0.1,
+        },
+      ],
     },
   ];
 
@@ -1302,36 +1344,42 @@ const ThresholdSettingsPanel: React.FC<{
     enabledKey: keyof TIEThresholds;
     title: string;
     detail: string;
+    usedBy: string;
     control?: { key: keyof TIEThresholds; suffix: string; min: number; max: number; step: number };
   }> = [
     {
       enabledKey: 'atRiskAverageEnabled',
       title: 'Low course average',
       detail: 'Classifies trainees as At Risk when their whole-course score average falls below the at-risk threshold.',
+      usedBy: 'Course Status, Trainee Risk Summary',
       control: { key: 'atRiskAvgGrade', suffix: 'avg', min: 1, max: 4.5, step: 0.1 },
     },
     {
       enabledKey: 'atRiskSustainedDeclineEnabled',
       title: 'Sustained decline',
       detail: 'Moves a trainee to Monitor when each of the most recent assessments is lower than the previous one.',
+      usedBy: 'Monitor / Watch status and trainee risk indicators',
       control: { key: 'sustainedDeclineCount', suffix: 'events', min: 3, max: 6, step: 1 },
     },
     {
       enabledKey: 'atRiskRecentDropEnabled',
       title: 'Recent performance drop',
       detail: 'Moves trainees to Monitor when their recent average has fallen materially below their whole-course average.',
+      usedBy: 'Monitor / Watch status and recent trend analysis',
       control: { key: 'recentDropThreshold', suffix: 'drop', min: 0.2, max: 1.5, step: 0.1 },
     },
     {
       enabledKey: 'atRiskLowRecentEnabled',
       title: 'Worsening trend recent average',
       detail: 'Moves trainees to Monitor when their recent assessment window is below the configured recent score floor and their trend is worsening.',
+      usedBy: 'Monitor / Watch status and worsening trend analysis',
       control: { key: 'worseningRecentAvgGrade', suffix: 'recent avg', min: 1, max: 4.5, step: 0.1 },
     },
     {
       enabledKey: 'atRiskRecurringWeakElementsEnabled',
       title: 'Recurring weak elements',
       detail: 'Moves trainees to Monitor when repeated weak element patterns appear before the overall average has fallen.',
+      usedBy: 'Weak element analysis and trainee risk indicators',
       control: { key: 'recurringWeakElementCount', suffix: 'elements', min: 2, max: 8, step: 1 },
     },
   ];
@@ -1369,6 +1417,9 @@ const ThresholdSettingsPanel: React.FC<{
                 <h4 className="text-sm font-semibold text-white">At-Risk Criteria</h4>
                 <p className="mt-1 text-xs leading-relaxed text-slate-400">
                   At Risk is controlled by the low course average threshold. The other enabled signals move trainees into Monitor, so each rule can be switched on or off without changing the At Risk count.
+                </p>
+                <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-cyan-300">
+                  Used by: Course Status, Trainee Risk Summary, Monitor / Watch indicators
                 </p>
               </div>
             </div>
@@ -1428,6 +1479,7 @@ const ThresholdSettingsPanel: React.FC<{
                             {enabled ? 'On' : 'Off'}
                           </span>
                           <p className="mt-1 text-xs leading-relaxed text-slate-500">{criteria.detail}</p>
+                          <p className="mt-1 text-[11px] text-cyan-300/80">Used by: {criteria.usedBy}</p>
                         </div>
                       </label>
                       {criteria.control && (
@@ -1462,32 +1514,43 @@ const ThresholdSettingsPanel: React.FC<{
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          {fields.map(f => (
-            <div key={f.key}>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-sm font-semibold text-gray-200">{f.label}</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min={f.min} max={f.max} step={f.step}
-                    value={local[f.key] as number}
-                    onChange={e => set(f.key, e.target.value)}
-                    className="w-32 accent-blue-500"
-                  />
-                  <input
-                    type="number"
-                    min={f.min} max={f.max} step={f.step}
-                    value={local[f.key] as number}
-                    onChange={e => set(f.key, e.target.value)}
-                    className="w-16 bg-gray-800 border border-gray-600 text-white text-sm rounded px-2 py-0.5 text-center focus:outline-none focus:border-blue-500"
-                  />
-                </div>
+          {thresholdGroups.map(group => (
+            <div key={group.title} className="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-white">{group.title}</h4>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  Used by: {group.usedBy}
+                </p>
               </div>
-              <p className="text-gray-500 text-xs leading-relaxed">{f.desc}</p>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                {group.fields.map(f => (
+                  <div key={f.key} className="rounded-md border border-slate-800 bg-slate-950/35 px-3 py-3">
+                    <div className="flex items-center justify-between gap-4 mb-1">
+                      <label className="text-sm font-semibold text-gray-200">{f.label}</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min={f.min} max={f.max} step={f.step}
+                          value={local[f.key] as number}
+                          onChange={e => set(f.key, e.target.value)}
+                          className="w-32 accent-blue-500"
+                        />
+                        <input
+                          type="number"
+                          min={f.min} max={f.max} step={f.step}
+                          value={local[f.key] as number}
+                          onChange={e => set(f.key, e.target.value)}
+                          className="w-16 bg-gray-800 border border-gray-600 text-white text-sm rounded px-2 py-0.5 text-center focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-gray-500 text-xs leading-relaxed">{f.desc}</p>
+                    <p className="mt-1 text-[11px] text-blue-300/80">Used by: {f.usedBy}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
-          </div>
 
           {/* Status definition legend */}
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mt-2">
