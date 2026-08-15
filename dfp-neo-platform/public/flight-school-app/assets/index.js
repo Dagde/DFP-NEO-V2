@@ -83554,6 +83554,7 @@ const SettingsNavigationSidebar = React.memo(({
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
   const [pendingSection, setPendingSection] = reactExports.useState(null);
   const deferredNavigationTimeoutRef = reactExports.useRef(null);
+  const deferredNavigationFrameRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
     if (pendingSection && activeSection === pendingSection) {
       setPendingSection(null);
@@ -83563,15 +83564,26 @@ const SettingsNavigationSidebar = React.memo(({
     if (deferredNavigationTimeoutRef.current !== null) {
       window.clearTimeout(deferredNavigationTimeoutRef.current);
     }
+    if (deferredNavigationFrameRef.current !== null) {
+      window.cancelAnimationFrame(deferredNavigationFrameRef.current);
+    }
   }, []);
   const deferSidebarNavigation = (callback, delayMs = 40) => {
     if (deferredNavigationTimeoutRef.current !== null) {
       window.clearTimeout(deferredNavigationTimeoutRef.current);
-    }
-    deferredNavigationTimeoutRef.current = window.setTimeout(() => {
       deferredNavigationTimeoutRef.current = null;
-      callback();
-    }, delayMs);
+    }
+    if (deferredNavigationFrameRef.current !== null) {
+      window.cancelAnimationFrame(deferredNavigationFrameRef.current);
+      deferredNavigationFrameRef.current = null;
+    }
+    deferredNavigationFrameRef.current = window.requestAnimationFrame(() => {
+      deferredNavigationFrameRef.current = null;
+      deferredNavigationTimeoutRef.current = window.setTimeout(() => {
+        deferredNavigationTimeoutRef.current = null;
+        callback();
+      }, delayMs);
+    });
   };
   const openSettingsGroup = (group) => {
     const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
@@ -83581,6 +83593,10 @@ const SettingsNavigationSidebar = React.memo(({
         window.clearTimeout(deferredNavigationTimeoutRef.current);
         deferredNavigationTimeoutRef.current = null;
       }
+      if (deferredNavigationFrameRef.current !== null) {
+        window.cancelAnimationFrame(deferredNavigationFrameRef.current);
+        deferredNavigationFrameRef.current = null;
+      }
       setPendingSection(null);
       setExpandedGroups((previous) => ({ ...previous, [group.label]: false }));
       return;
@@ -83589,7 +83605,7 @@ const SettingsNavigationSidebar = React.memo(({
     if (!groupActive) {
       const defaultSection = getDefaultSectionForVisibleGroup(group);
       setPendingSection(defaultSection);
-      deferSidebarNavigation(() => onOpenDefaultSection(defaultSection), 260);
+      deferSidebarNavigation(() => onOpenDefaultSection(defaultSection), 320);
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
@@ -83612,7 +83628,6 @@ const SettingsNavigationSidebar = React.memo(({
     /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[30px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
       const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
       const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
-      const submenuMaxHeight = Math.min(860, Math.max(42, group.visibleSections.length * 39 + 8));
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[175px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
@@ -83643,43 +83658,54 @@ const SettingsNavigationSidebar = React.memo(({
           "div",
           {
             id: getSettingsGroupId(group.label),
-            className: "overflow-hidden will-change-[max-height,opacity,transform]",
+            className: "grid overflow-hidden will-change-[grid-template-rows,opacity]",
             style: {
-              maxHeight: showSubmenu ? `${submenuMaxHeight}px` : "0px",
+              gridTemplateRows: showSubmenu ? "1fr" : "0fr",
               opacity: showSubmenu ? 1 : 0,
-              transform: showSubmenu ? "translateY(0)" : "translateY(-4px)",
-              transition: "max-height 240ms ease, opacity 180ms ease, transform 180ms ease"
+              pointerEvents: showSubmenu ? "auto" : "none",
+              transition: "grid-template-rows 260ms ease, opacity 180ms ease"
             },
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
-              const sectionActive = (pendingSection || activeSection) === section;
-              const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    setPendingSection(section);
-                    deferSidebarNavigation(() => onSelectSection(section, group.label));
-                  },
-                  "data-ui-lag-role": "settings-section",
-                  "data-settings-group": group.label,
-                  "data-settings-section": section,
-                  className: `flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-sky-300" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
-                  children: [
-                    sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: getSectionLabel(section) }),
-                      contextSnippet && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.before }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-200", children: contextSnippet.match.toUpperCase() }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.after })
-                      ] })
-                    ] })
-                  ]
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                className: "space-y-[1px] py-[1px] will-change-transform",
+                style: {
+                  transformOrigin: "top",
+                  transform: showSubmenu ? "translateY(0) scaleY(1)" : "translateY(-6px) scaleY(0.96)",
+                  transition: "transform 260ms ease"
                 },
-                section
-              );
-            }) })
+                children: group.visibleSections.map((section) => {
+                  const sectionActive = (pendingSection || activeSection) === section;
+                  const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        setPendingSection(section);
+                        deferSidebarNavigation(() => onSelectSection(section, group.label), 80);
+                      },
+                      "data-ui-lag-role": "settings-section",
+                      "data-settings-group": group.label,
+                      "data-settings-section": section,
+                      className: `flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-sky-300" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
+                      children: [
+                        sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: getSectionLabel(section) }),
+                          contextSnippet && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.before }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-200", children: contextSnippet.match.toUpperCase() }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.after })
+                          ] })
+                        ] })
+                      ]
+                    },
+                    section
+                  );
+                })
+              }
+            ) })
           }
         )
       ] }, group.label);
@@ -84200,13 +84226,18 @@ const SettingsViewWithMenu = (props) => {
       cancelled = true;
     };
   }, [activeSection, settingsSearchFocus]);
-  const visibleSettingGroups = isSearchActive ? sectionGroups.map((group) => ({
+  const visibleSettingGroups = reactExports.useMemo(() => isSearchActive ? sectionGroups.map((group) => ({
     ...group,
     visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label))
   })).filter((group) => group.visibleSections.length > 0) : sectionGroups.map((group) => ({
     ...group,
     visibleSections: group.sections
-  }));
+  })), [
+    isSearchActive,
+    settingsSearchQuery,
+    settingsDataSearchTermsBySection,
+    continuationCurrencyLabel
+  ]);
   const hasSettingsMatches = visibleSettingGroups.length > 0;
   const activePlatformTarget = activeSection !== "home" && isPlatformConfigurationMenuSection(activeSection) ? platformSectionTargets[activeSection] : void 0;
   const isPlatformConfigurationActive = Boolean(activePlatformTarget);

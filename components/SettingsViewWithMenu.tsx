@@ -922,6 +922,7 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
     const [pendingSection, setPendingSection] = useState<SettingsMenuSection | null>(null);
     const deferredNavigationTimeoutRef = useRef<number | null>(null);
+    const deferredNavigationFrameRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (pendingSection && activeSection === pendingSection) {
@@ -933,16 +934,27 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
         if (deferredNavigationTimeoutRef.current !== null) {
             window.clearTimeout(deferredNavigationTimeoutRef.current);
         }
+        if (deferredNavigationFrameRef.current !== null) {
+            window.cancelAnimationFrame(deferredNavigationFrameRef.current);
+        }
     }, []);
 
     const deferSidebarNavigation = (callback: () => void, delayMs = 40) => {
         if (deferredNavigationTimeoutRef.current !== null) {
             window.clearTimeout(deferredNavigationTimeoutRef.current);
-        }
-        deferredNavigationTimeoutRef.current = window.setTimeout(() => {
             deferredNavigationTimeoutRef.current = null;
-            callback();
-        }, delayMs);
+        }
+        if (deferredNavigationFrameRef.current !== null) {
+            window.cancelAnimationFrame(deferredNavigationFrameRef.current);
+            deferredNavigationFrameRef.current = null;
+        }
+        deferredNavigationFrameRef.current = window.requestAnimationFrame(() => {
+            deferredNavigationFrameRef.current = null;
+            deferredNavigationTimeoutRef.current = window.setTimeout(() => {
+                deferredNavigationTimeoutRef.current = null;
+                callback();
+            }, delayMs);
+        });
     };
 
     const openSettingsGroup = (group: VisibleSettingGroup) => {
@@ -954,6 +966,10 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                 window.clearTimeout(deferredNavigationTimeoutRef.current);
                 deferredNavigationTimeoutRef.current = null;
             }
+            if (deferredNavigationFrameRef.current !== null) {
+                window.cancelAnimationFrame(deferredNavigationFrameRef.current);
+                deferredNavigationFrameRef.current = null;
+            }
             setPendingSection(null);
             setExpandedGroups(previous => ({ ...previous, [group.label]: false }));
             return;
@@ -963,7 +979,7 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
         if (!groupActive) {
             const defaultSection = getDefaultSectionForVisibleGroup(group);
             setPendingSection(defaultSection);
-            deferSidebarNavigation(() => onOpenDefaultSection(defaultSection), 260);
+            deferSidebarNavigation(() => onOpenDefaultSection(defaultSection), 320);
         }
     };
 
@@ -986,7 +1002,6 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                 {visibleSettingGroups.map(group => {
                     const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
                     const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
-                    const submenuMaxHeight = Math.min(860, Math.max(42, group.visibleSections.length * 39 + 8));
                     return (
                         <div key={group.label} className="w-[175px]">
                             <button
@@ -1014,53 +1029,62 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                             </button>
                             <div
                                 id={getSettingsGroupId(group.label)}
-                                className="overflow-hidden will-change-[max-height,opacity,transform]"
+                                className="grid overflow-hidden will-change-[grid-template-rows,opacity]"
                                 style={{
-                                    maxHeight: showSubmenu ? `${submenuMaxHeight}px` : '0px',
+                                    gridTemplateRows: showSubmenu ? '1fr' : '0fr',
                                     opacity: showSubmenu ? 1 : 0,
-                                    transform: showSubmenu ? 'translateY(0)' : 'translateY(-4px)',
-                                    transition: 'max-height 240ms ease, opacity 180ms ease, transform 180ms ease',
+                                    pointerEvents: showSubmenu ? 'auto' : 'none',
+                                    transition: 'grid-template-rows 260ms ease, opacity 180ms ease',
                                 }}
                             >
-                                <div className="space-y-[1px] py-[1px]">
-                                    {group.visibleSections.map(section => {
-                                        const sectionActive = (pendingSection || activeSection) === section;
-                                        const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
-                                        return (
-                                            <button
-                                                type="button"
-                                                key={section}
-                                                onClick={() => {
-                                                    setPendingSection(section);
-                                                    deferSidebarNavigation(() => onSelectSection(section, group.label));
-                                                }}
-                                                data-ui-lag-role="settings-section"
-                                                data-settings-group={group.label}
-                                                data-settings-section={section}
-                                                className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
-                                                    sectionActive
-                                                        ? 'border-transparent bg-transparent text-sky-300'
-                                                        : section === 'emergency'
-                                                            ? 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                                                            : 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                                                }`}
-                                            >
-                                                {sectionActive ? (
-                                                    <span className="h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300" aria-hidden="true" />
-                                                ) : null}
-                                                <span className="min-w-0">
-                                                    <span className="block truncate">{getSectionLabel(section)}</span>
-                                                    {contextSnippet && (
-                                                        <span className="mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
-                                                            <span>{contextSnippet.before}</span>
-                                                            <span className="font-bold text-cyan-200">{contextSnippet.match.toUpperCase()}</span>
-                                                            <span>{contextSnippet.after}</span>
-                                                        </span>
-                                                    )}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
+                                <div className="min-h-0 overflow-hidden">
+                                    <div
+                                        className="space-y-[1px] py-[1px] will-change-transform"
+                                        style={{
+                                            transformOrigin: 'top',
+                                            transform: showSubmenu ? 'translateY(0) scaleY(1)' : 'translateY(-6px) scaleY(0.96)',
+                                            transition: 'transform 260ms ease',
+                                        }}
+                                    >
+                                        {group.visibleSections.map(section => {
+                                            const sectionActive = (pendingSection || activeSection) === section;
+                                            const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    key={section}
+                                                    onClick={() => {
+                                                        setPendingSection(section);
+                                                        deferSidebarNavigation(() => onSelectSection(section, group.label), 80);
+                                                    }}
+                                                    data-ui-lag-role="settings-section"
+                                                    data-settings-group={group.label}
+                                                    data-settings-section={section}
+                                                    className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
+                                                        sectionActive
+                                                            ? 'border-transparent bg-transparent text-sky-300'
+                                                            : section === 'emergency'
+                                                                ? 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                                                                : 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                                                    }`}
+                                                >
+                                                    {sectionActive ? (
+                                                        <span className="h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300" aria-hidden="true" />
+                                                    ) : null}
+                                                    <span className="min-w-0">
+                                                        <span className="block truncate">{getSectionLabel(section)}</span>
+                                                        {contextSnippet && (
+                                                            <span className="mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
+                                                                <span>{contextSnippet.before}</span>
+                                                                <span className="font-bold text-cyan-200">{contextSnippet.match.toUpperCase()}</span>
+                                                                <span>{contextSnippet.after}</span>
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1697,17 +1721,24 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return getAccentClasses(fallback);
     };
 
-    const visibleSettingGroups = isSearchActive
-        ? sectionGroups
-            .map(group => ({
+    const visibleSettingGroups = useMemo<VisibleSettingGroup[]>(() => (
+        isSearchActive
+            ? sectionGroups
+                .map(group => ({
+                    ...group,
+                    visibleSections: group.sections.filter(section => matchesSettingsSearch(section, group.label)),
+                }))
+                .filter(group => group.visibleSections.length > 0)
+            : sectionGroups.map(group => ({
                 ...group,
-                visibleSections: group.sections.filter(section => matchesSettingsSearch(section, group.label)),
+                visibleSections: group.sections,
             }))
-            .filter(group => group.visibleSections.length > 0)
-        : sectionGroups.map(group => ({
-            ...group,
-            visibleSections: group.sections,
-        }));
+    ), [
+        isSearchActive,
+        settingsSearchQuery,
+        settingsDataSearchTermsBySection,
+        continuationCurrencyLabel,
+    ]);
     const hasSettingsMatches = visibleSettingGroups.length > 0;
     const activePlatformTarget =
         activeSection !== 'home' && isPlatformConfigurationMenuSection(activeSection)
