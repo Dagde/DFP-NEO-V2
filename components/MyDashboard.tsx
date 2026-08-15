@@ -29,6 +29,8 @@ interface MyDashboardProps {
     onUnreadMessageCountChange?: (count: number) => void;
     sctTerminology?: SctTerminology;
     currentLocationCode?: string | null;
+    onLogout?: () => void;
+    onShowChangePassword?: () => void;
 }
 
 type DashboardMessageContact = {
@@ -423,6 +425,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     onUnreadMessageCountChange,
     sctTerminology = DEFAULT_SCT_TERMINOLOGY,
     currentLocationCode,
+    onLogout,
+    onShowChangePassword,
 }) => {
     const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
     const continuationShortLabel = continuationTerminology.shortLabel;
@@ -1042,12 +1046,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     </button>
                     <button
                         type="button"
+                        onClick={onShowChangePassword}
                         className={dashboardActionButtonClass}
                     >
                         Change<br />Password
                     </button>
                     <button
                         type="button"
+                        onClick={onLogout}
                         className={`${dashboardActionButtonClass} text-red-500`}
                     >
                         Sign<br />Out

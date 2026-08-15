@@ -38592,7 +38592,9 @@ const MyDashboard = ({
   messageContactUnitCodes = [],
   onUnreadMessageCountChange,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
-  currentLocationCode
+  currentLocationCode,
+  onLogout,
+  onShowChangePassword
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
@@ -39121,6 +39123,7 @@ const MyDashboard = ({
           "button",
           {
             type: "button",
+            onClick: onShowChangePassword,
             className: dashboardActionButtonClass,
             children: [
               "Change",
@@ -39133,6 +39136,7 @@ const MyDashboard = ({
           "button",
           {
             type: "button",
+            onClick: onLogout,
             className: `${dashboardActionButtonClass} text-red-500`,
             children: [
               "Sign",
@@ -130930,6 +130934,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUnreadMessageCountChange: setDashboardUnreadMessageCount,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             currentLocationCode: activeLocationSolarProfile.code,
+            onLogout: handleLogout,
+            onShowChangePassword: () => setShowChangePassword(true),
             onSelectTrainingReport: (entry) => {
               const dashboardReport = entry.report;
               const reportCode = normaliseDashboardContextCode(dashboardReport.eventCode);

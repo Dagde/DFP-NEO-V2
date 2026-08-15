@@ -46036,6 +46036,8 @@ appliedUpdates.forEach(update => {
                             onUnreadMessageCountChange={setDashboardUnreadMessageCount}
                             sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                             currentLocationCode={activeLocationSolarProfile.code}
+                            onLogout={handleLogout}
+                            onShowChangePassword={() => setShowChangePassword(true)}
                             onSelectTrainingReport={(entry) => {
                                 const dashboardReport = entry.report as AirCombatTrainingReport & { traineeFullName?: string };
                                 const reportCode = normaliseDashboardContextCode(dashboardReport.eventCode);
