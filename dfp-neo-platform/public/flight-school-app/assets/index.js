@@ -72061,6 +72061,8 @@ const PlatformConfigurationSettings = ({
   formationCallsigns = [],
   onUpdateFormationCallsigns
 }) => {
+  const visibleSectionTarget = sectionOnly ? scrollTarget || "platform-configuration-health" : null;
+  const configurationHealthActive = !visibleSectionTarget || visibleSectionTarget === "platform-configuration-health";
   const [config, setConfig] = reactExports.useState(() => cachedPlatformConfig || emptyConfig);
   const [loading, setLoading] = reactExports.useState(() => !cachedPlatformConfig);
   const [saving, setSaving] = reactExports.useState(false);
@@ -74668,19 +74670,19 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
   );
   const isOrganisationWideConfigurationHealth = currentUserPermission === "Super Admin";
   const configurationHealthConfig = reactExports.useMemo(
-    () => isOrganisationWideConfigurationHealth ? config : buildScopedConfigurationHealthConfig(config, configurationHealthUnitCodes),
-    [config, configurationHealthUnitCodes, isOrganisationWideConfigurationHealth]
+    () => !configurationHealthActive || isOrganisationWideConfigurationHealth ? config : buildScopedConfigurationHealthConfig(config, configurationHealthUnitCodes),
+    [config, configurationHealthActive, configurationHealthUnitCodes, isOrganisationWideConfigurationHealth]
   );
   const configurationHealthScopeLabel = isOrganisationWideConfigurationHealth ? "Organisation-wide" : `Current unit: ${configurationHealthUnitCodes.join(" + ") || "active unit"}`;
   const configurationHealth = reactExports.useMemo(
-    () => buildConfigurationHealth(
+    () => configurationHealthActive ? buildConfigurationHealth(
       configurationHealthConfig,
       permissionProfiles,
       readinessPercent,
       operationalReadinessPercent,
       { includeOrganisationWideChecks: isOrganisationWideConfigurationHealth }
-    ),
-    [configurationHealthConfig, isOrganisationWideConfigurationHealth, permissionProfiles, readinessPercent, operationalReadinessPercent]
+    ) : [],
+    [configurationHealthActive, configurationHealthConfig, isOrganisationWideConfigurationHealth, permissionProfiles, readinessPercent, operationalReadinessPercent]
   );
   const configurationHealthSummary = reactExports.useMemo(() => configurationHealth.reduce((summary, item) => ({
     ...summary,
@@ -75873,7 +75875,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   if (loading) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-6 text-gray-300", children: "Loading platform configuration..." });
   }
-  const visibleSectionTarget = sectionOnly ? scrollTarget || "platform-configuration-health" : null;
   const shouldRenderSection = (sectionId) => {
     if (!visibleSectionTarget) return true;
     if (visibleSectionTarget === sectionId) return true;
@@ -83590,10 +83591,8 @@ const SettingsNavigationSidebar = React.memo(({
   }, [activeSection, pendingSection]);
   const openSettingsGroup = (group) => {
     const isOpen = expandedGroups[group.label] === true;
-    reactDomExports.flushSync(() => {
-      setPendingSection(null);
-      setExpandedGroups((previous) => isOpen ? { ...previous, [group.label]: false } : { [group.label]: true });
-    });
+    setPendingSection(null);
+    setExpandedGroups((previous) => isOpen ? { ...previous, [group.label]: false } : { [group.label]: true });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
@@ -83659,7 +83658,9 @@ const SettingsNavigationSidebar = React.memo(({
                       type: "button",
                       onClick: () => {
                         setPendingSection(section);
-                        onSelectSection(section, group.label);
+                        React.startTransition(() => {
+                          onSelectSection(section, group.label);
+                        });
                       },
                       "data-ui-lag-role": "settings-section",
                       "data-settings-group": group.label,

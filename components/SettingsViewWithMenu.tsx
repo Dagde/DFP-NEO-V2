@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
@@ -924,12 +923,10 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
 
     const openSettingsGroup = (group: VisibleSettingGroup) => {
         const isOpen = expandedGroups[group.label] === true;
-        flushSync(() => {
-            setPendingSection(null);
-            setExpandedGroups(previous => isOpen
-                ? { ...previous, [group.label]: false }
-                : { [group.label]: true });
-        });
+        setPendingSection(null);
+        setExpandedGroups(previous => isOpen
+            ? { ...previous, [group.label]: false }
+            : { [group.label]: true });
     };
 
     return (
@@ -993,7 +990,9 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                                                 key={section}
                                                 onClick={() => {
                                                     setPendingSection(section);
-                                                    onSelectSection(section, group.label);
+                                                    React.startTransition(() => {
+                                                        onSelectSection(section, group.label);
+                                                    });
                                                 }}
                                                 data-ui-lag-role="settings-section"
                                                 data-settings-group={group.label}

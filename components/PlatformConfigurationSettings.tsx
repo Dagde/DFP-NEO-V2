@@ -2302,6 +2302,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   formationCallsigns = [],
   onUpdateFormationCallsigns,
 }) => {
+  const visibleSectionTarget = sectionOnly ? (scrollTarget || 'platform-configuration-health') : null;
+  const configurationHealthActive = !visibleSectionTarget || visibleSectionTarget === 'platform-configuration-health';
   const [config, setConfig] = useState<PlatformConfig>(() => cachedPlatformConfig || emptyConfig);
   const [loading, setLoading] = useState(() => !cachedPlatformConfig);
   const [saving, setSaving] = useState(false);
@@ -5513,24 +5515,28 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const isOrganisationWideConfigurationHealth = currentUserPermission === 'Super Admin';
   const configurationHealthConfig = useMemo(
     () => (
-      isOrganisationWideConfigurationHealth
+      !configurationHealthActive || isOrganisationWideConfigurationHealth
         ? config
         : buildScopedConfigurationHealthConfig(config, configurationHealthUnitCodes)
     ),
-    [config, configurationHealthUnitCodes, isOrganisationWideConfigurationHealth],
+    [config, configurationHealthActive, configurationHealthUnitCodes, isOrganisationWideConfigurationHealth],
   );
   const configurationHealthScopeLabel = isOrganisationWideConfigurationHealth
     ? 'Organisation-wide'
     : `Current unit: ${configurationHealthUnitCodes.join(' + ') || 'active unit'}`;
   const configurationHealth = useMemo(
-    () => buildConfigurationHealth(
-      configurationHealthConfig,
-      permissionProfiles,
-      readinessPercent,
-      operationalReadinessPercent,
-      { includeOrganisationWideChecks: isOrganisationWideConfigurationHealth },
+    () => (
+      configurationHealthActive
+        ? buildConfigurationHealth(
+            configurationHealthConfig,
+            permissionProfiles,
+            readinessPercent,
+            operationalReadinessPercent,
+            { includeOrganisationWideChecks: isOrganisationWideConfigurationHealth },
+          )
+        : []
     ),
-    [configurationHealthConfig, isOrganisationWideConfigurationHealth, permissionProfiles, readinessPercent, operationalReadinessPercent],
+    [configurationHealthActive, configurationHealthConfig, isOrganisationWideConfigurationHealth, permissionProfiles, readinessPercent, operationalReadinessPercent],
   );
 
   const configurationHealthSummary = useMemo(() => (
@@ -6979,7 +6985,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     );
   }
 
-  const visibleSectionTarget = sectionOnly ? (scrollTarget || 'platform-configuration-health') : null;
   const shouldRenderSection = (sectionId: string) => {
     if (!visibleSectionTarget) return true;
     if (visibleSectionTarget === sectionId) return true;
