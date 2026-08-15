@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
@@ -921,8 +921,9 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
 }) => {
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
     const [pendingSection, setPendingSection] = useState<SettingsMenuSection | null>(null);
-    const deferredNavigationTimeoutRef = useRef<number | null>(null);
-    const deferredNavigationFrameRef = useRef<number | null>(null);
+    const groupElementsRef = useRef(new Map<string, HTMLDivElement>());
+    const previousGroupTopsRef = useRef(new Map<string, number>());
+    const groupAnimationsRef = useRef(new Map<string, Animation>());
 
     useEffect(() => {
         if (pendingSection && activeSection === pendingSection) {
@@ -930,56 +931,65 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
         }
     }, [activeSection, pendingSection]);
 
-    useEffect(() => () => {
-        if (deferredNavigationTimeoutRef.current !== null) {
-            window.clearTimeout(deferredNavigationTimeoutRef.current);
-        }
-        if (deferredNavigationFrameRef.current !== null) {
-            window.cancelAnimationFrame(deferredNavigationFrameRef.current);
-        }
-    }, []);
-
-    const deferSidebarNavigation = (callback: () => void, delayMs = 40) => {
-        if (deferredNavigationTimeoutRef.current !== null) {
-            window.clearTimeout(deferredNavigationTimeoutRef.current);
-            deferredNavigationTimeoutRef.current = null;
-        }
-        if (deferredNavigationFrameRef.current !== null) {
-            window.cancelAnimationFrame(deferredNavigationFrameRef.current);
-            deferredNavigationFrameRef.current = null;
-        }
-        deferredNavigationFrameRef.current = window.requestAnimationFrame(() => {
-            deferredNavigationFrameRef.current = null;
-            deferredNavigationTimeoutRef.current = window.setTimeout(() => {
-                deferredNavigationTimeoutRef.current = null;
-                callback();
-            }, delayMs);
-        });
+    const captureGroupPositions = () => {
+        previousGroupTopsRef.current = new Map(
+            Array.from(groupElementsRef.current.entries()).map(([label, element]) => [
+                label,
+                element.getBoundingClientRect().top,
+            ]),
+        );
     };
+
+    useLayoutEffect(() => {
+        const previousTops = previousGroupTopsRef.current;
+        if (previousTops.size === 0) return;
+
+        groupElementsRef.current.forEach((element, label) => {
+            const previousTop = previousTops.get(label);
+            if (previousTop === undefined) return;
+            const deltaY = previousTop - element.getBoundingClientRect().top;
+            if (Math.abs(deltaY) < 0.5) return;
+
+            groupAnimationsRef.current.get(label)?.cancel();
+            const animation = element.animate(
+                [
+                    { transform: `translateY(${deltaY}px)` },
+                    { transform: 'translateY(0)' },
+                ],
+                { duration: 190, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+            );
+            groupAnimationsRef.current.set(label, animation);
+            animation.addEventListener('finish', () => {
+                if (groupAnimationsRef.current.get(label) === animation) {
+                    groupAnimationsRef.current.delete(label);
+                }
+            }, { once: true });
+        });
+        previousGroupTopsRef.current = new Map();
+    }, [expandedGroups, isSearchActive]);
+
+    useEffect(() => () => {
+        groupAnimationsRef.current.forEach(animation => animation.cancel());
+        groupAnimationsRef.current.clear();
+    }, []);
 
     const openSettingsGroup = (group: VisibleSettingGroup) => {
         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
         const isOpen = expandedGroups[group.label] === true;
 
         if (isOpen) {
-            if (deferredNavigationTimeoutRef.current !== null) {
-                window.clearTimeout(deferredNavigationTimeoutRef.current);
-                deferredNavigationTimeoutRef.current = null;
-            }
-            if (deferredNavigationFrameRef.current !== null) {
-                window.cancelAnimationFrame(deferredNavigationFrameRef.current);
-                deferredNavigationFrameRef.current = null;
-            }
+            captureGroupPositions();
             setPendingSection(null);
             setExpandedGroups(previous => ({ ...previous, [group.label]: false }));
             return;
         }
 
+        captureGroupPositions();
         setExpandedGroups({ [group.label]: true });
         if (!groupActive) {
             const defaultSection = getDefaultSectionForVisibleGroup(group);
             setPendingSection(defaultSection);
-            deferSidebarNavigation(() => onOpenDefaultSection(defaultSection), 320);
+            React.startTransition(() => onOpenDefaultSection(defaultSection));
         }
     };
 
@@ -999,12 +1009,23 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                 />
             </div>
             <nav className="mt-[30px] flex flex-col items-center gap-[1px]">
-                {visibleSettingGroups.map(group => {
+                {visibleSettingGroups.map((group, groupIndex) => {
                     const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
                     const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
                     const submenuHeight = Math.min(860, group.visibleSections.length * 37 + 3);
                     return (
-                        <div key={group.label} className="w-[175px]" style={{ contain: 'layout paint' }}>
+                        <div
+                            key={group.label}
+                            ref={(element) => {
+                                if (element) groupElementsRef.current.set(group.label, element);
+                                else groupElementsRef.current.delete(group.label);
+                            }}
+                            className="relative w-[175px]"
+                            style={{
+                                height: `${45 + (showSubmenu ? submenuHeight : 0)}px`,
+                                zIndex: visibleSettingGroups.length - groupIndex + 1,
+                            }}
+                        >
                             <button
                                 type="button"
                                 onClick={() => openSettingsGroup(group)}
@@ -1030,12 +1051,19 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                             </button>
                             <div
                                 id={getSettingsGroupId(group.label)}
-                                className="overflow-hidden will-change-[height]"
+                                className="absolute left-0 top-[45px] overflow-hidden will-change-[clip-path,opacity,transform]"
                                 style={{
-                                    height: showSubmenu ? `${submenuHeight}px` : '0px',
+                                    width: '175px',
+                                    height: `${submenuHeight}px`,
+                                    clipPath: showSubmenu ? 'inset(0 0 0 0)' : 'inset(0 0 100% 0)',
+                                    opacity: showSubmenu ? 1 : 0,
+                                    transform: showSubmenu ? 'translateY(0)' : 'translateY(-4px)',
                                     pointerEvents: showSubmenu ? 'auto' : 'none',
-                                    transition: 'height 240ms cubic-bezier(0.22, 1, 0.36, 1)',
-                                    contain: 'layout paint',
+                                    transition: [
+                                        'clip-path 190ms cubic-bezier(0.22, 1, 0.36, 1)',
+                                        'opacity 110ms ease-out',
+                                        'transform 190ms cubic-bezier(0.22, 1, 0.36, 1)',
+                                    ].join(', '),
                                 }}
                             >
                                 <div className="space-y-[1px] py-[1px]">
@@ -1048,7 +1076,7 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                                                 key={section}
                                                 onClick={() => {
                                                     setPendingSection(section);
-                                                    deferSidebarNavigation(() => onSelectSection(section, group.label), 80);
+                                                    React.startTransition(() => onSelectSection(section, group.label));
                                                 }}
                                                 data-ui-lag-role="settings-section"
                                                 data-settings-group={group.label}
