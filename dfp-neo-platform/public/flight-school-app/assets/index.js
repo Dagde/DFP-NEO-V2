@@ -83552,16 +83552,6 @@ const SettingsNavigationSidebar = React.memo(({
   getSectionLabel
 }) => {
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
-  const pendingDefaultSectionTimerRef = reactExports.useRef(null);
-  const pendingDefaultSectionFrameRef = reactExports.useRef(null);
-  reactExports.useEffect(() => () => {
-    if (pendingDefaultSectionFrameRef.current !== null) {
-      window.cancelAnimationFrame(pendingDefaultSectionFrameRef.current);
-    }
-    if (pendingDefaultSectionTimerRef.current !== null) {
-      window.clearTimeout(pendingDefaultSectionTimerRef.current);
-    }
-  }, []);
   const openSettingsGroup = (group) => {
     const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
     const isOpen = expandedGroups[group.label] === true;
@@ -83571,22 +83561,8 @@ const SettingsNavigationSidebar = React.memo(({
     }
     setExpandedGroups({ [group.label]: true });
     if (!groupActive) {
-      if (pendingDefaultSectionFrameRef.current !== null) {
-        window.cancelAnimationFrame(pendingDefaultSectionFrameRef.current);
-        pendingDefaultSectionFrameRef.current = null;
-      }
-      if (pendingDefaultSectionTimerRef.current !== null) {
-        window.clearTimeout(pendingDefaultSectionTimerRef.current);
-        pendingDefaultSectionTimerRef.current = null;
-      }
       const defaultSection = getDefaultSectionForVisibleGroup(group);
-      pendingDefaultSectionFrameRef.current = window.requestAnimationFrame(() => {
-        pendingDefaultSectionFrameRef.current = null;
-        pendingDefaultSectionTimerRef.current = window.setTimeout(() => {
-          onOpenDefaultSection(defaultSection);
-          pendingDefaultSectionTimerRef.current = null;
-        }, 240);
-      });
+      onOpenDefaultSection(defaultSection);
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
@@ -83653,6 +83629,7 @@ const SettingsNavigationSidebar = React.memo(({
               return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
+                  type: "button",
                   onClick: () => onSelectSection(section, group.label),
                   "data-ui-lag-role": "settings-section",
                   "data-settings-group": group.label,
@@ -83811,12 +83788,10 @@ const SettingsViewWithMenu = (props) => {
   const getSectionLabel = (section) => isContinuationCurrencySection(section) ? continuationCurrencyLabel : sectionLabels[section];
   const getSectionDescription = (section) => isContinuationCurrencySection(section) ? `Configure ${continuationCurrencyLabel} settings` : sectionDescriptions[section];
   const changeActiveSection = (section) => {
-    reactExports.startTransition(() => {
-      if (section !== "currencies") {
-        setEmbeddedCurrencyBuilderOpen(false);
-      }
-      setActiveSection(section);
-    });
+    if (section !== "currencies") {
+      setEmbeddedCurrencyBuilderOpen(false);
+    }
+    setActiveSection(section);
   };
   const selectSettingsSectionFromMenu = (section, groupLabel) => {
     const contextSnippet = groupLabel && settingsSearch.trim() ? getSearchContextSnippet(section, groupLabel) : null;

@@ -1,4 +1,4 @@
-import React, { startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
@@ -920,17 +920,6 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
     getSectionLabel,
 }) => {
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-    const pendingDefaultSectionTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
-    const pendingDefaultSectionFrameRef = useRef<number | null>(null);
-
-    useEffect(() => () => {
-        if (pendingDefaultSectionFrameRef.current !== null) {
-            window.cancelAnimationFrame(pendingDefaultSectionFrameRef.current);
-        }
-        if (pendingDefaultSectionTimerRef.current !== null) {
-            window.clearTimeout(pendingDefaultSectionTimerRef.current);
-        }
-    }, []);
 
     const openSettingsGroup = (group: VisibleSettingGroup) => {
         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
@@ -943,22 +932,8 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
 
         setExpandedGroups({ [group.label]: true });
         if (!groupActive) {
-            if (pendingDefaultSectionFrameRef.current !== null) {
-                window.cancelAnimationFrame(pendingDefaultSectionFrameRef.current);
-                pendingDefaultSectionFrameRef.current = null;
-            }
-            if (pendingDefaultSectionTimerRef.current !== null) {
-                window.clearTimeout(pendingDefaultSectionTimerRef.current);
-                pendingDefaultSectionTimerRef.current = null;
-            }
             const defaultSection = getDefaultSectionForVisibleGroup(group);
-            pendingDefaultSectionFrameRef.current = window.requestAnimationFrame(() => {
-                pendingDefaultSectionFrameRef.current = null;
-                pendingDefaultSectionTimerRef.current = window.setTimeout(() => {
-                    onOpenDefaultSection(defaultSection);
-                    pendingDefaultSectionTimerRef.current = null;
-                }, 240);
-            });
+            onOpenDefaultSection(defaultSection);
         }
     };
 
@@ -1023,6 +998,7 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                                         const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
                                         return (
                                             <button
+                                                type="button"
                                                 key={section}
                                                 onClick={() => onSelectSection(section, group.label)}
                                                 data-ui-lag-role="settings-section"
@@ -1231,12 +1207,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     );
 
     const changeActiveSection = (section: ActiveSection) => {
-        startTransition(() => {
-            if (section !== 'currencies') {
-                setEmbeddedCurrencyBuilderOpen(false);
-            }
-            setActiveSection(section);
-        });
+        if (section !== 'currencies') {
+            setEmbeddedCurrencyBuilderOpen(false);
+        }
+        setActiveSection(section);
     };
 
     const selectSettingsSectionFromMenu = (section: SettingsMenuSection, groupLabel?: string) => {
