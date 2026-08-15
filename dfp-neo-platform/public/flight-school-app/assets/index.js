@@ -83553,65 +83553,27 @@ const SettingsNavigationSidebar = React.memo(({
 }) => {
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
   const [pendingSection, setPendingSection] = reactExports.useState(null);
-  const groupElementsRef = reactExports.useRef(/* @__PURE__ */ new Map());
-  const previousGroupTopsRef = reactExports.useRef(/* @__PURE__ */ new Map());
-  const groupAnimationsRef = reactExports.useRef(/* @__PURE__ */ new Map());
   reactExports.useEffect(() => {
     if (pendingSection && activeSection === pendingSection) {
       setPendingSection(null);
     }
   }, [activeSection, pendingSection]);
-  const captureGroupPositions = () => {
-    previousGroupTopsRef.current = new Map(
-      Array.from(groupElementsRef.current.entries()).map(([label, element]) => [
-        label,
-        element.getBoundingClientRect().top
-      ])
-    );
-  };
-  reactExports.useLayoutEffect(() => {
-    const previousTops = previousGroupTopsRef.current;
-    if (previousTops.size === 0) return;
-    groupElementsRef.current.forEach((element, label) => {
-      const previousTop = previousTops.get(label);
-      if (previousTop === void 0) return;
-      const deltaY = previousTop - element.getBoundingClientRect().top;
-      if (Math.abs(deltaY) < 0.5) return;
-      groupAnimationsRef.current.get(label)?.cancel();
-      const animation = element.animate(
-        [
-          { transform: `translateY(${deltaY}px)` },
-          { transform: "translateY(0)" }
-        ],
-        { duration: 150, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
-      );
-      groupAnimationsRef.current.set(label, animation);
-      animation.addEventListener("finish", () => {
-        if (groupAnimationsRef.current.get(label) === animation) {
-          groupAnimationsRef.current.delete(label);
-        }
-      }, { once: true });
-    });
-    previousGroupTopsRef.current = /* @__PURE__ */ new Map();
-  }, [expandedGroups, isSearchActive]);
-  reactExports.useEffect(() => () => {
-    groupAnimationsRef.current.forEach((animation) => animation.cancel());
-    groupAnimationsRef.current.clear();
-  }, []);
   const openSettingsGroup = (group) => {
     const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
     const isOpen = expandedGroups[group.label] === true;
     if (isOpen) {
-      captureGroupPositions();
-      setPendingSection(null);
-      setExpandedGroups((previous) => ({ ...previous, [group.label]: false }));
+      reactDomExports.flushSync(() => {
+        setPendingSection(null);
+        setExpandedGroups((previous) => ({ ...previous, [group.label]: false }));
+      });
       return;
     }
-    captureGroupPositions();
-    setExpandedGroups({ [group.label]: true });
+    const defaultSection = !groupActive ? getDefaultSectionForVisibleGroup(group) : null;
+    reactDomExports.flushSync(() => {
+      setExpandedGroups({ [group.label]: true });
+      if (defaultSection) setPendingSection(defaultSection);
+    });
     if (!groupActive) {
-      const defaultSection = getDefaultSectionForVisibleGroup(group);
-      setPendingSection(defaultSection);
       React.startTransition(() => onOpenDefaultSection(defaultSection));
     }
   };
@@ -83632,22 +83594,13 @@ const SettingsNavigationSidebar = React.memo(({
         }
       )
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[30px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group, groupIndex) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[30px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
       const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
       const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
-      const submenuHeight = Math.min(860, group.visibleSections.length * 37 + 3);
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
-          ref: (element) => {
-            if (element) groupElementsRef.current.set(group.label, element);
-            else groupElementsRef.current.delete(group.label);
-          },
-          className: "relative w-[175px]",
-          style: {
-            height: `${45 + (showSubmenu ? submenuHeight : 0)}px`,
-            zIndex: visibleSettingGroups.length - groupIndex + 1
-          },
+          className: "w-[175px]",
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
@@ -83674,24 +83627,11 @@ const SettingsNavigationSidebar = React.memo(({
                 ]
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
+            showSubmenu && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "div",
               {
                 id: getSettingsGroupId(group.label),
-                className: "absolute left-0 top-[45px] overflow-hidden will-change-[clip-path,opacity,transform]",
-                style: {
-                  width: "175px",
-                  height: `${submenuHeight}px`,
-                  clipPath: showSubmenu ? "inset(0 0 0 0)" : "inset(0 0 100% 0)",
-                  opacity: showSubmenu ? 1 : 0,
-                  transform: showSubmenu ? "translateY(0)" : "translateY(-4px)",
-                  pointerEvents: showSubmenu ? "auto" : "none",
-                  transition: [
-                    "clip-path 210ms cubic-bezier(0.22, 1, 0.36, 1)",
-                    "opacity 210ms ease-out",
-                    "transform 210ms cubic-bezier(0.22, 1, 0.36, 1)"
-                  ].join(", ")
-                },
+                className: "w-[175px] overflow-hidden",
                 children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
                   const sectionActive = (pendingSection || activeSection) === section;
                   const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
