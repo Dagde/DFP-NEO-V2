@@ -896,17 +896,11 @@ interface SettingsNavigationSidebarProps {
     isSearchActive: boolean;
     hasSettingsMatches: boolean;
     onSelectSection: (section: SettingsMenuSection, groupLabel?: string) => void;
-    onOpenDefaultSection: (section: ActiveSection) => void;
     getSearchContextSnippet: (section: SettingsMenuSection, groupLabel: string) => { before: string; match: string; after: string } | null;
     getSectionLabel: (section: SettingsMenuSection) => string;
 }
 
 const getSettingsGroupId = (label: string) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-
-const getDefaultSectionForVisibleGroup = (group: VisibleSettingGroup): SettingsMenuSection => {
-    if (group.visibleSections.includes(group.defaultSection)) return group.defaultSection;
-    return group.visibleSections[0] as SettingsMenuSection;
-};
 
 const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = React.memo(({
     activeSection,
@@ -916,7 +910,6 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
     isSearchActive,
     hasSettingsMatches,
     onSelectSection,
-    onOpenDefaultSection,
     getSearchContextSnippet,
     getSectionLabel,
 }) => {
@@ -930,25 +923,13 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
     }, [activeSection, pendingSection]);
 
     const openSettingsGroup = (group: VisibleSettingGroup) => {
-        const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
         const isOpen = expandedGroups[group.label] === true;
-
-        if (isOpen) {
-            flushSync(() => {
-                setPendingSection(null);
-                setExpandedGroups(previous => ({ ...previous, [group.label]: false }));
-            });
-            return;
-        }
-
-        const defaultSection = !groupActive ? getDefaultSectionForVisibleGroup(group) : null;
         flushSync(() => {
-            setExpandedGroups({ [group.label]: true });
-            if (defaultSection) setPendingSection(defaultSection);
+            setPendingSection(null);
+            setExpandedGroups(previous => isOpen
+                ? { ...previous, [group.label]: false }
+                : { [group.label]: true });
         });
-        if (!groupActive) {
-            React.startTransition(() => onOpenDefaultSection(defaultSection as SettingsMenuSection));
-        }
     };
 
     return (
@@ -1012,7 +993,7 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                                                 key={section}
                                                 onClick={() => {
                                                     setPendingSection(section);
-                                                    React.startTransition(() => onSelectSection(section, group.label));
+                                                    onSelectSection(section, group.label);
                                                 }}
                                                 data-ui-lag-role="settings-section"
                                                 data-settings-group={group.label}
@@ -1176,7 +1157,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 }
             }
         } catch (e) { /* ignore */ }
-        return 'platform-configuration-health';
+        return 'home';
     });
     const { isFrozen } = useSystemFreeze();
     const [scoringMatrixTab, setScoringMatrixTab] = useState<ScoringMatrixTab>(() => {
@@ -1739,7 +1720,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 isSearchActive={isSearchActive}
                 hasSettingsMatches={hasSettingsMatches}
                 onSelectSection={selectSettingsSectionFromMenu}
-                onOpenDefaultSection={changeActiveSection}
                 getSearchContextSnippet={getSearchContextSnippet}
                 getSectionLabel={getSectionLabel}
             />

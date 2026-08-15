@@ -83535,10 +83535,6 @@ const sectionGroups = [
   }
 ];
 const getSettingsGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-const getDefaultSectionForVisibleGroup = (group) => {
-  if (group.visibleSections.includes(group.defaultSection)) return group.defaultSection;
-  return group.visibleSections[0];
-};
 const SettingsNavigationSidebar = React.memo(({
   activeSection,
   settingsSearch,
@@ -83547,7 +83543,6 @@ const SettingsNavigationSidebar = React.memo(({
   isSearchActive,
   hasSettingsMatches,
   onSelectSection,
-  onOpenDefaultSection,
   getSearchContextSnippet,
   getSectionLabel
 }) => {
@@ -83559,23 +83554,11 @@ const SettingsNavigationSidebar = React.memo(({
     }
   }, [activeSection, pendingSection]);
   const openSettingsGroup = (group) => {
-    const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
     const isOpen = expandedGroups[group.label] === true;
-    if (isOpen) {
-      reactDomExports.flushSync(() => {
-        setPendingSection(null);
-        setExpandedGroups((previous) => ({ ...previous, [group.label]: false }));
-      });
-      return;
-    }
-    const defaultSection = !groupActive ? getDefaultSectionForVisibleGroup(group) : null;
     reactDomExports.flushSync(() => {
-      setExpandedGroups({ [group.label]: true });
-      if (defaultSection) setPendingSection(defaultSection);
+      setPendingSection(null);
+      setExpandedGroups((previous) => isOpen ? { ...previous, [group.label]: false } : { [group.label]: true });
     });
-    if (!groupActive) {
-      React.startTransition(() => onOpenDefaultSection(defaultSection));
-    }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
@@ -83641,7 +83624,7 @@ const SettingsNavigationSidebar = React.memo(({
                       type: "button",
                       onClick: () => {
                         setPendingSection(section);
-                        React.startTransition(() => onSelectSection(section, group.label));
+                        onSelectSection(section, group.label);
                       },
                       "data-ui-lag-role": "settings-section",
                       "data-settings-group": group.label,
@@ -83779,7 +83762,7 @@ const SettingsViewWithMenu = (props) => {
       }
     } catch (e) {
     }
-    return "platform-configuration-health";
+    return "home";
   });
   const { isFrozen } = useSystemFreeze();
   const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState(() => {
@@ -84229,7 +84212,6 @@ const SettingsViewWithMenu = (props) => {
         isSearchActive,
         hasSettingsMatches,
         onSelectSection: selectSettingsSectionFromMenu,
-        onOpenDefaultSection: changeActiveSection,
         getSearchContextSnippet,
         getSectionLabel
       }
