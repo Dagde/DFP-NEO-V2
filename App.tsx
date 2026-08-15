@@ -24255,6 +24255,9 @@ const App: React.FC = () => {
         setAuthSessionToken('');
         setCurrentUserName('Bloggs, Joe');
         setSessionUser(null);
+        if (typeof window !== 'undefined') {
+            window.location.assign('https://dfp-neo.com/');
+        }
     };
 
     // Session user info (populated from auth)

@@ -505,17 +505,6 @@ function pushAuthDiag(stage, details = {}) {
   } catch {
   }
 }
-function downloadJsonFile$2(filename, payload) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
 async function checkSession(token) {
   const startedAt = performance.now();
   pushAuthDiag("auth:session-check:start", {
@@ -606,7 +595,6 @@ const LoginModal = ({ onLoginSuccess }) => {
   const [userId, setUserId] = reactExports.useState("");
   const [password, setPassword] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
-  const [lastLoginDiagnostic, setLastLoginDiagnostic] = reactExports.useState(null);
   const [loading, setLoading] = reactExports.useState(false);
   const [showForgotPassword, setShowForgotPassword] = reactExports.useState(false);
   const [forgotUserId, setForgotUserId] = reactExports.useState("");
@@ -615,7 +603,6 @@ const LoginModal = ({ onLoginSuccess }) => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-    setLastLoginDiagnostic(null);
     setLoading(true);
     try {
       const result = await loginUser(userId.trim(), password);
@@ -624,38 +611,9 @@ const LoginModal = ({ onLoginSuccess }) => {
       onLoginSuccess(result.user, result.sessionToken);
     } catch (err) {
       setError(err.message || "Login failed. Please check your credentials.");
-      setLastLoginDiagnostic({
-        generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        source: "login-screen",
-        userIdAttempt: userId.trim(),
-        serverDiagnostic: err?.diagnostic || null,
-        serverResponse: err?.response ? {
-          error: err.response.error || null,
-          message: err.response.message || null
-        } : null
-      });
     } finally {
       setLoading(false);
     }
-  };
-  const handleDownloadLoginDiagnostic = () => {
-    let browserTrace = [];
-    try {
-      const stored = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
-      browserTrace = Array.isArray(stored) ? stored : [];
-    } catch {
-      browserTrace = [];
-    }
-    const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    downloadJsonFile$2(`dfp-login-activation-diagnostics_${timestamp}.json`, {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      source: "login-screen",
-      currentUserIdAttempt: userId.trim(),
-      currentPasswordLength: password.length,
-      lastLoginDiagnostic,
-      browserTrace: browserTrace.slice(-80),
-      note: "This diagnostic intentionally excludes the supplied password text."
-    });
   };
   const handleForgotPassword = async (e) => {
     e.preventDefault();
@@ -695,7 +653,7 @@ const LoginModal = ({ onLoginSuccess }) => {
             type: "text",
             value: userId,
             onChange: (e) => setUserId(e.target.value),
-            placeholder: "e.g. user.name",
+            placeholder: "Enter your User ID",
             className: "w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500",
             style: { background: "rgba(255,255,255,0.05)" },
             autoComplete: "username",
@@ -724,15 +682,6 @@ const LoginModal = ({ onLoginSuccess }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-red-400 flex-shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-red-300", children: error })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: handleDownloadLoginDiagnostic,
-          className: "w-full rounded border border-amber-500/50 bg-amber-900/30 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-800/50",
-          children: "Download Login Diagnostics"
-        }
-      ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
@@ -771,7 +720,7 @@ const LoginModal = ({ onLoginSuccess }) => {
             type: "text",
             value: forgotUserId,
             onChange: (e) => setForgotUserId(e.target.value),
-            placeholder: "e.g. user.name",
+            placeholder: "Enter your User ID",
             className: "w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500",
             style: { background: "rgba(255,255,255,0.05)" },
             autoFocus: true,
@@ -112915,6 +112864,9 @@ const App = () => {
     setAuthSessionToken("");
     setCurrentUserName("Bloggs, Joe");
     setSessionUser(null);
+    if (typeof window !== "undefined") {
+      window.location.assign("https://dfp-neo.com/");
+    }
   };
   const [sessionUser, setSessionUser] = reactExports.useState(null);
   const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
