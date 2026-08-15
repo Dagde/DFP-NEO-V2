@@ -843,7 +843,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
     String(pool?.id || pool?.code || pool?.name || '').trim()
   );
   const getResourcePoolSettingsLink = (pool?: any, suffix = ''): PlatformConfigSaveBlocker['link'] => ({
-    label: 'Settings -> Platform & Deployment -> DFP Resource Rows',
+    label: 'Settings -> Resources & Configuration -> DFP Resource Rows',
     target: {
       section: 'platform-dfp-resource-rows',
       label: 'DFP Resource Rows',
@@ -855,7 +855,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
     return {
       message: `Save blocked: the aircraft type "${describeAircraftType(incompleteAircraftType)}" needs both Code and Name. Open`,
       link: {
-        label: 'Settings -> Platform & Deployment -> Aircraft Setup',
+        label: 'Settings -> Resources & Configuration -> Aircraft Setup',
         target: {
           section: 'platform-aircraft-setup',
           label: 'Aircraft Setup',
@@ -1658,28 +1658,28 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
 const getDefaultConfigurationHealthRemediation = (area: string, title: string): string => {
   const lowerTitle = title.toLowerCase();
   if (area === 'Organisation') {
-    return 'Open Settings → Platform & Deployment → Organisation, Bases & Areas and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.';
+    return 'Open Settings → Organisation & Operations → Organisation, Bases & Areas and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.';
   }
   if (area === 'Locations') {
     if (lowerTitle.includes('organisation')) {
-      return 'Open Settings → Platform & Deployment → Organisation, Bases & Areas, then assign the location to an active organisation or reactivate the referenced organisation.';
+      return 'Open Settings → Organisation & Operations → Organisation, Bases & Areas, then assign the location to an active organisation or reactivate the referenced organisation.';
     }
-    return 'Open Settings → Platform & Deployment → Organisation, Bases & Areas, then create or reactivate the location and at least one unit at that location.';
+    return 'Open Settings → Organisation & Operations → Organisation, Bases & Areas, then create or reactivate the location and at least one unit at that location.';
   }
   if (area === 'Units') {
-    return 'Open Settings → Platform & Deployment → Units & Ownership and assign the unit to an active location, or reactivate the correct location before saving.';
+    return 'Open Settings → Organisation & Operations → Units & Ownership and assign the unit to an active location, or reactivate the correct location before saving.';
   }
   if (area === 'Modules') {
-    return 'Open Settings → Platform & Deployment → Unit Features & Modules and enable the required app areas for that unit, or deactivate unused modules if they are not required.';
+    return 'Open Settings → Resources & Configuration → Unit Features & Modules and enable the required app areas for that unit, or deactivate unused modules if they are not required.';
   }
   if (area === 'Aircraft Setup') {
-    return 'Open Settings -> Platform & Deployment -> Aircraft Setup and correct aircraft code, name, category, cruise planning values, crew seats or role eligibility.';
+    return 'Open Settings -> Resources & Configuration -> Aircraft Setup and correct aircraft code, name, category, cruise planning values, crew seats or role eligibility.';
   }
   if (area === 'DFP Resource Rows' || area === 'Resource Pools' || area === 'Aircraft & Resource Pools' || area === 'Aircraft Types & DFP Resource Rows') {
     if (lowerTitle.includes('no usable resources')) {
-      return 'Open Settings -> Platform & Deployment -> DFP Resource Rows, enter non-zero row counts such as aircraft, simulator, procedural trainer, standby or ground, then save.';
+      return 'Open Settings -> Resources & Configuration -> DFP Resource Rows, enter non-zero row counts such as aircraft, simulator, procedural trainer, standby or ground, then save.';
     }
-    return 'Open Settings -> Platform & Deployment -> DFP Resource Rows and correct the location, unit, aircraft type and DFP row quantities so they match active platform records.';
+    return 'Open Settings -> Resources & Configuration -> DFP Resource Rows and correct the location, unit, aircraft type and DFP row quantities so they match active platform records.';
   }
   if (area === 'User Access') {
     if (lowerTitle.includes('no permission profile')) {
@@ -1695,12 +1695,12 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
   }
   if (area === 'Licensing') {
     if (lowerTitle.includes('expired')) {
-      return 'Open Settings → Platform & Deployment → Licensing & Deployment, enter a current valid-until date or install a renewed licence file/key, then save.';
+      return 'Open Settings → Deployment & Security → Licensing & Deployment, enter a current valid-until date or install a renewed licence file/key, then save.';
     }
-    return 'Open Settings → Platform & Deployment → Licensing & Deployment and add, activate or complete the licence record. For a perpetual licence, record that deliberately in the licence notes.';
+    return 'Open Settings → Deployment & Security → Licensing & Deployment and add, activate or complete the licence record. For a perpetual licence, record that deliberately in the licence notes.';
   }
   if (area === 'Deployment Readiness') {
-    return 'Open Settings → Platform & Deployment → Deployment Readiness and complete the missing checklist fields, especially local database, authentication, file storage, licence and update process items.';
+    return 'Open Settings → Deployment & Security → Deployment Readiness and complete the missing checklist fields, especially local database, authentication, file storage, licence and update process items.';
   }
   if (area === 'Operational Runbook') {
     return 'Open Settings → Records & Data → Operational Runbook and complete support, backup, restore, update, audit and accreditation fields using the help icon examples beside each section.';
@@ -1959,7 +1959,7 @@ const buildConfigurationHealth = (
           `${unitCode} will use shared resource capacity`,
           `${unitCode} has no unit-specific DFP Resource Rows. It can still schedule using shared or location capacity where that is intended, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
-          'Open Settings -> Platform & Deployment -> DFP Resource Rows and add or enable unit-specific rows if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.',
+          'Open Settings -> Resources & Configuration -> DFP Resource Rows and add or enable unit-specific rows if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.',
           { focusSubsectionId: 'platform-dfp-resource-rows' }
         );
       }
@@ -2040,7 +2040,7 @@ const buildConfigurationHealth = (
           `${poolName} duplicates unit aircraft rows`,
           'Only one active DFP Resource Rows record is allowed for each unit and aircraft type.',
           `pool-${poolName}-duplicate-unit-aircraft`,
-          'Open Settings -> Platform & Deployment -> DFP Resource Rows, keep one active row for this unit and aircraft type, then save.',
+          'Open Settings -> Resources & Configuration -> DFP Resource Rows, keep one active row for this unit and aircraft type, then save.',
           { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
         );
       } else {
@@ -2055,7 +2055,7 @@ const buildConfigurationHealth = (
             `${unitCode} has DFP Resource Rows for more than one aircraft type`,
             'NEO Build supports one aircraft type per unit DFP. Create a separate unit for a second aircraft type.',
             `unit-${unitCode}-multiple-dfp-aircraft-types`,
-            'Open Settings -> Platform & Deployment -> DFP Resource Rows, keep one aircraft type for this unit, or create a separate unit for the second aircraft type.',
+            'Open Settings -> Resources & Configuration -> DFP Resource Rows, keep one aircraft type for this unit, or create a separate unit for the second aircraft type.',
             { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
           );
         }
@@ -2082,7 +2082,7 @@ const buildConfigurationHealth = (
       'Combined-unit records need per-unit copies',
       `${missingCompositeClones} unit-scoped reusable directed task, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      `Open Settings → Platform & Deployment → Directed Task Setups for full reusable directed tasks, Settings → Crew Composition → Crew Composition for alternate crew, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
+      `Open Settings → Organisation & Operations → Directed Task Setups for full reusable directed tasks, Settings → Crew Composition → Crew Composition for alternate crew, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
       { section: 'standard-missions', label: 'Directed Task Setups', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
@@ -8523,7 +8523,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the short directed task names available for each operational model. This section is for names only. If the task needs aircraft, crew, timing or callsign details, use Settings → Platform & Deployment → Directed Task Setups.
+            Set the short directed task names available for each operational model. This section is for names only. If the task needs aircraft, crew, timing or callsign details, use Settings → Organisation & Operations → Directed Task Setups.
             Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">

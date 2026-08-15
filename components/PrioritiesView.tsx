@@ -609,7 +609,7 @@ const TaskingProfileInput: React.FC<{
   const suggestions = getTaskProfileSuggestions(value, taskProfiles);
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || '').trim()).length;
   const showSuggestions = isOpen;
-  const settingsPathText = 'Settings → Platform & Deployment → Directed Task Lists';
+  const settingsPathText = 'Settings → Organisation & Operations → Directed Task Lists';
   const settingsLinkClass = 'inline-flex rounded border border-cyan-500/20 bg-cyan-500/5 px-1.5 py-0.5 font-semibold text-slate-300 underline decoration-cyan-500/25 underline-offset-2 transition hover:border-cyan-400/30 hover:bg-cyan-500/10 hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60';
   const settingsPathLink = onOpenDirectedTaskLists ? (
     <button
@@ -776,7 +776,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       }}
       className="font-semibold text-slate-300 underline decoration-cyan-500/35 underline-offset-2 transition hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60"
     >
-      Settings → Platform & Deployment → Directed Task Lists
+      Settings → Organisation & Operations → Directed Task Lists
     </button>
   );
   const toggleTaskingExpanded = (id: string) => {

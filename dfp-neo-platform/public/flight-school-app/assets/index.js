@@ -39681,7 +39681,7 @@ const FlightTrackingWidget = ({ school, locationName, locationProfile }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-200/75", children: "Public ADS-B map embeds are blocked by Settings → Records & Data → Data Sources." })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col items-center justify-center p-6 text-center", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "Location coordinates required" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-200/75", children: "Add latitude and longitude in Settings → Platform & Deployment → Organisation, Bases & Areas." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-200/75", children: "Add latitude and longitude in Settings → Organisation & Operations → Organisation, Bases & Areas." })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-2 gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -41402,7 +41402,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
   const suggestions = getTaskProfileSuggestions(value, taskProfiles);
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || "").trim()).length;
   const showSuggestions = isOpen;
-  const settingsPathText = "Settings → Platform & Deployment → Directed Task Lists";
+  const settingsPathText = "Settings → Organisation & Operations → Directed Task Lists";
   const settingsLinkClass = "inline-flex rounded border border-cyan-500/20 bg-cyan-500/5 px-1.5 py-0.5 font-semibold text-slate-300 underline decoration-cyan-500/25 underline-offset-2 transition hover:border-cyan-400/30 hover:bg-cyan-500/10 hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60";
   const settingsPathLink = onOpenDirectedTaskLists ? /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
@@ -41528,7 +41528,7 @@ const TaskingRequestTable = ({
         openDirectedTaskSettings();
       },
       className: "font-semibold text-slate-300 underline decoration-cyan-500/35 underline-offset-2 transition hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60",
-      children: "Settings → Platform & Deployment → Directed Task Lists"
+      children: "Settings → Organisation & Operations → Directed Task Lists"
     }
   );
   const toggleTaskingExpanded = (id) => {
@@ -70909,7 +70909,7 @@ const getPlatformConfigSaveBlocker = (config) => {
   };
   const getResourcePoolFocusCode = (pool) => String(pool?.id || pool?.code || pool?.name || "").trim();
   const getResourcePoolSettingsLink = (pool, suffix = "") => ({
-    label: "Settings -> Platform & Deployment -> DFP Resource Rows",
+    label: "Settings -> Resources & Configuration -> DFP Resource Rows",
     target: {
       section: "platform-dfp-resource-rows",
       label: "DFP Resource Rows",
@@ -70921,7 +70921,7 @@ const getPlatformConfigSaveBlocker = (config) => {
     return {
       message: `Save blocked: the aircraft type "${describeAircraftType(incompleteAircraftType)}" needs both Code and Name. Open`,
       link: {
-        label: "Settings -> Platform & Deployment -> Aircraft Setup",
+        label: "Settings -> Resources & Configuration -> Aircraft Setup",
         target: {
           section: "platform-aircraft-setup",
           label: "Aircraft Setup",
@@ -71545,28 +71545,28 @@ const getConfigurationHealthSettingsLink = (area, title) => {
 const getDefaultConfigurationHealthRemediation = (area, title) => {
   const lowerTitle = title.toLowerCase();
   if (area === "Organisation") {
-    return "Open Settings → Platform & Deployment → Organisation, Bases & Areas and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.";
+    return "Open Settings → Organisation & Operations → Organisation, Bases & Areas and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.";
   }
   if (area === "Locations") {
     if (lowerTitle.includes("organisation")) {
-      return "Open Settings → Platform & Deployment → Organisation, Bases & Areas, then assign the location to an active organisation or reactivate the referenced organisation.";
+      return "Open Settings → Organisation & Operations → Organisation, Bases & Areas, then assign the location to an active organisation or reactivate the referenced organisation.";
     }
-    return "Open Settings → Platform & Deployment → Organisation, Bases & Areas, then create or reactivate the location and at least one unit at that location.";
+    return "Open Settings → Organisation & Operations → Organisation, Bases & Areas, then create or reactivate the location and at least one unit at that location.";
   }
   if (area === "Units") {
-    return "Open Settings → Platform & Deployment → Units & Ownership and assign the unit to an active location, or reactivate the correct location before saving.";
+    return "Open Settings → Organisation & Operations → Units & Ownership and assign the unit to an active location, or reactivate the correct location before saving.";
   }
   if (area === "Modules") {
-    return "Open Settings → Platform & Deployment → Unit Features & Modules and enable the required app areas for that unit, or deactivate unused modules if they are not required.";
+    return "Open Settings → Resources & Configuration → Unit Features & Modules and enable the required app areas for that unit, or deactivate unused modules if they are not required.";
   }
   if (area === "Aircraft Setup") {
-    return "Open Settings -> Platform & Deployment -> Aircraft Setup and correct aircraft code, name, category, cruise planning values, crew seats or role eligibility.";
+    return "Open Settings -> Resources & Configuration -> Aircraft Setup and correct aircraft code, name, category, cruise planning values, crew seats or role eligibility.";
   }
   if (area === "DFP Resource Rows" || area === "Resource Pools" || area === "Aircraft & Resource Pools" || area === "Aircraft Types & DFP Resource Rows") {
     if (lowerTitle.includes("no usable resources")) {
-      return "Open Settings -> Platform & Deployment -> DFP Resource Rows, enter non-zero row counts such as aircraft, simulator, procedural trainer, standby or ground, then save.";
+      return "Open Settings -> Resources & Configuration -> DFP Resource Rows, enter non-zero row counts such as aircraft, simulator, procedural trainer, standby or ground, then save.";
     }
-    return "Open Settings -> Platform & Deployment -> DFP Resource Rows and correct the location, unit, aircraft type and DFP row quantities so they match active platform records.";
+    return "Open Settings -> Resources & Configuration -> DFP Resource Rows and correct the location, unit, aircraft type and DFP row quantities so they match active platform records.";
   }
   if (area === "User Access") {
     if (lowerTitle.includes("no permission profile")) {
@@ -71582,12 +71582,12 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
   }
   if (area === "Licensing") {
     if (lowerTitle.includes("expired")) {
-      return "Open Settings → Platform & Deployment → Licensing & Deployment, enter a current valid-until date or install a renewed licence file/key, then save.";
+      return "Open Settings → Deployment & Security → Licensing & Deployment, enter a current valid-until date or install a renewed licence file/key, then save.";
     }
-    return "Open Settings → Platform & Deployment → Licensing & Deployment and add, activate or complete the licence record. For a perpetual licence, record that deliberately in the licence notes.";
+    return "Open Settings → Deployment & Security → Licensing & Deployment and add, activate or complete the licence record. For a perpetual licence, record that deliberately in the licence notes.";
   }
   if (area === "Deployment Readiness") {
-    return "Open Settings → Platform & Deployment → Deployment Readiness and complete the missing checklist fields, especially local database, authentication, file storage, licence and update process items.";
+    return "Open Settings → Deployment & Security → Deployment Readiness and complete the missing checklist fields, especially local database, authentication, file storage, licence and update process items.";
   }
   if (area === "Operational Runbook") {
     return "Open Settings → Records & Data → Operational Runbook and complete support, backup, restore, update, audit and accreditation fields using the help icon examples beside each section.";
@@ -71775,7 +71775,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
           `${unitCode} will use shared resource capacity`,
           `${unitCode} has no unit-specific DFP Resource Rows. It can still schedule using shared or location capacity where that is intended, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
-          "Open Settings -> Platform & Deployment -> DFP Resource Rows and add or enable unit-specific rows if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.",
+          "Open Settings -> Resources & Configuration -> DFP Resource Rows and add or enable unit-specific rows if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.",
           { focusSubsectionId: "platform-dfp-resource-rows" }
         );
       }
@@ -71850,7 +71850,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
           `${poolName} duplicates unit aircraft rows`,
           "Only one active DFP Resource Rows record is allowed for each unit and aircraft type.",
           `pool-${poolName}-duplicate-unit-aircraft`,
-          "Open Settings -> Platform & Deployment -> DFP Resource Rows, keep one active row for this unit and aircraft type, then save.",
+          "Open Settings -> Resources & Configuration -> DFP Resource Rows, keep one active row for this unit and aircraft type, then save.",
           { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
         );
       } else {
@@ -71865,7 +71865,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
             `${unitCode} has DFP Resource Rows for more than one aircraft type`,
             "NEO Build supports one aircraft type per unit DFP. Create a separate unit for a second aircraft type.",
             `unit-${unitCode}-multiple-dfp-aircraft-types`,
-            "Open Settings -> Platform & Deployment -> DFP Resource Rows, keep one aircraft type for this unit, or create a separate unit for the second aircraft type.",
+            "Open Settings -> Resources & Configuration -> DFP Resource Rows, keep one aircraft type for this unit, or create a separate unit for the second aircraft type.",
             { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
           );
         }
@@ -71890,7 +71890,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "Combined-unit records need per-unit copies",
       `${missingCompositeClones} unit-scoped reusable directed task, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      `Open Settings → Platform & Deployment → Directed Task Setups for full reusable directed tasks, Settings → Crew Composition → Crew Composition for alternate crew, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
+      `Open Settings → Organisation & Operations → Directed Task Setups for full reusable directed tasks, Settings → Crew Composition → Crew Composition for alternate crew, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
       { section: "standard-missions", label: "Directed Task Setups", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
@@ -77173,7 +77173,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the short directed task names available for each operational model. This section is for names only. If the task needs aircraft, crew, timing or callsign details, use Settings → Platform & Deployment → Directed Task Setups. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the short directed task names available for each operational model. This section is for names only. If the task needs aircraft, crew, timing or callsign details, use Settings → Organisation & Operations → Directed Task Setups. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-directed-task-list-${option.value}`, className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
@@ -83488,9 +83488,9 @@ const sectionColors = {
 };
 const sectionGroups = [
   {
-    label: "Platform & Deployment",
-    shortLabel: "Platform",
-    description: "Customer, bases, units, aircraft pools, enabled features, licensing and deployment readiness.",
+    label: "Organisation & Operations",
+    shortLabel: "Organisation",
+    description: "Configuration health, organisations, locations, units, directed tasks and Master LMP access.",
     accent: "cyan",
     defaultSection: "platform-configuration-health",
     sections: [
@@ -83499,17 +83499,35 @@ const sectionGroups = [
       "platform-units",
       "platform-task-profiles",
       "standard-missions",
-      "platform-master-lmp-access",
+      "platform-master-lmp-access"
+    ]
+  },
+  {
+    label: "Resources & Configuration",
+    shortLabel: "Resources",
+    description: "Aircraft, DFP resource rows, unit features, terminology, resource sharing and app appearance.",
+    accent: "cyan",
+    defaultSection: "platform-aircraft-setup",
+    sections: [
       "platform-aircraft-setup",
       "platform-dfp-resource-rows",
       "platform-unit-modules",
-      "platform-settings-visibility",
-      "platform-deployment-readiness",
-      "email-activation",
-      "platform-licensing",
       "platform-rank-terminology",
       "organisation",
       "appearance"
+    ]
+  },
+  {
+    label: "Deployment & Security",
+    shortLabel: "Deployment",
+    description: "Settings visibility, deployment readiness, account email and licensing controls.",
+    accent: "cyan",
+    defaultSection: "platform-settings-visibility",
+    sections: [
+      "platform-settings-visibility",
+      "platform-deployment-readiness",
+      "email-activation",
+      "platform-licensing"
     ]
   },
   {
@@ -95110,7 +95128,7 @@ const DfpSidePanelTimeline = ({
     const dep = getAssistAirfieldByCode(depCode);
     const arr = getAssistAirfieldByCode(arrCode);
     if (!dep || !arr) return { status: "error", message: "Enter valid departure and arrival ICAO/IATA codes." };
-    if (!activeAircraftTasKtas || activeAircraftTasKtas <= 0) return { status: "error", message: "Aircraft TAS is missing. Add TAS in Settings -> Platform & Deployment -> Aircraft Setup." };
+    if (!activeAircraftTasKtas || activeAircraftTasKtas <= 0) return { status: "error", message: "Aircraft TAS is missing. Add TAS in Settings -> Resources & Configuration -> Aircraft Setup." };
     const route = calculateGreatCircleRoute(dep, arr);
     const wind = getNearestAssistWindProfile((dep.lat + arr.lat) / 2, (dep.lon + arr.lon) / 2, activeAircraftCruiseFlightLevel);
     if (!wind) return { status: "error", message: "Wind profile data is unavailable." };
@@ -96273,7 +96291,7 @@ const DfpSidePanelTimeline = ({
                 step: 10,
                 value: activeAircraftCruiseFlightLevel,
                 readOnly: true,
-                title: "Set this in Settings -> Platform & Deployment -> Aircraft Setup -> Cruise Level (FL).",
+                title: "Set this in Settings -> Resources & Configuration -> Aircraft Setup -> Cruise Level (FL).",
                 className: "mt-1 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-300"
               }
             )
@@ -101896,7 +101914,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     if (!picQualification) {
       diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
-      diag.conclusion = ["Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings → Platform & Deployment → Rank, Terminology & Labels → Personnel Qualifications."];
+      diag.conclusion = ["Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings → Resources & Configuration → Rank, Terminology & Labels → Personnel Qualifications."];
       saveNeoBuildDiag("final");
       return generatedEvents;
     }
@@ -120758,10 +120776,10 @@ ${error instanceof Error ? error.message : String(error)}`,
     const requestedAcademicLmpType = data.academicLmpType || "";
     const lmpAccessContext = getMasterLmpAccessContextForUnit(traineeUnitCode);
     if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, "Assign")) {
-      throw new Error(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
+      throw new Error(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
     }
     if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
-      throw new Error(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
+      throw new Error(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
     }
     const dbId = data.id;
     logRoutineAppDebug("📝 [APP] DB ID:", dbId);
@@ -121559,11 +121577,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     const courseUnitCode = data.unit || activeUnitCode;
     const lmpAccessContext = getMasterLmpAccessContextForUnit(courseUnitCode);
     if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, "Assign")) {
-      setSuccessMessage(`Save failed: Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
+      setSuccessMessage(`Save failed: Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
       return;
     }
     if (data.academicLmpType && !hasMasterLmpAccess(platformConfig, data.academicLmpType, lmpAccessContext, "Assign")) {
-      setSuccessMessage(`Save failed: Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || "this unit"}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
+      setSuccessMessage(`Save failed: Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || "this unit"}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
       return;
     }
     setCourses(

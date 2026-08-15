@@ -110,7 +110,7 @@ const FlightTrackingWidget: React.FC<FlightTrackingWidgetProps> = ({ school, loc
                         <div className="flex h-full flex-col items-center justify-center p-6 text-center">
                             <p className="text-sm font-semibold text-amber-300">Location coordinates required</p>
                             <p className="mt-2 text-xs text-amber-200/75">
-                                Add latitude and longitude in Settings → Platform & Deployment → Organisation, Bases & Areas.
+                                Add latitude and longitude in Settings → Organisation & Operations → Organisation, Bases & Areas.
                             </p>
                         </div>
                     )}

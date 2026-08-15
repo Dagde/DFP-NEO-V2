@@ -2179,7 +2179,7 @@ const DfpSidePanelTimeline: React.FC<{
         const dep = getAssistAirfieldByCode(depCode);
         const arr = getAssistAirfieldByCode(arrCode);
         if (!dep || !arr) return { status: 'error' as const, message: 'Enter valid departure and arrival ICAO/IATA codes.' };
-        if (!activeAircraftTasKtas || activeAircraftTasKtas <= 0) return { status: 'error' as const, message: 'Aircraft TAS is missing. Add TAS in Settings -> Platform & Deployment -> Aircraft Setup.' };
+        if (!activeAircraftTasKtas || activeAircraftTasKtas <= 0) return { status: 'error' as const, message: 'Aircraft TAS is missing. Add TAS in Settings -> Resources & Configuration -> Aircraft Setup.' };
         const route = calculateGreatCircleRoute(dep, arr);
         const wind = getNearestAssistWindProfile((dep.lat + arr.lat) / 2, (dep.lon + arr.lon) / 2, activeAircraftCruiseFlightLevel);
         if (!wind) return { status: 'error' as const, message: 'Wind profile data is unavailable.' };
@@ -3462,7 +3462,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 step={10}
                                 value={activeAircraftCruiseFlightLevel}
                                 readOnly
-                                title="Set this in Settings -> Platform & Deployment -> Aircraft Setup -> Cruise Level (FL)."
+                                title="Set this in Settings -> Resources & Configuration -> Aircraft Setup -> Cruise Level (FL)."
                                 className="mt-1 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-300"
                             />
                         </label>
@@ -10656,7 +10656,7 @@ function generateDfpInternal(
 
         if (!picQualification) {
             diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
-            diag.conclusion = ['Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings → Platform & Deployment → Rank, Terminology & Labels → Personnel Qualifications.'];
+            diag.conclusion = ['Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings → Resources & Configuration → Rank, Terminology & Labels → Personnel Qualifications.'];
             saveNeoBuildDiag('final');
             return generatedEvents;
         }
@@ -33507,10 +33507,10 @@ const App: React.FC = () => {
         const requestedAcademicLmpType = (data as any).academicLmpType || '';
         const lmpAccessContext = getMasterLmpAccessContextForUnit(traineeUnitCode);
         if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, 'Assign')) {
-            throw new Error(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || 'this unit'}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
+            throw new Error(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || 'this unit'}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
         }
         if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig, requestedAcademicLmpType, lmpAccessContext, 'Assign')) {
-            throw new Error(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || 'this unit'}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
+            throw new Error(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || 'this unit'}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
         }
 
         // If this is a DB trainee, persist changes to the database
@@ -34448,11 +34448,11 @@ const App: React.FC = () => {
         const courseUnitCode = data.unit || activeUnitCode;
         const lmpAccessContext = getMasterLmpAccessContextForUnit(courseUnitCode);
         if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, 'Assign')) {
-            setSuccessMessage(`Save failed: Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || 'this unit'}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
+            setSuccessMessage(`Save failed: Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || 'this unit'}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
             return;
         }
         if (data.academicLmpType && !hasMasterLmpAccess(platformConfig, data.academicLmpType, lmpAccessContext, 'Assign')) {
-            setSuccessMessage(`Save failed: Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || 'this unit'}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
+            setSuccessMessage(`Save failed: Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || 'this unit'}. Check Settings -> Organisation & Operations -> Master LMP Access.`);
             return;
         }
 
