@@ -22657,10 +22657,10 @@ const App: React.FC = () => {
         return `${h.toString().padStart(2, '0')}${m.toString().padStart(2, '0')}`;
     };
 
-    // Timezone offset state (in hours, e.g., +11 for AEDT)
+    // Timezone offset state (in hours, e.g., +10 for AEST)
     const [timezoneOffset, setTimezoneOffset] = useState<number>(() => {
         const saved = localStorage.getItem('timezoneOffset');
-        return saved ? parseFloat(saved) : 11; // Default to UTC+11 (AEDT)
+        return saved ? parseFloat(saved) : 10; // Default to UTC+10 (AEST); location timezones override this where available.
     });
 
     // Validation Settings State

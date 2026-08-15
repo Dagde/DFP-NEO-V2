@@ -948,6 +948,59 @@ const validateWizardTemplateFile = async (
 
 const normaliseUnitSettingsIdentifier = (value: unknown): string => String(value || '').trim().toUpperCase();
 
+const getOffsetHoursForTimezone = (timeZone: unknown, at: Date = new Date()): number | null => {
+    const cleanTimeZone = String(timeZone || '').trim();
+    if (!cleanTimeZone) return null;
+    try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: cleanTimeZone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hourCycle: 'h23',
+        }).formatToParts(at);
+        const values = new Map(parts.map((part) => [part.type, part.value]));
+        const year = Number(values.get('year'));
+        const month = Number(values.get('month'));
+        const day = Number(values.get('day'));
+        const hour = Number(values.get('hour'));
+        const minute = Number(values.get('minute'));
+        const second = Number(values.get('second'));
+        if ([year, month, day, hour, minute, second].some((value) => !Number.isFinite(value))) return null;
+
+        const timezoneAsUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+        const actualUtc = Date.UTC(
+            at.getUTCFullYear(),
+            at.getUTCMonth(),
+            at.getUTCDate(),
+            at.getUTCHours(),
+            at.getUTCMinutes(),
+            at.getUTCSeconds(),
+        );
+        return Math.round((timezoneAsUtc - actualUtc) / 60000) / 60;
+    } catch {
+        return null;
+    }
+};
+
+const locationMatchesKey = (location: any, key: string): boolean => {
+    if (!key) return false;
+    return [
+        location?.code,
+        location?.iataCode,
+        location?.icao,
+        location?.icaoCode,
+        location?.settings?.iataCode,
+        location?.settings?.icaoCode,
+        location?.settings?.legacyCode,
+        ...(Array.isArray(location?.aliases) ? location.aliases : []),
+        ...(Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []),
+    ].some((value) => normaliseUnitSettingsIdentifier(value) === key);
+};
+
 const makeWizardResourcePoolCode = (locationCode: unknown, unitCode: unknown, aircraftCode: unknown): string => {
     const parts = [locationCode, unitCode, aircraftCode]
         .map((part) => normaliseUnitSettingsIdentifier(part).replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, ''))
@@ -7229,7 +7282,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     onInitialSetupWizardActiveChange,
     formationCallsigns = [],
     buildRuleSettings,
-    timezoneOffset = 11 // Default to UTC+11
+    timezoneOffset = 10 // Default to UTC+10 (AEST); location timezone overrides this when configured.
 }) => {
     const schedulePersonnelDisplaySettings = useMemo(
         () => normalisePersonnelDisplaySettings(personnelDisplaySettingsInput || null),
@@ -7250,6 +7303,20 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [isNeoAssistPanelOpen]);
     const [resourceSlideoutFrame, setResourceSlideoutFrame] = useState<{ left: number; top: number; height: number; width: number; bottom: number } | null>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
+    const effectiveTimezoneOffset = useMemo(() => {
+        const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
+        const locations = Array.isArray(platformConfig?.locations) ? platformConfig.locations : [];
+        const cleanUnitCode = normaliseUnitSettingsIdentifier(unitCode);
+        const activeUnit = units.find((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
+        const locationKey = normaliseUnitSettingsIdentifier(locationCode || activeUnit?.locationCode);
+        const activeLocation = locations.find((location: any) => locationMatchesKey(location, locationKey));
+        const locationTimezone = activeLocation?.timezone || activeLocation?.settings?.timezone;
+        const resolvedOffset = getOffsetHoursForTimezone(locationTimezone);
+        if (resolvedOffset !== null) return resolvedOffset;
+
+        const configuredOffset = Number(activeLocation?.timezoneOffset ?? activeLocation?.settings?.timezoneOffset ?? timezoneOffset);
+        return Number.isFinite(configuredOffset) ? configuredOffset : 10;
+    }, [locationCode, platformConfig, timezoneOffset, unitCode]);
     const flightLinePoolContext = useMemo(() => {
         const cleanUnitCode = normaliseUnitSettingsIdentifier(unitCode);
         const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
@@ -7556,7 +7623,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
         const now = new Date();
-        const offsetMs = timezoneOffset * 60 * 60 * 1000;
+        const offsetMs = effectiveTimezoneOffset * 60 * 60 * 1000;
         return new Date(now.getTime() + offsetMs);
     });
     const isInitialLoad = useRef(true);
@@ -7567,7 +7634,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const updateTime = () => {
             const now = new Date();
             // Apply timezone offset
-            const offsetMs = timezoneOffset * 60 * 60 * 1000;
+            const offsetMs = effectiveTimezoneOffset * 60 * 60 * 1000;
             const adjustedTime = new Date(now.getTime() + offsetMs);
             setCurrentTime(adjustedTime);
         };
@@ -7579,7 +7646,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const interval = setInterval(updateTime, 1000);
         
         return () => clearInterval(interval);
-    }, [timezoneOffset]);
+    }, [effectiveTimezoneOffset]);
     
     const updateResourceSlideoutFrame = useCallback(() => {
         const surface = scrollContainerRef.current;
