@@ -70500,6 +70500,9 @@ const emptyConfig = {
   platformUsers: [],
   schedulingRuleSets: []
 };
+let cachedPlatformConfig = null;
+let cachedPlatformLicenseStatus = null;
+let cachedAirfieldCatalogue = null;
 const getApiBase = () => getAppApiBase();
 const fieldClass = "w-full min-w-0 rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none";
 const labelClass = "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400";
@@ -70980,6 +70983,7 @@ const getPlatformConfigSaveBlocker = (config) => {
   return null;
 };
 const notifyPlatformConfigUpdated = (config) => {
+  cachedPlatformConfig = config;
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT$1, { detail: { config } }));
 };
@@ -72057,13 +72061,13 @@ const PlatformConfigurationSettings = ({
   formationCallsigns = [],
   onUpdateFormationCallsigns
 }) => {
-  const [config, setConfig] = reactExports.useState(emptyConfig);
-  const [loading, setLoading] = reactExports.useState(true);
+  const [config, setConfig] = reactExports.useState(() => cachedPlatformConfig || emptyConfig);
+  const [loading, setLoading] = reactExports.useState(() => !cachedPlatformConfig);
   const [saving, setSaving] = reactExports.useState(false);
   const [applyingChanges, setApplyingChanges] = reactExports.useState(false);
   const [error, setError] = reactExports.useState("");
   const [errorLink, setErrorLink] = reactExports.useState(null);
-  const loadedConfigRef = reactExports.useRef(emptyConfig);
+  const loadedConfigRef = reactExports.useRef(cachedPlatformConfig || emptyConfig);
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = reactExports.useState({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = reactExports.useState({});
@@ -72088,6 +72092,7 @@ const PlatformConfigurationSettings = ({
       const rawConfig = event.detail?.config;
       const nextConfig = rawConfig && Array.isArray(rawConfig.units) ? applyDefaultUnitTraineeAvailability$1(rawConfig) : rawConfig;
       if (!nextConfig || !Array.isArray(nextConfig.units)) return;
+      cachedPlatformConfig = nextConfig;
       loadedConfigRef.current = nextConfig;
       setConfig(nextConfig);
     };
@@ -72103,13 +72108,13 @@ const PlatformConfigurationSettings = ({
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = reactExports.useState(false);
   const [, setRankTerminologyDirty] = reactExports.useState(false);
   const [trainingReportTemplateUnlocked, setTrainingReportTemplateUnlocked] = reactExports.useState(null);
-  const [licenseStatus, setLicenseStatus] = reactExports.useState(null);
+  const [licenseStatus, setLicenseStatus] = reactExports.useState(() => cachedPlatformLicenseStatus);
   const [licenseImportText, setLicenseImportText] = reactExports.useState("");
   const [licenseImportMessage, setLicenseImportMessage] = reactExports.useState("");
   const [licenseImportError, setLicenseImportError] = reactExports.useState("");
   const [licenseActionLoading, setLicenseActionLoading] = reactExports.useState(false);
-  const [airfieldCatalogue, setAirfieldCatalogue] = reactExports.useState([]);
-  const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = reactExports.useState("idle");
+  const [airfieldCatalogue, setAirfieldCatalogue] = reactExports.useState(() => cachedAirfieldCatalogue || []);
+  const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = reactExports.useState(() => cachedAirfieldCatalogue ? "loaded" : "idle");
   const [airfieldCatalogueError, setAirfieldCatalogueError] = reactExports.useState("");
   const [organisationStructureUnlocked, setOrganisationStructureUnlocked] = reactExports.useState(false);
   const [organisationStructureImportError, setOrganisationStructureImportError] = reactExports.useState("");
@@ -72254,19 +72259,31 @@ const PlatformConfigurationSettings = ({
   reactExports.useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      setLoading(true);
       clearPlatformConfigError();
       try {
         if (isSetupTestMode()) {
+          setLoading(true);
           const nextConfig = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
           if (!cancelled) {
             setConfig(nextConfig);
             loadedConfigRef.current = nextConfig;
+            cachedPlatformConfig = nextConfig;
             const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
             setSelectedAccessUserId((current) => current || firstUserId);
           }
           return;
         }
+        if (cachedPlatformConfig) {
+          const nextConfig = cachedPlatformConfig;
+          setConfig(nextConfig);
+          loadedConfigRef.current = nextConfig;
+          if (cachedPlatformLicenseStatus) setLicenseStatus(cachedPlatformLicenseStatus);
+          const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
+          setSelectedAccessUserId((current) => current || firstUserId);
+          setLoading(false);
+          return;
+        }
+        setLoading(true);
         const [res, licenseRes] = await Promise.all([
           fetch(`${getApiBase()}/platform-config`),
           fetch(`${getApiBase()}/platform-license/status`)
@@ -72278,7 +72295,11 @@ const PlatformConfigurationSettings = ({
           const nextConfig = normaliseSettingsPlatformConfig(data);
           setConfig(nextConfig);
           loadedConfigRef.current = nextConfig;
-          if (nextLicenseStatus) setLicenseStatus(nextLicenseStatus);
+          cachedPlatformConfig = nextConfig;
+          if (nextLicenseStatus) {
+            cachedPlatformLicenseStatus = nextLicenseStatus;
+            setLicenseStatus(nextLicenseStatus);
+          }
           const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
           setSelectedAccessUserId((current) => current || firstUserId);
         }
@@ -72303,6 +72324,13 @@ const PlatformConfigurationSettings = ({
     setEditingUnitIndex((current) => current === null ? null : Math.min(Math.max(current, 0), config.units.length - 1));
   }, [config.units.length]);
   reactExports.useEffect(() => {
+    const needsAirfieldCatalogue = !sectionOnly || scrollTarget === "platform-locations" || scrollTarget === "platform-organisation-locations";
+    if (!needsAirfieldCatalogue) return void 0;
+    if (cachedAirfieldCatalogue) {
+      setAirfieldCatalogue(cachedAirfieldCatalogue);
+      setAirfieldCatalogueStatus("loaded");
+      return void 0;
+    }
     let cancelled = false;
     const loadAirfieldCatalogue = async () => {
       setAirfieldCatalogueStatus("loading");
@@ -72318,6 +72346,7 @@ const PlatformConfigurationSettings = ({
           o: Number(entry.o)
         }));
         if (!cancelled) {
+          cachedAirfieldCatalogue = entries;
           setAirfieldCatalogue(entries);
           setAirfieldCatalogueStatus("loaded");
         }
@@ -72333,7 +72362,7 @@ const PlatformConfigurationSettings = ({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [scrollTarget, sectionOnly]);
   reactExports.useEffect(() => {
     const pendingLocationId = pendingLocationScrollIdRef.current;
     if (!pendingLocationId) return;
@@ -75762,6 +75791,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     const res = await fetch(`${getApiBase()}/platform-license/status`);
     if (!res.ok) throw new Error(`Licence status failed (${res.status})`);
     const data = await res.json();
+    cachedPlatformLicenseStatus = data;
     setLicenseStatus(data);
     return data;
   };
@@ -75844,6 +75874,11 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-6 text-gray-300", children: "Loading platform configuration..." });
   }
   const visibleSectionTarget = sectionOnly ? scrollTarget || "platform-configuration-health" : null;
+  const shouldRenderSection = (sectionId) => {
+    if (!visibleSectionTarget) return true;
+    if (visibleSectionTarget === sectionId) return true;
+    return visibleSectionTarget === "platform-organisation-locations" && (sectionId === "platform-organisation" || sectionId === "platform-locations");
+  };
   const getSectionClass = (sectionId) => {
     const visibleWithLegacyTarget = visibleSectionTarget === "platform-organisation-locations" && (sectionId === "platform-organisation" || sectionId === "platform-locations");
     return `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId && !visibleWithLegacyTarget ? " hidden" : ""}`;
@@ -76415,7 +76450,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       !canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Read-only. Super Admin or Admin permission is required to change platform configuration." }),
       renderPlatformConfigError()
     ] }) : null,
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-configuration-health", className: getSectionClass("platform-configuration-health"), children: [
+    shouldRenderSection("platform-configuration-health") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-configuration-health", className: getSectionClass("platform-configuration-health"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -76486,7 +76521,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         }) })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-organisation", className: getSectionClass("platform-organisation"), children: [
+    shouldRenderSection("platform-organisation") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-organisation", className: getSectionClass("platform-organisation"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -76642,7 +76677,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-locations", className: getSectionClass("platform-locations"), children: [
+    shouldRenderSection("platform-locations") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-locations", className: getSectionClass("platform-locations"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -76832,7 +76867,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-units", className: getSectionClass("platform-units"), children: [
+    shouldRenderSection("platform-units") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-units", className: getSectionClass("platform-units"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -77112,7 +77147,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         }) }) })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-task-profiles", className: getSectionClass("platform-task-profiles"), children: [
+    shouldRenderSection("platform-task-profiles") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-task-profiles", className: getSectionClass("platform-task-profiles"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -77200,7 +77235,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-master-lmp-access", className: getSectionClass("platform-master-lmp-access"), children: [
+    shouldRenderSection("platform-master-lmp-access") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-master-lmp-access", className: getSectionClass("platform-master-lmp-access"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -77434,7 +77469,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-standard-missions", className: getSectionClass("platform-standard-missions"), children: [
+    shouldRenderSection("platform-standard-missions") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-standard-missions", className: getSectionClass("platform-standard-missions"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -77626,7 +77661,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         }) })
       ] }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-crew-composition", className: getSectionClass("platform-crew-composition"), children: [
+    shouldRenderSection("platform-crew-composition") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-crew-composition", className: getSectionClass("platform-crew-composition"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -77925,7 +77960,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-currency-profiles", className: getSectionClass("platform-currency-profiles"), children: [
+    shouldRenderSection("platform-currency-profiles") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-currency-profiles", className: getSectionClass("platform-currency-profiles"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -78110,7 +78145,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-aircraft-setup", className: getSectionClass("platform-aircraft-setup"), children: [
+    shouldRenderSection("platform-aircraft-setup") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-aircraft-setup", className: getSectionClass("platform-aircraft-setup"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -78386,7 +78421,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-dfp-resource-rows", className: getSectionClass("platform-dfp-resource-rows"), children: [
+    shouldRenderSection("platform-dfp-resource-rows") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-dfp-resource-rows", className: getSectionClass("platform-dfp-resource-rows"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -78664,7 +78699,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         })
       ] }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-unit-modules", className: getSectionClass("platform-unit-modules"), children: [
+    shouldRenderSection("platform-unit-modules") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-unit-modules", className: getSectionClass("platform-unit-modules"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -78706,7 +78741,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] }, unit.code)) })
       ] }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-settings-visibility", className: getSectionClass("platform-settings-visibility"), children: [
+    shouldRenderSection("platform-settings-visibility") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-settings-visibility", className: getSectionClass("platform-settings-visibility"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -78795,7 +78830,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-deployment-readiness", className: getSectionClass("platform-deployment-readiness"), children: [
+    shouldRenderSection("platform-deployment-readiness") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-deployment-readiness", className: getSectionClass("platform-deployment-readiness"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -78883,7 +78918,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-operational-runbook", className: getSectionClass("platform-operational-runbook"), children: [
+    shouldRenderSection("platform-operational-runbook") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-operational-runbook", className: getSectionClass("platform-operational-runbook"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -79017,7 +79052,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-licensing", className: getSectionClass("platform-licensing"), children: [
+    shouldRenderSection("platform-licensing") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-licensing", className: getSectionClass("platform-licensing"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -79227,7 +79262,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         }) })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-permission-profiles", className: getSectionClass("platform-permission-profiles"), children: [
+    shouldRenderSection("platform-permission-profiles") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-permission-profiles", className: getSectionClass("platform-permission-profiles"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -79307,7 +79342,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-training-report-template", className: getSectionClass("platform-training-report-template"), children: [
+    shouldRenderSection("platform-training-report-template") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-training-report-template", className: getSectionClass("platform-training-report-template"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -80141,7 +80176,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-rank-terminology", className: getSectionClass("platform-rank-terminology"), children: [
+    shouldRenderSection("platform-rank-terminology") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-rank-terminology", className: getSectionClass("platform-rank-terminology"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -80840,7 +80875,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-user-access", className: getSectionClass("platform-user-access"), children: [
+    shouldRenderSection("platform-user-access") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-user-access", className: getSectionClass("platform-user-access"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -81092,7 +81127,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-scheduling-rule-sets", className: getSectionClass("platform-scheduling-rule-sets"), children: [
+    shouldRenderSection("platform-scheduling-rule-sets") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-scheduling-rule-sets", className: getSectionClass("platform-scheduling-rule-sets"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {

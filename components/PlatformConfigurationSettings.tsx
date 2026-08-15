@@ -231,6 +231,10 @@ const emptyConfig: PlatformConfig = {
   schedulingRuleSets: [],
 };
 
+let cachedPlatformConfig: PlatformConfig | null = null;
+let cachedPlatformLicenseStatus: LicenseRuntimeStatus | null = null;
+let cachedAirfieldCatalogue: AirfieldCatalogueEntry[] | null = null;
+
 const getApiBase = (): string => getAppApiBase();
 
 const fieldClass = 'w-full min-w-0 rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none';
@@ -914,6 +918,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
 };
 
 const notifyPlatformConfigUpdated = (config: PlatformConfig) => {
+  cachedPlatformConfig = config;
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent(PLATFORM_CONFIG_UPDATED_EVENT, { detail: { config } }));
 };
@@ -2297,13 +2302,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   formationCallsigns = [],
   onUpdateFormationCallsigns,
 }) => {
-  const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
-  const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<PlatformConfig>(() => cachedPlatformConfig || emptyConfig);
+  const [loading, setLoading] = useState(() => !cachedPlatformConfig);
   const [saving, setSaving] = useState(false);
   const [applyingChanges, setApplyingChanges] = useState(false);
   const [error, setError] = useState('');
   const [errorLink, setErrorLink] = useState<PlatformConfigSaveBlocker['link'] | null>(null);
-  const loadedConfigRef = useRef<PlatformConfig>(emptyConfig);
+  const loadedConfigRef = useRef<PlatformConfig>(cachedPlatformConfig || emptyConfig);
   const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = useState<Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>>({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = useState<Record<string, string>>({});
@@ -2334,6 +2339,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ? applyDefaultUnitTraineeAvailability(rawConfig)
         : rawConfig;
       if (!nextConfig || !Array.isArray(nextConfig.units)) return;
+      cachedPlatformConfig = nextConfig;
       loadedConfigRef.current = nextConfig;
       setConfig(nextConfig);
     };
@@ -2350,13 +2356,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = useState(false);
   const [, setRankTerminologyDirty] = useState(false);
   const [trainingReportTemplateUnlocked, setTrainingReportTemplateUnlocked] = useState<string | null>(null);
-  const [licenseStatus, setLicenseStatus] = useState<LicenseRuntimeStatus | null>(null);
+  const [licenseStatus, setLicenseStatus] = useState<LicenseRuntimeStatus | null>(() => cachedPlatformLicenseStatus);
   const [licenseImportText, setLicenseImportText] = useState('');
   const [licenseImportMessage, setLicenseImportMessage] = useState('');
   const [licenseImportError, setLicenseImportError] = useState('');
   const [licenseActionLoading, setLicenseActionLoading] = useState(false);
-  const [airfieldCatalogue, setAirfieldCatalogue] = useState<AirfieldCatalogueEntry[]>([]);
-  const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [airfieldCatalogue, setAirfieldCatalogue] = useState<AirfieldCatalogueEntry[]>(() => cachedAirfieldCatalogue || []);
+  const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>(() => (
+    cachedAirfieldCatalogue ? 'loaded' : 'idle'
+  ));
   const [airfieldCatalogueError, setAirfieldCatalogueError] = useState('');
   const [organisationStructureUnlocked, setOrganisationStructureUnlocked] = useState(false);
   const [organisationStructureImportError, setOrganisationStructureImportError] = useState('');
@@ -2514,19 +2522,31 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      setLoading(true);
       clearPlatformConfigError();
       try {
         if (isSetupTestMode()) {
+          setLoading(true);
           const nextConfig = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
           if (!cancelled) {
             setConfig(nextConfig);
             loadedConfigRef.current = nextConfig;
+            cachedPlatformConfig = nextConfig;
             const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || '';
             setSelectedAccessUserId((current) => current || firstUserId);
           }
           return;
         }
+        if (cachedPlatformConfig) {
+          const nextConfig = cachedPlatformConfig;
+          setConfig(nextConfig);
+          loadedConfigRef.current = nextConfig;
+          if (cachedPlatformLicenseStatus) setLicenseStatus(cachedPlatformLicenseStatus);
+          const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || '';
+          setSelectedAccessUserId((current) => current || firstUserId);
+          setLoading(false);
+          return;
+        }
+        setLoading(true);
         const [res, licenseRes] = await Promise.all([
           fetch(`${getApiBase()}/platform-config`),
           fetch(`${getApiBase()}/platform-license/status`),
@@ -2538,7 +2558,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           const nextConfig = normaliseSettingsPlatformConfig(data);
           setConfig(nextConfig);
           loadedConfigRef.current = nextConfig;
-          if (nextLicenseStatus) setLicenseStatus(nextLicenseStatus);
+          cachedPlatformConfig = nextConfig;
+          if (nextLicenseStatus) {
+            cachedPlatformLicenseStatus = nextLicenseStatus;
+            setLicenseStatus(nextLicenseStatus);
+          }
           const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || '';
           setSelectedAccessUserId((current) => current || firstUserId);
         }
@@ -2565,6 +2589,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, [config.units.length]);
 
   useEffect(() => {
+    const needsAirfieldCatalogue = !sectionOnly
+      || scrollTarget === 'platform-locations'
+      || scrollTarget === 'platform-organisation-locations';
+    if (!needsAirfieldCatalogue) return undefined;
+    if (cachedAirfieldCatalogue) {
+      setAirfieldCatalogue(cachedAirfieldCatalogue);
+      setAirfieldCatalogueStatus('loaded');
+      return undefined;
+    }
     let cancelled = false;
     const loadAirfieldCatalogue = async () => {
       setAirfieldCatalogueStatus('loading');
@@ -2586,6 +2619,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           o: Number(entry.o),
         }));
         if (!cancelled) {
+          cachedAirfieldCatalogue = entries;
           setAirfieldCatalogue(entries);
           setAirfieldCatalogueStatus('loaded');
         }
@@ -2600,7 +2634,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
     loadAirfieldCatalogue();
     return () => { cancelled = true; };
-  }, []);
+  }, [scrollTarget, sectionOnly]);
 
   useEffect(() => {
     const pendingLocationId = pendingLocationScrollIdRef.current;
@@ -6853,6 +6887,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const res = await fetch(`${getApiBase()}/platform-license/status`);
     if (!res.ok) throw new Error(`Licence status failed (${res.status})`);
     const data = await res.json();
+    cachedPlatformLicenseStatus = data;
     setLicenseStatus(data);
     return data;
   };
@@ -6945,6 +6980,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }
 
   const visibleSectionTarget = sectionOnly ? (scrollTarget || 'platform-configuration-health') : null;
+  const shouldRenderSection = (sectionId: string) => {
+    if (!visibleSectionTarget) return true;
+    if (visibleSectionTarget === sectionId) return true;
+    return visibleSectionTarget === 'platform-organisation-locations'
+      && (sectionId === 'platform-organisation' || sectionId === 'platform-locations');
+  };
   const getSectionClass = (sectionId: string) => {
     const visibleWithLegacyTarget = visibleSectionTarget === 'platform-organisation-locations'
       && (sectionId === 'platform-organisation' || sectionId === 'platform-locations');
@@ -7696,6 +7737,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       ) : null}
 
+      {shouldRenderSection('platform-configuration-health') && (
+
       <section id="platform-configuration-health" className={getSectionClass('platform-configuration-health')}>
         <SectionHeader
           title="Configuration Health"
@@ -7781,6 +7824,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-organisation') && (
 
       <section id="platform-organisation" className={getSectionClass('platform-organisation')}>
         <SectionHeader
@@ -7934,6 +7981,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-locations') && (
 
       <section id="platform-locations" className={getSectionClass('platform-locations')}>
         <SectionHeader
@@ -8120,6 +8171,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           })}
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-units') && (
 
       <section id="platform-units" className={getSectionClass('platform-units')}>
         <SectionHeader
@@ -8434,6 +8489,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
+      )}
+
+      {shouldRenderSection('platform-task-profiles') && (
+
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
           title="Directed Task Lists"
@@ -8523,6 +8582,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-master-lmp-access') && (
 
       <section id="platform-master-lmp-access" className={getSectionClass('platform-master-lmp-access')}>
         <SectionHeader
@@ -8723,6 +8786,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-standard-missions') && (
 
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
@@ -8956,6 +9023,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </>
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-crew-composition') && (
 
       <section id="platform-crew-composition" className={getSectionClass('platform-crew-composition')}>
         <SectionHeader
@@ -9272,6 +9343,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
+      )}
+
+      {shouldRenderSection('platform-currency-profiles') && (
+
       <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
         <SectionHeader
           title={continuationCurrencyEventsLabel}
@@ -9456,6 +9531,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           )}
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-aircraft-setup') && (
 
       <section id="platform-aircraft-setup" className={getSectionClass('platform-aircraft-setup')}>
         <SectionHeader
@@ -9753,6 +9832,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
+      )}
+
+      {shouldRenderSection('platform-dfp-resource-rows') && (
+
       <section id="platform-dfp-resource-rows" className={getSectionClass('platform-dfp-resource-rows')}>
         <SectionHeader
           title="DFP Resource Rows"
@@ -10032,6 +10115,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
+      )}
+
+      {shouldRenderSection('platform-unit-modules') && (
+
       <section id="platform-unit-modules" className={getSectionClass('platform-unit-modules')}>
         <SectionHeader
           title="Unit Modules"
@@ -10080,6 +10167,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </table>
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-settings-visibility') && (
 
       <section id="platform-settings-visibility" className={getSectionClass('platform-settings-visibility')}>
         <SectionHeader
@@ -10181,6 +10272,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
+      )}
+
+      {shouldRenderSection('platform-deployment-readiness') && (
+
       <section id="platform-deployment-readiness" className={getSectionClass('platform-deployment-readiness')}>
         <SectionHeader
           title="Deployment Readiness"
@@ -10266,6 +10361,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-operational-runbook') && (
 
       <section id="platform-operational-runbook" className={getSectionClass('platform-operational-runbook')}>
         <SectionHeader
@@ -10400,6 +10499,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-licensing') && (
 
       <section id="platform-licensing" className={getSectionClass('platform-licensing')}>
         <SectionHeader
@@ -10618,6 +10721,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
+      )}
+
+      {shouldRenderSection('platform-permission-profiles') && (
+
       <section id="platform-permission-profiles" className={getSectionClass('platform-permission-profiles')}>
         <SectionHeader
           title="Permission Profiles"
@@ -10697,6 +10804,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           )}
         </div>
       </section>
+
+      )}
+
+      {shouldRenderSection('platform-training-report-template') && (
 
       <section id="platform-training-report-template" className={getSectionClass('platform-training-report-template')}>
         <SectionHeader
@@ -11517,6 +11628,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
+      )}
+
+      {shouldRenderSection('platform-rank-terminology') && (
+
       <section id="platform-rank-terminology" className={getSectionClass('platform-rank-terminology')}>
         <SectionHeader
           title="Rank, Terminology & Labels"
@@ -12254,6 +12369,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
+      )}
+
+      {shouldRenderSection('platform-user-access') && (
+
       <section id="platform-user-access" className={getSectionClass('platform-user-access')}>
         <SectionHeader
           title="User Access Context"
@@ -12530,6 +12649,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
+      )}
+
+      {shouldRenderSection('platform-scheduling-rule-sets') && (
+
       <section id="platform-scheduling-rule-sets" className={getSectionClass('platform-scheduling-rule-sets')}>
         <SectionHeader
           title="Scheduling Rule Sets"
@@ -12623,6 +12746,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
         </div>
       </section>
+
+      )}
     </div>
   );
 };
