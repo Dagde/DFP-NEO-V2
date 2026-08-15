@@ -607,6 +607,11 @@ const normaliseUtcOffsetValue = (offset: unknown): number | null => {
   return Math.round(numericOffset * 4) / 4;
 };
 
+const getSystemUtcOffsetHours = (): number => {
+  const offsetMinutes = -new Date().getTimezoneOffset();
+  return Math.round((offsetMinutes / 60) * 2) / 2;
+};
+
 const formatUtcOffsetLabel = (offset: unknown): string => {
   const numericOffset = normaliseUtcOffsetValue(offset);
   if (numericOffset === null) return 'UTC offset not set';
@@ -7956,7 +7961,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
           {visibleLocationRows.map(({ location, index }) => {
             const rowKey = location.id || `platform-location-${index}`;
-            const timezoneReference = getOfflineTimezoneReference(location.timezoneOffset ?? 10);
+            const usesSystemTimezoneOffset = Boolean(location.useSystemTimezoneOffset);
+            const displayedTimezoneOffset = usesSystemTimezoneOffset ? getSystemUtcOffsetHours() : (location.timezoneOffset ?? 10);
+            const timezoneReference = getOfflineTimezoneReference(displayedTimezoneOffset);
             const locationOrganisationOptions = [
               '',
               ...uniqueValues([
@@ -8033,23 +8040,54 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="md:col-span-2">
                   <NumberField
                     label="UTC Offset"
-                    value={location.timezoneOffset ?? 10}
-                    disabled={!canEditSection('platform-locations')}
+                    value={displayedTimezoneOffset}
+                    disabled={!canEditSection('platform-locations') || usesSystemTimezoneOffset}
                     min={-12}
                     max={14}
-                    step={0.25}
-                    info="This numeric UTC offset is the app-controlled scheduling timezone. It works offline and is used before any browser timezone lookup."
+                    step={0.5}
+                    commitOnChange
+                    info="This numeric UTC offset is the app-controlled scheduling timezone. It works offline and changes in half-hour increments."
                     onChange={(value) => {
                       const reference = getOfflineTimezoneReference(value);
                       updateRow('locations', index, {
                         timezoneOffset: value,
+                        useSystemTimezoneOffset: false,
                         ...(reference?.timezone ? { timezone: reference.timezone } : {}),
                       });
                     }}
                   />
                   <div className="mt-1 rounded border border-cyan-500/25 bg-cyan-950/20 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
-                    {formatUtcOffsetLabel(location.timezoneOffset ?? 10)}
+                    {formatUtcOffsetLabel(displayedTimezoneOffset)}
                   </div>
+                  <label
+                    className="mt-2 flex items-start gap-2 rounded border border-gray-700 bg-gray-950/50 px-2 py-2 text-xs text-gray-200"
+                    onMouseDown={(event) => event.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 accent-cyan-400"
+                      checked={usesSystemTimezoneOffset}
+                      disabled={!canEditSection('platform-locations')}
+                      onChange={(event) => {
+                        const useSystem = event.target.checked;
+                        const systemOffset = getSystemUtcOffsetHours();
+                        const reference = getOfflineTimezoneReference(systemOffset);
+                        updateRow('locations', index, {
+                          useSystemTimezoneOffset: useSystem,
+                          ...(useSystem
+                            ? {
+                              timezoneOffset: systemOffset,
+                              ...(reference?.timezone ? { timezone: reference.timezone } : {}),
+                            }
+                            : {}),
+                        });
+                      }}
+                    />
+                    <span>
+                      <span className="block font-bold text-cyan-100">Auto from computer timezone</span>
+                      <span className="block text-[11px] leading-snug text-gray-400">Uses this device's timezone setting and still works offline.</span>
+                    </span>
+                  </label>
                 </div>
                 <div className="md:col-span-2">
                   <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
@@ -8061,7 +8099,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <label>
                     <FieldLabel label="Offline Timezone Reference" info="Inserted from the app's internal offline UTC offset table. This is guidance for the selected offset, not an internet lookup." />
                     <div className="min-h-[42px] rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm leading-snug text-gray-100">
-                      <div className="font-black text-cyan-100">{timezoneReference?.label || formatUtcOffsetLabel(location.timezoneOffset ?? 10)}</div>
+                      <div className="font-black text-cyan-100">{timezoneReference?.label || formatUtcOffsetLabel(displayedTimezoneOffset)}</div>
                       <div className="mt-1 text-xs text-gray-300">{timezoneReference?.places || 'No offline city/country reference for this offset.'}</div>
                     </div>
                   </label>

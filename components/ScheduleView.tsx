@@ -986,6 +986,11 @@ const getOffsetHoursForTimezone = (timeZone: unknown, at: Date = new Date()): nu
     }
 };
 
+const getSystemUtcOffsetHours = (): number => {
+    const offsetMinutes = -new Date().getTimezoneOffset();
+    return Math.round((offsetMinutes / 60) * 2) / 2;
+};
+
 const locationMatchesKey = (location: any, key: string): boolean => {
     if (!key) return false;
     return [
@@ -7310,6 +7315,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const activeUnit = units.find((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
         const locationKey = normaliseUnitSettingsIdentifier(locationCode || activeUnit?.locationCode);
         const activeLocation = locations.find((location: any) => locationMatchesKey(location, locationKey));
+        const useSystemOffset = Boolean(activeLocation?.useSystemTimezoneOffset ?? activeLocation?.settings?.useSystemTimezoneOffset);
+        if (useSystemOffset) return getSystemUtcOffsetHours();
+
         const configuredOffset = Number(activeLocation?.timezoneOffset ?? activeLocation?.settings?.timezoneOffset);
         if (Number.isFinite(configuredOffset)) return configuredOffset;
 
