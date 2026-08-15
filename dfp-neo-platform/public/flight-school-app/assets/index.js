@@ -83534,6 +83534,126 @@ const sectionGroups = [
     sections: ["emergency"]
   }
 ];
+const getSettingsGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+const getDefaultSectionForVisibleGroup = (group) => {
+  if (group.visibleSections.includes(group.defaultSection)) return group.defaultSection;
+  return group.visibleSections[0];
+};
+const SettingsNavigationSidebar = React.memo(({
+  activeSection,
+  settingsSearch,
+  setSettingsSearch,
+  visibleSettingGroups,
+  isSearchActive,
+  hasSettingsMatches,
+  onSelectSection,
+  onOpenDefaultSection,
+  getSearchContextSnippet,
+  getSectionLabel
+}) => {
+  const [expandedGroups, setExpandedGroups] = reactExports.useState({});
+  const openSettingsGroup = (group) => {
+    const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
+    const isOpen = expandedGroups[group.label] === true;
+    if (isOpen) {
+      setExpandedGroups((previous) => ({ ...previous, [group.label]: false }));
+      return;
+    }
+    setExpandedGroups({ [group.label]: true });
+    if (!groupActive) {
+      onOpenDefaultSection(getDefaultSectionForVisibleGroup(group));
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          type: "search",
+          value: settingsSearch,
+          onChange: (event) => setSettingsSearch(event.target.value),
+          onBeforeInput: (event) => handleEditableTextBeforeInput(event, setSettingsSearch),
+          onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setSettingsSearch),
+          onKeyDown: stopEditableKeyPropagation,
+          placeholder: "Search settings...",
+          className: "w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[30px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
+      const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
+      const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[175px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => openSettingsGroup(group),
+            className: `btn-aluminium-brushed flex h-[45px] w-[175px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${groupActive ? "ring-1 ring-gray-500/60" : ""}`,
+            "aria-expanded": showSubmenu,
+            "aria-controls": getSettingsGroupId(group.label),
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 flex-1 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words", children: group.label }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "svg",
+                {
+                  className: `h-3 w-3 flex-shrink-0 transition-transform ${showSubmenu ? "rotate-90" : ""}`,
+                  fill: "none",
+                  stroke: "currentColor",
+                  viewBox: "0 0 24 24",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 5l7 7-7 7" })
+                }
+              )
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            id: getSettingsGroupId(group.label),
+            className: `grid transition-[grid-template-rows,opacity] duration-200 ease-out ${showSubmenu ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
+              const sectionActive = activeSection === section;
+              const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  onClick: () => onSelectSection(section, group.label),
+                  className: `flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-sky-300" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
+                  children: [
+                    sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: getSectionLabel(section) }),
+                      contextSnippet && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.before }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-200", children: contextSnippet.match.toUpperCase() }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.after })
+                      ] })
+                    ] })
+                  ]
+                },
+                section
+              );
+            }) }) })
+          }
+        )
+      ] }, group.label);
+    }) }),
+    !hasSettingsMatches && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-900/70 p-4 text-sm text-gray-400", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-gray-300", children: "No matching settings." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: () => setSettingsSearch(""),
+          className: "mt-3 rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
+          children: "Clear Search"
+        }
+      )
+    ] })
+  ] });
+});
+SettingsNavigationSidebar.displayName = "SettingsNavigationSidebar";
 const TraineeReallocationSection = () => {
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState("");
@@ -83645,8 +83765,6 @@ const SettingsViewWithMenu = (props) => {
     return "Airmanship";
   });
   const [settingsSearch, setSettingsSearch] = reactExports.useState("");
-  const [expandedGroups, setExpandedGroups] = reactExports.useState({});
-  const settingsGroupOpenTimerRef = reactExports.useRef(null);
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [settingsSearchFocus, setSettingsSearchFocus] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
@@ -83703,11 +83821,6 @@ const SettingsViewWithMenu = (props) => {
     }
     contentScrollRef.current?.scrollTo({ top: restoreScrollTop ?? 0, left: 0, behavior: "auto" });
   }, [activeSection]);
-  reactExports.useEffect(() => () => {
-    if (settingsGroupOpenTimerRef.current) {
-      clearTimeout(settingsGroupOpenTimerRef.current);
-    }
-  }, []);
   const settingsDataSearchTermsBySection = reactExports.useMemo(() => {
     const platformConfig = props.platformConfig || null;
     const platformOrganisations = platformConfig?.organisations || [];
@@ -84039,16 +84152,11 @@ const SettingsViewWithMenu = (props) => {
       cancelled = true;
     };
   }, [activeSection, settingsSearchFocus]);
-  const getGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   const visibleSettingGroups = sectionGroups.map((group) => ({
     ...group,
     visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label))
   })).filter((group) => group.visibleSections.length > 0);
   const hasSettingsMatches = visibleSettingGroups.length > 0;
-  const getDefaultSectionForGroup = (group) => {
-    if (group.visibleSections.includes(group.defaultSection)) return group.defaultSection;
-    return group.visibleSections[0];
-  };
   const activePlatformTarget = activeSection !== "home" && isPlatformConfigurationMenuSection(activeSection) ? platformSectionTargets[activeSection] : void 0;
   const isPlatformConfigurationActive = Boolean(activePlatformTarget);
   const isSearchActive = settingsSearch.trim().length > 0;
@@ -84064,131 +84172,28 @@ const SettingsViewWithMenu = (props) => {
       userId: target.focusUserId,
       focusSubsectionId: target.focusSubsectionId
     });
-    setExpandedGroups({});
     changeActiveSection(targetSection);
-  };
-  const openSettingsGroup = (group) => {
-    if (settingsGroupOpenTimerRef.current) {
-      clearTimeout(settingsGroupOpenTimerRef.current);
-      settingsGroupOpenTimerRef.current = null;
-    }
-    const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
-    const isOpen = expandedGroups[group.label] === true;
-    if (isOpen) {
-      setExpandedGroups((previous) => ({ ...previous, [group.label]: false }));
-      return;
-    }
-    const openSelectedGroup = () => {
-      setExpandedGroups({ [group.label]: true });
-      if (!groupActive) {
-        changeActiveSection(getDefaultSectionForGroup(group));
-      }
-      settingsGroupOpenTimerRef.current = null;
-    };
-    const anotherGroupOpen = !isSearchActive && visibleSettingGroups.some((candidate) => candidate.label !== group.label && expandedGroups[candidate.label] === true);
-    if (anotherGroupOpen) {
-      setExpandedGroups(visibleSettingGroups.reduce((next, candidate) => {
-        next[candidate.label] = false;
-        return next;
-      }, {}));
-      settingsGroupOpenTimerRef.current = setTimeout(openSelectedGroup, 210);
-      return;
-    }
-    openSelectedGroup();
   };
   const handleSettingsShellKeyDownCapture = (event) => {
     if (isEditableElement(event.target)) return;
     stopEditableKeyPropagation(event);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", onKeyDownCapture: handleSettingsShellKeyDownCapture, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "search",
-            value: settingsSearch,
-            onChange: (event) => setSettingsSearch(event.target.value),
-            onBeforeInput: (event) => handleEditableTextBeforeInput(event, setSettingsSearch),
-            onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setSettingsSearch),
-            onKeyDown: stopEditableKeyPropagation,
-            placeholder: "Search settings...",
-            className: "w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[30px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
-        const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
-        const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[175px]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              onClick: () => openSettingsGroup(group),
-              className: `btn-aluminium-brushed flex h-[45px] w-[175px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${groupActive ? "ring-1 ring-gray-500/60" : ""}`,
-              "aria-expanded": showSubmenu,
-              "aria-controls": getGroupId(group.label),
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 flex-1 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words", children: group.label }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "svg",
-                  {
-                    className: `h-3 w-3 flex-shrink-0 transition-transform ${showSubmenu ? "rotate-90" : ""}`,
-                    fill: "none",
-                    stroke: "currentColor",
-                    viewBox: "0 0 24 24",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 5l7 7-7 7" })
-                  }
-                )
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "div",
-            {
-              id: getGroupId(group.label),
-              className: `grid transition-[grid-template-rows,opacity] duration-200 ease-out ${showSubmenu ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
-                const sectionActive = activeSection === section;
-                const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "button",
-                  {
-                    onClick: () => selectSettingsSectionFromMenu(section, group.label),
-                    className: `flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-sky-300" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
-                    children: [
-                      sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: getSectionLabel(section) }),
-                        contextSnippet && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.before }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-200", children: contextSnippet.match.toUpperCase() }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.after })
-                        ] })
-                      ] })
-                    ]
-                  },
-                  section
-                );
-              }) }) })
-            }
-          )
-        ] }, group.label);
-      }) }),
-      !hasSettingsMatches && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-900/70 p-4 text-sm text-gray-400", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-gray-300", children: "No matching settings." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => setSettingsSearch(""),
-            className: "mt-3 rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
-            children: "Clear Search"
-          }
-        )
-      ] })
-    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      SettingsNavigationSidebar,
+      {
+        activeSection,
+        settingsSearch,
+        setSettingsSearch,
+        visibleSettingGroups,
+        isSearchActive,
+        hasSettingsMatches,
+        onSelectSection: selectSettingsSectionFromMenu,
+        onOpenDefaultSection: changeActiveSection,
+        getSearchContextSnippet,
+        getSectionLabel
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: contentScrollRef, "data-settings-content-scroll": "true", className: "flex-1 overflow-y-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 sm:p-6", children: [
       activeSection === "home" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/70 shadow-lg overflow-hidden", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-4 px-5 py-4", children: [

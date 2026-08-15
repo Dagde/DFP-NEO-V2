@@ -249,6 +249,7 @@ const platformConfigurationSections = [
 
 type PlatformConfigurationMenuSection = typeof platformConfigurationSections[number];
 type SettingsMenuSection = SettingsSection | 'scheduling-rules' | PlatformConfigurationMenuSection;
+type ActiveSection = SettingsMenuSection | 'home';
 
 const platformSectionTargets: Record<PlatformConfigurationMenuSection, string> = {
     'platform-configuration-health': 'platform-configuration-health',
@@ -884,6 +885,162 @@ const sectionGroups: {
 const highlightedCrewPageSections: SettingsMenuSection[] = ['crew-composition', 'standard-missions'];
 const isHighlightedCrewPageSection = (section: SettingsMenuSection) => highlightedCrewPageSections.includes(section);
 
+type VisibleSettingGroup = typeof sectionGroups[number] & { visibleSections: SettingsMenuSection[] };
+
+interface SettingsNavigationSidebarProps {
+    activeSection: ActiveSection;
+    settingsSearch: string;
+    setSettingsSearch: React.Dispatch<React.SetStateAction<string>>;
+    visibleSettingGroups: VisibleSettingGroup[];
+    isSearchActive: boolean;
+    hasSettingsMatches: boolean;
+    onSelectSection: (section: SettingsMenuSection, groupLabel?: string) => void;
+    onOpenDefaultSection: (section: ActiveSection) => void;
+    getSearchContextSnippet: (section: SettingsMenuSection, groupLabel: string) => { before: string; match: string; after: string } | null;
+    getSectionLabel: (section: SettingsMenuSection) => string;
+}
+
+const getSettingsGroupId = (label: string) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+
+const getDefaultSectionForVisibleGroup = (group: VisibleSettingGroup): SettingsMenuSection => {
+    if (group.visibleSections.includes(group.defaultSection)) return group.defaultSection;
+    return group.visibleSections[0] as SettingsMenuSection;
+};
+
+const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = React.memo(({
+    activeSection,
+    settingsSearch,
+    setSettingsSearch,
+    visibleSettingGroups,
+    isSearchActive,
+    hasSettingsMatches,
+    onSelectSection,
+    onOpenDefaultSection,
+    getSearchContextSnippet,
+    getSectionLabel,
+}) => {
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+    const openSettingsGroup = (group: VisibleSettingGroup) => {
+        const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
+        const isOpen = expandedGroups[group.label] === true;
+
+        if (isOpen) {
+            setExpandedGroups(previous => ({ ...previous, [group.label]: false }));
+            return;
+        }
+
+        setExpandedGroups({ [group.label]: true });
+        if (!groupActive) {
+            onOpenDefaultSection(getDefaultSectionForVisibleGroup(group));
+        }
+    };
+
+    return (
+        <aside className="hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
+            <div className="mb-4">
+                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
+                <input
+                    type="search"
+                    value={settingsSearch}
+                    onChange={(event) => setSettingsSearch(event.target.value)}
+                    onBeforeInput={(event) => handleEditableTextBeforeInput(event, setSettingsSearch)}
+                    onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setSettingsSearch)}
+                    onKeyDown={stopEditableKeyPropagation}
+                    placeholder="Search settings..."
+                    className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
+            </div>
+            <nav className="mt-[30px] flex flex-col items-center gap-[1px]">
+                {visibleSettingGroups.map(group => {
+                    const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
+                    const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
+                    return (
+                        <div key={group.label} className="w-[175px]">
+                            <button
+                                type="button"
+                                onClick={() => openSettingsGroup(group)}
+                                className={`btn-aluminium-brushed flex h-[45px] w-[175px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${
+                                    groupActive ? 'ring-1 ring-gray-500/60' : ''
+                                }`}
+                                aria-expanded={showSubmenu}
+                                aria-controls={getSettingsGroupId(group.label)}
+                            >
+                                <span className="min-w-0 flex-1 text-center">
+                                    <span className="block whitespace-normal break-words">{group.label}</span>
+                                </span>
+                                <svg
+                                    className={`h-3 w-3 flex-shrink-0 transition-transform ${showSubmenu ? 'rotate-90' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                            <div
+                                id={getSettingsGroupId(group.label)}
+                                className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
+                                    showSubmenu ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                                }`}
+                            >
+                                <div className="min-h-0 overflow-hidden">
+                                    <div className="space-y-[1px] py-[1px]">
+                                        {group.visibleSections.map(section => {
+                                            const sectionActive = activeSection === section;
+                                            const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
+                                            return (
+                                                <button
+                                                    key={section}
+                                                    onClick={() => onSelectSection(section, group.label)}
+                                                    className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
+                                                        sectionActive
+                                                            ? 'border-transparent bg-transparent text-sky-300'
+                                                            : section === 'emergency'
+                                                                ? 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                                                                : 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                                                    }`}
+                                                >
+                                                    {sectionActive ? (
+                                                        <span className="h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300" aria-hidden="true" />
+                                                    ) : null}
+                                                    <span className="min-w-0">
+                                                        <span className="block truncate">{getSectionLabel(section)}</span>
+                                                        {contextSnippet && (
+                                                            <span className="mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
+                                                                <span>{contextSnippet.before}</span>
+                                                                <span className="font-bold text-cyan-200">{contextSnippet.match.toUpperCase()}</span>
+                                                                <span>{contextSnippet.after}</span>
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </nav>
+            {!hasSettingsMatches && (
+                <div className="rounded-lg border border-gray-800 bg-gray-900/70 p-4 text-sm text-gray-400">
+                    <p className="font-semibold text-gray-300">No matching settings.</p>
+                    <button
+                        onClick={() => setSettingsSearch('')}
+                        className="mt-3 rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600"
+                    >
+                        Clear Search
+                    </button>
+                </div>
+            )}
+        </aside>
+    );
+});
+
+SettingsNavigationSidebar.displayName = 'SettingsNavigationSidebar';
+
 const TraineeReallocationSection: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -978,7 +1135,6 @@ const TraineeReallocationSection: React.FC = () => {
 };
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
-    type ActiveSection = SettingsMenuSection | 'home';
     const contentScrollRef = useRef<HTMLDivElement | null>(null);
     const normaliseLegacySettingsSection = (section: string) => {
         if (section === 'platform-configuration') return 'platform-configuration-health';
@@ -1011,8 +1167,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return 'Airmanship';
     });
     const [settingsSearch, setSettingsSearch] = useState('');
-    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-    const settingsGroupOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [settingsFocusTarget, setSettingsFocusTarget] = useState<{
         unitCode?: string;
         locationCode?: string;
@@ -1098,12 +1252,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
         contentScrollRef.current?.scrollTo({ top: restoreScrollTop ?? 0, left: 0, behavior: 'auto' });
     }, [activeSection]);
-
-    useEffect(() => () => {
-        if (settingsGroupOpenTimerRef.current) {
-            clearTimeout(settingsGroupOpenTimerRef.current);
-        }
-    }, []);
 
     const settingsDataSearchTermsBySection = useMemo<Partial<Record<SettingsMenuSection, string[]>>>(() => {
         const platformConfig = props.platformConfig || null;
@@ -1501,7 +1649,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return getAccentClasses(fallback);
     };
 
-    const getGroupId = (label: string) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
     const visibleSettingGroups = sectionGroups
         .map(group => ({
             ...group,
@@ -1509,10 +1656,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         }))
         .filter(group => group.visibleSections.length > 0);
     const hasSettingsMatches = visibleSettingGroups.length > 0;
-    const getDefaultSectionForGroup = (group: typeof visibleSettingGroups[number]) => {
-        if (group.visibleSections.includes(group.defaultSection)) return group.defaultSection;
-        return group.visibleSections[0] as SettingsMenuSection;
-    };
     const activePlatformTarget =
         activeSection !== 'home' && isPlatformConfigurationMenuSection(activeSection)
             ? platformSectionTargets[activeSection]
@@ -1539,44 +1682,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             userId: target.focusUserId,
             focusSubsectionId: target.focusSubsectionId,
         });
-        setExpandedGroups({});
         changeActiveSection(targetSection as ActiveSection);
-    };
-    const openSettingsGroup = (group: typeof visibleSettingGroups[number]) => {
-        if (settingsGroupOpenTimerRef.current) {
-            clearTimeout(settingsGroupOpenTimerRef.current);
-            settingsGroupOpenTimerRef.current = null;
-        }
-        const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
-        const isOpen = expandedGroups[group.label] === true;
-
-        if (isOpen) {
-            setExpandedGroups(previous => ({ ...previous, [group.label]: false }));
-            return;
-        }
-
-        const openSelectedGroup = () => {
-            setExpandedGroups({ [group.label]: true });
-            if (!groupActive) {
-                changeActiveSection(getDefaultSectionForGroup(group));
-            }
-            settingsGroupOpenTimerRef.current = null;
-        };
-        const anotherGroupOpen = !isSearchActive && visibleSettingGroups.some(candidate => (
-            candidate.label !== group.label
-            && expandedGroups[candidate.label] === true
-        ));
-
-        if (anotherGroupOpen) {
-            setExpandedGroups(visibleSettingGroups.reduce<Record<string, boolean>>((next, candidate) => {
-                next[candidate.label] = false;
-                return next;
-            }, {}));
-            settingsGroupOpenTimerRef.current = setTimeout(openSelectedGroup, 210);
-            return;
-        }
-
-        openSelectedGroup();
     };
 
     const handleSettingsShellKeyDownCapture = (event: React.KeyboardEvent<HTMLElement>) => {
@@ -1586,105 +1692,18 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
     return (
         <div data-settings-view="true" className="flex-1 flex overflow-hidden bg-gray-900" onKeyDownCapture={handleSettingsShellKeyDownCapture}>
-            <aside className="hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
-                <div className="mb-4">
-                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
-                    <input
-                        type="search"
-                        value={settingsSearch}
-                        onChange={(event) => setSettingsSearch(event.target.value)}
-                        onBeforeInput={(event) => handleEditableTextBeforeInput(event, setSettingsSearch)}
-                        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setSettingsSearch)}
-                        onKeyDown={stopEditableKeyPropagation}
-                        placeholder="Search settings..."
-                        className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                    />
-                </div>
-                <nav className="mt-[30px] flex flex-col items-center gap-[1px]">
-                    {visibleSettingGroups.map(group => {
-                        const groupActive = activeSection !== 'home' && group.sections.includes(activeSection);
-                        const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
-                        return (
-                            <div key={group.label} className="w-[175px]">
-                                <button
-                                    type="button"
-                                    onClick={() => openSettingsGroup(group)}
-                                    className={`btn-aluminium-brushed flex h-[45px] w-[175px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${
-                                        groupActive ? 'ring-1 ring-gray-500/60' : ''
-                                    }`}
-                                    aria-expanded={showSubmenu}
-                                    aria-controls={getGroupId(group.label)}
-                                >
-                                    <span className="min-w-0 flex-1 text-center">
-                                        <span className="block whitespace-normal break-words">{group.label}</span>
-                                    </span>
-                                    <svg
-                                        className={`h-3 w-3 flex-shrink-0 transition-transform ${showSubmenu ? 'rotate-90' : ''}`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                                <div
-                                    id={getGroupId(group.label)}
-                                    className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
-                                        showSubmenu ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                                    }`}
-                                >
-                                    <div className="min-h-0 overflow-hidden">
-                                        <div className="space-y-[1px] py-[1px]">
-                                            {group.visibleSections.map(section => {
-                                                const sectionActive = activeSection === section;
-                                                const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
-                                                return (
-                                                    <button
-                                                        key={section}
-                                                        onClick={() => selectSettingsSectionFromMenu(section, group.label)}
-                                                        className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
-                                                            sectionActive
-                                                                ? 'border-transparent bg-transparent text-sky-300'
-                                                                : section === 'emergency'
-                                                                    ? 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                                                                    : 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                                                        }`}
-                                                    >
-                                                        {sectionActive ? (
-                                                            <span className="h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300" aria-hidden="true" />
-                                                        ) : null}
-                                                        <span className="min-w-0">
-                                                            <span className="block truncate">{getSectionLabel(section)}</span>
-                                                            {contextSnippet && (
-                                                                <span className="mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
-                                                                    <span>{contextSnippet.before}</span>
-                                                                    <span className="font-bold text-cyan-200">{contextSnippet.match.toUpperCase()}</span>
-                                                                    <span>{contextSnippet.after}</span>
-                                                                </span>
-                                                            )}
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </nav>
-                {!hasSettingsMatches && (
-                    <div className="rounded-lg border border-gray-800 bg-gray-900/70 p-4 text-sm text-gray-400">
-                        <p className="font-semibold text-gray-300">No matching settings.</p>
-                        <button
-                            onClick={() => setSettingsSearch('')}
-                            className="mt-3 rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600"
-                        >
-                            Clear Search
-                        </button>
-                    </div>
-                )}
-            </aside>
+            <SettingsNavigationSidebar
+                activeSection={activeSection}
+                settingsSearch={settingsSearch}
+                setSettingsSearch={setSettingsSearch}
+                visibleSettingGroups={visibleSettingGroups}
+                isSearchActive={isSearchActive}
+                hasSettingsMatches={hasSettingsMatches}
+                onSelectSection={selectSettingsSectionFromMenu}
+                onOpenDefaultSection={changeActiveSection}
+                getSearchContextSnippet={getSearchContextSnippet}
+                getSectionLabel={getSectionLabel}
+            />
 
             <div ref={contentScrollRef} data-settings-content-scroll="true" className="flex-1 overflow-y-auto bg-gray-900">
                 <div className="p-4 sm:p-6">
