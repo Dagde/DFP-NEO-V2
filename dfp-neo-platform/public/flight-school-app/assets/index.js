@@ -83553,7 +83553,11 @@ const SettingsNavigationSidebar = React.memo(({
 }) => {
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
   const pendingDefaultSectionTimerRef = reactExports.useRef(null);
+  const pendingDefaultSectionFrameRef = reactExports.useRef(null);
   reactExports.useEffect(() => () => {
+    if (pendingDefaultSectionFrameRef.current !== null) {
+      window.cancelAnimationFrame(pendingDefaultSectionFrameRef.current);
+    }
     if (pendingDefaultSectionTimerRef.current !== null) {
       window.clearTimeout(pendingDefaultSectionTimerRef.current);
     }
@@ -83567,14 +83571,22 @@ const SettingsNavigationSidebar = React.memo(({
     }
     setExpandedGroups({ [group.label]: true });
     if (!groupActive) {
+      if (pendingDefaultSectionFrameRef.current !== null) {
+        window.cancelAnimationFrame(pendingDefaultSectionFrameRef.current);
+        pendingDefaultSectionFrameRef.current = null;
+      }
       if (pendingDefaultSectionTimerRef.current !== null) {
         window.clearTimeout(pendingDefaultSectionTimerRef.current);
+        pendingDefaultSectionTimerRef.current = null;
       }
       const defaultSection = getDefaultSectionForVisibleGroup(group);
-      pendingDefaultSectionTimerRef.current = window.setTimeout(() => {
-        onOpenDefaultSection(defaultSection);
-        pendingDefaultSectionTimerRef.current = null;
-      }, 120);
+      pendingDefaultSectionFrameRef.current = window.requestAnimationFrame(() => {
+        pendingDefaultSectionFrameRef.current = null;
+        pendingDefaultSectionTimerRef.current = window.setTimeout(() => {
+          onOpenDefaultSection(defaultSection);
+          pendingDefaultSectionTimerRef.current = null;
+        }, 240);
+      });
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
@@ -83597,6 +83609,7 @@ const SettingsNavigationSidebar = React.memo(({
     /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[30px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
       const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
       const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
+      const submenuMaxHeight = Math.min(860, Math.max(42, group.visibleSections.length * 39 + 8));
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[175px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
@@ -83625,7 +83638,13 @@ const SettingsNavigationSidebar = React.memo(({
           "div",
           {
             id: getSettingsGroupId(group.label),
-            className: `overflow-hidden transition-[max-height,opacity,transform] duration-200 ease-out will-change-[max-height,opacity,transform] ${showSubmenu ? "max-h-[720px] translate-y-0 opacity-100" : "max-h-0 -translate-y-1 opacity-0"}`,
+            className: "overflow-hidden will-change-[max-height,opacity,transform]",
+            style: {
+              maxHeight: showSubmenu ? `${submenuMaxHeight}px` : "0px",
+              opacity: showSubmenu ? 1 : 0,
+              transform: showSubmenu ? "translateY(0)" : "translateY(-4px)",
+              transition: "max-height 240ms ease, opacity 180ms ease, transform 180ms ease"
+            },
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
               const sectionActive = activeSection === section;
               const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;

@@ -921,8 +921,12 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
 }) => {
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
     const pendingDefaultSectionTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+    const pendingDefaultSectionFrameRef = useRef<number | null>(null);
 
     useEffect(() => () => {
+        if (pendingDefaultSectionFrameRef.current !== null) {
+            window.cancelAnimationFrame(pendingDefaultSectionFrameRef.current);
+        }
         if (pendingDefaultSectionTimerRef.current !== null) {
             window.clearTimeout(pendingDefaultSectionTimerRef.current);
         }
@@ -939,14 +943,22 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
 
         setExpandedGroups({ [group.label]: true });
         if (!groupActive) {
+            if (pendingDefaultSectionFrameRef.current !== null) {
+                window.cancelAnimationFrame(pendingDefaultSectionFrameRef.current);
+                pendingDefaultSectionFrameRef.current = null;
+            }
             if (pendingDefaultSectionTimerRef.current !== null) {
                 window.clearTimeout(pendingDefaultSectionTimerRef.current);
+                pendingDefaultSectionTimerRef.current = null;
             }
             const defaultSection = getDefaultSectionForVisibleGroup(group);
-            pendingDefaultSectionTimerRef.current = window.setTimeout(() => {
-                onOpenDefaultSection(defaultSection);
-                pendingDefaultSectionTimerRef.current = null;
-            }, 120);
+            pendingDefaultSectionFrameRef.current = window.requestAnimationFrame(() => {
+                pendingDefaultSectionFrameRef.current = null;
+                pendingDefaultSectionTimerRef.current = window.setTimeout(() => {
+                    onOpenDefaultSection(defaultSection);
+                    pendingDefaultSectionTimerRef.current = null;
+                }, 240);
+            });
         }
     };
 
@@ -969,6 +981,7 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                 {visibleSettingGroups.map(group => {
                     const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
                     const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
+                    const submenuMaxHeight = Math.min(860, Math.max(42, group.visibleSections.length * 39 + 8));
                     return (
                         <div key={group.label} className="w-[175px]">
                             <button
@@ -994,9 +1007,13 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                             </button>
                             <div
                                 id={getSettingsGroupId(group.label)}
-                                className={`overflow-hidden transition-[max-height,opacity,transform] duration-200 ease-out will-change-[max-height,opacity,transform] ${
-                                    showSubmenu ? 'max-h-[720px] translate-y-0 opacity-100' : 'max-h-0 -translate-y-1 opacity-0'
-                                }`}
+                                className="overflow-hidden will-change-[max-height,opacity,transform]"
+                                style={{
+                                    maxHeight: showSubmenu ? `${submenuMaxHeight}px` : '0px',
+                                    opacity: showSubmenu ? 1 : 0,
+                                    transform: showSubmenu ? 'translateY(0)' : 'translateY(-4px)',
+                                    transition: 'max-height 240ms ease, opacity 180ms ease, transform 180ms ease',
+                                }}
                             >
                                 <div className="space-y-[1px] py-[1px]">
                                     {group.visibleSections.map(section => {
