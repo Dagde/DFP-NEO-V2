@@ -83658,54 +83658,42 @@ const SettingsNavigationSidebar = React.memo(({
           "div",
           {
             id: getSettingsGroupId(group.label),
-            className: "grid overflow-hidden will-change-[grid-template-rows,opacity]",
+            className: "grid overflow-hidden will-change-[grid-template-rows]",
             style: {
               gridTemplateRows: showSubmenu ? "1fr" : "0fr",
-              opacity: showSubmenu ? 1 : 0,
               pointerEvents: showSubmenu ? "auto" : "none",
-              transition: "grid-template-rows 260ms ease, opacity 180ms ease"
+              transition: "grid-template-rows 260ms cubic-bezier(0.22, 1, 0.36, 1)"
             },
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "div",
-              {
-                className: "space-y-[1px] py-[1px] will-change-transform",
-                style: {
-                  transformOrigin: "top",
-                  transform: showSubmenu ? "translateY(0) scaleY(1)" : "translateY(-6px) scaleY(0.96)",
-                  transition: "transform 260ms ease"
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
+              const sectionActive = (pendingSection || activeSection) === section;
+              const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => {
+                    setPendingSection(section);
+                    deferSidebarNavigation(() => onSelectSection(section, group.label), 80);
+                  },
+                  "data-ui-lag-role": "settings-section",
+                  "data-settings-group": group.label,
+                  "data-settings-section": section,
+                  className: `flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-sky-300" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
+                  children: [
+                    sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: getSectionLabel(section) }),
+                      contextSnippet && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.before }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-200", children: contextSnippet.match.toUpperCase() }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.after })
+                      ] })
+                    ] })
+                  ]
                 },
-                children: group.visibleSections.map((section) => {
-                  const sectionActive = (pendingSection || activeSection) === section;
-                  const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => {
-                        setPendingSection(section);
-                        deferSidebarNavigation(() => onSelectSection(section, group.label), 80);
-                      },
-                      "data-ui-lag-role": "settings-section",
-                      "data-settings-group": group.label,
-                      "data-settings-section": section,
-                      className: `flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-sky-300" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
-                      children: [
-                        sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: getSectionLabel(section) }),
-                          contextSnippet && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.before }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-200", children: contextSnippet.match.toUpperCase() }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.after })
-                          ] })
-                        ] })
-                      ]
-                    },
-                    section
-                  );
-                })
-              }
-            ) })
+                section
+              );
+            }) }) })
           }
         )
       ] }, group.label);

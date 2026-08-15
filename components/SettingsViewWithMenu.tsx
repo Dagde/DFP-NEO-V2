@@ -1029,23 +1029,15 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                             </button>
                             <div
                                 id={getSettingsGroupId(group.label)}
-                                className="grid overflow-hidden will-change-[grid-template-rows,opacity]"
+                                className="grid overflow-hidden will-change-[grid-template-rows]"
                                 style={{
                                     gridTemplateRows: showSubmenu ? '1fr' : '0fr',
-                                    opacity: showSubmenu ? 1 : 0,
                                     pointerEvents: showSubmenu ? 'auto' : 'none',
-                                    transition: 'grid-template-rows 260ms ease, opacity 180ms ease',
+                                    transition: 'grid-template-rows 260ms cubic-bezier(0.22, 1, 0.36, 1)',
                                 }}
                             >
                                 <div className="min-h-0 overflow-hidden">
-                                    <div
-                                        className="space-y-[1px] py-[1px] will-change-transform"
-                                        style={{
-                                            transformOrigin: 'top',
-                                            transform: showSubmenu ? 'translateY(0) scaleY(1)' : 'translateY(-6px) scaleY(0.96)',
-                                            transition: 'transform 260ms ease',
-                                        }}
-                                    >
+                                    <div className="space-y-[1px] py-[1px]">
                                         {group.visibleSections.map(section => {
                                             const sectionActive = (pendingSection || activeSection) === section;
                                             const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
