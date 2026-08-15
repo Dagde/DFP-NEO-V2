@@ -16621,7 +16621,7 @@ const ScheduleView = ({
   formationCallsigns = [],
   buildRuleSettings,
   timezoneOffset = 10
-  // Default to UTC+10 (AEST); location timezone overrides this when configured.
+  // Default to UTC+10 (AEST); location UTC offset overrides this when configured.
 }) => {
   const schedulePersonnelDisplaySettings = reactExports.useMemo(
     () => normalisePersonnelDisplaySettings(personnelDisplaySettingsInput || null),
@@ -16649,11 +16649,13 @@ const ScheduleView = ({
     const activeUnit = units.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
     const locationKey = normaliseUnitSettingsIdentifier(locationCode || activeUnit?.locationCode);
     const activeLocation = locations.find((location) => locationMatchesKey(location, locationKey));
+    const configuredOffset = Number(activeLocation?.timezoneOffset ?? activeLocation?.settings?.timezoneOffset);
+    if (Number.isFinite(configuredOffset)) return configuredOffset;
     const locationTimezone = activeLocation?.timezone || activeLocation?.settings?.timezone;
     const resolvedOffset = getOffsetHoursForTimezone(locationTimezone);
     if (resolvedOffset !== null) return resolvedOffset;
-    const configuredOffset = Number(activeLocation?.timezoneOffset ?? activeLocation?.settings?.timezoneOffset ?? timezoneOffset);
-    return Number.isFinite(configuredOffset) ? configuredOffset : 10;
+    const fallbackOffset = Number(timezoneOffset);
+    return Number.isFinite(fallbackOffset) ? fallbackOffset : 10;
   }, [locationCode, platformConfig, timezoneOffset, unitCode]);
   const flightLinePoolContext = reactExports.useMemo(() => {
     const cleanUnitCode = normaliseUnitSettingsIdentifier(unitCode);
@@ -16994,7 +16996,7 @@ const ScheduleView = ({
   reactExports.useEffect(() => {
     const timerId = setInterval(() => {
       const now = /* @__PURE__ */ new Date();
-      const offsetMs = timezoneOffset * 60 * 60 * 1e3;
+      const offsetMs = effectiveTimezoneOffset * 60 * 60 * 1e3;
       const adjustedTime = new Date(now.getTime() + offsetMs);
       setCurrentTime(adjustedTime);
     }, 1e3);
@@ -17019,7 +17021,7 @@ const ScheduleView = ({
       document.removeEventListener("mousemove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
-  }, [draggingState]);
+  }, [draggingState, effectiveTimezoneOffset]);
   const getExternalDropPlacement = (event) => {
     if (!scheduleGridRef.current) return null;
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
@@ -70701,17 +70703,65 @@ const BACKUP_FREQUENCY_OPTIONS = [
   "Weekly",
   "Manual"
 ];
-const COMMON_IANA_TIMEZONES = [
-  "Australia/Melbourne",
-  "Australia/Perth",
-  "Australia/Sydney",
-  "Australia/Brisbane",
-  "Australia/Darwin",
-  "Australia/Adelaide",
-  "Europe/London",
-  "America/Anchorage",
-  "UTC"
+const OFFLINE_TIMEZONE_REFERENCES = [
+  { offset: -12, label: "UTC-12", places: "Baker Island, United States", timezone: "Etc/GMT+12" },
+  { offset: -11, label: "UTC-11", places: "Pago Pago, American Samoa / Niue", timezone: "Pacific/Pago_Pago" },
+  { offset: -10, label: "UTC-10", places: "Honolulu, United States / Papeete, French Polynesia", timezone: "Pacific/Honolulu" },
+  { offset: -9.5, label: "UTC-09:30", places: "Marquesas Islands, French Polynesia", timezone: "Pacific/Marquesas" },
+  { offset: -9, label: "UTC-09", places: "Anchorage, United States / Gambier Islands, French Polynesia", timezone: "America/Anchorage" },
+  { offset: -8, label: "UTC-08", places: "Los Angeles, United States / Vancouver, Canada", timezone: "America/Los_Angeles" },
+  { offset: -7, label: "UTC-07", places: "Denver, United States / Edmonton, Canada", timezone: "America/Denver" },
+  { offset: -6, label: "UTC-06", places: "Chicago, United States / Mexico City, Mexico", timezone: "America/Chicago" },
+  { offset: -5, label: "UTC-05", places: "New York, United States / Toronto, Canada", timezone: "America/New_York" },
+  { offset: -4, label: "UTC-04", places: "Halifax, Canada / La Paz, Bolivia", timezone: "America/Halifax" },
+  { offset: -3.5, label: "UTC-03:30", places: "St Johns, Canada", timezone: "America/St_Johns" },
+  { offset: -3, label: "UTC-03", places: "Buenos Aires, Argentina / Sao Paulo, Brazil", timezone: "America/Argentina/Buenos_Aires" },
+  { offset: -2, label: "UTC-02", places: "South Georgia / Fernando de Noronha, Brazil", timezone: "Atlantic/South_Georgia" },
+  { offset: -1, label: "UTC-01", places: "Azores, Portugal / Cape Verde", timezone: "Atlantic/Azores" },
+  { offset: 0, label: "UTC+00", places: "London, United Kingdom / Accra, Ghana", timezone: "UTC" },
+  { offset: 1, label: "UTC+01", places: "Berlin, Germany / Paris, France / Lagos, Nigeria", timezone: "Europe/Berlin" },
+  { offset: 2, label: "UTC+02", places: "Athens, Greece / Cairo, Egypt / Johannesburg, South Africa", timezone: "Europe/Athens" },
+  { offset: 3, label: "UTC+03", places: "Riyadh, Saudi Arabia / Nairobi, Kenya / Moscow, Russia", timezone: "Asia/Riyadh" },
+  { offset: 3.5, label: "UTC+03:30", places: "Tehran, Iran", timezone: "Asia/Tehran" },
+  { offset: 4, label: "UTC+04", places: "Dubai, United Arab Emirates / Baku, Azerbaijan", timezone: "Asia/Dubai" },
+  { offset: 4.5, label: "UTC+04:30", places: "Kabul, Afghanistan", timezone: "Asia/Kabul" },
+  { offset: 5, label: "UTC+05", places: "Karachi, Pakistan / Tashkent, Uzbekistan", timezone: "Asia/Karachi" },
+  { offset: 5.5, label: "UTC+05:30", places: "New Delhi, India / Colombo, Sri Lanka", timezone: "Asia/Kolkata" },
+  { offset: 5.75, label: "UTC+05:45", places: "Kathmandu, Nepal", timezone: "Asia/Kathmandu" },
+  { offset: 6, label: "UTC+06", places: "Dhaka, Bangladesh / Almaty, Kazakhstan", timezone: "Asia/Dhaka" },
+  { offset: 6.5, label: "UTC+06:30", places: "Yangon, Myanmar / Cocos Islands, Australia", timezone: "Asia/Yangon" },
+  { offset: 7, label: "UTC+07", places: "Bangkok, Thailand / Jakarta, Indonesia", timezone: "Asia/Bangkok" },
+  { offset: 8, label: "UTC+08", places: "Perth, Australia / Singapore / Beijing, China", timezone: "Australia/Perth" },
+  { offset: 8.75, label: "UTC+08:45", places: "Eucla, Australia", timezone: "Australia/Eucla" },
+  { offset: 9, label: "UTC+09", places: "Tokyo, Japan / Seoul, South Korea", timezone: "Asia/Tokyo" },
+  { offset: 9.5, label: "UTC+09:30", places: "Darwin, Australia / Adelaide, Australia", timezone: "Australia/Darwin" },
+  { offset: 10, label: "UTC+10", places: "Melbourne, Australia / Brisbane, Australia / Port Moresby, Papua New Guinea", timezone: "Australia/Melbourne" },
+  { offset: 10.5, label: "UTC+10:30", places: "Lord Howe Island, Australia", timezone: "Australia/Lord_Howe" },
+  { offset: 11, label: "UTC+11", places: "Melbourne, Australia daylight saving / Sydney, Australia daylight saving / Honiara, Solomon Islands", timezone: "Australia/Melbourne" },
+  { offset: 12, label: "UTC+12", places: "Auckland, New Zealand standard time / Suva, Fiji", timezone: "Pacific/Auckland" },
+  { offset: 12.75, label: "UTC+12:45", places: "Chatham Islands, New Zealand standard time", timezone: "Pacific/Chatham" },
+  { offset: 13, label: "UTC+13", places: "Auckland, New Zealand daylight saving / Nuku alofa, Tonga", timezone: "Pacific/Auckland" },
+  { offset: 14, label: "UTC+14", places: "Kiritimati, Kiribati", timezone: "Pacific/Kiritimati" }
 ];
+const normaliseUtcOffsetValue = (offset) => {
+  const numericOffset = Number(offset);
+  if (!Number.isFinite(numericOffset)) return null;
+  return Math.round(numericOffset * 4) / 4;
+};
+const formatUtcOffsetLabel = (offset) => {
+  const numericOffset = normaliseUtcOffsetValue(offset);
+  if (numericOffset === null) return "UTC offset not set";
+  const sign = numericOffset >= 0 ? "+" : "-";
+  const absolute = Math.abs(numericOffset);
+  const hours = Math.floor(absolute);
+  const minutes = Math.round((absolute - hours) * 60);
+  return `UTC${sign}${String(hours).padStart(2, "0")}${minutes ? `:${String(minutes).padStart(2, "0")}` : ""}`;
+};
+const getOfflineTimezoneReference = (offset) => {
+  const numericOffset = normaliseUtcOffsetValue(offset);
+  if (numericOffset === null) return null;
+  return OFFLINE_TIMEZONE_REFERENCES.find((reference) => Math.abs(reference.offset - numericOffset) < 1e-3) || null;
+};
 const AIRFIELD_CATALOGUE_FILE = "airfield-location-catalog.json";
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT$1 = "dfp-platform-config-updated";
@@ -76613,6 +76663,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] }),
         visibleLocationRows.map(({ location, index }) => {
           const rowKey = location.id || `platform-location-${index}`;
+          const timezoneReference = getOfflineTimezoneReference(location.timezoneOffset ?? 10);
           const locationOrganisationOptions = [
             "",
             ...uniqueValues([
@@ -76690,10 +76741,37 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   }
                 ) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEditSection("platform-locations"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    NumberField,
+                    {
+                      label: "UTC Offset",
+                      value: location.timezoneOffset ?? 10,
+                      disabled: !canEditSection("platform-locations"),
+                      min: -12,
+                      max: 14,
+                      step: 0.25,
+                      info: "This numeric UTC offset is the app-controlled scheduling timezone. It works offline and is used before any browser timezone lookup.",
+                      onChange: (value) => {
+                        const reference = getOfflineTimezoneReference(value);
+                        updateRow("locations", index, {
+                          timezoneOffset: value,
+                          ...reference?.timezone ? { timezone: reference.timezone } : {}
+                        });
+                      }
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-cyan-500/25 bg-cyan-950/20 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100", children: formatUtcOffsetLabel(location.timezoneOffset ?? 10) })
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TimeZoneField, { label: "IANA Timezone", value: location.timezone || "", disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { timezone: value }), info: "Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: "Offline Timezone Reference", info: "Inserted from the app's internal offline UTC offset table. This is guidance for the selected offset, not an internet lookup." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[42px] rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm leading-snug text-gray-100", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-black text-cyan-100", children: timezoneReference?.label || formatUtcOffsetLabel(location.timezoneOffset ?? 10) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-gray-300", children: timezoneReference?.places || "No offline city/country reference for this offset." })
+                  ] })
+                ] }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   CommaListField,
                   {
@@ -82013,37 +82091,6 @@ const TrainingReportModulePreview = ({
   ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children })
 ] });
-const TimeZoneField = ({ label, value, disabled, onChange, info }) => {
-  const [draftValue, setDraftValue] = reactExports.useState(value || "");
-  const [isEditing, setIsEditing] = reactExports.useState(false);
-  reactExports.useEffect(() => {
-    if (!isEditing) setDraftValue(value || "");
-  }, [isEditing, value]);
-  const commitDraftValue = () => {
-    setIsEditing(false);
-    if (draftValue !== (value || "")) onChange(draftValue);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "input",
-      {
-        className: fieldClass,
-        list: "platform-iana-timezones",
-        value: draftValue,
-        disabled,
-        placeholder: "Australia/Melbourne",
-        onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue),
-        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue),
-        onKeyDown: stopEditableKeyPropagation,
-        onFocus: () => setIsEditing(true),
-        onBlur: commitDraftValue,
-        onChange: (event) => setDraftValue(event.target.value)
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "platform-iana-timezones", children: COMMON_IANA_TIMEZONES.map((timezone) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: timezone }, timezone)) })
-  ] });
-};
 const UserSearchSelect = ({
   label,
   value,

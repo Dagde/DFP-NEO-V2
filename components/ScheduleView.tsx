@@ -7282,7 +7282,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     onInitialSetupWizardActiveChange,
     formationCallsigns = [],
     buildRuleSettings,
-    timezoneOffset = 10 // Default to UTC+10 (AEST); location timezone overrides this when configured.
+    timezoneOffset = 10 // Default to UTC+10 (AEST); location UTC offset overrides this when configured.
 }) => {
     const schedulePersonnelDisplaySettings = useMemo(
         () => normalisePersonnelDisplaySettings(personnelDisplaySettingsInput || null),
@@ -7310,12 +7310,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const activeUnit = units.find((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
         const locationKey = normaliseUnitSettingsIdentifier(locationCode || activeUnit?.locationCode);
         const activeLocation = locations.find((location: any) => locationMatchesKey(location, locationKey));
+        const configuredOffset = Number(activeLocation?.timezoneOffset ?? activeLocation?.settings?.timezoneOffset);
+        if (Number.isFinite(configuredOffset)) return configuredOffset;
+
         const locationTimezone = activeLocation?.timezone || activeLocation?.settings?.timezone;
         const resolvedOffset = getOffsetHoursForTimezone(locationTimezone);
         if (resolvedOffset !== null) return resolvedOffset;
 
-        const configuredOffset = Number(activeLocation?.timezoneOffset ?? activeLocation?.settings?.timezoneOffset ?? timezoneOffset);
-        return Number.isFinite(configuredOffset) ? configuredOffset : 10;
+        const fallbackOffset = Number(timezoneOffset);
+        return Number.isFinite(fallbackOffset) ? fallbackOffset : 10;
     }, [locationCode, platformConfig, timezoneOffset, unitCode]);
     const flightLinePoolContext = useMemo(() => {
         const cleanUnitCode = normaliseUnitSettingsIdentifier(unitCode);
@@ -7698,7 +7701,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     useEffect(() => {
         const timerId = setInterval(() => {
             const now = new Date();
-            const offsetMs = timezoneOffset * 60 * 60 * 1000;
+            const offsetMs = effectiveTimezoneOffset * 60 * 60 * 1000;
             const adjustedTime = new Date(now.getTime() + offsetMs);
             setCurrentTime(adjustedTime);
         }, 1000);
@@ -7730,7 +7733,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             document.removeEventListener('mousemove', handleGlobalMouseMove);
             document.removeEventListener('mouseup', handleGlobalMouseUp);
         };
-    }, [draggingState]);
+    }, [draggingState, effectiveTimezoneOffset]);
 
     const getExternalDropPlacement = (event: React.DragEvent<HTMLDivElement>) => {
         if (!scheduleGridRef.current) return null;
