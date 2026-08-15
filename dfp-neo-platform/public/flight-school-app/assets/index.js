@@ -76753,6 +76753,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   }
                 ) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEditSection("platform-locations"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     NumberField,
@@ -76775,18 +76777,21 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       }
                     }
                   ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-cyan-500/25 bg-cyan-950/20 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100", children: formatUtcOffsetLabel(displayedTimezoneOffset) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 rounded border border-cyan-500/25 bg-cyan-950/20 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100", children: formatUtcOffsetLabel(displayedTimezoneOffset) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: "Auto Timezone", info: "When enabled, this location uses the computer's timezone offset. The value is read from the device and does not require internet." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "label",
                     {
-                      className: "mt-2 flex items-start gap-2 rounded border border-gray-700 bg-gray-950/50 px-2 py-2 text-xs text-gray-200",
+                      className: "flex min-h-[42px] items-center gap-2 rounded border border-gray-700 bg-gray-950/50 px-2 py-2 text-xs text-gray-200",
                       onMouseDown: (event) => event.stopPropagation(),
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "input",
                           {
                             type: "checkbox",
-                            className: "mt-0.5 h-4 w-4 accent-cyan-400",
+                            className: "h-4 w-4 accent-cyan-400",
                             checked: usesSystemTimezoneOffset,
                             disabled: !canEditSection("platform-locations"),
                             onChange: (event) => {
@@ -76805,14 +76810,12 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         ),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-bold text-cyan-100", children: "Auto from computer timezone" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[11px] leading-snug text-gray-400", children: "Uses this device's timezone setting and still works offline." })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[11px] leading-snug text-gray-400", children: "Uses this device's timezone setting." })
                         ] })
                       ]
                     }
                   )
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: "Offline Timezone Reference", info: "Inserted from the app's internal offline UTC offset table. This is guidance for the selected offset, not an internet lookup." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[42px] rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm leading-snug text-gray-100", children: [

@@ -8038,6 +8038,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEditSection('platform-locations')} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
                 </div>
                 <div className="md:col-span-2">
+                  <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
+                </div>
+                <div className="md:col-span-2">
+                  <OptionalNumberField label="Longitude" value={toNullableNumber(location.longitude)} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { longitude: value })} info="Decimal degrees. West is negative." />
+                </div>
+                <div className="md:col-span-2">
                   <NumberField
                     label="UTC Offset"
                     value={displayedTimezoneOffset}
@@ -8059,13 +8065,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <div className="mt-1 rounded border border-cyan-500/25 bg-cyan-950/20 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
                     {formatUtcOffsetLabel(displayedTimezoneOffset)}
                   </div>
+                </div>
+                <div className="md:col-span-3">
+                  <FieldLabel label="Auto Timezone" info="When enabled, this location uses the computer's timezone offset. The value is read from the device and does not require internet." />
                   <label
-                    className="mt-2 flex items-start gap-2 rounded border border-gray-700 bg-gray-950/50 px-2 py-2 text-xs text-gray-200"
+                    className="flex min-h-[42px] items-center gap-2 rounded border border-gray-700 bg-gray-950/50 px-2 py-2 text-xs text-gray-200"
                     onMouseDown={(event) => event.stopPropagation()}
                   >
                     <input
                       type="checkbox"
-                      className="mt-0.5 h-4 w-4 accent-cyan-400"
+                      className="h-4 w-4 accent-cyan-400"
                       checked={usesSystemTimezoneOffset}
                       disabled={!canEditSection('platform-locations')}
                       onChange={(event) => {
@@ -8085,15 +8094,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     />
                     <span>
                       <span className="block font-bold text-cyan-100">Auto from computer timezone</span>
-                      <span className="block text-[11px] leading-snug text-gray-400">Uses this device's timezone setting and still works offline.</span>
+                      <span className="block text-[11px] leading-snug text-gray-400">Uses this device's timezone setting.</span>
                     </span>
                   </label>
-                </div>
-                <div className="md:col-span-2">
-                  <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
-                </div>
-                <div className="md:col-span-2">
-                  <OptionalNumberField label="Longitude" value={toNullableNumber(location.longitude)} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { longitude: value })} info="Decimal degrees. West is negative." />
                 </div>
                 <div className="md:col-span-3">
                   <label>
