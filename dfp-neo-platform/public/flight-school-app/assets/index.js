@@ -83658,9 +83658,7 @@ const SettingsNavigationSidebar = React.memo(({
                       type: "button",
                       onClick: () => {
                         setPendingSection(section);
-                        React.startTransition(() => {
-                          onSelectSection(section, group.label);
-                        });
+                        onSelectSection(section, group.label);
                       },
                       "data-ui-lag-role": "settings-section",
                       "data-settings-group": group.label,
