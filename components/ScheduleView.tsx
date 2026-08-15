@@ -7640,7 +7640,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const isInitialLoad = useRef(true);
     const prevZoomLevelRef = useRef(zoomLevel);
 
-    // Update current time when timezone offset changes
+    // Update current time when timezone offset changes. The schedule surface is large,
+    // so avoid second-by-second repaints when the marker only needs minute-scale accuracy.
     useEffect(() => {
         const updateTime = () => {
             const now = new Date();
@@ -7653,8 +7654,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         // Update immediately
         updateTime();
         
-        // Update every second
-        const interval = setInterval(updateTime, 1000);
+        const interval = setInterval(updateTime, 30000);
         
         return () => clearInterval(interval);
     }, [effectiveTimezoneOffset]);
@@ -7707,13 +7707,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [validateOverlayTime, setValidateOverlayTime] = useState<number | null>(null);
 
     useEffect(() => {
-        const timerId = setInterval(() => {
-            const now = new Date();
-            const offsetMs = effectiveTimezoneOffset * 60 * 60 * 1000;
-            const adjustedTime = new Date(now.getTime() + offsetMs);
-            setCurrentTime(adjustedTime);
-        }, 1000);
-        
         // Global drag handlers
         const handleGlobalMouseMove = (e: MouseEvent) => {
             if (draggingState) {
@@ -7737,11 +7730,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         document.addEventListener('mouseup', handleGlobalMouseUp);
         
         return () => {
-            clearInterval(timerId);
             document.removeEventListener('mousemove', handleGlobalMouseMove);
             document.removeEventListener('mouseup', handleGlobalMouseUp);
         };
-    }, [draggingState, effectiveTimezoneOffset]);
+    }, [draggingState]);
 
     const getExternalDropPlacement = (event: React.DragEvent<HTMLDivElement>) => {
         if (!scheduleGridRef.current) return null;

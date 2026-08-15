@@ -16964,7 +16964,7 @@ const ScheduleView = ({
       setCurrentTime(adjustedTime);
     };
     updateTime();
-    const interval = setInterval(updateTime, 1e3);
+    const interval = setInterval(updateTime, 3e4);
     return () => clearInterval(interval);
   }, [effectiveTimezoneOffset]);
   const updateResourceSlideoutFrame = reactExports.useCallback(() => {
@@ -17000,12 +17000,6 @@ const ScheduleView = ({
   const [selectionRect, setSelectionRect] = reactExports.useState(null);
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   reactExports.useEffect(() => {
-    const timerId = setInterval(() => {
-      const now = /* @__PURE__ */ new Date();
-      const offsetMs = effectiveTimezoneOffset * 60 * 60 * 1e3;
-      const adjustedTime = new Date(now.getTime() + offsetMs);
-      setCurrentTime(adjustedTime);
-    }, 1e3);
     const handleGlobalMouseMove = (e) => {
       if (draggingState) {
         handleMouseMove(e);
@@ -17023,11 +17017,10 @@ const ScheduleView = ({
     document.addEventListener("mousemove", handleGlobalMouseMove);
     document.addEventListener("mouseup", handleGlobalMouseUp);
     return () => {
-      clearInterval(timerId);
       document.removeEventListener("mousemove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
-  }, [draggingState, effectiveTimezoneOffset]);
+  }, [draggingState]);
   const getExternalDropPlacement = (event) => {
     if (!scheduleGridRef.current) return null;
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
@@ -83848,7 +83841,63 @@ const SettingsViewWithMenu = (props) => {
       "appearance": collectSelectedSearchDataTerms(props.fixedCrewTileColourMode, props.activeOperationalModel),
       "emergency": collectSelectedSearchDataTerms(props.emergencyFreezeAuthority, props.qualificationOptions, props.currentUserQualificationIds)
     };
-  }, [props]);
+  }, [
+    props.platformConfig,
+    props.instructorsData,
+    props.traineesData,
+    props.units,
+    props.platformUnits,
+    props.platformUnitContexts,
+    props.unitLocations,
+    props.activeUnitCode,
+    props.activeUnitCodes,
+    props.activeCompositeUnitCode,
+    props.activeAircraftTypeCode,
+    props.activeOperationalModel,
+    props.locations,
+    props.locationAbbreviations,
+    props.locationOpAreas,
+    props.aircraftCrewComposition,
+    props.aircraftConfigurationDefinitions,
+    props.crewPositionTerminology,
+    props.resourceDisplayNames,
+    props.masterCurrencies,
+    props.currencyRequirements,
+    props.unitCurrencyDefinitions,
+    props.currencyImportUnitOptions,
+    props.activeCurrencyUnitCode,
+    props.phraseBank,
+    props.trainingReportDisplayName,
+    props.syllabusDetails,
+    props.cancellationCodes,
+    props.cancellationRecords,
+    props.sctEvents,
+    props.sctTerminology,
+    props.formationCallsigns,
+    props.serviceDefinitions,
+    props.personnelDisplaySettings,
+    props.instructorLabel,
+    props.qualificationOptions,
+    props.settingsVisibilityPolicy,
+    props.excludedCourses,
+    props.courseColors,
+    props.eventLimits,
+    props.dispatchStaggerSettings,
+    props.tileStatusSettings,
+    props.maxDispatchPerHour,
+    props.showDepartureDensityOverlay,
+    props.preferredDutyPeriod,
+    props.maxCrewDutyPeriod,
+    props.flightTurnaround,
+    props.ftdTurnaround,
+    props.cptTurnaround,
+    props.dayFlyingStart,
+    props.dayFlyingEnd,
+    props.organisationSettings,
+    props.fixedCrewTileColourMode,
+    props.emergencyFreezeAuthority,
+    props.currentUserQualificationIds
+  ]);
   const normaliseSearchText = (value) => value.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
   const getSearchQueryTokens = () => normaliseSearchText(settingsSearch).split(" ").filter(Boolean);
   const searchTokensMatchText = (tokens, text) => tokens.length > 0 && tokens.every((token) => text.includes(token));
