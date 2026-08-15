@@ -83583,7 +83583,7 @@ const SettingsNavigationSidebar = React.memo(({
           { transform: `translateY(${deltaY}px)` },
           { transform: "translateY(0)" }
         ],
-        { duration: 190, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+        { duration: 150, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
       );
       groupAnimationsRef.current.set(label, animation);
       animation.addEventListener("finish", () => {
@@ -83687,9 +83687,9 @@ const SettingsNavigationSidebar = React.memo(({
                   transform: showSubmenu ? "translateY(0)" : "translateY(-4px)",
                   pointerEvents: showSubmenu ? "auto" : "none",
                   transition: [
-                    "clip-path 190ms cubic-bezier(0.22, 1, 0.36, 1)",
-                    "opacity 110ms ease-out",
-                    "transform 190ms cubic-bezier(0.22, 1, 0.36, 1)"
+                    "clip-path 210ms cubic-bezier(0.22, 1, 0.36, 1)",
+                    "opacity 210ms ease-out",
+                    "transform 210ms cubic-bezier(0.22, 1, 0.36, 1)"
                   ].join(", ")
                 },
                 children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
