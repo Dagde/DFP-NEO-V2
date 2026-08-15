@@ -83552,17 +83552,44 @@ const SettingsNavigationSidebar = React.memo(({
   getSectionLabel
 }) => {
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
+  const [pendingSection, setPendingSection] = reactExports.useState(null);
+  const deferredNavigationTimeoutRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    if (pendingSection && activeSection === pendingSection) {
+      setPendingSection(null);
+    }
+  }, [activeSection, pendingSection]);
+  reactExports.useEffect(() => () => {
+    if (deferredNavigationTimeoutRef.current !== null) {
+      window.clearTimeout(deferredNavigationTimeoutRef.current);
+    }
+  }, []);
+  const deferSidebarNavigation = (callback, delayMs = 40) => {
+    if (deferredNavigationTimeoutRef.current !== null) {
+      window.clearTimeout(deferredNavigationTimeoutRef.current);
+    }
+    deferredNavigationTimeoutRef.current = window.setTimeout(() => {
+      deferredNavigationTimeoutRef.current = null;
+      callback();
+    }, delayMs);
+  };
   const openSettingsGroup = (group) => {
     const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
     const isOpen = expandedGroups[group.label] === true;
     if (isOpen) {
+      if (deferredNavigationTimeoutRef.current !== null) {
+        window.clearTimeout(deferredNavigationTimeoutRef.current);
+        deferredNavigationTimeoutRef.current = null;
+      }
+      setPendingSection(null);
       setExpandedGroups((previous) => ({ ...previous, [group.label]: false }));
       return;
     }
     setExpandedGroups({ [group.label]: true });
     if (!groupActive) {
       const defaultSection = getDefaultSectionForVisibleGroup(group);
-      onOpenDefaultSection(defaultSection);
+      setPendingSection(defaultSection);
+      deferSidebarNavigation(() => onOpenDefaultSection(defaultSection), 260);
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
@@ -83624,13 +83651,16 @@ const SettingsNavigationSidebar = React.memo(({
               transition: "max-height 240ms ease, opacity 180ms ease, transform 180ms ease"
             },
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
-              const sectionActive = activeSection === section;
+              const sectionActive = (pendingSection || activeSection) === section;
               const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
               return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
                   type: "button",
-                  onClick: () => onSelectSection(section, group.label),
+                  onClick: () => {
+                    setPendingSection(section);
+                    deferSidebarNavigation(() => onSelectSection(section, group.label));
+                  },
                   "data-ui-lag-role": "settings-section",
                   "data-settings-group": group.label,
                   "data-settings-section": section,

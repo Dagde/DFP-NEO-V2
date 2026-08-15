@@ -920,12 +920,41 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
     getSectionLabel,
 }) => {
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+    const [pendingSection, setPendingSection] = useState<SettingsMenuSection | null>(null);
+    const deferredNavigationTimeoutRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        if (pendingSection && activeSection === pendingSection) {
+            setPendingSection(null);
+        }
+    }, [activeSection, pendingSection]);
+
+    useEffect(() => () => {
+        if (deferredNavigationTimeoutRef.current !== null) {
+            window.clearTimeout(deferredNavigationTimeoutRef.current);
+        }
+    }, []);
+
+    const deferSidebarNavigation = (callback: () => void, delayMs = 40) => {
+        if (deferredNavigationTimeoutRef.current !== null) {
+            window.clearTimeout(deferredNavigationTimeoutRef.current);
+        }
+        deferredNavigationTimeoutRef.current = window.setTimeout(() => {
+            deferredNavigationTimeoutRef.current = null;
+            callback();
+        }, delayMs);
+    };
 
     const openSettingsGroup = (group: VisibleSettingGroup) => {
         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
         const isOpen = expandedGroups[group.label] === true;
 
         if (isOpen) {
+            if (deferredNavigationTimeoutRef.current !== null) {
+                window.clearTimeout(deferredNavigationTimeoutRef.current);
+                deferredNavigationTimeoutRef.current = null;
+            }
+            setPendingSection(null);
             setExpandedGroups(previous => ({ ...previous, [group.label]: false }));
             return;
         }
@@ -933,7 +962,8 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
         setExpandedGroups({ [group.label]: true });
         if (!groupActive) {
             const defaultSection = getDefaultSectionForVisibleGroup(group);
-            onOpenDefaultSection(defaultSection);
+            setPendingSection(defaultSection);
+            deferSidebarNavigation(() => onOpenDefaultSection(defaultSection), 260);
         }
     };
 
@@ -994,13 +1024,16 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                             >
                                 <div className="space-y-[1px] py-[1px]">
                                     {group.visibleSections.map(section => {
-                                        const sectionActive = activeSection === section;
+                                        const sectionActive = (pendingSection || activeSection) === section;
                                         const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
                                         return (
                                             <button
                                                 type="button"
                                                 key={section}
-                                                onClick={() => onSelectSection(section, group.label)}
+                                                onClick={() => {
+                                                    setPendingSection(section);
+                                                    deferSidebarNavigation(() => onSelectSection(section, group.label));
+                                                }}
                                                 data-ui-lag-role="settings-section"
                                                 data-settings-group={group.label}
                                                 data-settings-section={section}
