@@ -83552,6 +83552,12 @@ const SettingsNavigationSidebar = React.memo(({
   getSectionLabel
 }) => {
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
+  const pendingDefaultSectionTimerRef = reactExports.useRef(null);
+  reactExports.useEffect(() => () => {
+    if (pendingDefaultSectionTimerRef.current !== null) {
+      window.clearTimeout(pendingDefaultSectionTimerRef.current);
+    }
+  }, []);
   const openSettingsGroup = (group) => {
     const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
     const isOpen = expandedGroups[group.label] === true;
@@ -83561,7 +83567,14 @@ const SettingsNavigationSidebar = React.memo(({
     }
     setExpandedGroups({ [group.label]: true });
     if (!groupActive) {
-      onOpenDefaultSection(getDefaultSectionForVisibleGroup(group));
+      if (pendingDefaultSectionTimerRef.current !== null) {
+        window.clearTimeout(pendingDefaultSectionTimerRef.current);
+      }
+      const defaultSection = getDefaultSectionForVisibleGroup(group);
+      pendingDefaultSectionTimerRef.current = window.setTimeout(() => {
+        onOpenDefaultSection(defaultSection);
+        pendingDefaultSectionTimerRef.current = null;
+      }, 120);
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
@@ -83612,8 +83625,8 @@ const SettingsNavigationSidebar = React.memo(({
           "div",
           {
             id: getSettingsGroupId(group.label),
-            className: `grid transition-[grid-template-rows,opacity] duration-200 ease-out ${showSubmenu ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
+            className: `overflow-hidden transition-[max-height,opacity,transform] duration-200 ease-out will-change-[max-height,opacity,transform] ${showSubmenu ? "max-h-[720px] translate-y-0 opacity-100" : "max-h-0 -translate-y-1 opacity-0"}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
               const sectionActive = activeSection === section;
               const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
               return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -83635,7 +83648,7 @@ const SettingsNavigationSidebar = React.memo(({
                 },
                 section
               );
-            }) }) })
+            }) })
           }
         )
       ] }, group.label);
@@ -83774,10 +83787,12 @@ const SettingsViewWithMenu = (props) => {
   const getSectionLabel = (section) => isContinuationCurrencySection(section) ? continuationCurrencyLabel : sectionLabels[section];
   const getSectionDescription = (section) => isContinuationCurrencySection(section) ? `Configure ${continuationCurrencyLabel} settings` : sectionDescriptions[section];
   const changeActiveSection = (section) => {
-    if (section !== "currencies") {
-      setEmbeddedCurrencyBuilderOpen(false);
-    }
-    setActiveSection(section);
+    reactExports.startTransition(() => {
+      if (section !== "currencies") {
+        setEmbeddedCurrencyBuilderOpen(false);
+      }
+      setActiveSection(section);
+    });
   };
   const selectSettingsSectionFromMenu = (section, groupLabel) => {
     const contextSnippet = groupLabel && settingsSearch.trim() ? getSearchContextSnippet(section, groupLabel) : null;

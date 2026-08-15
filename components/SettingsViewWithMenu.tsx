@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
@@ -920,6 +920,13 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
     getSectionLabel,
 }) => {
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+    const pendingDefaultSectionTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+
+    useEffect(() => () => {
+        if (pendingDefaultSectionTimerRef.current !== null) {
+            window.clearTimeout(pendingDefaultSectionTimerRef.current);
+        }
+    }, []);
 
     const openSettingsGroup = (group: VisibleSettingGroup) => {
         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
@@ -932,7 +939,14 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
 
         setExpandedGroups({ [group.label]: true });
         if (!groupActive) {
-            onOpenDefaultSection(getDefaultSectionForVisibleGroup(group));
+            if (pendingDefaultSectionTimerRef.current !== null) {
+                window.clearTimeout(pendingDefaultSectionTimerRef.current);
+            }
+            const defaultSection = getDefaultSectionForVisibleGroup(group);
+            pendingDefaultSectionTimerRef.current = window.setTimeout(() => {
+                onOpenDefaultSection(defaultSection);
+                pendingDefaultSectionTimerRef.current = null;
+            }, 120);
         }
     };
 
@@ -980,44 +994,42 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                             </button>
                             <div
                                 id={getSettingsGroupId(group.label)}
-                                className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
-                                    showSubmenu ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                                className={`overflow-hidden transition-[max-height,opacity,transform] duration-200 ease-out will-change-[max-height,opacity,transform] ${
+                                    showSubmenu ? 'max-h-[720px] translate-y-0 opacity-100' : 'max-h-0 -translate-y-1 opacity-0'
                                 }`}
                             >
-                                <div className="min-h-0 overflow-hidden">
-                                    <div className="space-y-[1px] py-[1px]">
-                                        {group.visibleSections.map(section => {
-                                            const sectionActive = activeSection === section;
-                                            const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
-                                            return (
-                                                <button
-                                                    key={section}
-                                                    onClick={() => onSelectSection(section, group.label)}
-                                                    className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
-                                                        sectionActive
-                                                            ? 'border-transparent bg-transparent text-sky-300'
-                                                            : section === 'emergency'
-                                                                ? 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                                                                : 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                                                    }`}
-                                                >
-                                                    {sectionActive ? (
-                                                        <span className="h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300" aria-hidden="true" />
-                                                    ) : null}
-                                                    <span className="min-w-0">
-                                                        <span className="block truncate">{getSectionLabel(section)}</span>
-                                                        {contextSnippet && (
-                                                            <span className="mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
-                                                                <span>{contextSnippet.before}</span>
-                                                                <span className="font-bold text-cyan-200">{contextSnippet.match.toUpperCase()}</span>
-                                                                <span>{contextSnippet.after}</span>
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                <div className="space-y-[1px] py-[1px]">
+                                    {group.visibleSections.map(section => {
+                                        const sectionActive = activeSection === section;
+                                        const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
+                                        return (
+                                            <button
+                                                key={section}
+                                                onClick={() => onSelectSection(section, group.label)}
+                                                className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
+                                                    sectionActive
+                                                        ? 'border-transparent bg-transparent text-sky-300'
+                                                        : section === 'emergency'
+                                                            ? 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                                                            : 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                                                }`}
+                                            >
+                                                {sectionActive ? (
+                                                    <span className="h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300" aria-hidden="true" />
+                                                ) : null}
+                                                <span className="min-w-0">
+                                                    <span className="block truncate">{getSectionLabel(section)}</span>
+                                                    {contextSnippet && (
+                                                        <span className="mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
+                                                            <span>{contextSnippet.before}</span>
+                                                            <span className="font-bold text-cyan-200">{contextSnippet.match.toUpperCase()}</span>
+                                                            <span>{contextSnippet.after}</span>
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -1197,10 +1209,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     );
 
     const changeActiveSection = (section: ActiveSection) => {
-        if (section !== 'currencies') {
-            setEmbeddedCurrencyBuilderOpen(false);
-        }
-        setActiveSection(section);
+        startTransition(() => {
+            if (section !== 'currencies') {
+                setEmbeddedCurrencyBuilderOpen(false);
+            }
+            setActiveSection(section);
+        });
     };
 
     const selectSettingsSectionFromMenu = (section: SettingsMenuSection, groupLabel?: string) => {
