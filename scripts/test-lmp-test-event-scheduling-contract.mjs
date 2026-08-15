@@ -4,11 +4,38 @@ import process from 'node:process';
 
 const root = process.cwd();
 const appSource = fs.readFileSync(path.join(root, 'App.tsx'), 'utf8');
+const serverSource = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 const helperSource = fs.readFileSync(path.join(root, 'utils/lmpTestEventScheduling.ts'), 'utf8');
+const individualLmpSource = fs.readFileSync(path.join(root, 'components/TraineeLmpView.tsx'), 'utf8');
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
+
+const appEditableContract = appSource.match(
+  /const INDIVIDUAL_LMP_EDITABLE_FIELDS[^=]*=\s*\[([\s\S]*?)\];/,
+)?.[1] || '';
+const serverEditableContract = serverSource.match(
+  /const INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC\s*=\s*\[([\s\S]*?)\];/,
+)?.[1] || '';
+for (const field of [
+  'testEventType',
+  'testingOfficerQualificationId',
+  'useTestingOfficerSecondaryCallsign',
+]) {
+  assert(
+    appEditableContract.includes(`'${field}'`),
+    `Individual LMP frontend save contract must retain ${field}.`,
+  );
+  assert(
+    serverEditableContract.includes(`'${field}'`),
+    `Individual LMP server sync contract must retain ${field}.`,
+  );
+  assert(
+    individualLmpSource.includes(field),
+    `Individual LMP editor must expose ${field}.`,
+  );
+}
 
 assert(
   helperSource.includes('if (!isLmpTestEvent(testEventType)) return candidates;'),

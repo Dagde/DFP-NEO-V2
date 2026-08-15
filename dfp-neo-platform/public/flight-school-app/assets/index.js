@@ -21489,10 +21489,13 @@ const AircraftConfigCheckboxes = ({ value, definitions, onChange }) => {
     ] }, definition.id))
   ] });
 };
-const LmpEventEditModal = ({ item, aircraftConfigurations, description = "Update the event details used by Individual LMP and NEO Build.", onCancel, onSave }) => {
+const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifications, description = "Update the event details used by Individual LMP and NEO Build.", onCancel, onSave }) => {
   const [code, setCode] = reactExports.useState(item.code || item.id || "");
   const [eventDescription, setEventDescription] = reactExports.useState(item.eventDescription || "");
   const [type, setType] = reactExports.useState(item.type || "Flight");
+  const [testEventType, setTestEventType] = reactExports.useState(item.testEventType || "NONE");
+  const [testingOfficerQualificationId, setTestingOfficerQualificationId] = reactExports.useState(item.testingOfficerQualificationId || "");
+  const [useTestingOfficerSecondaryCallsign, setUseTestingOfficerSecondaryCallsign] = reactExports.useState(item.useTestingOfficerSecondaryCallsign === true);
   const [dayNight, setDayNight] = reactExports.useState(item.dayNight || "Day");
   const [sortieType, setSortieType] = reactExports.useState(item.sortieType || "Dual");
   const [duration, setDuration] = reactExports.useState(item.duration || 1);
@@ -21515,6 +21518,10 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, description = "Update
       setValidationMessage("Duration must be greater than zero.");
       return;
     }
+    if (testEventType !== "NONE" && !testingOfficerQualificationId) {
+      setValidationMessage("Select the one Testing Officer qualification required for this test event.");
+      return;
+    }
     const roundedResourceNumber = Math.max(0, Math.round(Number(resourceNumber) || 0));
     const normalizedPhysicalResources = alignPhysicalResourcesToResourceNumber(
       splitListInput(resourcesPhysical),
@@ -21525,6 +21532,9 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, description = "Update
       code: trimmedCode,
       eventDescription: eventDescription.trim() || trimmedCode,
       type,
+      testEventType,
+      testingOfficerQualificationId: testEventType === "NONE" ? null : testingOfficerQualificationId,
+      useTestingOfficerSecondaryCallsign: testEventType === "FLIGHT_TEST" ? useTestingOfficerSecondaryCallsign : false,
       dayNight,
       sortieType: type === "Flight" ? sortieType : void 0,
       duration: Math.max(0.25, Number(duration) || 0.25),
@@ -21623,6 +21633,68 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, description = "Update
             onChange: setAcceptableAircraftConfigs
           }
         )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded border border-gray-700 bg-gray-950/60 p-3 md:col-span-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Test Event Scheduling" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-300", children: "Test Event Type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white",
+                value: testEventType,
+                onChange: (event) => {
+                  const nextType = event.target.value;
+                  setTestEventType(nextType);
+                  if (nextType === "NONE") setTestingOfficerQualificationId("");
+                  if (nextType !== "FLIGHT_TEST") setUseTestingOfficerSecondaryCallsign(false);
+                },
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "NONE", children: "Not a test event" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FLIGHT_TEST", children: "Flight Test" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SIMULATOR_TEST", children: "Simulator Test" })
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: "This Individual LMP value is used by scheduling for this trainee." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `space-y-1 ${testEventType === "NONE" ? "opacity-50" : ""}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-300", children: "Testing Officer Qualification" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white disabled:cursor-not-allowed",
+                value: testingOfficerQualificationId,
+                disabled: testEventType === "NONE",
+                onChange: (event) => setTestingOfficerQualificationId(event.target.value),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select one qualification" }),
+                  testingOfficerQualifications.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: qualification.id, children: [
+                    qualification.name,
+                    qualification.code ? ` (${qualification.code})` : ""
+                  ] }, qualification.id))
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: "Only one Testing Officer qualification can be required; staff may hold other general qualifications." })
+          ] })
+        ] }),
+        testEventType === "FLIGHT_TEST" && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-900/60 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: useTestingOfficerSecondaryCallsign,
+              onChange: (event) => setUseTestingOfficerSecondaryCallsign(event.target.checked),
+              className: "mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-200", children: "Use Testing Officer secondary callsign" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "Uses the selected officer's secondary callsign from their Staff Profile for this Flight Test." })
+          ] })
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Duration" }),
@@ -21911,7 +21983,18 @@ const formatLmpSortieLabel = (item, resourceDisplayNames) => {
 };
 const formatLmpDurationLabel = (item) => `${formatHours$1(item.duration)}h`;
 const getAssessedElements = (item) => Array.isArray(item.assessedElements) ? item.assessedElements : [];
-const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], instructorLabel: instructorLabel2 = "Instructor", isRemedial = false, isAddedItem = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+const formatTestEventType = (value) => {
+  if (value === "FLIGHT_TEST") return "Flight Test";
+  if (value === "SIMULATOR_TEST") return "Simulator Test";
+  return "Not a test event";
+};
+const getTestingOfficerQualificationLabel = (item, qualifications) => {
+  if (!item.testingOfficerQualificationId) return "N/A";
+  const qualification = qualifications.find((option) => option.id === item.testingOfficerQualificationId);
+  if (!qualification) return item.testingOfficerQualificationId;
+  return `${qualification.name}${qualification.code ? ` (${qualification.code})` : ""}`;
+};
+const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], testingOfficerQualifications = [], instructorLabel: instructorLabel2 = "Instructor", isRemedial = false, isAddedItem = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-red-100", children: "Remedial Package Event" }),
@@ -21959,6 +22042,26 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
             /* @__PURE__ */ jsxRuntimeExports.jsx(AircraftConfigInfoIcon$1, { definitions: aircraftConfigurations })
           ] }),
           value: formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations)
+        }
+      )
+    ] })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Test Event Scheduling" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 mt-2 md:grid-cols-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Test Event Type", value: formatTestEventType(item.testEventType) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        DetailCard$1,
+        {
+          label: "Testing Officer Qualification",
+          value: getTestingOfficerQualificationLabel(item, testingOfficerQualifications)
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        DetailCard$1,
+        {
+          label: "Secondary Callsign",
+          value: item.testEventType === "FLIGHT_TEST" ? item.useTestingOfficerSecondaryCallsign ? "Use Staff Profile secondary callsign" : "Do not use" : "N/A"
         }
       )
     ] })
@@ -22301,13 +22404,19 @@ const TraineeLmpView = ({
   onInsertCustomEvent,
   onUpdateLmpItem,
   trainingReportDisplayName = "Training Report",
-  instructorLabel: instructorLabel2 = "Instructor"
+  instructorLabel: instructorLabel2 = "Instructor",
+  staffQualificationCatalogue: staffQualificationCatalogue2,
+  operationalModel = "flight_school"
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
   const [activeTab, setActiveTab] = reactExports.useState("neo");
   const [showInsertEventModal, setShowInsertEventModal] = reactExports.useState(false);
   const [itemBeingEdited, setItemBeingEdited] = reactExports.useState(null);
+  const testingOfficerQualifications = reactExports.useMemo(
+    () => getQualificationsForOperationalModel(staffQualificationCatalogue2, operationalModel),
+    [staffQualificationCatalogue2, operationalModel]
+  );
   const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
   const completedEventIds = reactExports.useMemo(() => {
     const ids = new Set(scores.map((s) => (s.event || "").replace("*", "")));
@@ -22416,6 +22525,7 @@ const TraineeLmpView = ({
       {
         item: itemBeingEdited,
         aircraftConfigurations,
+        testingOfficerQualifications,
         onCancel: () => setItemBeingEdited(null),
         onSave: async (updatedItem) => {
           const updated = await onUpdateLmpItem?.(trainee, itemBeingEdited, updatedItem);
@@ -22487,6 +22597,7 @@ const TraineeLmpView = ({
               score: scores.find((s) => s.event === selectedItem.code),
               resourceDisplayNames,
               aircraftConfigurations,
+              testingOfficerQualifications,
               instructorLabel: instructorLabel2,
               isRemedial: isRemedialLmpItem(selectedItem),
               isAddedItem: isAddedLmpItem(selectedItem, masterLmpKeys),
@@ -26837,7 +26948,9 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     aircraftCrewComposition,
                     trainingReportDisplayName: activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
                     trainingReportStatusFieldLabel: activeTrainingReportTemplate.modules.overallAssessment.fields.result || "Mission Status",
-                    instructorLabel: activeReportAssessorDisplayLabel
+                    instructorLabel: activeReportAssessorDisplayLabel,
+                    staffQualificationCatalogue: staffQualificationCatalogue2,
+                    operationalModel
                   }
                 ) });
               })(),
@@ -98434,6 +98547,9 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS = [
   "phase",
   "module",
   "type",
+  "testEventType",
+  "testingOfficerQualificationId",
+  "useTestingOfficerSecondaryCallsign",
   "sortieType",
   "dayNight",
   "methodOfDelivery",

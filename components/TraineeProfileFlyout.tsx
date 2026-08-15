@@ -2670,6 +2670,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             trainingReportDisplayName={activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName}
                             trainingReportStatusFieldLabel={activeTrainingReportTemplate.modules.overallAssessment.fields.result || 'Mission Status'}
                             instructorLabel={activeReportAssessorDisplayLabel}
+                            staffQualificationCatalogue={staffQualificationCatalogue}
+                            operationalModel={operationalModel}
                           />
                         </div>
                       );

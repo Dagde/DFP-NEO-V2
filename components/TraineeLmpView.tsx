@@ -27,6 +27,11 @@ import {
     handleEditableTextKeyDownCapture,
     stopEditableKeyPropagation,
 } from '../utils/editableKeyEvents';
+import {
+    getQualificationsForOperationalModel,
+    type StaffQualificationCatalogue,
+    type StaffQualificationDefinition,
+} from '../utils/staffQualifications';
 
 interface TraineeLmpViewProps {
   trainee: Trainee;
@@ -51,6 +56,8 @@ interface TraineeLmpViewProps {
   trainingReportDisplayName?: string;
   trainingReportStatusFieldLabel?: string;
   instructorLabel?: string;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
+  operationalModel?: string;
 }
 
 export interface InsertLmpEventRequest {
@@ -222,13 +229,17 @@ const AircraftConfigCheckboxes: React.FC<{
 export const LmpEventEditModal: React.FC<{
     item: SyllabusItemDetail;
     aircraftConfigurations: AircraftConfigurationDefinition[];
+    testingOfficerQualifications: StaffQualificationDefinition[];
     description?: string;
     onCancel: () => void;
     onSave: (updatedItem: SyllabusItemDetail) => void;
-}> = ({ item, aircraftConfigurations, description = 'Update the event details used by Individual LMP and NEO Build.', onCancel, onSave }) => {
+}> = ({ item, aircraftConfigurations, testingOfficerQualifications, description = 'Update the event details used by Individual LMP and NEO Build.', onCancel, onSave }) => {
     const [code, setCode] = useState(item.code || item.id || '');
     const [eventDescription, setEventDescription] = useState(item.eventDescription || '');
     const [type, setType] = useState<SyllabusItemDetail['type']>(item.type || 'Flight');
+    const [testEventType, setTestEventType] = useState<SyllabusItemDetail['testEventType']>(item.testEventType || 'NONE');
+    const [testingOfficerQualificationId, setTestingOfficerQualificationId] = useState(item.testingOfficerQualificationId || '');
+    const [useTestingOfficerSecondaryCallsign, setUseTestingOfficerSecondaryCallsign] = useState(item.useTestingOfficerSecondaryCallsign === true);
     const [dayNight, setDayNight] = useState<SyllabusItemDetail['dayNight']>(item.dayNight || 'Day');
     const [sortieType, setSortieType] = useState<'Dual' | 'Solo'>(item.sortieType || 'Dual');
     const [duration, setDuration] = useState(item.duration || 1);
@@ -254,6 +265,10 @@ export const LmpEventEditModal: React.FC<{
             setValidationMessage('Duration must be greater than zero.');
             return;
         }
+        if (testEventType !== 'NONE' && !testingOfficerQualificationId) {
+            setValidationMessage('Select the one Testing Officer qualification required for this test event.');
+            return;
+        }
 
         const roundedResourceNumber = Math.max(0, Math.round(Number(resourceNumber) || 0));
         const normalizedPhysicalResources = alignPhysicalResourcesToResourceNumber(
@@ -265,6 +280,11 @@ export const LmpEventEditModal: React.FC<{
             code: trimmedCode,
             eventDescription: eventDescription.trim() || trimmedCode,
             type,
+            testEventType,
+            testingOfficerQualificationId: testEventType === 'NONE' ? null : testingOfficerQualificationId,
+            useTestingOfficerSecondaryCallsign: testEventType === 'FLIGHT_TEST'
+                ? useTestingOfficerSecondaryCallsign
+                : false,
             dayNight,
             sortieType: type === 'Flight' ? sortieType : undefined,
             duration: Math.max(0.25, Number(duration) || 0.25),
@@ -354,6 +374,60 @@ export const LmpEventEditModal: React.FC<{
                             definitions={aircraftConfigurations}
                             onChange={setAcceptableAircraftConfigs}
                         />
+                    </div>
+                    <div className="space-y-3 rounded border border-gray-700 bg-gray-950/60 p-3 md:col-span-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Test Event Scheduling</p>
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <label className="space-y-1">
+                                <span className="text-xs font-semibold text-gray-300">Test Event Type</span>
+                                <select
+                                    className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white"
+                                    value={testEventType}
+                                    onChange={(event) => {
+                                        const nextType = event.target.value as SyllabusItemDetail['testEventType'];
+                                        setTestEventType(nextType);
+                                        if (nextType === 'NONE') setTestingOfficerQualificationId('');
+                                        if (nextType !== 'FLIGHT_TEST') setUseTestingOfficerSecondaryCallsign(false);
+                                    }}
+                                >
+                                    <option value="NONE">Not a test event</option>
+                                    <option value="FLIGHT_TEST">Flight Test</option>
+                                    <option value="SIMULATOR_TEST">Simulator Test</option>
+                                </select>
+                                <span className="block text-xs text-gray-500">This Individual LMP value is used by scheduling for this trainee.</span>
+                            </label>
+                            <label className={`space-y-1 ${testEventType === 'NONE' ? 'opacity-50' : ''}`}>
+                                <span className="text-xs font-semibold text-gray-300">Testing Officer Qualification</span>
+                                <select
+                                    className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white disabled:cursor-not-allowed"
+                                    value={testingOfficerQualificationId}
+                                    disabled={testEventType === 'NONE'}
+                                    onChange={(event) => setTestingOfficerQualificationId(event.target.value)}
+                                >
+                                    <option value="">Select one qualification</option>
+                                    {testingOfficerQualifications.map(qualification => (
+                                        <option key={qualification.id} value={qualification.id}>
+                                            {qualification.name}{qualification.code ? ` (${qualification.code})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                <span className="block text-xs text-gray-500">Only one Testing Officer qualification can be required; staff may hold other general qualifications.</span>
+                            </label>
+                        </div>
+                        {testEventType === 'FLIGHT_TEST' && (
+                            <label className="flex items-start gap-2 rounded border border-gray-700 bg-gray-900/60 p-3">
+                                <input
+                                    type="checkbox"
+                                    checked={useTestingOfficerSecondaryCallsign}
+                                    onChange={(event) => setUseTestingOfficerSecondaryCallsign(event.target.checked)}
+                                    className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                />
+                                <span>
+                                    <span className="block text-xs font-semibold text-gray-200">Use Testing Officer secondary callsign</span>
+                                    <span className="mt-1 block text-xs text-gray-500">Uses the selected officer's secondary callsign from their Staff Profile for this Flight Test.</span>
+                                </span>
+                            </label>
+                        )}
                     </div>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Duration</span>
@@ -727,16 +801,33 @@ const getAssessedElements = (item: SyllabusItemDetail): string[] => (
         : []
 );
 
+const formatTestEventType = (value?: SyllabusItemDetail['testEventType']): string => {
+    if (value === 'FLIGHT_TEST') return 'Flight Test';
+    if (value === 'SIMULATOR_TEST') return 'Simulator Test';
+    return 'Not a test event';
+};
+
+const getTestingOfficerQualificationLabel = (
+    item: SyllabusItemDetail,
+    qualifications: StaffQualificationDefinition[],
+): string => {
+    if (!item.testingOfficerQualificationId) return 'N/A';
+    const qualification = qualifications.find(option => option.id === item.testingOfficerQualificationId);
+    if (!qualification) return item.testingOfficerQualificationId;
+    return `${qualification.name}${qualification.code ? ` (${qualification.code})` : ''}`;
+};
+
 const DetailView: React.FC<{
     item: SyllabusItemDetail;
     score: Score | undefined;
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftConfigurations?: AircraftConfigurationDefinition[];
+    testingOfficerQualifications?: StaffQualificationDefinition[];
     instructorLabel?: string;
     isRemedial?: boolean;
     isAddedItem?: boolean;
     onDelete?: (item: SyllabusItemDetail) => void;
-}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], instructorLabel = 'Instructor', isRemedial = false, isAddedItem = false, onDelete }) => (
+}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], testingOfficerQualifications = [], instructorLabel = 'Instructor', isRemedial = false, isAddedItem = false, onDelete }) => (
     <div className="space-y-6">
         {isRemedial && (
             <div className="flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3">
@@ -779,6 +870,24 @@ const DetailView: React.FC<{
                 <DetailCard
                     label={<span className="flex items-center">CONFIG<AircraftConfigInfoIcon definitions={aircraftConfigurations} /></span>}
                     value={formatAircraftConfigurationSummary(item.acceptableAircraftConfigs, aircraftConfigurations)}
+                />
+            </div>
+        </fieldset>
+
+        <fieldset className="p-4 border border-gray-700 rounded-lg">
+            <legend className="px-2 text-sm font-semibold text-gray-300">Test Event Scheduling</legend>
+            <div className="grid grid-cols-1 gap-4 mt-2 md:grid-cols-3">
+                <DetailCard label="Test Event Type" value={formatTestEventType(item.testEventType)} />
+                <DetailCard
+                    label="Testing Officer Qualification"
+                    value={getTestingOfficerQualificationLabel(item, testingOfficerQualifications)}
+                />
+                <DetailCard
+                    label="Secondary Callsign"
+                    value={item.testEventType === 'FLIGHT_TEST'
+                        ? (item.useTestingOfficerSecondaryCallsign ? 'Use Staff Profile secondary callsign' : 'Do not use')
+                        : 'N/A'
+                    }
                 />
             </div>
         </fieldset>
@@ -1228,12 +1337,18 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     onUpdateLmpItem,
     trainingReportDisplayName = 'Training Report',
     instructorLabel = 'Instructor',
+    staffQualificationCatalogue,
+    operationalModel = 'flight_school',
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
     const [activeTab, setActiveTab] = useState<'neo' | 'academic'>('neo');
     const [showInsertEventModal, setShowInsertEventModal] = useState(false);
     const [itemBeingEdited, setItemBeingEdited] = useState<SyllabusItemDetail | null>(null);
+    const testingOfficerQualifications = useMemo(
+        () => getQualificationsForOperationalModel(staffQualificationCatalogue, operationalModel),
+        [staffQualificationCatalogue, operationalModel],
+    );
 
     // Always show Academic tab when syllabusDetails prop is provided
     // The tab itself will show a "configure" message if academicLmpType not set
@@ -1347,6 +1462,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                 <LmpEventEditModal
                     item={itemBeingEdited}
                     aircraftConfigurations={aircraftConfigurations}
+                    testingOfficerQualifications={testingOfficerQualifications}
                     onCancel={() => setItemBeingEdited(null)}
                     onSave={async (updatedItem) => {
                         const updated = await onUpdateLmpItem?.(trainee, itemBeingEdited, updatedItem);
@@ -1464,6 +1580,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                         score={scores.find(s => s.event === selectedItem.code)}
                                         resourceDisplayNames={resourceDisplayNames}
                                         aircraftConfigurations={aircraftConfigurations}
+                                        testingOfficerQualifications={testingOfficerQualifications}
                                         instructorLabel={instructorLabel}
                                         isRemedial={isRemedialLmpItem(selectedItem)}
                                         isAddedItem={isAddedLmpItem(selectedItem, masterLmpKeys)}
