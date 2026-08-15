@@ -1561,7 +1561,7 @@ const CourseOutcomeTile: React.FC<{
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-violet-400/40 bg-violet-400/10 text-violet-200">
-          <ChartBarIcon className="h-8 w-8" />
+          <ChartBarIcon className="h-8 w-8 opacity-60" />
         </div>
         <ArrowTopRightOnSquareIcon className="h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" />
       </div>
@@ -1774,7 +1774,7 @@ const CoursePassRateTile: React.FC<{
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200">
-          <ChartBarIcon className="h-8 w-8" />
+          <ChartBarIcon className="h-8 w-8 opacity-60" />
         </div>
         <ArrowTopRightOnSquareIcon className="h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" />
       </div>
