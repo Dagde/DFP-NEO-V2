@@ -1560,7 +1560,7 @@ const CourseOutcomeTile: React.FC<{
       className="group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-200">
+        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-violet-400/40 bg-violet-400/10 text-violet-200">
           <ChartBarIcon className="h-8 w-8" />
         </div>
         <ArrowTopRightOnSquareIcon className="h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" />
@@ -1773,7 +1773,7 @@ const CoursePassRateTile: React.FC<{
       className="group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-emerald-400/40 bg-emerald-400/10 text-emerald-200">
+        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200">
           <ChartBarIcon className="h-8 w-8" />
         </div>
         <ArrowTopRightOnSquareIcon className="h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" />
