@@ -660,12 +660,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             ...updates,
         }));
     };
-    const handleTileStatusMinutesChange = (key: keyof TileStatusSettings, value: number) => {
+    const handleTileStatusSettingsChange = (updates: Partial<TileStatusSettings>) => {
         setTempTileStatusSettings((current) => normaliseTileStatusSettings({
             ...current,
-            [key]: value,
+            ...updates,
         }));
     };
+    const handleTileStatusMinutesChange = (
+        key: 'authorizationUrgentMinutes' | 'authorizationWarningMinutes',
+        value: number
+    ) => handleTileStatusSettingsChange({ [key]: value });
     
     // Continuation and currency event state
     const [isEditingSctEvents, setIsEditingSctEvents] = useState(false);
@@ -891,8 +895,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         if (onUpdateDispatchStaggerSettings) {
             onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings(tempDispatchStaggerSettings));
         }
+        const savedTileStatusSettings = normaliseTileStatusSettings(tempTileStatusSettings);
         if (onUpdateTileStatusSettings) {
-            onUpdateTileStatusSettings(normaliseTileStatusSettings(tempTileStatusSettings));
+            onUpdateTileStatusSettings(savedTileStatusSettings);
         }
         setIsEditingBusinessRules(false);
         onShowSuccess('Business rules updated');
@@ -900,7 +905,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             page: 'Settings - Business Rules',
             action: 'update',
             description: 'Updated business rule settings',
-            changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? 'none' : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? 'none' : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation warnings: ${tempTileStatusSettings.authorizationWarningMinutes}/${tempTileStatusSettings.authorizationUrgentMinutes} min`,
+            changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? 'none' : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? 'none' : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation: ${savedTileStatusSettings.flightAuthorisationRequired ? 'required' : 'optional'}; authorisation warnings: ${savedTileStatusSettings.authorizationWarningMinutes}/${savedTileStatusSettings.authorizationUrgentMinutes} min`,
         });
     };
 
@@ -1543,10 +1548,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         <div>
                                             <h3 className="text-sm font-semibold text-gray-200">Flight tile authorisation warnings</h3>
                                             <p className="mt-1 text-xs text-gray-400">
-                                                Controls when unsigned flight tiles change border and crew-name colour on the current day's DFP.
+                                                Controls whether flight authorisation is required and when unsigned flight tiles change border colour on the current day's DFP.
                                             </p>
                                         </div>
                                     </div>
+                                    <label className={`flex items-start gap-3 rounded-lg border p-3 mb-3 ${
+                                        canEditBusinessRules
+                                            ? 'bg-gray-700/40 border-gray-600 cursor-pointer hover:bg-gray-700/60'
+                                            : 'bg-gray-700/20 border-gray-700 cursor-not-allowed'
+                                    }`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={displayedTileStatusSettings.flightAuthorisationRequired}
+                                            onChange={(e) => handleTileStatusSettingsChange({ flightAuthorisationRequired: e.target.checked })}
+                                            disabled={!canEditBusinessRules}
+                                            className="mt-1 h-4 w-4 rounded border-gray-500 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                        />
+                                        <span>
+                                            <span className="block text-sm font-semibold text-gray-100">Flight authorisation required</span>
+                                            <span className="block mt-1 text-xs text-gray-400">
+                                                When off, authorisation controls stay visible but cannot be selected, and DFP authorisation border warnings are disabled.
+                                            </span>
+                                        </span>
+                                    </label>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <label className="block">
                                             <span className="block text-xs font-medium text-gray-400 mb-1">Amber warning before start</span>
@@ -1558,9 +1582,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     step={5}
                                                     value={displayedTileStatusSettings.authorizationWarningMinutes}
                                                     onChange={(e) => handleTileStatusMinutesChange('authorizationWarningMinutes', Number(e.target.value))}
-                                                    disabled={!canEditBusinessRules}
+                                                    disabled={!canEditBusinessRules || !displayedTileStatusSettings.flightAuthorisationRequired}
                                                     className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
-                                                        canEditBusinessRules
+                                                        canEditBusinessRules && displayedTileStatusSettings.flightAuthorisationRequired
                                                             ? 'bg-gray-700 border-gray-600 text-white'
                                                             : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                                                     }`}
@@ -1578,9 +1602,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                     step={5}
                                                     value={displayedTileStatusSettings.authorizationUrgentMinutes}
                                                     onChange={(e) => handleTileStatusMinutesChange('authorizationUrgentMinutes', Number(e.target.value))}
-                                                    disabled={!canEditBusinessRules}
+                                                    disabled={!canEditBusinessRules || !displayedTileStatusSettings.flightAuthorisationRequired}
                                                     className={`w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
-                                                        canEditBusinessRules
+                                                        canEditBusinessRules && displayedTileStatusSettings.flightAuthorisationRequired
                                                             ? 'bg-gray-700 border-gray-600 text-white'
                                                             : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
                                                     }`}
@@ -1815,6 +1839,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        qualificationOptions={qualificationOptions}
                        currentUserQualificationIds={currentUserQualificationIds}
                        canEditEmergencyAuthority={canEditEmergencyAuthority}
+                       flightAuthorisationRequired={resolvedTileStatusSettings.flightAuthorisationRequired}
                    />
                    )}
                </div>

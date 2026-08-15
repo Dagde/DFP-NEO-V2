@@ -184,6 +184,10 @@ const getAuthorizationTextColorClass = (
     }
 
     const resolvedSettings = normaliseTileStatusSettings(settings);
+
+    if (!resolvedSettings.flightAuthorisationRequired) {
+        return '';
+    }
     
     // Use currentTime (timezone-adjusted) instead of new Date() to match the current time indicator
     const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
@@ -315,11 +319,16 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
         return 'ring-red-400'; // Highest priority
     }
 
-    if (suppressAuthorisationWarnings || event.type !== 'flight' || isAuthorisationWarningExempt(event)) {
+    const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
+
+    if (
+        suppressAuthorisationWarnings ||
+        !resolvedTileStatusSettings.flightAuthorisationRequired ||
+        event.type !== 'flight' ||
+        isAuthorisationWarningExempt(event)
+    ) {
         return 'ring-transparent';
     }
-
-    const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     
     // Use currentTime (timezone-adjusted) instead of new Date() to match the current time indicator
     const todayStr = getLocalDateStringFromAdjustedTime(currentTime);

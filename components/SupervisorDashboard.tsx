@@ -17,6 +17,7 @@ interface SupervisorDashboardProps {
         latitude?: number | null;
         longitude?: number | null;
     } | null;
+    flightAuthorisationRequired?: boolean;
     onNavigate: (view: string) => void;
     onOpenAuth: (event: ScheduleEvent) => void;
 }
@@ -27,7 +28,7 @@ const formatTime = (time: number) => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
-const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsData, traineesData, date, events, school, currentLocation, currentLocationProfile, onNavigate, onOpenAuth }) => {
+const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsData, traineesData, date, events, school, currentLocation, currentLocationProfile, flightAuthorisationRequired = true, onNavigate, onOpenAuth }) => {
     
     const flightsNeedingAuth = useMemo(() => {
         const nowInHours = new Date().getHours() + new Date().getMinutes() / 60;
@@ -87,7 +88,14 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                                                     </p>
                                                 </div>
                                             </div>
-                                            <button onClick={() => onOpenAuth(event)} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">
+                                            <button
+                                                onClick={() => {
+                                                    if (flightAuthorisationRequired) onOpenAuth(event);
+                                                }}
+                                                disabled={!flightAuthorisationRequired}
+                                                className={`px-3 py-1 text-white rounded-md text-xs font-semibold ${flightAuthorisationRequired ? 'bg-sky-600 hover:bg-sky-700' : 'bg-gray-600 cursor-not-allowed opacity-60'}`}
+                                                title={flightAuthorisationRequired ? undefined : 'Flight authorisation is optional for this unit'}
+                                            >
                                                 Auth
                                             </button>
                                         </li>
@@ -99,8 +107,12 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                         </div>
                          <div className="p-4 border-t border-gray-700">
                             <button 
-                                onClick={() => onNavigate('AUTH')}
-                                className="w-full text-center px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed"
+                                onClick={() => {
+                                    if (flightAuthorisationRequired) onNavigate('AUTH');
+                                }}
+                                disabled={!flightAuthorisationRequired}
+                                className={`w-full text-center px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed ${flightAuthorisationRequired ? '' : 'opacity-50 cursor-not-allowed'}`}
+                                title={flightAuthorisationRequired ? undefined : 'Flight authorisation is optional for this unit'}
                             >
                                 Go to Flight Authorisation
                             </button>

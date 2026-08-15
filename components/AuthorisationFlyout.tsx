@@ -148,6 +148,7 @@ interface AuthorisationFlyoutProps {
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
   instructorLabel?: string;
+  flightAuthorisationRequired?: boolean;
 }
 
 const InfoRow: React.FC<{ label: string; value: string | undefined }> = ({ label, value }) => (
@@ -173,6 +174,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   masterCurrencies = [],
   currencyRequirements = [],
   instructorLabel = 'Instructor',
+  flightAuthorisationRequired = true,
 }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [notes, setNotes] = useState(event.authNotes ?? '');
@@ -182,6 +184,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   const [isVerbal, setIsVerbal] = useState(event.isVerbalAuth ?? false);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const [isClearingAuth, setIsClearingAuth] = useState(false);
+  const authorisationControlsDisabled = !flightAuthorisationRequired;
   
   const picName = useMemo(() => event.instructor || event.pilot, [event]);
   
@@ -283,6 +286,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   // ─── Action handlers ─────────────────────────────────────────────────────
 
   const handleSignClick = (role: 'autho' | 'captain') => {
+    if (authorisationControlsDisabled) return;
     if (role === 'autho' && !selectedAutho) return;
     if (role === 'captain' && !selectedCaptain) return;
     setSigningRole(role);
@@ -290,10 +294,15 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
     else setShowPinEntry(true);
   };
 
-  const handleConfirmAuthForSign = () => { setShowAuthConfirmation(false); setShowPinEntry(true); };
+  const handleConfirmAuthForSign = () => {
+    if (authorisationControlsDisabled) return;
+    setShowAuthConfirmation(false);
+    setShowPinEntry(true);
+  };
   const handleCancelAuthForSign  = () => { setShowAuthConfirmation(false); setSigningRole(null); };
 
   const handleCorrectPinForSign = () => {
+    if (authorisationControlsDisabled) return;
     if (signingRole) {
       const selectedPerson = signingRole === 'autho' ? selectedAutho : selectedCaptain;
       onAuthorise(event.id, notes, signingRole, isVerbal, selectedPerson);
@@ -302,11 +311,22 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
     setSigningRole(null);
   };
 
-  const handleProceedToPinForClear = () => { setShowClearConfirmation(false); setIsClearingAuth(true); setShowPinEntry(true); };
-  const handleCorrectPinForClear  = () => { onClearAuth(event.id); setShowPinEntry(false); setIsClearingAuth(false); };
+  const handleProceedToPinForClear = () => {
+    if (authorisationControlsDisabled) return;
+    setShowClearConfirmation(false);
+    setIsClearingAuth(true);
+    setShowPinEntry(true);
+  };
+  const handleCorrectPinForClear  = () => {
+    if (authorisationControlsDisabled) return;
+    onClearAuth(event.id);
+    setShowPinEntry(false);
+    setIsClearingAuth(false);
+  };
   const handleCancelPin           = () => { setShowPinEntry(false); setSigningRole(null); setIsClearingAuth(false); };
 
   const handleVerbalAuthChange = (checked: boolean) => {
+    if (authorisationControlsDisabled) return;
     setIsVerbal(checked);
   };
 
@@ -435,7 +455,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                 </div>
 
                 <div className="p-4 space-y-4 relative">
-                    {isFrozen && !freezeAllowedActions.flightAuthorisation && (
+                    {((isFrozen && !freezeAllowedActions.flightAuthorisation) || authorisationControlsDisabled) && (
                         <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                     )}
                     <div className="bg-gray-700/50 rounded-lg p-3 text-center border border-gray-600">
@@ -500,7 +520,13 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                 </div>
 
                 <div className="px-4 py-3 bg-gray-900 border-t border-gray-700 flex justify-between items-center">
-                    <button onClick={() => setShowClearConfirmation(true)} className="px-4 py-2 bg-red-600 text-white rounded text-sm font-semibold hover:bg-red-700 transition-colors">Clear Auth</button>
+                    <button
+                        onClick={() => !authorisationControlsDisabled && setShowClearConfirmation(true)}
+                        disabled={authorisationControlsDisabled}
+                        className={`px-4 py-2 text-white rounded text-sm font-semibold transition-colors ${authorisationControlsDisabled ? 'bg-gray-600 cursor-not-allowed opacity-60' : 'bg-red-600 hover:bg-red-700'}`}
+                    >
+                        Clear Auth
+                    </button>
                     <button onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded text-sm font-semibold hover:bg-gray-700 transition-colors">Close</button>
                 </div>
             </div>
@@ -525,8 +551,14 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                 </div>
 
                 <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto relative">
-                    {isFrozen && !freezeAllowedActions.flightAuthorisation && (
+                    {((isFrozen && !freezeAllowedActions.flightAuthorisation) || authorisationControlsDisabled) && (
                         <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                    )}
+
+                    {authorisationControlsDisabled && (
+                        <div className="rounded-md border border-amber-500/30 bg-amber-900/20 px-3 py-2 text-xs text-amber-200">
+                            Flight authorisation is optional for this unit. Existing authorisation details can be viewed but not changed.
+                        </div>
                     )}
 
                     {/* Flight Summary */}
@@ -556,7 +588,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                             onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setNotes)}
                             onKeyDown={stopEditableKeyPropagation}
                             onChange={e => setNotes(e.target.value)}
-                            disabled={!!(event.authoSignedBy ?? event.captainSignedBy)}
+                            disabled={authorisationControlsDisabled || !!(event.authoSignedBy ?? event.captainSignedBy)}
                             className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
                             placeholder="Enter any authorisation notes here..."
                         />
@@ -575,10 +607,11 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                                             selectedStaff={selectedAutho}
                                             onSelect={setSelectedAutho}
                                             placeholder="Select Authorising Officer..."
+                                            disabled={authorisationControlsDisabled}
                                         />
                                         <button 
                                             onClick={() => handleSignClick('autho')} 
-                                            disabled={!selectedAutho}
+                                            disabled={authorisationControlsDisabled || !selectedAutho}
                                             className="w-full px-3 py-1.5 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed"
                                         >
                                             Sign as AUTHO
@@ -604,11 +637,11 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                                             selectedStaff={selectedCaptain}
                                             onSelect={setSelectedCaptain}
                                             placeholder="Select Captain (PIC)..."
-                                            disabled={!!(event.authoSignedBy && !event.isVerbalAuth)}
+                                            disabled={authorisationControlsDisabled || !!(event.authoSignedBy && !event.isVerbalAuth)}
                                         />
                                         <button
                                             onClick={() => handleSignClick('captain')}
-                                            disabled={!selectedCaptain || !(event.authoSignedBy || event.isVerbalAuth || isVerbal)}
+                                            disabled={authorisationControlsDisabled || !selectedCaptain || !(event.authoSignedBy || event.isVerbalAuth || isVerbal)}
                                             className="w-full px-3 py-1.5 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed"
                                         >
                                             Sign as PIC
@@ -627,10 +660,10 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                                         type="checkbox"
                                         checked={isVerbal}
                                         onChange={e => handleVerbalAuthChange(e.target.checked)}
-                                        disabled={!!event.authoSignedBy}
+                                        disabled={authorisationControlsDisabled || !!event.authoSignedBy}
                                         className="h-4 w-4 bg-gray-700 border-gray-600 rounded focus:ring-amber-500 focus:ring-offset-gray-800 accent-amber-500 disabled:accent-gray-600"
                                     />
-                                    <span className={`text-sm ${event.authoSignedBy ? 'text-gray-500' : 'text-gray-300'}`}>
+                                    <span className={`text-sm ${(authorisationControlsDisabled || event.authoSignedBy) ? 'text-gray-500' : 'text-gray-300'}`}>
                                         Verbal AUTH received. See Notes.
                                         {isVerbal && (
                                             <span className="ml-2 text-amber-400 font-medium">
@@ -647,7 +680,11 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                 <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-between items-center">
                     <div>
                         {hasAnySignature && (
-                            <button onClick={() => setShowClearConfirmation(true)} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold">
+                            <button
+                                onClick={() => !authorisationControlsDisabled && setShowClearConfirmation(true)}
+                                disabled={authorisationControlsDisabled}
+                                className={`px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold ${authorisationControlsDisabled ? 'bg-gray-600 cursor-not-allowed opacity-60' : 'bg-red-600 hover:bg-red-700'}`}
+                            >
                                 Clear Auth
                             </button>
                         )}

@@ -22684,6 +22684,12 @@ const App: React.FC = () => {
         writeTileStatusSettingsToLocalStorage(tileStatusSettings);
     }, [tileStatusSettings]);
 
+    const effectiveTileStatusSettings = useMemo(
+        () => normaliseTileStatusSettings(tileStatusSettings),
+        [tileStatusSettings],
+    );
+    const flightAuthorisationRequired = effectiveTileStatusSettings.flightAuthorisationRequired;
+
     // Helper function to get local date string with timezone offset
     const getLocalDateString = (date: Date = new Date()): string => {
         // Apply timezone offset
@@ -41300,6 +41306,14 @@ appliedUpdates.forEach(update => {
             denyPastDfpEdit('authorise events');
             return;
         }
+        if (!flightAuthorisationRequired) {
+            showDarkAlert(
+                'Flight authorisation is optional for this unit. Authorisation entries are disabled.',
+                'Flight Authorisation Optional',
+                'warning'
+            );
+            return;
+        }
         // System freeze check - read directly from localStorage to avoid stale closure
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
@@ -41436,6 +41450,14 @@ appliedUpdates.forEach(update => {
         ))?.[0];
         if (isPastDfpDate(authEventDate)) {
             denyPastDfpEdit('clear authorisations');
+            return;
+        }
+        if (!flightAuthorisationRequired) {
+            showDarkAlert(
+                'Flight authorisation is optional for this unit. Authorisation entries are disabled.',
+                'Flight Authorisation Optional',
+                'warning'
+            );
             return;
         }
         let affectedScheduleDate: string | null = null;
@@ -46309,8 +46331,17 @@ appliedUpdates.forEach(update => {
                             school={school}
                             currentLocation={activeLocationDisplayName}
                             currentLocationProfile={activeLocationSolarProfile}
+                            flightAuthorisationRequired={flightAuthorisationRequired}
                             onNavigate={handleNavigation}
                             onOpenAuth={(e) => {
+                                if (!flightAuthorisationRequired) {
+                                    showDarkAlert(
+                                        'Flight authorisation is optional for this unit. Authorisation entries are disabled.',
+                                        'Flight Authorisation Optional',
+                                        'warning'
+                                    );
+                                    return;
+                                }
                                 // Find the latest version of the event from main events state
                                 const latestEvent = events.find(ev => ev.id === e.id) || e;
                                 setEventForAuth(latestEvent);
@@ -46744,8 +46775,12 @@ appliedUpdates.forEach(update => {
                     onUpdateTimezoneOffset={setTimezoneOffset}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
                     onUpdateShowDepartureDensityOverlay={setShowDepartureDensityOverlay}
-                    tileStatusSettings={tileStatusSettings}
-                    onUpdateTileStatusSettings={(settings) => setTileStatusSettings(normaliseTileStatusSettings(settings))}
+                    tileStatusSettings={effectiveTileStatusSettings}
+                    onUpdateTileStatusSettings={(settings) => {
+                        const normalisedSettings = normaliseTileStatusSettings(settings);
+                        setTileStatusSettings(normalisedSettings);
+                        writeTileStatusSettingsToLocalStorage(normalisedSettings);
+                    }}
 
                        formationCallsigns={formationCallsigns}
                           onUpdateFormationCallsigns={setFormationCallsigns}
@@ -47824,6 +47859,18 @@ appliedUpdates.forEach(update => {
                 }
                 return null;
             case 'AUTH':
+                if (!flightAuthorisationRequired) {
+                    return (
+                        <div className="flex-1 bg-gray-900 p-8 text-gray-200">
+                            <div className="max-w-2xl rounded-lg border border-amber-500/30 bg-amber-900/20 p-5">
+                                <h2 className="text-lg font-semibold text-amber-200">Flight Authorisation Optional</h2>
+                                <p className="mt-2 text-sm text-amber-100/90">
+                                    Flight authorisation is optional for this unit, so authorisation entries are disabled.
+                                </p>
+                            </div>
+                        </div>
+                    );
+                }
                 return <AuthorisationView />;
             default:
                 return <div>View not found</div>;
@@ -48442,11 +48489,20 @@ appliedUpdates.forEach(update => {
                         ? handleOpenAirCombatTrainingReportFromFlightDetails
                         : undefined}
                     onOpenAuth={(e) => {
+                        if (!flightAuthorisationRequired) {
+                            showDarkAlert(
+                                'Flight authorisation is optional for this unit. Authorisation entries are disabled.',
+                                'Flight Authorisation Optional',
+                                'warning'
+                            );
+                            return;
+                        }
                         // Find the latest version of the event from main events state
                         const latestEvent = events.find(ev => ev.id === e.id) || e;
                         setEventForAuth(latestEvent);
                         setShowAuthFlyout(true);
                     }}
+                    flightAuthorisationRequired={flightAuthorisationRequired}
                     onOpenPostFlight={(e) => {
                         const latestEvent = events.find(ev => ev.id === e.id) || e;
                         setEventForPostFlight(latestEvent);
@@ -48743,6 +48799,7 @@ appliedUpdates.forEach(update => {
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}
                     instructorLabel={instructorLabel}
+                    flightAuthorisationRequired={flightAuthorisationRequired}
                 />
             }
             {showAddRemedialPackage && selectedTraineeForRemedial && (

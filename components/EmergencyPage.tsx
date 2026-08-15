@@ -18,6 +18,7 @@ interface EmergencyPageProps {
     qualificationOptions?: StaffQualificationDefinition[];
     currentUserQualificationIds?: string[];
     canEditEmergencyAuthority?: boolean;
+    flightAuthorisationRequired?: boolean;
 }
 
 const defaultAllowedActions: AllowedActions = {
@@ -35,7 +36,8 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     onUpdateEmergencyFreezeAuthority,
     qualificationOptions = [],
     currentUserQualificationIds = [],
-    canEditEmergencyAuthority = false
+    canEditEmergencyAuthority = false,
+    flightAuthorisationRequired = true,
 }) => {
     const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze();
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -47,6 +49,16 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     const [pendingAllowedActions, setPendingAllowedActions] = useState<AllowedActions>(defaultAllowedActions);
     const reportDisplayName = String(trainingReportDisplayName || '').trim() || 'Training Report';
     const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
+    const effectivePendingAllowedActions: AllowedActions = flightAuthorisationRequired
+        ? pendingAllowedActions
+        : { ...pendingAllowedActions, flightAuthorisation: false };
+    const frozenFlightAuthorisationAllowed = flightAuthorisationRequired && freezeState.allowedActions.flightAuthorisation;
+
+    useEffect(() => {
+        if (!flightAuthorisationRequired) {
+            setPendingAllowedActions(prev => prev.flightAuthorisation ? { ...prev, flightAuthorisation: false } : prev);
+        }
+    }, [flightAuthorisationRequired]);
     const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
     const canActivateFreeze = hasEmergencyFreezeAuthority({
         action: 'activate',
@@ -136,6 +148,7 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     };
 
     const handleAllowedActionChange = (action: keyof AllowedActions) => {
+        if (action === 'flightAuthorisation' && !flightAuthorisationRequired) return;
         setPendingAllowedActions(prev => ({
             ...prev,
             [action]: !prev[action]
@@ -147,10 +160,10 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     };
 
     const isEverythingFrozen = () => {
-        return !pendingAllowedActions.postFlightTimes &&
-               !pendingAllowedActions.pt051Entries &&
-               !pendingAllowedActions.flightAuthorisation &&
-               !pendingAllowedActions.aircraftAvailability;
+        return !effectivePendingAllowedActions.postFlightTimes &&
+               !effectivePendingAllowedActions.pt051Entries &&
+               !effectivePendingAllowedActions.flightAuthorisation &&
+               !effectivePendingAllowedActions.aircraftAvailability;
     };
 
     const handleFreezeClick = () => {
@@ -169,7 +182,7 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
         if (!unlocked) return;
         setIsProcessing(true);
         
-        freezeSystem('Aircraft Emergency', pendingAllowedActions, currentUserRole);
+        freezeSystem('Aircraft Emergency', effectivePendingAllowedActions, currentUserRole);
         setShowConfirmDialog(false);
         setIsProcessing(false);
         
@@ -423,16 +436,25 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                                 </div>
                             </label>
 
-                            <label className="flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors">
+                            <label className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                                flightAuthorisationRequired
+                                    ? 'bg-gray-700/50 border-gray-600 cursor-pointer hover:bg-gray-700'
+                                    : 'bg-gray-800/70 border-gray-700 cursor-not-allowed opacity-70'
+                            }`}>
                                 <input
                                     type="checkbox"
-                                    checked={pendingAllowedActions.flightAuthorisation}
+                                    checked={flightAuthorisationRequired && pendingAllowedActions.flightAuthorisation}
                                     onChange={() => handleAllowedActionChange('flightAuthorisation')}
+                                    disabled={!flightAuthorisationRequired}
                                     className="w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
                                 />
                                 <div>
-                                    <span className="text-white font-medium">Flight Authorisation Entries</span>
-                                    <p className="text-gray-400 text-xs">Allow flight authorisation processing</p>
+                                    <span className={flightAuthorisationRequired ? 'text-white font-medium' : 'text-gray-400 font-medium'}>Flight Authorisation Entries</span>
+                                    <p className="text-gray-400 text-xs">
+                                        {flightAuthorisationRequired
+                                            ? 'Allow flight authorisation processing'
+                                            : 'Flight authorisation is optional for this unit, so this emergency exception is disabled.'}
+                                    </p>
                                 </div>
                             </label>
 
@@ -470,8 +492,8 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                         <div className={`p-3 rounded-lg ${freezeState.allowedActions.pt051Entries ? 'bg-green-900/30 border border-green-500/30' : 'bg-gray-700/30 border border-gray-600'}`}>
                             <span className={freezeState.allowedActions.pt051Entries ? 'text-green-400' : 'text-gray-500'}>{reportDisplayName} Entries</span>
                         </div>
-                        <div className={`p-3 rounded-lg ${freezeState.allowedActions.flightAuthorisation ? 'bg-green-900/30 border border-green-500/30' : 'bg-gray-700/30 border border-gray-600'}`}>
-                            <span className={freezeState.allowedActions.flightAuthorisation ? 'text-green-400' : 'text-gray-500'}>Flight Authorisation</span>
+                        <div className={`p-3 rounded-lg ${frozenFlightAuthorisationAllowed ? 'bg-green-900/30 border border-green-500/30' : 'bg-gray-700/30 border border-gray-600'}`}>
+                            <span className={frozenFlightAuthorisationAllowed ? 'text-green-400' : 'text-gray-500'}>Flight Authorisation</span>
                         </div>
                         <div className={`p-3 rounded-lg ${freezeState.allowedActions.aircraftAvailability ? 'bg-green-900/30 border border-green-500/30' : 'bg-gray-700/30 border border-gray-600'}`}>
                             <span className={freezeState.allowedActions.aircraftAvailability ? 'text-green-400' : 'text-gray-500'}>Aircraft Availability</span>
@@ -523,10 +545,10 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                                     <span className="text-red-400 text-sm font-medium">None (Full Freeze)</span>
                                 ) : (
                                     <>
-                                        {pendingAllowedActions.postFlightTimes && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">Post Flight Times</span>}
-                                        {pendingAllowedActions.pt051Entries && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">{reportDisplayName}</span>}
-                                        {pendingAllowedActions.flightAuthorisation && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">Flight Auth</span>}
-                                        {pendingAllowedActions.aircraftAvailability && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">Aircraft Availability</span>}
+                                        {effectivePendingAllowedActions.postFlightTimes && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">Post Flight Times</span>}
+                                        {effectivePendingAllowedActions.pt051Entries && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">{reportDisplayName}</span>}
+                                        {effectivePendingAllowedActions.flightAuthorisation && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">Flight Auth</span>}
+                                        {effectivePendingAllowedActions.aircraftAvailability && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">Aircraft Availability</span>}
                                     </>
                                 )}
                             </div>

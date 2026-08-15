@@ -463,6 +463,7 @@ interface EventDetailModalProps {
   trainingReportDisplayName?: string;
   onOpenTrainingReport?: (staff: Instructor, event: ScheduleEvent) => void;
   onOpenAuth: (event: ScheduleEvent) => void;
+  flightAuthorisationRequired?: boolean;
   onOpenPostFlight: (event: ScheduleEvent) => void;
   isConflict: boolean;
   onNeoClick: (event: ScheduleEvent) => void;
@@ -657,7 +658,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = 'Training Report', onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = 'Training Report', onOpenTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
     
 
     const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
@@ -2976,6 +2977,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     };
     
     const handleAuthClick = () => {
+        if (!flightAuthorisationRequired) return;
         onOpenAuth(event);
     };
 
@@ -4264,7 +4266,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     {/* Auth button - frozen unless flightAuthorisation is allowed */}
                                     {event.type === 'flight' && (
                                         <div className="relative w-[75px]">
-                                            {isFrozen && !freezeAllowedActions.flightAuthorisation && (
+                                            {((isFrozen && !freezeAllowedActions.flightAuthorisation) || !flightAuthorisationRequired) && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                             )}
                                             <button
@@ -4272,8 +4274,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     if (blockReadOnlyAction('authorise events')) return;
                                                     handleAuthClick();
                                                 }}
-                                                className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${isReadOnly ? 'cursor-not-allowed' : ''}`}
-                                                title={isReadOnly ? 'Past DFP locked' : undefined}
+                                                disabled={isReadOnly || !flightAuthorisationRequired}
+                                                className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${(isReadOnly || !flightAuthorisationRequired) ? 'cursor-not-allowed opacity-60' : ''}`}
+                                                title={isReadOnly ? 'Past DFP locked' : !flightAuthorisationRequired ? 'Flight authorisation is optional for this unit' : undefined}
                                             >
                                                 <span className="text-center leading-tight">Auth</span>
                                             </button>

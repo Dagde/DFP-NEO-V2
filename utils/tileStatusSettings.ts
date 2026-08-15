@@ -1,9 +1,11 @@
 export interface TileStatusSettings {
+  flightAuthorisationRequired: boolean;
   authorizationUrgentMinutes: number;
   authorizationWarningMinutes: number;
 }
 
 export const DEFAULT_TILE_STATUS_SETTINGS: TileStatusSettings = {
+  flightAuthorisationRequired: true,
   authorizationUrgentMinutes: 15,
   authorizationWarningMinutes: 120,
 };
@@ -29,6 +31,7 @@ export const normaliseTileStatusSettings = (
   );
 
   return {
+    flightAuthorisationRequired: settings?.flightAuthorisationRequired !== false,
     authorizationUrgentMinutes: Math.min(urgent, warning),
     authorizationWarningMinutes: Math.max(warning, urgent),
   };

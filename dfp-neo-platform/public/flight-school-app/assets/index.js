@@ -1609,6 +1609,7 @@ function logAudit(pageOrParams, action, description, changes) {
   }
 }
 const DEFAULT_TILE_STATUS_SETTINGS = {
+  flightAuthorisationRequired: true,
   authorizationUrgentMinutes: 15,
   authorizationWarningMinutes: 120
 };
@@ -1628,6 +1629,7 @@ const normaliseTileStatusSettings = (settings) => {
     DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes
   );
   return {
+    flightAuthorisationRequired: settings?.flightAuthorisationRequired !== false,
     authorizationUrgentMinutes: Math.min(urgent, warning),
     authorizationWarningMinutes: Math.max(warning, urgent)
   };
@@ -9005,6 +9007,9 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
     return "";
   }
   const resolvedSettings = normaliseTileStatusSettings(settings);
+  if (!resolvedSettings.flightAuthorisationRequired) {
+    return "";
+  }
   const todayStr = getLocalDateStringFromAdjustedTime$1(currentTime);
   if (event.date !== todayStr) {
     return "";
@@ -9099,10 +9104,10 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
     if (isConflicting || isUnavailabilityConflict) {
       return "ring-red-400";
     }
-    if (suppressAuthorisationWarnings || event.type !== "flight" || isAuthorisationWarningExempt(event)) {
+    const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
+    if (suppressAuthorisationWarnings || !resolvedTileStatusSettings.flightAuthorisationRequired || event.type !== "flight" || isAuthorisationWarningExempt(event)) {
       return "ring-transparent";
     }
-    const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     const todayStr = getLocalDateStringFromAdjustedTime$1(currentTime);
     if (event.date !== todayStr) {
       return "ring-transparent";
@@ -30278,7 +30283,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [isEditing, setIsEditing] = reactExports.useState(isReadOnly ? false : isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
@@ -31972,6 +31977,7 @@ ${swapNote}` : swapNote
     }
   };
   const handleAuthClick = () => {
+    if (!flightAuthorisationRequired) return;
     onOpenAuth(event);
   };
   const handlePostFlightClick = () => {
@@ -33121,7 +33127,7 @@ ${swapNote}` : swapNote
               )
             ] }),
             event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
-              isFrozen && !freezeAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
+              (isFrozen && !freezeAllowedActions.flightAuthorisation || !flightAuthorisationRequired) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -33129,8 +33135,9 @@ ${swapNote}` : swapNote
                     if (blockReadOnlyAction("authorise events")) return;
                     handleAuthClick();
                   },
-                  className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${isReadOnly ? "cursor-not-allowed" : ""}`,
-                  title: isReadOnly ? "Past DFP locked" : void 0,
+                  disabled: isReadOnly || !flightAuthorisationRequired,
+                  className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${isReadOnly || !flightAuthorisationRequired ? "cursor-not-allowed opacity-60" : ""}`,
+                  title: isReadOnly ? "Past DFP locked" : !flightAuthorisationRequired ? "Flight authorisation is optional for this unit" : void 0,
                   children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Auth" })
                 }
               )
@@ -39687,7 +39694,7 @@ const formatTime$1 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const SupervisorDashboard = ({ instructorsData, traineesData, date, events, school, currentLocation, currentLocationProfile, onNavigate, onOpenAuth }) => {
+const SupervisorDashboard = ({ instructorsData, traineesData, date, events, school, currentLocation, currentLocationProfile, flightAuthorisationRequired = true, onNavigate, onOpenAuth }) => {
   const flightsNeedingAuth = reactExports.useMemo(() => {
     const nowInHours = (/* @__PURE__ */ new Date()).getHours() + (/* @__PURE__ */ new Date()).getMinutes() / 60;
     return events.filter(
@@ -39729,13 +39736,28 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
               ] })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onOpenAuth(event), className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Auth" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => {
+                if (flightAuthorisationRequired) onOpenAuth(event);
+              },
+              disabled: !flightAuthorisationRequired,
+              className: `px-3 py-1 text-white rounded-md text-xs font-semibold ${flightAuthorisationRequired ? "bg-sky-600 hover:bg-sky-700" : "bg-gray-600 cursor-not-allowed opacity-60"}`,
+              title: flightAuthorisationRequired ? void 0 : "Flight authorisation is optional for this unit",
+              children: "Auth"
+            }
+          )
         ] }, event.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-8", children: "No flights require authorisation." }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => onNavigate("AUTH"),
-            className: "w-full text-center px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed",
+            onClick: () => {
+              if (flightAuthorisationRequired) onNavigate("AUTH");
+            },
+            disabled: !flightAuthorisationRequired,
+            className: `w-full text-center px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed ${flightAuthorisationRequired ? "" : "opacity-50 cursor-not-allowed"}`,
+            title: flightAuthorisationRequired ? void 0 : "Flight authorisation is optional for this unit",
             children: "Go to Flight Authorisation"
           }
         ) })
@@ -64009,7 +64031,8 @@ const AuthorisationFlyout = ({
   traineesData = [],
   masterCurrencies = [],
   currencyRequirements = [],
-  instructorLabel: instructorLabel2 = "Instructor"
+  instructorLabel: instructorLabel2 = "Instructor",
+  flightAuthorisationRequired = true
 }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [notes, setNotes] = reactExports.useState(event.authNotes ?? "");
@@ -64019,6 +64042,7 @@ const AuthorisationFlyout = ({
   const [isVerbal, setIsVerbal] = reactExports.useState(event.isVerbalAuth ?? false);
   const [showClearConfirmation, setShowClearConfirmation] = reactExports.useState(false);
   const [isClearingAuth, setIsClearingAuth] = reactExports.useState(false);
+  const authorisationControlsDisabled = !flightAuthorisationRequired;
   const picName = reactExports.useMemo(() => event.instructor || event.pilot, [event]);
   const currentUserDisplayName = reactExports.useMemo(() => `${currentUserRank} ${currentUserName}`, [currentUserRank, currentUserName]);
   const defaultAutho = reactExports.useMemo(() => currentUserDisplayName, [currentUserDisplayName]);
@@ -64099,6 +64123,7 @@ const AuthorisationFlyout = ({
     return `${day} ${month} ${year} ${hours}:${minutes}`;
   };
   const handleSignClick = (role) => {
+    if (authorisationControlsDisabled) return;
     if (role === "autho" && !selectedAutho) return;
     if (role === "captain" && !selectedCaptain) return;
     setSigningRole(role);
@@ -64106,6 +64131,7 @@ const AuthorisationFlyout = ({
     else setShowPinEntry(true);
   };
   const handleConfirmAuthForSign = () => {
+    if (authorisationControlsDisabled) return;
     setShowAuthConfirmation(false);
     setShowPinEntry(true);
   };
@@ -64114,6 +64140,7 @@ const AuthorisationFlyout = ({
     setSigningRole(null);
   };
   const handleCorrectPinForSign = () => {
+    if (authorisationControlsDisabled) return;
     if (signingRole) {
       const selectedPerson = signingRole === "autho" ? selectedAutho : selectedCaptain;
       onAuthorise(event.id, notes, signingRole, isVerbal, selectedPerson);
@@ -64122,11 +64149,13 @@ const AuthorisationFlyout = ({
     setSigningRole(null);
   };
   const handleProceedToPinForClear = () => {
+    if (authorisationControlsDisabled) return;
     setShowClearConfirmation(false);
     setIsClearingAuth(true);
     setShowPinEntry(true);
   };
   const handleCorrectPinForClear = () => {
+    if (authorisationControlsDisabled) return;
     onClearAuth(event.id);
     setShowPinEntry(false);
     setIsClearingAuth(false);
@@ -64137,6 +64166,7 @@ const AuthorisationFlyout = ({
     setIsClearingAuth(false);
   };
   const handleVerbalAuthChange = (checked) => {
+    if (authorisationControlsDisabled) return;
     setIsVerbal(checked);
   };
   const normaliseSigner = (value) => value?.trim().toLowerCase() || "";
@@ -64228,7 +64258,7 @@ const AuthorisationFlyout = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4 relative", children: [
-          isFrozen && !freezeAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
+          (isFrozen && !freezeAllowedActions.flightAuthorisation || authorisationControlsDisabled) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg p-3 text-center border border-gray-600", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center mb-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "h-5 w-5 text-green-400 mr-2", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M5 13l4 4L19 7" }) }),
@@ -64315,7 +64345,15 @@ const AuthorisationFlyout = ({
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-3 bg-gray-900 border-t border-gray-700 flex justify-between items-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowClearConfirmation(true), className: "px-4 py-2 bg-red-600 text-white rounded text-sm font-semibold hover:bg-red-700 transition-colors", children: "Clear Auth" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => !authorisationControlsDisabled && setShowClearConfirmation(true),
+              disabled: authorisationControlsDisabled,
+              className: `px-4 py-2 text-white rounded text-sm font-semibold transition-colors ${authorisationControlsDisabled ? "bg-gray-600 cursor-not-allowed opacity-60" : "bg-red-600 hover:bg-red-700"}`,
+              children: "Clear Auth"
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded text-sm font-semibold hover:bg-gray-700 transition-colors", children: "Close" })
         ] })
       ] }) }),
@@ -64330,7 +64368,8 @@ const AuthorisationFlyout = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-4 max-h-[70vh] overflow-y-auto relative", children: [
-        isFrozen && !freezeAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
+        (isFrozen && !freezeAllowedActions.flightAuthorisation || authorisationControlsDisabled) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
+        authorisationControlsDisabled && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-amber-500/30 bg-amber-900/20 px-3 py-2 text-xs text-amber-200", children: "Flight authorisation is optional for this unit. Existing authorisation details can be viewed but not changed." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Flight Summary" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-4 gap-y-1 mt-1", children: [
@@ -64355,7 +64394,7 @@ const AuthorisationFlyout = ({
               onKeyDownCapture: (event2) => handleEditableTextKeyDownCapture(event2, setNotes),
               onKeyDown: stopEditableKeyPropagation,
               onChange: (e) => setNotes(e.target.value),
-              disabled: !!(event.authoSignedBy ?? event.captainSignedBy),
+              disabled: authorisationControlsDisabled || !!(event.authoSignedBy ?? event.captainSignedBy),
               className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
               placeholder: "Enter any authorisation notes here..."
             }
@@ -64371,14 +64410,15 @@ const AuthorisationFlyout = ({
                   staff: instructorsList,
                   selectedStaff: selectedAutho,
                   onSelect: setSelectedAutho,
-                  placeholder: "Select Authorising Officer..."
+                  placeholder: "Select Authorising Officer...",
+                  disabled: authorisationControlsDisabled
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   onClick: () => handleSignClick("autho"),
-                  disabled: !selectedAutho,
+                  disabled: authorisationControlsDisabled || !selectedAutho,
                   className: "w-full px-3 py-1.5 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed",
                   children: "Sign as AUTHO"
                 }
@@ -64402,14 +64442,14 @@ const AuthorisationFlyout = ({
                     selectedStaff: selectedCaptain,
                     onSelect: setSelectedCaptain,
                     placeholder: "Select Captain (PIC)...",
-                    disabled: !!(event.authoSignedBy && !event.isVerbalAuth)
+                    disabled: authorisationControlsDisabled || !!(event.authoSignedBy && !event.isVerbalAuth)
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
                     onClick: () => handleSignClick("captain"),
-                    disabled: !selectedCaptain || !(event.authoSignedBy || event.isVerbalAuth || isVerbal),
+                    disabled: authorisationControlsDisabled || !selectedCaptain || !(event.authoSignedBy || event.isVerbalAuth || isVerbal),
                     className: "w-full px-3 py-1.5 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed",
                     children: "Sign as PIC"
                   }
@@ -64426,11 +64466,11 @@ const AuthorisationFlyout = ({
                   type: "checkbox",
                   checked: isVerbal,
                   onChange: (e) => handleVerbalAuthChange(e.target.checked),
-                  disabled: !!event.authoSignedBy,
+                  disabled: authorisationControlsDisabled || !!event.authoSignedBy,
                   className: "h-4 w-4 bg-gray-700 border-gray-600 rounded focus:ring-amber-500 focus:ring-offset-gray-800 accent-amber-500 disabled:accent-gray-600"
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `text-sm ${event.authoSignedBy ? "text-gray-500" : "text-gray-300"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `text-sm ${authorisationControlsDisabled || event.authoSignedBy ? "text-gray-500" : "text-gray-300"}`, children: [
                 "Verbal AUTH received. See Notes.",
                 isVerbal && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-amber-400 font-medium", children: "(AUTHO or PIC may sign either box)" })
               ] })
@@ -64439,7 +64479,15 @@ const AuthorisationFlyout = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-between items-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: hasAnySignature && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowClearConfirmation(true), className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold", children: "Clear Auth" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: hasAnySignature && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => !authorisationControlsDisabled && setShowClearConfirmation(true),
+            disabled: authorisationControlsDisabled,
+            className: `px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold ${authorisationControlsDisabled ? "bg-gray-600 cursor-not-allowed opacity-60" : "bg-red-600 hover:bg-red-700"}`,
+            children: "Clear Auth"
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Close" })
       ] })
     ] }) }),
@@ -65765,7 +65813,8 @@ const EmergencyPage = ({
   onUpdateEmergencyFreezeAuthority,
   qualificationOptions = [],
   currentUserQualificationIds = [],
-  canEditEmergencyAuthority = false
+  canEditEmergencyAuthority = false,
+  flightAuthorisationRequired = true
 }) => {
   const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze$1();
   const [showConfirmDialog, setShowConfirmDialog] = reactExports.useState(false);
@@ -65775,6 +65824,13 @@ const EmergencyPage = ({
   const [pendingAllowedActions, setPendingAllowedActions] = reactExports.useState(defaultAllowedActions);
   const reportDisplayName = String(trainingReportDisplayName || "").trim() || "Training Report";
   const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
+  const effectivePendingAllowedActions = flightAuthorisationRequired ? pendingAllowedActions : { ...pendingAllowedActions, flightAuthorisation: false };
+  const frozenFlightAuthorisationAllowed = flightAuthorisationRequired && freezeState.allowedActions.flightAuthorisation;
+  reactExports.useEffect(() => {
+    if (!flightAuthorisationRequired) {
+      setPendingAllowedActions((prev) => prev.flightAuthorisation ? { ...prev, flightAuthorisation: false } : prev);
+    }
+  }, [flightAuthorisationRequired]);
   const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
   const canActivateFreeze = hasEmergencyFreezeAuthority({
     settings: authoritySettings,
@@ -65848,6 +65904,7 @@ const EmergencyPage = ({
     }
   };
   const handleAllowedActionChange = (action) => {
+    if (action === "flightAuthorisation" && !flightAuthorisationRequired) return;
     setPendingAllowedActions((prev) => ({
       ...prev,
       [action]: !prev[action]
@@ -65857,7 +65914,7 @@ const EmergencyPage = ({
     setPendingAllowedActions(defaultAllowedActions);
   };
   const isEverythingFrozen = () => {
-    return !pendingAllowedActions.postFlightTimes && !pendingAllowedActions.pt051Entries && !pendingAllowedActions.flightAuthorisation && !pendingAllowedActions.aircraftAvailability;
+    return !effectivePendingAllowedActions.postFlightTimes && !effectivePendingAllowedActions.pt051Entries && !effectivePendingAllowedActions.flightAuthorisation && !effectivePendingAllowedActions.aircraftAvailability;
   };
   const handleFreezeClick = () => {
     if (!canActivateFreeze) {
@@ -65873,7 +65930,7 @@ const EmergencyPage = ({
     );
     if (!unlocked) return;
     setIsProcessing(true);
-    freezeSystem("Aircraft Emergency", pendingAllowedActions, currentUserRole);
+    freezeSystem("Aircraft Emergency", effectivePendingAllowedActions, currentUserRole);
     setShowConfirmDialog(false);
     setIsProcessing(false);
     if (onShowSuccess) {
@@ -66064,19 +66121,20 @@ const EmergencyPage = ({
               ] })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-3 p-3 rounded-lg border transition-colors ${flightAuthorisationRequired ? "bg-gray-700/50 border-gray-600 cursor-pointer hover:bg-gray-700" : "bg-gray-800/70 border-gray-700 cursor-not-allowed opacity-70"}`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
                 type: "checkbox",
-                checked: pendingAllowedActions.flightAuthorisation,
+                checked: flightAuthorisationRequired && pendingAllowedActions.flightAuthorisation,
                 onChange: () => handleAllowedActionChange("flightAuthorisation"),
+                disabled: !flightAuthorisationRequired,
                 className: "w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Flight Authorisation Entries" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "Allow flight authorisation processing" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: flightAuthorisationRequired ? "text-white font-medium" : "text-gray-400 font-medium", children: "Flight Authorisation Entries" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: flightAuthorisationRequired ? "Allow flight authorisation processing" : "Flight authorisation is optional for this unit, so this emergency exception is disabled." })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
@@ -66108,7 +66166,7 @@ const EmergencyPage = ({
           reportDisplayName,
           " Entries"
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.flightAuthorisation ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: freezeState.allowedActions.flightAuthorisation ? "text-green-400" : "text-gray-500", children: "Flight Authorisation" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${frozenFlightAuthorisationAllowed ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: frozenFlightAuthorisationAllowed ? "text-green-400" : "text-gray-500", children: "Flight Authorisation" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.aircraftAvailability ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: freezeState.allowedActions.aircraftAvailability ? "text-green-400" : "text-gray-500", children: "Aircraft Availability" }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -66137,10 +66195,10 @@ const EmergencyPage = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg p-3 mb-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-2", children: "Operations allowed during freeze:" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: isEverythingFrozen() ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 text-sm font-medium", children: "None (Full Freeze)" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          pendingAllowedActions.postFlightTimes && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Post Flight Times" }),
-          pendingAllowedActions.pt051Entries && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: reportDisplayName }),
-          pendingAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Flight Auth" }),
-          pendingAllowedActions.aircraftAvailability && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Aircraft Availability" })
+          effectivePendingAllowedActions.postFlightTimes && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Post Flight Times" }),
+          effectivePendingAllowedActions.pt051Entries && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: reportDisplayName }),
+          effectivePendingAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Flight Auth" }),
+          effectivePendingAllowedActions.aircraftAvailability && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Aircraft Availability" })
         ] }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm mb-6", children: "This will prevent all scheduling and data modifications until manually unfrozen." }),
@@ -66627,12 +66685,13 @@ const SettingsView = ({
       ...updates
     }));
   };
-  const handleTileStatusMinutesChange = (key, value) => {
+  const handleTileStatusSettingsChange = (updates) => {
     setTempTileStatusSettings((current) => normaliseTileStatusSettings({
       ...current,
-      [key]: value
+      ...updates
     }));
   };
+  const handleTileStatusMinutesChange = (key, value) => handleTileStatusSettingsChange({ [key]: value });
   const [isEditingSctEvents, setIsEditingSctEvents] = reactExports.useState(false);
   const [tempSctEvents, setTempSctEvents] = reactExports.useState([]);
   const [newSctEvent, setNewSctEvent] = reactExports.useState("");
@@ -66807,8 +66866,9 @@ const SettingsView = ({
     if (onUpdateDispatchStaggerSettings) {
       onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings(tempDispatchStaggerSettings));
     }
+    const savedTileStatusSettings = normaliseTileStatusSettings(tempTileStatusSettings);
     if (onUpdateTileStatusSettings) {
-      onUpdateTileStatusSettings(normaliseTileStatusSettings(tempTileStatusSettings));
+      onUpdateTileStatusSettings(savedTileStatusSettings);
     }
     setIsEditingBusinessRules(false);
     onShowSuccess("Business rules updated");
@@ -66816,7 +66876,7 @@ const SettingsView = ({
       page: "Settings - Business Rules",
       action: "update",
       description: "Updated business rule settings",
-      changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? "none" : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? "none" : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation warnings: ${tempTileStatusSettings.authorizationWarningMinutes}/${tempTileStatusSettings.authorizationUrgentMinutes} min`
+      changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? "none" : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? "none" : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation: ${savedTileStatusSettings.flightAuthorisationRequired ? "required" : "optional"}; authorisation warnings: ${savedTileStatusSettings.authorizationWarningMinutes}/${savedTileStatusSettings.authorizationUrgentMinutes} min`
     });
   };
   const handleCancelBusinessRules = () => {
@@ -67405,8 +67465,24 @@ const SettingsView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-4 border-t border-gray-700", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-between gap-4 mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-200", children: "Flight tile authorisation warnings" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Controls when unsigned flight tiles change border and crew-name colour on the current day's DFP." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Controls whether flight authorisation is required and when unsigned flight tiles change border colour on the current day's DFP." })
             ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-start gap-3 rounded-lg border p-3 mb-3 ${canEditBusinessRules ? "bg-gray-700/40 border-gray-600 cursor-pointer hover:bg-gray-700/60" : "bg-gray-700/20 border-gray-700 cursor-not-allowed"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: displayedTileStatusSettings.flightAuthorisationRequired,
+                  onChange: (e) => handleTileStatusSettingsChange({ flightAuthorisationRequired: e.target.checked }),
+                  disabled: !canEditBusinessRules,
+                  className: "mt-1 h-4 w-4 rounded border-gray-500 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-100", children: "Flight authorisation required" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block mt-1 text-xs text-gray-400", children: "When off, authorisation controls stay visible but cannot be selected, and DFP authorisation border warnings are disabled." })
+              ] })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-medium text-gray-400 mb-1", children: "Amber warning before start" }),
@@ -67420,8 +67496,8 @@ const SettingsView = ({
                       step: 5,
                       value: displayedTileStatusSettings.authorizationWarningMinutes,
                       onChange: (e) => handleTileStatusMinutesChange("authorizationWarningMinutes", Number(e.target.value)),
-                      disabled: !canEditBusinessRules,
-                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                      disabled: !canEditBusinessRules || !displayedTileStatusSettings.flightAuthorisationRequired,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && displayedTileStatusSettings.flightAuthorisationRequired ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
@@ -67439,8 +67515,8 @@ const SettingsView = ({
                       step: 5,
                       value: displayedTileStatusSettings.authorizationUrgentMinutes,
                       onChange: (e) => handleTileStatusMinutesChange("authorizationUrgentMinutes", Number(e.target.value)),
-                      disabled: !canEditBusinessRules,
-                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                      disabled: !canEditBusinessRules || !displayedTileStatusSettings.flightAuthorisationRequired,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && displayedTileStatusSettings.flightAuthorisationRequired ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
@@ -67632,7 +67708,8 @@ const SettingsView = ({
           onUpdateEmergencyFreezeAuthority,
           qualificationOptions,
           currentUserQualificationIds,
-          canEditEmergencyAuthority
+          canEditEmergencyAuthority,
+          flightAuthorisationRequired: resolvedTileStatusSettings.flightAuthorisationRequired
         }
       )
     ] }),
@@ -111615,6 +111692,11 @@ const App = () => {
   reactExports.useEffect(() => {
     writeTileStatusSettingsToLocalStorage(tileStatusSettings);
   }, [tileStatusSettings]);
+  const effectiveTileStatusSettings = reactExports.useMemo(
+    () => normaliseTileStatusSettings(tileStatusSettings),
+    [tileStatusSettings]
+  );
+  const flightAuthorisationRequired = effectiveTileStatusSettings.flightAuthorisationRequired;
   const getLocalDateString2 = (date2 = /* @__PURE__ */ new Date()) => {
     const offsetMs = timezoneOffset * 60 * 60 * 1e3;
     const adjustedDate = new Date(date2.getTime() + offsetMs);
@@ -126918,6 +127000,14 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       denyPastDfpEdit("authorise events");
       return;
     }
+    if (!flightAuthorisationRequired) {
+      showDarkAlert2(
+        "Flight authorisation is optional for this unit. Authorisation entries are disabled.",
+        "Flight Authorisation Optional",
+        "warning"
+      );
+      return;
+    }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
     if (_freezeRaw) {
       const _freeze = JSON.parse(_freezeRaw);
@@ -127020,6 +127110,14 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     const authEventDate = eventForAuth?.date || Object.entries(publishedSchedules).find(([, eventsList]) => eventsList.some((e) => e.id === eventId))?.[0];
     if (isPastDfpDate(authEventDate)) {
       denyPastDfpEdit("clear authorisations");
+      return;
+    }
+    if (!flightAuthorisationRequired) {
+      showDarkAlert2(
+        "Flight authorisation is optional for this unit. Authorisation entries are disabled.",
+        "Flight Authorisation Optional",
+        "warning"
+      );
       return;
     }
     let affectedScheduleDate = null;
@@ -131094,8 +131192,17 @@ ${error instanceof Error ? error.message : String(error)}`,
             school,
             currentLocation: activeLocationDisplayName,
             currentLocationProfile: activeLocationSolarProfile,
+            flightAuthorisationRequired,
             onNavigate: handleNavigation,
             onOpenAuth: (e) => {
+              if (!flightAuthorisationRequired) {
+                showDarkAlert2(
+                  "Flight authorisation is optional for this unit. Authorisation entries are disabled.",
+                  "Flight Authorisation Optional",
+                  "warning"
+                );
+                return;
+              }
               const latestEvent = events.find((ev) => ev.id === e.id) || e;
               setEventForAuth(latestEvent);
               setShowAuthFlyout(true);
@@ -131527,8 +131634,12 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateTimezoneOffset: setTimezoneOffset,
             showDepartureDensityOverlay,
             onUpdateShowDepartureDensityOverlay: setShowDepartureDensityOverlay,
-            tileStatusSettings,
-            onUpdateTileStatusSettings: (settings) => setTileStatusSettings(normaliseTileStatusSettings(settings)),
+            tileStatusSettings: effectiveTileStatusSettings,
+            onUpdateTileStatusSettings: (settings) => {
+              const normalisedSettings = normaliseTileStatusSettings(settings);
+              setTileStatusSettings(normalisedSettings);
+              writeTileStatusSettingsToLocalStorage(normalisedSettings);
+            },
             formationCallsigns,
             onUpdateFormationCallsigns: setFormationCallsigns,
             courseColors,
@@ -132469,6 +132580,12 @@ Do you want to replace the existing entry?`,
         }
         return null;
       case "AUTH":
+        if (!flightAuthorisationRequired) {
+          return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 bg-gray-900 p-8 text-gray-200", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-2xl rounded-lg border border-amber-500/30 bg-amber-900/20 p-5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-amber-200", children: "Flight Authorisation Optional" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-amber-100/90", children: "Flight authorisation is optional for this unit, so authorisation entries are disabled." })
+          ] }) });
+        }
         return /* @__PURE__ */ jsxRuntimeExports.jsx(AuthorisationView, {});
       default:
         return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "View not found" });
@@ -133076,10 +133193,19 @@ Do you want to replace the existing entry?`,
           ),
           onOpenTrainingReport: normaliseOperationalModel(activeOperationalModel) === "air_combat" || isFixedCrewLikeOperationalModel(activeOperationalModel) ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
           onOpenAuth: (e) => {
+            if (!flightAuthorisationRequired) {
+              showDarkAlert2(
+                "Flight authorisation is optional for this unit. Authorisation entries are disabled.",
+                "Flight Authorisation Optional",
+                "warning"
+              );
+              return;
+            }
             const latestEvent = events.find((ev) => ev.id === e.id) || e;
             setEventForAuth(latestEvent);
             setShowAuthFlyout(true);
           },
+          flightAuthorisationRequired,
           onOpenPostFlight: (e) => {
             const latestEvent = events.find((ev) => ev.id === e.id) || e;
             setEventForPostFlight(latestEvent);
@@ -133353,7 +133479,8 @@ Do you want to replace the existing entry?`,
           traineesData,
           masterCurrencies,
           currencyRequirements,
-          instructorLabel: instructorLabel2
+          instructorLabel: instructorLabel2,
+          flightAuthorisationRequired
         }
       ),
       showAddRemedialPackage && selectedTraineeForRemedial && /* @__PURE__ */ jsxRuntimeExports.jsx(
