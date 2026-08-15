@@ -83628,7 +83628,8 @@ const SettingsNavigationSidebar = React.memo(({
     /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "mt-[30px] flex flex-col items-center gap-[1px]", children: visibleSettingGroups.map((group) => {
       const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
       const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[175px]", children: [
+      const submenuHeight = Math.min(860, group.visibleSections.length * 37 + 3);
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[175px]", style: { contain: "layout paint" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
@@ -83658,13 +83659,14 @@ const SettingsNavigationSidebar = React.memo(({
           "div",
           {
             id: getSettingsGroupId(group.label),
-            className: "grid overflow-hidden will-change-[grid-template-rows]",
+            className: "overflow-hidden will-change-[height]",
             style: {
-              gridTemplateRows: showSubmenu ? "1fr" : "0fr",
+              height: showSubmenu ? `${submenuHeight}px` : "0px",
               pointerEvents: showSubmenu ? "auto" : "none",
-              transition: "grid-template-rows 260ms cubic-bezier(0.22, 1, 0.36, 1)"
+              transition: "height 240ms cubic-bezier(0.22, 1, 0.36, 1)",
+              contain: "layout paint"
             },
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
               const sectionActive = (pendingSection || activeSection) === section;
               const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
               return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -83693,7 +83695,7 @@ const SettingsNavigationSidebar = React.memo(({
                 },
                 section
               );
-            }) }) })
+            }) })
           }
         )
       ] }, group.label);

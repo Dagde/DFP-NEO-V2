@@ -1002,8 +1002,9 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                 {visibleSettingGroups.map(group => {
                     const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
                     const showSubmenu = isSearchActive || expandedGroups[group.label] === true;
+                    const submenuHeight = Math.min(860, group.visibleSections.length * 37 + 3);
                     return (
-                        <div key={group.label} className="w-[175px]">
+                        <div key={group.label} className="w-[175px]" style={{ contain: 'layout paint' }}>
                             <button
                                 type="button"
                                 onClick={() => openSettingsGroup(group)}
@@ -1029,54 +1030,53 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                             </button>
                             <div
                                 id={getSettingsGroupId(group.label)}
-                                className="grid overflow-hidden will-change-[grid-template-rows]"
+                                className="overflow-hidden will-change-[height]"
                                 style={{
-                                    gridTemplateRows: showSubmenu ? '1fr' : '0fr',
+                                    height: showSubmenu ? `${submenuHeight}px` : '0px',
                                     pointerEvents: showSubmenu ? 'auto' : 'none',
-                                    transition: 'grid-template-rows 260ms cubic-bezier(0.22, 1, 0.36, 1)',
+                                    transition: 'height 240ms cubic-bezier(0.22, 1, 0.36, 1)',
+                                    contain: 'layout paint',
                                 }}
                             >
-                                <div className="min-h-0 overflow-hidden">
-                                    <div className="space-y-[1px] py-[1px]">
-                                        {group.visibleSections.map(section => {
-                                            const sectionActive = (pendingSection || activeSection) === section;
-                                            const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
-                                            return (
-                                                <button
-                                                    type="button"
-                                                    key={section}
-                                                    onClick={() => {
-                                                        setPendingSection(section);
-                                                        deferSidebarNavigation(() => onSelectSection(section, group.label), 80);
-                                                    }}
-                                                    data-ui-lag-role="settings-section"
-                                                    data-settings-group={group.label}
-                                                    data-settings-section={section}
-                                                    className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
-                                                        sectionActive
-                                                            ? 'border-transparent bg-transparent text-sky-300'
-                                                            : section === 'emergency'
-                                                                ? 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                                                                : 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                                                    }`}
-                                                >
-                                                    {sectionActive ? (
-                                                        <span className="h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300" aria-hidden="true" />
-                                                    ) : null}
-                                                    <span className="min-w-0">
-                                                        <span className="block truncate">{getSectionLabel(section)}</span>
-                                                        {contextSnippet && (
-                                                            <span className="mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
-                                                                <span>{contextSnippet.before}</span>
-                                                                <span className="font-bold text-cyan-200">{contextSnippet.match.toUpperCase()}</span>
-                                                                <span>{contextSnippet.after}</span>
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                <div className="space-y-[1px] py-[1px]">
+                                    {group.visibleSections.map(section => {
+                                        const sectionActive = (pendingSection || activeSection) === section;
+                                        const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={section}
+                                                onClick={() => {
+                                                    setPendingSection(section);
+                                                    deferSidebarNavigation(() => onSelectSection(section, group.label), 80);
+                                                }}
+                                                data-ui-lag-role="settings-section"
+                                                data-settings-group={group.label}
+                                                data-settings-section={section}
+                                                className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
+                                                    sectionActive
+                                                        ? 'border-transparent bg-transparent text-sky-300'
+                                                        : section === 'emergency'
+                                                            ? 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                                                            : 'border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                                                }`}
+                                            >
+                                                {sectionActive ? (
+                                                    <span className="h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300" aria-hidden="true" />
+                                                ) : null}
+                                                <span className="min-w-0">
+                                                    <span className="block truncate">{getSectionLabel(section)}</span>
+                                                    {contextSnippet && (
+                                                        <span className="mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
+                                                            <span>{contextSnippet.before}</span>
+                                                            <span className="font-bold text-cyan-200">{contextSnippet.match.toUpperCase()}</span>
+                                                            <span>{contextSnippet.after}</span>
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
