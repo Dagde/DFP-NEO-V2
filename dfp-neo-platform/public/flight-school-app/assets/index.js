@@ -5350,6 +5350,26 @@ const continuationEventToCurrencyProfile = (event) => ({
   status: event.status || "ACTIVE"
 });
 const getContinuationEventCurrencyProfiles = (events) => normaliseContinuationEventSettings(events).filter((event) => event.status !== "INACTIVE").map(continuationEventToCurrencyProfile);
+const normaliseLmpTestEventType = (value) => {
+  const candidate = String(value || "").trim().toUpperCase();
+  if (candidate === "FLIGHT_TEST" || candidate === "SIMULATOR_TEST") return candidate;
+  return "NONE";
+};
+const isLmpTestEvent = (value) => normaliseLmpTestEventType(value) !== "NONE";
+const filterQualifiedTestingOfficers = (candidates, testEventType, requiredQualificationId, catalogue) => {
+  if (!isLmpTestEvent(testEventType)) return candidates;
+  const qualificationId = String(requiredQualificationId || "").trim();
+  if (!qualificationId) return [];
+  return candidates.filter((person) => getPersonAssignedQualificationIds(person, catalogue, false).includes(qualificationId));
+};
+const resolveLmpTestEventCallsign = (options) => {
+  const formationCallsign = String(options.formationCallsign || "").trim();
+  if (formationCallsign) return formationCallsign;
+  if (normaliseLmpTestEventType(options.testEventType) !== "FLIGHT_TEST" || options.useTestingOfficerSecondaryCallsign !== true) {
+    return void 0;
+  }
+  return String(options.officerSecondaryCallsign || "").trim() || void 0;
+};
 const INSERT_EVENT_LABEL_MAX_LENGTH = 8;
 const DEFAULT_INSERT_EVENT_TYPES = [
   { label: "GF", syllabusType: "Ground School", dayNight: "Day", duration: 1, flightOrSimHours: 0, totalEventHours: 1, preFlightTime: 0.25, postFlightTime: 0, resourceCount: 0 },
@@ -59175,7 +59195,10 @@ function populatePrerequisites(items) {
       ...item,
       acceptableAircraftConfigs: Array.isArray(item.acceptableAircraftConfigs) && item.acceptableAircraftConfigs.length > 0 ? item.acceptableAircraftConfigs : ["ANY"],
       assessedElements: Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : ["Airmanship", "Preparation", "Technique"],
-      assessmentRequired: item.assessmentRequired === true || shouldDefaultAssessmentRequired(item)
+      assessmentRequired: item.assessmentRequired === true || shouldDefaultAssessmentRequired(item),
+      testEventType: item.testEventType === "FLIGHT_TEST" || item.testEventType === "SIMULATOR_TEST" ? item.testEventType : "NONE",
+      testingOfficerQualificationId: item.testEventType === "FLIGHT_TEST" || item.testEventType === "SIMULATOR_TEST" ? String(item.testingOfficerQualificationId || "").trim() || null : null,
+      useTestingOfficerSecondaryCallsign: item.testEventType === "FLIGHT_TEST" && item.useTestingOfficerSecondaryCallsign === true
     };
     const hasExplicitPrereqs = item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
     if (hasExplicitPrereqs || item.lmpType === "Master LMP") {
@@ -59196,7 +59219,7 @@ function populatePrerequisites(items) {
       break;
     }
     return {
-      ...item,
+      ...itemWithDefaults,
       acceptableAircraftConfigs: itemWithDefaults.acceptableAircraftConfigs,
       assessmentRequired: itemWithDefaults.assessmentRequired,
       prerequisitesGround,
@@ -59670,6 +59693,13 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
     onLinkedEventChange?.(item, linkedEventCode);
   };
   const showAssessmentRequiredControl = operationalModel === "flight_school" || isAirCombatModel || isFixedCrewModel;
+  const testEventType = currentItem.testEventType || "NONE";
+  const isTestEvent = testEventType !== "NONE";
+  const testingOfficerQualifications = getQualificationsForOperationalModel(
+    staffQualificationCatalogue2,
+    normaliseOperationalModel(operationalModel)
+  );
+  const selectedTestingOfficerQualification = testingOfficerQualifications.find((qualification) => qualification.id === currentItem.testingOfficerQualificationId);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
@@ -60007,6 +60037,93 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
           )
         ] })
       ] }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-700 rounded-lg", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xs font-semibold text-gray-300", children: "Test Event Scheduling" }),
+      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 mt-2 md:grid-cols-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-300", children: "Test event type" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: testEventType,
+              onChange: (event) => {
+                const nextType = event.target.value;
+                onItemChange({
+                  ...currentItem,
+                  testEventType: nextType,
+                  testingOfficerQualificationId: nextType === "NONE" ? null : currentItem.testingOfficerQualificationId,
+                  useTestingOfficerSecondaryCallsign: nextType === "FLIGHT_TEST" ? currentItem.useTestingOfficerSecondaryCallsign === true : false
+                });
+              },
+              className: "mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "NONE", children: "Not a test event" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FLIGHT_TEST", children: "Flight Test" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SIMULATOR_TEST", children: "Simulator Test" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "Identifies whether this event requires a specifically qualified Testing Officer." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `block ${isTestEvent ? "" : "opacity-50"}`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-300", children: "Testing Officer qualification" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: currentItem.testingOfficerQualificationId || "",
+              disabled: !isTestEvent,
+              onChange: (event) => handleFieldChange("testingOfficerQualificationId", event.target.value || null),
+              className: "mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select one qualification" }),
+                testingOfficerQualifications.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: qualification.id, children: [
+                  qualification.name,
+                  qualification.code ? ` (${qualification.code})` : ""
+                ] }, qualification.id))
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "The one test qualification required for this event. Staff may also hold other general qualifications." })
+        ] }),
+        testEventType === "FLIGHT_TEST" && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-900/40 p-3 md:col-span-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: currentItem.useTestingOfficerSecondaryCallsign === true,
+              onChange: (event) => handleFieldChange("useTestingOfficerSecondaryCallsign", event.target.checked),
+              className: "mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-200", children: "Use Testing Officer secondary callsign" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "Uses the selected officer's secondary callsign from their Staff Profile for this Flight Test." })
+          ] })
+        ] })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 mt-2 md:grid-cols-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            label: "Test Event Type",
+            value: testEventType === "FLIGHT_TEST" ? "Flight Test" : testEventType === "SIMULATOR_TEST" ? "Simulator Test" : "Not a test"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            label: "Testing Officer Qualification",
+            value: isTestEvent ? selectedTestingOfficerQualification?.name || "Not configured" : "N/A"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DetailCard,
+          {
+            label: "Secondary Callsign",
+            value: testEventType === "FLIGHT_TEST" ? currentItem.useTestingOfficerSecondaryCallsign ? "Use officer profile" : "Do not use" : "N/A"
+          }
+        )
+      ] })
     ] }),
     isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-emerald-700/70 rounded-lg bg-emerald-950/10", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xs font-semibold text-emerald-300", children: "Fixed Crew Requirements" }),
@@ -60653,11 +60770,23 @@ const SyllabusView = ({
     setIsEditing(true);
   };
   const handleSave = async () => {
+    const editedTestEventType = editedItem?.testEventType || "NONE";
+    if (editedItem && editedTestEventType !== "NONE" && !editedItem.testingOfficerQualificationId?.trim()) {
+      await showDarkAlert(
+        "Select one Testing Officer qualification. A Flight Test or Simulator Test cannot be saved until the qualification required to schedule its Testing Officer is selected.",
+        "Testing Officer Qualification Required",
+        "error"
+      );
+      return;
+    }
     setIsSaving(true);
     try {
       if (editedItem) {
         const itemToSaveBase = {
           ...editedItem,
+          testEventType: editedTestEventType,
+          testingOfficerQualificationId: editedTestEventType === "NONE" ? null : editedItem.testingOfficerQualificationId,
+          useTestingOfficerSecondaryCallsign: editedTestEventType === "FLIGHT_TEST" && editedItem.useTestingOfficerSecondaryCallsign === true,
           acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(editedItem.acceptableAircraftConfigs, aircraftConfigurations),
           notes: stripFixedCrewManifestNote(editedItem.notes)
         };
@@ -104891,13 +105020,28 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       let candidates = [];
       const _dRej = { staticUnavailable: 0, softDutyLimit: 0, groundLimit: 0, eventLimit: 0, timeOverlap: 0, crewDutyPeriod: 0 };
       const requiredRemedialInstructor = remedialInstructorOverride || (isRemedialSyllabusItem(syllabusItemForCheck) ? (syllabusItemForCheck.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim() : "");
+      const testEventType2 = normaliseLmpTestEventType(syllabusItemForCheck.testEventType);
+      const requiredTestingOfficerQualificationId = String(syllabusItemForCheck.testingOfficerQualificationId || "").trim();
       if (remedialInstructorOverride) {
         candidates = instructors.filter((ip) => ip.name === remedialInstructorOverride);
       } else {
-        candidates = [...getBaseInstructorPoolForEventType(type)];
+        candidates = isLmpTestEvent(testEventType2) ? [...instructors] : [...getBaseInstructorPoolForEventType(type)];
         candidates = candidates.filter((ip) => canAssignStaffForScheduledWindow(ip, startTime));
         if (requiredRemedialInstructor) {
           candidates = candidates.filter((ip) => ip.name === requiredRemedialInstructor);
+        }
+      }
+      if (isLmpTestEvent(testEventType2)) {
+        candidates = filterQualifiedTestingOfficers(
+          candidates,
+          testEventType2,
+          requiredTestingOfficerQualificationId,
+          buildStaffQualificationCatalogue
+        );
+        if (!requiredTestingOfficerQualificationId) {
+          buildDebugLog(`[Test Event] ${syllabusItemForCheck.code} cannot be scheduled because no Testing Officer qualification is configured.`);
+        } else if (candidates.length === 0) {
+          buildDebugLog(`[Test Event] ${syllabusItemForCheck.code} has no available staff member with qualification ${requiredTestingOfficerQualificationId}.`);
         }
       }
       const _afterQualFilter = candidates.length;
@@ -105291,7 +105435,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return null;
     };
-    const isSoloFlight = syllabusItem.sortieType === "Solo" || ["BGF11", "BGF18"].includes(syllabusItem.id);
+    const testEventType = normaliseLmpTestEventType(syllabusItem.testEventType);
+    const isTestEvent = isLmpTestEvent(testEventType);
+    const isSoloFlight = !isTestEvent && (syllabusItem.sortieType === "Solo" || ["BGF11", "BGF18"].includes(syllabusItem.id));
     let instructor = null;
     if (!isSoloFlight) {
       instructor = findAvailableInstructor(trainee, syllabusItem, isPlusOne, primaryPreferOnly);
@@ -105312,6 +105458,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             else noInstrReason = "OTHER";
           }
           _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, noInstrReason);
+        }
+        if (isTestEvent) {
+          return traceScheduleReject("NO_QUALIFIED_TESTING_OFFICER", {
+            testEventType,
+            requiredQualificationId: syllabusItem.testingOfficerQualificationId || null
+          });
         }
         return traceScheduleReject("NO_INSTRUCTOR_SELECTED", { remedialInstructorOverride });
       }
@@ -105499,6 +105651,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         configuredStaggerMinutes: simulatorDispatchStaggerMinutes
       });
     }
+    const scheduledCallsign = resolveLmpTestEventCallsign({
+      formationCallsign: options.formationCallsign,
+      testEventType,
+      useTestingOfficerSecondaryCallsign: syllabusItem.useTestingOfficerSecondaryCallsign,
+      officerSecondaryCallsign: instructor?.secondaryCallsign
+    });
     const result = {
       id: options.eventId || v4(),
       type,
@@ -105527,8 +105685,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       formationId: options.formationGroupId,
       formationType: options.formationGroupId ? "Multi-Resource" : void 0,
       formationPosition: options.formationPosition,
-      callsign: options.formationCallsign,
+      callsign: scheduledCallsign,
       formationSize: options.formationSize,
+      testEventType,
+      testingOfficerQualificationId: isTestEvent ? syllabusItem.testingOfficerQualificationId : void 0,
+      useTestingOfficerSecondaryCallsign: testEventType === "FLIGHT_TEST" ? syllabusItem.useTestingOfficerSecondaryCallsign === true : false,
       forcedInstructorConflict: forcedInstructorConflictDetails.length > 0 || void 0,
       forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : void 0,
       preFlightNotes: schedulePreFlightNotes,

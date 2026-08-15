@@ -156,6 +156,14 @@ function normaliseSyllabusItemForRuntime(item) {
   if (!item) return item;
   const courses = normaliseSyllabusCourses(item.courses);
   const acceptableAircraftConfigs = normaliseRuntimeAircraftConfigs(item.acceptableAircraftConfigs);
+  const testEventType = ['FLIGHT_TEST', 'SIMULATOR_TEST'].includes(String(item.testEventType || '').trim().toUpperCase())
+    ? String(item.testEventType).trim().toUpperCase()
+    : 'NONE';
+  const testingOfficerQualificationId = testEventType === 'NONE'
+    ? null
+    : String(item.testingOfficerQualificationId || '').trim() || null;
+  const useTestingOfficerSecondaryCallsign = testEventType === 'FLIGHT_TEST'
+    && item.useTestingOfficerSecondaryCallsign === true;
   const flightOrSimHours = Number.isFinite(Number(item.flightOrSimHours)) && Number(item.flightOrSimHours) > 0
     ? Number(item.flightOrSimHours)
     : INTEGRATED_COMBAT_OPERATIONS_DEFAULT_FLIGHT_OR_SIM_HOURS;
@@ -168,6 +176,9 @@ function normaliseSyllabusItemForRuntime(item) {
       ...item,
       courses,
       acceptableAircraftConfigs,
+      testEventType,
+      testingOfficerQualificationId,
+      useTestingOfficerSecondaryCallsign,
       flightOrSimHours,
       duration: flightOrSimHours,
       preFlightTime: INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS,
@@ -179,6 +190,9 @@ function normaliseSyllabusItemForRuntime(item) {
     courses,
     acceptableAircraftConfigs,
     assessmentRequired: item.assessmentRequired === true || isFlightSchoolAssessmentRequiredDefaultItem({ ...item, courses }),
+    testEventType,
+    testingOfficerQualificationId,
+    useTestingOfficerSecondaryCallsign,
     duration,
   };
 }
@@ -1345,6 +1359,9 @@ async function ensureSyllabusTablesExist(db) {
         "acceptableAircraftConfigs" TEXT[] NOT NULL DEFAULT ARRAY['ANY']::text[],
         "assessedElements"     TEXT[] NOT NULL DEFAULT '{}',
         "assessmentRequired"   BOOLEAN NOT NULL DEFAULT false,
+        "testEventType"        TEXT NOT NULL DEFAULT 'NONE',
+        "testingOfficerQualificationId" TEXT,
+        "useTestingOfficerSecondaryCallsign" BOOLEAN NOT NULL DEFAULT false,
         "resourcesHuman"       TEXT[] NOT NULL DEFAULT '{}',
         "eventDetailsCommon"   TEXT[] NOT NULL DEFAULT '{}',
         "eventDetailsSortie"   TEXT[] NOT NULL DEFAULT '{}',
@@ -1377,6 +1394,9 @@ async function ensureSyllabusTablesExist(db) {
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "assessedElements" TEXT[] NOT NULL DEFAULT '{}'`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "assessedElements" SET DEFAULT '{}'`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "assessmentRequired" BOOLEAN NOT NULL DEFAULT false`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "testEventType" TEXT NOT NULL DEFAULT 'NONE'`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "testingOfficerQualificationId" TEXT`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "useTestingOfficerSecondaryCallsign" BOOLEAN NOT NULL DEFAULT false`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "unit" TEXT`);
     await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SyllabusItem_code_key" ON "SyllabusItem"("code")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_sortOrder_idx" ON "SyllabusItem"("sortOrder")`);
@@ -8126,22 +8146,28 @@ app.post('/api/syllabus', async (req, res) => {
       lmpType: body.lmpType || null,
     });
     finalCourses = itemData.courses;
+    if (itemData.testEventType !== 'NONE' && !itemData.testingOfficerQualificationId) {
+      return res.status(400).json({
+        error: 'Testing Officer qualification required',
+        message: 'A Flight Test or Simulator Test cannot be saved until one Testing Officer qualification is selected.',
+      });
+    }
 
     await db.$executeRawUnsafe(`
       INSERT INTO "SyllabusItem" (
         "id","code","eventDescription","phase","module","type","sortieType","dayNight",
-        "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber","acceptableAircraftConfigs","assessedElements","assessmentRequired","resourcesHuman",
+        "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourceNumber","acceptableAircraftConfigs","assessedElements","assessmentRequired","testEventType","testingOfficerQualificationId","useTestingOfficerSecondaryCallsign","resourcesHuman",
         "eventDetailsCommon","eventDetailsSortie","flightOrSimHours","totalEventHours","duration",
         "preFlightTime","postFlightTime","prerequisites","prerequisitesGround","prerequisitesFlying",
         "location","unit","sortOrder","lmpType","twrDiReqd","cctOnly","isRemedial","isActive","version",
         "notes","createdBy","createdAt","updatedAt"
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,
-        $9,$10,$11,$12,$13,$14,$15,$16,$17,
-        $18,$19,$20,$21,$22,
-        $23,$24,$25,$26,$27,
-        $28,$29,$30,$31,$32,$33,$34,$35,$36,
-        $37,$38,NOW(),NOW()
+        $9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+        $21,$22,$23,$24,$25,
+        $26,$27,$28,$29,$30,
+        $31,$32,$33,$34,$35,$36,$37,$38,$39,
+        $40,$41,NOW(),NOW()
       )`,
       id, finalCode, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
       itemData.sortieType || null, itemData.dayNight || 'Day',
@@ -8150,6 +8176,9 @@ app.post('/api/syllabus', async (req, res) => {
       Array.isArray(itemData.acceptableAircraftConfigs) && itemData.acceptableAircraftConfigs.length ? itemData.acceptableAircraftConfigs : ['ANY'],
       Array.isArray(itemData.assessedElements) ? itemData.assessedElements : [],
       itemData.assessmentRequired === true,
+      itemData.testEventType,
+      itemData.testingOfficerQualificationId,
+      itemData.useTestingOfficerSecondaryCallsign === true,
       itemData.resourcesHuman || [],
       itemData.eventDetailsCommon || [], itemData.eventDetailsSortie || [],
       itemData.flightOrSimHours || 0, itemData.totalEventHours || 1, itemData.duration || 1,
@@ -8190,6 +8219,12 @@ app.put('/api/syllabus/:id', async (req, res) => {
       courses: originalBody.courses ?? existingRows[0]?.courses,
       lmpType: originalBody.lmpType ?? existingRows[0]?.lmpType,
     });
+    if (body.testEventType !== 'NONE' && !body.testingOfficerQualificationId) {
+      return res.status(400).json({
+        error: 'Testing Officer qualification required',
+        message: 'A Flight Test or Simulator Test cannot be saved until one Testing Officer qualification is selected.',
+      });
+    }
 
     // Exclude server-managed fields, timestamps, and non-column metadata fields sent from frontend
     const EXCLUDED_FIELDS = ['id', 'createdAt', 'createdBy', 'updatedAt', 'version', 'changeReason'];
@@ -8207,7 +8242,7 @@ app.put('/api/syllabus/:id', async (req, res) => {
     // Build SET clauses, casting array fields and boolean fields properly
     const ARRAY_FIELDS = ['courses','methodOfDelivery','methodOfAssessment','resourcesPhysical','acceptableAircraftConfigs','assessedElements','resourcesHuman',
                           'eventDetailsCommon','eventDetailsSortie','prerequisites','prerequisitesGround','prerequisitesFlying'];
-    const BOOL_FIELDS = ['isActive','isRemedial','assessmentRequired'];
+    const BOOL_FIELDS = ['isActive','isRemedial','assessmentRequired','useTestingOfficerSecondaryCallsign'];
     const INT_FIELDS = ['resourceNumber', 'sortOrder'];
 
     const setClauses = fields.map((f, i) => {

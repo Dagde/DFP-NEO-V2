@@ -320,6 +320,8 @@ export interface StaffCallsignInfo {
   callsignNumber: number;
 }
 
+export type LmpTestEventType = 'NONE' | 'FLIGHT_TEST' | 'SIMULATOR_TEST';
+
 export interface ScheduleEvent {
   id: string;
   date: string;
@@ -347,6 +349,9 @@ export interface ScheduleEvent {
   formationSize?: number;
   crewSelectionOrder?: string[];
   callsign?: string;
+  testEventType?: LmpTestEventType;
+  testingOfficerQualificationId?: string;
+  useTestingOfficerSecondaryCallsign?: boolean;
   aircraftNumber?: string;
   attendees?: string[];
   isUnavailabilityConflict?: boolean;
@@ -489,6 +494,9 @@ export interface SyllabusItemDetail {
   acceptableAircraftConfigs?: string[];
   assessedElements?: string[];
   assessmentRequired?: boolean;
+  testEventType?: LmpTestEventType;
+  testingOfficerQualificationId?: string | null;
+  useTestingOfficerSecondaryCallsign?: boolean;
   notes?: string;
   resourcesHuman: string[];
   crewRequirement?: CrewRequirement;

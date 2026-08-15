@@ -98,6 +98,12 @@ import {
     type StaffQualificationCatalogue,
 } from './utils/staffQualifications';
 import {
+    filterQualifiedTestingOfficers,
+    isLmpTestEvent,
+    normaliseLmpTestEventType,
+    resolveLmpTestEventCallsign,
+} from './utils/lmpTestEventScheduling';
+import {
     DEFAULT_EMERGENCY_FREEZE_AUTHORITY,
     hasEmergencyFreezeAuthority,
     normaliseEmergencyFreezeAuthoritySettings,
@@ -14294,18 +14300,40 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 : '');
 
             // ── STEP 1: Build base pool filtered by role/type and night-separation rule ──
+            const testEventType = normaliseLmpTestEventType(syllabusItemForCheck.testEventType);
+            const requiredTestingOfficerQualificationId = String(syllabusItemForCheck.testingOfficerQualificationId || '').trim();
+
             if (remedialInstructorOverride) {
                 // Remedial priority is an exact build-time override from Highest Priority Events.
                 // Start with the assigned instructor directly so normal day/night schedule filters
                 // cannot remove them before the remedial conflict override is evaluated.
                 candidates = instructors.filter(ip => ip.name === remedialInstructorOverride);
             } else {
-                candidates = [...getBaseInstructorPoolForEventType(type)];
+                // Test events use the selected qualification as their role gate. This allows a
+                // Testing Officer to hold any number of unrelated qualifications without also
+                // requiring the ordinary QFI qualification used by non-test Flight/FTD events.
+                candidates = isLmpTestEvent(testEventType)
+                    ? [...instructors]
+                    : [...getBaseInstructorPoolForEventType(type)];
 
                 candidates = candidates.filter(ip => canAssignStaffForScheduledWindow(ip, startTime));
 
                 if (requiredRemedialInstructor) {
                     candidates = candidates.filter(ip => ip.name === requiredRemedialInstructor);
+                }
+            }
+
+            if (isLmpTestEvent(testEventType)) {
+                candidates = filterQualifiedTestingOfficers(
+                    candidates,
+                    testEventType,
+                    requiredTestingOfficerQualificationId,
+                    buildStaffQualificationCatalogue,
+                );
+                if (!requiredTestingOfficerQualificationId) {
+                    buildDebugLog(`[Test Event] ${syllabusItemForCheck.code} cannot be scheduled because no Testing Officer qualification is configured.`);
+                } else if (candidates.length === 0) {
+                    buildDebugLog(`[Test Event] ${syllabusItemForCheck.code} has no available staff member with qualification ${requiredTestingOfficerQualificationId}.`);
                 }
             }
 
@@ -14758,9 +14786,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return null;
         };
 
-        // CRITICAL FIX: Skip instructor assignment for solo flights
-        // BGF11 and BGF18 are solo flights even if sortieType is not explicitly 'Solo'
-        const isSoloFlight = syllabusItem.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(syllabusItem.id);
+        const testEventType = normaliseLmpTestEventType(syllabusItem.testEventType);
+        const isTestEvent = isLmpTestEvent(testEventType);
+        // Test events always require the configured Testing Officer as PIC/instructor.
+        // Otherwise BGF11 and BGF18 remain solo flights even if sortieType is not explicit.
+        const isSoloFlight = !isTestEvent && (syllabusItem.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(syllabusItem.id));
 
         let instructor: Instructor | null = null;
         // HARD MODE flag: flight/FTD events that can't be matched to a hard group will be placed on STBY
@@ -14788,6 +14818,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         else noInstrReason = 'OTHER';
                     }
                     _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, noInstrReason);
+                }
+                if (isTestEvent) {
+                    return traceScheduleReject('NO_QUALIFIED_TESTING_OFFICER', {
+                        testEventType,
+                        requiredQualificationId: syllabusItem.testingOfficerQualificationId || null,
+                    });
                 }
                 return traceScheduleReject('NO_INSTRUCTOR_SELECTED', { remedialInstructorOverride });
             }
@@ -15097,6 +15133,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             });
         }
 
+        const scheduledCallsign = resolveLmpTestEventCallsign({
+            formationCallsign: options.formationCallsign,
+            testEventType,
+            useTestingOfficerSecondaryCallsign: syllabusItem.useTestingOfficerSecondaryCallsign,
+            officerSecondaryCallsign: instructor?.secondaryCallsign,
+        });
         const result = {
             id: options.eventId || uuidv4(), type: type, instructor: (isSoloFlight ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (isSoloFlight ? trainee.fullName : instructor?.name || ''),
             flightNumber: syllabusItem.code, duration: scheduledDuration, startTime, resourceId,
@@ -15113,8 +15155,13 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             formationId: options.formationGroupId,
             formationType: options.formationGroupId ? 'Multi-Resource' : undefined,
             formationPosition: options.formationPosition,
-            callsign: options.formationCallsign,
+            callsign: scheduledCallsign,
             formationSize: options.formationSize,
+            testEventType,
+            testingOfficerQualificationId: isTestEvent ? syllabusItem.testingOfficerQualificationId : undefined,
+            useTestingOfficerSecondaryCallsign: testEventType === 'FLIGHT_TEST'
+                ? syllabusItem.useTestingOfficerSecondaryCallsign === true
+                : false,
             forcedInstructorConflict: forcedInstructorConflictDetails.length > 0 || undefined,
             forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : undefined,
             preFlightNotes: schedulePreFlightNotes,

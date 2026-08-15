@@ -18,7 +18,10 @@ import {
     type AircraftConfigurationDefinition,
 } from '../utils/aircraftConfigurationSettings';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
-import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
+import {
+    getQualificationsForOperationalModel,
+    type StaffQualificationCatalogue,
+} from '../utils/staffQualifications';
 import {
     formatFixedCrewManifestStatus,
     getFixedCrewManifestReadiness,
@@ -549,6 +552,15 @@ const DetailView: React.FC<{
         onLinkedEventChange?.(item, linkedEventCode);
     };
     const showAssessmentRequiredControl = operationalModel === 'flight_school' || isAirCombatModel || isFixedCrewModel;
+    const testEventType = currentItem.testEventType || 'NONE';
+    const isTestEvent = testEventType !== 'NONE';
+    const testingOfficerQualifications = getQualificationsForOperationalModel(
+        staffQualificationCatalogue,
+        normaliseOperationalModel(operationalModel),
+    );
+    const selectedTestingOfficerQualification = testingOfficerQualifications.find(qualification => (
+        qualification.id === currentItem.testingOfficerQualificationId
+    ));
 
     return (
     <div className="space-y-6">
@@ -828,6 +840,92 @@ const DetailView: React.FC<{
                     </>
                 )}
             </div>
+        </fieldset>
+        <fieldset className="p-3 border border-gray-700 rounded-lg">
+            <legend className="px-2 text-xs font-semibold text-gray-300">Test Event Scheduling</legend>
+            {isEditing ? (
+                <div className="grid gap-3 mt-2 md:grid-cols-2">
+                    <label className="block">
+                        <span className="block text-xs font-semibold text-gray-300">Test event type</span>
+                        <select
+                            value={testEventType}
+                            onChange={(event) => {
+                                const nextType = event.target.value as SyllabusItemDetail['testEventType'];
+                                onItemChange({
+                                    ...currentItem,
+                                    testEventType: nextType,
+                                    testingOfficerQualificationId: nextType === 'NONE'
+                                        ? null
+                                        : currentItem.testingOfficerQualificationId,
+                                    useTestingOfficerSecondaryCallsign: nextType === 'FLIGHT_TEST'
+                                        ? currentItem.useTestingOfficerSecondaryCallsign === true
+                                        : false,
+                                });
+                            }}
+                            className="mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                        >
+                            <option value="NONE">Not a test event</option>
+                            <option value="FLIGHT_TEST">Flight Test</option>
+                            <option value="SIMULATOR_TEST">Simulator Test</option>
+                        </select>
+                        <span className="mt-1 block text-xs text-gray-500">
+                            Identifies whether this event requires a specifically qualified Testing Officer.
+                        </span>
+                    </label>
+                    <label className={`block ${isTestEvent ? '' : 'opacity-50'}`}>
+                        <span className="block text-xs font-semibold text-gray-300">Testing Officer qualification</span>
+                        <select
+                            value={currentItem.testingOfficerQualificationId || ''}
+                            disabled={!isTestEvent}
+                            onChange={(event) => handleFieldChange('testingOfficerQualificationId', event.target.value || null)}
+                            className="mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-2 py-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed"
+                        >
+                            <option value="">Select one qualification</option>
+                            {testingOfficerQualifications.map(qualification => (
+                                <option key={qualification.id} value={qualification.id}>
+                                    {qualification.name}{qualification.code ? ` (${qualification.code})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                        <span className="mt-1 block text-xs text-gray-500">
+                            The one test qualification required for this event. Staff may also hold other general qualifications.
+                        </span>
+                    </label>
+                    {testEventType === 'FLIGHT_TEST' && (
+                        <label className="flex items-start gap-2 rounded border border-gray-700 bg-gray-900/40 p-3 md:col-span-2">
+                            <input
+                                type="checkbox"
+                                checked={currentItem.useTestingOfficerSecondaryCallsign === true}
+                                onChange={(event) => handleFieldChange('useTestingOfficerSecondaryCallsign', event.target.checked)}
+                                className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                            />
+                            <span>
+                                <span className="block text-xs font-semibold text-gray-200">Use Testing Officer secondary callsign</span>
+                                <span className="mt-1 block text-xs text-gray-500">
+                                    Uses the selected officer's secondary callsign from their Staff Profile for this Flight Test.
+                                </span>
+                            </span>
+                        </label>
+                    )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 gap-2 mt-2 md:grid-cols-3">
+                    <DetailCard
+                        label="Test Event Type"
+                        value={testEventType === 'FLIGHT_TEST' ? 'Flight Test' : testEventType === 'SIMULATOR_TEST' ? 'Simulator Test' : 'Not a test'}
+                    />
+                    <DetailCard
+                        label="Testing Officer Qualification"
+                        value={isTestEvent ? (selectedTestingOfficerQualification?.name || 'Not configured') : 'N/A'}
+                    />
+                    <DetailCard
+                        label="Secondary Callsign"
+                        value={testEventType === 'FLIGHT_TEST'
+                            ? (currentItem.useTestingOfficerSecondaryCallsign ? 'Use officer profile' : 'Do not use')
+                            : 'N/A'}
+                    />
+                </div>
+            )}
         </fieldset>
         {isFixedCrewModel && (
             <fieldset className="p-3 border border-emerald-700/70 rounded-lg bg-emerald-950/10">
@@ -1586,12 +1684,27 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   };
 
   const handleSave = async () => {
+      const editedTestEventType = editedItem?.testEventType || 'NONE';
+      if (editedItem && editedTestEventType !== 'NONE' && !editedItem.testingOfficerQualificationId?.trim()) {
+          await showDarkAlert(
+              'Select one Testing Officer qualification. A Flight Test or Simulator Test cannot be saved until the qualification required to schedule its Testing Officer is selected.',
+              'Testing Officer Qualification Required',
+              'error',
+          );
+          return;
+      }
       setIsSaving(true);
       try {
           // Save the selected event item if one is being edited
           if (editedItem) {
               const itemToSaveBase = {
                   ...editedItem,
+                  testEventType: editedTestEventType,
+                  testingOfficerQualificationId: editedTestEventType === 'NONE'
+                      ? null
+                      : editedItem.testingOfficerQualificationId,
+                  useTestingOfficerSecondaryCallsign: editedTestEventType === 'FLIGHT_TEST'
+                      && editedItem.useTestingOfficerSecondaryCallsign === true,
                   acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(editedItem.acceptableAircraftConfigs, aircraftConfigurations),
                   notes: stripFixedCrewManifestNote(editedItem.notes),
               };

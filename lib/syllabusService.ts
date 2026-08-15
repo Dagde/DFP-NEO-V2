@@ -116,6 +116,13 @@ function populatePrerequisites(items: SyllabusItemDetail[]): SyllabusItemDetail[
         ? item.assessedElements
         : ['Airmanship', 'Preparation', 'Technique'],
       assessmentRequired: item.assessmentRequired === true || shouldDefaultAssessmentRequired(item),
+      testEventType: item.testEventType === 'FLIGHT_TEST' || item.testEventType === 'SIMULATOR_TEST'
+        ? item.testEventType
+        : 'NONE',
+      testingOfficerQualificationId: item.testEventType === 'FLIGHT_TEST' || item.testEventType === 'SIMULATOR_TEST'
+        ? String(item.testingOfficerQualificationId || '').trim() || null
+        : null,
+      useTestingOfficerSecondaryCallsign: item.testEventType === 'FLIGHT_TEST' && item.useTestingOfficerSecondaryCallsign === true,
     };
     const hasExplicitPrereqs =
       (item.prerequisitesGround && item.prerequisitesGround.length > 0) ||
@@ -143,7 +150,7 @@ function populatePrerequisites(items: SyllabusItemDetail[]): SyllabusItemDetail[
     }
 
     return {
-      ...item,
+      ...itemWithDefaults,
       acceptableAircraftConfigs: itemWithDefaults.acceptableAircraftConfigs,
       assessmentRequired: itemWithDefaults.assessmentRequired,
       prerequisitesGround,
