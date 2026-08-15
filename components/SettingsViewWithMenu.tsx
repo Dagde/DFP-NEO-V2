@@ -987,6 +987,8 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                             <button
                                 type="button"
                                 onClick={() => openSettingsGroup(group)}
+                                data-ui-lag-role="settings-group"
+                                data-settings-group={group.label}
                                 className={`btn-aluminium-brushed flex h-[45px] w-[175px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${
                                     groupActive ? 'ring-1 ring-gray-500/60' : ''
                                 }`}
@@ -1023,6 +1025,9 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
                                             <button
                                                 key={section}
                                                 onClick={() => onSelectSection(section, group.label)}
+                                                data-ui-lag-role="settings-section"
+                                                data-settings-group={group.label}
+                                                data-settings-section={section}
                                                 className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
                                                     sectionActive
                                                         ? 'border-transparent bg-transparent text-sky-300'

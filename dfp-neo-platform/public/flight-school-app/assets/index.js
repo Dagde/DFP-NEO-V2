@@ -83616,6 +83616,8 @@ const SettingsNavigationSidebar = React.memo(({
           {
             type: "button",
             onClick: () => openSettingsGroup(group),
+            "data-ui-lag-role": "settings-group",
+            "data-settings-group": group.label,
             className: `btn-aluminium-brushed flex h-[45px] w-[175px] items-center gap-2 rounded-md px-3 text-left text-[10px] font-semibold leading-tight !text-black transition-colors ${groupActive ? "ring-1 ring-gray-500/60" : ""}`,
             "aria-expanded": showSubmenu,
             "aria-controls": getSettingsGroupId(group.label),
@@ -83652,6 +83654,9 @@ const SettingsNavigationSidebar = React.memo(({
                 "button",
                 {
                   onClick: () => onSelectSection(section, group.label),
+                  "data-ui-lag-role": "settings-section",
+                  "data-settings-group": group.label,
+                  "data-settings-section": section,
                   className: `flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-sky-300" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
                   children: [
                     sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,
@@ -93711,6 +93716,38 @@ const downloadJsonDiagnosticFile = (filename, report) => {
   a.click();
   URL.revokeObjectURL(url);
   return true;
+};
+const getUiLagTargetDescriptor = (target) => {
+  const fallback = {
+    tagName: "unknown",
+    id: null,
+    role: null,
+    type: null,
+    title: null,
+    ariaLabel: null,
+    text: "",
+    className: null,
+    dataUiLagRole: null,
+    dataSettingsGroup: null,
+    dataSettingsSection: null
+  };
+  if (!(target instanceof Element)) return fallback;
+  const element = target.closest('button, [role="button"], input, select, textarea, a, [data-ui-lag-role]') || target;
+  const htmlElement = element;
+  const text = String(element.textContent || "").replace(/\s+/g, " ").trim().slice(0, 160);
+  return {
+    tagName: element.tagName.toLowerCase(),
+    id: element.id || null,
+    role: element.getAttribute("role"),
+    type: element.getAttribute("type"),
+    title: element.getAttribute("title"),
+    ariaLabel: element.getAttribute("aria-label"),
+    text,
+    className: typeof htmlElement.className === "string" ? htmlElement.className.slice(0, 240) : null,
+    dataUiLagRole: element.getAttribute("data-ui-lag-role"),
+    dataSettingsGroup: element.getAttribute("data-settings-group"),
+    dataSettingsSection: element.getAttribute("data-settings-section")
+  };
 };
 const buildNeoBuildDiagnosticExport = () => {
   if (typeof window === "undefined") return null;
@@ -127865,11 +127902,147 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
   const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
   const [lastPollTime, setLastPollTime] = reactExports.useState("");
   const [lastPollChanged, setLastPollChanged] = reactExports.useState(false);
+  const uiLagClickSamplesRef = reactExports.useRef([]);
+  const uiLagLongTaskSamplesRef = reactExports.useRef([]);
+  const uiLagFrameDelaySamplesRef = reactExports.useRef([]);
+  const uiLagClickSequenceRef = reactExports.useRef(0);
+  const latestUiLagContextRef = reactExports.useRef({
+    activeView,
+    date,
+    school,
+    activeUnitCode,
+    liveSyncEnabled,
+    lastPollTime,
+    isManualSyncing
+  });
   const isAddFlightTileModalOpen = isAddingTile;
   const isUserEditing = reactExports.useCallback(() => {
     if (typeof document === "undefined") return false;
     return isEditableElement(document.activeElement);
   }, []);
+  const pushUiLagSample = reactExports.useCallback((ref, sample, limit = 180) => {
+    ref.current = [...ref.current, sample].slice(-limit);
+  }, []);
+  reactExports.useEffect(() => {
+    latestUiLagContextRef.current = {
+      activeView,
+      date,
+      school,
+      activeUnitCode,
+      liveSyncEnabled,
+      lastPollTime,
+      isManualSyncing
+    };
+  }, [activeUnitCode, activeView, date, isManualSyncing, lastPollTime, liveSyncEnabled, school]);
+  reactExports.useEffect(() => {
+    if (typeof document === "undefined" || typeof window === "undefined") return;
+    const handlePointerDown = (event) => {
+      const start = performance.now();
+      const sample = {
+        sequence: uiLagClickSequenceRef.current + 1,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        activeContext: { ...latestUiLagContextRef.current },
+        target: getUiLagTargetDescriptor(event.target),
+        pointerType: event.pointerType || null,
+        x: Number.isFinite(event.clientX) ? event.clientX : null,
+        y: Number.isFinite(event.clientY) ? event.clientY : null,
+        firstFrameDelayMs: null,
+        secondFrameDelayMs: null,
+        timeoutDelayMs: null
+      };
+      uiLagClickSequenceRef.current = sample.sequence;
+      window.setTimeout(() => {
+        sample.timeoutDelayMs = Number((performance.now() - start).toFixed(1));
+      }, 0);
+      window.requestAnimationFrame((firstFrameTime) => {
+        sample.firstFrameDelayMs = Number((firstFrameTime - start).toFixed(1));
+        window.requestAnimationFrame((secondFrameTime) => {
+          sample.secondFrameDelayMs = Number((secondFrameTime - start).toFixed(1));
+        });
+      });
+      pushUiLagSample(uiLagClickSamplesRef, sample);
+    };
+    document.addEventListener("pointerdown", handlePointerDown, { capture: true, passive: true });
+    return () => document.removeEventListener("pointerdown", handlePointerDown, { capture: true });
+  }, [pushUiLagSample]);
+  reactExports.useEffect(() => {
+    if (typeof PerformanceObserver === "undefined") return;
+    let observer = null;
+    try {
+      observer = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry) => {
+          const anyEntry = entry;
+          pushUiLagSample(uiLagLongTaskSamplesRef, {
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            activeContext: { ...latestUiLagContextRef.current },
+            startTimeMs: Number(entry.startTime.toFixed(1)),
+            durationMs: Number(entry.duration.toFixed(1)),
+            name: entry.name || "longtask",
+            attribution: Array.isArray(anyEntry.attribution) ? anyEntry.attribution : []
+          });
+        });
+      });
+      observer.observe({ type: "longtask", buffered: true });
+    } catch {
+      observer = null;
+    }
+    return () => observer?.disconnect();
+  }, [pushUiLagSample]);
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    let animationFrameId = 0;
+    let previousFrameTime = performance.now();
+    const tick = (now) => {
+      const frameGapMs = now - previousFrameTime;
+      if (frameGapMs > 80) {
+        pushUiLagSample(uiLagFrameDelaySamplesRef, {
+          timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+          activeContext: { ...latestUiLagContextRef.current },
+          frameGapMs: Number(frameGapMs.toFixed(1))
+        });
+      }
+      previousFrameTime = now;
+      animationFrameId = window.requestAnimationFrame(tick);
+    };
+    animationFrameId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(animationFrameId);
+  }, [pushUiLagSample]);
+  const downloadUiLagDiagnosticReport = reactExports.useCallback(() => {
+    const clickSamples = uiLagClickSamplesRef.current.map((sample) => ({ ...sample }));
+    const longTaskSamples = uiLagLongTaskSamplesRef.current.map((sample) => ({ ...sample }));
+    const frameDelaySamples = uiLagFrameDelaySamplesRef.current.map((sample) => ({ ...sample }));
+    const slowClicks = clickSamples.filter((sample) => (sample.secondFrameDelayMs ?? sample.firstFrameDelayMs ?? 0) >= 120).sort((a, b) => (b.secondFrameDelayMs ?? b.firstFrameDelayMs ?? 0) - (a.secondFrameDelayMs ?? a.firstFrameDelayMs ?? 0));
+    const settingsClicks = clickSamples.filter((sample) => sample.target.dataUiLagRole?.startsWith("settings-") || /settings|platform|people|permissions|training|threshold|business|configuration/i.test(`${sample.target.text} ${sample.target.title || ""}`));
+    const report = {
+      reportType: "dfp-ui-lag-diagnostics",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      url: typeof window !== "undefined" ? window.location.href : null,
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      activeContext: { ...latestUiLagContextRef.current },
+      thresholds: {
+        slowClickFrameMs: 120,
+        frameDelayMs: 80,
+        browserLongTaskMs: 50
+      },
+      summary: {
+        clickCount: clickSamples.length,
+        slowClickCount: slowClicks.length,
+        longTaskCount: longTaskSamples.length,
+        frameDelayCount: frameDelaySamples.length,
+        settingsClickCount: settingsClicks.length,
+        worstClicks: slowClicks.slice(0, 20),
+        worstLongTasks: [...longTaskSamples].sort((a, b) => b.durationMs - a.durationMs).slice(0, 20),
+        worstFrameDelays: [...frameDelaySamples].sort((a, b) => b.frameGapMs - a.frameGapMs).slice(0, 20)
+      },
+      settingsClicks,
+      clickSamples,
+      longTaskSamples,
+      frameDelaySamples
+    };
+    const unit = String(activeUnitCode || "unit").replace(/[^a-z0-9-]+/gi, "-");
+    const filename = `dfp-ui-lag-diagnostics_${unit}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
+    downloadJsonDiagnosticFile(filename, report);
+  }, [activeUnitCode]);
   reactExports.useEffect(() => {
     try {
       window.localStorage.setItem("dfp_live_sync_enabled", liveSyncEnabled ? "true" : "false");
@@ -134161,6 +134334,16 @@ Do you want to replace the existing entry?`,
           className: "rounded border border-rose-500/30 px-1.5 py-0.5 text-rose-200 transition-colors hover:border-rose-400/60 hover:text-rose-100",
           title: "Download My Home reports-to-complete diagnostic JSON report",
           children: "Reports"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: downloadUiLagDiagnosticReport,
+          className: "rounded border border-violet-500/30 px-1.5 py-0.5 text-violet-200 transition-colors hover:border-violet-400/60 hover:text-violet-100",
+          title: "Download UI lag, click-to-paint, long task, and frame delay diagnostic JSON report",
+          children: "Lag"
         }
       )
     ] })

@@ -235,6 +235,91 @@ const downloadJsonDiagnosticFile = (filename: string, report: any): boolean => {
     return true;
 };
 
+type UiLagTargetDescriptor = {
+    tagName: string;
+    id: string | null;
+    role: string | null;
+    type: string | null;
+    title: string | null;
+    ariaLabel: string | null;
+    text: string;
+    className: string | null;
+    dataUiLagRole: string | null;
+    dataSettingsGroup: string | null;
+    dataSettingsSection: string | null;
+};
+
+type UiLagContext = {
+    activeView: string;
+    date: string;
+    school: string;
+    activeUnitCode: string;
+    liveSyncEnabled: boolean;
+    lastPollTime: string;
+    isManualSyncing: boolean;
+};
+
+type UiLagClickSample = {
+    sequence: number;
+    timestamp: string;
+    activeContext: UiLagContext;
+    target: UiLagTargetDescriptor;
+    pointerType: string | null;
+    x: number | null;
+    y: number | null;
+    firstFrameDelayMs: number | null;
+    secondFrameDelayMs: number | null;
+    timeoutDelayMs: number | null;
+};
+
+type UiLagLongTaskSample = {
+    timestamp: string;
+    activeContext: UiLagContext;
+    startTimeMs: number;
+    durationMs: number;
+    name: string;
+    attribution: any[];
+};
+
+type UiLagFrameDelaySample = {
+    timestamp: string;
+    activeContext: UiLagContext;
+    frameGapMs: number;
+};
+
+const getUiLagTargetDescriptor = (target: EventTarget | null): UiLagTargetDescriptor => {
+    const fallback: UiLagTargetDescriptor = {
+        tagName: 'unknown',
+        id: null,
+        role: null,
+        type: null,
+        title: null,
+        ariaLabel: null,
+        text: '',
+        className: null,
+        dataUiLagRole: null,
+        dataSettingsGroup: null,
+        dataSettingsSection: null,
+    };
+    if (!(target instanceof Element)) return fallback;
+    const element = target.closest('button, [role="button"], input, select, textarea, a, [data-ui-lag-role]') || target;
+    const htmlElement = element as HTMLElement;
+    const text = String(element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+    return {
+        tagName: element.tagName.toLowerCase(),
+        id: element.id || null,
+        role: element.getAttribute('role'),
+        type: element.getAttribute('type'),
+        title: element.getAttribute('title'),
+        ariaLabel: element.getAttribute('aria-label'),
+        text,
+        className: typeof htmlElement.className === 'string' ? htmlElement.className.slice(0, 240) : null,
+        dataUiLagRole: element.getAttribute('data-ui-lag-role'),
+        dataSettingsGroup: element.getAttribute('data-settings-group'),
+        dataSettingsSection: element.getAttribute('data-settings-section'),
+    };
+};
+
 const buildNeoBuildDiagnosticExport = (): { report: any; filename: string } | null => {
     if (typeof window === 'undefined') return null;
     const inMemoryReport = (window as any).__lastNeoBuildDiagnosticReport;
@@ -42037,11 +42122,158 @@ appliedUpdates.forEach(update => {
     const [isManualSyncing, setIsManualSyncing] = useState(false);
     const [lastPollTime, setLastPollTime] = useState<string>('');
     const [lastPollChanged, setLastPollChanged] = useState<boolean>(false);
+    const uiLagClickSamplesRef = useRef<UiLagClickSample[]>([]);
+    const uiLagLongTaskSamplesRef = useRef<UiLagLongTaskSample[]>([]);
+    const uiLagFrameDelaySamplesRef = useRef<UiLagFrameDelaySample[]>([]);
+    const uiLagClickSequenceRef = useRef(0);
+    const latestUiLagContextRef = useRef<UiLagContext>({
+        activeView,
+        date,
+        school,
+        activeUnitCode,
+        liveSyncEnabled,
+        lastPollTime,
+        isManualSyncing,
+    });
     const isAddFlightTileModalOpen = isAddingTile;
     const isUserEditing = useCallback(() => {
         if (typeof document === 'undefined') return false;
         return isEditableElement(document.activeElement);
     }, []);
+
+    const pushUiLagSample = useCallback(<T,>(ref: React.MutableRefObject<T[]>, sample: T, limit = 180) => {
+        ref.current = [...ref.current, sample].slice(-limit);
+    }, []);
+
+    useEffect(() => {
+        latestUiLagContextRef.current = {
+            activeView,
+            date,
+            school,
+            activeUnitCode,
+            liveSyncEnabled,
+            lastPollTime,
+            isManualSyncing,
+        };
+    }, [activeUnitCode, activeView, date, isManualSyncing, lastPollTime, liveSyncEnabled, school]);
+
+    useEffect(() => {
+        if (typeof document === 'undefined' || typeof window === 'undefined') return;
+        const handlePointerDown = (event: PointerEvent) => {
+            const start = performance.now();
+            const sample: UiLagClickSample = {
+                sequence: uiLagClickSequenceRef.current + 1,
+                timestamp: new Date().toISOString(),
+                activeContext: { ...latestUiLagContextRef.current },
+                target: getUiLagTargetDescriptor(event.target),
+                pointerType: event.pointerType || null,
+                x: Number.isFinite(event.clientX) ? event.clientX : null,
+                y: Number.isFinite(event.clientY) ? event.clientY : null,
+                firstFrameDelayMs: null,
+                secondFrameDelayMs: null,
+                timeoutDelayMs: null,
+            };
+            uiLagClickSequenceRef.current = sample.sequence;
+            window.setTimeout(() => {
+                sample.timeoutDelayMs = Number((performance.now() - start).toFixed(1));
+            }, 0);
+            window.requestAnimationFrame((firstFrameTime) => {
+                sample.firstFrameDelayMs = Number((firstFrameTime - start).toFixed(1));
+                window.requestAnimationFrame((secondFrameTime) => {
+                    sample.secondFrameDelayMs = Number((secondFrameTime - start).toFixed(1));
+                });
+            });
+            pushUiLagSample(uiLagClickSamplesRef, sample);
+        };
+        document.addEventListener('pointerdown', handlePointerDown, { capture: true, passive: true });
+        return () => document.removeEventListener('pointerdown', handlePointerDown, { capture: true } as AddEventListenerOptions);
+    }, [pushUiLagSample]);
+
+    useEffect(() => {
+        if (typeof PerformanceObserver === 'undefined') return;
+        let observer: PerformanceObserver | null = null;
+        try {
+            observer = new PerformanceObserver((list) => {
+                list.getEntries().forEach(entry => {
+                    const anyEntry = entry as any;
+                    pushUiLagSample(uiLagLongTaskSamplesRef, {
+                        timestamp: new Date().toISOString(),
+                        activeContext: { ...latestUiLagContextRef.current },
+                        startTimeMs: Number(entry.startTime.toFixed(1)),
+                        durationMs: Number(entry.duration.toFixed(1)),
+                        name: entry.name || 'longtask',
+                        attribution: Array.isArray(anyEntry.attribution) ? anyEntry.attribution : [],
+                    });
+                });
+            });
+            observer.observe({ type: 'longtask', buffered: true } as PerformanceObserverInit);
+        } catch {
+            observer = null;
+        }
+        return () => observer?.disconnect();
+    }, [pushUiLagSample]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        let animationFrameId = 0;
+        let previousFrameTime = performance.now();
+        const tick = (now: number) => {
+            const frameGapMs = now - previousFrameTime;
+            if (frameGapMs > 80) {
+                pushUiLagSample(uiLagFrameDelaySamplesRef, {
+                    timestamp: new Date().toISOString(),
+                    activeContext: { ...latestUiLagContextRef.current },
+                    frameGapMs: Number(frameGapMs.toFixed(1)),
+                });
+            }
+            previousFrameTime = now;
+            animationFrameId = window.requestAnimationFrame(tick);
+        };
+        animationFrameId = window.requestAnimationFrame(tick);
+        return () => window.cancelAnimationFrame(animationFrameId);
+    }, [pushUiLagSample]);
+
+    const downloadUiLagDiagnosticReport = useCallback(() => {
+        const clickSamples = uiLagClickSamplesRef.current.map(sample => ({ ...sample }));
+        const longTaskSamples = uiLagLongTaskSamplesRef.current.map(sample => ({ ...sample }));
+        const frameDelaySamples = uiLagFrameDelaySamplesRef.current.map(sample => ({ ...sample }));
+        const slowClicks = clickSamples
+            .filter(sample => (sample.secondFrameDelayMs ?? sample.firstFrameDelayMs ?? 0) >= 120)
+            .sort((a, b) => (b.secondFrameDelayMs ?? b.firstFrameDelayMs ?? 0) - (a.secondFrameDelayMs ?? a.firstFrameDelayMs ?? 0));
+        const settingsClicks = clickSamples.filter(sample => (
+            sample.target.dataUiLagRole?.startsWith('settings-')
+            || /settings|platform|people|permissions|training|threshold|business|configuration/i.test(`${sample.target.text} ${sample.target.title || ''}`)
+        ));
+        const report = {
+            reportType: 'dfp-ui-lag-diagnostics',
+            generatedAt: new Date().toISOString(),
+            url: typeof window !== 'undefined' ? window.location.href : null,
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+            activeContext: { ...latestUiLagContextRef.current },
+            thresholds: {
+                slowClickFrameMs: 120,
+                frameDelayMs: 80,
+                browserLongTaskMs: 50,
+            },
+            summary: {
+                clickCount: clickSamples.length,
+                slowClickCount: slowClicks.length,
+                longTaskCount: longTaskSamples.length,
+                frameDelayCount: frameDelaySamples.length,
+                settingsClickCount: settingsClicks.length,
+                worstClicks: slowClicks.slice(0, 20),
+                worstLongTasks: [...longTaskSamples].sort((a, b) => b.durationMs - a.durationMs).slice(0, 20),
+                worstFrameDelays: [...frameDelaySamples].sort((a, b) => b.frameGapMs - a.frameGapMs).slice(0, 20),
+            },
+            settingsClicks,
+            clickSamples,
+            longTaskSamples,
+            frameDelaySamples,
+        };
+        const unit = String(activeUnitCode || 'unit').replace(/[^a-z0-9-]+/gi, '-');
+        const filename = `dfp-ui-lag-diagnostics_${unit}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
+        downloadJsonDiagnosticFile(filename, report);
+    }, [activeUnitCode]);
 
     useEffect(() => {
         try {
@@ -49269,6 +49501,14 @@ appliedUpdates.forEach(update => {
                     title="Download My Home reports-to-complete diagnostic JSON report"
                 >
                     Reports
+                </button>
+                <button
+                    type="button"
+                    onClick={downloadUiLagDiagnosticReport}
+                    className="rounded border border-violet-500/30 px-1.5 py-0.5 text-violet-200 transition-colors hover:border-violet-400/60 hover:text-violet-100"
+                    title="Download UI lag, click-to-paint, long task, and frame delay diagnostic JSON report"
+                >
+                    Lag
                 </button>
             </div>
         )}
