@@ -21748,19 +21748,19 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Duration" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0.25", value: duration, onChange: (event) => setDuration(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.25", value: duration, onChange: (event) => setDuration(Number(event.target.value)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Flight/Sim Hours" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: flightOrSimHours, onChange: (event) => setFlightOrSimHours(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: flightOrSimHours, onChange: (event) => setFlightOrSimHours(Number(event.target.value)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Pre Event Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: preFlightTime, onChange: (event) => setPreFlightTime(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: preFlightTime, onChange: (event) => setPreFlightTime(Number(event.target.value)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Post Event Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: postFlightTime, onChange: (event) => setPostFlightTime(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: postFlightTime, onChange: (event) => setPostFlightTime(Number(event.target.value)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1 md:col-span-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Physical Resources" }),
@@ -21772,7 +21772,7 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Total Event Hours" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0.25", value: totalEventHours, onChange: (event) => setTotalEventHours(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.25", value: totalEventHours, onChange: (event) => setTotalEventHours(Number(event.target.value)) })
       ] })
     ] }),
     validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 pb-2 text-sm font-semibold text-red-300", children: validationMessage }),
@@ -21928,23 +21928,23 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, ai
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Duration" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0.25", value: duration, onChange: (event) => setDuration(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.25", value: duration, onChange: (event) => setDuration(Number(event.target.value)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Flight/Sim Hours" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: flightOrSimHours, onChange: (event) => setFlightOrSimHours(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: flightOrSimHours, onChange: (event) => setFlightOrSimHours(Number(event.target.value)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Pre Event Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: preFlightTime, onChange: (event) => setPreFlightTime(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: preFlightTime, onChange: (event) => setPreFlightTime(Number(event.target.value)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Post Event Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: postFlightTime, onChange: (event) => setPostFlightTime(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: postFlightTime, onChange: (event) => setPostFlightTime(Number(event.target.value)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Total Event Hours" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0.25", value: totalEventHours, onChange: (event) => setTotalEventHours(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.25", value: totalEventHours, onChange: (event) => setTotalEventHours(Number(event.target.value)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Aircraft / Resources Required" }),

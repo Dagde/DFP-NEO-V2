@@ -438,19 +438,19 @@ export const LmpEventEditModal: React.FC<{
                     </div>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Duration</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0.25" value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.25" value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Flight/Sim Hours</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={flightOrSimHours} onChange={(event) => setFlightOrSimHours(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={flightOrSimHours} onChange={(event) => setFlightOrSimHours(Number(event.target.value))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Pre Event Time</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={preFlightTime} onChange={(event) => setPreFlightTime(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={preFlightTime} onChange={(event) => setPreFlightTime(Number(event.target.value))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Post Event Time</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={postFlightTime} onChange={(event) => setPostFlightTime(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={postFlightTime} onChange={(event) => setPostFlightTime(Number(event.target.value))} />
                     </label>
                     <label className="space-y-1 md:col-span-2">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Physical Resources</span>
@@ -462,7 +462,7 @@ export const LmpEventEditModal: React.FC<{
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Total Event Hours</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0.25" value={totalEventHours} onChange={(event) => setTotalEventHours(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.25" value={totalEventHours} onChange={(event) => setTotalEventHours(Number(event.target.value))} />
                     </label>
                 </div>
                 {validationMessage && <div className="px-5 pb-2 text-sm font-semibold text-red-300">{validationMessage}</div>}
@@ -659,23 +659,23 @@ export const InsertEventModal: React.FC<{
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Duration</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0.25" value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.25" value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Flight/Sim Hours</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={flightOrSimHours} onChange={(event) => setFlightOrSimHours(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={flightOrSimHours} onChange={(event) => setFlightOrSimHours(Number(event.target.value))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Pre Event Time</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={preFlightTime} onChange={(event) => setPreFlightTime(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={preFlightTime} onChange={(event) => setPreFlightTime(Number(event.target.value))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Post Event Time</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={postFlightTime} onChange={(event) => setPostFlightTime(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={postFlightTime} onChange={(event) => setPostFlightTime(Number(event.target.value))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Total Event Hours</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0.25" value={totalEventHours} onChange={(event) => setTotalEventHours(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.25" value={totalEventHours} onChange={(event) => setTotalEventHours(Number(event.target.value))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Aircraft / Resources Required</span>
