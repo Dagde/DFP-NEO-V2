@@ -17269,36 +17269,77 @@ const ScheduleView = ({
   const [realtimeConflict, setRealtimeConflict] = reactExports.useState(null);
   const [realtimeResourceConflictId, setRealtimeResourceConflictId] = reactExports.useState(null);
   const [draggedCptConflict, setDraggedCptConflict] = reactExports.useState(null);
-  const [dragPreviewUpdates, setDragPreviewUpdates] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
   const dragFrameRef = reactExports.useRef(null);
   const lastDragUpdateSignatureRef = reactExports.useRef("");
   const dragDiagnosticSessionRef = reactExports.useRef(null);
+  const lastDragCommitUpdatesRef = reactExports.useRef(null);
   const pendingDragUpdateRef = reactExports.useRef(null);
+  const getDragTileElements = reactExports.useCallback((eventId) => {
+    if (typeof document === "undefined") return [];
+    const escapedId = eventId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    return Array.from(document.querySelectorAll(`[data-dfp-event-id="${escapedId}"]`));
+  }, []);
+  const clearDragVisualStyles = reactExports.useCallback(() => {
+    if (!draggingState) return;
+    draggingState.initialPositions.forEach((_initialPosition, eventId) => {
+      getDragTileElements(eventId).forEach((element) => {
+        element.style.transform = "";
+        element.style.transition = "";
+        element.style.willChange = "";
+      });
+    });
+  }, [draggingState, getDragTileElements]);
+  const applyDragVisualUpdates = reactExports.useCallback((updates) => {
+    if (!draggingState) return;
+    updates.forEach((update) => {
+      const initialPosition = draggingState.initialPositions.get(update.eventId);
+      if (!initialPosition) return;
+      const newRowIndex = resources.indexOf(update.newResourceId);
+      if (newRowIndex < 0) return;
+      const deltaX = (update.newStartTime - initialPosition.startTime) * PIXELS_PER_HOUR$6 * zoomLevel;
+      const deltaY = (newRowIndex - initialPosition.rowIndex) * ROW_HEIGHT$6;
+      getDragTileElements(update.eventId).forEach((element) => {
+        element.style.transition = "none";
+        element.style.willChange = "transform";
+        element.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
+      });
+    });
+  }, [draggingState, getDragTileElements, resources, zoomLevel]);
   const flushPendingDragUpdate = reactExports.useCallback((commitToSchedule = false) => {
     if (dragFrameRef.current !== null) {
       window.cancelAnimationFrame(dragFrameRef.current);
       dragFrameRef.current = null;
     }
     const pending = pendingDragUpdateRef.current;
-    if (!pending) return;
+    if (!pending) {
+      if (commitToSchedule && lastDragCommitUpdatesRef.current) {
+        recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
+          queuedAtMs: performance.now(),
+          updateCount: lastDragCommitUpdatesRef.current.length,
+          signature: lastDragUpdateSignatureRef.current
+        });
+        onUpdateEvent(lastDragCommitUpdatesRef.current);
+        lastDragCommitUpdatesRef.current = null;
+      }
+      return;
+    }
     pendingDragUpdateRef.current = null;
-    setRealtimeConflict(pending.realtimeConflict);
-    setRealtimeResourceConflictId(pending.resourceConflictId);
-    setDraggedCptConflict(pending.cptConflict);
-    setDragPreviewUpdates(new Map(pending.updates.map((update) => [
-      update.eventId,
-      { startTime: update.newStartTime, resourceId: update.newResourceId }
-    ])));
+    lastDragCommitUpdatesRef.current = pending.updates;
+    applyDragVisualUpdates(pending.updates);
     if (commitToSchedule) {
+      setRealtimeConflict(pending.realtimeConflict);
+      setRealtimeResourceConflictId(pending.resourceConflictId);
+      setDraggedCptConflict(pending.cptConflict);
       recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
         queuedAtMs: pending.queuedAtMs,
         updateCount: pending.updates.length,
         signature: pending.signature
       });
       onUpdateEvent(pending.updates);
+      lastDragCommitUpdatesRef.current = null;
     }
-  }, [onUpdateEvent]);
+  }, [applyDragVisualUpdates, onUpdateEvent]);
   reactExports.useEffect(() => {
     return () => {
       if (dragFrameRef.current !== null) {
@@ -17320,11 +17361,12 @@ const ScheduleView = ({
         flushPendingDragUpdate(true);
         document.body.classList.remove("no-select");
         setDraggingState(null);
-        setDragPreviewUpdates(null);
         setRealtimeConflict(null);
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
+        window.requestAnimationFrame(clearDragVisualStyles);
         lastDragUpdateSignatureRef.current = "";
+        lastDragCommitUpdatesRef.current = null;
         endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
         dragDiagnosticSessionRef.current = null;
       }
@@ -17516,8 +17558,8 @@ const ScheduleView = ({
       }
       if (initialPositions.size > 0) {
         lastDragUpdateSignatureRef.current = "";
+        lastDragCommitUpdatesRef.current = null;
         pendingDragUpdateRef.current = null;
-        setDragPreviewUpdates(null);
         dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
           board: "DFP",
           eventId: event.id,
@@ -17720,6 +17762,7 @@ const ScheduleView = ({
   const handleMouseUp = (e) => {
     if (draggingState) {
       flushPendingDragUpdate(true);
+      window.requestAnimationFrame(clearDragVisualStyles);
       return;
     }
     document.body.classList.remove("no-select");
@@ -17730,10 +17773,11 @@ const ScheduleView = ({
       onCptConflict(draggedCptConflict);
     }
     setDraggingState(null);
-    setDragPreviewUpdates(null);
     setRealtimeConflict(null);
     setRealtimeResourceConflictId(null);
     setDraggedCptConflict(null);
+    window.requestAnimationFrame(clearDragVisualStyles);
+    lastDragCommitUpdatesRef.current = null;
     endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
     dragDiagnosticSessionRef.current = null;
     setValidateOverlayTime(null);
@@ -18075,12 +18119,8 @@ const ScheduleView = ({
     );
   }) });
   const renderEvents = () => {
-    const renderSourceEvents = dragPreviewUpdates ? events.map((event) => {
-      const preview = dragPreviewUpdates.get(event.id);
-      return preview ? { ...event, startTime: preview.startTime, resourceId: preview.resourceId } : event;
-    }) : events;
     return resources.flatMap((resource, rowIndex) => {
-      const resourceEvents = renderSourceEvents.filter((e) => e.resourceId === resource).sort((a, b) => {
+      const resourceEvents = events.filter((e) => e.resourceId === resource).sort((a, b) => {
         if (a.type === "deployment" && b.type !== "deployment") return -1;
         if (a.type !== "deployment" && b.type === "deployment") return 1;
         return a.startTime - b.startTime;
@@ -40589,37 +40629,78 @@ const NextDayBuildView = ({
   const [realtimeConflict, setRealtimeConflict] = reactExports.useState(null);
   const [realtimeResourceConflictId, setRealtimeResourceConflictId] = reactExports.useState(null);
   const [draggedCptConflict, setDraggedCptConflict] = reactExports.useState(null);
-  const [dragPreviewUpdates, setDragPreviewUpdates] = reactExports.useState(null);
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
   const dragFrameRef = reactExports.useRef(null);
   const lastDragUpdateSignatureRef = reactExports.useRef("");
   const dragDiagnosticSessionRef = reactExports.useRef(null);
+  const lastDragCommitUpdatesRef = reactExports.useRef(null);
   const pendingDragUpdateRef = reactExports.useRef(null);
+  const getDragTileElements = reactExports.useCallback((eventId) => {
+    if (typeof document === "undefined") return [];
+    const escapedId = eventId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    return Array.from(document.querySelectorAll(`[data-dfp-event-id="${escapedId}"]`));
+  }, []);
+  const clearDragVisualStyles = reactExports.useCallback(() => {
+    if (!draggingState) return;
+    draggingState.initialPositions.forEach((_initialPosition, eventId) => {
+      getDragTileElements(eventId).forEach((element) => {
+        element.style.transform = "";
+        element.style.transition = "";
+        element.style.willChange = "";
+      });
+    });
+  }, [draggingState, getDragTileElements]);
+  const applyDragVisualUpdates = reactExports.useCallback((updates) => {
+    if (!draggingState) return;
+    updates.forEach((update) => {
+      const initialPosition = draggingState.initialPositions.get(update.eventId);
+      if (!initialPosition) return;
+      const newRowIndex = resources.indexOf(update.newResourceId);
+      if (newRowIndex < 0) return;
+      const deltaX = (update.newStartTime - initialPosition.startTime) * PIXELS_PER_HOUR$3 * zoomLevel;
+      const deltaY = (newRowIndex - initialPosition.rowIndex) * ROW_HEIGHT$3;
+      getDragTileElements(update.eventId).forEach((element) => {
+        element.style.transition = "none";
+        element.style.willChange = "transform";
+        element.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
+      });
+    });
+  }, [draggingState, getDragTileElements, resources, zoomLevel]);
   const flushPendingDragUpdate = reactExports.useCallback((commitToSchedule = false) => {
     if (dragFrameRef.current !== null) {
       window.cancelAnimationFrame(dragFrameRef.current);
       dragFrameRef.current = null;
     }
     const pending = pendingDragUpdateRef.current;
-    if (!pending) return;
+    if (!pending) {
+      if (commitToSchedule && lastDragCommitUpdatesRef.current) {
+        recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
+          queuedAtMs: performance.now(),
+          updateCount: lastDragCommitUpdatesRef.current.length,
+          signature: lastDragUpdateSignatureRef.current
+        });
+        onUpdateEvent(lastDragCommitUpdatesRef.current);
+        lastDragCommitUpdatesRef.current = null;
+      }
+      return;
+    }
     pendingDragUpdateRef.current = null;
-    setRealtimeConflict(pending.realtimeConflict);
-    setRealtimeResourceConflictId(pending.resourceConflictId);
-    setDraggedCptConflict(pending.cptConflict);
-    setDragPreviewUpdates(new Map(pending.updates.map((update) => [
-      update.eventId,
-      { startTime: update.newStartTime, resourceId: update.newResourceId }
-    ])));
+    lastDragCommitUpdatesRef.current = pending.updates;
+    applyDragVisualUpdates(pending.updates);
     if (commitToSchedule) {
+      setRealtimeConflict(pending.realtimeConflict);
+      setRealtimeResourceConflictId(pending.resourceConflictId);
+      setDraggedCptConflict(pending.cptConflict);
       recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
         queuedAtMs: pending.queuedAtMs,
         updateCount: pending.updates.length,
         signature: pending.signature
       });
       onUpdateEvent(pending.updates);
+      lastDragCommitUpdatesRef.current = null;
     }
-  }, [onUpdateEvent]);
+  }, [applyDragVisualUpdates, onUpdateEvent]);
   reactExports.useEffect(() => {
     return () => {
       if (dragFrameRef.current !== null) {
@@ -40771,8 +40852,8 @@ const NextDayBuildView = ({
       }
       if (initialPositions.size > 0) {
         lastDragUpdateSignatureRef.current = "";
+        lastDragCommitUpdatesRef.current = null;
         pendingDragUpdateRef.current = null;
-        setDragPreviewUpdates(null);
         dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
           board: "NEO Build Schedule",
           eventId: event.id,
@@ -40960,11 +41041,12 @@ const NextDayBuildView = ({
       onCptConflict(draggedCptConflict);
     }
     setDraggingState(null);
-    setDragPreviewUpdates(null);
     setRealtimeConflict(null);
     setRealtimeResourceConflictId(null);
     setDraggedCptConflict(null);
+    window.requestAnimationFrame(clearDragVisualStyles);
     lastDragUpdateSignatureRef.current = "";
+    lastDragCommitUpdatesRef.current = null;
     endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
     dragDiagnosticSessionRef.current = null;
     setValidateOverlayTime(null);
@@ -41262,12 +41344,8 @@ const NextDayBuildView = ({
     return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: shades });
   };
   const renderEvents = () => {
-    const renderSourceEvents = dragPreviewUpdates ? events.map((event) => {
-      const preview = dragPreviewUpdates.get(event.id);
-      return preview ? { ...event, startTime: preview.startTime, resourceId: preview.resourceId } : event;
-    }) : events;
     const seenIds = /* @__PURE__ */ new Set();
-    const uniqueEvents = renderSourceEvents.filter((e) => {
+    const uniqueEvents = events.filter((e) => {
       if (seenIds.has(e.id)) return false;
       seenIds.add(e.id);
       return true;

@@ -7698,11 +7698,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [realtimeConflict, setRealtimeConflict] = useState<{ conflictingEventId: string; conflictedPersonName: string; } | null>(null);
     const [realtimeResourceConflictId, setRealtimeResourceConflictId] = useState<string | null>(null);
     const [draggedCptConflict, setDraggedCptConflict] = useState<Conflict | null>(null);
-    const [dragPreviewUpdates, setDragPreviewUpdates] = useState<Map<string, { startTime: number; resourceId: string }> | null>(null);
     const didDragRef = useRef(false);
     const dragFrameRef = useRef<number | null>(null);
     const lastDragUpdateSignatureRef = useRef('');
     const dragDiagnosticSessionRef = useRef<string | null>(null);
+    const lastDragCommitUpdatesRef = useRef<{ eventId: string, newStartTime: number, newResourceId: string }[] | null>(null);
     const pendingDragUpdateRef = useRef<{
         updates: { eventId: string, newStartTime: number, newResourceId: string }[];
         realtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null;
@@ -7712,30 +7712,74 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         signature: string;
     } | null>(null);
 
+    const getDragTileElements = useCallback((eventId: string): HTMLElement[] => {
+        if (typeof document === 'undefined') return [];
+        const escapedId = eventId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        return Array.from(document.querySelectorAll<HTMLElement>(`[data-dfp-event-id="${escapedId}"]`));
+    }, []);
+
+    const clearDragVisualStyles = useCallback(() => {
+        if (!draggingState) return;
+        draggingState.initialPositions.forEach((_initialPosition, eventId) => {
+            getDragTileElements(eventId).forEach(element => {
+                element.style.transform = '';
+                element.style.transition = '';
+                element.style.willChange = '';
+            });
+        });
+    }, [draggingState, getDragTileElements]);
+
+    const applyDragVisualUpdates = useCallback((updates: { eventId: string, newStartTime: number, newResourceId: string }[]) => {
+        if (!draggingState) return;
+        updates.forEach(update => {
+            const initialPosition = draggingState.initialPositions.get(update.eventId);
+            if (!initialPosition) return;
+            const newRowIndex = resources.indexOf(update.newResourceId);
+            if (newRowIndex < 0) return;
+            const deltaX = (update.newStartTime - initialPosition.startTime) * PIXELS_PER_HOUR * zoomLevel;
+            const deltaY = (newRowIndex - initialPosition.rowIndex) * ROW_HEIGHT;
+            getDragTileElements(update.eventId).forEach(element => {
+                element.style.transition = 'none';
+                element.style.willChange = 'transform';
+                element.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
+            });
+        });
+    }, [draggingState, getDragTileElements, resources, zoomLevel]);
+
     const flushPendingDragUpdate = useCallback((commitToSchedule = false) => {
         if (dragFrameRef.current !== null) {
             window.cancelAnimationFrame(dragFrameRef.current);
             dragFrameRef.current = null;
         }
         const pending = pendingDragUpdateRef.current;
-        if (!pending) return;
+        if (!pending) {
+            if (commitToSchedule && lastDragCommitUpdatesRef.current) {
+                recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
+                    queuedAtMs: performance.now(),
+                    updateCount: lastDragCommitUpdatesRef.current.length,
+                    signature: lastDragUpdateSignatureRef.current,
+                });
+                onUpdateEvent(lastDragCommitUpdatesRef.current);
+                lastDragCommitUpdatesRef.current = null;
+            }
+            return;
+        }
         pendingDragUpdateRef.current = null;
-        setRealtimeConflict(pending.realtimeConflict);
-        setRealtimeResourceConflictId(pending.resourceConflictId);
-        setDraggedCptConflict(pending.cptConflict);
-        setDragPreviewUpdates(new Map(pending.updates.map(update => [
-            update.eventId,
-            { startTime: update.newStartTime, resourceId: update.newResourceId },
-        ])));
+        lastDragCommitUpdatesRef.current = pending.updates;
+        applyDragVisualUpdates(pending.updates);
         if (commitToSchedule) {
+            setRealtimeConflict(pending.realtimeConflict);
+            setRealtimeResourceConflictId(pending.resourceConflictId);
+            setDraggedCptConflict(pending.cptConflict);
             recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
                 queuedAtMs: pending.queuedAtMs,
                 updateCount: pending.updates.length,
                 signature: pending.signature,
             });
             onUpdateEvent(pending.updates);
+            lastDragCommitUpdatesRef.current = null;
         }
-    }, [onUpdateEvent]);
+    }, [applyDragVisualUpdates, onUpdateEvent]);
 
     useEffect(() => {
         return () => {
@@ -7765,11 +7809,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 flushPendingDragUpdate(true);
                 document.body.classList.remove('no-select');
                 setDraggingState(null);
-                setDragPreviewUpdates(null);
                 setRealtimeConflict(null);
                 setRealtimeResourceConflictId(null);
                 setDraggedCptConflict(null);
+                window.requestAnimationFrame(clearDragVisualStyles);
                 lastDragUpdateSignatureRef.current = '';
+                lastDragCommitUpdatesRef.current = null;
                 endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
                 dragDiagnosticSessionRef.current = null;
             }
@@ -8001,8 +8046,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
             if (initialPositions.size > 0) {
                 lastDragUpdateSignatureRef.current = '';
+                lastDragCommitUpdatesRef.current = null;
                 pendingDragUpdateRef.current = null;
-                setDragPreviewUpdates(null);
                 dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
                     board: 'DFP',
                     eventId: event.id,
@@ -8242,6 +8287,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
         if (draggingState) {
             flushPendingDragUpdate(true);
+            window.requestAnimationFrame(clearDragVisualStyles);
             return; // Don't clear drag state if we're in a drag operation
         }
         document.body.classList.remove('no-select');
@@ -8254,10 +8300,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             onCptConflict(draggedCptConflict);
         }
         setDraggingState(null);
-        setDragPreviewUpdates(null);
         setRealtimeConflict(null);
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
+        window.requestAnimationFrame(clearDragVisualStyles);
+        lastDragCommitUpdatesRef.current = null;
         endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
         dragDiagnosticSessionRef.current = null;
         
@@ -8644,14 +8691,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     // Render loop for events
     const renderEvents = () => {
-        const renderSourceEvents = dragPreviewUpdates
-            ? events.map(event => {
-                const preview = dragPreviewUpdates.get(event.id);
-                return preview ? { ...event, startTime: preview.startTime, resourceId: preview.resourceId } : event;
-            })
-            : events;
         return resources.flatMap((resource, rowIndex) => {
-            const resourceEvents = renderSourceEvents
+            const resourceEvents = events
                 .filter(e => e.resourceId === resource)
                 .sort((a, b) => {
                     if (a.type === 'deployment' && b.type !== 'deployment') return -1;
