@@ -23067,26 +23067,6 @@ const App: React.FC = () => {
         const saved = localStorage.getItem('timezoneOffset');
         return saved ? parseFloat(saved) : 10; // Default to UTC+10 (AEST); location timezones override this where available.
     });
-    const effectiveDfpTimezoneOffset = useMemo(() => {
-        const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
-        const locations = Array.isArray(platformConfig?.locations) ? platformConfig.locations : [];
-        const cleanUnitCode = normaliseDfpTimezoneKey(activeUnitCode);
-        const activeUnit = units.find((unit: any) => normaliseDfpTimezoneKey(unit?.code) === cleanUnitCode);
-        const locationKey = normaliseDfpTimezoneKey(school || activeUnit?.locationCode);
-        const activeLocation = locations.find((location: any) => dfpLocationMatchesTimezoneKey(location, locationKey));
-        const useSystemOffset = Boolean(activeLocation?.useSystemTimezoneOffset ?? activeLocation?.settings?.useSystemTimezoneOffset);
-        if (useSystemOffset) return getDfpSystemUtcOffsetHours();
-
-        const configuredOffset = Number(activeLocation?.timezoneOffset ?? activeLocation?.settings?.timezoneOffset);
-        if (Number.isFinite(configuredOffset)) return configuredOffset;
-
-        const locationTimezone = activeLocation?.timezone || activeLocation?.timeZone || activeLocation?.settings?.timezone;
-        const resolvedOffset = getDfpOffsetHoursForTimezone(locationTimezone);
-        if (resolvedOffset !== null) return resolvedOffset;
-
-        const fallbackOffset = Number(timezoneOffset);
-        return Number.isFinite(fallbackOffset) ? fallbackOffset : 10;
-    }, [activeUnitCode, platformConfig, school, timezoneOffset]);
 
     // Validation Settings State
     const [showDepartureDensityOverlay, setShowDepartureDensityOverlay] = useState<boolean>(() => {
@@ -23118,7 +23098,7 @@ const App: React.FC = () => {
     // Helper function to get local date string with timezone offset
     const getLocalDateString = (date: Date = new Date()): string => {
         // Apply timezone offset
-        const offsetMs = effectiveDfpTimezoneOffset * 60 * 60 * 1000;
+        const offsetMs = timezoneOffset * 60 * 60 * 1000;
         const adjustedDate = new Date(date.getTime() + offsetMs);
 
         const year = adjustedDate.getUTCFullYear();
@@ -23126,10 +23106,6 @@ const App: React.FC = () => {
         const day = String(adjustedDate.getUTCDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     };
-
-    const isPastDfpDate = (targetDate?: string | null): boolean => (
-        Boolean(targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) && targetDate < getLocalDateString())
-    );
 
     const denyPastDfpEdit = (action: string = 'modify this DFP') => {
         showDarkAlert(
@@ -23265,7 +23241,6 @@ const App: React.FC = () => {
         } catch (e) { /* ignore */ }
         return getLocalDateString();
     });
-    const isViewingPastDfp = isPastDfpDate(date);
     const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
     const [isEditingDefault, setIsEditingDefault] = useState(false);
@@ -23355,6 +23330,38 @@ const App: React.FC = () => {
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
     const [platformConfigLoaded, setPlatformConfigLoaded] = useState(false);
     const platformConfigSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const effectiveDfpTimezoneOffset = useMemo(() => {
+        const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
+        const locations = Array.isArray(platformConfig?.locations) ? platformConfig.locations : [];
+        const cleanUnitCode = normaliseDfpTimezoneKey(activeUnitCode);
+        const activeUnit = units.find((unit: any) => normaliseDfpTimezoneKey(unit?.code) === cleanUnitCode);
+        const locationKey = normaliseDfpTimezoneKey(school || activeUnit?.locationCode);
+        const activeLocation = locations.find((location: any) => dfpLocationMatchesTimezoneKey(location, locationKey));
+        const useSystemOffset = Boolean(activeLocation?.useSystemTimezoneOffset ?? activeLocation?.settings?.useSystemTimezoneOffset);
+        if (useSystemOffset) return getDfpSystemUtcOffsetHours();
+
+        const configuredOffset = Number(activeLocation?.timezoneOffset ?? activeLocation?.settings?.timezoneOffset);
+        if (Number.isFinite(configuredOffset)) return configuredOffset;
+
+        const locationTimezone = activeLocation?.timezone || activeLocation?.timeZone || activeLocation?.settings?.timezone;
+        const resolvedOffset = getDfpOffsetHoursForTimezone(locationTimezone);
+        if (resolvedOffset !== null) return resolvedOffset;
+
+        const fallbackOffset = Number(timezoneOffset);
+        return Number.isFinite(fallbackOffset) ? fallbackOffset : 10;
+    }, [activeUnitCode, platformConfig, school, timezoneOffset]);
+    const getEffectiveDfpDateString = useCallback((sourceDate: Date = new Date()): string => {
+        const offsetMs = effectiveDfpTimezoneOffset * 60 * 60 * 1000;
+        const adjustedDate = new Date(sourceDate.getTime() + offsetMs);
+        const year = adjustedDate.getUTCFullYear();
+        const month = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(adjustedDate.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }, [effectiveDfpTimezoneOffset]);
+    const isPastDfpDate = useCallback((targetDate?: string | null): boolean => (
+        Boolean(targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) && targetDate < getEffectiveDfpDateString())
+    ), [getEffectiveDfpDateString]);
+    const isViewingPastDfp = isPastDfpDate(date);
     // Settings loaded flag is used by context restore diagnostics and availability fetches.
     const [settingsLoaded, setSettingsLoaded] = useState(false);
     const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
