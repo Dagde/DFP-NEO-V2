@@ -44835,16 +44835,36 @@ appliedUpdates.forEach(update => {
         return getPersonnel(event).some(person => buildIntelligencePersonnelSet.has(person));
     }, [buildIntelligenceCourseSet, buildIntelligencePersonnelSet, getBuildIntelligenceEventCourse]);
 
-    const buildIntelligenceEvents = useMemo(
-        () => nextDayBuildEvents
-            .map(event => ({ ...event, date: buildDfpDate }))
-            .filter(eventMatchesBuildIntelligenceScope),
-        [buildDfpDate, eventMatchesBuildIntelligenceScope, nextDayBuildEvents],
-    );
+    const buildIntelligenceEvents = useMemo(() => {
+        const hasPendingBuildEvents = nextDayBuildEvents.length > 0;
+        const sourceEvents = hasPendingBuildEvents
+            ? nextDayBuildEvents.map(event => ({ ...event, date: buildDfpDate }))
+            : (publishedSchedules[buildDfpDate] || []).map(event => ({
+                ...event,
+                date: event.date || buildDfpDate,
+            }));
+        return sourceEvents.filter(eventMatchesBuildIntelligenceScope);
+    }, [buildDfpDate, eventMatchesBuildIntelligenceScope, nextDayBuildEvents, publishedSchedules]);
 
     const buildIntelligenceAnalysis = useMemo<BuildAnalysis | null>(() => {
-        if (!lastBuildAnalysis) return null;
-        const scopedCourseAnalysis = (lastBuildAnalysis.courseAnalysis || [])
+        const baseAnalysis = lastBuildAnalysis || (
+            buildIntelligenceEvents.length > 0
+                ? analyzeBuildResults(
+                    buildIntelligenceEvents.map(({ date: _date, ...event }) => event),
+                    coursePercentages,
+                    buildIntelligenceActiveCourses,
+                    availableAircraftCount,
+                    buildDfpDate,
+                    allTraineesData,
+                    traineeLMPs,
+                    scores,
+                    syllabusDetails,
+                    publishedSchedules as any,
+                )
+                : null
+        );
+        if (!baseAnalysis) return null;
+        const scopedCourseAnalysis = (baseAnalysis.courseAnalysis || [])
             .filter(course => buildIntelligenceCourseSet.has(course.courseName));
         const scheduledEvents = buildIntelligenceEvents.filter(event => {
             if (event.flightNumber.includes('Duty Sup')) return false;
@@ -44871,12 +44891,12 @@ appliedUpdates.forEach(update => {
         const standbyCount = buildIntelligenceEvents.filter(event =>
             event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY')
         ).length;
-        const aircraftUtilization = lastBuildAnalysis.availableAircraft > 0
-            ? (flightEvents / lastBuildAnalysis.availableAircraft) * 100
+        const aircraftUtilization = baseAnalysis.availableAircraft > 0
+            ? (flightEvents / baseAnalysis.availableAircraft) * 100
             : 0;
 
         return {
-            ...lastBuildAnalysis,
+            ...baseAnalysis,
             totalEvents,
             courseAnalysis: scopedCourseAnalysis,
             timeDistribution: {
@@ -44885,13 +44905,26 @@ appliedUpdates.forEach(update => {
                 uniformityScore: 1 - clusteringScore,
             },
             resourceUtilization: {
-                ...lastBuildAnalysis.resourceUtilization,
+                ...baseAnalysis.resourceUtilization,
                 aircraftUtilization,
                 standbyCount,
             },
-            insights: lastBuildAnalysis.insights || [],
+            insights: baseAnalysis.insights || [],
         };
-    }, [buildIntelligenceCourseSet, buildIntelligenceEvents, lastBuildAnalysis]);
+    }, [
+        allTraineesData,
+        availableAircraftCount,
+        buildDfpDate,
+        buildIntelligenceActiveCourses,
+        buildIntelligenceCourseSet,
+        buildIntelligenceEvents,
+        coursePercentages,
+        lastBuildAnalysis,
+        publishedSchedules,
+        scores,
+        syllabusDetails,
+        traineeLMPs,
+    ]);
 
     const buildIntelligenceCancellationRecords = useMemo(() => {
         const scopedEventIds = new Set(buildIntelligenceEvents.map(event => event.id));

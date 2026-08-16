@@ -130502,13 +130502,29 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (eventCourse) return buildIntelligenceCourseSet.has(eventCourse);
     return getPersonnel(event).some((person) => buildIntelligencePersonnelSet.has(person));
   }, [buildIntelligenceCourseSet, buildIntelligencePersonnelSet, getBuildIntelligenceEventCourse]);
-  const buildIntelligenceEvents = reactExports.useMemo(
-    () => nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate })).filter(eventMatchesBuildIntelligenceScope),
-    [buildDfpDate, eventMatchesBuildIntelligenceScope, nextDayBuildEvents]
-  );
+  const buildIntelligenceEvents = reactExports.useMemo(() => {
+    const hasPendingBuildEvents = nextDayBuildEvents.length > 0;
+    const sourceEvents = hasPendingBuildEvents ? nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate })) : (publishedSchedules[buildDfpDate] || []).map((event) => ({
+      ...event,
+      date: event.date || buildDfpDate
+    }));
+    return sourceEvents.filter(eventMatchesBuildIntelligenceScope);
+  }, [buildDfpDate, eventMatchesBuildIntelligenceScope, nextDayBuildEvents, publishedSchedules]);
   const buildIntelligenceAnalysis = reactExports.useMemo(() => {
-    if (!lastBuildAnalysis) return null;
-    const scopedCourseAnalysis = (lastBuildAnalysis.courseAnalysis || []).filter((course) => buildIntelligenceCourseSet.has(course.courseName));
+    const baseAnalysis = lastBuildAnalysis || (buildIntelligenceEvents.length > 0 ? analyzeBuildResults(
+      buildIntelligenceEvents.map(({ date: _date, ...event }) => event),
+      coursePercentages,
+      buildIntelligenceActiveCourses,
+      availableAircraftCount,
+      buildDfpDate,
+      allTraineesData,
+      traineeLMPs,
+      scores,
+      syllabusDetails,
+      publishedSchedules
+    ) : null);
+    if (!baseAnalysis) return null;
+    const scopedCourseAnalysis = (baseAnalysis.courseAnalysis || []).filter((course) => buildIntelligenceCourseSet.has(course.courseName));
     const scheduledEvents = buildIntelligenceEvents.filter((event) => {
       if (event.flightNumber.includes("Duty Sup")) return false;
       if (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY")) return false;
@@ -130533,9 +130549,9 @@ ${error instanceof Error ? error.message : String(error)}`,
     const standbyCount = buildIntelligenceEvents.filter(
       (event) => event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY")
     ).length;
-    const aircraftUtilization = lastBuildAnalysis.availableAircraft > 0 ? flightEvents / lastBuildAnalysis.availableAircraft * 100 : 0;
+    const aircraftUtilization = baseAnalysis.availableAircraft > 0 ? flightEvents / baseAnalysis.availableAircraft * 100 : 0;
     return {
-      ...lastBuildAnalysis,
+      ...baseAnalysis,
       totalEvents,
       courseAnalysis: scopedCourseAnalysis,
       timeDistribution: {
@@ -130544,13 +130560,26 @@ ${error instanceof Error ? error.message : String(error)}`,
         uniformityScore: 1 - clusteringScore
       },
       resourceUtilization: {
-        ...lastBuildAnalysis.resourceUtilization,
+        ...baseAnalysis.resourceUtilization,
         aircraftUtilization,
         standbyCount
       },
-      insights: lastBuildAnalysis.insights || []
+      insights: baseAnalysis.insights || []
     };
-  }, [buildIntelligenceCourseSet, buildIntelligenceEvents, lastBuildAnalysis]);
+  }, [
+    allTraineesData,
+    availableAircraftCount,
+    buildDfpDate,
+    buildIntelligenceActiveCourses,
+    buildIntelligenceCourseSet,
+    buildIntelligenceEvents,
+    coursePercentages,
+    lastBuildAnalysis,
+    publishedSchedules,
+    scores,
+    syllabusDetails,
+    traineeLMPs
+  ]);
   const buildIntelligenceCancellationRecords = reactExports.useMemo(() => {
     const scopedEventIds = new Set(buildIntelligenceEvents.map((event) => event.id));
     return cancellationRecords.filter((record) => {
