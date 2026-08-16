@@ -469,8 +469,8 @@ const SystemFreezeProvider = ({ children }) => {
   const checkAndWarn = reactExports.useCallback((action, actionName) => {
     if (!freezeState.isFrozen) return true;
     if (freezeState.allowedActions[action]) return true;
-    const name = actionName || action;
-    alert(`System is currently frozen. "${name}" action is not permitted during the freeze.`);
+    const name2 = actionName || action;
+    alert(`System is currently frozen. "${name2}" action is not permitted during the freeze.`);
     return false;
   }, [freezeState]);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(SystemFreezeContext.Provider, { value: {
@@ -1483,12 +1483,12 @@ const initDB = () => {
     };
   });
 };
-const addFile = (file, folderId, name) => {
+const addFile = (file, folderId, name2) => {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], "readwrite");
     const store = transaction.objectStore(STORE_NAME);
     const id = v4();
-    const fileRecord = { id, name, folderId, content: file };
+    const fileRecord = { id, name: name2, folderId, content: file };
     const request = store.add(fileRecord);
     request.onsuccess = () => {
       resolve(id);
@@ -1522,8 +1522,8 @@ const getAllFiles = () => {
     request.onsuccess = (event) => {
       const cursor = event.target.result;
       if (cursor) {
-        const { id, name, folderId } = cursor.value;
-        files.push({ id, name, folderId });
+        const { id, name: name2, folderId } = cursor.value;
+        files.push({ id, name: name2, folderId });
         cursor.continue();
       } else {
         resolve(files);
@@ -2784,12 +2784,12 @@ const normaliseOperationalModels = (source) => {
   return Array.from(new Set(values.map((value) => normaliseOperationalModel(value))));
 };
 const normaliseQualification = (entry, index) => {
-  const name = String(entry?.name || entry?.label || entry?.code || "").trim();
-  const code = String(entry?.code || entry?.abbreviation || name).trim();
-  if (!name && !code) return null;
-  const id = String(entry?.id || makeQualificationId(code || name, index)).trim() || makeQualificationId(name || code, index);
-  const isLegacyPicLabel = id === "pic" && normaliseQualificationToken(code) === "pic" && normaliseQualificationToken(name) === "pilotincommand";
-  const displayName = isLegacyPicLabel ? "PIC" : name || code;
+  const name2 = String(entry?.name || entry?.label || entry?.code || "").trim();
+  const code = String(entry?.code || entry?.abbreviation || name2).trim();
+  if (!name2 && !code) return null;
+  const id = String(entry?.id || makeQualificationId(code || name2, index)).trim() || makeQualificationId(name2 || code, index);
+  const isLegacyPicLabel = id === "pic" && normaliseQualificationToken(code) === "pic" && normaliseQualificationToken(name2) === "pilotincommand";
+  const displayName = isLegacyPicLabel ? "PIC" : name2 || code;
   return {
     id,
     name: displayName,
@@ -5044,9 +5044,9 @@ const getPersonStableKey = (person, fallbackPrefix = "person") => {
   if (id) return `db-${id}`;
   const idNumber = String(person.idNumber || "").trim();
   if (idNumber) return `pid-${idNumber}`;
-  const name = getPersonDisplayName(person);
+  const name2 = getPersonDisplayName(person);
   const context = [person.unit, person.course, person.role].map((value) => String(value || "").trim()).filter(Boolean).join("|");
-  return `${fallbackPrefix}-${name || "unnamed"}${context ? `-${context}` : ""}`;
+  return `${fallbackPrefix}-${name2 || "unnamed"}${context ? `-${context}` : ""}`;
 };
 const getPersonDomIdSuffix = (person, fallbackPrefix = "person") => getPersonStableKey(person, fallbackPrefix).replace(/[^A-Za-z0-9_-]+/g, "-");
 const getPersonIdentityDedupeKey = (person, fallbackPrefix = "person") => {
@@ -5055,10 +5055,10 @@ const getPersonIdentityDedupeKey = (person, fallbackPrefix = "person") => {
   return getPersonStableKey(person, fallbackPrefix);
 };
 const formatPersonOptionLabel = (person) => {
-  const name = getPersonDisplayName(person) || "Unnamed person";
+  const name2 = getPersonDisplayName(person) || "Unnamed person";
   const parts = [
     person.rank,
-    name,
+    name2,
     person.role || person.course,
     person.unit,
     person.idNumber ? `ID ${person.idNumber}` : ""
@@ -5092,17 +5092,17 @@ const buildCompactPersonNameResolver = (people = []) => {
     if (surnameKey) surnameCounts.set(surnameKey, (surnameCounts.get(surnameKey) || 0) + 1);
     if (surnameKey && firstName) surnameFirstNameCounts.set(firstNameKey, (surnameFirstNameCounts.get(firstNameKey) || 0) + 1);
   });
-  const findPerson = (name) => {
-    const key = normalisePersonName(stripPersonContext(name));
+  const findPerson = (name2) => {
+    const key = normalisePersonName(stripPersonContext(name2));
     const matches = key ? personByName.get(key) || [] : [];
     if (matches[0]) return matches[0];
-    const inputParts = getNameParts(name);
+    const inputParts = getNameParts(name2);
     const inputSurnameKey = normalisePersonName(inputParts.surname);
     if (inputSurnameKey && !inputParts.firstName && !inputParts.firstInitial) {
       const surnameMatches = personBySurname.get(inputSurnameKey) || [];
       if (surnameMatches.length === 1) return surnameMatches[0];
     }
-    const visualSuffix = getVisualIdSuffix(name);
+    const visualSuffix = getVisualIdSuffix(name2);
     if (!visualSuffix) return void 0;
     const { surname, firstInitial } = inputParts;
     const surnameKey = normalisePersonName(surname);
@@ -5113,10 +5113,10 @@ const buildCompactPersonNameResolver = (people = []) => {
       return normalisePersonName(parts.surname) === surnameKey && (!firstInitial || parts.firstInitial === firstInitial);
     });
   };
-  const explainCompact = (name) => {
-    const input = String(name || "");
-    const cleaned = stripPersonContext(name);
-    const visualSuffix = getVisualIdSuffix(name);
+  const explainCompact = (name2) => {
+    const input = String(name2 || "");
+    const cleaned = stripPersonContext(name2);
+    const visualSuffix = getVisualIdSuffix(name2);
     if (!cleaned) {
       return {
         input,
@@ -5136,7 +5136,7 @@ const buildCompactPersonNameResolver = (people = []) => {
         decision: "empty"
       };
     }
-    const person = findPerson(name);
+    const person = findPerson(name2);
     const displayName = person ? getPersonDisplayName(person) : cleaned;
     const { surname, firstName, firstInitial } = getNameParts(displayName);
     const surnameKey = normalisePersonName(surname);
@@ -5214,11 +5214,11 @@ const buildCompactPersonNameResolver = (people = []) => {
       decision: suffix ? "exact-duplicate" : "exact-duplicate-without-id"
     };
   };
-  const formatCompact = (name) => {
-    return explainCompact(name).output;
+  const formatCompact = (name2) => {
+    return explainCompact(name2).output;
   };
-  const formatCompactWithInitial = (name) => {
-    const result = explainCompact(name);
+  const formatCompactWithInitial = (name2) => {
+    const result = explainCompact(name2);
     return result.decision === "exact-duplicate" || result.decision === "exact-duplicate-without-id" ? result.output : result.base || result.output;
   };
   const formatList = (person) => {
@@ -5315,7 +5315,7 @@ const normaliseCrewCompositionSettings = (value) => {
   const currencyProfiles = currencyRows.map((row, index) => {
     const rawName = String(row?.name || row?.profileName || row?.label || "");
     const fallbackName = String(row?.currency || row?.event || `Currency Event ${index + 1}`).trim();
-    const name = rawName.length > 0 ? rawName : fallbackName;
+    const name2 = rawName.length > 0 ? rawName : fallbackName;
     const config = String(row?.config || row?.aircraftConfigId || "ANY").trim() || "ANY";
     return {
       id: String(row?.id || `currency-profile-${index + 1}`),
@@ -5323,8 +5323,8 @@ const normaliseCrewCompositionSettings = (value) => {
       compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || "").trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
-      name,
-      code: normaliseCurrencyProfileCode(row?.code || row?.eventCode || row?.shortCode, name || fallbackName),
+      name: name2,
+      code: normaliseCurrencyProfileCode(row?.code || row?.eventCode || row?.shortCode, name2 || fallbackName),
       crew: String(row?.crew || ""),
       config,
       acceptableAircraftConfigs: normaliseAcceptableConfigs(row?.acceptableAircraftConfigs, config),
@@ -5337,9 +5337,9 @@ const normaliseCrewCompositionSettings = (value) => {
   }).filter((profile) => profile.currency);
   return { alternateCompositions, currencyProfiles };
 };
-const createAlternateCrewCompositionCode = (existingProfiles, name) => {
+const createAlternateCrewCompositionCode = (existingProfiles, name2) => {
   const usedCodes = new Set(existingProfiles.map((profile) => profile.code.toUpperCase()));
-  const base = normaliseCode$4(name, `ALT-${existingProfiles.length + 1}`);
+  const base = normaliseCode$4(name2, `ALT-${existingProfiles.length + 1}`);
   return nextAvailableThreeLetterCode(base, usedCodes);
 };
 const normaliseText = (value) => String(value || "").trim();
@@ -5367,15 +5367,15 @@ const normaliseContinuationEventSettings = (events) => {
   const rows = Array.isArray(events) ? events : [];
   return rows.map((row, index) => {
     if (typeof row === "string") {
-      const name2 = normaliseText(row);
-      if (!name2) return null;
+      const name22 = normaliseText(row);
+      if (!name22) return null;
       return {
         id: `continuation-event-${index + 1}`,
-        name: name2,
-        code: normaliseCode$3("", name2),
+        name: name22,
+        code: normaliseCode$3("", name22),
         config: "ANY",
         acceptableAircraftConfigs: ["ANY"],
-        dayNight: normaliseContinuationDayNight("", name2),
+        dayNight: normaliseContinuationDayNight("", name22),
         flightType: "Dual",
         aircraftCount: 1,
         status: "ACTIVE"
@@ -5383,21 +5383,21 @@ const normaliseContinuationEventSettings = (events) => {
     }
     if (!row || typeof row !== "object") return null;
     const source = row;
-    const name = normaliseText(source.name || source.currency || source.code);
-    if (!name) return null;
+    const name2 = normaliseText(source.name || source.currency || source.code);
+    if (!name2) return null;
     const config = normaliseText(source.config) || "ANY";
     return {
       id: normaliseText(source.id) || `continuation-event-${index + 1}`,
-      name,
-      code: normaliseCode$3(source.code, name),
+      name: name2,
+      code: normaliseCode$3(source.code, name2),
       unitCode: normaliseUnitCode$3(source.unitCode),
       compositeUnitCode: normaliseUnitCode$3(source.compositeUnitCode),
       aircraftTypeCode: normaliseUnitCode$3(source.aircraftTypeCode),
       crew: normaliseText(source.crew),
       config,
       acceptableAircraftConfigs: normaliseConfigs(source.acceptableAircraftConfigs, config),
-      currency: normaliseText(source.currency || name),
-      dayNight: normaliseContinuationDayNight(source.dayNight, name),
+      currency: normaliseText(source.currency || name2),
+      dayNight: normaliseContinuationDayNight(source.dayNight, name2),
       flightType: normaliseContinuationFlightType(source.flightType),
       aircraftCount: normaliseAircraftCount(source.aircraftCount),
       status: normaliseText(source.status).toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
@@ -7593,7 +7593,7 @@ const UsedInSection = ({ currencyId, allCurrencies }) => {
   if (dependencies.length === 0) return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border border-gray-600 rounded-lg bg-gray-700/30", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-300 mb-2", children: "Used In:" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: dependencies.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-purple-800 text-purple-200 text-xs font-medium rounded-full", children: name }, name)) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: dependencies.map((name2) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-purple-800 text-purple-200 text-xs font-medium rounded-full", children: name2 }, name2)) })
   ] });
 };
 const InputField$2 = ({ label, value, onChange, type = "text" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -8012,7 +8012,7 @@ const RemoveCourseFlyout = ({ onClose, onArchive, activeCourses }) => {
             value: selectedCourse,
             onChange: (e) => setSelectedCourse(e.target.value),
             className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm",
-            children: courseNames.length > 0 ? courseNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { disabled: true, children: "No active courses" })
+            children: courseNames.length > 0 ? courseNames.map((name2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name2, children: name2 }, name2)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { disabled: true, children: "No active courses" })
           }
         )
       ] }),
@@ -8024,8 +8024,8 @@ const RemoveCourseFlyout = ({ onClose, onArchive, activeCourses }) => {
     ] })
   ] }) });
 };
-const formatCourseName = (name) => {
-  return String(name || "").trim();
+const formatCourseName = (name2) => {
+  return String(name2 || "").trim();
 };
 const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
@@ -9176,9 +9176,9 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
     () => buildCompactPersonNameResolver([...event.personnelRefs || [], ...instructorsData, ...traineesData]),
     [event.personnelRefs, instructorsData, traineesData]
   );
-  const formatStaffTileName = (name) => staffNameResolver.formatCompactWithInitial(name);
-  const formatTraineeTileName = (name) => traineeNameResolver.formatCompactWithInitial(name);
-  const formatMixedTileName = (name) => mixedNameResolver.formatCompact(name);
+  const formatStaffTileName = (name2) => staffNameResolver.formatCompactWithInitial(name2);
+  const formatTraineeTileName = (name2) => traineeNameResolver.formatCompactWithInitial(name2);
+  const formatMixedTileName = (name2) => mixedNameResolver.formatCompact(name2);
   const isSmallTile = tileWidth < 60;
   const isEndSegment = segment.segmentType === "start";
   const flyoutToLeft = isEndSegment || effectiveStartTime + effectiveDuration > 22;
@@ -9305,7 +9305,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       ...event.crewSelectionOrder || [],
       ...event.attendees || [],
       event.crew
-    ].map((name) => String(name || "").trim()).filter((name) => name && name !== "Pooled Crew" && normaliseName2(name) !== picKey);
+    ].map((name2) => String(name2 || "").trim()).filter((name2) => name2 && name2 !== "Pooled Crew" && normaliseName2(name2) !== picKey);
     return Array.from(new Set(manifest))[0] || "";
   })();
   const fixedCrewDisplay = isFixedCrewCrewEvent ? formatFixedCrewDisplayGroup$3(event.fixedCrewGroup) : "";
@@ -11489,8 +11489,8 @@ const parseWizardStaffRows = (value) => String(value || "").split(/\n/).map((lin
 const formatWizardStaffRows = (rows) => rows.filter((row) => row.surname || row.givenNames || row.unit || row.position || row.personnelId || row.qualifications).map((row) => {
   const surname = String(row.surname || "");
   const givenNames = String(row.givenNames || "");
-  const name = surname && givenNames ? `${surname}, ${givenNames}` : surname || givenNames;
-  return [name, String(row.unit || ""), String(row.position || ""), String(row.personnelId || ""), String(row.qualifications || "")].join("|");
+  const name2 = surname && givenNames ? `${surname}, ${givenNames}` : surname || givenNames;
+  return [name2, String(row.unit || ""), String(row.position || ""), String(row.personnelId || ""), String(row.qualifications || "")].join("|");
 }).join("\n");
 const parseWizardTraineeRows = (value) => String(value || "").split(/\n/).map((line) => {
   const parts = line.split("|").map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
@@ -11511,9 +11511,9 @@ const parseWizardTraineeRows = (value) => String(value || "").split(/\n/).map((l
 const formatWizardTraineeRows = (rows) => rows.filter((row) => row.surname || row.givenNames || row.unit || row.rank || row.personnelId || row.courseNumber || row.course || row.masterLmp || row.startDate).map((row) => {
   const surname = String(row.surname || "");
   const givenNames = String(row.givenNames || "");
-  const name = surname && givenNames ? `${surname}, ${givenNames}` : surname || givenNames;
+  const name2 = surname && givenNames ? `${surname}, ${givenNames}` : surname || givenNames;
   return [
-    name,
+    name2,
     String(row.unit || ""),
     String(row.rank || ""),
     String(row.personnelId || ""),
@@ -12938,8 +12938,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     if (sourceUnitCodes.length > 0) {
       return sourceUnitCodes.map((code) => {
         const unit = activeUnitByCode.get(normaliseUnitSettingsIdentifier(code));
-        const name = String(unit?.name || "").trim();
-        return `${code}${name && name !== code ? ` | ${name}` : ""}`;
+        const name2 = String(unit?.name || "").trim();
+        return `${code}${name2 && name2 !== code ? ` | ${name2}` : ""}`;
       }).join("\n");
     }
     return "";
@@ -18552,26 +18552,26 @@ const PersonnelColumn = ({
     return groups;
   }, [personnel, showUnits]);
   if (!showUnits) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: personnel.map(({ id, idNumber, name, rank, unit, role }, index) => {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: personnel.map(({ id, idNumber, name: name2, rank, unit, role }, index) => {
       const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
       const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(unit) : "text-gray-300";
-      const displayName = staffNameResolver.formatList({ id, idNumber, name, rank, unit, role });
+      const displayName = staffNameResolver.formatList({ id, idNumber, name: name2, rank, unit, role });
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "li",
         {
-          ref: (el) => onRowRef?.(name, el),
+          ref: (el) => onRowRef?.(name2, el),
           className: `flex items-center justify-start pl-3 text-xs transition-colors duration-150 border-b border-gray-700/50 ${onPersonClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
           style: { height: rowHeight },
           onMouseEnter: () => onRowEnter?.(index),
           onMouseLeave: () => onRowLeave?.(),
-          onClick: () => onPersonClick?.(name),
-          title: useRoleColors ? `${name} - ${roleDisplay.label}` : name,
+          onClick: () => onPersonClick?.(name2),
+          title: useRoleColors ? `${name2} - ${roleDisplay.label}` : name2,
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 flex-shrink-0", children: rank }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium ${nameTextClass}`, children: displayName })
           ]
         },
-        getPersonIdentityDedupeKey({ id, idNumber, name, unit, role }, "staff")
+        getPersonIdentityDedupeKey({ id, idNumber, name: name2, unit, role }, "staff")
       );
     }) }) });
   }
@@ -18592,28 +18592,28 @@ const PersonnelColumn = ({
           ] })
         }
       ),
-      people.map(({ id, idNumber, name, rank, unit: personUnit, role }) => {
+      people.map(({ id, idNumber, name: name2, rank, unit: personUnit, role }) => {
         const rowIndex = visualRowIndex;
         visualRowIndex += 1;
         const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
         const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : "text-gray-300";
-        const displayName = staffNameResolver.formatList({ id, idNumber, name, rank, unit: personUnit, role });
+        const displayName = staffNameResolver.formatList({ id, idNumber, name: name2, rank, unit: personUnit, role });
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "li",
           {
-            ref: (el) => onRowRef?.(name, el),
+            ref: (el) => onRowRef?.(name2, el),
             className: `flex items-center justify-start pl-3 pr-2 py-1 text-xs transition-colors duration-150 border-b border-gray-700/50 bg-gray-800 ${onPersonClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
             style: { height: rowHeight, minHeight: rowHeight },
             onMouseEnter: () => onRowEnter?.(rowIndex),
             onMouseLeave: () => onRowLeave?.(),
-            onClick: () => onPersonClick?.(name),
-            title: useRoleColors ? `${name} - ${roleDisplay.label}` : name,
+            onClick: () => onPersonClick?.(name2),
+            title: useRoleColors ? `${name2} - ${roleDisplay.label}` : name2,
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-10 text-xs", children: rank }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium flex-1 ${nameTextClass}`, children: displayName })
             ]
           },
-          `${unit}-${getPersonIdentityDedupeKey({ id, idNumber, name, unit: personUnit, role }, "staff")}`
+          `${unit}-${getPersonIdentityDedupeKey({ id, idNumber, name: name2, unit: personUnit, role }, "staff")}`
         );
       })
     ] }, unit);
@@ -18621,14 +18621,14 @@ const PersonnelColumn = ({
 };
 const PERSONNEL_RANK_PREFIX_RE$1 = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
 const PLACEHOLDER_PERSONNEL_NAMES$1 = /* @__PURE__ */ new Set(["tba", "to be advised", "multiple", "group"]);
-const normalisePersonnelNameForScheduleMatch = (name) => String(name || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE$1, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
-const isPlaceholderPersonnelName$1 = (name) => {
-  const normalised = normalisePersonnelNameForScheduleMatch(name);
+const normalisePersonnelNameForScheduleMatch = (name2) => String(name2 || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE$1, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
+const isPlaceholderPersonnelName$1 = (name2) => {
+  const normalised = normalisePersonnelNameForScheduleMatch(name2);
   return !normalised || PLACEHOLDER_PERSONNEL_NAMES$1.has(normalised);
 };
-const addPersonnelName$2 = (personnel, name) => {
-  if (!isPlaceholderPersonnelName$1(name)) {
-    personnel.add(String(name || "").trim());
+const addPersonnelName$2 = (personnel, name2) => {
+  if (!isPlaceholderPersonnelName$1(name2)) {
+    personnel.add(String(name2 || "").trim());
   }
 };
 const getScheduleEventPersonnelNames = (event) => {
@@ -18703,8 +18703,8 @@ const TOTAL_HOURS$5 = END_HOUR$5 - START_HOUR$5;
 const PERSONNEL_COLUMN_WIDTH$3 = 160;
 const TIME_HEADER_HEIGHT$5 = 40;
 const addPersonnelName$1 = (personnel, value) => {
-  const name = String(value || "").trim();
-  if (name) personnel.add(name);
+  const name2 = String(value || "").trim();
+  if (name2) personnel.add(name2);
 };
 const getPersonnel$5 = (event) => {
   const personnel = /* @__PURE__ */ new Set();
@@ -18857,7 +18857,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
         return "database-id-ref";
       }
       if (matchingRefs.length > 0) return "other-person-ref-same-name";
-      return getPersonnel$5(event).some((name) => schedulePersonnelNamesMatch(name, instructor.name)) ? "name-fallback" : "unknown";
+      return getPersonnel$5(event).some((name2) => schedulePersonnelNamesMatch(name2, instructor.name)) ? "name-fallback" : "unknown";
     };
     const tileRows = uniqueEventsWithUnavailability.flatMap(
       (event) => instructors.filter((instructor) => scheduleEventIncludesPersonRecord(event, instructor, {
@@ -19554,8 +19554,8 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: (() => {
     const occurrenceCounts = /* @__PURE__ */ new Map();
     return trainees.map((fullName, index) => {
-      const { name, course: parsedCourse } = parseTraineeName(fullName);
-      const nameKey = normalisePersonName(name);
+      const { name: name2, course: parsedCourse } = parseTraineeName(fullName);
+      const nameKey = normalisePersonName(name2);
       const occurrence = occurrenceCounts.get(nameKey) || 0;
       occurrenceCounts.set(nameKey, occurrence + 1);
       const matchingTrainees = traineesData.filter(
@@ -19563,7 +19563,7 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
       );
       const traineeObj = matchingTrainees[occurrence] || matchingTrainees[0];
       const course = getCourse(fullName, parsedCourse);
-      const displayName = traineeObj ? traineeNameResolver.formatList(traineeObj) : name;
+      const displayName = traineeObj ? traineeNameResolver.formatList(traineeObj) : name2;
       return /* @__PURE__ */ jsxRuntimeExports.jsx(
         "li",
         {
@@ -22926,7 +22926,7 @@ const findTrainingReportInstructor = (instructors, value) => {
   const lowered = text.toLowerCase();
   const stripped = stripReportInstructorMetadata(value).toLowerCase();
   return instructors.find((instructor) => {
-    const name = normaliseReportInstructorText(instructor.name).toLowerCase();
+    const name2 = normaliseReportInstructorText(instructor.name).toLowerCase();
     const rankName = formatTrainingReportInstructorLabel(instructor).toLowerCase();
     const legacyLabel = [
       instructor.rank,
@@ -22935,7 +22935,7 @@ const findTrainingReportInstructor = (instructors, value) => {
       instructor.unit,
       instructor.idNumber ? `ID ${instructor.idNumber}` : ""
     ].map((part) => String(part || "").trim()).filter(Boolean).join(" - ").toLowerCase();
-    return lowered === name || lowered === rankName || lowered === legacyLabel || stripped === name || stripped === rankName;
+    return lowered === name2 || lowered === rankName || lowered === legacyLabel || stripped === name2 || stripped === rankName;
   });
 };
 const normaliseTrainingReportInstructorValue = (instructors, value) => {
@@ -23463,10 +23463,10 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
         if (typeText.includes("FLIGHT") || typeText.includes("FTD") || typeText.includes("SIM")) return true;
         if (isContinuationScheduleEvent(matchingScheduleEvent)) return true;
       }
-      const name = String(eventName || "").trim().toUpperCase();
-      const looksLikeFlyingEventCode = /^[A-Z][A-Z0-9-]*\d[A-Z0-9-]*$/.test(name);
-      const looksLikeGroundEventCode = /\b(MB|TUT|CPT|GROUND|ACADEMIC)\b/.test(name) || /(?:^|[A-Z])(?:MB|TUT|CPT)\d/i.test(name);
-      if ((name.includes("FTD") || name.includes("SIM") || looksLikeFlyingEventCode) && !looksLikeGroundEventCode) return true;
+      const name2 = String(eventName || "").trim().toUpperCase();
+      const looksLikeFlyingEventCode = /^[A-Z][A-Z0-9-]*\d[A-Z0-9-]*$/.test(name2);
+      const looksLikeGroundEventCode = /\b(MB|TUT|CPT|GROUND|ACADEMIC)\b/.test(name2) || /(?:^|[A-Z])(?:MB|TUT|CPT)\d/i.test(name2);
+      if ((name2.includes("FTD") || name2.includes("SIM") || looksLikeFlyingEventCode) && !looksLikeGroundEventCode) return true;
       return false;
     };
     lmpScores.forEach((s) => {
@@ -24799,7 +24799,7 @@ const AccountAccessPanel = ({
   personType,
   personId,
   idNumber,
-  name,
+  name: name2,
   email,
   canManage
 }) => {
@@ -24902,7 +24902,7 @@ const AccountAccessPanel = ({
       });
       if (!response.ok) throw new Error(await readErrorMessage(response, "Failed to download account diagnostics"));
       const data = await response.json();
-      const safeName = String(name || data?.person?.name || "person").replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "person";
+      const safeName = String(name2 || data?.person?.name || "person").replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "person";
       const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
       downloadJsonFile$1(`dfp-account-activation-diagnostics_${safeName}_${timestamp}.json`, data);
       setMessage("Account activation diagnostics downloaded.");
@@ -24920,7 +24920,7 @@ const AccountAccessPanel = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "Account Access" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-xs text-sky-200/70", children: [
           "Login and activation status for ",
-          name || "this profile",
+          name2 || "this profile",
           "."
         ] })
       ] }),
@@ -25316,11 +25316,11 @@ const TraineeProfileFlyout = ({
       (traineesData.length > 0 ? traineesData : [trainee]).filter((candidate) => String(candidate.course || "").trim().toUpperCase() === currentCourse).map((candidate) => candidate.fullName).filter(Boolean)
     );
     if (trainee.fullName) sameCourseTraineeNames.add(trainee.fullName);
-    const getCompletionRefsForTrainee = (name2) => {
+    const getCompletionRefsForTrainee = (name22) => {
       const refs = /* @__PURE__ */ new Set();
-      (scores.get(name2) || []).forEach((score) => refs.add(reviewEventCode(score.event)));
+      (scores.get(name22) || []).forEach((score) => refs.add(reviewEventCode(score.event)));
       if (pt051Assessments) {
-        Array.from(pt051Assessments.values()).filter((assessment) => assessment.traineeFullName === name2).forEach((assessment) => {
+        Array.from(pt051Assessments.values()).filter((assessment) => assessment.traineeFullName === name22).forEach((assessment) => {
           refs.add(reviewEventCode(assessment.eventId));
           refs.add(reviewEventCode(assessment.flightNumber));
         });
@@ -25334,9 +25334,9 @@ const TraineeProfileFlyout = ({
     );
     const ownCourseProgressFallback = reviewUniqueByEventCode(currentIndividualLMP.filter(reviewIsCourseProgressLmpEvent));
     const courseProgressItems = masterCourseProgressItems.length > 0 ? masterCourseProgressItems : ownCourseProgressFallback;
-    const getProgressForTrainee = (name2, lmpItems) => {
+    const getProgressForTrainee = (name22, lmpItems) => {
       const countableItems = courseProgressItems;
-      const refs = getCompletionRefsForTrainee(name2);
+      const refs = getCompletionRefsForTrainee(name22);
       const completedLmpRefs = new Set(
         lmpItems.filter(isMarkedCompleteInLmp).flatMap(reviewLmpRefs)
       );
@@ -25358,10 +25358,10 @@ const TraineeProfileFlyout = ({
     const completedCount = ownProgress.completedCount;
     const progressPercent = ownProgress.percent;
     const countableLmp = currentIndividualLMP.filter(reviewIsCountableLmpEvent);
-    const peerProgressValues = Array.from(sameCourseTraineeNames).map((name2) => {
-      const peerLmp = traineeLMPs?.get(name2) || (name2 === trainee.fullName ? currentIndividualLMP : []);
+    const peerProgressValues = Array.from(sameCourseTraineeNames).map((name22) => {
+      const peerLmp = traineeLMPs?.get(name22) || (name22 === trainee.fullName ? currentIndividualLMP : []);
       if (!peerLmp || peerLmp.length === 0) return null;
-      return getProgressForTrainee(name2, peerLmp).percent;
+      return getProgressForTrainee(name22, peerLmp).percent;
     }).filter((value) => value !== null && Number.isFinite(value));
     const averageProgress = peerProgressValues.length > 0 ? peerProgressValues.reduce((sum, value) => sum + value, 0) / peerProgressValues.length : progressPercent;
     const mostProgress = peerProgressValues.length > 0 ? Math.max(...peerProgressValues) : progressPercent;
@@ -25397,11 +25397,11 @@ const TraineeProfileFlyout = ({
     const summaryMarginal = scorePoints.filter((point) => point.status === "marginal");
     const currentScoreAverage = scorePoints.length > 0 ? scorePoints.reduce((sum, point) => sum + point.grade, 0) / scorePoints.length : 0;
     const countableRefSet = new Set(countableLmp.flatMap(reviewLmpRefs));
-    const courseAverageRankings = Array.from(scores.entries()).filter(([name2]) => sameCourseTraineeNames.has(name2)).map(([name2, peerScores]) => {
+    const courseAverageRankings = Array.from(scores.entries()).filter(([name22]) => sameCourseTraineeNames.has(name22)).map(([name22, peerScores]) => {
       const peerFlightScores = peerScores.filter((score) => countableRefSet.has(reviewEventCode(score.event))).map((score) => reviewNumber(score.score)).filter((value) => Number.isFinite(value));
       if (peerFlightScores.length === 0) return null;
       return {
-        name: name2,
+        name: name22,
         average: peerFlightScores.reduce((sum, value) => sum + value, 0) / peerFlightScores.length,
         completed: peerFlightScores.length
       };
@@ -25647,7 +25647,7 @@ const TraineeProfileFlyout = ({
   });
   const [showPauseConfirm, setShowPauseConfirm] = reactExports.useState(false);
   const [showScheduleWarning, setShowScheduleWarning] = reactExports.useState(false);
-  const [name, setName] = reactExports.useState(trainee.name);
+  const [name2, setName] = reactExports.useState(trainee.name);
   const [idNumber, setIdNumber] = reactExports.useState(trainee.idNumber);
   const [rank, setRank] = reactExports.useState(trainee.rank);
   const traineeRankOptionGroups = reactExports.useMemo(() => {
@@ -25935,7 +25935,7 @@ const TraineeProfileFlyout = ({
     setPermissions(nextPermissions);
   };
   const handleNameChange = (newName) => {
-    const oldName = name;
+    const oldName = name2;
     setName(newName);
     if (oldName && newName !== oldName) {
       debouncedAuditLog(
@@ -25968,7 +25968,7 @@ const TraineeProfileFlyout = ({
     }
   };
   const handleSave = async () => {
-    if (!name || !course) {
+    if (!name2 || !course) {
       await showDarkAlert("Name and Course are required.", "Missing Trainee Details", "warning");
       return;
     }
@@ -25977,10 +25977,10 @@ const TraineeProfileFlyout = ({
       return;
     }
     const proposedRecord = { ...trainee, idNumber };
-    const duplicateNameMatches = [...traineesData, ...instructorsData].filter((person) => person.isActive !== false).filter((person) => normalisePersonName(person.name || person.fullName) === normalisePersonName(name)).filter((person) => !samePersonRecord(person, proposedRecord));
+    const duplicateNameMatches = [...traineesData, ...instructorsData].filter((person) => person.isActive !== false).filter((person) => normalisePersonName(person.name || person.fullName) === normalisePersonName(name2)).filter((person) => !samePersonRecord(person, proposedRecord));
     if (duplicateNameMatches.length > 0) {
       const confirmed = await showDarkConfirm(
-        `Another active person already has the name "${name}".
+        `Another active person already has the name "${name2}".
 
 ${duplicateNameMatches.map(describeDuplicateNamePerson).join("\n")}
 
@@ -25990,11 +25990,11 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
       );
       if (!confirmed) return;
     }
-    const fullName = `${name} – ${course}`;
+    const fullName = `${name2} – ${course}`;
     const updatedTrainee = {
       ...trainee,
       idNumber,
-      name,
+      name: name2,
       fullName,
       course,
       lmpType,
@@ -26025,13 +26025,13 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
     if (isCreating) {
       logAudit({
         action: "Add",
-        description: `Added new trainee ${rank} ${name}`,
+        description: `Added new trainee ${rank} ${name2}`,
         changes: `Course: ${course}, Unit: ${unit}, Location: ${location}`,
         page: "Trainee Roster"
       });
     } else {
       const changes = [];
-      if (trainee.name !== name) changes.push(`Name: ${trainee.name} → ${name}`);
+      if (trainee.name !== name2) changes.push(`Name: ${trainee.name} → ${name2}`);
       if (trainee.rank !== rank) changes.push(`Rank: ${trainee.rank} → ${rank}`);
       if ((trainee.role || "") !== role) changes.push(`Role: ${trainee.role || "None"} → ${role || "None"}`);
       if (trainee.course !== course) changes.push(`Course: ${trainee.course} → ${course}`);
@@ -26048,7 +26048,7 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
       if (changes.length > 0) {
         logAudit({
           action: "Edit",
-          description: `Updated trainee ${rank} ${name}`,
+          description: `Updated trainee ${rank} ${name2}`,
           changes: changes.join(", "),
           page: "Trainee Roster"
         });
@@ -27088,7 +27088,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                                   "img",
                                   {
                                     src: displayUrl,
-                                    alt: name,
+                                    alt: name2,
                                     className: "w-full h-full object-cover object-top",
                                     onError: () => setPhotoLoadFailed(true)
                                   }
@@ -27102,7 +27102,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                                 ] })
                               ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center", children: [
-                                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg font-bold text-gray-300 leading-none select-none", children: name.split(" ").filter((word) => /^[A-Z]/.test(word)).slice(-2).map((word) => word[0]).join("") }),
+                                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg font-bold text-gray-300 leading-none select-none", children: name2.split(" ").filter((word) => /^[A-Z]/.test(word)).slice(-2).map((word) => word[0]).join("") }),
                                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[7px] text-gray-300 leading-tight break-words", children: [
                                     "Click to add picture",
                                     /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -27139,7 +27139,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2", children: "Training" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 lg:grid-cols-6 gap-2.5", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => handleNameChange(e.target.value) }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Name (Surname, Firstname)", value: name2, onChange: (e) => handleNameChange(e.target.value) }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Personnel ID", value: idNumber || "", onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: traineeRankOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, `${group.label}-${option}`)) }, group.label)) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: roleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) }),
@@ -27183,7 +27183,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                       personType: "trainee",
                       personId: trainee.id || trainee.idNumber,
                       idNumber,
-                      name: name || trainee.fullName,
+                      name: name2 || trainee.fullName,
                       email,
                       canManage: canManageAccountAccess
                     }
@@ -27372,19 +27372,19 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }),
                     (() => {
                       const primaries = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
-                      return primaries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1.5", children: primaries.map((name2, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") && isExternalDataAllowed("externalMediaEnabled") ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
+                      return primaries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1.5", children: primaries.map((name22, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name22.toLowerCase().includes("burns") && isExternalDataAllowed("externalMediaEnabled") ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name22, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
                         onOpenInstructorProfile ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "button",
                           {
                             onClick: () => {
-                              onOpenInstructorProfile(name2);
+                              onOpenInstructorProfile(name22);
                               onClose();
                             },
                             className: "text-sky-300 hover:text-sky-100 hover:underline text-[10px] font-medium leading-tight text-left",
-                            children: name2
+                            children: name22
                           }
-                        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-[10px] font-medium leading-tight", children: name2 })
+                        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-[10px] font-medium leading-tight", children: name22 })
                       ] }, idx)) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-600", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
@@ -27395,19 +27395,19 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }),
                     (() => {
                       const secondaries = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
-                      return secondaries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1.5", children: secondaries.map((name2, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") && isExternalDataAllowed("externalMediaEnabled") ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
+                      return secondaries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1.5", children: secondaries.map((name22, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name22.toLowerCase().includes("burns") && isExternalDataAllowed("externalMediaEnabled") ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name22, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
                         onOpenInstructorProfile ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "button",
                           {
                             onClick: () => {
-                              onOpenInstructorProfile(name2);
+                              onOpenInstructorProfile(name22);
                               onClose();
                             },
                             className: "text-amber-300 hover:text-amber-100 hover:underline text-[10px] font-medium leading-tight text-left",
-                            children: name2
+                            children: name22
                           }
-                        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-[10px] font-medium leading-tight", children: name2 })
+                        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-[10px] font-medium leading-tight", children: name22 })
                       ] }, idx)) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-600", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" })
@@ -27591,7 +27591,7 @@ const FlightInfoFlyout = ({ events, position, personName, personType, resourceDi
   };
   const getOtherPersonnelText = (event) => {
     const label = personType === "Instructor" ? "Other personnel" : "Staff/Crew";
-    const otherPersonnel = getScheduleEventPersonnelNames(event).filter((name) => !schedulePersonnelNamesMatch(name, personName));
+    const otherPersonnel = getScheduleEventPersonnelNames(event).filter((name2) => !schedulePersonnelNamesMatch(name2, personName));
     const directCounterpart = personType === "Instructor" ? event.student : event.instructor || event.pilot;
     const displayPersonnel = otherPersonnel.length > 0 ? otherPersonnel : directCounterpart ? [directCounterpart] : [];
     return displayPersonnel.length > 0 ? `${label}: ${displayPersonnel.join(", ")}` : "";
@@ -27656,8 +27656,8 @@ const DeleteTraineeConfirmation = ({
     setError("");
   };
   const getTraineeOptionKey = (trainee) => String(trainee.id || trainee.idNumber || trainee.fullName || trainee.name || "");
-  const handleTraineeChange = (traineeKey) => {
-    const trainee = traineesData.find((t) => getTraineeOptionKey(t) === traineeKey);
+  const handleTraineeChange = (traineeKey2) => {
+    const trainee = traineesData.find((t) => getTraineeOptionKey(t) === traineeKey2);
     setSelectedTrainee(trainee || null);
     setError("");
   };
@@ -29232,8 +29232,8 @@ const CourseRosterView = ({
   const courseRecordsByName = reactExports.useMemo(() => {
     const records = /* @__PURE__ */ new Map();
     courses.forEach((course) => {
-      const name = String(course?.name || "").trim();
-      if (name) records.set(name, course);
+      const name2 = String(course?.name || "").trim();
+      if (name2) records.set(name2, course);
     });
     return records;
   }, [courses]);
@@ -30502,8 +30502,8 @@ const uniqueOptionValues = (values) => {
 };
 const inferEventCategory = (event) => normaliseEventCategoryValue(event.eventCategory) || (isContinuationScheduleEvent(event) ? "sct" : "lmp_event");
 const getContinuationPilotName = (event) => stripCrewSuffix(event.pilot || event.instructor || event.student || "");
-const findEventPersonnelRef = (sourceEvent, roles, name, personType) => {
-  const cleanName = stripCrewSuffix(name);
+const findEventPersonnelRef = (sourceEvent, roles, name2, personType) => {
+  const cleanName = stripCrewSuffix(name2);
   if (!cleanName) return null;
   return sourceEvent.personnelRefs?.find((ref) => roles.includes(ref.role) && (!personType || ref.personType === personType) && stripCrewSuffix(ref.name).toLowerCase() === cleanName.toLowerCase()) || null;
 };
@@ -30719,12 +30719,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   );
   const formatFlightDetailPersonLabel = (person, resolver, fallbackName = "", fallbackRank = "") => {
     const rank = String(person?.rank || fallbackRank || "").trim();
-    const name = resolver.formatList({
+    const name2 = resolver.formatList({
       ...person || {},
       name: person?.name || fallbackName,
       fullName: person?.fullName || fallbackName
     });
-    return [rank, name].filter(Boolean).join(" - ");
+    return [rank, name2].filter(Boolean).join(" - ");
   };
   const configuredContinuationEvents = reactExports.useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
   const getConfiguredContinuationEvent = (value) => {
@@ -30917,13 +30917,13 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (!isFixedCrewCrewedEvent) return [];
     const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || "";
     const eventRosterNames = new Set(String(event.fixedCrewPic || event.pilot || event.instructor || "") ? [String(event.fixedCrewPic || event.pilot || event.instructor || "").trim()] : []);
-    (event.attendees || []).forEach((name) => {
-      const cleaned = String(name || "").trim();
+    (event.attendees || []).forEach((name2) => {
+      const cleaned = String(name2 || "").trim();
       if (cleaned) eventRosterNames.add(cleaned);
     });
     const crewParts = splitFixedCrewGroupKey(eventCrewKey);
-    const rosterFromAttendees = Array.from(eventRosterNames).map((name) => {
-      const candidates = instructorsData.filter((staff) => staff.name === name);
+    const rosterFromAttendees = Array.from(eventRosterNames).map((name2) => {
+      const candidates = instructorsData.filter((staff) => staff.name === name2);
       return candidates.find((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey) && (!crewParts.crew || String(staff.crew || "").trim().toUpperCase() === crewParts.crew)) || candidates.find((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)) || candidates[0];
     }).filter(Boolean);
     if (rosterFromAttendees.length > 0) {
@@ -30956,7 +30956,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     const assignedToCurrentEvent = new Set([
       ...getPersonnelForConflictCheck(event),
       ...rosteredFixedCrewMembers.map((member) => member.name)
-    ].map((name) => String(name || "").trim()).filter(Boolean));
+    ].map((name2) => String(name2 || "").trim()).filter(Boolean));
     return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => fixedCrewStaffRolesMatch(candidate, staff)).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   };
   const getFixedCrewSubstituteRejectReasons = (staff, bookingWindow, eventDate) => {
@@ -30966,7 +30966,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     const assignedToCurrentEvent = new Set([
       ...getPersonnelForConflictCheck(event),
       ...rosteredFixedCrewMembers.map((member) => member.name)
-    ].map((name) => String(name || "").trim()).filter(Boolean));
+    ].map((name2) => String(name2 || "").trim()).filter(Boolean));
     return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !candidate.isAdminStaff).map((candidate) => {
       const reasons = [];
       if (normaliseFixedCrewUnitCode(candidate.unit) !== crewUnit) reasons.push("different unit");
@@ -31080,7 +31080,7 @@ Please select another substitute.`, "Substitution Not Available", "warning");
     const updatedAttendees = Array.from(new Set([
       ...event.attendees || [],
       ...rosteredFixedCrewMembers.map((staff) => staff.name)
-    ].map((name) => String(name || "").trim()).filter(Boolean))).map((name) => name === unavailableStaff.name ? substituteDisplayName : name);
+    ].map((name2) => String(name2 || "").trim()).filter(Boolean))).map((name2) => name2 === unavailableStaff.name ? substituteDisplayName : name2);
     const nextPic = originalPic === unavailableStaff.name ? substituteDisplayName : originalPic;
     const existingNotes = String(event.fixedCrewManifestNotes || fixedCrewManifestNotes || "").trim();
     const swapNote = `${formatTime$4(event.startTime)}: ${[unavailableStaff.rank, unavailableStaff.name].filter(Boolean).join(" ")} replaced by ${[substitute.rank, substitute.name].filter(Boolean).join(" ")}.`;
@@ -31262,8 +31262,8 @@ ${swapNote}` : swapNote
   };
   const staffInstructorsByUnit = reactExports.useMemo(() => {
     const traineeNames = new Set(traineesData.map((t) => t.fullName));
-    const staffOnly = instructorList.filter((name) => !traineeNames.has(name));
-    const staffNameSet = new Set(staffOnly.map((name) => String(name || "").trim()).filter(Boolean));
+    const staffOnly = instructorList.filter((name2) => !traineeNames.has(name2));
+    const staffNameSet = new Set(staffOnly.map((name2) => String(name2 || "").trim()).filter(Boolean));
     const staffRecordOptions = instructorsData.filter((instructor) => staffNameSet.has(String(instructor.name || "").trim())).map((instructor) => ({
       name: instructor.name,
       unit: instructor.unit || "Unknown",
@@ -31277,11 +31277,11 @@ ${swapNote}` : swapNote
     );
     const staffWithDetails = [
       ...uniqueStaffRecordOptions,
-      ...staffOnly.filter((name) => !instructorsData.some((instructor) => instructor.name === name)).map((name) => ({
-        name,
+      ...staffOnly.filter((name2) => !instructorsData.some((instructor) => instructor.name === name2)).map((name2) => ({
+        name: name2,
         unit: "Unknown",
         rank: "FLGOFF",
-        value: String(name || "").trim(),
+        value: String(name2 || "").trim(),
         ref: void 0,
         instructor: void 0
       }))
@@ -31329,8 +31329,8 @@ ${swapNote}` : swapNote
     const selectedPilotNames = new Set(
       crew.map((c) => c.pilot).concat(event.pilot || "", event.instructor || "", event.student || "").map(stripCrewSuffix).filter(Boolean)
     );
-    const selectedPilots = Array.from(selectedPilotNames).map((name) => instructorsData.find(
-      (staff) => stripCrewSuffix(staff.name) === name || stripCrewSuffix(staff.fullName) === name
+    const selectedPilots = Array.from(selectedPilotNames).map((name2) => instructorsData.find(
+      (staff) => stripCrewSuffix(staff.name) === name2 || stripCrewSuffix(staff.fullName) === name2
     )).filter((staff) => Boolean(staff) && isStaffPilotRole(staff));
     const candidatePilots = instructorsData.filter((staff) => !staff.isAdminStaff).filter(isStaffPilotRole).filter((staff) => activeEventUnitCodes.length === 0 || activeEventUnitCodes.includes(String(staff.unit || "").trim().toUpperCase()));
     const ordered = [
@@ -31350,7 +31350,7 @@ ${swapNote}` : swapNote
     return { grouped, sortedUnits: Object.keys(grouped).sort() };
   }, [activeEventUnitCodes, crew, event.instructor, event.pilot, event.student, instructorsData, isAirCombatModel, personnelDisplaySettings]);
   const traineesByCourse = reactExports.useMemo(() => {
-    const traineeNameSet = new Set(traineeList.map((name) => String(name || "").trim()).filter(Boolean));
+    const traineeNameSet = new Set(traineeList.map((name2) => String(name2 || "").trim()).filter(Boolean));
     const traineeRecordOptions = traineesData.filter((trainee) => traineeNameSet.has(String(trainee.name || "").trim()) || traineeNameSet.has(String(trainee.fullName || "").trim())).map((trainee) => ({
       name: trainee.fullName || trainee.name,
       course: trainee.course || "Unknown",
@@ -31363,10 +31363,10 @@ ${swapNote}` : swapNote
     );
     const traineesWithCourse = [
       ...uniqueTraineeRecordOptions,
-      ...traineeList.filter((name) => !traineesData.some((trainee) => trainee.name === name || trainee.fullName === name)).map((name) => ({
-        name,
+      ...traineeList.filter((name2) => !traineesData.some((trainee) => trainee.name === name2 || trainee.fullName === name2)).map((name2) => ({
+        name: name2,
         course: "Unknown",
-        value: String(name || "").trim(),
+        value: String(name2 || "").trim(),
         ref: void 0,
         trainee: void 0
       }))
@@ -31385,11 +31385,11 @@ ${swapNote}` : swapNote
     () => traineesByCourse.sortedCourses.flatMap((course) => traineesByCourse.grouped[course]),
     [traineesByCourse]
   );
-  const getPersonSelectionValue = (name, selectedRef, options) => {
-    if (!name) return "";
+  const getPersonSelectionValue = (name2, selectedRef, options) => {
+    if (!name2) return "";
     const refMatch = selectedRef ? options.find((option) => personRefsMatch(option.ref, selectedRef)) : null;
     if (refMatch?.value) return refMatch.value;
-    return options.find((option) => stripCrewSuffix(option.name).toLowerCase() === stripCrewSuffix(name).toLowerCase())?.value || name;
+    return options.find((option) => stripCrewSuffix(option.name).toLowerCase() === stripCrewSuffix(name2).toLowerCase())?.value || name2;
   };
   const handleCrewPersonSelection = (index, field, value, options, role) => {
     const option = options.find((candidate) => candidate.value === value);
@@ -31403,11 +31403,11 @@ ${swapNote}` : swapNote
   };
   const personStats = reactExports.useMemo(() => {
     const stats = {};
-    [...instructorList, ...traineeList].forEach((name) => {
-      const instructor = instructorsData.find((i) => i.name === name);
-      const trainee = traineesData.find((t) => t.name === name || t.fullName === name);
-      stats[name] = {
-        name,
+    [...instructorList, ...traineeList].forEach((name2) => {
+      const instructor = instructorsData.find((i) => i.name === name2);
+      const trainee = traineesData.find((t) => t.name === name2 || t.fullName === name2);
+      stats[name2] = {
+        name: name2,
         rank: instructor?.rank || trainee?.rank || "",
         flightCount: 0,
         ftdCount: 0,
@@ -31448,9 +31448,9 @@ ${swapNote}` : swapNote
     });
     return stats;
   }, [eventsForDate, instructorList, traineeList, instructorsData, traineesData, syllabusDetails]);
-  const resolveSelectedPersonRef = (name, selectedRef, options, role) => {
+  const resolveSelectedPersonRef = (name2, selectedRef, options, role) => {
     if (selectedRef) return clonePersonRefForRole(selectedRef, role);
-    const match = options.find((option) => stripCrewSuffix(option.name).toLowerCase() === stripCrewSuffix(name).toLowerCase());
+    const match = options.find((option) => stripCrewSuffix(option.name).toLowerCase() === stripCrewSuffix(name2).toLowerCase());
     return clonePersonRefForRole(match?.ref, role);
   };
   const renderStaffInstructorDropdown = (index, field, value, label = "Instructor", disabled = false, includePax = false, role = "instructor") => {
@@ -32236,7 +32236,7 @@ ${swapNote}` : swapNote
       const matchedByIdentity = instructorsData.find((instructor) => instructorRef.id && String(instructor.id || "") === String(instructorRef.id) || instructorRef.idNumber && String(instructor.idNumber || "") === String(instructorRef.idNumber));
       if (matchedByIdentity) return matchedByIdentity;
     }
-    const candidateNames = [event.fixedCrewPic, event.pilot, event.crew, event.instructor].map((name) => String(name || "").trim()).filter(Boolean);
+    const candidateNames = [event.fixedCrewPic, event.pilot, event.crew, event.instructor].map((name2) => String(name2 || "").trim()).filter(Boolean);
     for (const candidateName of candidateNames) {
       const staff = instructorsData.find((instructor) => instructor.name === candidateName);
       if (staff) return staff;
@@ -33848,23 +33848,23 @@ ${swapNote}` : swapNote
                 const fullName = nameParts[0];
                 const course = nameParts[1] || "";
                 let rank = "";
-                let name = fullName;
+                let name2 = fullName;
                 const commaIndex = fullName.indexOf(",");
                 if (commaIndex !== -1) {
                   const lastName = fullName.substring(0, commaIndex).trim();
                   const firstName = fullName.substring(commaIndex + 1).trim();
-                  name = `${firstName} ${lastName}`;
+                  name2 = `${firstName} ${lastName}`;
                 } else {
                   const parts = fullName.trim().split(" ");
                   if (parts.length >= 2) {
                     rank = parts[0];
-                    name = parts.slice(1).join(" ");
+                    name2 = parts.slice(1).join(" ");
                   }
                 }
                 const fallbackTrainee = {
                   idNumber: 0,
                   fullName,
-                  name,
+                  name: name2,
                   rank,
                   course,
                   isPaused: false,
@@ -34874,28 +34874,28 @@ const AddFlightTileModal = ({
     }
     return "";
   };
-  const findInstructorByRefOrName = reactExports.useCallback((name, selectedRef) => {
+  const findInstructorByRefOrName = reactExports.useCallback((name2, selectedRef) => {
     const refId = String(selectedRef?.id || "").trim();
     const refIdNumber = String(selectedRef?.idNumber || "").trim();
     if (refId || refIdNumber) {
       const byRef = instructorsData.find((staff) => refId && String(staff.id || "").trim() === refId || refIdNumber && String(staff.idNumber || "").trim() === refIdNumber);
       if (byRef) return byRef;
     }
-    const cleanKey = normalisePersonNameForAddTile(name);
+    const cleanKey = normalisePersonNameForAddTile(name2);
     return instructorsData.find((staff) => normalisePersonNameForAddTile(staff.name) === cleanKey);
   }, [instructorsData, normalisePersonNameForAddTile]);
-  const findTraineeByRefOrName = reactExports.useCallback((name, selectedRef) => {
+  const findTraineeByRefOrName = reactExports.useCallback((name2, selectedRef) => {
     const refId = String(selectedRef?.id || "").trim();
     const refIdNumber = String(selectedRef?.idNumber || "").trim();
     if (refId || refIdNumber) {
       const byRef = traineesData.find((traineeRecord) => refId && String(traineeRecord.id || "").trim() === refId || refIdNumber && String(traineeRecord.idNumber || "").trim() === refIdNumber);
       if (byRef) return byRef;
     }
-    const cleanKey = normalisePersonNameForAddTile(name);
+    const cleanKey = normalisePersonNameForAddTile(name2);
     return traineesData.find((traineeRecord) => normalisePersonNameForAddTile(traineeRecord.fullName || traineeRecord.name) === cleanKey || normalisePersonNameForAddTile(traineeRecord.name) === cleanKey);
   }, [normalisePersonNameForAddTile, traineesData]);
-  const resolveAssignedCallsign = reactExports.useCallback((name, selectedRef) => {
-    const cleanName = String(name || "").trim();
+  const resolveAssignedCallsign = reactExports.useCallback((name2, selectedRef) => {
+    const cleanName = String(name2 || "").trim();
     if (!cleanName) return "";
     const cleanKey = normalisePersonNameForAddTile(cleanName);
     const instructor = findInstructorByRefOrName(cleanName, selectedRef);
@@ -34908,8 +34908,8 @@ const AddFlightTileModal = ({
       if (direct) return direct;
       return String(instructor.preferences?.callsign || instructor.secondaryCallsign || "").trim();
     }
-    const traineeKey = normalisePersonNameForAddTile(trainee?.fullName || trainee?.name || cleanName);
-    const traineeAssigned = personnelData?.get(trainee?.fullName || trainee?.name || cleanName) || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === traineeKey)?.[1];
+    const traineeKey2 = normalisePersonNameForAddTile(trainee?.fullName || trainee?.name || cleanName);
+    const traineeAssigned = personnelData?.get(trainee?.fullName || trainee?.name || cleanName) || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === traineeKey2)?.[1];
     return String(trainee?.traineeCallsign || formatPersonnelCallsign(traineeAssigned) || "").trim();
   }, [findInstructorByRefOrName, findTraineeByRefOrName, normalisePersonNameForAddTile, personnelData]);
   const selectedPicHasIndividualCallsign = reactExports.useMemo(() => Boolean(resolveAssignedCallsign(picName, selectedPicRef)), [picName, resolveAssignedCallsign, selectedPicRef]);
@@ -35074,17 +35074,17 @@ const AddFlightTileModal = ({
     const rightIdNumber = String(right.idNumber || "").trim();
     return Boolean(leftIdNumber && rightIdNumber && leftIdNumber === rightIdNumber);
   };
-  const getPersonSelectionValue = reactExports.useCallback((name, selectedRef) => {
-    if (!name) return "";
+  const getPersonSelectionValue = reactExports.useCallback((name2, selectedRef) => {
+    if (!name2) return "";
     const refMatch = selectedRef ? standardPersonOptions.find((option) => personRefsMatch(option.ref, selectedRef)) : null;
     if (refMatch) return refMatch.value;
-    return standardPersonOptions.find((option) => option.name === name)?.value || "";
+    return standardPersonOptions.find((option) => option.name === name2)?.value || "";
   }, [standardPersonOptions]);
   const clonePersonRefForRole = (ref, role) => ref ? { ...ref, role } : null;
-  const resolvePersonRefForName = reactExports.useCallback((name, selectedRef) => {
-    if (!name) return null;
+  const resolvePersonRefForName = reactExports.useCallback((name2, selectedRef) => {
+    if (!name2) return null;
     const refMatch = selectedRef ? standardPersonOptions.find((option) => personRefsMatch(option.ref, selectedRef)) : null;
-    return (refMatch || standardPersonOptions.find((option) => option.name === name))?.ref || null;
+    return (refMatch || standardPersonOptions.find((option) => option.name === name2))?.ref || null;
   }, [standardPersonOptions]);
   const handlePicSelectionChange = (value) => {
     const option = standardPersonOptions.find((person) => person.value === value);
@@ -35130,7 +35130,7 @@ const AddFlightTileModal = ({
       picName,
       studentName,
       ...formationCrew.flatMap((crewMember) => [crewMember.picName, crewMember.studentName])
-    ].map(normaliseFormationPersonName).filter((name) => name && name !== allowedCurrent);
+    ].map(normaliseFormationPersonName).filter((name2) => name2 && name2 !== allowedCurrent);
     return new Set(assignedNames);
   };
   const filterFormationNames = (names, exceptName) => {
@@ -35142,9 +35142,9 @@ const AddFlightTileModal = ({
   const tileColor = reactExports.useMemo(() => {
     if (eventCategory === "sct") return "bg-gray-500";
     if (eventCategory === "staff_cat" || eventCategory === "twr_di") return "bg-gray-500";
-    const name = flightType === "Solo" ? picName : studentName;
-    if (!name) return "bg-gray-500";
-    const t = traineesData.find((t2) => (t2.fullName || t2.name) === name);
+    const name2 = flightType === "Solo" ? picName : studentName;
+    if (!name2) return "bg-gray-500";
+    const t = traineesData.find((t2) => (t2.fullName || t2.name) === name2);
     if (!t) return "bg-gray-500";
     return t.course && courseColors[t.course] || "bg-gray-500";
   }, [picName, studentName, flightType, traineesData, courseColors, eventCategory]);
@@ -35244,12 +35244,12 @@ const AddFlightTileModal = ({
   }, [courseOptions, eventCategory, getContinuationDisplayLabel, getCourseDisplayLabel, sctEvents, sctShortLabel, syllabusByCourse]);
   const nextLMPEvent = reactExports.useMemo(() => {
     if (eventCategory !== "lmp_event") return null;
-    const name = flightType === "Solo" ? picName : studentName;
+    const name2 = flightType === "Solo" ? picName : studentName;
     const selectedRef = flightType === "Solo" ? selectedPicRef : selectedStudentRef;
-    if (!name || !traineeLMPs) return null;
-    const selectedTrainee = findTraineeByRefOrName(name, selectedRef);
+    if (!name2 || !traineeLMPs) return null;
+    const selectedTrainee = findTraineeByRefOrName(name2, selectedRef);
     const candidateNames = Array.from(new Set([
-      name,
+      name2,
       selectedTrainee?.fullName,
       selectedTrainee?.name
     ].map((value) => String(value || "").trim()).filter(Boolean)));
@@ -35420,9 +35420,9 @@ const AddFlightTileModal = ({
   }, [flightNumber, isFixedCrewModel, isSctFormationCode]);
   reactExports.useEffect(() => {
     if (isPersonDropdownKey(activeAddFlightDropdownKey)) return;
-    const name = flightType === "Solo" ? picName : studentName;
-    if (!name || !flightNumber || !traineeLMPs) return;
-    const lmp = traineeLMPs.get(name);
+    const name2 = flightType === "Solo" ? picName : studentName;
+    if (!name2 || !flightNumber || !traineeLMPs) return;
+    const lmp = traineeLMPs.get(name2);
     if (!lmp) return;
     const item = lmp.find((i) => i.id === flightNumber || i.code === flightNumber);
     if (!isSingleSeatAircraft && item?.sortieType) setFlightType(item.sortieType);
@@ -35632,10 +35632,10 @@ const AddFlightTileModal = ({
             crewMember.picName,
             crewMember.flightType === "Dual" ? crewMember.studentName : ""
           ])
-        ].map((name) => String(name || "").trim()).filter(Boolean);
+        ].map((name2) => String(name2 || "").trim()).filter(Boolean);
         const seenFormationPeople = /* @__PURE__ */ new Set();
-        const duplicateFormationPerson = assignedFormationPeople.find((name) => {
-          const key = normaliseFormationPersonName(name);
+        const duplicateFormationPerson = assignedFormationPeople.find((name2) => {
+          const key = normaliseFormationPersonName(name2);
           if (seenFormationPeople.has(key)) return true;
           seenFormationPeople.add(key);
           return false;
@@ -35928,9 +35928,9 @@ const AddFlightTileModal = ({
                             ...group.options.map((profile) => {
                               const unit = normaliseFixedCrewUnitCode2(profile.unitCode || profile.compositeUnitCode);
                               const code = stripLeadingUnitLabel(profile.code || profile.name || profile.currency, unit);
-                              const name = stripLeadingUnitLabel(profile.name, unit);
+                              const name2 = stripLeadingUnitLabel(profile.name, unit);
                               const currency = stripLeadingUnitLabel(profile.currency, unit);
-                              const label = Array.from(new Set([code, name, currency].filter(Boolean))).join(" - ");
+                              const label = Array.from(new Set([code, name2, currency].filter(Boolean))).join(" - ");
                               return { value: getFixedCrewCurrencyProfileOptionKey(profile), label };
                             })
                           ]) : fixedCrewEventOptionGroups.length === 0 ? [{ value: "__none", label: `No ${fixedCrewEventFieldLabel.toLowerCase()}s for selected unit`, disabled: true }] : fixedCrewEventOptionGroups.flatMap((group) => [
@@ -36464,7 +36464,7 @@ const AddFlightTileModal = ({
                           {
                             value: crewMember.picName,
                             displayValue: crewMember.picName,
-                            onChange: (name) => updateFormationCrew(index, { picName: name }),
+                            onChange: (name2) => updateFormationCrew(index, { picName: name2 }),
                             allUnits,
                             getLayer2,
                             getNames: getFormationPicNames(crewMember.picName),
@@ -36483,7 +36483,7 @@ const AddFlightTileModal = ({
                           {
                             value: crewMember.studentName,
                             displayValue: crewMember.studentName,
-                            onChange: (name) => updateFormationCrew(index, { studentName: name }),
+                            onChange: (name2) => updateFormationCrew(index, { studentName: name2 }),
                             allUnits,
                             getLayer2,
                             getNames: getFormationCrewNames(crewMember.studentName),
@@ -37064,7 +37064,7 @@ const AcademicsTab = ({
   const [editDuration, setEditDuration] = reactExports.useState("");
   const coursesForLocality = reactExports.useMemo(() => {
     const courses = /* @__PURE__ */ new Set();
-    const locationShortCode = Object.entries(locationAbbreviations || {}).find(([name, _]) => name === selectedLocality)?.[1] || "";
+    const locationShortCode = Object.entries(locationAbbreviations || {}).find(([name2, _]) => name2 === selectedLocality)?.[1] || "";
     traineesData.forEach((t) => {
       if (!selectedLocality || t.location === selectedLocality || t.location === locationShortCode || localities.length <= 1) {
         courses.add(t.course);
@@ -37095,18 +37095,18 @@ const AcademicsTab = ({
       courseTrainees.filter((t) => traineeStatuses[t.fullName]?.status === "available").map((t) => t.fullName)
     );
   }, [courseTrainees, traineeStatuses]);
-  const toggleTrainee = async (name) => {
-    const isCurrentlySelected = selectedTrainees.includes(name);
+  const toggleTrainee = async (name2) => {
+    const isCurrentlySelected = selectedTrainees.includes(name2);
     if (isCurrentlySelected) {
-      setSelectedTrainees((prev) => prev.filter((n) => n !== name));
+      setSelectedTrainees((prev) => prev.filter((n) => n !== name2));
       return;
     }
-    const st = traineeStatuses[name];
+    const st = traineeStatuses[name2];
     if (st && st.status !== "available") {
       const statusLabel = st.status === "paused" ? "PAUSED" : "UNAVAILABLE";
       const reason = st.reason || (st.status === "paused" ? "This trainee is currently paused." : "This trainee has a scheduling conflict or unavailability.");
       const confirmed = await showDarkConfirm(
-        `${stripCourse(name)} is ${statusLabel}
+        `${stripCourse(name2)} is ${statusLabel}
 
 ${reason}
 
@@ -37116,7 +37116,7 @@ Do you still want to include them in this academic session?`,
       );
       if (!confirmed) return;
     }
-    setSelectedTrainees((prev) => [...prev, name]);
+    setSelectedTrainees((prev) => [...prev, name2]);
   };
   const academicLmpCourses = reactExports.useMemo(() => {
     const courseCodeSet = /* @__PURE__ */ new Set();
@@ -38123,7 +38123,7 @@ const AddGroundEventFlyout = ({
                           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-course", className: "block text-sm font-medium text-gray-400", children: "Course" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { id: "ground-course", value: selectedCourse, onChange: (e) => setSelectedCourse(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: [
                             activeCourseNames.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No courses available" }),
-                            activeCourseNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+                            activeCourseNames.map((name2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name2, children: name2 }, name2))
                           ] })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 pt-6", children: [
@@ -38691,14 +38691,14 @@ const getDashboardTrainingReportSuppressionIds = (report) => {
     report.eventId ? `pt051-${report.eventId}-${traineeName}` : ""
   ].map((value) => String(value || "").trim()).filter(Boolean);
 };
-const toDashboardContactDisplayName = (name, rank) => {
-  const [lastName, firstName] = String(name || "").split(",").map((part) => part.trim());
-  const displayName = firstName ? `${lastName}, ${firstName}` : name;
+const toDashboardContactDisplayName = (name2, rank) => {
+  const [lastName, firstName] = String(name2 || "").split(",").map((part) => part.trim());
+  const displayName = firstName ? `${lastName}, ${firstName}` : name2;
   return `${rank || ""} ${displayName}`.trim();
 };
-const getDashboardContactNameParts = (name) => {
-  const [surname, firstNames] = String(name || "").split(",").map((part) => part.trim());
-  return { surname: surname || name || "", firstNames: firstNames || "" };
+const getDashboardContactNameParts = (name2) => {
+  const [surname, firstNames] = String(name2 || "").split(",").map((part) => part.trim());
+  return { surname: surname || name2 || "", firstNames: firstNames || "" };
 };
 const formatDashboardMessageTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 const formatDashboardConversationDate = (dateString) => {
@@ -38908,12 +38908,12 @@ const MyDashboard = ({
       const unit = String(trainee.unit || "").trim().toUpperCase();
       return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
     }).map((trainee) => {
-      const name = trainee.fullName || trainee.name;
-      const nameParts = getDashboardContactNameParts(name);
+      const name2 = trainee.fullName || trainee.name;
+      const nameParts = getDashboardContactNameParts(name2);
       return {
-        id: `trainee-${trainee.idNumber}-${name}`,
-        name,
-        displayName: toDashboardContactDisplayName(name, trainee.rank),
+        id: `trainee-${trainee.idNumber}-${name2}`,
+        name: name2,
+        displayName: toDashboardContactDisplayName(name2, trainee.rank),
         unit: trainee.unit || "No Unit",
         role: trainee.course || "Trainee",
         rank: trainee.rank || "",
@@ -38931,14 +38931,14 @@ const MyDashboard = ({
     if (!query) return [];
     return messageContacts.filter((contact) => normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query)).slice(0, 6);
   }, [messageContacts, messageToText]);
-  const getMessageContactForName = (name) => {
-    const contact = messageContacts.find((candidate) => normaliseDashboardContactName(candidate.name) === normaliseDashboardContactName(name));
+  const getMessageContactForName = (name2) => {
+    const contact = messageContacts.find((candidate) => normaliseDashboardContactName(candidate.name) === normaliseDashboardContactName(name2));
     if (contact) return contact;
-    const nameParts = getDashboardContactNameParts(name);
+    const nameParts = getDashboardContactNameParts(name2);
     return {
-      id: `stored-${normaliseDashboardContactName(name)}`,
-      name,
-      displayName: toDashboardContactDisplayName(name),
+      id: `stored-${normaliseDashboardContactName(name2)}`,
+      name: name2,
+      displayName: toDashboardContactDisplayName(name2),
       unit: "Stored Message",
       role: "Message contact",
       rank: "",
@@ -39757,7 +39757,7 @@ const formatMilitaryTime$1 = (timeString) => {
   if (!timeString) return "";
   return timeString.replace(":", "");
 };
-const UnavailabilityItem = ({ name, rank, period, status }) => {
+const UnavailabilityItem = ({ name: name2, rank, period, status }) => {
   const timeDisplay = reactExports.useMemo(() => {
     if (status) return status;
     if (!period) return "N/A";
@@ -39779,7 +39779,7 @@ const UnavailabilityItem = ({ name, rank, period, status }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex justify-between items-center p-2 bg-gray-700/50 rounded-md text-sm", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 text-right", children: rank }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: name.split(" – ")[0] })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: name2.split(" – ")[0] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-medium ${status ? "text-amber-300" : "text-gray-300"}`, children: status ? "" : period?.reason }),
@@ -42367,16 +42367,16 @@ const PrioritiesView = ({
   }, [currencyProfilesForContext]);
   const currencyProfileNameLabels = reactExports.useMemo(() => {
     const counts = currencyProfilesForContext.reduce((map, profile) => {
-      const name = String(profile.name || profile.currency || "").trim();
-      if (!name) return map;
-      map.set(name, (map.get(name) || 0) + 1);
+      const name2 = String(profile.name || profile.currency || "").trim();
+      if (!name2) return map;
+      map.set(name2, (map.get(name2) || 0) + 1);
       return map;
     }, /* @__PURE__ */ new Map());
     return Object.fromEntries(currencyProfilesForContext.map((profile) => {
-      const name = String(profile.name || profile.currency || "").trim();
+      const name2 = String(profile.name || profile.currency || "").trim();
       const currency = String(profile.currency || "").trim();
-      return [name, counts.get(name) > 1 && currency ? `${name} - ${currency}` : name];
-    }).filter(([name]) => Boolean(name)));
+      return [name2, counts.get(name2) > 1 && currency ? `${name2} - ${currency}` : name2];
+    }).filter(([name2]) => Boolean(name2)));
   }, [currencyProfilesForContext]);
   reactExports.useMemo(() => Array.from(/* @__PURE__ */ new Set([
     ...currencyProfilesForContext.map((profile) => String(profile.crew || "").trim()).filter(Boolean),
@@ -43203,7 +43203,7 @@ const PrioritiesView = ({
     return false;
   };
   const getDueCurrencies = (person) => {
-    return currencyNames.filter((name) => isCurrencyDue(person, name));
+    return currencyNames.filter((name2) => isCurrencyDue(person, name2));
   };
   const traineeCurrencyRows = reactExports.useMemo(() => {
     return traineesData.filter((t) => !t.isPaused && traineeCurrencyCourseSelection.has(t.course)).map((trainee) => ({ trainee, dueCurrencies: getDueCurrencies(trainee) })).filter((row) => row.dueCurrencies.length > 0).sort((a, b) => a.trainee.course.localeCompare(b.trainee.course) || a.trainee.name.localeCompare(b.trainee.name));
@@ -43879,7 +43879,7 @@ const PrioritiesView = ({
                 className: controlClass,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: isFlightSchoolCurrencyRequest ? "Select pilot" : `Select ${instructorLabel2.toLowerCase()}` }),
-                  instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+                  instructorNames.map((name2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name2, children: name2 }, name2))
                 ]
               }
             )
@@ -43944,7 +43944,7 @@ const PrioritiesView = ({
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select second pilot / Solo" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
-                  instructorNames.filter((name) => name !== req.name).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+                  instructorNames.filter((name2) => name2 !== req.name).map((name2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name2, children: name2 }, name2))
                 ]
               }
             ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500", children: "N/A" })
@@ -45621,7 +45621,7 @@ const PrioritiesView = ({
                         className: "w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-60",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
-                          sctEvents.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: currencyProfileNameLabels[name] || name }, `${draft.id}-${name}`))
+                          sctEvents.map((name2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name2, children: currencyProfileNameLabels[name2] || name2 }, `${draft.id}-${name2}`))
                         ]
                       }
                     )
@@ -46323,14 +46323,14 @@ const InteractiveStatCard = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400", children: title }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-3xl font-bold text-white", children: value }),
         description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: description }),
-        isHovered && personnelList.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-10 mt-2 max-h-60 w-64 overflow-y-auto rounded-lg border border-cyan-500/45 bg-slate-950 p-2 shadow-2xl animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: personnelList.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        isHovered && personnelList.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-10 mt-2 max-h-60 w-64 overflow-y-auto rounded-lg border border-cyan-500/45 bg-slate-950 p-2 shadow-2xl animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: personnelList.map((name2) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => onPersonClick(name),
+            onClick: () => onPersonClick(name2),
             className: "w-full rounded p-2 text-left text-sm text-slate-300 transition-colors hover:bg-cyan-500/15 hover:text-white",
-            children: name.split(" – ")[0]
+            children: name2.split(" – ")[0]
           }
-        ) }, name)) }) })
+        ) }, name2)) }) })
       ]
     }
   );
@@ -46548,11 +46548,11 @@ const PeopleTab = ({
         traineesWithOtherInstructors.add(traineeName);
       }
     }
-    traineesWithPrimary.forEach((name) => traineesWithOtherInstructors.delete(name));
-    traineesWithSecondary.forEach((name) => traineesWithOtherInstructors.delete(name));
-    traineesWithInstructorFromFlight.forEach((name) => traineesWithOtherInstructors.delete(name));
-    traineesWithOtherInstructors.forEach((name) => {
-      if (!traineeEventCounts.has(name)) traineesWithOtherInstructors.delete(name);
+    traineesWithPrimary.forEach((name2) => traineesWithOtherInstructors.delete(name2));
+    traineesWithSecondary.forEach((name2) => traineesWithOtherInstructors.delete(name2));
+    traineesWithInstructorFromFlight.forEach((name2) => traineesWithOtherInstructors.delete(name2));
+    traineesWithOtherInstructors.forEach((name2) => {
+      if (!traineeEventCounts.has(name2)) traineesWithOtherInstructors.delete(name2);
     });
     return {
       instructorsWithFourEvents: instructorsWithFourEventsList.length,
@@ -46700,7 +46700,7 @@ const PeopleTab = ({
       event.crew,
       event.student,
       ...event.attendees || []
-    ].map((name) => String(name || "").trim()).filter((name) => name && !/^TBA$/i.test(name));
+    ].map((name2) => String(name2 || "").trim()).filter((name2) => name2 && !/^TBA$/i.test(name2));
     return Array.from(new Set(names));
   };
   const normaliseEventType = (item) => {
@@ -46732,8 +46732,8 @@ const PeopleTab = ({
     const eventStaff = new Set(events.flatMap(getEventPeople2));
     const staffEventCounts = /* @__PURE__ */ new Map();
     events.forEach((event) => {
-      getEventPeople2(event).forEach((name) => {
-        staffEventCounts.set(name, (staffEventCounts.get(name) || 0) + 1);
+      getEventPeople2(event).forEach((name2) => {
+        staffEventCounts.set(name2, (staffEventCounts.get(name2) || 0) + 1);
       });
     });
     const unavailableNames = /* @__PURE__ */ new Set();
@@ -47405,7 +47405,7 @@ const CourseMetricsTab = ({
       event.crew,
       event.student,
       ...event.attendees || []
-    ].map((name) => String(name || "").trim()).filter((name) => name && !/^TBA$/i.test(name));
+    ].map((name2) => String(name2 || "").trim()).filter((name2) => name2 && !/^TBA$/i.test(name2));
     return Array.from(new Set(names));
   };
   const airCombatCourseStats = reactExports.useMemo(() => {
@@ -47530,8 +47530,8 @@ const CourseMetricsTab = ({
   };
   const getEventPersonnel = (e) => {
     const personnel = /* @__PURE__ */ new Set();
-    const addPerson2 = (name) => {
-      const normalised = stripCourseSuffix(String(name || ""));
+    const addPerson2 = (name2) => {
+      const normalised = stripCourseSuffix(String(name2 || ""));
       if (normalised && !/^TBA$/i.test(normalised)) personnel.add(normalised);
     };
     addPerson2(e.instructor);
@@ -48674,7 +48674,7 @@ const Tag = ({ text, type = "gray" }) => {
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `border text-xs px-2 py-0.5 rounded ${m[type]}`, children: text });
 };
-const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) => {
+const ProgressionModal = ({ data, labels: propLabels, name: name2, trend, onClose }) => {
   const { thresholds } = useThresholds();
   const [timelineZoom, setTimelineZoom] = React.useState(0);
   const [scoreZoom, setScoreZoom] = React.useState(0);
@@ -48693,7 +48693,7 @@ const ProgressionModal = ({ data, labels: propLabels, name, trend, onClose }) =>
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-white font-bold text-lg", children: [
-          name,
+          name2,
           " — Grade Progression"
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm mt-0.5", children: [
@@ -49534,7 +49534,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
                   " ",
                   item.label
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 max-h-44 space-y-1 overflow-y-auto text-slate-500", children: item.names.slice(0, 12).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: name }, name)) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 max-h-44 space-y-1 overflow-y-auto text-slate-500", children: item.names.slice(0, 12).map((name2) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: name2 }, name2)) }),
                 item.names.length > 12 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-slate-600", children: [
                   "+",
                   item.names.length - 12,
@@ -49568,7 +49568,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
                   " ",
                   item.label
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 max-h-44 space-y-1 overflow-y-auto text-slate-500", children: item.names.slice(0, 12).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: name }, name)) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 max-h-44 space-y-1 overflow-y-auto text-slate-500", children: item.names.slice(0, 12).map((name2) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: name2 }, name2)) }),
                 item.names.length > 12 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-slate-600", children: [
                   "+",
                   item.names.length - 12,
@@ -51259,7 +51259,7 @@ const eventStaffNames$1 = (event) => {
     event.pilot,
     event.crew,
     ...event.attendees || []
-  ].map((name) => String(name || "").trim()).filter((name) => name && !/^TBA$/i.test(name));
+  ].map((name2) => String(name2 || "").trim()).filter((name2) => name2 && !/^TBA$/i.test(name2));
   return [...new Set(names)];
 };
 const buildFallbackMetrics = (date, events, currentAircraftAvailable, totalAircraft) => {
@@ -52834,13 +52834,13 @@ const eventStaffNames = (event) => {
     event.crew,
     event.student,
     ...event.attendees || []
-  ].map((name) => String(name || "").trim()).filter((name) => !isPlaceholderCrewValue(name) && !/^CREW\s*\d+/i.test(name));
+  ].map((name2) => String(name2 || "").trim()).filter((name2) => !isPlaceholderCrewValue(name2) && !/^CREW\s*\d+/i.test(name2));
   return [...new Set(names)];
 };
 const eventPicName = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim();
 const eventPartnerNames = (event) => {
   const picKey = normaliseName$1(eventPicName(event));
-  return eventStaffNames(event).filter((name) => normaliseName$1(name) !== picKey);
+  return eventStaffNames(event).filter((name2) => normaliseName$1(name2) !== picKey);
 };
 const eventCode = (event) => String(event.eventCode || event.flightNumber || event.taskingDisplayLabel || event.taskingName || "").trim().toUpperCase();
 const isTaskingEvent = (event) => Boolean(event.isTaskingRequest || event.taskingRequestId || event.taskingName);
@@ -52898,8 +52898,8 @@ const AirCombatIntelligenceTab = ({
     const missingCrew = crewedFlights.filter((event) => eventPartnerNames(event).length === 0);
     const soloAnomalies = isFixedCrewLike ? flightEvents.filter((event) => event.flightType === "Solo" || event.soloOrDual === "Solo" || /^Solo$/i.test(String(event.crew || "").trim()) || eventPartnerNames(event).length === 0) : [];
     const uniqueCrew = new Set(activeEvents.flatMap(eventStaffNames));
-    uniqueCrew.forEach((name) => {
-      const staff = staffByName.get(normaliseName$1(name));
+    uniqueCrew.forEach((name2) => {
+      const staff = staffByName.get(normaliseName$1(name2));
       if (!staff) return;
       const role = normaliseRole(staff.role);
       scheduledRoleCounts.set(role, Number(scheduledRoleCounts.get(role) || 0) + 1);
@@ -55439,7 +55439,7 @@ const InstructorProfileFlyout = ({
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
   const canManageAccountAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase());
   const [idNumber, setIdNumber] = reactExports.useState(instructor.idNumber);
-  const [name, setName] = reactExports.useState(instructor.name);
+  const [name2, setName] = reactExports.useState(instructor.name);
   const [rank, setRank] = reactExports.useState(instructor.rank);
   const staffRankOptionGroups = reactExports.useMemo(() => {
     const configuredGroups = getRankOptionGroupsForGroup(personnelDisplaySettings || void 0, "staff");
@@ -55879,7 +55879,7 @@ const InstructorProfileFlyout = ({
     setPriorExperience((prev) => field ? { ...prev, [section]: { ...prev[section], [field]: value } } : { ...prev, [section]: value });
   };
   const handleSave = async () => {
-    if (!name) {
+    if (!name2) {
       await showDarkAlert("Name is required.", "Missing Staff Name", "warning");
       return;
     }
@@ -55888,10 +55888,10 @@ const InstructorProfileFlyout = ({
       return;
     }
     const proposedRecord = { ...instructor, idNumber };
-    const duplicateNameMatches = [...instructorsData, ...traineesData].filter((person) => person.isActive !== false).filter((person) => normalisePersonName(person.name || person.fullName) === normalisePersonName(name)).filter((person) => !samePersonRecord(person, proposedRecord));
+    const duplicateNameMatches = [...instructorsData, ...traineesData].filter((person) => person.isActive !== false).filter((person) => normalisePersonName(person.name || person.fullName) === normalisePersonName(name2)).filter((person) => !samePersonRecord(person, proposedRecord));
     if (duplicateNameMatches.length > 0) {
       const confirmed = await showDarkConfirm(
-        `Another active person already has the name "${name}".
+        `Another active person already has the name "${name2}".
 
 ${duplicateNameMatches.map(describeDuplicateNamePerson).join("\n")}
 
@@ -55963,7 +55963,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     const updatedInstructor = {
       ...instructor,
       idNumber,
-      name,
+      name: name2,
       rank,
       role: savedRole,
       callsignNumber,
@@ -56003,10 +56003,10 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     };
     flushPendingAudits();
     if (isCreating) {
-      logAudit({ action: "Add", description: `Added new staff ${rank} ${name}`, changes: `Role: ${savedRole}, Unit: ${unit}, Location: ${location}`, page: "Staff" });
+      logAudit({ action: "Add", description: `Added new staff ${rank} ${name2}`, changes: `Role: ${savedRole}, Unit: ${unit}, Location: ${location}`, page: "Staff" });
     } else {
       const changes = [];
-      if (instructor.name !== name) changes.push(`Name: ${instructor.name} → ${name}`);
+      if (instructor.name !== name2) changes.push(`Name: ${instructor.name} → ${name2}`);
       if (instructor.rank !== rank) changes.push(`Rank: ${instructor.rank} → ${rank}`);
       if (instructor.role !== savedRole) changes.push(`Role: ${instructor.role} → ${savedRole}`);
       if (instructor.unit !== unit) changes.push(`Unit: ${instructor.unit || "(none)"} → ${unit || "(none)"}`);
@@ -56039,7 +56039,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       if (instructor.isQFI !== savedIsQFI) changes.push(`${instructorLabel2}: ${instructor.isQFI} → ${savedIsQFI}`);
       if (instructor.isOFI !== isOFI) changes.push(`${ofiQualificationLabel}: ${instructor.isOFI} → ${isOFI}`);
       const changesStr = changes.length > 0 ? changes.join(", ") : "No field changes";
-      logAudit({ action: "Edit", description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: "Staff" });
+      logAudit({ action: "Edit", description: `Edited staff profile for ${rank} ${name2}`, changes: changesStr, page: "Staff" });
     }
     try {
       await Promise.resolve(onUpdateInstructor(updatedInstructor));
@@ -56859,7 +56859,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                             "img",
                             {
                               src: displayUrl,
-                              alt: name,
+                              alt: name2,
                               className: "w-full h-full object-cover object-top",
                               onError: () => setPhotoLoadFailed(true)
                             }
@@ -56873,7 +56873,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                           ] })
                         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg font-bold text-gray-300 leading-none select-none", children: profilePhotoInitials(name) }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg font-bold text-gray-300 leading-none select-none", children: profilePhotoInitials(name2) }),
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[7px] text-gray-300 leading-tight break-words", children: [
                               "Click to add picture",
                               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -56913,7 +56913,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => setName(e.target.value) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Name (Surname, Firstname)", value: name2, onChange: (e) => setName(e.target.value) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Personnel ID", value: idNumber || "", onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: staffRankOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, `${group.label}-${option}`)) }, group.label)) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Role", value: role, onChange: (e) => handleRoleChange(e.target.value), children: staffRoleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
@@ -56958,7 +56958,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   personType: "staff",
                   personId: instructor.id || instructor.idNumber,
                   idNumber,
-                  name: name || instructor.name,
+                  name: name2 || instructor.name,
                   email,
                   canManage: canManageAccountAccess
                 }
@@ -62616,8 +62616,8 @@ const CurrencyStatusPage = ({
       cancelled = true;
     };
   }, [currencyEndpoint]);
-  const getStatus = reactExports.useCallback((name) => {
-    return currencyStatus.find((s) => s.currencyName === name);
+  const getStatus = reactExports.useCallback((name2) => {
+    return currencyStatus.find((s) => s.currencyName === name2);
   }, [currencyStatus]);
   const getValidityDays = (def) => {
     if (def.type === "primitive") return def.validityDays || 90;
@@ -62682,8 +62682,8 @@ const CurrencyStatusPage = ({
     setEditedInactive({});
     setSaveState("idle");
   }, []);
-  const toggleInactive = (name) => {
-    setEditedInactive((prev) => ({ ...prev, [name]: !prev[name] }));
+  const toggleInactive = (name2) => {
+    setEditedInactive((prev) => ({ ...prev, [name2]: !prev[name2] }));
   };
   const handleSaveClick = reactExports.useCallback(async () => {
     let latestStatus = [...currencyStatus];
@@ -63341,7 +63341,7 @@ const AirCombatTrainingReportModal = ({
   const reportId = reactExports.useMemo(() => initialReport?.id || `air-combat-report-${staff.idNumber}-${sourceEvent?.id || item?.id || eventCode2}-${Date.now()}`, [eventCode2, initialReport?.id, item?.id, sourceEvent?.id, staff.idNumber]);
   const editInputClass = "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500";
   const getRecentEventPic = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim() || "-";
-  const getRecentEventCoPilot = (event) => String(event.crew || (Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder.find((name) => name !== getRecentEventPic(event)) : "") || "").trim() || "-";
+  const getRecentEventCoPilot = (event) => String(event.crew || (Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder.find((name2) => name2 !== getRecentEventPic(event)) : "") || "").trim() || "-";
   const getRecentEventShortCode = (event) => String(event.flightNumber || event.eventCode || "").trim() || "Event";
   const renderEventDataField = (label, value, onChange, fallback = "-") => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: label }),
@@ -64492,9 +64492,9 @@ const AuthorisationFlyout = ({
     return defs;
   }, [currencyRequirements, masterCurrencies]);
   const instructorRecord = reactExports.useMemo(() => {
-    const name = event.instructor || event.pilot;
-    if (!name) return null;
-    return instructorsData.find((i) => i.name === name) ?? null;
+    const name2 = event.instructor || event.pilot;
+    if (!name2) return null;
+    return instructorsData.find((i) => i.name === name2) ?? null;
   }, [event.instructor, event.pilot, instructorsData]);
   const studentName = reactExports.useMemo(() => {
     if (!event.student) return null;
@@ -64971,10 +64971,10 @@ const DraftPhraseTextArea = ({ value, readOnly, onCommit }) => {
   );
 };
 const AddElementFlyout = ({ onClose, onSave }) => {
-  const [name, setName] = reactExports.useState("");
+  const [name2, setName] = reactExports.useState("");
   const handleSave = () => {
-    if (name.trim()) {
-      onSave(name.trim());
+    if (name2.trim()) {
+      onSave(name2.trim());
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
@@ -64986,7 +64986,7 @@ const AddElementFlyout = ({ onClose, onSave }) => {
         {
           id: "element-name",
           type: "text",
-          value: name,
+          value: name2,
           onBeforeInput: (event) => handleEditableTextBeforeInput(event, setName),
           onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setName),
           onKeyDown: stopEditableKeyPropagation,
@@ -64998,7 +64998,7 @@ const AddElementFlyout = ({ onClose, onSave }) => {
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, disabled: !name.trim(), className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Save" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, disabled: !name2.trim(), className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Save" })
     ] })
   ] }) });
 };
@@ -66745,13 +66745,13 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: gradePhrases.filter((_, i) => i !== index) } });
   };
   const handleSaveNewElement = async () => {
-    const name = newElementName.trim();
-    if (!name) return;
-    if (flightElements.includes(name)) {
+    const name2 = newElementName.trim();
+    if (!name2) return;
+    if (flightElements.includes(name2)) {
       await showDarkAlert("An element with this name already exists.", "Duplicate Element", "warning");
       return;
     }
-    const nextElements = [...flightElements, name];
+    const nextElements = [...flightElements, name2];
     setFlightElements(nextElements);
     onUpdatePhraseBank({
       ...phraseBank,
@@ -66759,14 +66759,14 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
       [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
       [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
-        [name]: "Additional Elements"
+        [name2]: "Additional Elements"
       },
-      [name]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+      [name2]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
     });
-    setSelectedElement(name);
+    setSelectedElement(name2);
     setNewElementName("");
     setShowAddElementFlyout(false);
-    onElementAdded?.(name);
+    onElementAdded?.(name2);
   };
   const handleDeleteElements = async () => {
     if (selectedToDelete.size === 0) {
@@ -67325,21 +67325,21 @@ const SettingsView = ({
     setIsEditingSctEvents(false);
   };
   const handleAddSctEvent = () => {
-    const name = newSctEvent.trim();
-    if (name && !tempSctEvents.some((event) => event.name.toUpperCase() === name.toUpperCase())) {
+    const name2 = newSctEvent.trim();
+    if (name2 && !tempSctEvents.some((event) => event.name.toUpperCase() === name2.toUpperCase())) {
       setTempSctEvents([
         ...tempSctEvents,
         {
           id: `continuation-event-${Date.now()}`,
-          name,
-          code: name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT",
+          name: name2,
+          code: name2.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT",
           unitCode: activeUnitCodeList[0] || "",
           compositeUnitCode: activeCompositeUnitCode || "",
           aircraftTypeCode: activeContinuationAircraftTypeCode,
           crew: "",
           config: "ANY",
           acceptableAircraftConfigs: ["ANY"],
-          currency: activeCurrencyNames[0] || name,
+          currency: activeCurrencyNames[0] || name2,
           dayNight: "Day",
           flightType: "Dual",
           aircraftCount: 1,
@@ -68539,8 +68539,8 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
       nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
     });
     const dupes = /* @__PURE__ */ new Set();
-    nameCounts.forEach((count, name) => {
-      if (count > 1) dupes.add(name);
+    nameCounts.forEach((count, name2) => {
+      if (count > 1) dupes.add(name2);
     });
     return dupes;
   }, [visibleStaffData]);
@@ -69603,11 +69603,11 @@ const OrganisationSettings = ({
     loadStaffSharingGroup(nextGroup);
     logAudit("Settings - Organisation", "Edit", `Staff sharing arrangement ${deletedGroup.name} deleted`);
   };
-  const handleRenameStaffSharingGroup = (name) => {
+  const handleRenameStaffSharingGroup = (name2) => {
     setStaffSharingGroups((previous) => previous.map(
-      (group) => group.id === activeStaffSharingGroupId ? { ...group, name } : group
+      (group) => group.id === activeStaffSharingGroupId ? { ...group, name: name2 } : group
     ));
-    logAudit("Settings - Organisation", "Edit", `Staff sharing arrangement renamed to ${name || "Unnamed arrangement"}`);
+    logAudit("Settings - Organisation", "Edit", `Staff sharing arrangement renamed to ${name2 || "Unnamed arrangement"}`);
   };
   const loadResourceSharingGroup = (group) => {
     setActiveResourceSharingGroupId(group.id);
@@ -69662,11 +69662,11 @@ const OrganisationSettings = ({
     loadResourceSharingGroup(nextGroup);
     logAudit("Settings - Organisation", "Edit", `Aircraft resource sharing arrangement ${deletedGroup.name} deleted`);
   };
-  const handleRenameResourceSharingGroup = (name) => {
+  const handleRenameResourceSharingGroup = (name2) => {
     setResourceSharingGroups((previous) => previous.map(
-      (group) => group.id === activeResourceSharingGroupId ? { ...group, name } : group
+      (group) => group.id === activeResourceSharingGroupId ? { ...group, name: name2 } : group
     ));
-    logAudit("Settings - Organisation", "Edit", `Aircraft resource sharing arrangement renamed to ${name || "Unnamed arrangement"}`);
+    logAudit("Settings - Organisation", "Edit", `Aircraft resource sharing arrangement renamed to ${name2 || "Unnamed arrangement"}`);
   };
   const handleToggleUnit = (unitCode) => {
     const isCurrentlySelected = selectedUnits.includes(unitCode);
@@ -71251,15 +71251,15 @@ const getPlatformConfigSaveBlocker = (config) => {
   const isDeliberatelyEmptyStructure = !hasActiveOrganisations && !hasActiveLocations && !hasActiveUnits;
   const describeResourcePool = (pool) => {
     const code = String(pool?.code || "").trim();
-    const name = String(pool?.name || "").trim();
+    const name2 = String(pool?.name || "").trim();
     const unit = String(pool?.unitCode || "").trim();
     const location = String(pool?.locationCode || "").trim();
-    return [code || name || "Unnamed DFP Resource Rows", unit, location].filter(Boolean).join(" / ");
+    return [code || name2 || "Unnamed DFP Resource Rows", unit, location].filter(Boolean).join(" / ");
   };
   const describeAircraftType = (aircraftType) => {
     const code = String(aircraftType?.code || "").trim();
-    const name = String(aircraftType?.name || "").trim();
-    return code || name || "New aircraft type";
+    const name2 = String(aircraftType?.name || "").trim();
+    return code || name2 || "New aircraft type";
   };
   const getResourcePoolFocusCode = (pool) => String(pool?.id || pool?.code || pool?.name || "").trim();
   const getResourcePoolSettingsLink = (pool, suffix = "") => ({
@@ -71842,9 +71842,9 @@ const getAirfieldCatalogueLocationChanges = (entry, currentLocation, fillIdentit
 const getPlatformLocationAuditKey = (location) => String(location?.id || location?.code || location?.name || "").trim().toLowerCase();
 const getPlatformLocationAuditLabel = (location) => {
   const code = String(location?.code || "").trim();
-  const name = String(location?.name || "").trim();
-  if (code && name) return `${code} - ${name}`;
-  return code || name || "Unnamed location";
+  const name2 = String(location?.name || "").trim();
+  if (code && name2) return `${code} - ${name2}`;
+  return code || name2 || "Unnamed location";
 };
 const uniqueValues = (values) => Array.from(new Set(values.filter(Boolean)));
 const getConfigurationHealthFocusAnchor = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
@@ -72534,14 +72534,14 @@ const PlatformConfigurationSettings = ({
   }, [config.aircraftTypes, config.resourcePools, resourcePoolsUnlocked]);
   const resourcePoolDeleteOptions = reactExports.useMemo(() => (Array.isArray(config.resourcePools) ? config.resourcePools : []).map((pool, index) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
-    const name = String(pool.name || "").trim() || "Unnamed DFP Resource Rows";
-    return { key, name };
+    const name2 = String(pool.name || "").trim() || "Unnamed DFP Resource Rows";
+    return { key, name: name2 };
   }), [config.resourcePools]);
   const aircraftTypeDeleteOptions = reactExports.useMemo(() => (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : []).map((aircraft, index) => {
     const key = String(aircraft.id || aircraft.code || `aircraft-type-${index}`);
     const code = String(aircraft.code || "").trim();
-    const name = String(aircraft.name || "").trim();
-    const label = [code, name && name !== code ? name : ""].filter(Boolean).join(" - ") || "Unnamed Aircraft Type";
+    const name2 = String(aircraft.name || "").trim();
+    const label = [code, name2 && name2 !== code ? name2 : ""].filter(Boolean).join(" - ") || "Unnamed Aircraft Type";
     return { key, code, name: label };
   }), [config.aircraftTypes]);
   const selectedAircraftTypeDeleteOption = aircraftTypeDeleteOptions.find((option) => option.key === selectedAircraftTypeDeleteKey);
@@ -73300,7 +73300,7 @@ const PlatformConfigurationSettings = ({
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
       const levelNames = getOrganisationLevelNamesFromWorkbook(workbook);
-      const ladderSheetName = workbook.SheetNames.find((name) => String(name || "").trim().toLowerCase() === "ladder view");
+      const ladderSheetName = workbook.SheetNames.find((name2) => String(name2 || "").trim().toLowerCase() === "ladder view");
       if (ladderSheetName) {
         const ladderRows = XLSX.utils.sheet_to_json(workbook.Sheets[ladderSheetName], { header: 1, defval: "" });
         if (importOrganisationStructureLadderRows(ladderRows, levelNames)) return;
@@ -73437,10 +73437,10 @@ This permanently removes the organisation record from platform configuration and
     const source = preset === "CUSTOM" ? { ...personnelDisplaySettings.staffRankEquivalency, preset: "CUSTOM" } : RANK_EQUIVALENCY_PRESETS[preset];
     updateStaffRankEquivalency(normaliseRankEquivalencyConfig(source));
   };
-  const updateStaffRankServiceName = (serviceIndex, name) => {
+  const updateStaffRankServiceName = (serviceIndex, name2) => {
     const nextEquivalency = normaliseRankEquivalencyConfig(personnelDisplaySettings.staffRankEquivalency);
     nextEquivalency.preset = "CUSTOM";
-    nextEquivalency.services = nextEquivalency.services.map((service, index) => index === serviceIndex ? { ...service, name } : service);
+    nextEquivalency.services = nextEquivalency.services.map((service, index) => index === serviceIndex ? { ...service, name: name2 } : service);
     updateStaffRankEquivalency(nextEquivalency);
   };
   const updateStaffRankCell = (rowIndex, serviceIndex, field, value) => {
@@ -73564,13 +73564,13 @@ This permanently removes the organisation record from platform configuration and
     updateStaffQualificationCatalogue(nextQualifications);
   };
   const addStaffQualificationEntry = () => {
-    const name = `Qualification ${staffQualificationCatalogue2.qualifications.length + 1}`;
+    const name2 = `Qualification ${staffQualificationCatalogue2.qualifications.length + 1}`;
     updateStaffQualificationCatalogue([
       ...staffQualificationCatalogue2.qualifications,
       {
         id: createClientRecordId("staff-qualification"),
-        name,
-        code: name,
+        name: name2,
+        code: name2,
         operationalModels: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
         roleRestrictions: [],
         status: "ACTIVE"
@@ -73653,11 +73653,11 @@ This permanently removes the organisation record from platform configuration and
     const role = crewCompositionRoleOptions[0] || "";
     if (!role) return;
     const aircraftProfiles = getVisibleAlternateCrewCompositions().filter((profile) => String(profile.aircraftTypeCode || "").trim().toUpperCase() === aircraftTypeCode.trim().toUpperCase());
-    const name = `Alternate Crew ${aircraftProfiles.length + 1}`;
+    const name2 = `Alternate Crew ${aircraftProfiles.length + 1}`;
     const baseId = createClientRecordId("alternate-crew");
     const targetUnitCodes = getActiveScopedUnitCodes();
     const combinedContext = targetUnitCodes.length > 1;
-    const code = createAlternateCrewCompositionCode(aircraftProfiles, name);
+    const code = createAlternateCrewCompositionCode(aircraftProfiles, name2);
     updateCrewCompositionSettings([
       ...crewCompositionSettings.alternateCompositions,
       ...targetUnitCodes.map((unitCode) => ({
@@ -73667,7 +73667,7 @@ This permanently removes the organisation record from platform configuration and
         compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : "",
         compositeProfileId: combinedContext ? baseId : "",
         aircraftTypeCode: aircraftTypeCode.trim().toUpperCase(),
-        name,
+        name: name2,
         description: "",
         operationalModels: ["air_combat", "fixed_crew", "pooled_crew"],
         roleRequirements: [{ role, count: 1 }],
@@ -73832,15 +73832,15 @@ This permanently removes the organisation record from platform configuration and
       };
     });
   };
-  const trainingReportElementNameExists = (name, exceptName = "") => trainingReportPreviewElements.some((element) => element.toLowerCase() === name.toLowerCase() && element.toLowerCase() !== exceptName.toLowerCase());
+  const trainingReportElementNameExists = (name2, exceptName = "") => trainingReportPreviewElements.some((element) => element.toLowerCase() === name2.toLowerCase() && element.toLowerCase() !== exceptName.toLowerCase());
   const addTrainingReportElement = async () => {
-    const name = trainingReportNewElementDraft.trim();
+    const name2 = trainingReportNewElementDraft.trim();
     if (!canEditTrainingReportModules) return;
-    if (!name) {
+    if (!name2) {
       await showDarkAlert("Enter the assessment element name first.", "Element Name Required", "warning");
       return;
     }
-    if (trainingReportElementNameExists(name)) {
+    if (trainingReportElementNameExists(name2)) {
       await showDarkAlert("That assessment element is already selected for this report.", "Duplicate Element", "warning");
       return;
     }
@@ -73849,13 +73849,13 @@ This permanently removes the organisation record from platform configuration and
       const { groups } = getConfiguredScoringMatrixElementGroups(bank);
       return {
         ...bank,
-        [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: [...elements, name],
+        [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: [...elements, name2],
         [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
         [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
           ...groups,
-          [name]: "Additional Elements"
+          [name2]: "Additional Elements"
         },
-        [name]: bank[name] || { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+        [name2]: bank[name2] || { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
       };
     });
     setTrainingReportNewElementDraft("");
@@ -75175,8 +75175,8 @@ This removes the reusable permission profile from Settings. Users assigned only 
     if (!raw) return [];
     const splitName = raw.includes(",") ? raw.split(",").map((part) => part.trim()).filter(Boolean).reverse().join(" ") : raw;
     const dottedName = raw.replace(/[._-]+/g, " ");
-    const normaliseName2 = (name) => name.replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
-    const tokenSortName = (name) => normaliseName2(name).split(" ").filter(Boolean).sort().join(" ");
+    const normaliseName2 = (name2) => name2.replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+    const tokenSortName = (name2) => normaliseName2(name2).split(" ").filter(Boolean).sort().join(" ");
     return uniqueValues([
       normaliseName2(raw),
       normaliseName2(splitName),
@@ -76606,15 +76606,15 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const visibleSelectedAccessRows = visibleUserAccessRows.filter(({ access }) => String(access.userId || "").trim() === selectedAccessUserId);
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
-    const name = String(pool.name || "").trim() || "Unnamed DFP Resource Rows";
-    return { key, name };
+    const name2 = String(pool.name || "").trim() || "Unnamed DFP Resource Rows";
+    return { key, name: name2 };
   });
   const activeResourcePoolDeleteOptions = settingsVisibilityEnabled ? visibleResourcePoolDeleteOptions : resourcePoolDeleteOptions;
   const visibleAircraftTypeDeleteOptions = visibleAircraftTypeRows.map(({ aircraft, index }) => {
     const key = String(aircraft.id || aircraft.code || `aircraft-type-${index}`);
     const code = String(aircraft.code || "").trim();
-    const name = String(aircraft.name || "").trim();
-    const label = [code, name && name !== code ? name : ""].filter(Boolean).join(" - ") || "Unnamed Aircraft Type";
+    const name2 = String(aircraft.name || "").trim();
+    const label = [code, name2 && name2 !== code ? name2 : ""].filter(Boolean).join(" - ") || "Unnamed Aircraft Type";
     return { key, name: label };
   });
   const activeAircraftTypeDeleteOptions = settingsVisibilityEnabled ? visibleAircraftTypeDeleteOptions : aircraftTypeDeleteOptions;
@@ -80415,7 +80415,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         ...template.autoNotify,
                         recipients: {
                           ...template.autoNotify.recipients,
-                          staffNames: template.autoNotify.recipients.staffNames.filter((name) => name !== staffName)
+                          staffNames: template.autoNotify.recipients.staffNames.filter((name2) => name2 !== staffName)
                         }
                       }
                     })),
@@ -85066,8 +85066,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   const [isDirty, setIsDirty] = reactExports.useState(false);
   const [saveStatus, setSaveStatus] = reactExports.useState("Saved");
   const isFirstRender = reactExports.useRef(true);
-  const formatLogbookPersonName = (name) => {
-    const cleanName = String(name || "").split(" – ")[0].trim();
+  const formatLogbookPersonName = (name2) => {
+    const cleanName = String(name2 || "").split(" – ")[0].trim();
     if (!cleanName) return "";
     const commaParts = cleanName.split(",").map((part) => part.trim()).filter(Boolean);
     if (commaParts.length >= 2) return `${commaParts[0]}, ${commaParts.slice(1).join(" ")}`;
@@ -85105,8 +85105,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   };
   const fixedCrewRoster = reactExports.useMemo(() => {
     const roster = /* @__PURE__ */ new Map();
-    const addByName = (name) => {
-      const normalised = normalisePostFlightName(name);
+    const addByName = (name2) => {
+      const normalised = normalisePostFlightName(name2);
       if (!normalised || normalised === "tba") return;
       const staff = instructorsData.find((person2) => normalisePostFlightName(person2.name) === normalised);
       if (staff) roster.set(normalisePostFlightName(staff.name), staff);
@@ -85114,7 +85114,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     addByName(event.fixedCrewPic || event.pilot || event.instructor);
     (Array.isArray(event.crewSelectionOrder) ? event.crewSelectionOrder : []).forEach(addByName);
     (Array.isArray(event.attendees) ? event.attendees : []).forEach(addByName);
-    String(event.crew || "").split(/[,;/]/).map((name) => name.trim()).filter(Boolean).forEach(addByName);
+    String(event.crew || "").split(/[,;/]/).map((name2) => name2.trim()).filter(Boolean).forEach(addByName);
     const crewDetails = getFixedCrewGroupDetails(event.fixedCrewGroup || event.group || event.crew, event.fixedCrewUnit || event.unit);
     if (crewDetails.crew) {
       instructorsData.filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewDetails.crew && (!crewDetails.unit || String(staff.unit || "").trim().toUpperCase() === crewDetails.unit)).forEach((staff) => roster.set(normalisePostFlightName(staff.name), staff));
@@ -85139,8 +85139,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   }), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings]);
   const pilotLogbookOptions = reactExports.useMemo(() => {
     const options = [];
-    const addPilotOption = (name) => {
-      const cleanName = String(name || "").split(" – ")[0].trim();
+    const addPilotOption = (name2) => {
+      const cleanName = String(name2 || "").split(" – ")[0].trim();
       const key = normalisePostFlightName(cleanName);
       if (!key || key === "tba" || options.some((option) => option.key === key)) return;
       options.push({ key, label: formatLogbookPersonName(cleanName) });
@@ -86861,7 +86861,7 @@ const isProgressEvent = (item) => {
   return (item.type === "Flight" || item.type === "FTD") && !item.isRemedial && !item.id.includes(" MB") && !item.code.includes(" MB");
 };
 const getEventCode = (item) => (item.code || item.id || "").trim();
-const normaliseName = (name) => name.replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").trim();
+const normaliseName = (name2) => name2.replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").trim();
 const getAssessmentDate = (assessment) => {
   if (!assessment.date) return null;
   const date = /* @__PURE__ */ new Date(`${assessment.date}T00:00:00`);
@@ -87391,8 +87391,8 @@ const removeLegacyCourseAwardCriteria = (award) => {
 };
 const normaliseCourseAward = (award, index) => {
   const id = String(award.id || `award-${index}`).trim();
-  const name = String(award.name || "").trim();
-  if (!id || !name) return null;
+  const name2 = String(award.name || "").trim();
+  if (!id || !name2) return null;
   const scoreMethod = ["latest", "best", "average"].includes(String(award.scoreMethod)) ? award.scoreMethod : "latest";
   const eventTypes = Array.isArray(award.eventTypes) ? award.eventTypes.filter((key) => COURSE_SCORE_EVENT_TYPE_KEYS.includes(key)) : null;
   const criteria = Array.isArray(award.criteria) ? award.criteria.map((criterion, criterionIndex) => ({
@@ -87403,7 +87403,7 @@ const normaliseCourseAward = (award, index) => {
   })).filter((criterion) => criterion.event) : [];
   return {
     id,
-    name,
+    name: name2,
     course: String(award.course || ""),
     lmpType: String(award.lmpType || ""),
     eventTypes: eventTypes && eventTypes.length > 0 ? eventTypes : null,
@@ -87987,10 +87987,10 @@ const CourseProgressView = ({
       setAwardImportMessage("That award settings file could not be read.");
     }
   };
-  const getDisplayName = (name) => {
+  const getDisplayName = (name2) => {
     const activeCoursePattern = activeCourses.map((course) => course.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-    if (!activeCoursePattern) return name;
-    return name.replace(new RegExp(`\\s+[–-]\\s+(?:${activeCoursePattern})$`), "").trim();
+    if (!activeCoursePattern) return name2;
+    return name2.replace(new RegExp(`\\s+[–-]\\s+(?:${activeCoursePattern})$`), "").trim();
   };
   const scoreMatrixRows = reactExports.useMemo(() => {
     return scoreCourseTrainees.map((trainee) => ({
@@ -89740,7 +89740,7 @@ const TrainingRecordsExportView = ({
   };
   const filteredCourses = reactExports.useMemo(() => {
     return allCourseNames.filter(
-      (name) => name.toLowerCase().includes(courseSearch.toLowerCase())
+      (name2) => name2.toLowerCase().includes(courseSearch.toLowerCase())
     );
   }, [allCourseNames, courseSearch]);
   const filteredTrainees = reactExports.useMemo(() => {
@@ -89757,7 +89757,7 @@ const TrainingRecordsExportView = ({
     const allowedTraineeNames = new Set(
       allTrainees.filter((t) => selectedCourseSet.has(normaliseCourseFilterValue(t.course))).map((t) => t.name)
     );
-    setSelectedTrainees((previous) => previous.filter((name) => allowedTraineeNames.has(name)));
+    setSelectedTrainees((previous) => previous.filter((name2) => allowedTraineeNames.has(name2)));
   }, [allTrainees, selectedCourses]);
   const filteredStaff = reactExports.useMemo(() => {
     return allInstructors.filter(
@@ -91140,7 +91140,7 @@ const TrainingRecordsExportView = ({
                     if (e.target.checked) {
                       setSelectedForCompletion([...selectedForCompletion, traineeName]);
                     } else {
-                      setSelectedForCompletion(selectedForCompletion.filter((name) => name !== traineeName));
+                      setSelectedForCompletion(selectedForCompletion.filter((name2) => name2 !== traineeName));
                     }
                   },
                   className: "h-4 w-4 accent-green-500 bg-gray-600 border-gray-500 rounded"
@@ -92015,8 +92015,8 @@ const TOTAL_HOURS$1 = END_HOUR$1 - START_HOUR$1;
 const PERSONNEL_COLUMN_WIDTH$1 = 160;
 const TIME_HEADER_HEIGHT$1 = 40;
 const addPersonnelName = (personnel, value) => {
-  const name = String(value || "").trim();
-  if (name) personnel.add(name);
+  const name2 = String(value || "").trim();
+  if (name2) personnel.add(name2);
 };
 const getPersonnel$2 = (event) => {
   const personnel = /* @__PURE__ */ new Set();
@@ -93878,8 +93878,8 @@ async function saveCourse(course) {
   });
   return result.success ? { success: true } : { success: false, error: result.error };
 }
-async function deleteCourse(name) {
-  const result = await fetchAPI(`/courses/${encodeURIComponent(name)}`, {
+async function deleteCourse(name2) {
+  const result = await fetchAPI(`/courses/${encodeURIComponent(name2)}`, {
     method: "DELETE"
   });
   return result.success ? { success: true } : { success: false, error: result.error };
@@ -94677,26 +94677,26 @@ const DfpSidePanelTimeline = ({
     const eligibleNames = new Set(
       instructors.filter(isStaffEligibleForAssistCrew).map((instructor) => String(instructor.name || "").trim()).filter(Boolean)
     );
-    return [...diagnosticCrewPriority, ...Array.from(eligibleNames)].map((name) => String(name || "").trim()).filter((name) => {
-      if (!name || seen.has(name)) return false;
-      if (eligibleNames.size > 0 && !eligibleNames.has(name)) return false;
-      seen.add(name);
+    return [...diagnosticCrewPriority, ...Array.from(eligibleNames)].map((name2) => String(name2 || "").trim()).filter((name2) => {
+      if (!name2 || seen.has(name2)) return false;
+      if (eligibleNames.size > 0 && !eligibleNames.has(name2)) return false;
+      seen.add(name2);
       return true;
     });
   }, [diagnosticCrewPriority, instructors, isStaffEligibleForAssistCrew]);
-  const displayedCrewOptions = crewSourceMode === "priority" && diagnosticCrewPriority.length > 0 ? crewOptions : staffListNames.filter((name) => {
-    const staff = instructors.find((instructor) => instructor.name === name);
+  const displayedCrewOptions = crewSourceMode === "priority" && diagnosticCrewPriority.length > 0 ? crewOptions : staffListNames.filter((name2) => {
+    const staff = instructors.find((instructor) => instructor.name === name2);
     return staff ? isStaffEligibleForAssistCrew(staff) : true;
   });
-  const setCrewSelection = (name, checked) => {
+  const setCrewSelection = (name2, checked) => {
     if (!canSelectFormationCrew) {
-      const nextName = checked ? name : "";
+      const nextName = checked ? name2 : "";
       setSelectedCrewName(nextName);
       setSelectedCrewNames(nextName ? [nextName] : []);
       return;
     }
     setSelectedCrewNames((prev) => {
-      let next = checked ? prev.includes(name) ? prev : [...prev, name] : prev.filter((item) => item !== name);
+      let next = checked ? prev.includes(name2) ? prev : [...prev, name2] : prev.filter((item) => item !== name2);
       next = next.slice(0, assistCrewSelectionLimit);
       setSelectedCrewName(next[0] || "");
       return next;
@@ -94865,7 +94865,7 @@ const DfpSidePanelTimeline = ({
   const assistOrigin = activeAssistSection === "taskings" ? assistTaskDepPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyDepPoint.trim().toUpperCase() : assistDepPoint.trim().toUpperCase();
   const assistDestination = activeAssistSection === "taskings" ? assistTaskArrivalPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyArrivalPoint.trim().toUpperCase() : assistArrivalPoint.trim().toUpperCase();
   const assistConfigId = activeAssistSection === "taskings" ? assistTaskConfigId : activeAssistSection === "currency" ? assistCurrencyConfigId : selectedSyllabusItem?.acceptableAircraftConfigs?.[0];
-  const selectedCrewRecords = reactExports.useMemo(() => selectedCrewNames.map((name) => instructors.find((instructor) => instructor.name === name)).filter((staff) => Boolean(staff)), [instructors, selectedCrewNames]);
+  const selectedCrewRecords = reactExports.useMemo(() => selectedCrewNames.map((name2) => instructors.find((instructor) => instructor.name === name2)).filter((staff) => Boolean(staff)), [instructors, selectedCrewNames]);
   const selectedPilotCrewName = isFixedCrewNeoAssist ? selectedFixedCrewPic : selectedCrewRecords.find(isStaffPilotCrewPosition)?.name || selectedCrewName || "";
   const selectedSupportCrewName = isFixedCrewNeoAssist ? "" : selectedCrewRecords.find((staff) => staff.name !== selectedPilotCrewName)?.name || "";
   const getAssistTileDisplayColor = (color) => {
@@ -95035,16 +95035,16 @@ const DfpSidePanelTimeline = ({
       time.style.fontSize = `${Math.max(7, fontSize - 2)}px`;
       time.style.color = "rgba(255,255,255,0.72)";
       time.style.whiteSpace = "nowrap";
-      const name = document.createElement("span");
-      name.textContent = previewCrewName;
-      name.style.overflow = "hidden";
-      name.style.textOverflow = "ellipsis";
-      name.style.whiteSpace = "nowrap";
+      const name2 = document.createElement("span");
+      name2.textContent = previewCrewName;
+      name2.style.overflow = "hidden";
+      name2.style.textOverflow = "ellipsis";
+      name2.style.whiteSpace = "nowrap";
       const eventLabel = document.createElement("span");
       eventLabel.textContent = `[${assistDuration.toFixed(1)}] ${assistEventLabel}`;
       eventLabel.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
       eventLabel.style.whiteSpace = "nowrap";
-      top.append(time, name, eventLabel);
+      top.append(time, name2, eventLabel);
       const bottom = document.createElement("div");
       bottom.style.position = "absolute";
       bottom.style.left = "6px";
@@ -95314,11 +95314,11 @@ const DfpSidePanelTimeline = ({
   const previewAreaCallsign = `${selectedAssignedArea && selectedAssignedArea !== "TBA" ? `${selectedAssignedArea} ` : ""}${previewCallsign}`;
   const simulatorResourceLabel = formatResourceLabel2("FTD 1").replace(/\s+1$/, "");
   const proceduralTrainerResourceLabel = formatResourceLabel2("CPT 1").replace(/\s+1$/, "");
-  const formatCrewOptionLabel = (name) => {
-    const instructor = instructors.find((item) => item.name === name);
+  const formatCrewOptionLabel = (name2) => {
+    const instructor = instructors.find((item) => item.name === name2);
     const rank = String(instructor?.rank || "").trim();
     const roleLabel = getCrewPositionDisplayLabel(instructor?.role, crewPositionTerminology, "");
-    const personLabel = rank ? `${rank} ${name}` : name;
+    const personLabel = rank ? `${rank} ${name2}` : name2;
     return roleLabel ? `${personLabel} (${roleLabel})` : personLabel;
   };
   const hoursOverlap2 = (firstStart, firstEnd, secondStart, secondEnd) => firstStart < secondEnd && secondStart < firstEnd;
@@ -95359,22 +95359,22 @@ const DfpSidePanelTimeline = ({
   };
   const crewStatusByName = reactExports.useMemo(() => {
     const statusMap = /* @__PURE__ */ new Map();
-    displayedCrewOptions.forEach((name) => {
-      const instructor = instructors.find((item) => item.name === name);
+    displayedCrewOptions.forEach((name2) => {
+      const instructor = instructors.find((item) => item.name === name2);
       const unavailableReason = getUnavailabilityConflictReason(instructor);
       if (unavailableReason) {
-        statusMap.set(name, { status: "unavailable", reason: unavailableReason });
+        statusMap.set(name2, { status: "unavailable", reason: unavailableReason });
         return;
       }
       const conflictingEvent = activeDfpEvents.find((event) => {
         if (event.date && event.date !== date) return false;
         if (!isCrewStatusEvent(event)) return false;
-        if (!getPersonnel(event).includes(name)) return false;
+        if (!getPersonnel(event).includes(name2)) return false;
         const bookingWindow = getScheduleEventBookingWindow(event);
         return hoursOverlap2(assistBookingWindow.start, assistBookingWindow.end, bookingWindow.start, bookingWindow.end);
       });
       if (conflictingEvent) {
-        statusMap.set(name, {
+        statusMap.set(name2, {
           status: "scheduled",
           reason: `${conflictingEvent.flightNumber || conflictingEvent.resourceId || "Scheduled event"} ${formatTime2(conflictingEvent.startTime)}`
         });
@@ -95406,7 +95406,7 @@ const DfpSidePanelTimeline = ({
     const seen = /* @__PURE__ */ new Set();
     const options = [];
     assistAirfieldCatalogue.forEach((entry) => {
-      const name = String(entry.n || entry.m || "").trim();
+      const name2 = String(entry.n || entry.m || "").trim();
       const country = String(entry.y || "").trim();
       const lat = Number(entry.a);
       const lon = Number(entry.o);
@@ -95416,7 +95416,7 @@ const DfpSidePanelTimeline = ({
         seen.add(code);
         options.push({
           code,
-          label: [name, country].filter(Boolean).join(", "),
+          label: [name2, country].filter(Boolean).join(", "),
           lat,
           lon
         });
@@ -97440,7 +97440,7 @@ const DfpSidePanelTimeline = ({
             "Currency",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedCurrencyName, onChange: (event) => setSelectedCurrencyName(event.target.value), className: fieldClass2, children: [
               currencyNames.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No currency configured" }),
-              currencyNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+              currencyNames.map((name2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name2, children: name2 }, name2))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
@@ -97609,16 +97609,16 @@ const DfpSidePanelTimeline = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-44 space-y-1 overflow-y-auto pr-1", children: [
             displayedCrewOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-slate-500", children: "No crew available." }),
-            displayedCrewOptions.map((name, index) => {
-              const selectedOrder = selectedCrewNames.indexOf(name) + 1;
+            displayedCrewOptions.map((name2, index) => {
+              const selectedOrder = selectedCrewNames.indexOf(name2) + 1;
               const isSelected = selectedOrder > 0;
               const selectionFull = canSelectFormationCrew && !isSelected && selectedCrewNames.length >= assistFormationSize;
-              const crewStatus = crewStatusByName.get(name);
+              const crewStatus = crewStatusByName.get(name2);
               const crewStatusTextClass = crewStatus?.status === "unavailable" ? "text-red-300" : crewStatus?.status === "scheduled" ? "text-amber-300" : isSelected ? "text-cyan-50" : "text-slate-300";
               return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "label",
                 {
-                  title: crewStatus ? `${formatCrewOptionLabel(name)} - ${crewStatus.reason}` : formatCrewOptionLabel(name),
+                  title: crewStatus ? `${formatCrewOptionLabel(name2)} - ${crewStatus.reason}` : formatCrewOptionLabel(name2),
                   className: `grid cursor-pointer grid-cols-[22px_auto_24px_1fr] items-center gap-x-3 rounded border px-2 py-1 text-[10px] ${isSelected ? "border-cyan-300/70 bg-cyan-400/10 text-cyan-50" : "border-slate-700 bg-slate-950/45 text-slate-300"} ${selectionFull ? "opacity-55" : ""}`,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-slate-500", children: crewSourceMode === "priority" ? index + 1 : "" }),
@@ -97628,14 +97628,14 @@ const DfpSidePanelTimeline = ({
                         type: "checkbox",
                         checked: isSelected,
                         disabled: selectionFull,
-                        onChange: (event) => setCrewSelection(name, event.target.checked)
+                        onChange: (event) => setCrewSelection(name2, event.target.checked)
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-5 w-6 items-center justify-center", children: canSelectFormationCrew && isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-4 min-w-4 items-center justify-center rounded bg-emerald-500 px-1 text-[9px] font-bold leading-none text-emerald-950 shadow-[0_0_6px_rgba(16,185,129,0.35)]", children: selectedOrder }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate ${crewStatusTextClass}`, children: formatCrewOptionLabel(name) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate ${crewStatusTextClass}`, children: formatCrewOptionLabel(name2) })
                   ]
                 },
-                name
+                name2
               );
             })
           ] })
@@ -98193,8 +98193,8 @@ const isOverlapping = (f1, f2) => {
 };
 const getPersonnel = (event) => {
   const personnel = /* @__PURE__ */ new Set();
-  const addPersonnel = (name) => {
-    if (!isPlaceholderPersonnelName(name)) personnel.add(name || "");
+  const addPersonnel = (name2) => {
+    if (!isPlaceholderPersonnelName(name2)) personnel.add(name2 || "");
   };
   const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isSctEvent = isContinuationScheduleEvent(event);
@@ -98219,11 +98219,11 @@ const getPersonnel = (event) => {
 };
 const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
 const PLACEHOLDER_PERSONNEL_NAMES = /* @__PURE__ */ new Set(["tba", "to be advised", "multiple", "group"]);
-const isPlaceholderPersonnelName = (name) => {
-  const normalizedName = (name || "").replace(/\s+/g, " ").trim().toLowerCase();
+const isPlaceholderPersonnelName = (name2) => {
+  const normalizedName = (name2 || "").replace(/\s+/g, " ").trim().toLowerCase();
   return !normalizedName || PLACEHOLDER_PERSONNEL_NAMES.has(normalizedName);
 };
-const normalizePersonnelNameForMatch = (name) => (name || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
+const normalizePersonnelNameForMatch = (name2) => (name2 || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
 const personnelNamesMatch = (a, b) => {
   const left = normalizePersonnelNameForMatch(a);
   const right = normalizePersonnelNameForMatch(b);
@@ -98251,11 +98251,11 @@ const saveNeoBuildTimingReport = (report) => {
     console.warn("[NEO-BUILD-TIMING] Failed to save timing report:", error);
   }
 };
-const markNeoBuildTiming = (report, name, details) => {
+const markNeoBuildTiming = (report, name2, details) => {
   if (!report || report.startedAtMs === void 0 || report.lastMarkMs === void 0) return;
   const now = performance.now();
   report.phases.push({
-    name,
+    name: name2,
     durationMs: Math.round(now - report.lastMarkMs),
     totalElapsedMs: Math.round(now - report.startedAtMs),
     ...details ? { details } : {}
@@ -98340,6 +98340,14 @@ const makeNeoBuildStaffIdentityPayload = (staff, allStaff = []) => {
     ...identity ? { _neoBuildInstructorIdentity: identity, _neoBuildPilotIdentity: identity } : {},
     ...instructorRef ? { _neoBuildInstructorPersonnelRef: instructorRef } : {},
     ...pilotRef ? { _neoBuildPilotPersonnelRef: pilotRef } : {}
+  };
+};
+const makeNeoBuildTraineeIdentityPayload = (trainee, allTrainees = []) => {
+  const identity = makeNeoBuildPersonIdentity(trainee, "trainee", allTrainees);
+  const traineeRef = makeNeoBuildSchedulePersonnelRef(trainee, "student", "trainee");
+  return {
+    ...identity ? { _neoBuildTraineeIdentity: identity } : {},
+    ...traineeRef ? { _neoBuildTraineePersonnelRef: traineeRef } : {}
   };
 };
 const makePersonnelIdentityRef = (label, role, identity, allPeople = []) => {
@@ -99386,7 +99394,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildCrewPositionTerminology = normaliseCrewPositionTerminology(config.crewPositionTerminology || null);
   const buildAircraftCrewComposition = normaliseAircraftCrewComposition(config.aircraftCrewComposition || { crewCount: 1, seats: [{ id: "seat-1", role: "Pilot", eligibleRoles: ["Pilot"] }] });
   const getBuildAircraftCrewCompositionForEvent = (event) => getAircraftCrewCompositionForEvent(buildAircraftCrewComposition, event);
-  const markBuildTiming = (name, details) => markNeoBuildTiming(timingReport, name, details);
+  const markBuildTiming = (name2, details) => markNeoBuildTiming(timingReport, name2, details);
   const recordProgress = (progress) => {
     markBuildTiming(`progress:${progress.message}`, {
       percentage: progress.percentage
@@ -99880,7 +99888,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return totalDutyHours;
   };
-  const normalizeBuildPersonnelName = (name) => (name || "").replace(/\s+/g, " ").trim().replace(/^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i, "").toLowerCase();
+  const normalizeBuildPersonnelName = (name2) => (name2 || "").replace(/\s+/g, " ").trim().replace(/^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i, "").toLowerCase();
   const eventIncludesPerson = (event, personName) => {
     const personKey2 = normalizeBuildPersonnelName(personName);
     if (!personKey2) return false;
@@ -99923,6 +99931,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     return hasScheduledNightEvents || intendedNightStaff.has(normalizeBuildPersonnelName(personName));
   };
+  const isTraineeScheduledForDayEvents = (trainee) => getGeneratedEventsForPersonRecord(trainee, "trainee").some((event) => eventHasNeoBuildPersonIdentity(event, trainee, "trainee") && getGeneratedEventDayNightClassification(event) === "Day");
+  const isTraineeScheduledForNightEvents = (trainee) => getGeneratedEventsForPersonRecord(trainee, "trainee").some((event) => eventHasNeoBuildPersonIdentity(event, trainee, "trainee") && getGeneratedEventDayNightClassification(event) === "Night");
   const isStaffScheduledForDayEvents = (staff) => getGeneratedEventsForPersonRecord(staff, "staff").some((e) => eventHasNeoBuildPersonIdentity(e, staff, "staff") && getGeneratedEventDayNightClassification(e) === "Day");
   const isStaffScheduledForNightEvents = (staff) => getGeneratedEventsForPersonRecord(staff, "staff").some((e) => eventHasNeoBuildPersonIdentity(e, staff, "staff") && getGeneratedEventDayNightClassification(e) === "Night") || intendedNightStaff.has(normalizeBuildPersonnelName(staff.name));
   const getScheduledDayNightForStart = (startTime) => isStartWithinNightWindow(startTime) ? "Night" : "Day";
@@ -99967,6 +99977,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const proposedDayNight = getScheduledDayNightForStart(startTime);
     if (proposedDayNight === "Night" && isPersonScheduledForDayEvents(personName)) return false;
     if (proposedDayNight === "Day" && isPersonScheduledForNightEvents(personName)) return false;
+    return true;
+  };
+  const canAssignTraineeForScheduledWindow = (trainee, startTime) => {
+    const proposedDayNight = getScheduledDayNightForStart(startTime);
+    if (proposedDayNight === "Night" && isTraineeScheduledForDayEvents(trainee)) return false;
+    if (proposedDayNight === "Day" && isTraineeScheduledForNightEvents(trainee)) return false;
     return true;
   };
   const canAssignStaffForScheduledWindow = (staff, startTime) => {
@@ -100023,6 +100039,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return nameKey ? `${role}:name:${nameKey}` : "";
   };
   const getBuildPersonIdentityKey = (person, role) => getNeoBuildPersonIdentityKey(role, person, getNeoBuildPersonDisplayLabel(person))?.identityKey || "";
+  const getBuildTraineeKey = (trainee) => getBuildPersonIdentityKey(trainee, "trainee") || `trainee:name:${getBuildPersonKey(trainee.fullName)}`;
   const addGeneratedEventIndexKey = (key, event) => {
     if (!key) return;
     let bucket = generatedEventsByPerson.get(key);
@@ -100037,8 +100054,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ...getPersonnel(event),
       ...getPersonnelIdentityRefs(event).map((ref) => ref.label)
     ]);
-    names.forEach((name) => {
-      const key = getBuildPersonKey(name);
+    names.forEach((name2) => {
+      const key = getBuildPersonKey(name2);
       addGeneratedEventIndexKey(key, event);
     });
     (event.personnelRefs || []).forEach((ref) => addGeneratedEventIndexKey(getBuildRefIdentityKey(ref), event));
@@ -100055,7 +100072,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ref.idNumber || ref.id || normalizeBuildPersonnelName(ref.name)
     ].join(":");
     (event.personnelRefs || []).forEach((ref) => refsByKey.set(refKey(ref), ref));
-    [event._neoBuildInstructorPersonnelRef, event._neoBuildPilotPersonnelRef].filter(Boolean).forEach((ref) => {
+    [event._neoBuildInstructorPersonnelRef, event._neoBuildPilotPersonnelRef, event._neoBuildTraineePersonnelRef].filter(Boolean).forEach((ref) => {
       const scheduleRef = ref;
       refsByKey.set(refKey(scheduleRef), scheduleRef);
     });
@@ -100071,7 +100088,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     [
       ...Array.isArray(event?.personnelRefs) ? event.personnelRefs : [],
       event?._neoBuildInstructorPersonnelRef,
-      event?._neoBuildPilotPersonnelRef
+      event?._neoBuildPilotPersonnelRef,
+      event?._neoBuildTraineePersonnelRef
     ].filter(Boolean).forEach((ref) => {
       const scheduleRef = ref;
       refsByKey.set(refKey(scheduleRef), scheduleRef);
@@ -100448,8 +100466,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         ...neoBuildDiag,
         storageCompacted: true,
         storageCompactedReason: error instanceof Error ? error.message : String(error),
-        scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag.scheduleLists || {}).map(([name, diag]) => [
-          name,
+        scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag.scheduleLists || {}).map(([name2, diag]) => [
+          name2,
           {
             ...diag,
             sample: diag.sample?.slice?.(0, 12) || [],
@@ -100682,7 +100700,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   generatedEvents.forEach((event) => traceTaskProvenance("generatedPushes", "initial-generated-from-active-dfp", event));
   const eventCounts = /* @__PURE__ */ new Map();
   originalInstructors.forEach((i) => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
-  trainees.forEach((t) => eventCounts.set(t.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
+  trainees.forEach((t) => eventCounts.set(getBuildTraineeKey(t), { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
   buildDebugLog("Initializing event counts from Active DFP...");
   activeDfpEventsWithoutDate.forEach((event) => {
     getPersonnel(event).forEach((personName) => {
@@ -100697,6 +100715,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           counts.cpt++;
         }
       }
+    });
+    trainees.forEach((trainee) => {
+      const traineeRef = (event.personnelRefs || []).some((ref) => ref.personType === "trainee" && eventHasNeoBuildPersonIdentity(event, trainee, "trainee"));
+      if (!traineeRef) return;
+      const counts = eventCounts.get(getBuildTraineeKey(trainee));
+      if (!counts) return;
+      if (event.type === "flight" || event.type === "ftd") counts.flightFtd++;
+      else if (event.type === "ground") counts.ground++;
+      else if (event.type === "cpt") counts.cpt++;
     });
   });
   buildDebugLog("DEBUG ===== BUILD ALGORITHM: PROCESSING HIGHEST PRIORITY EVENTS =====");
@@ -101119,10 +101146,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const crewMembershipsByPerson = /* @__PURE__ */ new Map();
     crewGroups.forEach((members, crew) => {
       members.forEach((staff) => {
-        const name = String(staff.name || "").trim();
-        if (!name) return;
-        if (!crewMembershipsByPerson.has(name)) crewMembershipsByPerson.set(name, []);
-        crewMembershipsByPerson.get(name).push({
+        const name2 = String(staff.name || "").trim();
+        if (!name2) return;
+        if (!crewMembershipsByPerson.has(name2)) crewMembershipsByPerson.set(name2, []);
+        crewMembershipsByPerson.get(name2).push({
           crew,
           crewLabel: getFixedCrewCrewLabel(crew),
           unit: getFixedCrewCrewUnit(crew) || null,
@@ -101131,7 +101158,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
       });
     });
-    diag.duplicateCrewMemberships = Array.from(crewMembershipsByPerson.entries()).map(([name, memberships]) => ({ name, memberships })).filter((entry) => entry.memberships.length > 1).sort((left, right) => left.name.localeCompare(right.name));
+    diag.duplicateCrewMemberships = Array.from(crewMembershipsByPerson.entries()).map(([name2, memberships]) => ({ name: name2, memberships })).filter((entry) => entry.memberships.length > 1).sort((left, right) => left.name.localeCompare(right.name));
     const incrementFixedCrewRejection = (reason) => {
       diag.rejectionReasons[reason] = (diag.rejectionReasons[reason] || 0) + 1;
     };
@@ -101422,11 +101449,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const eventOwnerUnit = getFixedCrewEventOwnerUnit(event);
       const requestedCrewGroup = normaliseFixedCrewGroupKey(event.fixedCrewGroup);
       const priorityEventRequiresRequestedPicCrew = isCurrencyPriorityEvent(event) || isTaskingPriorityEvent(event);
-      const requestedPriorityPersonNames = priorityEventRequiresRequestedPicCrew ? [event.fixedCrewPic, event.pilot, event.instructor].map((name) => String(name || "").trim()).filter((name) => name && !isPlaceholderPersonnelName(name) && !/^CREW\b/i.test(name)) : [];
+      const requestedPriorityPersonNames = priorityEventRequiresRequestedPicCrew ? [event.fixedCrewPic, event.pilot, event.instructor].map((name2) => String(name2 || "").trim()).filter((name2) => name2 && !isPlaceholderPersonnelName(name2) && !/^CREW\b/i.test(name2)) : [];
       const allowRequestedPicOutsideCrew = priorityEventRequiresRequestedPicCrew && Boolean(String(event.fixedCrewPic || event.pilot || "").trim());
       const requiresRequestedPriorityPerson = requestedPriorityPersonNames.length > 0 && !allowRequestedPicOutsideCrew;
       const randomiseCrewSelection = Boolean(event.fixedCrewRandomCrew) && !requestedCrewGroup;
-      const candidates = Array.from(crewGroups.entries()).filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit)).filter(([crew]) => !requestedCrewGroup || normaliseFixedCrewGroupKey(crew) === requestedCrewGroup).filter(([, members]) => !requiresRequestedPriorityPerson || members.some((staff) => requestedPriorityPersonNames.some((name) => personnelNamesMatch(staff.name, name)))).sort(([leftCrew], [rightCrew]) => {
+      const candidates = Array.from(crewGroups.entries()).filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit)).filter(([crew]) => !requestedCrewGroup || normaliseFixedCrewGroupKey(crew) === requestedCrewGroup).filter(([, members]) => !requiresRequestedPriorityPerson || members.some((staff) => requestedPriorityPersonNames.some((name2) => personnelNamesMatch(staff.name, name2)))).sort(([leftCrew], [rightCrew]) => {
         if (randomiseCrewSelection) {
           const eventSeed = String(event.id || event.flightNumber || event.taskingRequestId || event.currencyDraftId || "fixed-crew-priority");
           return getFixedCrewStableRandomScore(`${buildDate}|${eventSeed}|${leftCrew}`) - getFixedCrewStableRandomScore(`${buildDate}|${eventSeed}|${rightCrew}`);
@@ -102755,7 +102782,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         ...event.attendees || [],
         ...event.crewSelectionOrder || [],
         ...getPersonnel(event)
-      ].map((name) => String(name || "").trim()).filter(Boolean)));
+      ].map((name2) => String(name2 || "").trim()).filter(Boolean)));
       const minimumManifestCount = getPooledCrewMinimumManifestCount(event);
       if (manifest.length < minimumManifestCount) {
         pooledCrewManifestGuard2.push({
@@ -103513,7 +103540,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const traineeNextEventMap = /* @__PURE__ */ new Map();
   activeTrainees.forEach((trainee) => {
     const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate, config.dbElceMap);
-    traineeNextEventMap.set(trainee.fullName, nextEvents);
+    traineeNextEventMap.set(getBuildTraineeKey(trainee), nextEvents);
   });
   const nextEventLists = { flight: [], ftd: [], cpt: [], ground: [], bnf: [] };
   const nextPlusOneLists = { flight: [], ftd: [], cpt: [], ground: [] };
@@ -103558,7 +103585,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
   };
   activeTrainees.forEach((trainee) => {
-    const { next, plusOne } = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
+    const { next, plusOne } = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { next: null, plusOne: null };
     if (next) {
       let classifiedList = "none";
       let classificationReason = "";
@@ -103646,7 +103673,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   Object.values(nextEventLists).forEach((list) => list.sort(sortTrainees));
   Object.values(nextPlusOneLists).forEach((list) => list.sort(sortTrainees));
   activeTrainees.forEach((trainee) => {
-    const nextEvents = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
+    const nextEvents = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { next: null, plusOne: null };
     const individualLmp = traineeLMPs.get(trainee.fullName) || [];
     const multiResourceItems = individualLmp.map((item, index) => ({ item, index })).filter(({ item }) => isMultiResourceFlightItem(item));
     const nextIsMultiResource = isMultiResourceFlightItem(nextEvents.next);
@@ -103691,7 +103718,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   });
   const formationGroups = /* @__PURE__ */ new Map();
   nextEventLists.flight.forEach((trainee) => {
-    const next = traineeNextEventMap.get(trainee.fullName)?.next;
+    const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
     if (!next || !isMultiResourceFlightItem(next) || isRemedialSyllabusItem(next)) {
       if (next && isMultiResourceFlightItem(next)) {
         traceFormation("groupBuildTrace", {
@@ -103732,7 +103759,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       dayNight: next.dayNight || null
     });
   });
-  const getFormationItemForTrainee = (trainee, fallback) => traineeNextEventMap.get(trainee.fullName)?.next || fallback;
+  const getFormationItemForTrainee = (trainee, fallback) => traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next || fallback;
   const getFormationGroupResourceNumber = (group) => {
     const groupItems = group.trainees.map((trainee) => getFormationItemForTrainee(trainee, group.item));
     const explicitResourceNumbers = groupItems.map(getExplicitFormationResourceNumber).filter((resourceNumber) => resourceNumber > 1);
@@ -103775,7 +103802,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       cpt: nextPlusOneLists.cpt.length,
       ground: nextPlusOneLists.ground.length
     },
-    noNextEvent: activeTrainees.filter((t) => !traineeNextEventMap.get(t.fullName)?.next).length
+    noNextEvent: activeTrainees.filter((t) => !traineeNextEventMap.get(getBuildTraineeKey(t))?.next).length
   };
   const nextBucketByCourse = (list) => countTraineesByCourse(list);
   neoBuildDiag.nextByCourse = {
@@ -103789,9 +103816,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     plusOneCpt: nextBucketByCourse(nextPlusOneLists.cpt),
     plusOneGround: nextBucketByCourse(nextPlusOneLists.ground)
   };
-  neoBuildDiag.noNextByCourse = countTraineesByCourse(activeTrainees.filter((t) => !traineeNextEventMap.get(t.fullName)?.next));
-  neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).map(([name, ev]) => {
-    const trainee = activeTrainees.find((candidate) => candidate.fullName === name);
+  neoBuildDiag.noNextByCourse = countTraineesByCourse(activeTrainees.filter((t) => !traineeNextEventMap.get(getBuildTraineeKey(t))?.next));
+  neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).map(([traineeKey2, ev]) => {
+    const trainee = activeTrainees.find((candidate) => getBuildTraineeKey(candidate) === traineeKey2);
     const nextDiag = describeBuildTrainingEventForDiag(ev.next);
     const plusOneDiag = describeBuildTrainingEventForDiag(ev.plusOne);
     return {
@@ -103826,14 +103853,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   );
   if (neoBuildLiveDiagnostics) {
     try {
-      localStorage.setItem("category_lists_diag", JSON.stringify({ activeTrainees: activeTrainees.length, next: { flight: nextEventLists.flight.length, ftd: nextEventLists.ftd.length, cpt: nextEventLists.cpt.length, ground: nextEventLists.ground.length, bnf: nextEventLists.bnf.length }, nextPlusOne: { flight: nextPlusOneLists.flight.length, ftd: nextPlusOneLists.ftd.length, cpt: nextPlusOneLists.cpt.length, ground: nextPlusOneLists.ground.length }, traineeNextEvents: Array.from(traineeNextEventMap.entries()).slice(0, 20).map(([name, ev]) => ({ name, nextType: ev.next?.type || "null", nextCode: ev.next?.code || "null" })) }));
+      localStorage.setItem("category_lists_diag", JSON.stringify({ activeTrainees: activeTrainees.length, next: { flight: nextEventLists.flight.length, ftd: nextEventLists.ftd.length, cpt: nextEventLists.cpt.length, ground: nextEventLists.ground.length, bnf: nextEventLists.bnf.length }, nextPlusOne: { flight: nextPlusOneLists.flight.length, ftd: nextPlusOneLists.ftd.length, cpt: nextPlusOneLists.cpt.length, ground: nextPlusOneLists.ground.length }, traineeNextEvents: Array.from(traineeNextEventMap.entries()).slice(0, 20).map(([name2, ev]) => ({ name: name2, nextType: ev.next?.type || "null", nextCode: ev.next?.code || "null" })) }));
     } catch (e) {
     }
   }
   const reorderSoloWithTwrDi = (list) => {
     const soloWithTwrDiIndices = [];
     list.forEach((trainee, index) => {
-      const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
+      const nextEvent = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
       if (nextEvent && nextEvent.sortieType === "Solo" && nextEvent.twrDiReqd === "YES") {
         soloWithTwrDiIndices.push(index);
       }
@@ -103946,7 +103973,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (mixingCourses.length === 0) return finishPriorityDiagnostic(rankedList, { exitReason: "no-mixing-courses" });
     const soloWithTwrDiIndices = [];
     rankedList.forEach((trainee, index) => {
-      const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
+      const nextEvent = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
       if (nextEvent && nextEvent.sortieType === "Solo" && nextEvent.twrDiReqd === "YES") {
         soloWithTwrDiIndices.push(index);
       }
@@ -104049,8 +104076,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
     }
   };
-  const bnfTraineeNames = new Set(nextEventLists.bnf.map((t) => t.fullName));
-  const filterOutBnfTrainees = (list) => nextEventLists.bnf.length >= 2 ? list.filter((t) => !bnfTraineeNames.has(t.fullName)) : list;
+  const bnfTraineeNames = new Set(nextEventLists.bnf.map(getBuildTraineeKey));
+  const filterOutBnfTrainees = (list) => nextEventLists.bnf.length >= 2 ? list.filter((t) => !bnfTraineeNames.has(getBuildTraineeKey(t))) : list;
   const isOperationalNightFlight = (event) => event.type === "flight" && !event.resourceId?.startsWith("STBY") && !event.resourceId?.startsWith("BNF-STBY") && getGeneratedEventDayNightClassification(event) === "Night";
   const hasMandatoryNightRemedialFlights = mandatoryRemedialFlights.some(isOperationalNightFlight);
   const hasScheduledNightFlights = () => generatedEvents.some(isOperationalNightFlight);
@@ -104118,7 +104145,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     nightFlyingInstructors.forEach((nfi, index) => {
       const trainee = bnfTrainees[index];
       if (trainee) {
-        nightPairings.set(trainee.fullName, nfi.name);
+        nightPairings.set(getBuildTraineeKey(trainee), nfi.name);
         markIntendedNightPerson(nfi.name);
         const instructorToUpdate = instructors.find((i) => i.name === nfi.name);
         if (instructorToUpdate) {
@@ -104290,8 +104317,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       trainee.name,
       trainee.displayName
     ].map((value) => String(value || "").trim()).filter(Boolean);
-    const exactLmpEntry = traineeNames.map((name) => [name, traineeLMPs.get(name)]).find(([, lmp2]) => Array.isArray(lmp2));
-    const fuzzyLmpEntry = exactLmpEntry ? null : Array.from(traineeLMPs.entries()).find(([name]) => traineeNames.some((candidate) => personnelNamesMatch(candidate, name)));
+    const exactLmpEntry = traineeNames.map((name2) => [name2, traineeLMPs.get(name2)]).find(([, lmp2]) => Array.isArray(lmp2));
+    const fuzzyLmpEntry = exactLmpEntry ? null : Array.from(traineeLMPs.entries()).find(([name2]) => traineeNames.some((candidate) => personnelNamesMatch(candidate, name2)));
     const matchedLmpKey = exactLmpEntry?.[0] || fuzzyLmpEntry?.[0] || null;
     const lmp = exactLmpEntry?.[1] || fuzzyLmpEntry?.[1];
     const eventRefs = [
@@ -104347,6 +104374,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       hasForwardedNotes: Object.values(item.trainingReportForwardedNotes || {}).some((entry) => String(entry?.notes || "").trim())
     }));
     return {
+      traineeIdentityKey: traineeKey,
+      traineeIdNumber: trainee?.idNumber ?? null,
       item: matchedItem,
       details: {
         ...baseDetails,
@@ -104433,10 +104462,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       passSummaries: [],
       searchWindowSamples: [],
       sample: list.slice(0, 20).map((trainee) => {
-        const nextEvents = traineeNextEventMap.get(trainee.fullName);
+        const nextEvents = traineeNextEventMap.get(getBuildTraineeKey(trainee));
         const item = !isPlusOne && syllabusOverrides?.has(trainee.fullName) ? syllabusOverrides.get(trainee.fullName) : isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
         return {
           trainee: trainee.fullName,
+          traineeIdNumber: trainee.idNumber ?? null,
+          traineeIdentityKey: getBuildTraineeKey(trainee),
           course: trainee.course || null,
           unit: trainee.unit || null,
           ...describeBuildTrainingEventForDiag(item)
@@ -104544,7 +104575,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       placedThisPass = false;
       const remainingForNextPass = [];
       for (const trainee of unplacedTrainees) {
-        const { next, plusOne } = traineeNextEventMap.get(trainee.fullName);
+        const { next, plusOne } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
         const syllabusItem = !isPlusOne && syllabusOverrides?.has(trainee.fullName) ? syllabusOverrides.get(trainee.fullName) : isPlusOne ? plusOne : next;
         if (!syllabusItem) {
           listDiag.noSyllabusItem++;
@@ -104743,7 +104774,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                   }
                   listDiag.successes++;
                   const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
-                  const tCounts = eventCounts.get(trainee.fullName);
+                  const tCounts = eventCounts.get(getBuildTraineeKey(trainee));
                   if (type === "flight" || type === "ftd") {
                     tCounts.flightFtd++;
                     if (ipCounts) ipCounts.flightFtd++;
@@ -104829,10 +104860,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       listDiag.durationMs = Math.round(performance.now() - scheduleListStartedAt);
       listDiag.passes = passNumber;
       listDiag.unplaced = unplacedTrainees.slice(0, 40).map((trainee) => {
-        const nextEvents = traineeNextEventMap.get(trainee.fullName);
+        const nextEvents = traineeNextEventMap.get(getBuildTraineeKey(trainee));
         const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
         return {
           trainee: trainee.fullName,
+          traineeIdNumber: trainee.idNumber ?? null,
+          traineeIdentityKey: getBuildTraineeKey(trainee),
           course: trainee.course || null,
           unit: trainee.unit || null,
           ...describeBuildTrainingEventForDiag(item)
@@ -104921,7 +104954,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const _isFlight = type === "flight" && !isNightPass;
     const _isNext = !isPlusOne;
     const _fbEnd = startTime + scheduledDuration;
-    const traineeCounts = eventCounts.get(trainee.fullName);
+    const traineeCounts = eventCounts.get(getBuildTraineeKey(trainee));
     const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
     let forcedInstructorConflictDetails = [];
     const isFormationTraceAttempt = !!options.formationGroupId || type === "flight" && isMultiResourceFlightItem(syllabusItem) && !isRemedialSyllabusItem(syllabusItem);
@@ -105027,7 +105060,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (syllabusItem.dayNight === "Day" && getScheduledDayNightForStart(startTime) !== "Day") {
       return traceScheduleReject("DAY_NIGHT_MISMATCH", { required: "Day", proposed: getScheduledDayNightForStart(startTime) });
     }
-    if (!canAssignPersonForScheduledWindow(trainee.fullName, startTime)) {
+    if (!canAssignTraineeForScheduledWindow(trainee, startTime)) {
       buildDebugLog(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "DAY_NIGHT_SEPARATION");
       return traceScheduleReject("TRAINEE_DAY_NIGHT_SEPARATION", { proposed: getScheduledDayNightForStart(startTime) });
@@ -105069,9 +105102,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
       return traceScheduleReject("TRAINEE_STATICALLY_UNAVAILABLE", { proposedBookingWindow });
     }
-    const traineeOverlapEvents = getGeneratedEventsForPerson(trainee.fullName).filter((e) => {
+    const traineeOverlapEvents = getGeneratedEventsForPersonRecord(trainee, "trainee").filter((e) => {
       if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
-      const hasTraineeConflict = options.traineeOverlapRole === "trainee" ? eventHasPersonWithRole(e, trainee.fullName, "trainee") : eventHasPerson(e, trainee.fullName);
+      const hasTraineeConflict = eventHasNeoBuildPersonIdentity(e, trainee, "trainee");
       if (!hasTraineeConflict) return false;
       const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
       return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
@@ -105102,9 +105135,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         flightNumber: syllabusItem.code,
         type
       };
-      const traineeTurnaroundConflict = getGeneratedEventsForPerson(trainee.fullName).find((existing) => {
+      const traineeTurnaroundConflict = getGeneratedEventsForPersonRecord(trainee, "trainee").find((existing) => {
         if (isStbyResource(existing.resourceId)) return false;
-        const hasTraineeTurnaroundConflict = options.traineeOverlapRole === "trainee" ? eventHasPersonWithRole(existing, trainee.fullName, "trainee") : eventHasPerson(existing, trainee.fullName);
+        const hasTraineeTurnaroundConflict = eventHasNeoBuildPersonIdentity(existing, trainee, "trainee");
         if (!hasTraineeTurnaroundConflict) return false;
         if (existing.type !== "flight" && existing.type !== "ftd" && existing.type !== "cpt") return false;
         if (startTime >= existing.startTime) {
@@ -105239,7 +105272,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
       const isBnfEvent2 = isNightPass && syllabusItemForCheck.code.startsWith("BNF") && !isRemedialSyllabusItem(syllabusItemForCheck);
       if (isBnfEvent2) {
-        const pairedInstructorName = nightPairings.get(traineeForCheck.fullName);
+        const pairedInstructorName = nightPairings.get(getBuildTraineeKey(traineeForCheck));
         if (!pairedInstructorName) return null;
         const instructor2 = instructors.find((i) => i.name === pairedInstructorName);
         if (!instructor2) return null;
@@ -105307,9 +105340,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
         if (hasOverlap) return null;
         if (isNightPass && isPlusOneCheck) {
-          const { next } = traineeNextEventMap.get(traineeForCheck.fullName);
-          const firstNightEvent = getGeneratedEventsForPerson(traineeForCheck.fullName).find(
-            (e) => e.flightNumber === next?.id && getPersonnel(e).includes(traineeForCheck.fullName) && eventHasNeoBuildPersonIdentity(e, instructor2, "staff")
+          const { next } = traineeNextEventMap.get(getBuildTraineeKey(traineeForCheck));
+          const firstNightEvent = getGeneratedEventsForPersonRecord(traineeForCheck, "trainee").find(
+            (e) => e.flightNumber === next?.id && eventHasNeoBuildPersonIdentity(e, traineeForCheck, "trainee") && eventHasNeoBuildPersonIdentity(e, instructor2, "staff")
           );
           if (firstNightEvent) {
             const firstSyllabus = syllabusDetails.find((s) => s.id === firstNightEvent.flightNumber || s.code === firstNightEvent.flightNumber);
@@ -105325,7 +105358,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       let candidates = [];
       const _dRej = { staticUnavailable: 0, softDutyLimit: 0, groundLimit: 0, eventLimit: 0, timeOverlap: 0, crewDutyPeriod: 0 };
-      const requiredRemedialInstructor = remedialInstructorOverride || (isRemedialSyllabusItem(syllabusItemForCheck) ? (syllabusItemForCheck.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim() : "");
+      const requiredRemedialInstructor = remedialInstructorOverride || (isRemedialSyllabusItem(syllabusItemForCheck) ? (syllabusItemForCheck.resourcesHuman || []).find((name2) => typeof name2 === "string" && name2.trim().length > 0)?.trim() : "");
       const remedialInstructorRequirement = remedialInstructorOverride ? { raw: remedialInstructorOverride, mode: "name", qualificationId: "", qualificationLabel: "" } : classifyRemedialInstructorRequirement(requiredRemedialInstructor);
       const requiredRemedialInstructorMode = remedialInstructorRequirement.mode;
       const requiredRemedialQualification = remedialInstructorRequirement.mode === "qualification" ? remedialInstructorRequirement.qualificationLabel || remedialInstructorRequirement.qualificationId || remedialInstructorRequirement.raw : "";
@@ -105786,10 +105819,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         return traceScheduleReject("NO_INSTRUCTOR_SELECTED", {
           remedialInstructorOverride,
-          requiredRemedialInstructor: isRemedialSyllabusItem(syllabusItem) ? (syllabusItem.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim() || "" : "",
-          requiredRemedialInstructorMode: isRemedialSyllabusItem(syllabusItem) ? classifyRemedialInstructorRequirement((syllabusItem.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim()).mode : "none",
+          requiredRemedialInstructor: isRemedialSyllabusItem(syllabusItem) ? (syllabusItem.resourcesHuman || []).find((name2) => typeof name2 === "string" && name2.trim().length > 0)?.trim() || "" : "",
+          requiredRemedialInstructorMode: isRemedialSyllabusItem(syllabusItem) ? classifyRemedialInstructorRequirement((syllabusItem.resourcesHuman || []).find((name2) => typeof name2 === "string" && name2.trim().length > 0)?.trim()).mode : "none",
           requiredRemedialQualification: isRemedialSyllabusItem(syllabusItem) ? (() => {
-            const requirement = classifyRemedialInstructorRequirement((syllabusItem.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim());
+            const requirement = classifyRemedialInstructorRequirement((syllabusItem.resourcesHuman || []).find((name2) => typeof name2 === "string" && name2.trim().length > 0)?.trim());
             return requirement.mode === "qualification" ? requirement.qualificationLabel || requirement.qualificationId || requirement.raw : "";
           })() : ""
         });
@@ -105816,10 +105849,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const requiredAircraftConfigSummary = type === "flight" ? getAircraftConfigRequirementSummary(syllabusItem) : "ANY";
     const getPreferredNightAircraftResource = () => {
       if (!isNightPass || !isPlusOne || type !== "flight") return null;
-      const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
+      const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { next: null };
       const nextEventCodes = new Set([next?.id, next?.code].filter(Boolean));
       const firstNightEvent = generatedEvents.find(
-        (e) => nextEventCodes.has(e.flightNumber) && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY") && getPersonnel(e).includes(trainee.fullName) && (!instructor || eventHasNeoBuildPersonIdentity(e, instructor, "staff"))
+        (e) => nextEventCodes.has(e.flightNumber) && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY") && eventHasNeoBuildPersonIdentity(e, trainee, "trainee") && (!instructor || eventHasNeoBuildPersonIdentity(e, instructor, "staff"))
       );
       return firstNightEvent?.resourceId || null;
     };
@@ -106023,7 +106056,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       preFlightNotes: schedulePreFlightNotes,
       trainingReportForwardedNotes: scheduleForwardedNotes,
       trainingReportNextEventExtensions: scheduleExtensionLedger,
-      ...makeNeoBuildStaffIdentityPayload(isSoloFlight ? null : instructor, instructors)
+      ...makeNeoBuildStaffIdentityPayload(isSoloFlight ? null : instructor, instructors),
+      ...makeNeoBuildTraineeIdentityPayload(trainee, trainees)
     };
     traceIndividualLmpDuration("schedule-event-placed", {
       trainee: trainee.fullName,
@@ -106412,9 +106446,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return airCombatCrewRoleGroupStaffCache.get(cacheKey) || [];
   };
   const airCombatRandomTieBreaks = /* @__PURE__ */ new Map();
-  const getAirCombatTieBreak = (name) => {
-    if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, getBuildDeterministicScore("air-combat-tie-break", name));
-    return airCombatRandomTieBreaks.get(name);
+  const getAirCombatTieBreak = (name2) => {
+    if (!airCombatRandomTieBreaks.has(name2)) airCombatRandomTieBreaks.set(name2, getBuildDeterministicScore("air-combat-tie-break", name2));
+    return airCombatRandomTieBreaks.get(name2);
   };
   const publishedHistoryEvents = Object.values(publishedSchedules || {}).flat();
   const airCombatPublishedHistoryByStaff = /* @__PURE__ */ new Map();
@@ -106671,8 +106705,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const decision = getDecision(entry.startTime);
         if (!decision) return;
         const members = Array.isArray(entry.members) ? entry.members.map((member) => `${member.staff}${member.crew ? ` + ${member.crew}` : ""}`) : [entry.staff || entry.pilot].filter(Boolean);
-        const primaryStaffNames = members.map((name) => String(name).split(" + ")[0]);
-        primaryStaffNames.forEach((name) => scheduledPrimaryStaff.add(name));
+        const primaryStaffNames = members.map((name2) => String(name2).split(" + ")[0]);
+        primaryStaffNames.forEach((name2) => scheduledPrimaryStaff.add(name2));
         const eventCode2 = entry.event || entry.flightNumber || "event";
         const scheduledText = `${members.join(", ") || "Selected staff"} - ${eventCode2}`;
         decision.scheduledEntries.push(scheduledText);
@@ -106681,7 +106715,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         decision.eventAttempted = decision.eventAttempted || eventCode2;
         decision.staffSelected = Array.from(/* @__PURE__ */ new Set([...decision.staffSelected || [], ...members]));
         decision._scheduledPrimaryStaff = Array.from(/* @__PURE__ */ new Set([...decision._scheduledPrimaryStaff || [], ...primaryStaffNames]));
-        decision.staffPriorityRank = priorityRows.find((row) => members.some((name) => name.startsWith(row.staffName)))?.priorityRank || null;
+        decision.staffPriorityRank = priorityRows.find((row) => members.some((name2) => name2.startsWith(row.staffName)))?.priorityRank || null;
         const scheduledReason = `${scheduledText} was scheduled because the selected staff were valid priority candidates and aircraft, crew, formation, duty, personnel, and spacing checks passed.`;
         decision.reason = decision.scheduledEntries.length === 1 ? scheduledReason : `${decision.scheduledEntries.length} events were scheduled at this time: ${decision.scheduledEntries.join("; ")}. Each listed event passed aircraft, crew, formation, duty, personnel, and spacing checks.`;
         decision.aircraftAvailabilityResult = "Passed";
@@ -106732,7 +106766,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const sequentialScheduledStaff = /* @__PURE__ */ new Set();
         const sequentialTop3 = () => priorityRows.filter((row) => !sequentialScheduledStaff.has(row.staffName)).slice(0, 3).map(priorityLabel);
         const scheduleDecisionTable = Array.from(decisionsByTime.values()).sort((left, right) => left.timeValue - right.timeValue).map(({ timeValue, _scheduledPrimaryStaff, ...row }) => {
-          (_scheduledPrimaryStaff || []).forEach((name) => sequentialScheduledStaff.add(name));
+          (_scheduledPrimaryStaff || []).forEach((name2) => sequentialScheduledStaff.add(name2));
           const { scheduledEntries, ...publicRow } = row;
           const failureSummary = (row.failureSummary || []).sort((left, right) => right.count - left.count).slice(0, 8);
           const reason = row.scheduled === "No one scheduled" && failureSummary.length ? failureSummary[0].reason : row.reason;
@@ -107896,8 +107930,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (token.startsWith("Y") && token.length === 4) aliases.add(token.slice(1));
       if (token.length === 3) aliases.add(`Y${token}`);
       try {
-        Object.entries(config.locationAbbreviations || {}).forEach(([name, abbreviation]) => {
-          const nameToken = normaliseFormationContextToken(name);
+        Object.entries(config.locationAbbreviations || {}).forEach(([name2, abbreviation]) => {
+          const nameToken = normaliseFormationContextToken(name2);
           const abbreviationToken = normaliseFormationContextToken(abbreviation);
           if (token === nameToken || token === abbreviationToken || token === `Y${abbreviationToken}`) {
             aliases.add(nameToken);
@@ -109633,7 +109667,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
   recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
   const _isSoloTrainee = (trainee) => {
-    const next = traineeNextEventMap.get(trainee.fullName)?.next;
+    const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
     return !!(next && (next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id)));
   };
   const getMandatoryRemedialFlightForTrainee = (trainee) => {
@@ -109941,7 +109975,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         stagedEvents.forEach((event, index) => {
           event.callsign = `${callsignBase}${index + 1}`;
           const trainee = selectedTrainees[index];
-          const traineeCounts = eventCounts.get(trainee.fullName);
+          const traineeCounts = eventCounts.get(getBuildTraineeKey(trainee));
           traineeCounts.flightFtd++;
           if (event.instructor) {
             const instructorCounts = eventCounts.get(event.instructor);
@@ -110008,17 +110042,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   activeTrainees.forEach((trainee) => {
     const item = getMandatoryRemedialSyllabusItem(trainee);
     if (item && item.type === "Flight") {
-      mandatoryRemedialFlightItems.set(trainee.fullName, item);
+      mandatoryRemedialFlightItems.set(getBuildTraineeKey(trainee), item);
     }
   });
   const _isMandatoryRemedialFlightTrainee = (trainee) => {
-    return mandatoryRemedialFlightItems.has(trainee.fullName);
+    return mandatoryRemedialFlightItems.has(getBuildTraineeKey(trainee));
   };
   const _isNightMandatoryRemedialFlightTrainee = (trainee) => {
-    return mandatoryRemedialFlightItems.get(trainee.fullName)?.dayNight === "Night";
+    return mandatoryRemedialFlightItems.get(getBuildTraineeKey(trainee))?.dayNight === "Night";
   };
   const _isDayMandatoryRemedialFlightTrainee = (trainee) => {
-    const item = mandatoryRemedialFlightItems.get(trainee.fullName);
+    const item = mandatoryRemedialFlightItems.get(getBuildTraineeKey(trainee));
     return !!item && item.dayNight !== "Night";
   };
   const _mandatoryDayFlightList = applyCoursePriority(activeTrainees.filter(_isDayMandatoryRemedialFlightTrainee), "mandatory-day-flight");
@@ -110028,20 +110062,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const _formationFlightGroups = Array.from(formationGroups.values()).map((group) => ({
     item: group.item,
     trainees: _allFlightList.filter(
-      (trainee) => getFormationEventKey(traineeNextEventMap.get(trainee.fullName)?.next) === getFormationEventKey(group.item)
+      (trainee) => getFormationEventKey(traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next) === getFormationEventKey(group.item)
     )
   })).filter((group) => group.trainees.length > 0);
   const _normalFlightList = _allFlightList.filter((trainee) => {
-    const next = traineeNextEventMap.get(trainee.fullName)?.next;
+    const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
     return !next || !isMultiResourceFlightItem(next) || isRemedialSyllabusItem(next);
   });
   traceFormation("groupBuildTrace", {
     phase: "formation-flight-list-built",
     allFlightList: _allFlightList.map((trainee) => ({
       trainee: trainee.fullName,
-      next: traineeNextEventMap.get(trainee.fullName)?.next?.code || null,
-      nextResourceNumber: getLmpResourceNumber(traineeNextEventMap.get(trainee.fullName)?.next),
-      isFormationNext: isMultiResourceFlightItem(traineeNextEventMap.get(trainee.fullName)?.next)
+      next: traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next?.code || null,
+      nextResourceNumber: getLmpResourceNumber(traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next),
+      isFormationNext: isMultiResourceFlightItem(traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next)
     })),
     formationGroups: _formationFlightGroups.map((group) => ({
       event: group.item.code || group.item.id || null,
@@ -110056,7 +110090,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     })),
     normalFlightList: _normalFlightList.map((trainee) => ({
       trainee: trainee.fullName,
-      next: traineeNextEventMap.get(trainee.fullName)?.next?.code || null
+      next: traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next?.code || null
     }))
   });
   const _dualFlightList = _normalFlightList.filter((t) => !_isSoloTrainee(t));
@@ -110110,7 +110144,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     prioritizedFlightList.forEach((trainee) => {
       if (_isSoloTrainee(trainee)) return;
-      const next = traineeNextEventMap.get(trainee.fullName)?.next;
+      const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
       if (next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
         const eventKey = getFormationEventKey(next);
         if (_placedFormationKeys.has(eventKey)) return;
@@ -110187,8 +110221,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   neoBuildDiag.mandatoryRemedialFlights.matchAudit = mandatoryRemedialFlights.map((event) => {
     const eventTrainee = event.student || event.pilot || "";
     const trainee = activeTrainees.find((t) => t.fullName === eventTrainee) || null;
-    const next = trainee ? traineeNextEventMap.get(trainee.fullName)?.next : null;
-    const mandatoryItem = trainee ? mandatoryRemedialFlightItems.get(trainee.fullName) || null : null;
+    const next = trainee ? traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next : null;
+    const mandatoryItem = trainee ? mandatoryRemedialFlightItems.get(getBuildTraineeKey(trainee)) || null : null;
     const priorityEventCodes = [
       normalizeLmpEventId(event.flightNumber),
       normalizeLmpEventId(getRemedialBaseEventCode({ code: event.flightNumber }))
@@ -110409,7 +110443,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const TIME_INCREMENT = getDispatchSearchStepHours("flight");
         let lastPlacedTime = groupSearchStart;
         for (const trainee of group) {
-          const { next } = traineeNextEventMap.get(trainee.fullName);
+          const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
           const syllabusItem = next;
           if (!syllabusItem) continue;
           const scheduledDuration = getScheduledEventDuration(syllabusItem, "flight", trainee);
@@ -110422,7 +110456,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               const result = scheduleEvent(trainee, syllabusItem, time, "flight", false, false, primaryOnly);
               if (result && typeof result === "object" && "id" in result) {
                 pushGeneratedEvent({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
-                const tCounts = eventCounts.get(trainee.fullName);
+                const tCounts = eventCounts.get(getBuildTraineeKey(trainee));
                 tCounts.flightFtd++;
                 lastPlacedTime = Math.max(lastPlacedTime, time);
                 placed = true;
@@ -110439,8 +110473,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       scheduleList(
         _soloFlightList.filter((t) => !generatedEvents.some((e) => {
-          const personnel = getPersonnel(e);
-          return personnel.includes(t.fullName) && e.type === "flight" && !e.resourceId.startsWith("STBY");
+          return eventHasNeoBuildPersonIdentity(e, t, "trainee") && e.type === "flight" && !e.resourceId.startsWith("STBY");
         })),
         "flight",
         false,
@@ -110515,7 +110548,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (nextEventLists.bnf.length >= 2) {
       recordProgress({ message: "Scheduling Night Flight Events (Plus-One)...", percentage: 80 });
       const bnfWaveTwoList = nextEventLists.bnf.filter((trainee) => {
-        const { plusOne } = traineeNextEventMap.get(trainee.fullName) || { plusOne: null };
+        const { plusOne } = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { plusOne: null };
         return plusOne && plusOne.code.startsWith("BNF") && plusOne.type === "Flight";
       });
       scheduleList(bnfWaveTwoList, "flight", true, commenceNightFlying, ceaseNightFlying, null, true);
@@ -110684,11 +110717,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         stbyEvent.instructor = "TBA";
       }
     }
-    const hasTraineeFlightOrFtdCommitment = (traineeName) => generatedEvents.some(
-      (e) => (e.type === "flight" || e.type === "ftd") && (e.student === traineeName || e.pilot === traineeName)
+    const hasTraineeFlightOrFtdCommitment = (trainee) => generatedEvents.some(
+      (e) => (e.type === "flight" || e.type === "ftd") && eventHasNeoBuildPersonIdentity(e, trainee, "trainee")
     );
     const traineesNeedingStby = nextEventLists.flight.filter((trainee) => {
-      const { next } = traineeNextEventMap.get(trainee.fullName);
+      const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
       if (!next) return false;
       if (isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
         traceFormation("standbyExclusions", {
@@ -110700,16 +110733,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
         return false;
       }
-      return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+      return !hasTraineeFlightOrFtdCommitment(trainee);
     });
     if (traineesNeedingStby.length > 0) {
       const timeIncrement = getDispatchSearchStepHours("flight");
       for (const trainee of traineesNeedingStby) {
-        const { next } = traineeNextEventMap.get(trainee.fullName);
+        const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
         if (!next) continue;
         const stbySearchStart = isRemedialSyllabusItem(next) ? Math.max(flyingStartTime, REMEDIAL_EARLIEST_START) : flyingStartTime;
         for (let time = stbySearchStart; time < flyingEndTime; time += timeIncrement) {
-          if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
+          if (!canAssignTraineeForScheduledWindow(trainee, time)) continue;
           if (hasFlightStartTime(time, generatedEvents)) continue;
           const flightEndTime = time + next.duration;
           if (flightEndTime > flyingEndTime) continue;
@@ -110738,7 +110771,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             _source: "stby-flight-recovery",
             _isNext: true,
             _traineeName: trainee.fullName,
-            ...makeNeoBuildStaffIdentityPayload(stbyInstructor, instructors)
+            ...makeNeoBuildStaffIdentityPayload(stbyInstructor, instructors),
+            ...makeNeoBuildTraineeIdentityPayload(trainee, trainees)
           });
           break;
         }
@@ -110746,16 +110780,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     recordProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
     const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee) => {
-      const { next } = traineeNextEventMap.get(trainee.fullName);
+      const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
       if (!next || next.type !== "FTD") return false;
-      return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+      return !hasTraineeFlightOrFtdCommitment(trainee);
     });
     buildDebugLog("Trainees needing FTD recovery pass:", traineesNeedingStbyFtd.length);
     if (traineesNeedingStbyFtd.length > 0) {
       const ftdRecoveryIncrement = getDispatchSearchStepHours("ftd");
       let recoveredToFtd = 0;
       for (const trainee of traineesNeedingStbyFtd) {
-        const { next } = traineeNextEventMap.get(trainee.fullName);
+        const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
         if (!next) continue;
         let placedOnFtd = false;
         const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) ? [true, false] : [false];
@@ -110763,11 +110797,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (placedOnFtd) break;
           const recoveryStart = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
           for (let time = recoveryStart; time <= ftdEndTime - next.duration + 1e-3; time += ftdRecoveryIncrement) {
-            if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
+            if (!canAssignTraineeForScheduledWindow(trainee, time)) continue;
             const result = scheduleEvent(trainee, next, time, "ftd", false, false, primaryOnly);
             if (result && result.resourceId?.startsWith("FTD ")) {
               pushGeneratedEvent({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
-              const tCounts = eventCounts.get(trainee.fullName);
+              const tCounts = eventCounts.get(getBuildTraineeKey(trainee));
               const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
               if (tCounts) tCounts.flightFtd++;
               if (ipCounts) ipCounts.flightFtd++;
@@ -110795,18 +110829,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     let recoveredToRealFtdBeforeStby = 0;
     const traineesNeedingFinalFtdRecovery = traineesNeedingStbyFtd.filter((trainee) => {
-      const { next } = traineeNextEventMap.get(trainee.fullName);
+      const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
       if (!next || next.type !== "FTD") return false;
-      return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+      return !hasTraineeFlightOrFtdCommitment(trainee);
     });
     for (const trainee of traineesNeedingFinalFtdRecovery) {
-      const { next } = traineeNextEventMap.get(trainee.fullName);
+      const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
       if (!next) continue;
       const recoveryIncrement = getDispatchSearchStepHours("ftd");
       let placedOnRealFtd = false;
       const recoveryStart = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
       for (let time = recoveryStart; time <= ftdEndTime - next.duration + 1e-3; time += recoveryIncrement) {
-        if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
+        if (!canAssignTraineeForScheduledWindow(trainee, time)) continue;
         const bookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.code, duration: next.duration }, syllabusDetails);
         if (isPersonStaticallyUnavailable(trainee, bookingWindow.start, bookingWindow.end, buildDate, "ftd")) continue;
         const resourceId = findAvailableFtdResourceForStbyCandidate(time, next.duration);
@@ -110830,9 +110864,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           destination: school,
           preStart: next.preFlightTime,
           postEnd: next.postFlightTime,
-          ...makeNeoBuildStaffIdentityPayload(instructor, instructors)
+          ...makeNeoBuildStaffIdentityPayload(instructor, instructors),
+          ...makeNeoBuildTraineeIdentityPayload(trainee, trainees)
         });
-        const tCounts = eventCounts.get(trainee.fullName);
+        const tCounts = eventCounts.get(getBuildTraineeKey(trainee));
         const ipCounts = eventCounts.get(instructor.name);
         if (tCounts) tCounts.flightFtd++;
         if (ipCounts) ipCounts.flightFtd++;
@@ -110849,9 +110884,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       buildDebugLog(`FTD final recovery complete: ${recoveredToRealFtdBeforeStby} additional events recovered onto real FTD resources`);
     }
     const traineesStillNeedingStbyFtd = traineesNeedingStbyFtd.filter((trainee) => {
-      const { next } = traineeNextEventMap.get(trainee.fullName);
+      const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
       if (!next || next.type !== "FTD") return false;
-      return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+      return !hasTraineeFlightOrFtdCommitment(trainee);
     });
     buildDebugLog("Trainees still needing STBY FTD events:", traineesStillNeedingStbyFtd.length);
     if (traineesStillNeedingStbyFtd.length > 0) {
@@ -110860,7 +110895,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const minSpacing = ftdTurnaround;
       buildDebugLog(`FTD STBY: Scheduling ${traineesStillNeedingStbyFtd.length} events with ${minSpacing.toFixed(2)}hr spacing`);
       for (const trainee of traineesStillNeedingStbyFtd) {
-        const { next } = traineeNextEventMap.get(trainee.fullName);
+        const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee));
         if (!next) continue;
         if (isRemedialSyllabusItem(next) && currentTime < REMEDIAL_EARLIEST_START) {
           currentTime = REMEDIAL_EARLIEST_START;
@@ -110868,7 +110903,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         let placed = false;
         while (!placed && currentStbyLine <= 20) {
           if (currentTime + next.duration <= ftdEndTime) {
-            if (!canAssignPersonForScheduledWindow(trainee.fullName, currentTime)) {
+            if (!canAssignTraineeForScheduledWindow(trainee, currentTime)) {
               currentTime += minSpacing;
               continue;
             }
@@ -110900,7 +110935,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                 _source: "stby-ftd-recovery",
                 _isNext: true,
                 _traineeName: trainee.fullName,
-                ...makeNeoBuildStaffIdentityPayload(instructor, instructors)
+                ...makeNeoBuildStaffIdentityPayload(instructor, instructors),
+                ...makeNeoBuildTraineeIdentityPayload(trainee, trainees)
               });
               buildDebugLog(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructorName}`);
               currentTime += next.duration + minSpacing;
@@ -111567,7 +111603,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ...event.attendees || [],
       ...event.crewSelectionOrder || [],
       ...getPersonnel(event)
-    ].map((name) => String(name || "").trim()).filter(Boolean)));
+    ].map((name2) => String(name2 || "").trim()).filter(Boolean)));
     const minimumManifestCount = getPooledCrewFinalManifestMinimum(event);
     if (manifest.length < minimumManifestCount) {
       pooledCrewManifestGuard.push({
@@ -112131,19 +112167,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const annotateScheduleListUnplacedRecovery = () => {
     const allUnplacedRows = [];
     const findFinalRecoveredEvent = (row) => {
+      const rowTraineeIdentityKey = String(row?.traineeIdentityKey || "").trim();
       const rowTrainee = normalizeBuildPersonnelName(row?.trainee || "");
       const rowEvent = String(row?.event || "").trim();
-      if (!rowTrainee || !rowEvent) return null;
+      if (!rowTraineeIdentityKey && !rowTrainee || !rowEvent) return null;
       return sortedEvents.find((event) => {
         const finalEventCode = String(event.flightNumber || "").trim();
         if (finalEventCode !== rowEvent) return false;
+        if (rowTraineeIdentityKey) {
+          const traineeRefs = getNeoBuildDiagnosticPersonnelRefs(event).filter((ref) => ref.personType === "trainee");
+          return traineeRefs.some((ref) => getBuildRefIdentityKey(ref) === rowTraineeIdentityKey);
+        }
         const finalNames = [
           event._traineeName,
           event.student,
           event.pilot,
           ...Array.isArray(event.crew) ? event.crew : [],
           ...Array.isArray(event.attendees) ? event.attendees : []
-        ].map((name) => normalizeBuildPersonnelName(name || "")).filter(Boolean);
+        ].map((name2) => normalizeBuildPersonnelName(name2 || "")).filter(Boolean);
         return finalNames.includes(rowTrainee);
       }) || null;
     };
@@ -112284,8 +112325,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   if (sortedEvents.length === 0) {
     const scheduleListSummary = Object.fromEntries(
-      Object.entries(neoBuildDiag.scheduleLists || {}).map(([name, diag]) => [
-        name,
+      Object.entries(neoBuildDiag.scheduleLists || {}).map(([name2, diag]) => [
+        name2,
         {
           input: diag.input ?? null,
           attempts: diag.attempts ?? null,
@@ -112348,8 +112389,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     final: neoBuildDiag.final
   });
   if (neoBuildVerboseDiagnostics) {
-    console.table(Object.entries(neoBuildDiag.scheduleLists).map(([name, diag]) => ({
-      list: name,
+    console.table(Object.entries(neoBuildDiag.scheduleLists).map(([name2, diag]) => ({
+      list: name2,
       input: diag.input,
       attempts: diag.attempts,
       successes: diag.successes,
@@ -113779,7 +113820,7 @@ const App = () => {
   ].filter(Boolean);
   const matchedCurrentStaffUser = instructorsData.find((inst) => {
     const staffIdentityKeys = [inst.id, inst.idNumber].map((value) => String(value || "").trim()).filter(Boolean);
-    return staffIdentityKeys.some((key) => signedInIdentityKeys.includes(key)) || signedInNameKeys.some((name) => personnelNamesMatch(inst.name, name));
+    return staffIdentityKeys.some((key) => signedInIdentityKeys.includes(key)) || signedInNameKeys.some((name2) => personnelNamesMatch(inst.name, name2));
   });
   const currentUser2 = matchedCurrentStaffUser || instructorsData[0];
   const signedInDisplayName = authUser ? formatAuthLoginName(authUser) : currentUserName;
@@ -114239,14 +114280,14 @@ const App = () => {
         explainValue("fixedCrewPic", event.fixedCrewPic)
       ].filter(Boolean);
       if (Array.isArray(event.attendees)) {
-        event.attendees.forEach((name, index) => {
-          const explained = explainValue(`attendees[${index}]`, name);
+        event.attendees.forEach((name2, index) => {
+          const explained = explainValue(`attendees[${index}]`, name2);
           if (explained) roles.push(explained);
         });
       }
       if (Array.isArray(event.crewSelectionOrder)) {
-        event.crewSelectionOrder.forEach((name, index) => {
-          const explained = explainValue(`crewSelectionOrder[${index}]`, name);
+        event.crewSelectionOrder.forEach((name2, index) => {
+          const explained = explainValue(`crewSelectionOrder[${index}]`, name2);
           if (explained) roles.push(explained);
         });
       }
@@ -114420,7 +114461,7 @@ const App = () => {
         staff.name,
         report?.instructorName
       ].map(normaliseName2).filter(Boolean);
-      const accepted = explicitAssignee ? dashboardNameKeys.includes(explicitAssignee) : nameCandidates.some((name) => dashboardNameKeys.includes(name)) || staffId && sessionDashboardIdKeys.includes(staffId);
+      const accepted = explicitAssignee ? dashboardNameKeys.includes(explicitAssignee) : nameCandidates.some((name2) => dashboardNameKeys.includes(name2)) || staffId && sessionDashboardIdKeys.includes(staffId);
       return {
         accepted,
         explicitAssignee: report?.dashboardAssigneeName || null,
@@ -114987,15 +115028,15 @@ const App = () => {
           const setupCourseNames = Array.from(new Set(
             normalisedTrainees.map((trainee) => String(trainee.course || "").trim()).filter(Boolean)
           ));
-          setCourses(setupCourseNames.map((name, index) => ({
+          setCourses(setupCourseNames.map((name2, index) => ({
             id: `setup-course-${index + 1}`,
-            name,
+            name: name2,
             color: ["bg-sky-400/80", "bg-purple-400/80", "bg-yellow-400/80", "bg-pink-400/80"][index % 4]
           })));
           setCourseColors((prev) => {
             const next = { ...prev };
-            setupCourseNames.forEach((name, index) => {
-              if (!next[name]) next[name] = ["bg-sky-400/80", "bg-purple-400/80", "bg-yellow-400/80", "bg-pink-400/80"][index % 4];
+            setupCourseNames.forEach((name2, index) => {
+              if (!next[name2]) next[name2] = ["bg-sky-400/80", "bg-purple-400/80", "bg-yellow-400/80", "bg-pink-400/80"][index % 4];
             });
             return next;
           });
@@ -116383,13 +116424,13 @@ const App = () => {
   }, [traineesData, courseColors]);
   reactExports.useEffect(() => {
     const visiblePackageNames = Array.from(new Set(
-      visibleSyllabusDetails.filter((item) => item.lmpType === "Staff CAT").map((item) => item.module || item.courses?.[0] || item.phase).map((name) => String(name || "").trim()).filter(Boolean)
+      visibleSyllabusDetails.filter((item) => item.lmpType === "Staff CAT").map((item) => item.module || item.courses?.[0] || item.phase).map((name2) => String(name2 || "").trim()).filter(Boolean)
     ));
     setPackagePriorities((prev) => {
       const visibleSet = new Set(visiblePackageNames);
-      const filtered = prev.filter((name) => visibleSet.has(name));
+      const filtered = prev.filter((name2) => visibleSet.has(name2));
       const existing = new Set(filtered);
-      const additions = visiblePackageNames.filter((name) => !existing.has(name));
+      const additions = visiblePackageNames.filter((name2) => !existing.has(name2));
       if (filtered.length === prev.length && additions.length === 0) return prev;
       return [...filtered, ...additions];
     });
@@ -116689,8 +116730,8 @@ const App = () => {
       configuredRecipients.courseCommander ? course?.courseCommander : "",
       configuredRecipients.deputyCourseCommander ? course?.deputyCourseCommander : "",
       ...configuredRecipients.staffNames || []
-    ].map((name) => String(name || "").trim()).filter(Boolean);
-    const uniqueRecipients = Array.from(new Map(recipientNames.map((name) => [normaliseDashboardNotificationName(name), name])).values());
+    ].map((name2) => String(name2 || "").trim()).filter(Boolean);
+    const uniqueRecipients = Array.from(new Map(recipientNames.map((name2) => [normaliseDashboardNotificationName(name2), name2])).values());
     if (uniqueRecipients.length === 0) return [];
     const sentAt = (/* @__PURE__ */ new Date()).toISOString();
     const reportName = activeReportTemplate.displayName || activeReportTemplate.genericName || configuredTrainingReportDisplayName;
@@ -118660,14 +118701,14 @@ ${"=".repeat(60)}`);
         }
       });
     };
-    candidateNames.forEach((name) => {
-      const exactLmp = traineeLMPs.get(name);
-      const fuzzyLmpEntry = exactLmp ? null : Array.from(traineeLMPs.entries()).find(([lmpName]) => personnelNamesMatch(lmpName, name));
+    candidateNames.forEach((name2) => {
+      const exactLmp = traineeLMPs.get(name2);
+      const fuzzyLmpEntry = exactLmp ? null : Array.from(traineeLMPs.entries()).find(([lmpName]) => personnelNamesMatch(lmpName, name2));
       const lmp = exactLmp || fuzzyLmpEntry?.[1];
-      if (eventCodeForDiag === "BGF20" || String(name || "").toLowerCase().includes("luna") || String(name || "").toLowerCase().includes("edwards")) {
+      if (eventCodeForDiag === "BGF20" || String(name2 || "").toLowerCase().includes("luna") || String(name2 || "").toLowerCase().includes("edwards")) {
         lmpMatchDiag.push({
-          candidateName: name,
-          matchedKey: exactLmp ? name : fuzzyLmpEntry?.[0] || null,
+          candidateName: name2,
+          matchedKey: exactLmp ? name2 : fuzzyLmpEntry?.[0] || null,
           lmpCount: Array.isArray(lmp) ? lmp.length : 0,
           matchingItems: Array.isArray(lmp) ? lmp.filter((item) => String(item.code || "").trim().toUpperCase() === eventCodeForDiag).slice(0, 6).map((item) => ({
             id: item.id || null,
@@ -118685,7 +118726,7 @@ ${"=".repeat(60)}`);
         lmp.forEach(inspectLmpItem);
       }
     });
-    const shouldTraceNotes = eventCodeForDiag === "BGF20" || initialCandidateNamesForDiag.some((name) => /luna|edwards/i.test(name)) || notesByKey.size > 0 || lmpMatchDiag.some((entry) => entry.matchingItems?.some((item) => item.forwardedKeys?.length));
+    const shouldTraceNotes = eventCodeForDiag === "BGF20" || initialCandidateNamesForDiag.some((name2) => /luna|edwards/i.test(name2)) || notesByKey.size > 0 || lmpMatchDiag.some((entry) => entry.matchingItems?.some((item) => item.forwardedKeys?.length));
     if (shouldTraceNotes) {
       pushDfpDataDiag("preflight-notes:decorate-event", {
         eventId: event.id,
@@ -118908,7 +118949,7 @@ ${"=".repeat(60)}`);
     const resolvedPrimaryName = String(primaryName || fallbackNames[0] || "").trim();
     const primaryKeys = new Set(getDiagnosticPersonKeys(resolvedPrimaryName));
     const fallbackSecondaryName = fallbackNames.find(
-      (name) => !getDiagnosticPersonKeys(name).some((key) => primaryKeys.has(key))
+      (name2) => !getDiagnosticPersonKeys(name2).some((key) => primaryKeys.has(key))
     ) || "";
     const resolvedSecondaryName = String(secondaryName || (event.flightType === "Solo" ? "" : fallbackSecondaryName) || "").trim();
     const seatOne = activeAircraftCrewComposition?.seats?.[0];
@@ -119946,8 +119987,8 @@ ${"=".repeat(60)}`);
       const [eventYear, eventMonth, eventDay] = event.date.split("-").map(Number);
       const eventStartUTC = new Date(Date.UTC(eventYear, eventMonth - 1, eventDay, 0, eventWindow.start * 60));
       const eventEndUTC = new Date(Date.UTC(eventYear, eventMonth - 1, eventDay, 0, eventWindow.end * 60));
-      for (const name of personnelNames) {
-        const person = personMap.get(name);
+      for (const name2 of personnelNames) {
+        const person = personMap.get(name2);
         if (!person || !person.unavailability || person.unavailability.length === 0) continue;
         for (const period of person.unavailability) {
           const isOwnDeploymentPeriod = String(period.notes || "") === `__deploy__${event.id}`;
@@ -119976,7 +120017,7 @@ ${"=".repeat(60)}`);
               isActuallyUnavailable = false;
             }
             if (isActuallyUnavailable) {
-              conflictedNamesForEvent.push(name);
+              conflictedNamesForEvent.push(name2);
               break;
             }
           }
@@ -120001,16 +120042,16 @@ ${"=".repeat(60)}`);
       newConflicts.forEach((names, eventId) => {
         const evt = eventsToCheck.find((e) => e.id === eventId);
         const evtDesc = evt ? evt.type + " " + (evt.instructor || evt.student || evt.pilot || "?") + " @" + evt.startTime : eventId;
-        names.forEach((name) => {
-          const person = personMap.get(name);
+        names.forEach((name2) => {
+          const person = personMap.get(name2);
           if (person?.unavailability) {
             const deployTags = person.unavailability.filter((p) => p?.notes?.startsWith("__deploy__"));
             const otherPeriods = person.unavailability.filter((p) => !p?.notes?.startsWith("__deploy__"));
             logRoutineAppDebug(
-              "  RED: [" + evtDesc + "] person=" + name + (deployTags.length > 0 ? " DEPLOY_TAGS=" + JSON.stringify(deployTags.map((p) => p.notes)) : "") + (otherPeriods.length > 0 ? " other_periods=" + otherPeriods.length : "")
+              "  RED: [" + evtDesc + "] person=" + name2 + (deployTags.length > 0 ? " DEPLOY_TAGS=" + JSON.stringify(deployTags.map((p) => p.notes)) : "") + (otherPeriods.length > 0 ? " other_periods=" + otherPeriods.length : "")
             );
           } else {
-            logRoutineAppDebug("  RED: [" + evtDesc + "] person=" + name + " (no unavailability data found)");
+            logRoutineAppDebug("  RED: [" + evtDesc + "] person=" + name2 + " (no unavailability data found)");
           }
         });
       });
@@ -123257,9 +123298,9 @@ ${error instanceof Error ? error.message : String(error)}`,
     const refsByKey = /* @__PURE__ */ new Map();
     const cleanName = (value) => String(value || "").split(" – ")[0].split(" - ")[0].trim();
     const addRef = (role, label, preferredType) => {
-      const name = cleanName(label);
-      if (!name || isPlaceholderPersonnelName(name)) return;
-      const nameKey = normalisePersonName(name);
+      const name2 = cleanName(label);
+      if (!name2 || isPlaceholderPersonnelName(name2)) return;
+      const nameKey = normalisePersonName(name2);
       const candidates = preferredType === "staff" ? instructorsData.filter((person2) => normalisePersonName(person2.name) === nameKey) : preferredType === "trainee" ? allTraineesData.filter((person2) => normalisePersonName(person2.name) === nameKey || normalisePersonName(person2.fullName) === nameKey) : [
         ...instructorsData.filter((person2) => normalisePersonName(person2.name) === nameKey),
         ...allTraineesData.filter((person2) => normalisePersonName(person2.name) === nameKey || normalisePersonName(person2.fullName) === nameKey)
@@ -123305,8 +123346,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       addRef("instructor", event.instructor, "staff");
       addRef("fixedCrewPic", event.fixedCrewPic, "staff");
       addRef("crew", event.crew, "staff");
-      event.crewSelectionOrder?.forEach((name) => addRef("crew", name, "staff"));
-      event.attendees?.forEach((name) => addRef("attendee", name, "staff"));
+      event.crewSelectionOrder?.forEach((name2) => addRef("crew", name2, "staff"));
+      event.attendees?.forEach((name2) => addRef("attendee", name2, "staff"));
     } else if (event.flightType === "Solo") {
       addRef("pilot", event.pilot || event.student, "trainee");
     } else {
@@ -123314,7 +123355,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       addRef("pilot", event.pilot, "staff");
       addRef("student", event.student, "trainee");
       addRef("crew", event.crew, "staff");
-      event.attendees?.forEach((name) => addRef("attendee", name, "trainee"));
+      event.attendees?.forEach((name2) => addRef("attendee", name2, "trainee"));
     }
     const personnelRefs = Array.from(refsByKey.values());
     return {
@@ -125178,7 +125219,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     };
     let traineesForBuildScope = activeOperationalModel === "flight_school" ? traineesData.filter(flightSchoolTraineeMatchesBuildScope) : traineesData;
     let traineeNamesForBuildScope = new Set(
-      traineesForBuildScope.flatMap((trainee) => [trainee.fullName, trainee.name]).map((name) => String(name || "").trim()).filter(Boolean)
+      traineesForBuildScope.flatMap((trainee) => [trainee.fullName, trainee.name]).map((name2) => String(name2 || "").trim()).filter(Boolean)
     );
     localStorage.removeItem("neo_build_runtime_error_report");
     localStorage.removeItem("neo_dfp_data_diag");
@@ -125376,7 +125417,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     };
     if (activeOperationalModel === "flight_school" && buildTraineeLMPs.size > 0) {
       const buildTraineeNameSet = new Set(
-        traineesForBuildScope.flatMap((trainee) => [trainee.fullName, trainee.name]).map((name) => String(name || "").trim()).filter(Boolean)
+        traineesForBuildScope.flatMap((trainee) => [trainee.fullName, trainee.name]).map((name2) => String(name2 || "").trim()).filter(Boolean)
       );
       const findReportSourceLmpIndex = (lmp, trainee, assessment) => {
         const eventRefs = new Set([
@@ -125675,11 +125716,11 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         followUpFetchMs = Math.round(performance.now() - followUpFetchStartedAt);
         const followUpReconcileStartedAt = performance.now();
         const reconciledLMPs = new Map(buildTraineeLMPs);
-        const normaliseFollowUpNameKey = (name) => String(name || "").trim().toUpperCase();
+        const normaliseFollowUpNameKey = (name2) => String(name2 || "").trim().toUpperCase();
         const buildTraineeLookup = /* @__PURE__ */ new Map();
         traineesForBuildScope.forEach((candidate) => {
-          [candidate.fullName, candidate.name].forEach((name) => {
-            const key = normaliseFollowUpNameKey(name);
+          [candidate.fullName, candidate.name].forEach((name2) => {
+            const key = normaliseFollowUpNameKey(name2);
             if (key && !buildTraineeLookup.has(key)) buildTraineeLookup.set(key, candidate);
           });
         });
@@ -125876,7 +125917,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     if (activeOperationalModel === "flight_school") {
       traineesForBuildScope = traineesData.filter(flightSchoolTraineeMatchesBuildScope);
       traineeNamesForBuildScope = new Set(
-        traineesForBuildScope.flatMap((trainee) => [trainee.fullName, trainee.name]).map((name) => String(name || "").trim()).filter(Boolean)
+        traineesForBuildScope.flatMap((trainee) => [trainee.fullName, trainee.name]).map((name2) => String(name2 || "").trim()).filter(Boolean)
       );
     }
     const traineesInBuild = traineesForBuildScope;
@@ -126372,8 +126413,8 @@ ${conflictLines.join("\n")}${moreText}`,
           event.student,
           ...event.attendees || [],
           ...event.crewSelectionOrder || []
-        ].map((name) => String(name || "").trim()).filter((name) => !ignored.has(normalisePausePersonName(name)));
-        return Array.from(new Set(names.map(normalisePausePersonName))).map((key) => names.find((name) => normalisePausePersonName(name) === key) || "").filter(Boolean);
+        ].map((name2) => String(name2 || "").trim()).filter((name2) => !ignored.has(normalisePausePersonName(name2)));
+        return Array.from(new Set(names.map(normalisePausePersonName))).map((key) => names.find((name2) => normalisePausePersonName(name2) === key) || "").filter(Boolean);
       };
       const getPausePersonRecord = (personName) => {
         const key = normalisePausePersonName(personName);
@@ -126438,7 +126479,7 @@ ${conflictLines.join("\n")}${moreText}`,
           const eventWindow = getPauseBookingWindow(event);
           if (!(eventWindow.start < candidateWindow.end && candidateWindow.start < eventWindow.end)) return false;
           const existingPeople = getPauseEventPeople(event).map(normalisePausePersonName);
-          return candidatePeople.some((name) => existingPeople.includes(name));
+          return candidatePeople.some((name2) => existingPeople.includes(name2));
         });
       };
       const peopleAreAvailable = (candidate) => {
@@ -126458,7 +126499,7 @@ ${conflictLines.join("\n")}${moreText}`,
           const limits = isExec ? eventLimits.exec : eventLimits.instructor;
           const existingEvents = scheduledEvents2.filter((event) => {
             if (event.isCancelled || event.resourceId?.startsWith("STBY")) return false;
-            return getPauseEventPeople(event).some((name) => normalisePausePersonName(name) === personKey2);
+            return getPauseEventPeople(event).some((name2) => normalisePausePersonName(name2) === personKey2);
           });
           const flightFtdCount = existingEvents.filter((event) => event.type === "flight" || event.type === "ftd").length;
           const totalCount = existingEvents.length;
@@ -127724,7 +127765,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     const formationSize = isFlightFormation ? Math.min(requestedFormationSize, Math.max(1, availableFormationResources.length)) : 1;
     const formationId = formationSize > 1 ? v4() : void 0;
     const callsignBase = getFormationCallsignBase(draft.callsign);
-    const crewSelectionOrder = Array.isArray(draft.crewSelectionOrder) ? draft.crewSelectionOrder.filter((name) => typeof name === "string" && name.trim().length > 0) : [];
+    const crewSelectionOrder = Array.isArray(draft.crewSelectionOrder) ? draft.crewSelectionOrder.filter((name2) => typeof name2 === "string" && name2.trim().length > 0) : [];
     return Array.from({ length: formationSize }, (_, index) => {
       const resourceId = formationSize > 1 ? availableFormationResources[index] || firstResourceId : firstResourceId;
       const type = resourceId.startsWith("FTD") ? "ftd" : resourceId.startsWith("CPT") ? "cpt" : draft.type || "flight";
@@ -129603,7 +129644,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         const candidates = [
           conflictResult.conflictedPersonnel,
           ...otherEvent ? getCommonPersonnel(event, otherEvent) : []
-        ].filter((name) => !!name && !isPlaceholderPersonnelName(name));
+        ].filter((name2) => !!name2 && !isPlaceholderPersonnelName(name2));
         if (candidates.length === 0) return "";
         const personName = candidates[0];
         const roleLabels = [];
@@ -129677,15 +129718,15 @@ ${error instanceof Error ? error.message : String(error)}`,
     const eventWindow = getEventBookingWindow(event, syllabusDetails);
     const personnel = getPersonnel(event);
     const allPersonnelData = [...allInstructorsData, ...allTraineesData];
-    personnel.forEach((name) => {
-      const person = allPersonnelData.find((p) => personnelNamesMatch("fullName" in p ? p.fullName : p.name, name));
+    personnel.forEach((name2) => {
+      const person = allPersonnelData.find((p) => personnelNamesMatch("fullName" in p ? p.fullName : p.name, name2));
       if (person && isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, event.date, event.type)) {
         const unavailability = person.unavailability.find((u) => {
           const isInDateRange = u.allDay ? event.date >= u.startDate && event.date < u.endDate : event.date >= u.startDate && event.date <= u.endDate;
           return isInDateRange;
         });
         const reason = unavailability?.reason || "Unavailable";
-        errors.push(`❌ ${(name || "").split(",")[0]} is unavailable - ${reason}`);
+        errors.push(`❌ ${(name2 || "").split(",")[0]} is unavailable - ${reason}`);
       }
     });
     const aircraftTailConflictReasons = getFlightLineAircraftConflictReasons(event, allEventsForDate, event.date || date);
@@ -131803,11 +131844,11 @@ ${error instanceof Error ? error.message : String(error)}`,
             instructorsData,
             traineesData,
             activeCourses: buildIntelligenceActiveCourses,
-            onNavigateAndSelectPerson: (name) => {
-              const person = [...allInstructorsData, ...allTraineesData].find((p) => p.name === name || "fullName" in p && p.fullName === name);
+            onNavigateAndSelectPerson: (name2) => {
+              const person = [...allInstructorsData, ...allTraineesData].find((p) => p.name === name2 || "fullName" in p && p.fullName === name2);
               if (person) {
-                if ("role" in person) handleSelectInstructorFromSchedule(name);
-                else handleSelectTraineeFromSchedule(name);
+                if ("role" in person) handleSelectInstructorFromSchedule(name2);
+                else handleSelectTraineeFromSchedule(name2);
               }
             },
             scores,
@@ -131900,7 +131941,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             report?.staffName,
             staff.name,
             report?.instructorName
-          ].some((name) => dashboardNameKeys.has(normaliseDashboardName(name))) || staffId && sessionDashboardIdKeys.includes(staffId);
+          ].some((name2) => dashboardNameKeys.has(normaliseDashboardName(name2))) || staffId && sessionDashboardIdKeys.includes(staffId);
         };
         const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && reportMatchesDashboardContext(report, staff) && reportMatchesDashboardUser(report, staff)).map((report) => ({ report, staff })));
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -131908,7 +131949,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           {
             userName: dashboardUserName,
             userRank: dashboardStaff?.rank || dashboardTrainee?.rank || sessionUser?.militaryRank || sessionUser?.role || "",
-            events: eventsForDate.filter((e) => [e.instructor, e.pilot, e.fixedCrewPic, e.crew].some((name) => normaliseDashboardName(name) === normaliseDashboardName(dashboardUserName))),
+            events: eventsForDate.filter((e) => [e.instructor, e.pilot, e.fixedCrewPic, e.crew].some((name2) => normaliseDashboardName(name2) === normaliseDashboardName(dashboardUserName))),
             onSelectEvent: handleOpenModal,
             onNavigate: handleNavigation,
             onSelectMyProfile: handleSelectMyProfile,
@@ -133217,8 +133258,8 @@ Do you want to replace the existing entry?`,
                   };
                   const getFixedCrewRosterForEvent = () => {
                     const roster = /* @__PURE__ */ new Map();
-                    const addByName = (name) => {
-                      const normalised = normaliseLogbookName(name);
+                    const addByName = (name2) => {
+                      const normalised = normaliseLogbookName(name2);
                       if (!normalised || normalised === "tba") return;
                       const staff = instructorsData.find((person) => normaliseLogbookName(person.name) === normalised);
                       if (staff) roster.set(normaliseLogbookName(staff.name), staff);
@@ -133226,7 +133267,7 @@ Do you want to replace the existing entry?`,
                     addByName(pfEvt.fixedCrewPic || pfEvt.pilot || pfEvt.instructor);
                     (Array.isArray(pfEvt.crewSelectionOrder) ? pfEvt.crewSelectionOrder : []).forEach(addByName);
                     (Array.isArray(pfEvt.attendees) ? pfEvt.attendees : []).forEach(addByName);
-                    String(pfEvt.crew || "").split(/[,;/]/).map((name) => name.trim()).filter(Boolean).forEach(addByName);
+                    String(pfEvt.crew || "").split(/[,;/]/).map((name2) => name2.trim()).filter(Boolean).forEach(addByName);
                     const crewDetails = getFixedCrewGroupDetails(pfEvt.fixedCrewGroup || pfEvt.group || pfEvt.crew, pfEvt.fixedCrewUnit || pfEvt.unit);
                     if (crewDetails.crew) {
                       instructorsData.filter((person) => String(person.crew || "").trim().toUpperCase() === crewDetails.crew && (!crewDetails.unit || String(person.unit || "").trim().toUpperCase() === crewDetails.unit)).forEach((person) => roster.set(normaliseLogbookName(person.name), person));

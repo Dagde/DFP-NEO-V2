@@ -5443,6 +5443,18 @@ const makeNeoBuildStaffIdentityPayload = (
     };
 };
 
+const makeNeoBuildTraineeIdentityPayload = (
+    trainee: Trainee,
+    allTrainees: Trainee[] = [],
+): Record<string, any> => {
+    const identity = makeNeoBuildPersonIdentity(trainee, 'trainee', allTrainees);
+    const traineeRef = makeNeoBuildSchedulePersonnelRef(trainee, 'student', 'trainee');
+    return {
+        ...(identity ? { _neoBuildTraineeIdentity: identity } : {}),
+        ...(traineeRef ? { _neoBuildTraineePersonnelRef: traineeRef } : {}),
+    };
+};
+
 const makePersonnelIdentityRef = (
     label: string | undefined,
     role: PersonnelIdentityRole,
@@ -7964,6 +7976,20 @@ function generateDfpInternal(
         return hasScheduledNightEvents || intendedNightStaff.has(normalizeBuildPersonnelName(personName));
     };
 
+    const isTraineeScheduledForDayEvents = (trainee: Trainee): boolean => (
+        getGeneratedEventsForPersonRecord(trainee, 'trainee').some(event => (
+            eventHasNeoBuildPersonIdentity(event, trainee, 'trainee') &&
+            getGeneratedEventDayNightClassification(event) === 'Day'
+        ))
+    );
+
+    const isTraineeScheduledForNightEvents = (trainee: Trainee): boolean => (
+        getGeneratedEventsForPersonRecord(trainee, 'trainee').some(event => (
+            eventHasNeoBuildPersonIdentity(event, trainee, 'trainee') &&
+            getGeneratedEventDayNightClassification(event) === 'Night'
+        ))
+    );
+
     const isStaffScheduledForDayEvents = (staff: Instructor): boolean => (
         getGeneratedEventsForPersonRecord(staff, 'staff').some(e => (
             eventHasNeoBuildPersonIdentity(e, staff, 'staff') &&
@@ -8034,6 +8060,13 @@ function generateDfpInternal(
         return true;
     };
 
+    const canAssignTraineeForScheduledWindow = (trainee: Trainee, startTime: number): boolean => {
+        const proposedDayNight = getScheduledDayNightForStart(startTime);
+        if (proposedDayNight === 'Night' && isTraineeScheduledForDayEvents(trainee)) return false;
+        if (proposedDayNight === 'Day' && isTraineeScheduledForNightEvents(trainee)) return false;
+        return true;
+    };
+
     const canAssignStaffForScheduledWindow = (staff: Instructor, startTime: number): boolean => {
         const proposedDayNight = getScheduledDayNightForStart(startTime);
         if (proposedDayNight === 'Night' && isStaffScheduledForDayEvents(staff)) return false;
@@ -8086,8 +8119,10 @@ function generateDfpInternal(
         _traineeName?: string;
         _neoBuildInstructorIdentity?: NeoBuildPersonIdentity;
         _neoBuildPilotIdentity?: NeoBuildPersonIdentity;
+        _neoBuildTraineeIdentity?: NeoBuildPersonIdentity;
         _neoBuildInstructorPersonnelRef?: ScheduleEventPersonnelRef;
         _neoBuildPilotPersonnelRef?: ScheduleEventPersonnelRef;
+        _neoBuildTraineePersonnelRef?: ScheduleEventPersonnelRef;
     })[] = activeDfpEventsWithoutDate.map(e => ({
         ...e,
         _source: 'active-dfp',
@@ -8108,6 +8143,9 @@ function generateDfpInternal(
     };
     const getBuildPersonIdentityKey = (person: NeoBuildIdentityPersonRecord, role: PersonnelIdentityRole): string => (
         getNeoBuildPersonIdentityKey(role, person, getNeoBuildPersonDisplayLabel(person))?.identityKey || ''
+    );
+    const getBuildTraineeKey = (trainee: Trainee): string => (
+        getBuildPersonIdentityKey(trainee, 'trainee') || `trainee:name:${getBuildPersonKey(trainee.fullName)}`
     );
     const addGeneratedEventIndexKey = (key: string, event: GeneratedBuildEvent) => {
         if (!key) return;
@@ -8141,7 +8179,7 @@ function generateDfpInternal(
             ref.idNumber || ref.id || normalizeBuildPersonnelName(ref.name),
         ].join(':');
         (event.personnelRefs || []).forEach(ref => refsByKey.set(refKey(ref), ref));
-        [event._neoBuildInstructorPersonnelRef, event._neoBuildPilotPersonnelRef]
+        [event._neoBuildInstructorPersonnelRef, event._neoBuildPilotPersonnelRef, event._neoBuildTraineePersonnelRef]
             .filter(Boolean)
             .forEach(ref => {
                 const scheduleRef = ref as ScheduleEventPersonnelRef;
@@ -8162,6 +8200,7 @@ function generateDfpInternal(
             ...(Array.isArray(event?.personnelRefs) ? event.personnelRefs : []),
             event?._neoBuildInstructorPersonnelRef,
             event?._neoBuildPilotPersonnelRef,
+            event?._neoBuildTraineePersonnelRef,
         ].filter(Boolean).forEach(ref => {
             const scheduleRef = ref as ScheduleEventPersonnelRef;
             refsByKey.set(refKey(scheduleRef), scheduleRef);
@@ -8844,7 +8883,7 @@ function generateDfpInternal(
 
     const eventCounts = new Map<string, { flightFtd: number, ground: number, cpt: number, dutySup: number, isStby: boolean }>();
     originalInstructors.forEach(i => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
-    trainees.forEach(t => eventCounts.set(t.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
+    trainees.forEach(t => eventCounts.set(getBuildTraineeKey(t), { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
 
     // Initialize event counts with Active DFP events
     buildDebugLog('Initializing event counts from Active DFP...');
@@ -8861,6 +8900,21 @@ function generateDfpInternal(
                     counts.cpt++;
                 }
             }
+        });
+        // Existing fixed tiles only affect a trainee's limit when their stored
+        // Personnel ID identifies that trainee. A name-only historical tile is
+        // intentionally not assigned to either person with a duplicate name.
+        trainees.forEach(trainee => {
+            const traineeRef = (event.personnelRefs || []).some(ref => (
+                ref.personType === 'trainee' &&
+                eventHasNeoBuildPersonIdentity(event, trainee, 'trainee')
+            ));
+            if (!traineeRef) return;
+            const counts = eventCounts.get(getBuildTraineeKey(trainee));
+            if (!counts) return;
+            if (event.type === 'flight' || event.type === 'ftd') counts.flightFtd++;
+            else if (event.type === 'ground') counts.ground++;
+            else if (event.type === 'cpt') counts.cpt++;
         });
     });
 
@@ -12166,7 +12220,7 @@ function generateDfpInternal(
 
     activeTrainees.forEach(trainee => {
         const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate, config.dbElceMap);
-        traineeNextEventMap.set(trainee.fullName, nextEvents);
+        traineeNextEventMap.set(getBuildTraineeKey(trainee), nextEvents);
     });
 
     const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[] };
@@ -12219,7 +12273,7 @@ function generateDfpInternal(
     };
 
     activeTrainees.forEach(trainee => {
-        const { next, plusOne } = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
+        const { next, plusOne } = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { next: null, plusOne: null };
         if (next) {
             let classifiedList: 'flight' | 'ftd' | 'cpt' | 'ground' | 'bnf' | 'none' = 'none';
             let classificationReason = '';
@@ -12322,7 +12376,7 @@ function generateDfpInternal(
     Object.values(nextPlusOneLists).forEach(list => list.sort(sortTrainees));
 
     activeTrainees.forEach(trainee => {
-        const nextEvents = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
+        const nextEvents = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { next: null, plusOne: null };
         const individualLmp = traineeLMPs.get(trainee.fullName) || [];
         const multiResourceItems = individualLmp
             .map((item, index) => ({ item, index }))
@@ -12371,7 +12425,7 @@ function generateDfpInternal(
 
     const formationGroups = new Map<string, { item: SyllabusItemDetail; trainees: Trainee[] }>();
     nextEventLists.flight.forEach(trainee => {
-        const next = traineeNextEventMap.get(trainee.fullName)?.next;
+        const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
         if (!next || !isMultiResourceFlightItem(next) || isRemedialSyllabusItem(next)) {
             if (next && isMultiResourceFlightItem(next)) {
                 traceFormation('groupBuildTrace', {
@@ -12413,7 +12467,7 @@ function generateDfpInternal(
         });
     });
     const getFormationItemForTrainee = (trainee: Trainee, fallback: SyllabusItemDetail): SyllabusItemDetail =>
-        traineeNextEventMap.get(trainee.fullName)?.next || fallback;
+        traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next || fallback;
     const getFormationGroupResourceNumber = (group: { item: SyllabusItemDetail; trainees: Trainee[] }): number => {
         const groupItems = group.trainees.map(trainee => getFormationItemForTrainee(trainee, group.item));
         const explicitResourceNumbers = groupItems
@@ -12460,7 +12514,7 @@ function generateDfpInternal(
             cpt: nextPlusOneLists.cpt.length,
             ground: nextPlusOneLists.ground.length,
         },
-        noNextEvent: activeTrainees.filter(t => !traineeNextEventMap.get(t.fullName)?.next).length,
+        noNextEvent: activeTrainees.filter(t => !traineeNextEventMap.get(getBuildTraineeKey(t))?.next).length,
     };
     const nextBucketByCourse = (list: Trainee[]): Record<string, number> => countTraineesByCourse(list);
     neoBuildDiag.nextByCourse = {
@@ -12474,9 +12528,9 @@ function generateDfpInternal(
         plusOneCpt: nextBucketByCourse(nextPlusOneLists.cpt),
         plusOneGround: nextBucketByCourse(nextPlusOneLists.ground),
     };
-    neoBuildDiag.noNextByCourse = countTraineesByCourse(activeTrainees.filter(t => !traineeNextEventMap.get(t.fullName)?.next));
-    neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).map(([name, ev]) => {
-        const trainee = activeTrainees.find(candidate => candidate.fullName === name);
+    neoBuildDiag.noNextByCourse = countTraineesByCourse(activeTrainees.filter(t => !traineeNextEventMap.get(getBuildTraineeKey(t))?.next));
+    neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).map(([traineeKey, ev]) => {
+        const trainee = activeTrainees.find(candidate => getBuildTraineeKey(candidate) === traineeKey);
         const nextDiag = describeBuildTrainingEventForDiag(ev.next);
         const plusOneDiag = describeBuildTrainingEventForDiag(ev.plusOne);
         return ({
@@ -12519,7 +12573,7 @@ function generateDfpInternal(
         const soloWithTwrDiIndices: number[] = [];
 
         list.forEach((trainee, index) => {
-            const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
+            const nextEvent = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
             if (nextEvent &&
                 nextEvent.sortieType === 'Solo' &&
                 nextEvent.twrDiReqd === 'YES') {
@@ -12671,7 +12725,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         // STEP 1: Identify and extract Solo-with-TWR-DI block
         const soloWithTwrDiIndices: number[] = [];
         rankedList.forEach((trainee, index) => {
-            const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
+            const nextEvent = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
             if (nextEvent &&
                 nextEvent.sortieType === 'Solo' &&
                 nextEvent.twrDiReqd === 'YES') {
@@ -12815,9 +12869,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             });
         }
     };
-    const bnfTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
+    const bnfTraineeNames = new Set(nextEventLists.bnf.map(getBuildTraineeKey));
     const filterOutBnfTrainees = (list: Trainee[]) =>
-        nextEventLists.bnf.length >= 2 ? list.filter(t => !bnfTraineeNames.has(t.fullName)) : list;
+        nextEventLists.bnf.length >= 2 ? list.filter(t => !bnfTraineeNames.has(getBuildTraineeKey(t))) : list;
 
     const isOperationalNightFlight = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): boolean =>
         event.type === 'flight' &&
@@ -12915,7 +12969,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         nightFlyingInstructors.forEach((nfi, index) => {
             const trainee = bnfTrainees[index];
             if (trainee) {
-                nightPairings.set(trainee.fullName, nfi.name);
+                nightPairings.set(getBuildTraineeKey(trainee), nfi.name);
                 // Track this instructor for night assignments
                 markIntendedNightPerson(nfi.name);
 
@@ -13164,6 +13218,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     .some((entry: any) => String(entry?.notes || '').trim()),
             }));
         return {
+            traineeIdentityKey: traineeKey,
+            traineeIdNumber: trainee?.idNumber ?? null,
             item: matchedItem,
             details: {
                 ...baseDetails,
@@ -13300,12 +13356,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             passSummaries: [] as any[],
             searchWindowSamples: [] as any[],
             sample: list.slice(0, 20).map(trainee => {
-                const nextEvents = traineeNextEventMap.get(trainee.fullName);
+                const nextEvents = traineeNextEventMap.get(getBuildTraineeKey(trainee));
                 const item = !isPlusOne && syllabusOverrides?.has(trainee.fullName)
                     ? syllabusOverrides.get(trainee.fullName)
                     : isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
                 return {
                     trainee: trainee.fullName,
+                    traineeIdNumber: trainee.idNumber ?? null,
+                    traineeIdentityKey: getBuildTraineeKey(trainee),
                     course: trainee.course || null,
                     unit: trainee.unit || null,
                     ...describeBuildTrainingEventForDiag(item),
@@ -13314,6 +13372,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             placed: [] as any[],
             unplaced: [] as {
                 trainee: string;
+                traineeIdNumber?: number | null;
+                traineeIdentityKey?: string;
                 course?: string | null;
                 unit?: string | null;
                 event: string | null;
@@ -13441,7 +13501,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const remainingForNextPass: Trainee[] = [];
 
             for (const trainee of unplacedTrainees) {
-                const { next, plusOne } = traineeNextEventMap.get(trainee.fullName)!;
+                const { next, plusOne } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
                 const syllabusItem = !isPlusOne && syllabusOverrides?.has(trainee.fullName)
                     ? syllabusOverrides.get(trainee.fullName)!
                     : isPlusOne ? plusOne : next;
@@ -13693,7 +13753,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     listDiag.successes++;
                                     // Only get instructor counts if not a solo flight
                                        const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
-                                    const tCounts = eventCounts.get(trainee.fullName)!;
+                                    const tCounts = eventCounts.get(getBuildTraineeKey(trainee))!;
                                     if (type === 'flight' || type === 'ftd') {
                                         tCounts.flightFtd++;
                                         if (ipCounts) ipCounts.flightFtd++;
@@ -13787,10 +13847,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             listDiag.durationMs = Math.round(performance.now() - scheduleListStartedAt);
             listDiag.passes = passNumber;
             listDiag.unplaced = unplacedTrainees.slice(0, 40).map(trainee => {
-                const nextEvents = traineeNextEventMap.get(trainee.fullName);
+                const nextEvents = traineeNextEventMap.get(getBuildTraineeKey(trainee));
                 const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
                 return {
                     trainee: trainee.fullName,
+                    traineeIdNumber: trainee.idNumber ?? null,
+                    traineeIdentityKey: getBuildTraineeKey(trainee),
                     course: trainee.course || null,
                     unit: trainee.unit || null,
                     ...describeBuildTrainingEventForDiag(item),
@@ -13927,7 +13989,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
         const _fbEnd = startTime + scheduledDuration;
-        const traineeCounts = eventCounts.get(trainee.fullName)!;
+        const traineeCounts = eventCounts.get(getBuildTraineeKey(trainee))!;
         const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
         let forcedInstructorConflictDetails: string[] = [];
         const isFormationTraceAttempt = !!options.formationGroupId || (type === 'flight' && isMultiResourceFlightItem(syllabusItem) && !isRemedialSyllabusItem(syllabusItem));
@@ -14037,7 +14099,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return traceScheduleReject('DAY_NIGHT_MISMATCH', { required: 'Day', proposed: getScheduledDayNightForStart(startTime) });
         }
 
-        if (!canAssignPersonForScheduledWindow(trainee.fullName, startTime)) {
+        if (!canAssignTraineeForScheduledWindow(trainee, startTime)) {
             buildDebugLog(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'DAY_NIGHT_SEPARATION');
             return traceScheduleReject('TRAINEE_DAY_NIGHT_SEPARATION', { proposed: getScheduledDayNightForStart(startTime) });
@@ -14089,11 +14151,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return traceScheduleReject('TRAINEE_STATICALLY_UNAVAILABLE', { proposedBookingWindow });
         }
 
-        const traineeOverlapEvents = getGeneratedEventsForPerson(trainee.fullName).filter(e => {
+        const traineeOverlapEvents = getGeneratedEventsForPersonRecord(trainee, 'trainee').filter(e => {
             if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
-            const hasTraineeConflict = options.traineeOverlapRole === 'trainee'
-                ? eventHasPersonWithRole(e, trainee.fullName, 'trainee')
-                : eventHasPerson(e, trainee.fullName);
+            const hasTraineeConflict = eventHasNeoBuildPersonIdentity(e, trainee, 'trainee');
             if (!hasTraineeConflict) return false;
             const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
             return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
@@ -14126,11 +14186,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 flightNumber: syllabusItem.code,
                 type,
             } as Omit<ScheduleEvent, 'date'>;
-            const traineeTurnaroundConflict = getGeneratedEventsForPerson(trainee.fullName).find(existing => {
+            const traineeTurnaroundConflict = getGeneratedEventsForPersonRecord(trainee, 'trainee').find(existing => {
                 if (isStbyResource(existing.resourceId)) return false;
-                const hasTraineeTurnaroundConflict = options.traineeOverlapRole === 'trainee'
-                    ? eventHasPersonWithRole(existing, trainee.fullName, 'trainee')
-                    : eventHasPerson(existing, trainee.fullName);
+                const hasTraineeTurnaroundConflict = eventHasNeoBuildPersonIdentity(existing, trainee, 'trainee');
                 if (!hasTraineeTurnaroundConflict) return false;
                 if (existing.type !== 'flight' && existing.type !== 'ftd' && existing.type !== 'cpt') return false;
                 if (startTime >= existing.startTime) {
@@ -14282,7 +14340,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const isBnfEvent = isNightPass && syllabusItemForCheck.code.startsWith('BNF') && !isRemedialSyllabusItem(syllabusItemForCheck);
 
             if (isBnfEvent) {
-                const pairedInstructorName = nightPairings.get(traineeForCheck.fullName);
+                const pairedInstructorName = nightPairings.get(getBuildTraineeKey(traineeForCheck));
                 if (!pairedInstructorName) return null;
 
                 const instructor = instructors.find(i => i.name === pairedInstructorName);
@@ -14369,10 +14427,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
                 // Special check for second night flight turnaround for the same crew
                 if (isNightPass && isPlusOneCheck) {
-                    const { next } = traineeNextEventMap.get(traineeForCheck.fullName)!;
-                    const firstNightEvent = getGeneratedEventsForPerson(traineeForCheck.fullName).find(e =>
+                    const { next } = traineeNextEventMap.get(getBuildTraineeKey(traineeForCheck))!;
+                    const firstNightEvent = getGeneratedEventsForPersonRecord(traineeForCheck, 'trainee').find(e =>
                         e.flightNumber === next?.id &&
-                        getPersonnel(e).includes(traineeForCheck.fullName) &&
+                        eventHasNeoBuildPersonIdentity(e, traineeForCheck, 'trainee') &&
                         eventHasNeoBuildPersonIdentity(e, instructor, 'staff')
                     );
 
@@ -15021,6 +15079,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 _source: 'stby-hard-mode',
                 _isNext: !isPlusOne,
                 _traineeName: trainee.fullName,
+                ...makeNeoBuildTraineeIdentityPayload(trainee, trainees),
             };
             options.diagnosticTrace?.({
                 phase: 'schedule-event',
@@ -15066,13 +15125,13 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             : 'ANY';
         const getPreferredNightAircraftResource = (): string | null => {
             if (!isNightPass || !isPlusOne || type !== 'flight') return null;
-            const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
+            const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { next: null };
             const nextEventCodes = new Set([next?.id, next?.code].filter(Boolean));
             const firstNightEvent = generatedEvents.find(e =>
                 nextEventCodes.has(e.flightNumber) &&
                 !e.resourceId.startsWith('STBY') &&
                 !e.resourceId.startsWith('BNF-STBY') &&
-                getPersonnel(e).includes(trainee.fullName) &&
+                eventHasNeoBuildPersonIdentity(e, trainee, 'trainee') &&
                 (!instructor || eventHasNeoBuildPersonIdentity(e, instructor, 'staff'))
             );
             return firstNightEvent?.resourceId || null;
@@ -15311,6 +15370,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             trainingReportForwardedNotes: scheduleForwardedNotes,
             trainingReportNextEventExtensions: scheduleExtensionLedger,
             ...makeNeoBuildStaffIdentityPayload(isSoloFlight ? null : instructor, instructors),
+            ...makeNeoBuildTraineeIdentityPayload(trainee, trainees),
         };
         traceIndividualLmpDuration('schedule-event-placed', {
             trainee: trainee.fullName,
@@ -19313,7 +19373,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     // 5-min separation) but are additionally constrained to a 09:00-15:00 departure window
     // and are grouped into batches of up to 4 to keep solos together in the schedule.
     const _isSoloTrainee = (trainee: Trainee): boolean => {
-        const next = traineeNextEventMap.get(trainee.fullName)?.next;
+        const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
         return !!(next && (next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id)));
     };
     const getMandatoryRemedialFlightForTrainee = (trainee: Trainee): ScheduleEvent | null => {
@@ -19679,7 +19739,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 stagedEvents.forEach((event, index) => {
                     event.callsign = `${callsignBase}${index + 1}`;
                     const trainee = selectedTrainees[index];
-                    const traineeCounts = eventCounts.get(trainee.fullName)!;
+                    const traineeCounts = eventCounts.get(getBuildTraineeKey(trainee))!;
                     traineeCounts.flightFtd++;
                     if (event.instructor) {
                         const instructorCounts = eventCounts.get(event.instructor);
@@ -19750,17 +19810,17 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     activeTrainees.forEach(trainee => {
         const item = getMandatoryRemedialSyllabusItem(trainee);
         if (item && item.type === 'Flight') {
-            mandatoryRemedialFlightItems.set(trainee.fullName, item);
+            mandatoryRemedialFlightItems.set(getBuildTraineeKey(trainee), item);
         }
     });
     const _isMandatoryRemedialFlightTrainee = (trainee: Trainee): boolean => {
-        return mandatoryRemedialFlightItems.has(trainee.fullName);
+        return mandatoryRemedialFlightItems.has(getBuildTraineeKey(trainee));
     };
     const _isNightMandatoryRemedialFlightTrainee = (trainee: Trainee): boolean => {
-        return mandatoryRemedialFlightItems.get(trainee.fullName)?.dayNight === 'Night';
+        return mandatoryRemedialFlightItems.get(getBuildTraineeKey(trainee))?.dayNight === 'Night';
     };
     const _isDayMandatoryRemedialFlightTrainee = (trainee: Trainee): boolean => {
-        const item = mandatoryRemedialFlightItems.get(trainee.fullName);
+        const item = mandatoryRemedialFlightItems.get(getBuildTraineeKey(trainee));
         return !!item && item.dayNight !== 'Night';
     };
     const _mandatoryDayFlightList = applyCoursePriority(activeTrainees.filter(_isDayMandatoryRemedialFlightTrainee), 'mandatory-day-flight');
@@ -19771,21 +19831,21 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         .map(group => ({
             item: group.item,
             trainees: _allFlightList.filter(trainee =>
-                getFormationEventKey(traineeNextEventMap.get(trainee.fullName)?.next) === getFormationEventKey(group.item)
+                getFormationEventKey(traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next) === getFormationEventKey(group.item)
             ),
         }))
         .filter(group => group.trainees.length > 0);
     const _normalFlightList = _allFlightList.filter(trainee => {
-        const next = traineeNextEventMap.get(trainee.fullName)?.next;
+        const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
         return !next || !isMultiResourceFlightItem(next) || isRemedialSyllabusItem(next);
     });
     traceFormation('groupBuildTrace', {
         phase: 'formation-flight-list-built',
         allFlightList: _allFlightList.map(trainee => ({
             trainee: trainee.fullName,
-            next: traineeNextEventMap.get(trainee.fullName)?.next?.code || null,
-            nextResourceNumber: getLmpResourceNumber(traineeNextEventMap.get(trainee.fullName)?.next),
-            isFormationNext: isMultiResourceFlightItem(traineeNextEventMap.get(trainee.fullName)?.next),
+            next: traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next?.code || null,
+            nextResourceNumber: getLmpResourceNumber(traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next),
+            isFormationNext: isMultiResourceFlightItem(traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next),
         })),
         formationGroups: _formationFlightGroups.map(group => ({
             event: group.item.code || group.item.id || null,
@@ -19800,7 +19860,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         })),
         normalFlightList: _normalFlightList.map(trainee => ({
             trainee: trainee.fullName,
-            next: traineeNextEventMap.get(trainee.fullName)?.next?.code || null,
+            next: traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next?.code || null,
         })),
     });
     const _dualFlightList = _normalFlightList.filter(t => !_isSoloTrainee(t));
@@ -19868,7 +19928,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
         prioritizedFlightList.forEach(trainee => {
             if (_isSoloTrainee(trainee)) return;
-            const next = traineeNextEventMap.get(trainee.fullName)?.next;
+            const next = traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next;
             if (next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
                 const eventKey = getFormationEventKey(next);
                 if (_placedFormationKeys.has(eventKey)) return;
@@ -19961,8 +20021,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     neoBuildDiag.mandatoryRemedialFlights.matchAudit = mandatoryRemedialFlights.map(event => {
         const eventTrainee = event.student || event.pilot || '';
         const trainee = activeTrainees.find(t => t.fullName === eventTrainee) || null;
-        const next = trainee ? traineeNextEventMap.get(trainee.fullName)?.next : null;
-        const mandatoryItem = trainee ? mandatoryRemedialFlightItems.get(trainee.fullName) || null : null;
+        const next = trainee ? traineeNextEventMap.get(getBuildTraineeKey(trainee))?.next : null;
+        const mandatoryItem = trainee ? mandatoryRemedialFlightItems.get(getBuildTraineeKey(trainee)) || null : null;
         const priorityEventCodes = [
             normalizeLmpEventId(event.flightNumber),
             normalizeLmpEventId(getRemedialBaseEventCode({ code: event.flightNumber })),
@@ -20214,7 +20274,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             let lastPlacedTime = groupSearchStart;
 
             for (const trainee of group) {
-                const { next } = traineeNextEventMap.get(trainee.fullName)!;
+                const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
                 const syllabusItem = next;
                 if (!syllabusItem) continue;
                 const scheduledDuration = getScheduledEventDuration(syllabusItem, 'flight', trainee);
@@ -20237,7 +20297,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         const result = scheduleEvent(trainee, syllabusItem, time, 'flight', false, false, primaryOnly);
                         if (result && typeof result === 'object' && 'id' in result) {
                             pushGeneratedEvent({ ...result, _source: 'generated', _isNext: true, _traineeName: trainee.fullName });
-                            const tCounts = eventCounts.get(trainee.fullName)!;
+                            const tCounts = eventCounts.get(getBuildTraineeKey(trainee))!;
                             tCounts.flightFtd++;
                             lastPlacedTime = Math.max(lastPlacedTime, time);
                             placed = true;
@@ -20264,8 +20324,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         // (uses the existing STBY fallback mechanism)
         scheduleList(
             _soloFlightList.filter(t => !generatedEvents.some(e => {
-                const personnel = getPersonnel(e);
-                return personnel.includes(t.fullName) && e.type === 'flight' && !e.resourceId.startsWith('STBY');
+            return eventHasNeoBuildPersonIdentity(e, t, 'trainee') && e.type === 'flight' && !e.resourceId.startsWith('STBY');
             })),
             'flight',
             false,
@@ -20364,7 +20423,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     if(nextEventLists.bnf.length >= 2) {
          recordProgress({ message: 'Scheduling Night Flight Events (Plus-One)...', percentage: 80 });
          const bnfWaveTwoList = nextEventLists.bnf.filter(trainee => {
-            const { plusOne } = traineeNextEventMap.get(trainee.fullName) || { plusOne: null };
+            const { plusOne } = traineeNextEventMap.get(getBuildTraineeKey(trainee)) || { plusOne: null };
             return plusOne && plusOne.code.startsWith('BNF') && plusOne.type === 'Flight';
          });
          scheduleList(bnfWaveTwoList, 'flight', true, commenceNightFlying, ceaseNightFlying, null, true);
@@ -20672,15 +20731,15 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
 
 
-    const hasTraineeFlightOrFtdCommitment = (traineeName: string): boolean => generatedEvents.some(e =>
+    const hasTraineeFlightOrFtdCommitment = (trainee: Trainee): boolean => generatedEvents.some(e =>
         (e.type === 'flight' || e.type === 'ftd') &&
-        (e.student === traineeName || e.pilot === traineeName)
+        eventHasNeoBuildPersonIdentity(e, trainee, 'trainee')
     );
 
     // Also handle trainees in nextEventLists.flight who have no Flight/FTD commitment yet.
     // A trainee may only receive one Flight-or-FTD event per day, including STBY.
     const traineesNeedingStby = nextEventLists.flight.filter(trainee => {
-        const { next } = traineeNextEventMap.get(trainee.fullName)!;
+        const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
         if (!next) return false;
         if (isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
             traceFormation('standbyExclusions', {
@@ -20692,7 +20751,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             });
             return false;
         }
-        return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+        return !hasTraineeFlightOrFtdCommitment(trainee);
     });
 
 
@@ -20700,7 +20759,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     if (traineesNeedingStby.length > 0) {
         const timeIncrement = getDispatchSearchStepHours('flight');
         for (const trainee of traineesNeedingStby) {
-            const { next } = traineeNextEventMap.get(trainee.fullName)!;
+            const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
             if (!next) continue;
 
             // Try to find a slot with an instructor
@@ -20709,7 +20768,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 ? Math.max(flyingStartTime, REMEDIAL_EARLIEST_START)
                 : flyingStartTime;
             for (let time = stbySearchStart; time < flyingEndTime; time += timeIncrement) {
-                if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
+                if (!canAssignTraineeForScheduledWindow(trainee, time)) continue;
                 if (hasFlightStartTime(time, generatedEvents)) continue;
                 const flightEndTime = time + next.duration;
                 if (flightEndTime > flyingEndTime) continue;
@@ -20742,6 +20801,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     _isNext: true,
                     _traineeName: trainee.fullName,
                     ...makeNeoBuildStaffIdentityPayload(stbyInstructor, instructors),
+                    ...makeNeoBuildTraineeIdentityPayload(trainee, trainees),
                 });
 
                 placed = true;
@@ -20758,9 +20818,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     recordProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
 
     const traineesNeedingStbyFtd = nextEventLists.ftd.filter(trainee => {
-        const { next } = traineeNextEventMap.get(trainee.fullName)!;
+        const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
         if (!next || next.type !== 'FTD') return false;
-        return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+        return !hasTraineeFlightOrFtdCommitment(trainee);
     });
 
     buildDebugLog('Trainees needing FTD recovery pass:', traineesNeedingStbyFtd.length);
@@ -20773,7 +20833,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         let recoveredToFtd = 0;
 
         for (const trainee of traineesNeedingStbyFtd) {
-            const { next } = traineeNextEventMap.get(trainee.fullName)!;
+            const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
             if (!next) continue;
 
             let placedOnFtd = false;
@@ -20787,11 +20847,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START)
                     : ftdStartTime;
                 for (let time = recoveryStart; time <= ftdEndTime - next.duration + 0.001; time += ftdRecoveryIncrement) {
-                    if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
+                    if (!canAssignTraineeForScheduledWindow(trainee, time)) continue;
                     const result = scheduleEvent(trainee, next, time, 'ftd', false, false, primaryOnly);
                     if (result && result.resourceId?.startsWith('FTD ')) {
                         pushGeneratedEvent({ ...result, _source: 'generated', _isNext: true, _traineeName: trainee.fullName });
-                        const tCounts = eventCounts.get(trainee.fullName);
+                        const tCounts = eventCounts.get(getBuildTraineeKey(trainee));
                         const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
                         if (tCounts) tCounts.flightFtd++;
                         if (ipCounts) ipCounts.flightFtd++;
@@ -20827,13 +20887,13 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     let recoveredToRealFtdBeforeStby = 0;
     const traineesNeedingFinalFtdRecovery = traineesNeedingStbyFtd.filter(trainee => {
-        const { next } = traineeNextEventMap.get(trainee.fullName)!;
+        const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
         if (!next || next.type !== 'FTD') return false;
-        return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+        return !hasTraineeFlightOrFtdCommitment(trainee);
     });
 
     for (const trainee of traineesNeedingFinalFtdRecovery) {
-        const { next } = traineeNextEventMap.get(trainee.fullName)!;
+        const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
         if (!next) continue;
 
         const recoveryIncrement = getDispatchSearchStepHours('ftd');
@@ -20843,7 +20903,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START)
             : ftdStartTime;
         for (let time = recoveryStart; time <= ftdEndTime - next.duration + 0.001; time += recoveryIncrement) {
-            if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
+            if (!canAssignTraineeForScheduledWindow(trainee, time)) continue;
             const bookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.code, duration: next.duration }, syllabusDetails);
             if (isPersonStaticallyUnavailable(trainee, bookingWindow.start, bookingWindow.end, buildDate, 'ftd')) continue;
 
@@ -20871,9 +20931,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 preStart: next.preFlightTime,
                 postEnd: next.postFlightTime,
                 ...makeNeoBuildStaffIdentityPayload(instructor, instructors),
+                ...makeNeoBuildTraineeIdentityPayload(trainee, trainees),
             });
 
-            const tCounts = eventCounts.get(trainee.fullName);
+            const tCounts = eventCounts.get(getBuildTraineeKey(trainee));
             const ipCounts = eventCounts.get(instructor.name);
             if (tCounts) tCounts.flightFtd++;
             if (ipCounts) ipCounts.flightFtd++;
@@ -20894,9 +20955,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     }
 
     const traineesStillNeedingStbyFtd = traineesNeedingStbyFtd.filter(trainee => {
-        const { next } = traineeNextEventMap.get(trainee.fullName)!;
+        const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
         if (!next || next.type !== 'FTD') return false;
-        return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+        return !hasTraineeFlightOrFtdCommitment(trainee);
     });
 
     buildDebugLog('Trainees still needing STBY FTD events:', traineesStillNeedingStbyFtd.length);
@@ -20909,7 +20970,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         buildDebugLog(`FTD STBY: Scheduling ${traineesStillNeedingStbyFtd.length} events with ${minSpacing.toFixed(2)}hr spacing`);
 
         for (const trainee of traineesStillNeedingStbyFtd) {
-            const { next } = traineeNextEventMap.get(trainee.fullName)!;
+            const { next } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
             if (!next) continue;
             if (isRemedialSyllabusItem(next) && currentTime < REMEDIAL_EARLIEST_START) {
                 currentTime = REMEDIAL_EARLIEST_START;
@@ -20921,7 +20982,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             while (!placed && currentStbyLine <= 20) {
                 // Check if event fits in current time slot on current STBY line
                 if (currentTime + next.duration <= ftdEndTime) {
-                    if (!canAssignPersonForScheduledWindow(trainee.fullName, currentTime)) {
+                    if (!canAssignTraineeForScheduledWindow(trainee, currentTime)) {
                         currentTime += minSpacing;
                         continue;
                     }
@@ -20959,6 +21020,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                             _isNext: true,
                             _traineeName: trainee.fullName,
                             ...makeNeoBuildStaffIdentityPayload(instructor, instructors),
+                            ...makeNeoBuildTraineeIdentityPayload(trainee, trainees),
                         });
 
                         buildDebugLog(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructorName}`);
@@ -22467,12 +22529,18 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     const annotateScheduleListUnplacedRecovery = () => {
         const allUnplacedRows: any[] = [];
         const findFinalRecoveredEvent = (row: any) => {
+            const rowTraineeIdentityKey = String(row?.traineeIdentityKey || '').trim();
             const rowTrainee = normalizeBuildPersonnelName(row?.trainee || '');
             const rowEvent = String(row?.event || '').trim();
-            if (!rowTrainee || !rowEvent) return null;
+            if ((!rowTraineeIdentityKey && !rowTrainee) || !rowEvent) return null;
             return sortedEvents.find((event: any) => {
                 const finalEventCode = String(event.flightNumber || '').trim();
                 if (finalEventCode !== rowEvent) return false;
+                if (rowTraineeIdentityKey) {
+                    const traineeRefs = getNeoBuildDiagnosticPersonnelRefs(event)
+                        .filter(ref => ref.personType === 'trainee');
+                    return traineeRefs.some(ref => getBuildRefIdentityKey(ref) === rowTraineeIdentityKey);
+                }
                 const finalNames = [
                     event._traineeName,
                     event.student,
