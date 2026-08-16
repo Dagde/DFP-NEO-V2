@@ -7698,6 +7698,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [realtimeConflict, setRealtimeConflict] = useState<{ conflictingEventId: string; conflictedPersonName: string; } | null>(null);
     const [realtimeResourceConflictId, setRealtimeResourceConflictId] = useState<string | null>(null);
     const [draggedCptConflict, setDraggedCptConflict] = useState<Conflict | null>(null);
+    const [dragPreviewUpdates, setDragPreviewUpdates] = useState<Map<string, { startTime: number; resourceId: string }> | null>(null);
     const didDragRef = useRef(false);
     const dragFrameRef = useRef<number | null>(null);
     const lastDragUpdateSignatureRef = useRef('');
@@ -7711,7 +7712,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         signature: string;
     } | null>(null);
 
-    const flushPendingDragUpdate = useCallback(() => {
+    const flushPendingDragUpdate = useCallback((commitToSchedule = false) => {
         if (dragFrameRef.current !== null) {
             window.cancelAnimationFrame(dragFrameRef.current);
             dragFrameRef.current = null;
@@ -7722,12 +7723,18 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         setRealtimeConflict(pending.realtimeConflict);
         setRealtimeResourceConflictId(pending.resourceConflictId);
         setDraggedCptConflict(pending.cptConflict);
-        recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
-            queuedAtMs: pending.queuedAtMs,
-            updateCount: pending.updates.length,
-            signature: pending.signature,
-        });
-        onUpdateEvent(pending.updates);
+        setDragPreviewUpdates(new Map(pending.updates.map(update => [
+            update.eventId,
+            { startTime: update.newStartTime, resourceId: update.newResourceId },
+        ])));
+        if (commitToSchedule) {
+            recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
+                queuedAtMs: pending.queuedAtMs,
+                updateCount: pending.updates.length,
+                signature: pending.signature,
+            });
+            onUpdateEvent(pending.updates);
+        }
     }, [onUpdateEvent]);
 
     useEffect(() => {
@@ -7755,9 +7762,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         
         const handleGlobalMouseUp = (e: MouseEvent) => {
             if (draggingState) {
-                flushPendingDragUpdate();
+                flushPendingDragUpdate(true);
                 document.body.classList.remove('no-select');
                 setDraggingState(null);
+                setDragPreviewUpdates(null);
                 setRealtimeConflict(null);
                 setRealtimeResourceConflictId(null);
                 setDraggedCptConflict(null);
@@ -7994,6 +8002,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             if (initialPositions.size > 0) {
                 lastDragUpdateSignatureRef.current = '';
                 pendingDragUpdateRef.current = null;
+                setDragPreviewUpdates(null);
                 dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
                     board: 'DFP',
                     eventId: event.id,
@@ -8224,7 +8233,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             if (dragFrameRef.current === null) {
                 dragFrameRef.current = window.requestAnimationFrame(() => {
                     dragFrameRef.current = null;
-                    flushPendingDragUpdate();
+                    flushPendingDragUpdate(false);
                 });
             }
         }
@@ -8232,7 +8241,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
         if (draggingState) {
-            flushPendingDragUpdate();
+            flushPendingDragUpdate(true);
             return; // Don't clear drag state if we're in a drag operation
         }
         document.body.classList.remove('no-select');
@@ -8245,6 +8254,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             onCptConflict(draggedCptConflict);
         }
         setDraggingState(null);
+        setDragPreviewUpdates(null);
         setRealtimeConflict(null);
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
@@ -8634,8 +8644,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     // Render loop for events
     const renderEvents = () => {
+        const renderSourceEvents = dragPreviewUpdates
+            ? events.map(event => {
+                const preview = dragPreviewUpdates.get(event.id);
+                return preview ? { ...event, startTime: preview.startTime, resourceId: preview.resourceId } : event;
+            })
+            : events;
         return resources.flatMap((resource, rowIndex) => {
-            const resourceEvents = events
+            const resourceEvents = renderSourceEvents
                 .filter(e => e.resourceId === resource)
                 .sort((a, b) => {
                     if (a.type === 'deployment' && b.type !== 'deployment') return -1;
@@ -8743,6 +8759,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         isDiagnosticHighlighted={diagnosticHighlightedEventIds.has(event.id)}
                         alertStatus={alertStatus}
                         aircraftNumberSettings={aircraftNumberSettings}
+                        disableLayoutTransition={isDraggedTile}
                         instructorLabel={schedulePersonnelDisplaySettings.instructorLabel || 'Instructor'}
                     />
                 );

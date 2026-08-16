@@ -139,6 +139,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     const [realtimeConflict, setRealtimeConflict] = useState<{ conflictingEventId: string; conflictedPersonName: string; } | null>(null);
     const [realtimeResourceConflictId, setRealtimeResourceConflictId] = useState<string | null>(null);
     const [draggedCptConflict, setDraggedCptConflict] = useState<Conflict | null>(null);
+    const [dragPreviewUpdates, setDragPreviewUpdates] = useState<Map<string, { startTime: number; resourceId: string }> | null>(null);
     const [validateOverlayTime, setValidateOverlayTime] = useState<number | null>(null);
     const didDragRef = useRef(false);
     const dragFrameRef = useRef<number | null>(null);
@@ -153,7 +154,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         signature: string;
     } | null>(null);
 
-    const flushPendingDragUpdate = useCallback(() => {
+    const flushPendingDragUpdate = useCallback((commitToSchedule = false) => {
         if (dragFrameRef.current !== null) {
             window.cancelAnimationFrame(dragFrameRef.current);
             dragFrameRef.current = null;
@@ -164,12 +165,18 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         setRealtimeConflict(pending.realtimeConflict);
         setRealtimeResourceConflictId(pending.resourceConflictId);
         setDraggedCptConflict(pending.cptConflict);
-        recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
-            queuedAtMs: pending.queuedAtMs,
-            updateCount: pending.updates.length,
-            signature: pending.signature,
-        });
-        onUpdateEvent(pending.updates);
+        setDragPreviewUpdates(new Map(pending.updates.map(update => [
+            update.eventId,
+            { startTime: update.newStartTime, resourceId: update.newResourceId },
+        ])));
+        if (commitToSchedule) {
+            recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
+                queuedAtMs: pending.queuedAtMs,
+                updateCount: pending.updates.length,
+                signature: pending.signature,
+            });
+            onUpdateEvent(pending.updates);
+        }
     }, [onUpdateEvent]);
 
     useEffect(() => {
@@ -353,6 +360,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             if (initialPositions.size > 0) {
                 lastDragUpdateSignatureRef.current = '';
                 pendingDragUpdateRef.current = null;
+                setDragPreviewUpdates(null);
                 dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
                     board: 'NEO Build Schedule',
                     eventId: event.id,
@@ -560,13 +568,13 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         if (dragFrameRef.current === null) {
             dragFrameRef.current = window.requestAnimationFrame(() => {
                 dragFrameRef.current = null;
-                flushPendingDragUpdate();
+                flushPendingDragUpdate(false);
             });
         }
     };
 
     const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
-        flushPendingDragUpdate();
+        flushPendingDragUpdate(true);
         document.body.classList.remove('no-select');
 
         if (isOracleMode) {
@@ -577,6 +585,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             onCptConflict(draggedCptConflict);
         }
         setDraggingState(null);
+        setDragPreviewUpdates(null);
         setRealtimeConflict(null);
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
@@ -895,9 +904,15 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     };
 
     const renderEvents = () => {
+        const renderSourceEvents = dragPreviewUpdates
+            ? events.map(event => {
+                const preview = dragPreviewUpdates.get(event.id);
+                return preview ? { ...event, startTime: preview.startTime, resourceId: preview.resourceId } : event;
+            })
+            : events;
         // Deduplicate events by ID to prevent stacked tiles causing visual alpha compositing artifacts
         const seenIds = new Set<string>();
-        const uniqueEvents = events.filter(e => {
+        const uniqueEvents = renderSourceEvents.filter(e => {
             if (seenIds.has(e.id)) return false;
             seenIds.add(e.id);
             return true;
@@ -991,6 +1006,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         isPauseCompleted={isPauseCompleted}
                         isDiagnosticHighlighted={diagnosticHighlightedEventIds.has(event.id)}
                         aircraftNumberSettings={aircraftNumberSettings}
+                        disableLayoutTransition={isDraggedTile}
                         suppressAuthorisationWarnings
                         
                     />
