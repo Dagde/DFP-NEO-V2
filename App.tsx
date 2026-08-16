@@ -7535,6 +7535,96 @@ function generateDfpInternal(
         if (eventType === 'flight' || eventType === 'ftd') return isQfiBuildInstructor(instructor);
         return true;
     };
+    type RemedialInstructorRequirementMode = 'none' | 'name' | 'qualification' | 'placeholder';
+    const classifyRemedialInstructorRequirement = (value: unknown): {
+        raw: string;
+        mode: RemedialInstructorRequirementMode;
+        qualificationId: string;
+        qualificationLabel: string;
+    } => {
+        const raw = String(value || '').trim();
+        if (!raw) return { raw: '', mode: 'none', qualificationId: '', qualificationLabel: '' };
+        const token = normaliseQualificationToken(raw);
+        const placeholderTokens = new Set([
+            'crew',
+            'crewmember',
+            'pilot',
+            'pilot1',
+            'pilot2',
+            'p1',
+            'p2',
+            'pic',
+            'student',
+            'trainee',
+        ]);
+        if (placeholderTokens.has(token)) {
+            return { raw, mode: 'placeholder', qualificationId: '', qualificationLabel: raw };
+        }
+
+        const namedInstructor = instructors.find(ip => normalizeBuildPersonnelName(ip.name) === normalizeBuildPersonnelName(raw));
+        if (namedInstructor) {
+            return { raw, mode: 'name', qualificationId: '', qualificationLabel: '' };
+        }
+
+        const instructorTokens = new Set([
+            'qfi',
+            'qualifiedflyinginstructor',
+            'instructor',
+            'flyinginstructor',
+            'cfi',
+            'ofi',
+        ]);
+        if (instructorTokens.has(token)) {
+            return { raw, mode: 'qualification', qualificationId: 'qfi', qualificationLabel: raw };
+        }
+
+        const simInstructorTokens = new Set([
+            'simip',
+            'simulatorinstructor',
+            'simulatorip',
+            'simulatorpilot',
+        ]);
+        if (simInstructorTokens.has(token)) {
+            return { raw, mode: 'qualification', qualificationId: 'contractor', qualificationLabel: raw };
+        }
+
+        const testingOfficerTokens = new Set([
+            'testingofficer',
+            'flighttestofficer',
+            'simulatortestofficer',
+        ]);
+        if (testingOfficerTokens.has(token)) {
+            return { raw, mode: 'qualification', qualificationId: 'testing-officer', qualificationLabel: raw };
+        }
+
+        const configuredQualification = buildStaffQualificationCatalogue.qualifications.find(qualification => (
+            [qualification.id, qualification.code, qualification.name].some(candidate => (
+                normaliseQualificationToken(candidate) === token
+            ))
+        ));
+        if (configuredQualification) {
+            return {
+                raw,
+                mode: 'qualification',
+                qualificationId: configuredQualification.id,
+                qualificationLabel: configuredQualification.code || configuredQualification.name || configuredQualification.id,
+            };
+        }
+
+        return { raw, mode: 'name', qualificationId: '', qualificationLabel: '' };
+    };
+    const instructorSatisfiesRemedialQualification = (
+        instructor: Instructor,
+        requirement: ReturnType<typeof classifyRemedialInstructorRequirement>,
+    ): boolean => {
+        if (requirement.mode !== 'qualification') return true;
+        const requirementId = String(requirement.qualificationId || '').trim();
+        const token = normaliseQualificationToken(requirement.qualificationLabel || requirement.raw || requirementId);
+        if (requirementId === 'qfi' || ['qfi', 'qualifiedflyinginstructor', 'instructor', 'flyinginstructor', 'cfi', 'ofi'].includes(token)) {
+            return personHasInstructorQualification(instructor, buildStaffQualificationCatalogue);
+        }
+        return getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes(requirementId);
+    };
 
     const normaliseBuildWindowStart = (value: number): number => Number.isFinite(Number(value)) ? Number(value) : 0;
     const normaliseBuildWindowEnd = (start: number, end: number): number => {
@@ -14299,6 +14389,13 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const requiredRemedialInstructor = remedialInstructorOverride || (isRemedialSyllabusItem(syllabusItemForCheck)
                 ? (syllabusItemForCheck.resourcesHuman || []).find(name => typeof name === 'string' && name.trim().length > 0)?.trim()
                 : '');
+            const remedialInstructorRequirement = remedialInstructorOverride
+                ? { raw: remedialInstructorOverride, mode: 'name' as RemedialInstructorRequirementMode, qualificationId: '', qualificationLabel: '' }
+                : classifyRemedialInstructorRequirement(requiredRemedialInstructor);
+            const requiredRemedialInstructorMode = remedialInstructorRequirement.mode;
+            const requiredRemedialQualification = remedialInstructorRequirement.mode === 'qualification'
+                ? (remedialInstructorRequirement.qualificationLabel || remedialInstructorRequirement.qualificationId || remedialInstructorRequirement.raw)
+                : '';
 
             // ── STEP 1: Build base pool filtered by role/type and night-separation rule ──
             const testEventType = normaliseLmpTestEventType(syllabusItemForCheck.testEventType);
@@ -14319,8 +14416,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
                 candidates = candidates.filter(ip => canAssignStaffForScheduledWindow(ip, startTime));
 
-                if (requiredRemedialInstructor) {
+                if (requiredRemedialInstructorMode === 'name' && requiredRemedialInstructor) {
                     candidates = candidates.filter(ip => ip.name === requiredRemedialInstructor);
+                } else if (requiredRemedialInstructorMode === 'qualification') {
+                    candidates = candidates.filter(ip => instructorSatisfiesRemedialQualification(ip, remedialInstructorRequirement));
                 }
             }
 
@@ -14350,6 +14449,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     displayTime: _fmtT(startTime),
                     remedialInstructorOverride,
                     requiredRemedialInstructor,
+                    requiredRemedialInstructorMode,
+                    requiredRemedialQualification,
                     totalInstructors: instructors.length,
                     candidatesAfterRoleAndDayNight: _afterQualFilter,
                     candidateNames: candidates.slice(0, 25).map(ip => ip.name),
@@ -14376,7 +14477,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             }
 
             // ── STEP 2: Filter by unit eligibility (staff sharing rules) ──
-            if (!requiredRemedialInstructor) {
+            if (requiredRemedialInstructorMode !== 'name') {
                 candidates = candidates.filter(ip => isInstructorEligibleByUnitForBuild(ip, traineeForCheck));
             }
             if (options.excludeInstructorNames && options.excludeInstructorNames.length > 0) {
@@ -14513,6 +14614,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     displayTime: _fmtT(startTime),
                     remedialInstructorOverride,
                     requiredRemedialInstructor,
+                    requiredRemedialInstructorMode,
+                    requiredRemedialQualification,
                     candidatesEnteringLoop: _candidatesEnteringLoop,
                     candidateNames: candidates.slice(0, 25).map(ip => ip.name),
                     primaryOnlyMode,
@@ -14725,6 +14828,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         instructor: ip.name,
                         startTime,
                         displayTime: _fmtT(startTime),
+                        requiredRemedialInstructorMode,
+                        requiredRemedialQualification,
                         rejections: { ..._dRej },
                     });
                 }
@@ -14760,6 +14865,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     displayTime: _fmtT(startTime),
                     remedialInstructorOverride,
                     requiredRemedialInstructor,
+                    requiredRemedialInstructorMode,
+                    requiredRemedialQualification,
                     zeroReason: _zeroReason,
                     totalInstructors: instructors.length,
                     afterQualificationFilter: _afterQualFilter,
@@ -14826,7 +14933,23 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         requiredQualificationId: syllabusItem.testingOfficerQualificationId || null,
                     });
                 }
-                return traceScheduleReject('NO_INSTRUCTOR_SELECTED', { remedialInstructorOverride });
+                return traceScheduleReject('NO_INSTRUCTOR_SELECTED', {
+                    remedialInstructorOverride,
+                    requiredRemedialInstructor: isRemedialSyllabusItem(syllabusItem)
+                        ? (syllabusItem.resourcesHuman || []).find(name => typeof name === 'string' && name.trim().length > 0)?.trim() || ''
+                        : '',
+                    requiredRemedialInstructorMode: isRemedialSyllabusItem(syllabusItem)
+                        ? classifyRemedialInstructorRequirement((syllabusItem.resourcesHuman || []).find(name => typeof name === 'string' && name.trim().length > 0)?.trim()).mode
+                        : 'none',
+                    requiredRemedialQualification: isRemedialSyllabusItem(syllabusItem)
+                        ? (() => {
+                            const requirement = classifyRemedialInstructorRequirement((syllabusItem.resourcesHuman || []).find(name => typeof name === 'string' && name.trim().length > 0)?.trim());
+                            return requirement.mode === 'qualification'
+                                ? (requirement.qualificationLabel || requirement.qualificationId || requirement.raw)
+                                : '';
+                        })()
+                        : '',
+                });
             }
 
             // ── HARD MODE CHECK ──

@@ -99614,6 +99614,77 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);
     return true;
   };
+  const classifyRemedialInstructorRequirement = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return { raw: "", mode: "none", qualificationId: "", qualificationLabel: "" };
+    const token = normaliseQualificationToken(raw);
+    const placeholderTokens = /* @__PURE__ */ new Set([
+      "crew",
+      "crewmember",
+      "pilot",
+      "pilot1",
+      "pilot2",
+      "p1",
+      "p2",
+      "pic",
+      "student",
+      "trainee"
+    ]);
+    if (placeholderTokens.has(token)) {
+      return { raw, mode: "placeholder", qualificationId: "", qualificationLabel: raw };
+    }
+    const namedInstructor = instructors.find((ip) => normalizeBuildPersonnelName(ip.name) === normalizeBuildPersonnelName(raw));
+    if (namedInstructor) {
+      return { raw, mode: "name", qualificationId: "", qualificationLabel: "" };
+    }
+    const instructorTokens = /* @__PURE__ */ new Set([
+      "qfi",
+      "qualifiedflyinginstructor",
+      "instructor",
+      "flyinginstructor",
+      "cfi",
+      "ofi"
+    ]);
+    if (instructorTokens.has(token)) {
+      return { raw, mode: "qualification", qualificationId: "qfi", qualificationLabel: raw };
+    }
+    const simInstructorTokens = /* @__PURE__ */ new Set([
+      "simip",
+      "simulatorinstructor",
+      "simulatorip",
+      "simulatorpilot"
+    ]);
+    if (simInstructorTokens.has(token)) {
+      return { raw, mode: "qualification", qualificationId: "contractor", qualificationLabel: raw };
+    }
+    const testingOfficerTokens = /* @__PURE__ */ new Set([
+      "testingofficer",
+      "flighttestofficer",
+      "simulatortestofficer"
+    ]);
+    if (testingOfficerTokens.has(token)) {
+      return { raw, mode: "qualification", qualificationId: "testing-officer", qualificationLabel: raw };
+    }
+    const configuredQualification = buildStaffQualificationCatalogue.qualifications.find((qualification) => [qualification.id, qualification.code, qualification.name].some((candidate) => normaliseQualificationToken(candidate) === token));
+    if (configuredQualification) {
+      return {
+        raw,
+        mode: "qualification",
+        qualificationId: configuredQualification.id,
+        qualificationLabel: configuredQualification.code || configuredQualification.name || configuredQualification.id
+      };
+    }
+    return { raw, mode: "name", qualificationId: "", qualificationLabel: "" };
+  };
+  const instructorSatisfiesRemedialQualification = (instructor, requirement) => {
+    if (requirement.mode !== "qualification") return true;
+    const requirementId = String(requirement.qualificationId || "").trim();
+    const token = normaliseQualificationToken(requirement.qualificationLabel || requirement.raw || requirementId);
+    if (requirementId === "qfi" || ["qfi", "qualifiedflyinginstructor", "instructor", "flyinginstructor", "cfi", "ofi"].includes(token)) {
+      return personHasInstructorQualification(instructor, buildStaffQualificationCatalogue);
+    }
+    return getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes(requirementId);
+  };
   const normaliseBuildWindowStart = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
   const normaliseBuildWindowEnd = (start, end) => {
     const numericEnd = Number.isFinite(Number(end)) ? Number(end) : start;
@@ -105216,6 +105287,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       let candidates = [];
       const _dRej = { staticUnavailable: 0, softDutyLimit: 0, groundLimit: 0, eventLimit: 0, timeOverlap: 0, crewDutyPeriod: 0 };
       const requiredRemedialInstructor = remedialInstructorOverride || (isRemedialSyllabusItem(syllabusItemForCheck) ? (syllabusItemForCheck.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim() : "");
+      const remedialInstructorRequirement = remedialInstructorOverride ? { raw: remedialInstructorOverride, mode: "name", qualificationId: "", qualificationLabel: "" } : classifyRemedialInstructorRequirement(requiredRemedialInstructor);
+      const requiredRemedialInstructorMode = remedialInstructorRequirement.mode;
+      const requiredRemedialQualification = remedialInstructorRequirement.mode === "qualification" ? remedialInstructorRequirement.qualificationLabel || remedialInstructorRequirement.qualificationId || remedialInstructorRequirement.raw : "";
       const testEventType2 = normaliseLmpTestEventType(syllabusItemForCheck.testEventType);
       const requiredTestingOfficerQualificationId = String(syllabusItemForCheck.testingOfficerQualificationId || "").trim();
       if (remedialInstructorOverride) {
@@ -105223,8 +105297,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       } else {
         candidates = isLmpTestEvent(testEventType2) ? [...instructors] : [...getBaseInstructorPoolForEventType(type)];
         candidates = candidates.filter((ip) => canAssignStaffForScheduledWindow(ip, startTime));
-        if (requiredRemedialInstructor) {
+        if (requiredRemedialInstructorMode === "name" && requiredRemedialInstructor) {
           candidates = candidates.filter((ip) => ip.name === requiredRemedialInstructor);
+        } else if (requiredRemedialInstructorMode === "qualification") {
+          candidates = candidates.filter((ip) => instructorSatisfiesRemedialQualification(ip, remedialInstructorRequirement));
         }
       }
       if (isLmpTestEvent(testEventType2)) {
@@ -105251,6 +105327,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           displayTime: _fmtT(startTime),
           remedialInstructorOverride,
           requiredRemedialInstructor,
+          requiredRemedialInstructorMode,
+          requiredRemedialQualification,
           totalInstructors: instructors.length,
           candidatesAfterRoleAndDayNight: _afterQualFilter,
           candidateNames: candidates.slice(0, 25).map((ip) => ip.name)
@@ -105272,7 +105350,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }).slice(0, 20).map((ip) => ip.name)
         });
       }
-      if (!requiredRemedialInstructor) {
+      if (requiredRemedialInstructorMode !== "name") {
         candidates = candidates.filter((ip) => isInstructorEligibleByUnitForBuild(ip, traineeForCheck));
       }
       if (options.excludeInstructorNames && options.excludeInstructorNames.length > 0) {
@@ -105353,6 +105431,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           displayTime: _fmtT(startTime),
           remedialInstructorOverride,
           requiredRemedialInstructor,
+          requiredRemedialInstructorMode,
+          requiredRemedialQualification,
           candidatesEnteringLoop: _candidatesEnteringLoop,
           candidateNames: candidates.slice(0, 25).map((ip) => ip.name),
           primaryOnlyMode
@@ -105572,6 +105652,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             instructor: ip.name,
             startTime,
             displayTime: _fmtT(startTime),
+            requiredRemedialInstructorMode,
+            requiredRemedialQualification,
             rejections: { ..._dRej }
           });
         }
@@ -105605,6 +105687,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           displayTime: _fmtT(startTime),
           remedialInstructorOverride,
           requiredRemedialInstructor,
+          requiredRemedialInstructorMode,
+          requiredRemedialQualification,
           zeroReason: _zeroReason,
           totalInstructors: instructors.length,
           afterQualificationFilter: _afterQualFilter,
@@ -105661,7 +105745,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             requiredQualificationId: syllabusItem.testingOfficerQualificationId || null
           });
         }
-        return traceScheduleReject("NO_INSTRUCTOR_SELECTED", { remedialInstructorOverride });
+        return traceScheduleReject("NO_INSTRUCTOR_SELECTED", {
+          remedialInstructorOverride,
+          requiredRemedialInstructor: isRemedialSyllabusItem(syllabusItem) ? (syllabusItem.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim() || "" : "",
+          requiredRemedialInstructorMode: isRemedialSyllabusItem(syllabusItem) ? classifyRemedialInstructorRequirement((syllabusItem.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim()).mode : "none",
+          requiredRemedialQualification: isRemedialSyllabusItem(syllabusItem) ? (() => {
+            const requirement = classifyRemedialInstructorRequirement((syllabusItem.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim());
+            return requirement.mode === "qualification" ? requirement.qualificationLabel || requirement.qualificationId || requirement.raw : "";
+          })() : ""
+        });
       }
       if (anyHardGroup && (type === "flight" || type === "ftd") && !isNightPass && !primaryPreferOnly) {
         const traineeFlight = (trainee.flight || "").trim();
