@@ -4,6 +4,7 @@ import AuditButton from './AuditButton';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
+    DEFAULT_INSERT_EVENT_TIMING_DEFAULTS,
     INSERT_EVENT_LABEL_MAX_LENGTH,
     type InsertEventDayNight,
     type InsertEventTypeConfig,
@@ -812,6 +813,13 @@ const isAddedLmpItem = (item: SyllabusItemDetail, masterLmpKeys?: Set<string>): 
         (!item.masterEventId && item.lmpSource !== 'master');
 };
 
+const isCustomInsertedLmpItem = (item: SyllabusItemDetail, masterLmpKeys?: Set<string>): boolean => (
+    !isRemedialLmpItem(item) && (
+        item.lmpSource === 'custom' ||
+        isAddedLmpItem(item, masterLmpKeys)
+    )
+);
+
 const formatHours = (value: unknown): string => {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue.toFixed(1) : '0.0';
@@ -1417,24 +1425,68 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
         return keys;
     }, [syllabusDetails]);
 
+    const insertTimingDefaults = useMemo(() => {
+        const configuredDefaults = insertEventTypes.find(Boolean);
+        return {
+            preFlightTime: configuredDefaults?.preFlightTime ?? DEFAULT_INSERT_EVENT_TIMING_DEFAULTS.preFlightTime,
+            postFlightTime: configuredDefaults?.postFlightTime ?? DEFAULT_INSERT_EVENT_TIMING_DEFAULTS.postFlightTime,
+        };
+    }, [insertEventTypes]);
+
+    const displayTraineeLmp = useMemo(() => traineeLmp.map((item) => {
+        if (!isCustomInsertedLmpItem(item, masterLmpKeys)) return item;
+
+        const timingOverrides = item.individualTimingOverrides || {};
+        const preFlightTime = timingOverrides.preFlightTime === true
+            ? item.preFlightTime
+            : insertTimingDefaults.preFlightTime;
+        const postFlightTime = timingOverrides.postFlightTime === true
+            ? item.postFlightTime
+            : insertTimingDefaults.postFlightTime;
+
+        if (preFlightTime === item.preFlightTime && postFlightTime === item.postFlightTime) return item;
+
+        return {
+            ...item,
+            preFlightTime,
+            postFlightTime,
+        };
+    }), [insertTimingDefaults, masterLmpKeys, traineeLmp]);
+
     useEffect(() => {
         if (activeTab !== 'neo') return;
-        if (traineeLmp.length === 0) {
+        if (displayTraineeLmp.length === 0) {
             setSelectedItem(null);
             return;
         }
 
         setSelectedItem(current => {
             if (current) {
-                const refreshedItem = traineeLmp.find(item => (
+                const refreshedItem = displayTraineeLmp.find(item => (
                     (current.id && item.id === current.id) ||
                     (current.code && item.code === current.code)
                 ));
                 if (refreshedItem) return refreshedItem;
             }
-            return traineeLmp[0];
+            return displayTraineeLmp[0];
         });
-    }, [activeTab, trainee.fullName, traineeLmp]);
+    }, [activeTab, displayTraineeLmp, trainee.fullName]);
+
+    const selectedDisplayItem = useMemo(() => {
+        if (!selectedItem) return null;
+        return displayTraineeLmp.find(item => (
+            (selectedItem.id && item.id === selectedItem.id) ||
+            (selectedItem.code && item.code === selectedItem.code)
+        )) || selectedItem;
+    }, [displayTraineeLmp, selectedItem]);
+
+    const selectedRawItem = useMemo(() => {
+        if (!selectedItem) return null;
+        return traineeLmp.find(item => (
+            (selectedItem.id && item.id === selectedItem.id) ||
+            (selectedItem.code && item.code === selectedItem.code)
+        )) || selectedItem;
+    }, [selectedItem, traineeLmp]);
 
     // Tab button style helper
     const tabClass = (tab: 'neo' | 'academic') =>
@@ -1462,7 +1514,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     {activeTab === 'neo' && (
                         <button
                             onClick={() => setShowInsertEventModal(true)}
-                            disabled={!onInsertCustomEvent || traineeLmp.length === 0 || insertEventTypes.length === 0}
+                            disabled={!onInsertCustomEvent || displayTraineeLmp.length === 0 || insertEventTypes.length === 0}
                             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             Insert<br />Event
@@ -1470,16 +1522,16 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     )}
                     {activeTab === 'neo' && (
                         <button
-                            onClick={() => selectedItem && setItemBeingEdited(selectedItem)}
-                            disabled={!selectedItem || !onUpdateLmpItem}
+                            onClick={() => selectedDisplayItem && setItemBeingEdited(selectedDisplayItem)}
+                            disabled={!selectedDisplayItem || !onUpdateLmpItem}
                             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             Edit
                         </button>
                     )}
-                    {activeTab === 'neo' && selectedItem && onGeneratePt051ForItem && (
+                    {activeTab === 'neo' && selectedDisplayItem && onGeneratePt051ForItem && (
                         <button
-                            onClick={() => onGeneratePt051ForItem(trainee, selectedItem)}
+                            onClick={() => onGeneratePt051ForItem(trainee, selectedDisplayItem)}
                             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed"
                         >
                             Generate<br />{trainingReportDisplayName}
@@ -1491,9 +1543,9 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
 
             {showInsertEventModal && (
                 <InsertEventModal
-                    traineeLmp={traineeLmp}
+                    traineeLmp={displayTraineeLmp}
                     insertEventTypes={insertEventTypes}
-                    selectedAnchorItem={selectedItem}
+                    selectedAnchorItem={selectedDisplayItem}
                     aircraftCrewComposition={aircraftCrewComposition}
                     onCancel={() => setShowInsertEventModal(false)}
                     onSave={async (request) => {
@@ -1510,7 +1562,8 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     testingOfficerQualifications={testingOfficerQualifications}
                     onCancel={() => setItemBeingEdited(null)}
                     onSave={async (updatedItem) => {
-                        const updated = await onUpdateLmpItem?.(trainee, itemBeingEdited, updatedItem);
+                        const originalItem = selectedRawItem || itemBeingEdited;
+                        const updated = await onUpdateLmpItem?.(trainee, originalItem, updatedItem);
                         if (updated !== false) {
                             setSelectedItem(updatedItem);
                             setItemBeingEdited(null);
@@ -1558,10 +1611,10 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                         {/* Left Column: Event Tiles */}
                         <div className="w-[310px] min-h-0 border-r border-gray-700 overflow-y-auto overscroll-contain bg-gray-950/25">
                             <ul className="p-3 space-y-2">
-                                {traineeLmp.map(item => {
+                                {displayTraineeLmp.map(item => {
                                     const isCompleted = completedEventIds.has(item.code);
                                     const isAddedItem = isAddedLmpItem(item, masterLmpKeys);
-                                    const isSelected = selectedItem?.code === item.code;
+                                    const isSelected = selectedDisplayItem?.code === item.code;
                                     const phaseLabel = item.phase || 'Phase';
                                     const moduleLabel = formatLmpModuleLabel(item.module);
                                     const sortieLabel = formatLmpSortieLabel(item, resourceDisplayNames);
@@ -1619,17 +1672,17 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                         {/* Right Column: Detail View */}
                         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                             <div className="p-6 max-w-5xl mx-auto min-h-full">
-                                {selectedItem ? (
+                                {selectedDisplayItem ? (
                                     <DetailView
-                                        item={selectedItem}
-                                        score={scores.find(s => s.event === selectedItem.code)}
+                                        item={selectedDisplayItem}
+                                        score={scores.find(s => s.event === selectedDisplayItem.code)}
                                         resourceDisplayNames={resourceDisplayNames}
                                         aircraftConfigurations={aircraftConfigurations}
                                         testingOfficerQualifications={testingOfficerQualifications}
                                         instructorLabel={instructorLabel}
-                                        isRemedial={isRemedialLmpItem(selectedItem)}
-                                        isAddedItem={isAddedLmpItem(selectedItem, masterLmpKeys)}
-                                        onDelete={isRemedialLmpItem(selectedItem) && onDeleteRemedialItem
+                                        isRemedial={isRemedialLmpItem(selectedDisplayItem)}
+                                        isAddedItem={isAddedLmpItem(selectedDisplayItem, masterLmpKeys)}
+                                        onDelete={isRemedialLmpItem(selectedDisplayItem) && onDeleteRemedialItem
                                             ? async (item) => {
                                                 const deleted = await onDeleteRemedialItem(trainee, item);
                                                 if (deleted) setSelectedItem(null);

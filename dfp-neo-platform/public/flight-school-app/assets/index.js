@@ -22130,6 +22130,7 @@ const isAddedLmpItem = (item, masterLmpKeys) => {
   }
   return /X\d+$/i.test(String(item.code || item.id || "")) || !item.masterEventId && item.lmpSource !== "master";
 };
+const isCustomInsertedLmpItem = (item, masterLmpKeys) => !isRemedialLmpItem(item) && (item.lmpSource === "custom" || isAddedLmpItem(item, masterLmpKeys));
 const formatHours$1 = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue.toFixed(1) : "0.0";
@@ -22612,20 +22613,47 @@ const TraineeLmpView = ({
     (syllabusDetails || []).filter((item) => item.lmpSource !== "custom" && item.lmpSource !== "remedial" && item.isRemedial !== true).forEach((item) => getLmpItemKeys(item).forEach((key) => keys.add(key)));
     return keys;
   }, [syllabusDetails]);
+  const insertTimingDefaults = reactExports.useMemo(() => {
+    const configuredDefaults = insertEventTypes.find(Boolean);
+    return {
+      preFlightTime: configuredDefaults?.preFlightTime ?? DEFAULT_INSERT_EVENT_TIMING_DEFAULTS.preFlightTime,
+      postFlightTime: configuredDefaults?.postFlightTime ?? DEFAULT_INSERT_EVENT_TIMING_DEFAULTS.postFlightTime
+    };
+  }, [insertEventTypes]);
+  const displayTraineeLmp = reactExports.useMemo(() => traineeLmp.map((item) => {
+    if (!isCustomInsertedLmpItem(item, masterLmpKeys)) return item;
+    const timingOverrides = item.individualTimingOverrides || {};
+    const preFlightTime = timingOverrides.preFlightTime === true ? item.preFlightTime : insertTimingDefaults.preFlightTime;
+    const postFlightTime = timingOverrides.postFlightTime === true ? item.postFlightTime : insertTimingDefaults.postFlightTime;
+    if (preFlightTime === item.preFlightTime && postFlightTime === item.postFlightTime) return item;
+    return {
+      ...item,
+      preFlightTime,
+      postFlightTime
+    };
+  }), [insertTimingDefaults, masterLmpKeys, traineeLmp]);
   reactExports.useEffect(() => {
     if (activeTab !== "neo") return;
-    if (traineeLmp.length === 0) {
+    if (displayTraineeLmp.length === 0) {
       setSelectedItem(null);
       return;
     }
     setSelectedItem((current) => {
       if (current) {
-        const refreshedItem = traineeLmp.find((item) => current.id && item.id === current.id || current.code && item.code === current.code);
+        const refreshedItem = displayTraineeLmp.find((item) => current.id && item.id === current.id || current.code && item.code === current.code);
         if (refreshedItem) return refreshedItem;
       }
-      return traineeLmp[0];
+      return displayTraineeLmp[0];
     });
-  }, [activeTab, trainee.fullName, traineeLmp]);
+  }, [activeTab, displayTraineeLmp, trainee.fullName]);
+  const selectedDisplayItem = reactExports.useMemo(() => {
+    if (!selectedItem) return null;
+    return displayTraineeLmp.find((item) => selectedItem.id && item.id === selectedItem.id || selectedItem.code && item.code === selectedItem.code) || selectedItem;
+  }, [displayTraineeLmp, selectedItem]);
+  const selectedRawItem = reactExports.useMemo(() => {
+    if (!selectedItem) return null;
+    return traineeLmp.find((item) => selectedItem.id && item.id === selectedItem.id || selectedItem.code && item.code === selectedItem.code) || selectedItem;
+  }, [selectedItem, traineeLmp]);
   const tabClass = (tab) => `px-4 py-2 text-sm font-semibold rounded-t-md transition-colors ${activeTab === tab ? "bg-gray-900 text-sky-400 border-t border-l border-r border-gray-700" : "bg-gray-800 text-gray-400 hover:text-gray-200 border border-transparent"}`;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -22652,7 +22680,7 @@ const TraineeLmpView = ({
           "button",
           {
             onClick: () => setShowInsertEventModal(true),
-            disabled: !onInsertCustomEvent || traineeLmp.length === 0 || insertEventTypes.length === 0,
+            disabled: !onInsertCustomEvent || displayTraineeLmp.length === 0 || insertEventTypes.length === 0,
             className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed",
             children: [
               "Insert",
@@ -22664,16 +22692,16 @@ const TraineeLmpView = ({
         activeTab === "neo" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => selectedItem && setItemBeingEdited(selectedItem),
-            disabled: !selectedItem || !onUpdateLmpItem,
+            onClick: () => selectedDisplayItem && setItemBeingEdited(selectedDisplayItem),
+            disabled: !selectedDisplayItem || !onUpdateLmpItem,
             className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed",
             children: "Edit"
           }
         ),
-        activeTab === "neo" && selectedItem && onGeneratePt051ForItem && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        activeTab === "neo" && selectedDisplayItem && onGeneratePt051ForItem && /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
-            onClick: () => onGeneratePt051ForItem(trainee, selectedItem),
+            onClick: () => onGeneratePt051ForItem(trainee, selectedDisplayItem),
             className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed",
             children: [
               "Generate",
@@ -22688,9 +22716,9 @@ const TraineeLmpView = ({
     showInsertEventModal && /* @__PURE__ */ jsxRuntimeExports.jsx(
       InsertEventModal,
       {
-        traineeLmp,
+        traineeLmp: displayTraineeLmp,
         insertEventTypes,
-        selectedAnchorItem: selectedItem,
+        selectedAnchorItem: selectedDisplayItem,
         aircraftCrewComposition,
         onCancel: () => setShowInsertEventModal(false),
         onSave: async (request) => {
@@ -22707,7 +22735,8 @@ const TraineeLmpView = ({
         testingOfficerQualifications,
         onCancel: () => setItemBeingEdited(null),
         onSave: async (updatedItem) => {
-          const updated = await onUpdateLmpItem?.(trainee, itemBeingEdited, updatedItem);
+          const originalItem = selectedRawItem || itemBeingEdited;
+          const updated = await onUpdateLmpItem?.(trainee, originalItem, updatedItem);
           if (updated !== false) {
             setSelectedItem(updatedItem);
             setItemBeingEdited(null);
@@ -22738,10 +22767,10 @@ const TraineeLmpView = ({
       ) : (
         /* ── NEO Build LMP Tab (existing) ── */
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[310px] min-h-0 border-r border-gray-700 overflow-y-auto overscroll-contain bg-gray-950/25", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-3 space-y-2", children: traineeLmp.map((item) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[310px] min-h-0 border-r border-gray-700 overflow-y-auto overscroll-contain bg-gray-950/25", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-3 space-y-2", children: displayTraineeLmp.map((item) => {
             const isCompleted = completedEventIds.has(item.code);
             const isAddedItem = isAddedLmpItem(item, masterLmpKeys);
-            const isSelected = selectedItem?.code === item.code;
+            const isSelected = selectedDisplayItem?.code === item.code;
             const phaseLabel = item.phase || "Phase";
             const moduleLabel = formatLmpModuleLabel(item.module);
             const sortieLabel = formatLmpSortieLabel(item, resourceDisplayNames);
@@ -22769,18 +22798,18 @@ const TraineeLmpView = ({
               }
             ) }, item.id || item.code);
           }) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 min-h-0 overflow-y-auto overscroll-contain", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto min-h-full", children: selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 min-h-0 overflow-y-auto overscroll-contain", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto min-h-full", children: selectedDisplayItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             DetailView$1,
             {
-              item: selectedItem,
-              score: scores.find((s) => s.event === selectedItem.code),
+              item: selectedDisplayItem,
+              score: scores.find((s) => s.event === selectedDisplayItem.code),
               resourceDisplayNames,
               aircraftConfigurations,
               testingOfficerQualifications,
               instructorLabel: instructorLabel2,
-              isRemedial: isRemedialLmpItem(selectedItem),
-              isAddedItem: isAddedLmpItem(selectedItem, masterLmpKeys),
-              onDelete: isRemedialLmpItem(selectedItem) && onDeleteRemedialItem ? async (item) => {
+              isRemedial: isRemedialLmpItem(selectedDisplayItem),
+              isAddedItem: isAddedLmpItem(selectedDisplayItem, masterLmpKeys),
+              onDelete: isRemedialLmpItem(selectedDisplayItem) && onDeleteRemedialItem ? async (item) => {
                 const deleted = await onDeleteRemedialItem(trainee, item);
                 if (deleted) setSelectedItem(null);
               } : void 0
