@@ -68,6 +68,7 @@ import {
     loadSuppressedTrainingReportEventIds,
     saveSuppressedTrainingReportEventIds,
 } from './utils/trainingReportCompatibility';
+import { replaceTrainingReportNextEventExtension } from './utils/trainingReportExtensions';
 import { getSctTerminology } from './utils/sctTerminology';
 import { buildCompactPersonNameResolver, formatPersonOptionLabel, getPersonDisplayName, getPersonIdentityDedupeKey, normalisePersonName, type PersonIdentityRecord } from './utils/personIdentity';
 import {
@@ -35069,24 +35070,20 @@ const App: React.FC = () => {
 
         const nextEvent = originalLmp[nextEventIndex] as SyllabusItemDetail & Record<string, any>;
         const extensionKey = assessment.id || assessment.eventId;
-        const legacyExtensionKeys = [
-            assessment.eventId,
-            `${assessment.eventId}`,
-            `${assessment.flightNumber}-${assessment.traineeFullName}`,
-        ].map(value => String(value || '').trim()).filter(Boolean);
-        const extensionLedger = {
-            ...(nextEvent.trainingReportNextEventExtensions || {}),
-        } as Record<string, number>;
-        const previousAssessmentKey = String(nextEvent.trainingReportLastExtendedByAssessmentId || '').trim();
-        const previousExtension = Number(
-            extensionLedger[extensionKey] ||
-            (previousAssessmentKey && previousAssessmentKey !== extensionKey ? extensionLedger[previousAssessmentKey] : 0) ||
-            legacyExtensionKeys.map(key => Number(extensionLedger[key] || 0)).find(value => value > 0) ||
-            0
-        );
         const requestedExtension = Number(assessment.dpcoFollowUp?.extraHours || 0);
-        const delta = requestedExtension - previousExtension;
-        if (Math.abs(delta) < 0.0001) {
+        const existingFlightOrSimHours = Number(nextEvent.flightOrSimHours || nextEvent.duration || 0);
+        const existingDuration = Number(nextEvent.duration || nextEvent.flightOrSimHours || 0);
+        const existingTotalEventHours = Number(nextEvent.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
+        const extensionReplacement = replaceTrainingReportNextEventExtension({
+            extensionKey,
+            requestedExtension,
+            flightOrSimHours: existingFlightOrSimHours,
+            duration: existingDuration,
+            totalEventHours: existingTotalEventHours,
+            extensionLedger: nextEvent.trainingReportNextEventExtensions,
+        });
+        const previousExtension = extensionReplacement.previousExtension;
+        if (!extensionReplacement.changed) {
             pushDfpDataDiag('report-lmp:extend-next:no-delta', {
                 assessmentId: assessment.id,
                 traineeFullName: trainee.fullName,
@@ -35094,30 +35091,19 @@ const App: React.FC = () => {
                 nextEventCode: nextEvent.code,
                 requestedExtension,
                 previousExtension,
+                trackedExtensionTotal: extensionReplacement.trackedExtensionTotal,
             });
             return;
         }
 
-        const existingFlightOrSimHours = Number(nextEvent.flightOrSimHours || nextEvent.duration || 0);
-        const existingDuration = Number(nextEvent.duration || nextEvent.flightOrSimHours || 0);
-        const existingTotalEventHours = Number(nextEvent.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
-        legacyExtensionKeys.forEach(key => {
-            if (key !== extensionKey && Object.prototype.hasOwnProperty.call(extensionLedger, key)) {
-                delete extensionLedger[key];
-            }
-        });
-        if (previousAssessmentKey && previousAssessmentKey !== extensionKey && Object.prototype.hasOwnProperty.call(extensionLedger, previousAssessmentKey)) {
-            delete extensionLedger[previousAssessmentKey];
-        }
-        extensionLedger[extensionKey] = requestedExtension;
-
         const updatedNextEvent: SyllabusItemDetail & Record<string, any> = {
             ...nextEvent,
-            flightOrSimHours: Math.max(0, Number((existingFlightOrSimHours + delta).toFixed(2))),
-            duration: Math.max(0, Number((existingDuration + delta).toFixed(2))),
-            totalEventHours: Math.max(0, Number((existingTotalEventHours + delta).toFixed(2))),
-            trainingReportNextEventExtensions: extensionLedger,
+            flightOrSimHours: extensionReplacement.flightOrSimHours,
+            duration: extensionReplacement.duration,
+            totalEventHours: extensionReplacement.totalEventHours,
+            trainingReportNextEventExtensions: extensionReplacement.extensionLedger,
             trainingReportLastExtendedByAssessmentId: extensionKey,
+            trainingReportExtensionAssessmentIds: Object.keys(extensionReplacement.extensionLedger),
         };
 
         const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedNextEvent : item);
@@ -35130,7 +35116,9 @@ const App: React.FC = () => {
             nextEventIndex,
             requestedExtension,
             previousExtension,
-            delta,
+            appliedDelta: extensionReplacement.appliedDelta,
+            trackedExtensionTotal: extensionReplacement.trackedExtensionTotal,
+            replacedExtensionKeys: extensionReplacement.replacedExtensionKeys,
             before: {
                 flightOrSimHours: existingFlightOrSimHours,
                 duration: existingDuration,
@@ -38663,29 +38651,27 @@ const App: React.FC = () => {
 
                 if (requestedExtensionInfo) {
                     const requestedExtension = Number(requestedExtensionInfo.hours);
-                    const extensionLedger = {
-                        ...(updatedTarget.trainingReportNextEventExtensions || {}),
-                    } as Record<string, number>;
-                    const preservedExtensionKeys = Object.keys(extensionLedger).filter(key => key !== assessmentKey);
-                    const previousExtension = Number(extensionLedger[assessmentKey] || 0);
-                    const delta = requestedExtension - previousExtension;
-                    if (Math.abs(delta) >= 0.0001) {
-                        const existingFlightOrSimHours = Number(updatedTarget.flightOrSimHours || updatedTarget.duration || 0);
-                        const existingDuration = Number(updatedTarget.duration || updatedTarget.flightOrSimHours || 0);
-                        const existingTotalEventHours = Number(updatedTarget.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
-                        extensionLedger[assessmentKey] = requestedExtension;
-                        const totalTrackedExtension = Object.values(extensionLedger).reduce((sum, value) => {
-                            const numericValue = Number(value);
-                            return sum + (Number.isFinite(numericValue) ? numericValue : 0);
-                        }, 0);
+                    const existingFlightOrSimHours = Number(updatedTarget.flightOrSimHours || updatedTarget.duration || 0);
+                    const existingDuration = Number(updatedTarget.duration || updatedTarget.flightOrSimHours || 0);
+                    const existingTotalEventHours = Number(updatedTarget.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
+                    const extensionReplacement = replaceTrainingReportNextEventExtension({
+                        extensionKey: assessmentKey,
+                        requestedExtension,
+                        flightOrSimHours: existingFlightOrSimHours,
+                        duration: existingDuration,
+                        totalEventHours: existingTotalEventHours,
+                        extensionLedger: updatedTarget.trainingReportNextEventExtensions,
+                    });
+                    const previousExtension = extensionReplacement.previousExtension;
+                    if (extensionReplacement.changed) {
                         updatedTarget = {
                             ...updatedTarget,
-                            flightOrSimHours: Math.max(0, Number((existingFlightOrSimHours + delta).toFixed(2))),
-                            duration: Math.max(0, Number((existingDuration + delta).toFixed(2))),
-                            totalEventHours: Math.max(0, Number((existingTotalEventHours + delta).toFixed(2))),
-                            trainingReportNextEventExtensions: extensionLedger,
+                            flightOrSimHours: extensionReplacement.flightOrSimHours,
+                            duration: extensionReplacement.duration,
+                            totalEventHours: extensionReplacement.totalEventHours,
+                            trainingReportNextEventExtensions: extensionReplacement.extensionLedger,
                             trainingReportLastExtendedByAssessmentId: assessmentKey,
-                            trainingReportExtensionAssessmentIds: Object.keys(extensionLedger),
+                            trainingReportExtensionAssessmentIds: Object.keys(extensionReplacement.extensionLedger),
                         };
                         changed = true;
                         updates.push({
@@ -38697,9 +38683,9 @@ const App: React.FC = () => {
                             requestedExtensionSource: requestedExtensionInfo.source,
                             requestedTargetCode: requestedTargetCode || null,
                             previousExtension,
-                            preservedExtensionKeys,
-                            delta,
-                            totalTrackedExtension: Number(totalTrackedExtension.toFixed(2)),
+                            appliedDelta: extensionReplacement.appliedDelta,
+                            trackedExtensionTotal: extensionReplacement.trackedExtensionTotal,
+                            replacedExtensionKeys: extensionReplacement.replacedExtensionKeys,
                             before: {
                                 flightOrSimHours: existingFlightOrSimHours,
                                 duration: existingDuration,
@@ -38721,7 +38707,7 @@ const App: React.FC = () => {
                             requestedExtensionSource: requestedExtensionInfo.source,
                             requestedTargetCode: requestedTargetCode || null,
                             previousExtension,
-                            preservedExtensionKeys,
+                            trackedExtensionTotal: extensionReplacement.trackedExtensionTotal,
                         });
                     }
                 }

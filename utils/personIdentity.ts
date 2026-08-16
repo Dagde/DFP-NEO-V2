@@ -274,6 +274,13 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
     return explainCompact(name).output;
   };
 
+  const formatCompactWithInitial = (name: unknown): string => {
+    const result = explainCompact(name);
+    return result.decision === 'exact-duplicate' || result.decision === 'exact-duplicate-without-id'
+      ? result.output
+      : result.base || result.output;
+  };
+
   const formatList = (person: PersonIdentityRecord): string => {
     const displayName = stripPersonContext(person.name || getPersonDisplayName(person)) || 'Unnamed person';
     const { surname, firstName } = getNameParts(displayName);
@@ -284,5 +291,5 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
     return suffix ? `${displayName} · ${suffix}` : displayName;
   };
 
-  return { formatCompact, formatList, explainCompact };
+  return { formatCompact, formatCompactWithInitial, formatList, explainCompact };
 };

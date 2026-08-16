@@ -273,7 +273,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
       () => buildCompactPersonNameResolver([...(event.personnelRefs || []), ...(instructorsData as any), ...(traineesData as any)]),
       [event.personnelRefs, instructorsData, traineesData]
   );
-  const formatStaffTileName = (name: unknown) => staffNameResolver.formatCompact(name);
+  const formatStaffTileName = (name: unknown) => staffNameResolver.formatCompactWithInitial(name);
   const formatTraineeTileName = (name: unknown) => traineeNameResolver.formatCompact(name);
   const formatMixedTileName = (name: unknown) => mixedNameResolver.formatCompact(name);
   

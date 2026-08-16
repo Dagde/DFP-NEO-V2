@@ -1817,7 +1817,7 @@ function toDegrees(radians) {
 function normaliseDegrees(degrees) {
   return (degrees % 360 + 360) % 360;
 }
-function normaliseHours(hours) {
+function normaliseHours$1(hours) {
   return (hours % 24 + 24) % 24;
 }
 function parseDateParts(date) {
@@ -1870,7 +1870,7 @@ function timeStringToDecimalHours(value) {
   const hours = Number(match[1]);
   const minutes = Number(match[2]);
   if (hours < 0 || hours > 24 || minutes < 0 || minutes > 59) return null;
-  return normaliseHours(hours + minutes / 60);
+  return normaliseHours$1(hours + minutes / 60);
 }
 function formatTimeInZone(date, timezone) {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -1928,7 +1928,7 @@ function calculateUtcMinutesForSolarEvent(dateParts, latitude, longitude, isSunr
   let localHourAngle = isSunrise ? 360 - toDegrees(Math.acos(cosLocalHourAngle)) : toDegrees(Math.acos(cosLocalHourAngle));
   localHourAngle /= 15;
   const localMeanTime = localHourAngle + rightAscension - 0.06571 * approximateTime - 6.622;
-  const utcHours = normaliseHours(localMeanTime - longitudeHour);
+  const utcHours = normaliseHours$1(localMeanTime - longitudeHour);
   return {
     utcMinutes: Math.round(utcHours * 60),
     polarState: null
@@ -4893,6 +4893,49 @@ const saveSuppressedTrainingReportEventIds = (eventIds) => {
   } catch {
   }
 };
+const roundHours = (value) => Math.round(value * 100) / 100;
+const normaliseHours = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+const replaceTrainingReportNextEventExtension = ({
+  extensionKey,
+  requestedExtension,
+  flightOrSimHours,
+  duration,
+  totalEventHours,
+  extensionLedger
+}) => {
+  const existingLedger = Object.entries(extensionLedger || {}).reduce((ledger, [key2, value]) => {
+    const hours = normaliseHours(value);
+    if (key2.trim() && hours > 0) ledger[key2] = hours;
+    return ledger;
+  }, {});
+  const trackedExtensionTotal = Object.values(existingLedger).reduce((total, hours) => total + hours, 0);
+  const key = String(extensionKey || "").trim();
+  const nextExtension = normaliseHours(requestedExtension);
+  const nextLedger = key && nextExtension > 0 ? { [key]: nextExtension } : {};
+  const replaceHours = (currentValue) => roundHours(
+    Math.max(0, normaliseHours(currentValue) - trackedExtensionTotal) + nextExtension
+  );
+  const nextFlightOrSimHours = replaceHours(flightOrSimHours);
+  const nextDuration = replaceHours(duration);
+  const nextTotalEventHours = replaceHours(totalEventHours);
+  const replacedExtensionKeys = Object.keys(existingLedger).filter((existingKey) => existingKey !== key);
+  const previousExtension = key ? normaliseHours(existingLedger[key]) : 0;
+  const changed = nextFlightOrSimHours !== roundHours(normaliseHours(flightOrSimHours)) || nextDuration !== roundHours(normaliseHours(duration)) || nextTotalEventHours !== roundHours(normaliseHours(totalEventHours)) || JSON.stringify(existingLedger) !== JSON.stringify(nextLedger);
+  return {
+    flightOrSimHours: nextFlightOrSimHours,
+    duration: nextDuration,
+    totalEventHours: nextTotalEventHours,
+    extensionLedger: nextLedger,
+    trackedExtensionTotal: roundHours(trackedExtensionTotal),
+    previousExtension,
+    appliedDelta: roundHours(nextDuration - normaliseHours(duration)),
+    replacedExtensionKeys,
+    changed
+  };
+};
 const DEFAULT_SCT_TERMINOLOGY$1 = {
   shortLabel: "ContT",
   longLabel: "Continuation Training"
@@ -5137,6 +5180,10 @@ const buildCompactPersonNameResolver = (people = []) => {
   const formatCompact = (name) => {
     return explainCompact(name).output;
   };
+  const formatCompactWithInitial = (name) => {
+    const result = explainCompact(name);
+    return result.decision === "exact-duplicate" || result.decision === "exact-duplicate-without-id" ? result.output : result.base || result.output;
+  };
   const formatList = (person) => {
     const displayName = stripPersonContext(person.name || getPersonDisplayName(person)) || "Unnamed person";
     const { surname, firstName } = getNameParts(displayName);
@@ -5146,7 +5193,7 @@ const buildCompactPersonNameResolver = (people = []) => {
     const suffix = getLastThreeIdDigits(person);
     return suffix ? `${displayName} · ${suffix}` : displayName;
   };
-  return { formatCompact, formatList, explainCompact };
+  return { formatCompact, formatCompactWithInitial, formatList, explainCompact };
 };
 const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "pooled_crew"];
 const normaliseCode$4 = (value, fallback) => {
@@ -9092,7 +9139,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
     () => buildCompactPersonNameResolver([...event.personnelRefs || [], ...instructorsData, ...traineesData]),
     [event.personnelRefs, instructorsData, traineesData]
   );
-  const formatStaffTileName = (name) => staffNameResolver.formatCompact(name);
+  const formatStaffTileName = (name) => staffNameResolver.formatCompactWithInitial(name);
   const formatTraineeTileName = (name) => traineeNameResolver.formatCompact(name);
   const formatMixedTileName = (name) => mixedNameResolver.formatCompact(name);
   const isSmallTile = tileWidth < 60;
@@ -122335,50 +122382,39 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const nextEvent = originalLmp[nextEventIndex];
     const extensionKey = assessment.id || assessment.eventId;
-    const legacyExtensionKeys = [
-      assessment.eventId,
-      `${assessment.eventId}`,
-      `${assessment.flightNumber}-${assessment.traineeFullName}`
-    ].map((value) => String(value || "").trim()).filter(Boolean);
-    const extensionLedger = {
-      ...nextEvent.trainingReportNextEventExtensions || {}
-    };
-    const previousAssessmentKey = String(nextEvent.trainingReportLastExtendedByAssessmentId || "").trim();
-    const previousExtension = Number(
-      extensionLedger[extensionKey] || (previousAssessmentKey && previousAssessmentKey !== extensionKey ? extensionLedger[previousAssessmentKey] : 0) || legacyExtensionKeys.map((key) => Number(extensionLedger[key] || 0)).find((value) => value > 0) || 0
-    );
     const requestedExtension = Number(assessment.dpcoFollowUp?.extraHours || 0);
-    const delta = requestedExtension - previousExtension;
-    if (Math.abs(delta) < 1e-4) {
+    const existingFlightOrSimHours = Number(nextEvent.flightOrSimHours || nextEvent.duration || 0);
+    const existingDuration = Number(nextEvent.duration || nextEvent.flightOrSimHours || 0);
+    const existingTotalEventHours = Number(nextEvent.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
+    const extensionReplacement = replaceTrainingReportNextEventExtension({
+      extensionKey,
+      requestedExtension,
+      flightOrSimHours: existingFlightOrSimHours,
+      duration: existingDuration,
+      totalEventHours: existingTotalEventHours,
+      extensionLedger: nextEvent.trainingReportNextEventExtensions
+    });
+    const previousExtension = extensionReplacement.previousExtension;
+    if (!extensionReplacement.changed) {
       pushDfpDataDiag("report-lmp:extend-next:no-delta", {
         assessmentId: assessment.id,
         traineeFullName: trainee.fullName,
         sourceCode: sourceItem.code,
         nextEventCode: nextEvent.code,
         requestedExtension,
-        previousExtension
+        previousExtension,
+        trackedExtensionTotal: extensionReplacement.trackedExtensionTotal
       });
       return;
     }
-    const existingFlightOrSimHours = Number(nextEvent.flightOrSimHours || nextEvent.duration || 0);
-    const existingDuration = Number(nextEvent.duration || nextEvent.flightOrSimHours || 0);
-    const existingTotalEventHours = Number(nextEvent.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
-    legacyExtensionKeys.forEach((key) => {
-      if (key !== extensionKey && Object.prototype.hasOwnProperty.call(extensionLedger, key)) {
-        delete extensionLedger[key];
-      }
-    });
-    if (previousAssessmentKey && previousAssessmentKey !== extensionKey && Object.prototype.hasOwnProperty.call(extensionLedger, previousAssessmentKey)) {
-      delete extensionLedger[previousAssessmentKey];
-    }
-    extensionLedger[extensionKey] = requestedExtension;
     const updatedNextEvent = {
       ...nextEvent,
-      flightOrSimHours: Math.max(0, Number((existingFlightOrSimHours + delta).toFixed(2))),
-      duration: Math.max(0, Number((existingDuration + delta).toFixed(2))),
-      totalEventHours: Math.max(0, Number((existingTotalEventHours + delta).toFixed(2))),
-      trainingReportNextEventExtensions: extensionLedger,
-      trainingReportLastExtendedByAssessmentId: extensionKey
+      flightOrSimHours: extensionReplacement.flightOrSimHours,
+      duration: extensionReplacement.duration,
+      totalEventHours: extensionReplacement.totalEventHours,
+      trainingReportNextEventExtensions: extensionReplacement.extensionLedger,
+      trainingReportLastExtendedByAssessmentId: extensionKey,
+      trainingReportExtensionAssessmentIds: Object.keys(extensionReplacement.extensionLedger)
     };
     const updatedLmp = originalLmp.map((item, index) => index === nextEventIndex ? updatedNextEvent : item);
     pushDfpDataDiag("report-lmp:extend-next:prepared", {
@@ -122390,7 +122426,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       nextEventIndex,
       requestedExtension,
       previousExtension,
-      delta,
+      appliedDelta: extensionReplacement.appliedDelta,
+      trackedExtensionTotal: extensionReplacement.trackedExtensionTotal,
+      replacedExtensionKeys: extensionReplacement.replacedExtensionKeys,
       before: {
         flightOrSimHours: existingFlightOrSimHours,
         duration: existingDuration,
@@ -125263,29 +125301,27 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         let changed = false;
         if (requestedExtensionInfo) {
           const requestedExtension = Number(requestedExtensionInfo.hours);
-          const extensionLedger = {
-            ...updatedTarget.trainingReportNextEventExtensions || {}
-          };
-          const preservedExtensionKeys = Object.keys(extensionLedger).filter((key) => key !== assessmentKey);
-          const previousExtension = Number(extensionLedger[assessmentKey] || 0);
-          const delta = requestedExtension - previousExtension;
-          if (Math.abs(delta) >= 1e-4) {
-            const existingFlightOrSimHours = Number(updatedTarget.flightOrSimHours || updatedTarget.duration || 0);
-            const existingDuration = Number(updatedTarget.duration || updatedTarget.flightOrSimHours || 0);
-            const existingTotalEventHours = Number(updatedTarget.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
-            extensionLedger[assessmentKey] = requestedExtension;
-            const totalTrackedExtension = Object.values(extensionLedger).reduce((sum, value) => {
-              const numericValue = Number(value);
-              return sum + (Number.isFinite(numericValue) ? numericValue : 0);
-            }, 0);
+          const existingFlightOrSimHours = Number(updatedTarget.flightOrSimHours || updatedTarget.duration || 0);
+          const existingDuration = Number(updatedTarget.duration || updatedTarget.flightOrSimHours || 0);
+          const existingTotalEventHours = Number(updatedTarget.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
+          const extensionReplacement = replaceTrainingReportNextEventExtension({
+            extensionKey: assessmentKey,
+            requestedExtension,
+            flightOrSimHours: existingFlightOrSimHours,
+            duration: existingDuration,
+            totalEventHours: existingTotalEventHours,
+            extensionLedger: updatedTarget.trainingReportNextEventExtensions
+          });
+          const previousExtension = extensionReplacement.previousExtension;
+          if (extensionReplacement.changed) {
             updatedTarget = {
               ...updatedTarget,
-              flightOrSimHours: Math.max(0, Number((existingFlightOrSimHours + delta).toFixed(2))),
-              duration: Math.max(0, Number((existingDuration + delta).toFixed(2))),
-              totalEventHours: Math.max(0, Number((existingTotalEventHours + delta).toFixed(2))),
-              trainingReportNextEventExtensions: extensionLedger,
+              flightOrSimHours: extensionReplacement.flightOrSimHours,
+              duration: extensionReplacement.duration,
+              totalEventHours: extensionReplacement.totalEventHours,
+              trainingReportNextEventExtensions: extensionReplacement.extensionLedger,
               trainingReportLastExtendedByAssessmentId: assessmentKey,
-              trainingReportExtensionAssessmentIds: Object.keys(extensionLedger)
+              trainingReportExtensionAssessmentIds: Object.keys(extensionReplacement.extensionLedger)
             };
             changed = true;
             updates.push({
@@ -125297,9 +125333,9 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               requestedExtensionSource: requestedExtensionInfo.source,
               requestedTargetCode: requestedTargetCode || null,
               previousExtension,
-              preservedExtensionKeys,
-              delta,
-              totalTrackedExtension: Number(totalTrackedExtension.toFixed(2)),
+              appliedDelta: extensionReplacement.appliedDelta,
+              trackedExtensionTotal: extensionReplacement.trackedExtensionTotal,
+              replacedExtensionKeys: extensionReplacement.replacedExtensionKeys,
               before: {
                 flightOrSimHours: existingFlightOrSimHours,
                 duration: existingDuration,
@@ -125321,7 +125357,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               requestedExtensionSource: requestedExtensionInfo.source,
               requestedTargetCode: requestedTargetCode || null,
               previousExtension,
-              preservedExtensionKeys
+              trackedExtensionTotal: extensionReplacement.trackedExtensionTotal
             });
           }
         }

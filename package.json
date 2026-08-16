@@ -10,6 +10,7 @@
     "start": "node server.js",
     "test:air-combat-scheduler": "node scripts/test-air-combat-scheduler-contract.mjs",
     "test:lmp-test-event-scheduling": "node scripts/test-lmp-test-event-scheduling-contract.mjs",
+    "test:training-report-extension": "node --experimental-strip-types scripts/test-training-report-extension-replacement.mjs",
     "generate:airfield-catalog": "node scripts/generate-airfield-catalog.mjs",
     "test:sun-times": "node scripts/test-sun-times.mjs",
     "git-sync": "node git-automation.js",
