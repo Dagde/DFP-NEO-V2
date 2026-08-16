@@ -22363,12 +22363,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         for (let i = 0; i < events.length; i++) {
             const a = events[i];
             const aWindow = eventWindow(a);
+            const aIsStby = isStbyResource(a.resourceId);
 
             for (let j = i + 1; j < events.length; j++) {
                 const b = events[j];
                 const bWindow = eventWindow(b);
+                const bIsStby = isStbyResource(b.resourceId);
 
-                if (a.resourceId === b.resourceId && !isStbyResource(a.resourceId) && !isStbyResource(b.resourceId)) {
+                if (a.resourceId === b.resourceId && !aIsStby && !bIsStby) {
                     if (a.startTime < b.startTime + b.duration && a.startTime + a.duration > b.startTime) {
                         conflicts.push({
                             conflictType: 'resource-overlap',
@@ -22405,7 +22407,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 }
 
                 const commonPersonnel = getCommonPersonnel(a, b);
-                if (commonPersonnel.length > 0) {
+                if (commonPersonnel.length > 0 && !aIsStby && !bIsStby) {
                     if (aWindow.start < bWindow.end && aWindow.end > bWindow.start) {
                         conflicts.push({
                             conflictType: 'personnel-booking-window',
@@ -31766,6 +31768,7 @@ const App: React.FC = () => {
 
         // Check resource conflicts - overlapping time on same resource
         for (const event of validEvents) {
+            if (targetIsStby || isStbyResource(event.resourceId)) continue;
             if (event.resourceId === targetEvent.resourceId && checkTimeOverlap(targetEvent, event)) {
                 return {
                     hasConflict: true,
@@ -31777,6 +31780,9 @@ const App: React.FC = () => {
         }
 
         // Check personnel conflicts - same instructor/supervisor with overlapping booking windows
+        if (targetIsStby) {
+            return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
+        }
         const targetPersonnel = getPersonnel(targetEvent);
         const targetEventWithDate = 'date' in targetEvent ? targetEvent : { ...targetEvent, date: checkDate || buildDfpDate };
         const targetWindow = getEventBookingWindow(targetEventWithDate as ScheduleEvent, syllabusDetails);
@@ -31787,6 +31793,7 @@ const App: React.FC = () => {
         }
 
         for (const event of validEvents) {
+            if (isStbyResource(event.resourceId)) continue;
             const commonPersonnel = getCommonPersonnel(targetEvent, event);
 
             if (commonPersonnel.length > 0) {
@@ -31849,6 +31856,7 @@ const App: React.FC = () => {
         }
 
         for (const event of validEvents) {
+            if (isStbyResource(event.resourceId)) continue;
             const commonPersonnelForDayNight = getCommonPersonnel(targetEvent, event);
 
             if (commonPersonnelForDayNight.length > 0) {
