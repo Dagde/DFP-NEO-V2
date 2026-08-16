@@ -902,6 +902,9 @@ const DetailView: React.FC<{
                 <DetailCard label="Type" value={formatDisplayType(getDisplayType(item), resourceDisplayNames)} />
                 <DetailCard label="Day/Night" value={item.dayNight || 'Day'} />
                 <DetailCard label="Dual/Solo" value={item.sortieType || 'Dual'} />
+                <DetailCard label="Duration" value={<>{formatHours(item.duration)} <span className="text-sm font-normal">hrs</span></>} />
+                <DetailCard label="Pre Event Time" value={<>{formatHours(item.preFlightTime)} <span className="text-sm font-normal">hrs</span></>} />
+                <DetailCard label="Post Event Time" value={<>{formatHours(item.postFlightTime)} <span className="text-sm font-normal">hrs</span></>} />
                 <DetailCard label="Total Event Hours" value={<>{formatHours(item.totalEventHours)} <span className="text-sm font-normal">hrs</span></>} />
                 <DetailCard label="Flight/Sim Hours" value={<>{formatHours(item.flightOrSimHours)} <span className="text-sm font-normal">hrs</span></>} />
                 <DetailCard label="Resource Number" value={item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0)} />

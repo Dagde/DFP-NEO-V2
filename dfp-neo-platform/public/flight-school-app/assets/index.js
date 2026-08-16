@@ -22186,6 +22186,21 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Type", value: formatDisplayType(getDisplayType(item), resourceDisplayNames) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Day/Night", value: item.dayNight || "Day" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Duration", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        formatHours$1(item.duration),
+        " ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Pre Event Time", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        formatHours$1(item.preFlightTime),
+        " ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Post Event Time", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        formatHours$1(item.postFlightTime),
+        " ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
+      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Total Event Hours", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         formatHours$1(item.totalEventHours),
         " ",
