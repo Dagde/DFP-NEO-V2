@@ -8231,6 +8231,8 @@ function generateDfpInternal(
     }));
     type GeneratedBuildEvent = typeof generatedEvents[number];
     const generatedEventsByPerson = new Map<string, Set<GeneratedBuildEvent>>();
+    const generatedEventsByResource = new Map<string, Set<GeneratedBuildEvent>>();
+    const generatedEventsForPersonRecordCache = new Map<string, GeneratedBuildEvent[]>();
     const getBuildPersonKey = (personName?: string): string => normalizeBuildPersonnelName(personName);
     const getBuildRefIdentityKey = (ref: ScheduleEventPersonnelRef): string => {
         const role = ref.personType;
@@ -8256,6 +8258,16 @@ function generateDfpInternal(
         }
         bucket.add(event);
     };
+    const addGeneratedEventResourceIndexKey = (resourceId: string | undefined, event: GeneratedBuildEvent) => {
+        const key = String(resourceId || '').trim();
+        if (!key) return;
+        let bucket = generatedEventsByResource.get(key);
+        if (!bucket) {
+            bucket = new Set<GeneratedBuildEvent>();
+            generatedEventsByResource.set(key, bucket);
+        }
+        bucket.add(event);
+    };
     const indexGeneratedEvent = (event: GeneratedBuildEvent) => {
         const names = new Set<string>([
             ...getPersonnel(event),
@@ -8266,9 +8278,12 @@ function generateDfpInternal(
             addGeneratedEventIndexKey(key, event);
         });
         (event.personnelRefs || []).forEach(ref => addGeneratedEventIndexKey(getBuildRefIdentityKey(ref), event));
+        addGeneratedEventResourceIndexKey(event.resourceId, event);
     };
     const rebuildGeneratedEventIndexes = () => {
         generatedEventsByPerson.clear();
+        generatedEventsByResource.clear();
+        generatedEventsForPersonRecordCache.clear();
         generatedEvents.forEach(indexGeneratedEvent);
     };
     const mergeNeoBuildPersonnelRefs = (event: GeneratedBuildEvent): GeneratedBuildEvent => {
@@ -8331,6 +8346,7 @@ function generateDfpInternal(
         const eventWithPersonnelRefs = mergeNeoBuildPersonnelRefs(event);
         generatedEvents.push(eventWithPersonnelRefs);
         indexGeneratedEvent(eventWithPersonnelRefs);
+        generatedEventsForPersonRecordCache.clear();
     };
     const getGeneratedEventsForPerson = (personName?: string): GeneratedBuildEvent[] => {
         const key = getBuildPersonKey(personName);
@@ -8343,12 +8359,20 @@ function generateDfpInternal(
     ): GeneratedBuildEvent[] => {
         const identityKey = getBuildPersonIdentityKey(person, role);
         const nameKey = getBuildPersonKey(getNeoBuildPersonDisplayLabel(person));
+        const cacheKey = `${role}|${identityKey}|${nameKey}`;
+        const cached = generatedEventsForPersonRecordCache.get(cacheKey);
+        if (cached) return cached;
         const candidates = new Set<GeneratedBuildEvent>([
             ...Array.from(identityKey ? generatedEventsByPerson.get(identityKey) || [] : []),
             ...Array.from(nameKey ? generatedEventsByPerson.get(nameKey) || [] : []),
         ]);
-        return Array.from(candidates).filter(event => eventHasNeoBuildPersonIdentity(event, person, role));
+        const result = Array.from(candidates).filter(event => eventHasNeoBuildPersonIdentity(event, person, role));
+        generatedEventsForPersonRecordCache.set(cacheKey, result);
+        return result;
     };
+    const getGeneratedEventsForResource = (resourceId: string): GeneratedBuildEvent[] => (
+        Array.from(generatedEventsByResource.get(resourceId) || [])
+    );
     const calculateStaffDutyHours = (staff: Instructor, includeProposedEvent?: any): number => {
         const instructorEvents = includeProposedEvent
             ? [...getGeneratedEventsForPersonRecord(staff, 'staff'), includeProposedEvent]
@@ -14352,8 +14376,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
             for (let index = 1; index <= ftdCount; index++) {
                 const candidateResourceId = `FTD ${index}`;
-                const resourceIsOccupied = generatedEvents.some(e => {
-                    if (e.resourceId !== candidateResourceId) return false;
+                const resourceIsOccupied = getGeneratedEventsForResource(candidateResourceId).some(e => {
                     const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
                     const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
                     return startTime < existingEventEnd && proposedEventEnd > e.startTime;
@@ -14384,8 +14407,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     continue;
                 }
                 compatibleResourceCandidateCount++;
-                const resourceIsOccupied = generatedEvents.some(e => {
-                    if (e.resourceId !== candidateResourceId) return false;
+                const resourceIsOccupied = getGeneratedEventsForResource(candidateResourceId).some(e => {
                     const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
                     const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
                     return startTime < existingEventEnd && proposedEventEnd > e.startTime;
@@ -15211,7 +15233,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             // Find an available STBY line for this time slot
             const stbyPrefix = type === 'flight' ? 'STBY' : 'FTD-STBY';
             let stbyLine = 1;
-            while (generatedEvents.some(e => e.resourceId === `${stbyPrefix} ${stbyLine}` &&
+            while (getGeneratedEventsForResource(`${stbyPrefix} ${stbyLine}`).some(e =>
                 e.startTime < startTime + scheduledDuration && e.startTime + e.duration > startTime)) {
                 stbyLine++;
             }
@@ -15321,9 +15343,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 }
                 compatibleResourceCandidateCount++;
             }
-            const resourceIsOccupied = generatedEvents.some(e => {
-                if (e.resourceId !== id) return false;
-
+            const resourceIsOccupied = getGeneratedEventsForResource(id).some(e => {
                 let existingTurnaround = getResourceTurnaroundAfter(e);
                 if (e.type === 'flight') {
                     const isExistingEventNight = e.flightNumber.startsWith('BNF');
@@ -15755,7 +15775,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     // CRITICAL FIX: Schedule Duty Supervisors for the ENTIRE day window, not just when flights are active
     buildDebugLog(`Duty Supervisor Allocation - Covering entire day window: ${dutySupStartTime} to ${dutySupEndTime}`);
     while (currentSupTime < dutySupEndTime) {
-        const isBlockCovered = generatedEvents.some(e => e.resourceId === 'Duty Sup' && currentSupTime >= e.startTime && currentSupTime < e.startTime + e.duration);
+        const isBlockCovered = getGeneratedEventsForResource('Duty Sup').some(e => currentSupTime >= e.startTime && currentSupTime < e.startTime + e.duration);
         if (isBlockCovered) {
             currentSupTime += 0.5;
             continue;
