@@ -105773,12 +105773,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       useTestingOfficerSecondaryCallsign: syllabusItem.useTestingOfficerSecondaryCallsign,
       officerSecondaryCallsign: instructor?.secondaryCallsign
     });
+    const instructorDisplayName = instructor ? getNeoBuildPersonDisplayLabel(instructor) : "";
     const result = {
       id: options.eventId || v4(),
       type,
-      instructor: isSoloFlight ? "" : instructor?.name || "",
+      instructor: isSoloFlight ? "" : instructorDisplayName,
       student: trainee.fullName,
-      pilot: isSoloFlight ? trainee.fullName : instructor?.name || "",
+      pilot: isSoloFlight ? trainee.fullName : instructorDisplayName,
       flightNumber: syllabusItem.code,
       duration: scheduledDuration,
       startTime,
@@ -125121,14 +125122,21 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP outside active Flight School build scope`);
               return;
             }
-            const lmpEventsForBuild = activeOperationalModel === "flight_school" ? filterFlightSchoolLmpEventsForBuildScope(lmp.events) : lmp.events;
-            if (activeOperationalModel === "flight_school" && lmpEventsForBuild.length === 0) {
-              logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP because it has no events in the active Flight School Master LMP scope`);
-              return;
-            }
             const traineeUnitCode = activeOperationalModel === "flight_school" ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign") : traineeForLmp?.unit || activeUnitCode;
             if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
               logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
+              return;
+            }
+            const masterLmpForBuild = activeOperationalModel === "flight_school" ? getAssignableMasterLmpItemsForType(
+              assignableFlightSchoolBuildSyllabus,
+              lmp.lmpType,
+              traineeUnitCode,
+              filterSyllabusForMasterLmpAccess
+            ) : [];
+            const inheritedLmpEvents = activeOperationalModel === "flight_school" && masterLmpForBuild.length > 0 ? mergeIndividualLmpWithMaster(lmp.events, masterLmpForBuild) : lmp.events;
+            const lmpEventsForBuild = activeOperationalModel === "flight_school" ? filterFlightSchoolLmpEventsForBuildScope(inheritedLmpEvents) : inheritedLmpEvents;
+            if (activeOperationalModel === "flight_school" && lmpEventsForBuild.length === 0) {
+              logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP because it has no events in the active Flight School Master LMP scope`);
               return;
             }
             freshLMPs.set(lmp.traineeFullName, lmpEventsForBuild);
