@@ -22370,9 +22370,15 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             if (event.type === 'cpt' || (event.type === 'ground' && event.flightNumber.includes('CPT'))) return cptTurnaround;
             return 0;
         };
-        const formatEvent = (event: Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string }) => {
-            const window = eventWindow(event);
+        const formatEvent = (
+            event: Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string },
+            cachedWindow?: { start: number; end: number },
+            cachedClassification?: ReturnType<typeof getGeneratedEventDayNightClassification>,
+            cachedPersonnelRefs?: ReturnType<typeof getPersonnelIdentityRefs>,
+        ) => {
+            const window = cachedWindow || eventWindow(event);
             const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber || s.code === event.flightNumber);
+            const personnelRefs = cachedPersonnelRefs || getPersonnelIdentityRefs(event);
             return {
                 id: event.id,
                 source: event._source || 'unknown',
@@ -22391,79 +22397,122 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 bookingEnd: window.end,
                 preFlightTime: syllabusItem?.preFlightTime ?? null,
                 postFlightTime: syllabusItem?.postFlightTime ?? null,
-                dayNight: getGeneratedEventDayNightClassification(event),
-                personnel: getPersonnel(event),
+                dayNight: cachedClassification || getGeneratedEventDayNightClassification(event),
+                personnel: personnelRefs.map(ref => ref.label),
                 personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(event),
             };
         };
         const conflicts: any[] = [];
         const invalidWindows: any[] = [];
-
-        events.forEach(event => {
+        const cachedEvents = events.map(event => {
             const window = eventWindow(event);
+            const personnelRefs = getPersonnelIdentityRefs(event);
+            const personnelKeys = new Set(personnelRefs.map(ref => ref.key));
+            const personnelLabelsByKey = new Map(personnelRefs.map(ref => [ref.key, ref.label]));
+            const classification = getGeneratedEventDayNightClassification(event);
+            return {
+                event,
+                window,
+                isStby: isStbyResource(event.resourceId),
+                turnaround: resourceTurnaroundFor(event),
+                personnelRefs,
+                personnelKeys,
+                personnelLabelsByKey,
+                classification,
+                formatted: null as ReturnType<typeof formatEvent> | null,
+            };
+        });
+        const getFormattedEvent = (cachedEvent: typeof cachedEvents[number]) => {
+            if (!cachedEvent.formatted) {
+                cachedEvent.formatted = formatEvent(
+                    cachedEvent.event,
+                    cachedEvent.window,
+                    cachedEvent.classification,
+                    cachedEvent.personnelRefs,
+                );
+            }
+            return cachedEvent.formatted;
+        };
+        const getCommonCachedPersonnel = (
+            a: typeof cachedEvents[number],
+            b: typeof cachedEvents[number],
+        ): string[] => {
+            const common: string[] = [];
+            a.personnelKeys.forEach(key => {
+                if (b.personnelKeys.has(key)) {
+                    common.push(a.personnelLabelsByKey.get(key) || b.personnelLabelsByKey.get(key) || key);
+                }
+            });
+            return common;
+        };
+
+        cachedEvents.forEach(cachedEvent => {
+            const window = cachedEvent.window;
             if (!Number.isFinite(window.start) || !Number.isFinite(window.end)) {
                 invalidWindows.push({
                     reason: 'NON_FINITE_BOOKING_WINDOW',
-                    event: formatEvent(event),
-                    matchedSyllabus: syllabusDetails.find(s => s.id === event.flightNumber || s.code === event.flightNumber) || null,
+                    event: getFormattedEvent(cachedEvent),
+                    matchedSyllabus: syllabusDetails.find(s => s.id === cachedEvent.event.flightNumber || s.code === cachedEvent.event.flightNumber) || null,
                 });
             }
         });
 
-        for (let i = 0; i < events.length; i++) {
-            const a = events[i];
-            const aWindow = eventWindow(a);
-            const aIsStby = isStbyResource(a.resourceId);
+        for (let i = 0; i < cachedEvents.length; i++) {
+            const aCached = cachedEvents[i];
+            const a = aCached.event;
+            const aWindow = aCached.window;
+            const aIsStby = aCached.isStby;
 
-            for (let j = i + 1; j < events.length; j++) {
-                const b = events[j];
-                const bWindow = eventWindow(b);
-                const bIsStby = isStbyResource(b.resourceId);
+            for (let j = i + 1; j < cachedEvents.length; j++) {
+                const bCached = cachedEvents[j];
+                const b = bCached.event;
+                const bWindow = bCached.window;
+                const bIsStby = bCached.isStby;
 
                 if (a.resourceId === b.resourceId && !aIsStby && !bIsStby) {
                     if (a.startTime < b.startTime + b.duration && a.startTime + a.duration > b.startTime) {
                         conflicts.push({
                             conflictType: 'resource-overlap',
-                            eventA: formatEvent(a),
-                            eventB: formatEvent(b),
+                            eventA: getFormattedEvent(aCached),
+                            eventB: getFormattedEvent(bCached),
                         });
                     }
 
                     if (a.startTime >= b.startTime) {
                         const actualGap = a.startTime - (b.startTime + b.duration);
-                        const requiredGap = resourceTurnaroundFor(a);
+                        const requiredGap = aCached.turnaround;
                         if (actualGap >= 0 && actualGap < requiredGap - 0.001) {
                             conflicts.push({
                                 conflictType: 'resource-turnaround',
                                 actualGap,
                                 requiredGap,
-                                eventA: formatEvent(a),
-                                eventB: formatEvent(b),
+                                eventA: getFormattedEvent(aCached),
+                                eventB: getFormattedEvent(bCached),
                             });
                         }
                     } else {
                         const actualGap = b.startTime - (a.startTime + a.duration);
-                        const requiredGap = resourceTurnaroundFor(b);
+                        const requiredGap = bCached.turnaround;
                         if (actualGap >= 0 && actualGap < requiredGap - 0.001) {
                             conflicts.push({
                                 conflictType: 'resource-turnaround',
                                 actualGap,
                                 requiredGap,
-                                eventA: formatEvent(a),
-                                eventB: formatEvent(b),
+                                eventA: getFormattedEvent(aCached),
+                                eventB: getFormattedEvent(bCached),
                             });
                         }
                     }
                 }
 
-                const commonPersonnel = getCommonPersonnel(a, b);
+                const commonPersonnel = getCommonCachedPersonnel(aCached, bCached);
                 if (commonPersonnel.length > 0 && !aIsStby && !bIsStby) {
                     if (aWindow.start < bWindow.end && aWindow.end > bWindow.start) {
                         conflicts.push({
                             conflictType: 'personnel-booking-window',
                             commonPersonnel,
-                            eventA: formatEvent(a),
-                            eventB: formatEvent(b),
+                            eventA: getFormattedEvent(aCached),
+                            eventB: getFormattedEvent(bCached),
                         });
                     }
 
@@ -22472,41 +22521,41 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     if (aHasTurnaround && bHasTurnaround) {
                         if (a.startTime >= b.startTime) {
                             const actualGap = a.startTime - (b.startTime + b.duration);
-                            const requiredGap = resourceTurnaroundFor(b);
+                            const requiredGap = bCached.turnaround;
                             if (actualGap >= 0 && actualGap < requiredGap - 0.001) {
                                 conflicts.push({
                                     conflictType: 'personnel-turnaround',
                                     commonPersonnel,
                                     actualGap,
                                     requiredGap,
-                                    eventA: formatEvent(a),
-                                    eventB: formatEvent(b),
+                                    eventA: getFormattedEvent(aCached),
+                                    eventB: getFormattedEvent(bCached),
                                 });
                             }
                         } else {
                             const actualGap = b.startTime - (a.startTime + a.duration);
-                            const requiredGap = resourceTurnaroundFor(a);
+                            const requiredGap = aCached.turnaround;
                             if (actualGap >= 0 && actualGap < requiredGap - 0.001) {
                                 conflicts.push({
                                     conflictType: 'personnel-turnaround',
                                     commonPersonnel,
                                     actualGap,
                                     requiredGap,
-                                    eventA: formatEvent(a),
-                                    eventB: formatEvent(b),
+                                    eventA: getFormattedEvent(aCached),
+                                    eventB: getFormattedEvent(bCached),
                                 });
                             }
                         }
                     }
 
-                    const aClassification = getGeneratedEventDayNightClassification(a);
-                    const bClassification = getGeneratedEventDayNightClassification(b);
+                    const aClassification = aCached.classification;
+                    const bClassification = bCached.classification;
                     if (aClassification !== 'Day/Night' && bClassification !== 'Day/Night' && aClassification !== bClassification) {
                         conflicts.push({
                             conflictType: 'personnel-day-night',
                             commonPersonnel,
-                            eventA: formatEvent(a),
-                            eventB: formatEvent(b),
+                            eventA: getFormattedEvent(aCached),
+                            eventB: getFormattedEvent(bCached),
                         });
                     }
                 }
@@ -22573,7 +22622,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         return report;
     };
 
+    markBuildTiming('final-diagnostics:pre-conflict-complete', {
+        events: sortedEvents.length,
+    });
     const finalConflictReport = generateBuildConflictDiagnostic(sortedEvents);
+    markBuildTiming('final-conflict-diagnostic:complete', {
+        totalConflicts: finalConflictReport.totalConflicts,
+        totalInvalidWindows: finalConflictReport.totalInvalidWindows,
+    });
     remedialPriorityEvents.forEach(priorityEvent => {
         const eventTrainee = priorityEvent.student || priorityEvent.pilot || '';
         const priorityCodes = new Set([
