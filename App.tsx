@@ -68,7 +68,10 @@ import {
     loadSuppressedTrainingReportEventIds,
     saveSuppressedTrainingReportEventIds,
 } from './utils/trainingReportCompatibility';
-import { replaceTrainingReportNextEventExtension } from './utils/trainingReportExtensions';
+import {
+    normaliseTrainingReportExtendedTiming,
+    replaceTrainingReportNextEventExtension,
+} from './utils/trainingReportExtensions';
 import { getSctTerminology } from './utils/sctTerminology';
 import { buildCompactPersonNameResolver, formatPersonOptionLabel, getPersonDisplayName, getPersonIdentityDedupeKey, normalisePersonName, type PersonIdentityRecord } from './utils/personIdentity';
 import {
@@ -5969,16 +5972,29 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS: (keyof SyllabusItemDetail)[] = [
     'twrDiReqd',
     'cctOnly',
     'notes',
+    'trainingReportNextEventExtensions',
+    'trainingReportExtensionAssessmentIds',
+    'trainingReportLastExtendedByAssessmentId',
+    'trainingReportBaseNotes',
+    'trainingReportForwardedNotes',
+    'trainingReportLastForwardedNotesAssessmentId',
 ];
 
-const getIndividualLmpMasterOverrides = (item?: SyllabusItemDetail): Partial<SyllabusItemDetail> => {
+const getIndividualLmpMasterOverrides = (
+    item?: SyllabusItemDetail,
+    masterItem?: SyllabusItemDetail
+): Partial<SyllabusItemDetail> => {
     if (!item) return {};
-    return INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((overrides, field) => {
+    const overrides = INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((nextOverrides, field) => {
         if (Object.prototype.hasOwnProperty.call(item, field)) {
-            (overrides as any)[field] = (item as any)[field];
+            (nextOverrides as any)[field] = (item as any)[field];
         }
-        return overrides;
+        return nextOverrides;
     }, {} as Partial<SyllabusItemDetail>);
+    return {
+        ...overrides,
+        ...normaliseTrainingReportExtendedTiming(item as any, masterItem as any),
+    };
 };
 
 const mergeIndividualLmpWithMaster = (
@@ -6000,7 +6016,7 @@ const mergeIndividualLmpWithMaster = (
         const existingItem = existingByMasterId.get(getMasterEventId(masterItem));
         return {
             ...masterItem,
-            ...getIndividualLmpMasterOverrides(existingItem),
+            ...getIndividualLmpMasterOverrides(existingItem, masterItem),
             id: masterItem.id,
             masterEventId: getMasterEventId(masterItem),
             lmpSource: 'master',

@@ -5876,14 +5876,61 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC = [
   'trainingReportLastForwardedNotesAssessmentId',
 ];
 
-const getIndividualLmpMasterOverridesForSync = (item) => {
+const roundTrainingReportHoursForSync = (value) => Math.round(Number(value || 0) * 100) / 100;
+const normaliseTrainingReportHoursForSync = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+const resolveCurrentTrainingReportExtensionHoursForSync = (extensionLedger, lastExtensionKey) => {
+  const entries = Object.entries(extensionLedger || {})
+    .map(([key, value]) => [String(key || '').trim(), normaliseTrainingReportHoursForSync(value)])
+    .filter(([key, hours]) => key && hours > 0);
+  if (entries.length === 0) return 0;
+  const preferredKey = String(lastExtensionKey || '').trim();
+  const preferredEntry = preferredKey ? entries.find(([key]) => key === preferredKey) : null;
+  return roundTrainingReportHoursForSync(preferredEntry?.[1] ?? entries[entries.length - 1][1]);
+};
+const hasTrainingReportExtensionMetadataForSync = (item) => (
+  Boolean(item?.trainingReportLastExtendedByAssessmentId) ||
+  (Array.isArray(item?.trainingReportExtensionAssessmentIds) && item.trainingReportExtensionAssessmentIds.length > 0) ||
+  Object.keys(item?.trainingReportNextEventExtensions || {}).length > 0
+);
+const trainingReportTimingBaseForSync = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+const normaliseTrainingReportExtendedTimingForSync = (existingItem, masterItem) => {
+  if (!existingItem || !masterItem || !hasTrainingReportExtensionMetadataForSync(existingItem)) return {};
+  const type = String(existingItem.type || masterItem.type || '').trim().toLowerCase();
+  if (type !== 'flight' && type !== 'ftd') return {};
+
+  const extensionHours = resolveCurrentTrainingReportExtensionHoursForSync(
+    existingItem.trainingReportNextEventExtensions,
+    existingItem.trainingReportLastExtendedByAssessmentId
+  );
+  const masterDuration = trainingReportTimingBaseForSync(masterItem.duration, 1);
+  const masterFlightOrSimHours = trainingReportTimingBaseForSync(masterItem.flightOrSimHours, masterDuration);
+  const masterTotalEventHours = trainingReportTimingBaseForSync(masterItem.totalEventHours, masterDuration);
+
+  return {
+    flightOrSimHours: roundTrainingReportHoursForSync(masterFlightOrSimHours + extensionHours),
+    duration: roundTrainingReportHoursForSync(masterDuration + extensionHours),
+    totalEventHours: roundTrainingReportHoursForSync(masterTotalEventHours + extensionHours),
+  };
+};
+
+const getIndividualLmpMasterOverridesForSync = (item, masterItem) => {
   if (!item) return {};
-  return INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC.reduce((overrides, field) => {
+  const overrides = INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC.reduce((nextOverrides, field) => {
     if (Object.prototype.hasOwnProperty.call(item, field)) {
-      overrides[field] = item[field];
+      nextOverrides[field] = item[field];
     }
-    return overrides;
+    return nextOverrides;
   }, {});
+  return {
+    ...overrides,
+    ...normaliseTrainingReportExtendedTimingForSync(item, masterItem),
+  };
 };
 
 const summariseTrainingReportLmpItemsForSync = (events = []) => {
@@ -6135,7 +6182,7 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
     const completedAt = getLmpCompletionTimestampForSync(masterItem, scoreMap);
     return {
       ...masterItem,
-      ...getIndividualLmpMasterOverridesForSync(existingItem),
+      ...getIndividualLmpMasterOverridesForSync(existingItem, masterItem),
       id: masterItem.id,
       masterEventId: getLmpMasterEventId(masterItem),
       lmpSource: 'master',

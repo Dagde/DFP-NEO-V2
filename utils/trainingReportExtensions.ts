@@ -14,6 +14,56 @@ const normaliseHours = (value: unknown): number => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
 
+export const resolveCurrentTrainingReportExtensionHours = (
+  extensionLedger?: Record<string, unknown> | null,
+  lastExtensionKey?: unknown,
+): number => {
+  const entries = Object.entries(extensionLedger || {})
+    .map(([key, value]) => [String(key || '').trim(), normaliseHours(value)] as const)
+    .filter(([key, hours]) => key && hours > 0);
+  if (entries.length === 0) return 0;
+
+  const preferredKey = String(lastExtensionKey || '').trim();
+  const preferredEntry = preferredKey
+    ? entries.find(([key]) => key === preferredKey)
+    : null;
+  return roundHours(preferredEntry?.[1] ?? entries[entries.length - 1][1]);
+};
+
+const hasTrainingReportExtensionMetadata = (item?: Record<string, any> | null): boolean => (
+  Boolean(item?.trainingReportLastExtendedByAssessmentId) ||
+  (Array.isArray(item?.trainingReportExtensionAssessmentIds) && item.trainingReportExtensionAssessmentIds.length > 0) ||
+  Object.keys((item?.trainingReportNextEventExtensions || {}) as Record<string, unknown>).length > 0
+);
+
+const timingBase = (value: unknown, fallback: number): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+export const normaliseTrainingReportExtendedTiming = <T extends Record<string, any>>(
+  existingItem: T | undefined | null,
+  masterItem: T | undefined | null,
+): Partial<T> => {
+  if (!existingItem || !masterItem || !hasTrainingReportExtensionMetadata(existingItem)) return {};
+  const existingType = String(existingItem.type || masterItem.type || '').trim().toLowerCase();
+  if (existingType !== 'flight' && existingType !== 'ftd') return {};
+
+  const extensionHours = resolveCurrentTrainingReportExtensionHours(
+    existingItem.trainingReportNextEventExtensions,
+    existingItem.trainingReportLastExtendedByAssessmentId,
+  );
+  const masterDuration = timingBase(masterItem.duration, 1);
+  const masterFlightOrSimHours = timingBase(masterItem.flightOrSimHours, masterDuration);
+  const masterTotalEventHours = timingBase(masterItem.totalEventHours, masterDuration);
+
+  return {
+    flightOrSimHours: roundHours(masterFlightOrSimHours + extensionHours),
+    duration: roundHours(masterDuration + extensionHours),
+    totalEventHours: roundHours(masterTotalEventHours + extensionHours),
+  } as Partial<T>;
+};
+
 export const replaceTrainingReportNextEventExtension = ({
   extensionKey,
   requestedExtension,

@@ -4898,6 +4898,35 @@ const normaliseHours = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
+const resolveCurrentTrainingReportExtensionHours = (extensionLedger, lastExtensionKey) => {
+  const entries = Object.entries(extensionLedger || {}).map(([key, value]) => [String(key || "").trim(), normaliseHours(value)]).filter(([key, hours]) => key && hours > 0);
+  if (entries.length === 0) return 0;
+  const preferredKey = String(lastExtensionKey || "").trim();
+  const preferredEntry = preferredKey ? entries.find(([key]) => key === preferredKey) : null;
+  return roundHours(preferredEntry?.[1] ?? entries[entries.length - 1][1]);
+};
+const hasTrainingReportExtensionMetadata = (item) => Boolean(item?.trainingReportLastExtendedByAssessmentId) || Array.isArray(item?.trainingReportExtensionAssessmentIds) && item.trainingReportExtensionAssessmentIds.length > 0 || Object.keys(item?.trainingReportNextEventExtensions || {}).length > 0;
+const timingBase = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+const normaliseTrainingReportExtendedTiming = (existingItem, masterItem) => {
+  if (!existingItem || !masterItem || !hasTrainingReportExtensionMetadata(existingItem)) return {};
+  const existingType = String(existingItem.type || masterItem.type || "").trim().toLowerCase();
+  if (existingType !== "flight" && existingType !== "ftd") return {};
+  const extensionHours = resolveCurrentTrainingReportExtensionHours(
+    existingItem.trainingReportNextEventExtensions,
+    existingItem.trainingReportLastExtendedByAssessmentId
+  );
+  const masterDuration = timingBase(masterItem.duration, 1);
+  const masterFlightOrSimHours = timingBase(masterItem.flightOrSimHours, masterDuration);
+  const masterTotalEventHours = timingBase(masterItem.totalEventHours, masterDuration);
+  return {
+    flightOrSimHours: roundHours(masterFlightOrSimHours + extensionHours),
+    duration: roundHours(masterDuration + extensionHours),
+    totalEventHours: roundHours(masterTotalEventHours + extensionHours)
+  };
+};
 const replaceTrainingReportNextEventExtension = ({
   extensionKey,
   requestedExtension,
@@ -98650,16 +98679,26 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS = [
   "location",
   "twrDiReqd",
   "cctOnly",
-  "notes"
+  "notes",
+  "trainingReportNextEventExtensions",
+  "trainingReportExtensionAssessmentIds",
+  "trainingReportLastExtendedByAssessmentId",
+  "trainingReportBaseNotes",
+  "trainingReportForwardedNotes",
+  "trainingReportLastForwardedNotesAssessmentId"
 ];
-const getIndividualLmpMasterOverrides = (item) => {
+const getIndividualLmpMasterOverrides = (item, masterItem) => {
   if (!item) return {};
-  return INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((overrides, field) => {
+  const overrides = INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((nextOverrides, field) => {
     if (Object.prototype.hasOwnProperty.call(item, field)) {
-      overrides[field] = item[field];
+      nextOverrides[field] = item[field];
     }
-    return overrides;
+    return nextOverrides;
   }, {});
+  return {
+    ...overrides,
+    ...normaliseTrainingReportExtendedTiming(item, masterItem)
+  };
 };
 const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
   const stampedMaster = stampMasterLmpItems(masterLMP);
@@ -98675,7 +98714,7 @@ const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
     const existingItem = existingByMasterId.get(getMasterEventId(masterItem));
     return {
       ...masterItem,
-      ...getIndividualLmpMasterOverrides(existingItem),
+      ...getIndividualLmpMasterOverrides(existingItem, masterItem),
       id: masterItem.id,
       masterEventId: getMasterEventId(masterItem),
       lmpSource: "master",
