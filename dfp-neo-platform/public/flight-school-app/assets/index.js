@@ -22619,8 +22619,9 @@ const TraineeLmpView = ({
       return;
     }
     setSelectedItem((current) => {
-      if (current && traineeLmp.some((item) => item.id === current.id || item.code === current.code)) {
-        return current;
+      if (current) {
+        const refreshedItem = traineeLmp.find((item) => current.id && item.id === current.id || current.code && item.code === current.code);
+        if (refreshedItem) return refreshedItem;
       }
       return traineeLmp[0];
     });
