@@ -3205,7 +3205,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           callsign: savedCallsign,
           locationType,
           color: tileColor,
-          resourceId: '',
+          resourceId: eventCategory === 'twr_di' ? 'TWR DI' : '',
           notes,
           group: '',
           groupTraineeIds: [],

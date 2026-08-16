@@ -35856,7 +35856,7 @@ const AddFlightTileModal = ({
           callsign: savedCallsign,
           locationType,
           color: tileColor,
-          resourceId: "",
+          resourceId: eventCategory === "twr_di" ? "TWR DI" : "",
           notes,
           group: "",
           groupTraineeIds: [],
@@ -98666,6 +98666,7 @@ const makePersonnelIdentityRef = (label, role, identity, allPeople = []) => {
 };
 const getPersonnelIdentityRefs = (event) => {
   const refsByKey = /* @__PURE__ */ new Map();
+  const storedRoleNameKeys = /* @__PURE__ */ new Set();
   const addStoredRef = (storedRef) => {
     const role = storedRef?.personType === "staff" || storedRef?.personType === "trainee" ? storedRef.personType : null;
     const label = String(storedRef?.name || "").trim();
@@ -98676,9 +98677,14 @@ const getPersonnelIdentityRefs = (event) => {
       name: label,
       fullName: label
     });
-    if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
+    if (ref) {
+      storedRoleNameKeys.add(`${role}:${normalizePersonnelNameForMatch(label)}`);
+      if (!refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
+    }
   };
   const addRef = (label, role) => {
+    const normalizedLabel = normalizePersonnelNameForMatch(label);
+    if (storedRoleNameKeys.has(`${role}:${normalizedLabel}`)) return;
     const ref = makePersonnelIdentityRef(label, role);
     if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
   };
@@ -105034,6 +105040,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                   continue;
                 }
                 const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse, {
+                  enforcePersonnelTurnaround: true,
                   diagnosticListName: listName,
                   diagnosticTrace: (traceEntry) => {
                     recordScheduleListRejection(traceEntry);
@@ -110822,7 +110829,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           for (const primaryOnly of passModes) {
             if (placed) break;
             for (let time = soloSearchStart; time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - scheduledDuration + 1e-3; time += TIME_INCREMENT) {
-              const result = scheduleEvent(trainee, syllabusItem, time, "flight", false, false, primaryOnly);
+              const result = scheduleEvent(trainee, syllabusItem, time, "flight", false, false, primaryOnly, false, {
+                enforcePersonnelTurnaround: true,
+                diagnosticListName: "SOLO flight group"
+              });
               if (result && typeof result === "object" && "id" in result) {
                 pushGeneratedEvent({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
                 const tCounts = eventCounts.get(getBuildTraineeKey(trainee));
@@ -111181,7 +111191,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const recoveryStart = isRemedialSyllabusItem(next) ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START) : ftdStartTime;
           for (let time = recoveryStart; time <= ftdEndTime - next.duration + 1e-3; time += ftdRecoveryIncrement) {
             if (!canAssignTraineeForScheduledWindow(trainee, time)) continue;
-            const result = scheduleEvent(trainee, next, time, "ftd", false, false, primaryOnly);
+            const result = scheduleEvent(trainee, next, time, "ftd", false, false, primaryOnly, false, {
+              enforcePersonnelTurnaround: true,
+              diagnosticListName: "FTD recovery"
+            });
             if (result && result.resourceId?.startsWith("FTD ")) {
               pushGeneratedEvent({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
               const tCounts = eventCounts.get(getBuildTraineeKey(trainee));
@@ -111852,7 +111865,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const earlierWindow = eventWindow(earlierEvent);
       const laterWindow = eventWindow(laterEvent);
       const lmpBriefDebriefGap = Math.max(0, earlierWindow.end - (earlierEvent.startTime + earlierEvent.duration)) + Math.max(0, laterEvent.startTime - laterWindow.start);
-      return Math.max(resourceTurnaroundFor(laterEvent), lmpBriefDebriefGap);
+      return Math.max(resourceTurnaroundFor(earlierEvent), lmpBriefDebriefGap);
     };
     const hasBuildConflict = (candidate, acceptedEvents2) => {
       const candidateWindow = eventWindow(candidate);
@@ -112227,7 +112240,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         preFlightTime: syllabusItem?.preFlightTime ?? null,
         postFlightTime: syllabusItem?.postFlightTime ?? null,
         dayNight: getGeneratedEventDayNightClassification(event),
-        personnel: getPersonnel(event)
+        personnel: getPersonnel(event),
+        personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(event)
       };
     };
     const conflicts = [];
