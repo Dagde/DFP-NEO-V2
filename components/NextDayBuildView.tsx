@@ -140,6 +140,36 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     const [draggedCptConflict, setDraggedCptConflict] = useState<Conflict | null>(null);
     const [validateOverlayTime, setValidateOverlayTime] = useState<number | null>(null);
     const didDragRef = useRef(false);
+    const dragFrameRef = useRef<number | null>(null);
+    const lastDragUpdateSignatureRef = useRef('');
+    const pendingDragUpdateRef = useRef<{
+        updates: { eventId: string, newStartTime: number, newResourceId: string }[];
+        realtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null;
+        resourceConflictId: string | null;
+        cptConflict: Conflict | null;
+    } | null>(null);
+
+    const flushPendingDragUpdate = useCallback(() => {
+        if (dragFrameRef.current !== null) {
+            window.cancelAnimationFrame(dragFrameRef.current);
+            dragFrameRef.current = null;
+        }
+        const pending = pendingDragUpdateRef.current;
+        if (!pending) return;
+        pendingDragUpdateRef.current = null;
+        setRealtimeConflict(pending.realtimeConflict);
+        setRealtimeResourceConflictId(pending.resourceConflictId);
+        setDraggedCptConflict(pending.cptConflict);
+        onUpdateEvent(pending.updates);
+    }, [onUpdateEvent]);
+
+    useEffect(() => {
+        return () => {
+            if (dragFrameRef.current !== null) {
+                window.cancelAnimationFrame(dragFrameRef.current);
+            }
+        };
+    }, []);
 
     // Multi-select State
     const selectionStartPoint = useRef<{ x: number, y: number } | null>(null);
@@ -312,6 +342,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             }
 
             if (initialPositions.size > 0) {
+                lastDragUpdateSignatureRef.current = '';
+                pendingDragUpdateRef.current = null;
                 setDraggingState({
                     mainEventId: event.id,
                     xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -402,6 +434,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         const tempEvents = [...events];
         let resourceConflictId: string | null = null;
         let tempCptConflict: Conflict | null = null;
+        let tempRealtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null = null;
 
         for (const [id, initialPos] of draggingState.initialPositions.entries()) {
             const eventData = events.find(ev => ev.id === id);
@@ -445,10 +478,10 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             const otherEvents = tempEvents.filter(e => e.id !== mainEvent.id);
             const conflict = findConflict([mainEvent], otherEvents);
             if (conflict) {
-                setRealtimeConflict({ 
+                tempRealtimeConflict = {
                     conflictingEventId: conflict.conflictingEvent.id, 
                     conflictedPersonName: conflict.personName 
-                });
+                };
                  if (mainEvent.flightNumber.includes('CPT')) {
                     tempCptConflict = {
                         conflictingEvent: conflict.conflictingEvent,
@@ -457,18 +490,32 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         personName: conflict.personName
                     } as Conflict;
                 }
-            } else {
-                setRealtimeConflict(null);
             }
         }
 
-        setRealtimeResourceConflictId(resourceConflictId);
-        setDraggedCptConflict(tempCptConflict);
-
-        onUpdateEvent(updates);
+        const updateSignature = updates
+            .map(update => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`)
+            .join('|');
+        if (updateSignature === lastDragUpdateSignatureRef.current) {
+            return;
+        }
+        lastDragUpdateSignatureRef.current = updateSignature;
+        pendingDragUpdateRef.current = {
+            updates,
+            realtimeConflict: tempRealtimeConflict,
+            resourceConflictId,
+            cptConflict: tempCptConflict,
+        };
+        if (dragFrameRef.current === null) {
+            dragFrameRef.current = window.requestAnimationFrame(() => {
+                dragFrameRef.current = null;
+                flushPendingDragUpdate();
+            });
+        }
     };
 
     const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
+        flushPendingDragUpdate();
         document.body.classList.remove('no-select');
 
         if (isOracleMode) {
@@ -482,6 +529,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         setRealtimeConflict(null);
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
+        lastDragUpdateSignatureRef.current = '';
         
         // Clear validate overlay when mouse leaves
         setValidateOverlayTime(null);

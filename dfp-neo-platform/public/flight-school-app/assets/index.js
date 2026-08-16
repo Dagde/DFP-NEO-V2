@@ -17149,6 +17149,29 @@ const ScheduleView = ({
   const [realtimeResourceConflictId, setRealtimeResourceConflictId] = reactExports.useState(null);
   const [draggedCptConflict, setDraggedCptConflict] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
+  const dragFrameRef = reactExports.useRef(null);
+  const lastDragUpdateSignatureRef = reactExports.useRef("");
+  const pendingDragUpdateRef = reactExports.useRef(null);
+  const flushPendingDragUpdate = reactExports.useCallback(() => {
+    if (dragFrameRef.current !== null) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+    const pending = pendingDragUpdateRef.current;
+    if (!pending) return;
+    pendingDragUpdateRef.current = null;
+    setRealtimeConflict(pending.realtimeConflict);
+    setRealtimeResourceConflictId(pending.resourceConflictId);
+    setDraggedCptConflict(pending.cptConflict);
+    onUpdateEvent(pending.updates);
+  }, [onUpdateEvent]);
+  reactExports.useEffect(() => {
+    return () => {
+      if (dragFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragFrameRef.current);
+      }
+    };
+  }, []);
   const selectionStartPoint = reactExports.useRef(null);
   const [selectionRect, setSelectionRect] = reactExports.useState(null);
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
@@ -17160,11 +17183,13 @@ const ScheduleView = ({
     };
     const handleGlobalMouseUp = (e) => {
       if (draggingState) {
+        flushPendingDragUpdate();
         document.body.classList.remove("no-select");
         setDraggingState(null);
         setRealtimeConflict(null);
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
+        lastDragUpdateSignatureRef.current = "";
       }
     };
     document.addEventListener("mousemove", handleGlobalMouseMove);
@@ -17173,7 +17198,7 @@ const ScheduleView = ({
       document.removeEventListener("mousemove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
-  }, [draggingState]);
+  }, [draggingState, flushPendingDragUpdate]);
   const getExternalDropPlacement = (event) => {
     if (!scheduleGridRef.current) return null;
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
@@ -17353,6 +17378,8 @@ const ScheduleView = ({
         processEventWithFormation(event);
       }
       if (initialPositions.size > 0) {
+        lastDragUpdateSignatureRef.current = "";
+        pendingDragUpdateRef.current = null;
         setDraggingState({
           mainEventId: event.id,
           xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -17426,6 +17453,7 @@ const ScheduleView = ({
       const tempEvents = [...events];
       let resourceConflictId = null;
       let tempCptConflict = null;
+      let tempRealtimeConflict = null;
       for (const [id, initialPos] of draggingState.initialPositions.entries()) {
         const eventData = events.find((ev) => ev.id === id);
         if (!eventData) continue;
@@ -17457,10 +17485,10 @@ const ScheduleView = ({
         if (detectConflictsForEvent) {
           conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
           if (conflictResult.hasConflict) {
-            setRealtimeConflict({
+            tempRealtimeConflict = {
               conflictingEventId: conflictResult.conflictingEventId,
               conflictedPersonName: conflictResult.conflictedPersonnel || ""
-            });
+            };
             if (mainEvent.flightNumber.includes("CPT") && conflictResult.conflictType === "personnel") {
               const conflictingEvent = otherEvents.find((e2) => e2.id === conflictResult.conflictingEventId);
               if (conflictingEvent) {
@@ -17471,16 +17499,14 @@ const ScheduleView = ({
                 };
               }
             }
-          } else {
-            setRealtimeConflict(null);
           }
         } else {
           const conflict = findConflict([mainEvent], otherEvents);
           if (conflict) {
-            setRealtimeConflict({
+            tempRealtimeConflict = {
               conflictingEventId: conflict.conflictingEvent.id,
               conflictedPersonName: conflict.personName
-            });
+            };
             if (mainEvent.flightNumber.includes("CPT")) {
               tempCptConflict = {
                 conflictingEvent: conflict.conflictingEvent,
@@ -17489,18 +17515,31 @@ const ScheduleView = ({
                 personName: conflict.personName
               };
             }
-          } else {
-            setRealtimeConflict(null);
           }
         }
       }
-      setRealtimeResourceConflictId(resourceConflictId);
-      setDraggedCptConflict(tempCptConflict);
-      onUpdateEvent(updates);
+      const updateSignature = updates.map((update) => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`).join("|");
+      if (updateSignature === lastDragUpdateSignatureRef.current) {
+        return;
+      }
+      lastDragUpdateSignatureRef.current = updateSignature;
+      pendingDragUpdateRef.current = {
+        updates,
+        realtimeConflict: tempRealtimeConflict,
+        resourceConflictId,
+        cptConflict: tempCptConflict
+      };
+      if (dragFrameRef.current === null) {
+        dragFrameRef.current = window.requestAnimationFrame(() => {
+          dragFrameRef.current = null;
+          flushPendingDragUpdate();
+        });
+      }
     }
   };
   const handleMouseUp = (e) => {
     if (draggingState) {
+      flushPendingDragUpdate();
       return;
     }
     document.body.classList.remove("no-select");
@@ -40364,6 +40403,29 @@ const NextDayBuildView = ({
   const [draggedCptConflict, setDraggedCptConflict] = reactExports.useState(null);
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   const didDragRef = reactExports.useRef(false);
+  const dragFrameRef = reactExports.useRef(null);
+  const lastDragUpdateSignatureRef = reactExports.useRef("");
+  const pendingDragUpdateRef = reactExports.useRef(null);
+  const flushPendingDragUpdate = reactExports.useCallback(() => {
+    if (dragFrameRef.current !== null) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+    const pending = pendingDragUpdateRef.current;
+    if (!pending) return;
+    pendingDragUpdateRef.current = null;
+    setRealtimeConflict(pending.realtimeConflict);
+    setRealtimeResourceConflictId(pending.resourceConflictId);
+    setDraggedCptConflict(pending.cptConflict);
+    onUpdateEvent(pending.updates);
+  }, [onUpdateEvent]);
+  reactExports.useEffect(() => {
+    return () => {
+      if (dragFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragFrameRef.current);
+      }
+    };
+  }, []);
   const selectionStartPoint = reactExports.useRef(null);
   const [selectionRect, setSelectionRect] = reactExports.useState(null);
   reactExports.useEffect(() => {
@@ -40507,6 +40569,8 @@ const NextDayBuildView = ({
         processEventWithFormation(event);
       }
       if (initialPositions.size > 0) {
+        lastDragUpdateSignatureRef.current = "";
+        pendingDragUpdateRef.current = null;
         setDraggingState({
           mainEventId: event.id,
           xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -40578,6 +40642,7 @@ const NextDayBuildView = ({
     const tempEvents = [...events];
     let resourceConflictId = null;
     let tempCptConflict = null;
+    let tempRealtimeConflict = null;
     for (const [id, initialPos] of draggingState.initialPositions.entries()) {
       const eventData = events.find((ev) => ev.id === id);
       if (!eventData) continue;
@@ -40609,10 +40674,10 @@ const NextDayBuildView = ({
       const otherEvents = tempEvents.filter((e2) => e2.id !== mainEvent.id);
       const conflict = findConflict([mainEvent], otherEvents);
       if (conflict) {
-        setRealtimeConflict({
+        tempRealtimeConflict = {
           conflictingEventId: conflict.conflictingEvent.id,
           conflictedPersonName: conflict.personName
-        });
+        };
         if (mainEvent.flightNumber.includes("CPT")) {
           tempCptConflict = {
             conflictingEvent: conflict.conflictingEvent,
@@ -40621,15 +40686,28 @@ const NextDayBuildView = ({
             personName: conflict.personName
           };
         }
-      } else {
-        setRealtimeConflict(null);
       }
     }
-    setRealtimeResourceConflictId(resourceConflictId);
-    setDraggedCptConflict(tempCptConflict);
-    onUpdateEvent(updates);
+    const updateSignature = updates.map((update) => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`).join("|");
+    if (updateSignature === lastDragUpdateSignatureRef.current) {
+      return;
+    }
+    lastDragUpdateSignatureRef.current = updateSignature;
+    pendingDragUpdateRef.current = {
+      updates,
+      realtimeConflict: tempRealtimeConflict,
+      resourceConflictId,
+      cptConflict: tempCptConflict
+    };
+    if (dragFrameRef.current === null) {
+      dragFrameRef.current = window.requestAnimationFrame(() => {
+        dragFrameRef.current = null;
+        flushPendingDragUpdate();
+      });
+    }
   };
   const handleMouseUp = (e) => {
+    flushPendingDragUpdate();
     document.body.classList.remove("no-select");
     if (isOracleMode) {
       onOracleMouseUp();
@@ -40641,6 +40719,7 @@ const NextDayBuildView = ({
     setRealtimeConflict(null);
     setRealtimeResourceConflictId(null);
     setDraggedCptConflict(null);
+    lastDragUpdateSignatureRef.current = "";
     setValidateOverlayTime(null);
     if (selectionStartPoint.current && (isMultiSelectMode || isPauseSelectMode)) {
       selectionStartPoint.current = null;

@@ -7698,6 +7698,36 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [realtimeResourceConflictId, setRealtimeResourceConflictId] = useState<string | null>(null);
     const [draggedCptConflict, setDraggedCptConflict] = useState<Conflict | null>(null);
     const didDragRef = useRef(false);
+    const dragFrameRef = useRef<number | null>(null);
+    const lastDragUpdateSignatureRef = useRef('');
+    const pendingDragUpdateRef = useRef<{
+        updates: { eventId: string, newStartTime: number, newResourceId: string }[];
+        realtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null;
+        resourceConflictId: string | null;
+        cptConflict: Conflict | null;
+    } | null>(null);
+
+    const flushPendingDragUpdate = useCallback(() => {
+        if (dragFrameRef.current !== null) {
+            window.cancelAnimationFrame(dragFrameRef.current);
+            dragFrameRef.current = null;
+        }
+        const pending = pendingDragUpdateRef.current;
+        if (!pending) return;
+        pendingDragUpdateRef.current = null;
+        setRealtimeConflict(pending.realtimeConflict);
+        setRealtimeResourceConflictId(pending.resourceConflictId);
+        setDraggedCptConflict(pending.cptConflict);
+        onUpdateEvent(pending.updates);
+    }, [onUpdateEvent]);
+
+    useEffect(() => {
+        return () => {
+            if (dragFrameRef.current !== null) {
+                window.cancelAnimationFrame(dragFrameRef.current);
+            }
+        };
+    }, []);
 
     // Multi-select State
     const selectionStartPoint = useRef<{ x: number, y: number } | null>(null);
@@ -7716,12 +7746,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         
         const handleGlobalMouseUp = (e: MouseEvent) => {
             if (draggingState) {
-                // Call the original handleMouseUp logic
+                flushPendingDragUpdate();
                 document.body.classList.remove('no-select');
                 setDraggingState(null);
                 setRealtimeConflict(null);
                 setRealtimeResourceConflictId(null);
                 setDraggedCptConflict(null);
+                lastDragUpdateSignatureRef.current = '';
             }
         };
         
@@ -7733,7 +7764,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             document.removeEventListener('mousemove', handleGlobalMouseMove);
             document.removeEventListener('mouseup', handleGlobalMouseUp);
         };
-    }, [draggingState]);
+    }, [draggingState, flushPendingDragUpdate]);
 
     const getExternalDropPlacement = (event: React.DragEvent<HTMLDivElement>) => {
         if (!scheduleGridRef.current) return null;
@@ -7950,6 +7981,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             }
 
             if (initialPositions.size > 0) {
+                lastDragUpdateSignatureRef.current = '';
+                pendingDragUpdateRef.current = null;
                 setDraggingState({
                     mainEventId: event.id,
                     xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -8040,6 +8073,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             const tempEvents = [...events];
             let resourceConflictId: string | null = null;
             let tempCptConflict: Conflict | null = null;
+            let tempRealtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null = null;
 
             for (const [id, initialPos] of draggingState.initialPositions.entries()) {
                 const eventData = events.find(ev => ev.id === id);
@@ -8085,10 +8119,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 if (detectConflictsForEvent) {
                     conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
                     if (conflictResult.hasConflict) {
-                        setRealtimeConflict({ 
+                        tempRealtimeConflict = {
                             conflictingEventId: conflictResult.conflictingEventId!, 
                             conflictedPersonName: conflictResult.conflictedPersonnel || '' 
-                        });
+                        };
                         if (mainEvent.flightNumber.includes('CPT') && conflictResult.conflictType === 'personnel') {
                             const conflictingEvent = otherEvents.find(e => e.id === conflictResult.conflictingEventId);
                             if (conflictingEvent) {
@@ -8099,18 +8133,16 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 };
                             }
                         }
-                    } else {
-                        setRealtimeConflict(null);
                     }
                 } else {
                     // Fallback to old method
                     const conflict = findConflict([mainEvent], otherEvents);
                     
                     if (conflict) {
-                        setRealtimeConflict({ 
+                        tempRealtimeConflict = {
                             conflictingEventId: conflict.conflictingEvent.id, 
                             conflictedPersonName: conflict.personName 
-                        });
+                        };
                         if (mainEvent.flightNumber.includes('CPT')) {
                             tempCptConflict = {
                                 conflictingEvent: conflict.conflictingEvent,
@@ -8119,21 +8151,35 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 personName: conflict.personName
                             } as Conflict;
                         }
-                    } else {
-                        setRealtimeConflict(null);
                     }
                 }
             }
-            
-            setRealtimeResourceConflictId(resourceConflictId);
-            setDraggedCptConflict(tempCptConflict);
 
-                onUpdateEvent(updates);
+            const updateSignature = updates
+                .map(update => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`)
+                .join('|');
+            if (updateSignature === lastDragUpdateSignatureRef.current) {
+                return;
+            }
+            lastDragUpdateSignatureRef.current = updateSignature;
+            pendingDragUpdateRef.current = {
+                updates,
+                realtimeConflict: tempRealtimeConflict,
+                resourceConflictId,
+                cptConflict: tempCptConflict,
+            };
+            if (dragFrameRef.current === null) {
+                dragFrameRef.current = window.requestAnimationFrame(() => {
+                    dragFrameRef.current = null;
+                    flushPendingDragUpdate();
+                });
+            }
         }
     };
 
     const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
         if (draggingState) {
+            flushPendingDragUpdate();
             return; // Don't clear drag state if we're in a drag operation
         }
         document.body.classList.remove('no-select');
