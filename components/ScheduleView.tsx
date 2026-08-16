@@ -7746,6 +7746,20 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         });
     }, [draggingState, getDragTileElements, resources, zoomLevel]);
 
+    const applyFinalDragVisualPositions = useCallback((updates: { eventId: string, newStartTime: number, newResourceId: string }[]) => {
+        updates.forEach(update => {
+            const newRowIndex = resources.indexOf(update.newResourceId);
+            if (newRowIndex < 0) return;
+            getDragTileElements(update.eventId).forEach(element => {
+                element.style.transition = 'none';
+                element.style.willChange = '';
+                element.style.transform = '';
+                element.style.left = `${(update.newStartTime - START_HOUR) * PIXELS_PER_HOUR * zoomLevel}px`;
+                element.style.top = `${newRowIndex * ROW_HEIGHT}px`;
+            });
+        });
+    }, [getDragTileElements, resources, zoomLevel]);
+
     const flushPendingDragUpdate = useCallback((commitToSchedule = false) => {
         if (dragFrameRef.current !== null) {
             window.cancelAnimationFrame(dragFrameRef.current);
@@ -7754,6 +7768,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const pending = pendingDragUpdateRef.current;
         if (!pending) {
             if (commitToSchedule && lastDragCommitUpdatesRef.current) {
+                applyFinalDragVisualPositions(lastDragCommitUpdatesRef.current);
                 recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
                     queuedAtMs: performance.now(),
                     updateCount: lastDragCommitUpdatesRef.current.length,
@@ -7766,8 +7781,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         }
         pendingDragUpdateRef.current = null;
         lastDragCommitUpdatesRef.current = pending.updates;
-        applyDragVisualUpdates(pending.updates);
         if (commitToSchedule) {
+            applyFinalDragVisualPositions(pending.updates);
             setRealtimeConflict(pending.realtimeConflict);
             setRealtimeResourceConflictId(pending.resourceConflictId);
             setDraggedCptConflict(pending.cptConflict);
@@ -7778,8 +7793,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             });
             onUpdateEvent(pending.updates);
             lastDragCommitUpdatesRef.current = null;
+        } else {
+            applyDragVisualUpdates(pending.updates);
         }
-    }, [applyDragVisualUpdates, onUpdateEvent]);
+    }, [applyDragVisualUpdates, applyFinalDragVisualPositions, onUpdateEvent]);
 
     useEffect(() => {
         return () => {
