@@ -46302,11 +46302,13 @@ const InteractiveStatCard = ({
   value,
   description,
   personnelList,
+  personnelDetails,
   onPersonClick
 }) => {
   const [isHovered, setIsHovered] = reactExports.useState(false);
   const cardClass = "relative flex flex-col rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
-  if (personnelList.length === 0 && !description) {
+  const hoverItems = personnelDetails && personnelDetails.length > 0 ? personnelDetails : personnelList.map((name) => ({ name }));
+  if (hoverItems.length === 0 && !description) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: cardClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400", children: title }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-3xl font-bold text-white", children: value }),
@@ -46323,14 +46325,30 @@ const InteractiveStatCard = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400", children: title }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-3xl font-bold text-white", children: value }),
         description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: description }),
-        isHovered && personnelList.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-10 mt-2 max-h-60 w-64 overflow-y-auto rounded-lg border border-cyan-500/45 bg-slate-950 p-2 shadow-2xl animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: personnelList.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        isHovered && hoverItems.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-10 mt-2 max-h-80 w-[24rem] overflow-y-auto rounded-lg border border-cyan-500/45 bg-slate-950 p-2 shadow-2xl animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: hoverItems.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
-            onClick: () => onPersonClick(name),
-            className: "w-full rounded p-2 text-left text-sm text-slate-300 transition-colors hover:bg-cyan-500/15 hover:text-white",
-            children: name.split(" – ")[0]
+            onClick: () => onPersonClick(person.name),
+            className: "w-full rounded-md p-3 text-left text-sm text-slate-300 transition-colors hover:bg-cyan-500/15 hover:text-white",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-slate-100", children: person.name.split(" – ")[0] }),
+                  person.detail && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-[11px] uppercase tracking-[0.12em] text-slate-500", children: person.detail })
+                ] }),
+                typeof person.total === "number" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/30 px-2 py-1 font-mono text-xs font-semibold text-cyan-100", children: person.total })
+              ] }),
+              person.breakdown && person.breakdown.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: person.breakdown.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[4.5rem_1fr] gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500", children: [
+                  group.label,
+                  " ",
+                  group.value
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: group.events.length > 0 ? group.events.map((eventCode2) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-white", children: eventCode2 }, `${group.label}-${eventCode2}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[11px] text-slate-600", children: "-" }) })
+              ] }, group.label)) })
+            ]
           }
-        ) }, name)) }) })
+        ) }, `${person.name}-${person.detail || ""}`)) }) })
       ]
     }
   );
@@ -46437,6 +46455,33 @@ const PeopleTab = ({
   const configuredInstructorLabel = String(instructorLabel2 || "Instructor").trim() || "Instructor";
   const instructorQualifiedLabel = `${configuredInstructorLabel}-qualified`;
   const instructorQualifiedPersonnelLabel = `${instructorQualifiedLabel.toLowerCase()} personnel`;
+  const getInstructorIdentityKey = (instructor) => {
+    const idNumber = Number(instructor.idNumber);
+    if (Number.isFinite(idNumber) && idNumber > 0) return `idNumber:${idNumber}`;
+    const dbId = String(instructor.id || "").trim();
+    if (dbId) return `id:${dbId}`;
+    return `name:${String(instructor.name || "").trim().toLowerCase()}`;
+  };
+  const getEventInstructorIdentityKey = (event, staffByName) => {
+    const refs = Array.isArray(event.personnelRefs) ? event.personnelRefs : [];
+    const instructorRef = refs.find(
+      (ref) => ref.personType === "staff" && (ref.role === "instructor" || ref.role === "pilot") && (!event.instructor || ref.name === event.instructor)
+    ) || refs.find((ref) => ref.personType === "staff" && (ref.role === "instructor" || ref.role === "pilot"));
+    if (instructorRef?.idNumber) return `idNumber:${instructorRef.idNumber}`;
+    if (instructorRef?.id) return `id:${instructorRef.id}`;
+    if (event.instructor) {
+      const matchedStaff = staffByName.get(event.instructor);
+      if (matchedStaff) return getInstructorIdentityKey(matchedStaff);
+      return `name:${event.instructor.trim().toLowerCase()}`;
+    }
+    return null;
+  };
+  const normaliseBuildEventType = (event) => {
+    if (event.type === "flight") return "flight";
+    if (event.type === "ftd") return "ftd";
+    if (event.type === "cpt") return "cpt";
+    return "ground";
+  };
   const formatMilitaryTime2 = (timeString) => {
     if (!timeString) return "";
     return timeString.replace(":", "");
@@ -46482,28 +46527,82 @@ const PeopleTab = ({
     const flightOrFtdEvents = events.filter(
       (e) => (e.type === "flight" || e.type === "ftd") && !e.resourceId?.startsWith("STBY") && !e.resourceId?.startsWith("FTD-STBY") && !e.resourceId?.startsWith("BNF-STBY")
     );
-    const instructorEventCounts = /* @__PURE__ */ new Map();
-    events.forEach((e) => {
-      if (e.instructor) {
-        instructorEventCounts.set(e.instructor, (instructorEventCounts.get(e.instructor) || 0) + 1);
+    const instructorMap = new Map(instructorsData.map((i) => [i.name, i]));
+    const instructorLoadRows = /* @__PURE__ */ new Map();
+    const ensureInstructorLoadRow = (key, instructor, fallbackName) => {
+      if (!instructorLoadRows.has(key)) {
+        instructorLoadRows.set(key, {
+          instructor,
+          displayName: instructor?.name || fallbackName,
+          idNumber: instructor?.idNumber,
+          unit: instructor?.unit,
+          total: 0,
+          breakdown: { flight: [], ftd: [], cpt: [], ground: [] }
+        });
       }
+      const row = instructorLoadRows.get(key);
+      if (instructor && !row.instructor) {
+        row.instructor = instructor;
+        row.displayName = instructor.name;
+        row.idNumber = instructor.idNumber;
+        row.unit = instructor.unit;
+      }
+      return row;
+    };
+    events.forEach((event) => {
+      if (!event.instructor) return;
+      const key = getEventInstructorIdentityKey(event, instructorMap);
+      if (!key) return;
+      const matchedInstructor = Array.from(instructorsData).find((instructor) => getInstructorIdentityKey(instructor) === key) || instructorMap.get(event.instructor) || null;
+      const row = ensureInstructorLoadRow(key, matchedInstructor, event.instructor);
+      row.total += 1;
+      const eventType = normaliseBuildEventType(event);
+      const eventCode2 = String(event.flightNumber || "").trim() || String(event.type || "").toUpperCase();
+      row.breakdown[eventType].push(eventCode2);
     });
     const selectedDateStr = date;
     const unavailableInstructors = /* @__PURE__ */ new Set();
     instructorsData.forEach((instructor) => {
       instructor.unavailability?.forEach((period) => {
         if (selectedDateStr >= period.startDate && selectedDateStr < period.endDate) {
-          unavailableInstructors.add(instructor.name);
+          unavailableInstructors.add(getInstructorIdentityKey(instructor));
         }
       });
     });
-    const availableInstructors = instructorsData.filter((i) => !unavailableInstructors.has(i.name));
+    const availableInstructors = instructorsData.filter((i) => !unavailableInstructors.has(getInstructorIdentityKey(i)));
     const totalAvailableInstructors = availableInstructors.length;
-    const instructorsWithFourEventsList = availableInstructors.filter((i) => (instructorEventCounts.get(i.name) || 0) === 4).map((i) => i.name).sort();
-    const instructorsWithThreeEventsList = availableInstructors.filter((i) => (instructorEventCounts.get(i.name) || 0) === 3).map((i) => i.name).sort();
-    const instructorsWithTwoEventsList = availableInstructors.filter((i) => (instructorEventCounts.get(i.name) || 0) === 2).map((i) => i.name).sort();
-    const instructorsWithOneEventList = availableInstructors.filter((i) => (instructorEventCounts.get(i.name) || 0) === 1).map((i) => i.name).sort();
-    const instructorsWithZeroEventsList = availableInstructors.filter((i) => (instructorEventCounts.get(i.name) || 0) === 0).map((i) => i.name).sort();
+    const formatInstructorLoadDetail = (instructor) => {
+      const key = getInstructorIdentityKey(instructor);
+      const load = instructorLoadRows.get(key) || ensureInstructorLoadRow(key, instructor, instructor.name);
+      const buildGroup = (label, type) => ({
+        label,
+        value: load.breakdown[type].length,
+        events: Array.from(new Set(load.breakdown[type]))
+      });
+      return {
+        name: instructor.name,
+        detail: [instructor.unit, instructor.idNumber ? `ID ${instructor.idNumber}` : null].filter(Boolean).join(" / "),
+        total: load.total,
+        breakdown: [
+          buildGroup("Flight", "flight"),
+          buildGroup("FTD", "ftd"),
+          buildGroup("CPT", "cpt"),
+          buildGroup("Ground", "ground")
+        ]
+      };
+    };
+    const sortInstructorLoadDetails = (left, right) => String(left.detail || "").localeCompare(String(right.detail || "")) || left.name.localeCompare(right.name);
+    const instructorLoadDetailsForCount = (count) => availableInstructors.filter((instructor) => (instructorLoadRows.get(getInstructorIdentityKey(instructor))?.total || 0) === count).map(formatInstructorLoadDetail).sort(sortInstructorLoadDetails);
+    const instructorsWithFourEventsDetails = instructorLoadDetailsForCount(4);
+    const instructorsWithThreeEventsDetails = instructorLoadDetailsForCount(3);
+    const instructorsWithTwoEventsDetails = instructorLoadDetailsForCount(2);
+    const instructorsWithOneEventDetails = instructorLoadDetailsForCount(1);
+    const instructorsWithZeroEventsDetails = instructorLoadDetailsForCount(0);
+    const instructorsWithFourEventsList = instructorsWithFourEventsDetails.map((person) => person.name);
+    const instructorsWithThreeEventsList = instructorsWithThreeEventsDetails.map((person) => person.name);
+    const instructorsWithTwoEventsList = instructorsWithTwoEventsDetails.map((person) => person.name);
+    const instructorsWithOneEventList = instructorsWithOneEventDetails.map((person) => person.name);
+    const instructorsWithZeroEventsList = instructorsWithZeroEventsDetails.map((person) => person.name);
     const traineeEventCounts = /* @__PURE__ */ new Map();
     flightOrFtdEvents.forEach((e) => {
       const traineeName = e.student || e.pilot;
@@ -46524,7 +46623,6 @@ const PeopleTab = ({
     const totalAvailableTrainees = availableActiveTrainees.length;
     const traineesWithZeroEventsList = availableActiveTrainees.filter((t) => !traineeEventCounts.has(t.fullName)).map((t) => t.fullName).sort();
     const traineeMap = new Map(traineesData.map((t) => [t.fullName, t]));
-    const instructorMap = new Map(instructorsData.map((i) => [i.name, i]));
     const traineesWithPrimary = /* @__PURE__ */ new Set();
     const traineesWithSecondary = /* @__PURE__ */ new Set();
     const traineesWithInstructorFromFlight = /* @__PURE__ */ new Set();
@@ -46566,6 +46664,11 @@ const PeopleTab = ({
       instructorsWithTwoEventsList,
       instructorsWithOneEventList,
       instructorsWithZeroEventsList,
+      instructorsWithFourEventsDetails,
+      instructorsWithThreeEventsDetails,
+      instructorsWithTwoEventsDetails,
+      instructorsWithOneEventDetails,
+      instructorsWithZeroEventsDetails,
       traineesWithZeroEventsList,
       totalAvailableInstructors,
       totalAvailableTrainees,
@@ -46693,15 +46796,22 @@ const PeopleTab = ({
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
   }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
-  const getEventPeople2 = (event) => {
-    const names = [
-      event.instructor,
-      event.pilot,
-      event.crew,
-      event.student,
-      ...event.attendees || []
-    ].map((name) => String(name || "").trim()).filter((name) => name && !/^TBA$/i.test(name));
-    return Array.from(new Set(names));
+  const getEventStaffIdentityKeys = (event, staffByName) => {
+    const keys = /* @__PURE__ */ new Set();
+    const refs = Array.isArray(event.personnelRefs) ? event.personnelRefs : [];
+    refs.filter((ref) => ref.personType === "staff").forEach((ref) => {
+      if (ref.idNumber) keys.add(`idNumber:${ref.idNumber}`);
+      else if (ref.id) keys.add(`id:${ref.id}`);
+      else if (ref.name) {
+        const staff = staffByName.get(ref.name);
+        keys.add(staff ? getInstructorIdentityKey(staff) : `name:${ref.name.trim().toLowerCase()}`);
+      }
+    });
+    [event.instructor, event.pilot, event.crew, ...event.attendees || []].map((name) => String(name || "").trim()).filter((name) => name && !/^TBA$/i.test(name)).forEach((name) => {
+      const staff = staffByName.get(name);
+      if (staff) keys.add(getInstructorIdentityKey(staff));
+    });
+    return keys;
   };
   const normaliseEventType = (item) => {
     if (!item) return "ground";
@@ -46729,24 +46839,26 @@ const PeopleTab = ({
       const staffUnit = String(staff.unit || "").trim().toUpperCase();
       return activeUnitCodes.size === 0 || !staffUnit || activeUnitCodes.has(staffUnit);
     });
-    const eventStaff = new Set(events.flatMap(getEventPeople2));
+    const staffByName = new Map(activeStaff.map((staff) => [staff.name, staff]));
+    const eventStaff = /* @__PURE__ */ new Set();
     const staffEventCounts = /* @__PURE__ */ new Map();
     events.forEach((event) => {
-      getEventPeople2(event).forEach((name) => {
-        staffEventCounts.set(name, (staffEventCounts.get(name) || 0) + 1);
+      getEventStaffIdentityKeys(event, staffByName).forEach((staffKey) => {
+        eventStaff.add(staffKey);
+        staffEventCounts.set(staffKey, (staffEventCounts.get(staffKey) || 0) + 1);
       });
     });
-    const unavailableNames = /* @__PURE__ */ new Set();
+    const unavailableStaffKeys = /* @__PURE__ */ new Set();
     activeStaff.forEach((staff) => {
       const unavailable = (staff.unavailability || []).some((period) => date >= period.startDate && date < period.endDate);
-      if (unavailable) unavailableNames.add(staff.name);
+      if (unavailable) unavailableStaffKeys.add(getInstructorIdentityKey(staff));
     });
-    const availableActiveStaff = activeStaff.filter((staff) => !unavailableNames.has(staff.name));
-    const staffWithFourEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(staff.name) || 0) >= 4).map((staff) => staff.name).sort();
-    const staffWithThreeEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(staff.name) || 0) === 3).map((staff) => staff.name).sort();
-    const staffWithTwoEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(staff.name) || 0) === 2).map((staff) => staff.name).sort();
-    const staffWithOneEventList = availableActiveStaff.filter((staff) => (staffEventCounts.get(staff.name) || 0) === 1).map((staff) => staff.name).sort();
-    const staffWithZeroEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(staff.name) || 0) === 0).map((staff) => staff.name).sort();
+    const availableActiveStaff = activeStaff.filter((staff) => !unavailableStaffKeys.has(getInstructorIdentityKey(staff)));
+    const staffWithFourEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(getInstructorIdentityKey(staff)) || 0) >= 4).map((staff) => staff.name).sort();
+    const staffWithThreeEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(getInstructorIdentityKey(staff)) || 0) === 3).map((staff) => staff.name).sort();
+    const staffWithTwoEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(getInstructorIdentityKey(staff)) || 0) === 2).map((staff) => staff.name).sort();
+    const staffWithOneEventList = availableActiveStaff.filter((staff) => (staffEventCounts.get(getInstructorIdentityKey(staff)) || 0) === 1).map((staff) => staff.name).sort();
+    const staffWithZeroEventsList = availableActiveStaff.filter((staff) => (staffEventCounts.get(getInstructorIdentityKey(staff)) || 0) === 0).map((staff) => staff.name).sort();
     const roleRows = /* @__PURE__ */ new Map();
     activeStaff.forEach((staff) => {
       const role = String(staff.role || "Unassigned").trim() || "Unassigned";
@@ -46754,9 +46866,9 @@ const PeopleTab = ({
       const row = roleRows.get(role);
       row.total += 1;
       row.names.push(staff.name);
-      if (unavailableNames.has(staff.name)) row.unavailable += 1;
+      if (unavailableStaffKeys.has(getInstructorIdentityKey(staff))) row.unavailable += 1;
       else row.available += 1;
-      if (eventStaff.has(staff.name)) row.scheduled += 1;
+      if (eventStaff.has(getInstructorIdentityKey(staff))) row.scheduled += 1;
     });
     const totals = Array.from(roleRows.values()).reduce((acc, row) => ({
       total: acc.total + row.total,
@@ -46824,7 +46936,7 @@ const PeopleTab = ({
         withOneEventList: staffWithOneEventList,
         withZeroEventsList: staffWithZeroEventsList
       },
-      unavailableList: activeStaff.filter((staff) => unavailableNames.has(staff.name)).map((staff) => ({ name: staff.name, rank: staff.rank, role: staff.role || "Unassigned" })).sort((left, right) => left.name.localeCompare(right.name)),
+      unavailableList: activeStaff.filter((staff) => unavailableStaffKeys.has(getInstructorIdentityKey(staff))).map((staff) => ({ name: staff.name, rank: staff.rank, role: staff.role || "Unassigned" })).sort((left, right) => left.name.localeCompare(right.name)),
       priorityRows,
       courseRows,
       packageRows,
@@ -46982,6 +47094,7 @@ const PeopleTab = ({
             value: stats.instructorsWithFourEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithFourEventsList,
+            personnelDetails: stats.instructorsWithFourEventsDetails,
             onPersonClick: onNavigateAndSelectPerson
           }
         ),
@@ -46992,6 +47105,7 @@ const PeopleTab = ({
             value: stats.instructorsWithThreeEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithThreeEventsList,
+            personnelDetails: stats.instructorsWithThreeEventsDetails,
             onPersonClick: onNavigateAndSelectPerson
           }
         ),
@@ -47002,6 +47116,7 @@ const PeopleTab = ({
             value: stats.instructorsWithTwoEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithTwoEventsList,
+            personnelDetails: stats.instructorsWithTwoEventsDetails,
             onPersonClick: onNavigateAndSelectPerson
           }
         ),
@@ -47012,6 +47127,7 @@ const PeopleTab = ({
             value: stats.instructorsWithOneEvent,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithOneEventList,
+            personnelDetails: stats.instructorsWithOneEventDetails,
             onPersonClick: onNavigateAndSelectPerson
           }
         ),
@@ -47022,6 +47138,7 @@ const PeopleTab = ({
             value: stats.instructorsWithZeroEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithZeroEventsList,
+            personnelDetails: stats.instructorsWithZeroEventsDetails,
             onPersonClick: onNavigateAndSelectPerson
           }
         )

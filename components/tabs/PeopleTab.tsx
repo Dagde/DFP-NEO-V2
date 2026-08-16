@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ScheduleEvent, Instructor, Trainee, UnavailabilityPeriod, Score, SyllabusItemDetail } from '../../types';
-import InteractiveStatCard from '../shared/InteractiveStatCard';
+import InteractiveStatCard, { type InteractiveStatCardPersonDetail } from '../shared/InteractiveStatCard';
 import AvailabilityCard from '../shared/AvailabilityCard';
 import ListCard from '../shared/ListCard';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../../utils/resourceDisplayNames';
@@ -56,6 +56,37 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
   const configuredInstructorLabel = String(instructorLabel || 'Instructor').trim() || 'Instructor';
   const instructorQualifiedLabel = `${configuredInstructorLabel}-qualified`;
   const instructorQualifiedPersonnelLabel = `${instructorQualifiedLabel.toLowerCase()} personnel`;
+  const getInstructorIdentityKey = (instructor: Instructor): string => {
+    const idNumber = Number(instructor.idNumber);
+    if (Number.isFinite(idNumber) && idNumber > 0) return `idNumber:${idNumber}`;
+    const dbId = String((instructor as any).id || '').trim();
+    if (dbId) return `id:${dbId}`;
+    return `name:${String(instructor.name || '').trim().toLowerCase()}`;
+  };
+
+  const getEventInstructorIdentityKey = (event: ScheduleEvent, staffByName: Map<string, Instructor>): string | null => {
+    const refs = Array.isArray(event.personnelRefs) ? event.personnelRefs : [];
+    const instructorRef = refs.find(ref =>
+      ref.personType === 'staff' &&
+      (ref.role === 'instructor' || ref.role === 'pilot') &&
+      (!event.instructor || ref.name === event.instructor)
+    ) || refs.find(ref => ref.personType === 'staff' && (ref.role === 'instructor' || ref.role === 'pilot'));
+    if (instructorRef?.idNumber) return `idNumber:${instructorRef.idNumber}`;
+    if (instructorRef?.id) return `id:${instructorRef.id}`;
+    if (event.instructor) {
+      const matchedStaff = staffByName.get(event.instructor);
+      if (matchedStaff) return getInstructorIdentityKey(matchedStaff);
+      return `name:${event.instructor.trim().toLowerCase()}`;
+    }
+    return null;
+  };
+
+  const normaliseBuildEventType = (event: ScheduleEvent): 'flight' | 'ftd' | 'cpt' | 'ground' => {
+    if (event.type === 'flight') return 'flight';
+    if (event.type === 'ftd') return 'ftd';
+    if (event.type === 'cpt') return 'cpt';
+    return 'ground';
+  };
 
   const formatMilitaryTime = (timeString: string | undefined): string => {
     if (!timeString) return '';
@@ -119,11 +150,45 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
       !e.resourceId?.startsWith('BNF-STBY')
     );
     
-    const instructorEventCounts = new Map<string, number>();
-    events.forEach(e => {
-      if (e.instructor) {
-        instructorEventCounts.set(e.instructor, (instructorEventCounts.get(e.instructor) || 0) + 1);
+    const instructorMap = new Map<string, Instructor>(instructorsData.map(i => [i.name, i]));
+    const instructorLoadRows = new Map<string, {
+      instructor: Instructor | null;
+      displayName: string;
+      idNumber?: number;
+      unit?: string;
+      total: number;
+      breakdown: Record<'flight' | 'ftd' | 'cpt' | 'ground', string[]>;
+    }>();
+    const ensureInstructorLoadRow = (key: string, instructor: Instructor | null, fallbackName: string) => {
+      if (!instructorLoadRows.has(key)) {
+        instructorLoadRows.set(key, {
+          instructor,
+          displayName: instructor?.name || fallbackName,
+          idNumber: instructor?.idNumber,
+          unit: instructor?.unit,
+          total: 0,
+          breakdown: { flight: [], ftd: [], cpt: [], ground: [] },
+        });
       }
+      const row = instructorLoadRows.get(key)!;
+      if (instructor && !row.instructor) {
+        row.instructor = instructor;
+        row.displayName = instructor.name;
+        row.idNumber = instructor.idNumber;
+        row.unit = instructor.unit;
+      }
+      return row;
+    };
+    events.forEach(event => {
+      if (!event.instructor) return;
+      const key = getEventInstructorIdentityKey(event, instructorMap);
+      if (!key) return;
+      const matchedInstructor = Array.from(instructorsData).find(instructor => getInstructorIdentityKey(instructor) === key) || instructorMap.get(event.instructor) || null;
+      const row = ensureInstructorLoadRow(key, matchedInstructor, event.instructor);
+      row.total += 1;
+      const eventType = normaliseBuildEventType(event);
+      const eventCode = String(event.flightNumber || '').trim() || String(event.type || '').toUpperCase();
+      row.breakdown[eventType].push(eventCode);
     });
 
     const selectedDateStr = date;
@@ -131,18 +196,51 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
     instructorsData.forEach(instructor => {
       instructor.unavailability?.forEach(period => {
         if (selectedDateStr >= period.startDate && selectedDateStr < period.endDate) {
-          unavailableInstructors.add(instructor.name);
+          unavailableInstructors.add(getInstructorIdentityKey(instructor));
         }
       });
     });
-    const availableInstructors = instructorsData.filter(i => !unavailableInstructors.has(i.name));
+    const availableInstructors = instructorsData.filter(i => !unavailableInstructors.has(getInstructorIdentityKey(i)));
     const totalAvailableInstructors = availableInstructors.length;
 
-    const instructorsWithFourEventsList = availableInstructors.filter(i => (instructorEventCounts.get(i.name) || 0) === 4).map(i => i.name).sort();
-    const instructorsWithThreeEventsList = availableInstructors.filter(i => (instructorEventCounts.get(i.name) || 0) === 3).map(i => i.name).sort();
-    const instructorsWithTwoEventsList = availableInstructors.filter(i => (instructorEventCounts.get(i.name) || 0) === 2).map(i => i.name).sort();
-    const instructorsWithOneEventList = availableInstructors.filter(i => (instructorEventCounts.get(i.name) || 0) === 1).map(i => i.name).sort();
-    const instructorsWithZeroEventsList = availableInstructors.filter(i => (instructorEventCounts.get(i.name) || 0) === 0).map(i => i.name).sort();
+    const formatInstructorLoadDetail = (instructor: Instructor): InteractiveStatCardPersonDetail => {
+      const key = getInstructorIdentityKey(instructor);
+      const load = instructorLoadRows.get(key) || ensureInstructorLoadRow(key, instructor, instructor.name);
+      const buildGroup = (label: string, type: 'flight' | 'ftd' | 'cpt' | 'ground') => ({
+        label,
+        value: load.breakdown[type].length,
+        events: Array.from(new Set(load.breakdown[type])),
+      });
+      return {
+        name: instructor.name,
+        detail: [instructor.unit, instructor.idNumber ? `ID ${instructor.idNumber}` : null].filter(Boolean).join(' / '),
+        total: load.total,
+        breakdown: [
+          buildGroup('Flight', 'flight'),
+          buildGroup('FTD', 'ftd'),
+          buildGroup('CPT', 'cpt'),
+          buildGroup('Ground', 'ground'),
+        ],
+      };
+    };
+    const sortInstructorLoadDetails = (left: InteractiveStatCardPersonDetail, right: InteractiveStatCardPersonDetail) =>
+      String(left.detail || '').localeCompare(String(right.detail || '')) ||
+      left.name.localeCompare(right.name);
+    const instructorLoadDetailsForCount = (count: number): InteractiveStatCardPersonDetail[] => availableInstructors
+      .filter(instructor => (instructorLoadRows.get(getInstructorIdentityKey(instructor))?.total || 0) === count)
+      .map(formatInstructorLoadDetail)
+      .sort(sortInstructorLoadDetails);
+
+    const instructorsWithFourEventsDetails = instructorLoadDetailsForCount(4);
+    const instructorsWithThreeEventsDetails = instructorLoadDetailsForCount(3);
+    const instructorsWithTwoEventsDetails = instructorLoadDetailsForCount(2);
+    const instructorsWithOneEventDetails = instructorLoadDetailsForCount(1);
+    const instructorsWithZeroEventsDetails = instructorLoadDetailsForCount(0);
+    const instructorsWithFourEventsList = instructorsWithFourEventsDetails.map(person => person.name);
+    const instructorsWithThreeEventsList = instructorsWithThreeEventsDetails.map(person => person.name);
+    const instructorsWithTwoEventsList = instructorsWithTwoEventsDetails.map(person => person.name);
+    const instructorsWithOneEventList = instructorsWithOneEventDetails.map(person => person.name);
+    const instructorsWithZeroEventsList = instructorsWithZeroEventsDetails.map(person => person.name);
 
     const traineeEventCounts = new Map<string, number>();
     flightOrFtdEvents.forEach(e => {
@@ -167,7 +265,6 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
     const traineesWithZeroEventsList = availableActiveTrainees.filter(t => !traineeEventCounts.has(t.fullName)).map(t => t.fullName).sort();
 
     const traineeMap = new Map<string, Trainee>(traineesData.map(t => [t.fullName, t]));
-    const instructorMap = new Map<string, Instructor>(instructorsData.map(i => [i.name, i]));
     const traineesWithPrimary = new Set<string>();
     const traineesWithSecondary = new Set<string>();
     const traineesWithInstructorFromFlight = new Set<string>();
@@ -222,6 +319,11 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
       instructorsWithTwoEventsList,
       instructorsWithOneEventList,
       instructorsWithZeroEventsList,
+      instructorsWithFourEventsDetails,
+      instructorsWithThreeEventsDetails,
+      instructorsWithTwoEventsDetails,
+      instructorsWithOneEventDetails,
+      instructorsWithZeroEventsDetails,
       traineesWithZeroEventsList,
       totalAvailableInstructors,
       totalAvailableTrainees,
@@ -389,6 +491,29 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
     return Array.from(new Set(names));
   };
 
+  const getEventStaffIdentityKeys = (event: ScheduleEvent, staffByName: Map<string, Instructor>): Set<string> => {
+    const keys = new Set<string>();
+    const refs = Array.isArray(event.personnelRefs) ? event.personnelRefs : [];
+    refs
+      .filter(ref => ref.personType === 'staff')
+      .forEach(ref => {
+        if (ref.idNumber) keys.add(`idNumber:${ref.idNumber}`);
+        else if (ref.id) keys.add(`id:${ref.id}`);
+        else if (ref.name) {
+          const staff = staffByName.get(ref.name);
+          keys.add(staff ? getInstructorIdentityKey(staff) : `name:${ref.name.trim().toLowerCase()}`);
+        }
+      });
+    [event.instructor, event.pilot, event.crew, ...((event.attendees || []) as string[])]
+      .map(name => String(name || '').trim())
+      .filter(name => name && !/^TBA$/i.test(name))
+      .forEach(name => {
+        const staff = staffByName.get(name);
+        if (staff) keys.add(getInstructorIdentityKey(staff));
+      });
+    return keys;
+  };
+
   const normaliseEventType = (item?: SyllabusItemDetail | null): 'flight' | 'ftd' | 'cpt' | 'ground' => {
     if (!item) return 'ground';
     if (item.type === 'Flight') return 'flight';
@@ -430,37 +555,39 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
       const staffUnit = String(staff.unit || '').trim().toUpperCase();
       return activeUnitCodes.size === 0 || !staffUnit || activeUnitCodes.has(staffUnit);
     });
-    const eventStaff = new Set(events.flatMap(getEventPeople));
+    const staffByName = new Map(activeStaff.map(staff => [staff.name, staff]));
+    const eventStaff = new Set<string>();
     const staffEventCounts = new Map<string, number>();
     events.forEach(event => {
-      getEventPeople(event).forEach(name => {
-        staffEventCounts.set(name, (staffEventCounts.get(name) || 0) + 1);
+      getEventStaffIdentityKeys(event, staffByName).forEach(staffKey => {
+        eventStaff.add(staffKey);
+        staffEventCounts.set(staffKey, (staffEventCounts.get(staffKey) || 0) + 1);
       });
     });
-    const unavailableNames = new Set<string>();
+    const unavailableStaffKeys = new Set<string>();
     activeStaff.forEach(staff => {
       const unavailable = (staff.unavailability || []).some(period => date >= period.startDate && date < period.endDate);
-      if (unavailable) unavailableNames.add(staff.name);
+      if (unavailable) unavailableStaffKeys.add(getInstructorIdentityKey(staff));
     });
-    const availableActiveStaff = activeStaff.filter(staff => !unavailableNames.has(staff.name));
+    const availableActiveStaff = activeStaff.filter(staff => !unavailableStaffKeys.has(getInstructorIdentityKey(staff)));
     const staffWithFourEventsList = availableActiveStaff
-      .filter(staff => (staffEventCounts.get(staff.name) || 0) >= 4)
+      .filter(staff => (staffEventCounts.get(getInstructorIdentityKey(staff)) || 0) >= 4)
       .map(staff => staff.name)
       .sort();
     const staffWithThreeEventsList = availableActiveStaff
-      .filter(staff => (staffEventCounts.get(staff.name) || 0) === 3)
+      .filter(staff => (staffEventCounts.get(getInstructorIdentityKey(staff)) || 0) === 3)
       .map(staff => staff.name)
       .sort();
     const staffWithTwoEventsList = availableActiveStaff
-      .filter(staff => (staffEventCounts.get(staff.name) || 0) === 2)
+      .filter(staff => (staffEventCounts.get(getInstructorIdentityKey(staff)) || 0) === 2)
       .map(staff => staff.name)
       .sort();
     const staffWithOneEventList = availableActiveStaff
-      .filter(staff => (staffEventCounts.get(staff.name) || 0) === 1)
+      .filter(staff => (staffEventCounts.get(getInstructorIdentityKey(staff)) || 0) === 1)
       .map(staff => staff.name)
       .sort();
     const staffWithZeroEventsList = availableActiveStaff
-      .filter(staff => (staffEventCounts.get(staff.name) || 0) === 0)
+      .filter(staff => (staffEventCounts.get(getInstructorIdentityKey(staff)) || 0) === 0)
       .map(staff => staff.name)
       .sort();
 
@@ -471,9 +598,9 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
       const row = roleRows.get(role)!;
       row.total += 1;
       row.names.push(staff.name);
-      if (unavailableNames.has(staff.name)) row.unavailable += 1;
+      if (unavailableStaffKeys.has(getInstructorIdentityKey(staff))) row.unavailable += 1;
       else row.available += 1;
-      if (eventStaff.has(staff.name)) row.scheduled += 1;
+      if (eventStaff.has(getInstructorIdentityKey(staff))) row.scheduled += 1;
     });
 
     const totals = Array.from(roleRows.values()).reduce((acc, row) => ({
@@ -567,7 +694,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
         withZeroEventsList: staffWithZeroEventsList,
       },
       unavailableList: activeStaff
-        .filter(staff => unavailableNames.has(staff.name))
+        .filter(staff => unavailableStaffKeys.has(getInstructorIdentityKey(staff)))
         .map(staff => ({ name: staff.name, rank: staff.rank, role: staff.role || 'Unassigned' }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       priorityRows,
@@ -790,6 +917,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
             value={stats.instructorsWithFourEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithFourEventsList}
+            personnelDetails={stats.instructorsWithFourEventsDetails}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
@@ -797,6 +925,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
             value={stats.instructorsWithThreeEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithThreeEventsList}
+            personnelDetails={stats.instructorsWithThreeEventsDetails}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
@@ -804,6 +933,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
             value={stats.instructorsWithTwoEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithTwoEventsList}
+            personnelDetails={stats.instructorsWithTwoEventsDetails}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
@@ -811,6 +941,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
             value={stats.instructorsWithOneEvent}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithOneEventList}
+            personnelDetails={stats.instructorsWithOneEventDetails}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
@@ -818,6 +949,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
             value={stats.instructorsWithZeroEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithZeroEventsList}
+            personnelDetails={stats.instructorsWithZeroEventsDetails}
             onPersonClick={onNavigateAndSelectPerson}
           />
         </div>
