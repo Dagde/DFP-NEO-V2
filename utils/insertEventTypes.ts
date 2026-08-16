@@ -15,7 +15,16 @@ export interface InsertEventTypeConfig {
   resourceCount: number;
 }
 
+export interface InsertEventTimingDefaults {
+  preFlightTime: number;
+  postFlightTime: number;
+}
+
 export const INSERT_EVENT_LABEL_MAX_LENGTH = 8;
+export const DEFAULT_INSERT_EVENT_TIMING_DEFAULTS: InsertEventTimingDefaults = {
+  preFlightTime: 1,
+  postFlightTime: 0.5,
+};
 
 export const DEFAULT_INSERT_EVENT_TYPES: InsertEventTypeConfig[] = [
   { label: 'GF', syllabusType: 'Ground School', dayNight: 'Day', duration: 1, flightOrSimHours: 0, totalEventHours: 1, preFlightTime: 0.25, postFlightTime: 0, resourceCount: 0 },
@@ -50,7 +59,9 @@ const cleanDayNight = (value: unknown, fallback: InsertEventDayNight): InsertEve
 export const normaliseInsertEventTypes = (
   input: unknown,
   useStarterDefaults = true,
+  timingDefaults?: Partial<InsertEventTimingDefaults> | null,
 ): InsertEventTypeConfig[] => {
+  const defaultTiming = normaliseInsertEventTimingDefaults(timingDefaults);
   const source = Array.isArray(input) ? input : (useStarterDefaults ? DEFAULT_INSERT_EVENT_TYPES : []);
   return source.map((item: any, index) => {
     const fallback = DEFAULT_INSERT_EVENT_TYPES[index] || DEFAULT_INSERT_EVENT_TYPES[0];
@@ -64,15 +75,32 @@ export const normaliseInsertEventTypes = (
       duration,
       flightOrSimHours,
       totalEventHours: cleanNumber(item?.totalEventHours, Math.max(duration, flightOrSimHours), 0.25),
-      preFlightTime: cleanNumber(item?.preFlightTime, fallback.preFlightTime, 0),
-      postFlightTime: cleanNumber(item?.postFlightTime, fallback.postFlightTime, 0),
+      preFlightTime: defaultTiming.preFlightTime,
+      postFlightTime: defaultTiming.postFlightTime,
       resourceCount: Math.round(cleanNumber(item?.resourceCount, fallback.resourceCount, 0)),
     };
   }).filter((item) => item.label);
 };
 
+export const normaliseInsertEventTimingDefaults = (
+  input: unknown,
+): InsertEventTimingDefaults => {
+  const source = input && typeof input === 'object' ? input as Partial<InsertEventTimingDefaults> : {};
+  return {
+    preFlightTime: cleanNumber(source.preFlightTime, DEFAULT_INSERT_EVENT_TIMING_DEFAULTS.preFlightTime, 0),
+    postFlightTime: cleanNumber(source.postFlightTime, DEFAULT_INSERT_EVENT_TIMING_DEFAULTS.postFlightTime, 0),
+  };
+};
+
 export const getInsertEventTypes = (config?: PlatformConfig | null): InsertEventTypeConfig[] => {
   const organisations = Array.isArray(config?.organisations) ? config!.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0];
-  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes, false);
+  const timingDefaults = normaliseInsertEventTimingDefaults(activeOrganisation?.settings?.insertEventTimingDefaults);
+  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes, false, timingDefaults);
+};
+
+export const getInsertEventTimingDefaults = (config?: PlatformConfig | null): InsertEventTimingDefaults => {
+  const organisations = Array.isArray(config?.organisations) ? config!.organisations : [];
+  const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0];
+  return normaliseInsertEventTimingDefaults(activeOrganisation?.settings?.insertEventTimingDefaults);
 };

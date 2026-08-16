@@ -109,9 +109,11 @@ import type { CurrencyRequirement, FormationCallsign, Instructor, MasterCurrency
 import {
   INSERT_EVENT_LABEL_MAX_LENGTH,
   normaliseInsertEventTypes,
+  normaliseInsertEventTimingDefaults,
   type InsertEventTypeConfig,
   type InsertEventDayNight,
   type InsertEventSyllabusType,
+  type InsertEventTimingDefaults,
 } from '../utils/insertEventTypes';
 import {
   DEFAULT_AIRFIELD_SOLAR_PROFILES,
@@ -2998,6 +3000,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const insertEventTypes = normaliseInsertEventTypes(
     primaryOrganisationSettings.insertEventTypes,
     false,
+    primaryOrganisationSettings.insertEventTimingDefaults,
+  );
+  const insertEventTimingDefaults = normaliseInsertEventTimingDefaults(
+    primaryOrganisationSettings.insertEventTimingDefaults,
   );
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null,
@@ -4535,6 +4541,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
       insertEventTypes: normaliseInsertEventTypes(nextEventTypes),
+    }));
+  };
+
+  const updateInsertEventTimingDefaults = (changes: Partial<InsertEventTimingDefaults>) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      insertEventTimingDefaults: {
+        ...normaliseInsertEventTimingDefaults(settings.insertEventTimingDefaults),
+        ...changes,
+      },
     }));
   };
 
@@ -12669,9 +12685,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="mb-3 flex flex-wrap items-center gap-3">
               <div>
                 <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-cyan-200/80">Subset of Scheduling Rule Sets</div>
-                <h5 className="text-sm font-bold text-cyan-100">Individual LMP Insert Event Defaults</h5>
+                <h5 className="text-sm font-bold text-cyan-100">Default Timing for Inserted Events</h5>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">
-                  Controls the default duration, resource, pre-event and post-event values for custom events inserted into an Individual LMP. Each inserted event remains editable inside the trainee's Individual LMP.
+                  One default pre-event and post-event timing is used for inserted Individual LMP events and scheduled events that do not have LMP timing. Inserted events remain editable inside the trainee's Individual LMP.
                 </p>
               </div>
               {canEdit && (
@@ -12679,6 +12695,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   Add Event Type
                 </button>
               )}
+            </div>
+            <div className="mb-4 grid gap-3 rounded border border-cyan-300/30 bg-gray-950/70 p-3 md:grid-cols-2">
+              <NumberField label="Default Pre Event Time" value={insertEventTimingDefaults.preFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventTimingDefaults({ preFlightTime: value })} />
+              <NumberField label="Default Post Event Time" value={insertEventTimingDefaults.postFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventTimingDefaults({ postFlightTime: value })} />
             </div>
             <div className="space-y-3">
               {insertEventTypes.map((eventType, eventTypeIndex) => (
@@ -12708,8 +12728,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <NumberField label="Flt/Sim Hrs" value={eventType.flightOrSimHours} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value })} />
                   <NumberField label="Resources" value={eventType.resourceCount} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) })} />
                   <NumberField label="Total Hrs" value={eventType.totalEventHours} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value })} />
-                  <NumberField label="Default Pre" value={eventType.preFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value })} />
-                  <NumberField label="Default Post" value={eventType.postFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value })} />
                   <div className="flex items-end">
                     <button
                       type="button"

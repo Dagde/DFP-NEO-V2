@@ -113,7 +113,7 @@ import {
     normaliseEmergencyFreezeAuthoritySettings,
     type EmergencyFreezeAuthoritySettings,
 } from './utils/emergencyFreezeAuthority';
-import { getInsertEventTypes } from './utils/insertEventTypes';
+import { getInsertEventTimingDefaults, getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
 import {
     getSetupTestProfile,
@@ -28489,6 +28489,10 @@ const App: React.FC = () => {
         () => getInsertEventTypes(platformConfig),
         [platformConfig]
     );
+    const insertEventTimingDefaults = useMemo(
+        () => getInsertEventTimingDefaults(platformConfig),
+        [platformConfig]
+    );
     const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
     const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
     const isContractorStaffRole = (instructor?: Instructor | null): boolean => Boolean(instructor) && (
@@ -30831,8 +30835,12 @@ const App: React.FC = () => {
         const lmpItem = eventCode
             ? syllabusDetails.find(item => String(item.code || '').trim().toUpperCase() === eventCode)
             : undefined;
-        const fallbackPreFlightTime = Number.isFinite(Number(lmpItem?.preFlightTime)) ? Number(lmpItem?.preFlightTime) : 0;
-        const fallbackPostFlightTime = Number.isFinite(Number(lmpItem?.postFlightTime)) ? Number(lmpItem?.postFlightTime) : 0;
+        const fallbackPreFlightTime = lmpItem && Number.isFinite(Number(lmpItem.preFlightTime))
+            ? Number(lmpItem.preFlightTime)
+            : insertEventTimingDefaults.preFlightTime;
+        const fallbackPostFlightTime = lmpItem && Number.isFinite(Number(lmpItem.postFlightTime))
+            ? Number(lmpItem.postFlightTime)
+            : insertEventTimingDefaults.postFlightTime;
         const rawPreStart = Number(event.preStart);
         const rawPostEnd = Number(event.postEnd);
         const hasPreStart = Number.isFinite(rawPreStart);
@@ -30864,7 +30872,7 @@ const App: React.FC = () => {
                         : rawPostEnd
                 : eventEnd + fallbackPostFlightTime,
         };
-    }, [syllabusDetails]);
+    }, [insertEventTimingDefaults, syllabusDetails]);
 
     const getDiagnosticRoleOption = useCallback((role: string | undefined, fallbackLabel: string): { key: string; label: string } => {
         const crewPosition = findCrewPositionEntry(role, activeCrewPositionTerminology);

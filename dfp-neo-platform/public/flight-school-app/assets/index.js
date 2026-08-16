@@ -5455,6 +5455,10 @@ const resolveLmpTestEventCallsign = (options) => {
   return String(options.officerSecondaryCallsign || "").trim() || void 0;
 };
 const INSERT_EVENT_LABEL_MAX_LENGTH = 8;
+const DEFAULT_INSERT_EVENT_TIMING_DEFAULTS = {
+  preFlightTime: 1,
+  postFlightTime: 0.5
+};
 const DEFAULT_INSERT_EVENT_TYPES = [
   { label: "GF", syllabusType: "Ground School", dayNight: "Day", duration: 1, flightOrSimHours: 0, totalEventHours: 1, preFlightTime: 0.25, postFlightTime: 0, resourceCount: 0 },
   { label: "IF", syllabusType: "Flight", dayNight: "Day", duration: 1.5, flightOrSimHours: 1.5, totalEventHours: 2.5, preFlightTime: 1, postFlightTime: 0.5, resourceCount: 1 },
@@ -5478,7 +5482,8 @@ const cleanSyllabusType = (value, fallback) => {
 const cleanDayNight = (value, fallback) => {
   return value === "Day" || value === "Night" || value === "Day/Night" ? value : fallback;
 };
-const normaliseInsertEventTypes = (input, useStarterDefaults = true) => {
+const normaliseInsertEventTypes = (input, useStarterDefaults = true, timingDefaults) => {
+  const defaultTiming = normaliseInsertEventTimingDefaults(timingDefaults);
   const source = Array.isArray(input) ? input : useStarterDefaults ? DEFAULT_INSERT_EVENT_TYPES : [];
   return source.map((item, index) => {
     const fallback = DEFAULT_INSERT_EVENT_TYPES[index] || DEFAULT_INSERT_EVENT_TYPES[0];
@@ -5492,16 +5497,29 @@ const normaliseInsertEventTypes = (input, useStarterDefaults = true) => {
       duration,
       flightOrSimHours,
       totalEventHours: cleanNumber(item?.totalEventHours, Math.max(duration, flightOrSimHours), 0.25),
-      preFlightTime: cleanNumber(item?.preFlightTime, fallback.preFlightTime, 0),
-      postFlightTime: cleanNumber(item?.postFlightTime, fallback.postFlightTime, 0),
+      preFlightTime: defaultTiming.preFlightTime,
+      postFlightTime: defaultTiming.postFlightTime,
       resourceCount: Math.round(cleanNumber(item?.resourceCount, fallback.resourceCount, 0))
     };
   }).filter((item) => item.label);
 };
+const normaliseInsertEventTimingDefaults = (input) => {
+  const source = input && typeof input === "object" ? input : {};
+  return {
+    preFlightTime: cleanNumber(source.preFlightTime, DEFAULT_INSERT_EVENT_TIMING_DEFAULTS.preFlightTime, 0),
+    postFlightTime: cleanNumber(source.postFlightTime, DEFAULT_INSERT_EVENT_TIMING_DEFAULTS.postFlightTime, 0)
+  };
+};
 const getInsertEventTypes = (config) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
-  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes, false);
+  const timingDefaults = normaliseInsertEventTimingDefaults(activeOrganisation?.settings?.insertEventTimingDefaults);
+  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes, false, timingDefaults);
+};
+const getInsertEventTimingDefaults = (config) => {
+  const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
+  const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
+  return normaliseInsertEventTimingDefaults(activeOrganisation?.settings?.insertEventTimingDefaults);
 };
 const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS = {
   permanent: "Permanent",
@@ -73190,7 +73208,11 @@ const PlatformConfigurationSettings = ({
   const trainingReportCompletionStatusPreview = trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(" / ") || "Complete";
   const insertEventTypes = normaliseInsertEventTypes(
     primaryOrganisationSettings.insertEventTypes,
-    false
+    false,
+    primaryOrganisationSettings.insertEventTimingDefaults
+  );
+  const insertEventTimingDefaults = normaliseInsertEventTimingDefaults(
+    primaryOrganisationSettings.insertEventTimingDefaults
   );
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null
@@ -74408,6 +74430,15 @@ This permanently removes the organisation record from platform configuration and
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
       insertEventTypes: normaliseInsertEventTypes(nextEventTypes)
+    }));
+  };
+  const updateInsertEventTimingDefaults = (changes) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      insertEventTimingDefaults: {
+        ...normaliseInsertEventTimingDefaults(settings.insertEventTimingDefaults),
+        ...changes
+      }
     }));
   };
   const getTaskProfileUnitDraftKey = (unit, unitIndex) => String(unit?.code || unit?.id || `unit-${unitIndex}`);
@@ -81664,10 +81695,14 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide text-cyan-200/80", children: "Subset of Scheduling Rule Sets" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Individual LMP Insert Event Defaults" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: "Controls the default duration, resource, pre-event and post-event values for custom events inserted into an Individual LMP. Each inserted event remains editable inside the trainee's Individual LMP." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Default Timing for Inserted Events" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: "One default pre-event and post-event timing is used for inserted Individual LMP events and scheduled events that do not have LMP timing. Inserted events remain editable inside the trainee's Individual LMP." })
             ] }),
             canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addInsertEventType, disabled: !canEditSection("platform-scheduling-rule-sets"), className: "ml-auto rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Event Type" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 rounded border border-cyan-300/30 bg-gray-950/70 p-3 md:grid-cols-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Default Pre Event Time", value: insertEventTimingDefaults.preFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventTimingDefaults({ preFlightTime: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Default Post Event Time", value: insertEventTimingDefaults.postFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventTimingDefaults({ postFlightTime: value }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
             insertEventTypes.map((eventType, eventTypeIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-6", children: [
@@ -81705,8 +81740,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Flt/Sim Hrs", value: eventType.flightOrSimHours, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Resources", value: eventType.resourceCount, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Hrs", value: eventType.totalEventHours, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Default Pre", value: eventType.preFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Default Post", value: eventType.postFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -117274,6 +117307,10 @@ const App = () => {
     () => getInsertEventTypes(platformConfig),
     [platformConfig]
   );
+  const insertEventTimingDefaults = reactExports.useMemo(
+    () => getInsertEventTimingDefaults(platformConfig),
+    [platformConfig]
+  );
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
   const isContractorStaffRole2 = (instructor) => Boolean(instructor) && getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("contractor");
@@ -119213,8 +119250,8 @@ ${"=".repeat(60)}`);
     const eventCodeMatch = String(event.eventCode || event.flightNumber || "").trim().toUpperCase().match(/[A-Z]{1,5}\d{1,3}/);
     const eventCode2 = eventCodeMatch?.[0] || "";
     const lmpItem = eventCode2 ? syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === eventCode2) : void 0;
-    const fallbackPreFlightTime = Number.isFinite(Number(lmpItem?.preFlightTime)) ? Number(lmpItem?.preFlightTime) : 0;
-    const fallbackPostFlightTime = Number.isFinite(Number(lmpItem?.postFlightTime)) ? Number(lmpItem?.postFlightTime) : 0;
+    const fallbackPreFlightTime = lmpItem && Number.isFinite(Number(lmpItem.preFlightTime)) ? Number(lmpItem.preFlightTime) : insertEventTimingDefaults.preFlightTime;
+    const fallbackPostFlightTime = lmpItem && Number.isFinite(Number(lmpItem.postFlightTime)) ? Number(lmpItem.postFlightTime) : insertEventTimingDefaults.postFlightTime;
     const rawPreStart = Number(event.preStart);
     const rawPostEnd = Number(event.postEnd);
     const hasPreStart = Number.isFinite(rawPreStart);
@@ -119227,7 +119264,7 @@ ${"=".repeat(60)}`);
       start: hasPreStart ? rawPreLooksLikeMinuteDuration ? eventStart - rawPreStart / 60 : rawPreLooksLikeDuration ? eventStart - rawPreStart : rawPreStart : eventStart - fallbackPreFlightTime,
       end: hasPostEnd ? rawPostLooksLikeMinuteDuration ? eventEnd + rawPostEnd / 60 : rawPostLooksLikeDuration ? eventEnd + rawPostEnd : rawPostEnd : eventEnd + fallbackPostFlightTime
     };
-  }, [syllabusDetails]);
+  }, [insertEventTimingDefaults, syllabusDetails]);
   const getDiagnosticRoleOption = reactExports.useCallback((role, fallbackLabel) => {
     const crewPosition = findCrewPositionEntry(role, activeCrewPositionTerminology);
     const label = getCrewPositionDisplayLabel(role, activeCrewPositionTerminology, fallbackLabel || "Unassigned");
