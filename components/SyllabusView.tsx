@@ -105,6 +105,15 @@ const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
 const DEFAULT_ASSESSED_ELEMENTS = INITIAL_SCORING_MATRIX_ELEMENTS.filter(element => element !== 'Generic Flying Elements');
 const SCORING_MATRIX_NON_ASSESSABLE_KEYS = new Set(['generic flying elements']);
 
+const roundMasterLmpHourToTenths = (value: number): number => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return 0;
+    return Number((Math.round(numericValue * 10) / 10).toFixed(1));
+};
+
+const clampMasterLmpHourToTenths = (value: number, minimum = 0): number =>
+    Math.max(minimum, roundMasterLmpHourToTenths(value));
+
 const getScoringMatrixElementOptions = (phraseBank?: PhraseBank): string[] => {
     const seen = new Map<string, string>();
     const add = (value: string) => {
@@ -512,7 +521,10 @@ const DetailView: React.FC<{
 
     const handleFieldChange = (field: keyof SyllabusItemDetail, value: any) => {
         if (!editedItem) return;
-        const updatedItem = { ...editedItem, [field]: value };
+        let normalisedValue = value;
+        if (field === 'totalEventHours') normalisedValue = clampMasterLmpHourToTenths(value, 0.3);
+        if (field === 'flightOrSimHours') normalisedValue = clampMasterLmpHourToTenths(value, 0);
+        const updatedItem = { ...editedItem, [field]: normalisedValue };
         if (field === 'flightOrSimHours' || field === 'totalEventHours') {
             updatedItem.duration = getAuthoritativeSyllabusDuration(updatedItem);
         }
@@ -669,6 +681,7 @@ const DetailView: React.FC<{
                             <input
                                 type="number"
                                 step="0.1"
+                                min="0.3"
                                 value={currentItem.totalEventHours}
                                 onChange={(e) => handleFieldChange('totalEventHours', parseFloat(e.target.value) || 0)}
                                 className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
@@ -679,6 +692,7 @@ const DetailView: React.FC<{
                             <input
                                 type="number"
                                 step="0.1"
+                                min="0"
                                 value={currentItem.flightOrSimHours}
                                 onChange={(e) => handleFieldChange('flightOrSimHours', parseFloat(e.target.value) || 0)}
                                 className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"

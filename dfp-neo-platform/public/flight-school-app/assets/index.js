@@ -21428,6 +21428,12 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
 };
 const splitListInput = (value) => value.split("\n").map((item) => item.trim()).filter(Boolean);
 const joinListInput = (items) => (items || []).join("\n");
+const roundLmpHourToTenths = (value, fallback = 0) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return fallback;
+  return Number((Math.round(numericValue * 10) / 10).toFixed(1));
+};
+const clampLmpHourToTenths = (value, minimum = 0, fallback = minimum) => Math.max(minimum, roundLmpHourToTenths(value, fallback));
 const DraftInsertEventTextArea = ({ value, onCommit }) => {
   const [draftValue, setDraftValue] = reactExports.useState(value || "");
   const [isFocused, setIsFocused] = reactExports.useState(false);
@@ -21546,11 +21552,11 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
   const [useTestingOfficerSecondaryCallsign, setUseTestingOfficerSecondaryCallsign] = reactExports.useState(item.useTestingOfficerSecondaryCallsign === true);
   const [dayNight, setDayNight] = reactExports.useState(item.dayNight || "Day");
   const [sortieType, setSortieType] = reactExports.useState(item.sortieType || "Dual");
-  const [duration, setDuration] = reactExports.useState(item.duration || 1);
-  const [flightOrSimHours, setFlightOrSimHours] = reactExports.useState(item.flightOrSimHours || 0);
-  const [totalEventHours, setTotalEventHours] = reactExports.useState(item.totalEventHours || item.duration || 1);
-  const [preFlightTime, setPreFlightTime] = reactExports.useState(item.preFlightTime || 0);
-  const [postFlightTime, setPostFlightTime] = reactExports.useState(item.postFlightTime || 0);
+  const [duration, setDuration] = reactExports.useState(clampLmpHourToTenths(item.duration ?? 1, 0.3, 1));
+  const [flightOrSimHours, setFlightOrSimHours] = reactExports.useState(clampLmpHourToTenths(item.flightOrSimHours ?? 0, 0, 0));
+  const [totalEventHours, setTotalEventHours] = reactExports.useState(clampLmpHourToTenths(item.totalEventHours ?? item.duration ?? 1, 0.3, 1));
+  const [preFlightTime, setPreFlightTime] = reactExports.useState(clampLmpHourToTenths(item.preFlightTime ?? 0, 0, 0));
+  const [postFlightTime, setPostFlightTime] = reactExports.useState(clampLmpHourToTenths(item.postFlightTime ?? 0, 0, 0));
   const [resourceNumber, setResourceNumber] = reactExports.useState(item.resourceNumber ?? (item.resourcesPhysical?.length ? item.resourcesPhysical.length : 0));
   const [acceptableAircraftConfigs, setAcceptableAircraftConfigs] = reactExports.useState(() => normaliseSelectedAircraftConfigurations(item.acceptableAircraftConfigs, aircraftConfigurations));
   const [resourcesPhysical, setResourcesPhysical] = reactExports.useState(joinListInput(item.resourcesPhysical));
@@ -21585,11 +21591,11 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
       useTestingOfficerSecondaryCallsign: testEventType === "FLIGHT_TEST" ? useTestingOfficerSecondaryCallsign : false,
       dayNight,
       sortieType: type === "Flight" ? sortieType : void 0,
-      duration: Math.max(0.25, Number(duration) || 0.25),
-      flightOrSimHours: Math.max(0, Number(flightOrSimHours) || 0),
-      totalEventHours: Math.max(0.25, Number(totalEventHours) || 0.25),
-      preFlightTime: Math.max(0, Number(preFlightTime) || 0),
-      postFlightTime: Math.max(0, Number(postFlightTime) || 0),
+      duration: clampLmpHourToTenths(duration, 0.3, 0.3),
+      flightOrSimHours: clampLmpHourToTenths(flightOrSimHours, 0, 0),
+      totalEventHours: clampLmpHourToTenths(totalEventHours, 0.3, 0.3),
+      preFlightTime: clampLmpHourToTenths(preFlightTime, 0, 0),
+      postFlightTime: clampLmpHourToTenths(postFlightTime, 0, 0),
       resourceNumber: roundedResourceNumber,
       resourceCount: roundedResourceNumber,
       acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(acceptableAircraftConfigs, aircraftConfigurations),
@@ -21748,19 +21754,19 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Duration" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.25", value: duration, onChange: (event) => setDuration(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.3", value: duration, onChange: (event) => setDuration(clampLmpHourToTenths(Number(event.target.value), 0.3, 0.3)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Flight/Sim Hours" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: flightOrSimHours, onChange: (event) => setFlightOrSimHours(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: flightOrSimHours, onChange: (event) => setFlightOrSimHours(clampLmpHourToTenths(Number(event.target.value), 0, 0)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Pre Event Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: preFlightTime, onChange: (event) => setPreFlightTime(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: preFlightTime, onChange: (event) => setPreFlightTime(clampLmpHourToTenths(Number(event.target.value), 0, 0)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Post Event Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: postFlightTime, onChange: (event) => setPostFlightTime(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: postFlightTime, onChange: (event) => setPostFlightTime(clampLmpHourToTenths(Number(event.target.value), 0, 0)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1 md:col-span-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Physical Resources" }),
@@ -21772,7 +21778,7 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Total Event Hours" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.25", value: totalEventHours, onChange: (event) => setTotalEventHours(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.3", value: totalEventHours, onChange: (event) => setTotalEventHours(clampLmpHourToTenths(Number(event.target.value), 0.3, 0.3)) })
       ] })
     ] }),
     validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 pb-2 text-sm font-semibold text-red-300", children: validationMessage }),
@@ -21803,11 +21809,11 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, ai
   const selectedType = options.find((option) => option.label === selectedLabel) || options[0];
   const [label, setLabel] = reactExports.useState((selectedType?.label || "").slice(0, INSERT_EVENT_LABEL_MAX_LENGTH));
   const [dayNight, setDayNight] = reactExports.useState(selectedType?.dayNight || "Day");
-  const [duration, setDuration] = reactExports.useState(selectedType?.duration || 1);
-  const [flightOrSimHours, setFlightOrSimHours] = reactExports.useState(selectedType?.flightOrSimHours || 0);
-  const [totalEventHours, setTotalEventHours] = reactExports.useState(selectedType?.totalEventHours || 1);
-  const [preFlightTime, setPreFlightTime] = reactExports.useState(selectedType?.preFlightTime || 0);
-  const [postFlightTime, setPostFlightTime] = reactExports.useState(selectedType?.postFlightTime || 0);
+  const [duration, setDuration] = reactExports.useState(clampLmpHourToTenths(selectedType?.duration ?? 1, 0.3, 1));
+  const [flightOrSimHours, setFlightOrSimHours] = reactExports.useState(clampLmpHourToTenths(selectedType?.flightOrSimHours ?? 0, 0, 0));
+  const [totalEventHours, setTotalEventHours] = reactExports.useState(clampLmpHourToTenths(selectedType?.totalEventHours ?? 1, 0.3, 1));
+  const [preFlightTime, setPreFlightTime] = reactExports.useState(clampLmpHourToTenths(selectedType?.preFlightTime ?? 0, 0, 0));
+  const [postFlightTime, setPostFlightTime] = reactExports.useState(clampLmpHourToTenths(selectedType?.postFlightTime ?? 0, 0, 0));
   const [resourceCount, setResourceCount] = reactExports.useState(selectedType?.resourceCount || 0);
   const [peopleRequired, setPeopleRequired] = reactExports.useState(() => getDefaultPeopleRequiredForInsertType(selectedType, aircraftCrewComposition));
   const [followsEventId, setFollowsEventId] = reactExports.useState(initialAnchorItem?.id || initialAnchorItem?.code || "");
@@ -21845,11 +21851,11 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, ai
     setSelectedLabel(nextLabel);
     setLabel((nextType?.label || "").slice(0, INSERT_EVENT_LABEL_MAX_LENGTH));
     setDayNight(nextType?.dayNight || "Day");
-    setDuration(nextType?.duration || 1);
-    setFlightOrSimHours(nextType?.flightOrSimHours || 0);
-    setTotalEventHours(nextType?.totalEventHours || 1);
-    setPreFlightTime(nextType?.preFlightTime || 0);
-    setPostFlightTime(nextType?.postFlightTime || 0);
+    setDuration(clampLmpHourToTenths(nextType?.duration ?? 1, 0.3, 1));
+    setFlightOrSimHours(clampLmpHourToTenths(nextType?.flightOrSimHours ?? 0, 0, 0));
+    setTotalEventHours(clampLmpHourToTenths(nextType?.totalEventHours ?? 1, 0.3, 1));
+    setPreFlightTime(clampLmpHourToTenths(nextType?.preFlightTime ?? 0, 0, 0));
+    setPostFlightTime(clampLmpHourToTenths(nextType?.postFlightTime ?? 0, 0, 0));
     setResourceCount(nextType?.resourceCount || 0);
     setPeopleRequired(getDefaultPeopleRequiredForInsertType(nextType, aircraftCrewComposition));
   };
@@ -21867,15 +21873,23 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, ai
       setValidationMessage("Duration must be greater than zero.");
       return;
     }
+    const normalizedDuration = clampLmpHourToTenths(duration, 0.3, 1);
+    const normalizedFlightOrSimHours = clampLmpHourToTenths(flightOrSimHours, 0, 0);
+    const normalizedTotalEventHours = Math.max(
+      normalizedDuration,
+      clampLmpHourToTenths(totalEventHours, 0.3, normalizedDuration)
+    );
+    const normalizedPreFlightTime = clampLmpHourToTenths(preFlightTime, 0, 0);
+    const normalizedPostFlightTime = clampLmpHourToTenths(postFlightTime, 0, 0);
     onSave({
       eventType: selectedType,
       label: trimmedLabel,
       dayNight,
-      duration,
-      flightOrSimHours: Math.max(0, flightOrSimHours),
-      totalEventHours: Math.max(duration, totalEventHours),
-      preFlightTime: Math.max(0, preFlightTime),
-      postFlightTime: Math.max(0, postFlightTime),
+      duration: normalizedDuration,
+      flightOrSimHours: normalizedFlightOrSimHours,
+      totalEventHours: normalizedTotalEventHours,
+      preFlightTime: normalizedPreFlightTime,
+      postFlightTime: normalizedPostFlightTime,
       resourceCount: Math.max(0, Math.round(resourceCount)),
       peopleRequired: peopleRequired.map((item) => item.trim()).filter(Boolean),
       followsEventId
@@ -21928,23 +21942,23 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, ai
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Duration" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.25", value: duration, onChange: (event) => setDuration(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.3", value: duration, onChange: (event) => setDuration(clampLmpHourToTenths(Number(event.target.value), 0.3, 0.3)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Flight/Sim Hours" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: flightOrSimHours, onChange: (event) => setFlightOrSimHours(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: flightOrSimHours, onChange: (event) => setFlightOrSimHours(clampLmpHourToTenths(Number(event.target.value), 0, 0)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Pre Event Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: preFlightTime, onChange: (event) => setPreFlightTime(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: preFlightTime, onChange: (event) => setPreFlightTime(clampLmpHourToTenths(Number(event.target.value), 0, 0)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Post Event Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: postFlightTime, onChange: (event) => setPostFlightTime(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0", value: postFlightTime, onChange: (event) => setPostFlightTime(clampLmpHourToTenths(Number(event.target.value), 0, 0)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Total Event Hours" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.25", value: totalEventHours, onChange: (event) => setTotalEventHours(Number(event.target.value)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.1", min: "0.3", value: totalEventHours, onChange: (event) => setTotalEventHours(clampLmpHourToTenths(Number(event.target.value), 0.3, 0.3)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Aircraft / Resources Required" }),
@@ -59529,6 +59543,12 @@ const DetailList = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
 const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1 = /^\[Linked Event:\s*([^\]]+)\]$/i;
 const DEFAULT_ASSESSED_ELEMENTS = INITIAL_SCORING_MATRIX_ELEMENTS.filter((element) => element !== "Generic Flying Elements");
 const SCORING_MATRIX_NON_ASSESSABLE_KEYS = /* @__PURE__ */ new Set(["generic flying elements"]);
+const roundMasterLmpHourToTenths = (value) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 0;
+  return Number((Math.round(numericValue * 10) / 10).toFixed(1));
+};
+const clampMasterLmpHourToTenths = (value, minimum = 0) => Math.max(minimum, roundMasterLmpHourToTenths(value));
 const getScoringMatrixElementOptions = (phraseBank) => {
   const seen = /* @__PURE__ */ new Map();
   const add = (value) => {
@@ -59826,7 +59846,10 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
   };
   const handleFieldChange = (field, value) => {
     if (!editedItem) return;
-    const updatedItem = { ...editedItem, [field]: value };
+    let normalisedValue = value;
+    if (field === "totalEventHours") normalisedValue = clampMasterLmpHourToTenths(value, 0.3);
+    if (field === "flightOrSimHours") normalisedValue = clampMasterLmpHourToTenths(value, 0);
+    const updatedItem = { ...editedItem, [field]: normalisedValue };
     if (field === "flightOrSimHours" || field === "totalEventHours") {
       updatedItem.duration = getAuthoritativeSyllabusDuration(updatedItem);
     }
@@ -59979,6 +60002,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
             {
               type: "number",
               step: "0.1",
+              min: "0.3",
               value: currentItem.totalEventHours,
               onChange: (e) => handleFieldChange("totalEventHours", parseFloat(e.target.value) || 0),
               className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
@@ -59992,6 +60016,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
             {
               type: "number",
               step: "0.1",
+              min: "0",
               value: currentItem.flightOrSimHours,
               onChange: (e) => handleFieldChange("flightOrSimHours", parseFloat(e.target.value) || 0),
               className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"

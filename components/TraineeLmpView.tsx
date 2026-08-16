@@ -82,6 +82,15 @@ const splitListInput = (value: string): string[] =>
 
 const joinListInput = (items?: string[]): string => (items || []).join('\n');
 
+const roundLmpHourToTenths = (value: number, fallback = 0): number => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return fallback;
+    return Number((Math.round(numericValue * 10) / 10).toFixed(1));
+};
+
+const clampLmpHourToTenths = (value: number, minimum = 0, fallback = minimum): number =>
+    Math.max(minimum, roundLmpHourToTenths(value, fallback));
+
 const DraftInsertEventTextArea: React.FC<{
     value: string;
     onCommit: (value: string) => void;
@@ -243,11 +252,11 @@ export const LmpEventEditModal: React.FC<{
     const [useTestingOfficerSecondaryCallsign, setUseTestingOfficerSecondaryCallsign] = useState(item.useTestingOfficerSecondaryCallsign === true);
     const [dayNight, setDayNight] = useState<SyllabusItemDetail['dayNight']>(item.dayNight || 'Day');
     const [sortieType, setSortieType] = useState<'Dual' | 'Solo'>(item.sortieType || 'Dual');
-    const [duration, setDuration] = useState(item.duration || 1);
-    const [flightOrSimHours, setFlightOrSimHours] = useState(item.flightOrSimHours || 0);
-    const [totalEventHours, setTotalEventHours] = useState(item.totalEventHours || item.duration || 1);
-    const [preFlightTime, setPreFlightTime] = useState(item.preFlightTime || 0);
-    const [postFlightTime, setPostFlightTime] = useState(item.postFlightTime || 0);
+    const [duration, setDuration] = useState(clampLmpHourToTenths(item.duration ?? 1, 0.3, 1));
+    const [flightOrSimHours, setFlightOrSimHours] = useState(clampLmpHourToTenths(item.flightOrSimHours ?? 0, 0, 0));
+    const [totalEventHours, setTotalEventHours] = useState(clampLmpHourToTenths(item.totalEventHours ?? item.duration ?? 1, 0.3, 1));
+    const [preFlightTime, setPreFlightTime] = useState(clampLmpHourToTenths(item.preFlightTime ?? 0, 0, 0));
+    const [postFlightTime, setPostFlightTime] = useState(clampLmpHourToTenths(item.postFlightTime ?? 0, 0, 0));
     const [resourceNumber, setResourceNumber] = useState(item.resourceNumber ?? (item.resourcesPhysical?.length ? item.resourcesPhysical.length : 0));
     const [acceptableAircraftConfigs, setAcceptableAircraftConfigs] = useState<string[]>(() => (
         normaliseSelectedAircraftConfigurations(item.acceptableAircraftConfigs, aircraftConfigurations)
@@ -288,11 +297,11 @@ export const LmpEventEditModal: React.FC<{
                 : false,
             dayNight,
             sortieType: type === 'Flight' ? sortieType : undefined,
-            duration: Math.max(0.25, Number(duration) || 0.25),
-            flightOrSimHours: Math.max(0, Number(flightOrSimHours) || 0),
-            totalEventHours: Math.max(0.25, Number(totalEventHours) || 0.25),
-            preFlightTime: Math.max(0, Number(preFlightTime) || 0),
-            postFlightTime: Math.max(0, Number(postFlightTime) || 0),
+            duration: clampLmpHourToTenths(duration, 0.3, 0.3),
+            flightOrSimHours: clampLmpHourToTenths(flightOrSimHours, 0, 0),
+            totalEventHours: clampLmpHourToTenths(totalEventHours, 0.3, 0.3),
+            preFlightTime: clampLmpHourToTenths(preFlightTime, 0, 0),
+            postFlightTime: clampLmpHourToTenths(postFlightTime, 0, 0),
             resourceNumber: roundedResourceNumber,
             resourceCount: roundedResourceNumber,
             acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(acceptableAircraftConfigs, aircraftConfigurations),
@@ -438,19 +447,19 @@ export const LmpEventEditModal: React.FC<{
                     </div>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Duration</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.25" value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.3" value={duration} onChange={(event) => setDuration(clampLmpHourToTenths(Number(event.target.value), 0.3, 0.3))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Flight/Sim Hours</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={flightOrSimHours} onChange={(event) => setFlightOrSimHours(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={flightOrSimHours} onChange={(event) => setFlightOrSimHours(clampLmpHourToTenths(Number(event.target.value), 0, 0))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Pre Event Time</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={preFlightTime} onChange={(event) => setPreFlightTime(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={preFlightTime} onChange={(event) => setPreFlightTime(clampLmpHourToTenths(Number(event.target.value), 0, 0))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Post Event Time</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={postFlightTime} onChange={(event) => setPostFlightTime(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={postFlightTime} onChange={(event) => setPostFlightTime(clampLmpHourToTenths(Number(event.target.value), 0, 0))} />
                     </label>
                     <label className="space-y-1 md:col-span-2">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Physical Resources</span>
@@ -462,7 +471,7 @@ export const LmpEventEditModal: React.FC<{
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Total Event Hours</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.25" value={totalEventHours} onChange={(event) => setTotalEventHours(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.3" value={totalEventHours} onChange={(event) => setTotalEventHours(clampLmpHourToTenths(Number(event.target.value), 0.3, 0.3))} />
                     </label>
                 </div>
                 {validationMessage && <div className="px-5 pb-2 text-sm font-semibold text-red-300">{validationMessage}</div>}
@@ -522,11 +531,11 @@ export const InsertEventModal: React.FC<{
     const selectedType = options.find(option => option.label === selectedLabel) || options[0];
     const [label, setLabel] = useState((selectedType?.label || '').slice(0, INSERT_EVENT_LABEL_MAX_LENGTH));
     const [dayNight, setDayNight] = useState<InsertEventDayNight>(selectedType?.dayNight || 'Day');
-    const [duration, setDuration] = useState(selectedType?.duration || 1);
-    const [flightOrSimHours, setFlightOrSimHours] = useState(selectedType?.flightOrSimHours || 0);
-    const [totalEventHours, setTotalEventHours] = useState(selectedType?.totalEventHours || 1);
-    const [preFlightTime, setPreFlightTime] = useState(selectedType?.preFlightTime || 0);
-    const [postFlightTime, setPostFlightTime] = useState(selectedType?.postFlightTime || 0);
+    const [duration, setDuration] = useState(clampLmpHourToTenths(selectedType?.duration ?? 1, 0.3, 1));
+    const [flightOrSimHours, setFlightOrSimHours] = useState(clampLmpHourToTenths(selectedType?.flightOrSimHours ?? 0, 0, 0));
+    const [totalEventHours, setTotalEventHours] = useState(clampLmpHourToTenths(selectedType?.totalEventHours ?? 1, 0.3, 1));
+    const [preFlightTime, setPreFlightTime] = useState(clampLmpHourToTenths(selectedType?.preFlightTime ?? 0, 0, 0));
+    const [postFlightTime, setPostFlightTime] = useState(clampLmpHourToTenths(selectedType?.postFlightTime ?? 0, 0, 0));
     const [resourceCount, setResourceCount] = useState(selectedType?.resourceCount || 0);
     const [peopleRequired, setPeopleRequired] = useState<string[]>(() => getDefaultPeopleRequiredForInsertType(selectedType, aircraftCrewComposition));
     const [followsEventId, setFollowsEventId] = useState(initialAnchorItem?.id || initialAnchorItem?.code || '');
@@ -575,11 +584,11 @@ export const InsertEventModal: React.FC<{
         setSelectedLabel(nextLabel);
         setLabel((nextType?.label || '').slice(0, INSERT_EVENT_LABEL_MAX_LENGTH));
         setDayNight(nextType?.dayNight || 'Day');
-        setDuration(nextType?.duration || 1);
-        setFlightOrSimHours(nextType?.flightOrSimHours || 0);
-        setTotalEventHours(nextType?.totalEventHours || 1);
-        setPreFlightTime(nextType?.preFlightTime || 0);
-        setPostFlightTime(nextType?.postFlightTime || 0);
+        setDuration(clampLmpHourToTenths(nextType?.duration ?? 1, 0.3, 1));
+        setFlightOrSimHours(clampLmpHourToTenths(nextType?.flightOrSimHours ?? 0, 0, 0));
+        setTotalEventHours(clampLmpHourToTenths(nextType?.totalEventHours ?? 1, 0.3, 1));
+        setPreFlightTime(clampLmpHourToTenths(nextType?.preFlightTime ?? 0, 0, 0));
+        setPostFlightTime(clampLmpHourToTenths(nextType?.postFlightTime ?? 0, 0, 0));
         setResourceCount(nextType?.resourceCount || 0);
         setPeopleRequired(getDefaultPeopleRequiredForInsertType(nextType, aircraftCrewComposition));
     };
@@ -598,15 +607,24 @@ export const InsertEventModal: React.FC<{
             setValidationMessage('Duration must be greater than zero.');
             return;
         }
+        const normalizedDuration = clampLmpHourToTenths(duration, 0.3, 1);
+        const normalizedFlightOrSimHours = clampLmpHourToTenths(flightOrSimHours, 0, 0);
+        const normalizedTotalEventHours = Math.max(
+            normalizedDuration,
+            clampLmpHourToTenths(totalEventHours, 0.3, normalizedDuration),
+        );
+        const normalizedPreFlightTime = clampLmpHourToTenths(preFlightTime, 0, 0);
+        const normalizedPostFlightTime = clampLmpHourToTenths(postFlightTime, 0, 0);
+
         onSave({
             eventType: selectedType,
             label: trimmedLabel,
             dayNight,
-            duration,
-            flightOrSimHours: Math.max(0, flightOrSimHours),
-            totalEventHours: Math.max(duration, totalEventHours),
-            preFlightTime: Math.max(0, preFlightTime),
-            postFlightTime: Math.max(0, postFlightTime),
+            duration: normalizedDuration,
+            flightOrSimHours: normalizedFlightOrSimHours,
+            totalEventHours: normalizedTotalEventHours,
+            preFlightTime: normalizedPreFlightTime,
+            postFlightTime: normalizedPostFlightTime,
             resourceCount: Math.max(0, Math.round(resourceCount)),
             peopleRequired: peopleRequired.map(item => item.trim()).filter(Boolean),
             followsEventId,
@@ -659,23 +677,23 @@ export const InsertEventModal: React.FC<{
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Duration</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.25" value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.3" value={duration} onChange={(event) => setDuration(clampLmpHourToTenths(Number(event.target.value), 0.3, 0.3))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Flight/Sim Hours</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={flightOrSimHours} onChange={(event) => setFlightOrSimHours(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={flightOrSimHours} onChange={(event) => setFlightOrSimHours(clampLmpHourToTenths(Number(event.target.value), 0, 0))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Pre Event Time</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={preFlightTime} onChange={(event) => setPreFlightTime(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={preFlightTime} onChange={(event) => setPreFlightTime(clampLmpHourToTenths(Number(event.target.value), 0, 0))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Post Event Time</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={postFlightTime} onChange={(event) => setPostFlightTime(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0" value={postFlightTime} onChange={(event) => setPostFlightTime(clampLmpHourToTenths(Number(event.target.value), 0, 0))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Total Event Hours</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.25" value={totalEventHours} onChange={(event) => setTotalEventHours(Number(event.target.value))} />
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.1" min="0.3" value={totalEventHours} onChange={(event) => setTotalEventHours(clampLmpHourToTenths(Number(event.target.value), 0.3, 0.3))} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Aircraft / Resources Required</span>
