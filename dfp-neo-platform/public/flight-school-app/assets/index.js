@@ -5048,6 +5048,7 @@ const buildCompactPersonNameResolver = (people = []) => {
     return source.findIndex((candidate) => getPersonIdentityDedupeKey(candidate) === key) === index;
   });
   const personByName = /* @__PURE__ */ new Map();
+  const personBySurname = /* @__PURE__ */ new Map();
   const surnameCounts = /* @__PURE__ */ new Map();
   const surnameFirstNameCounts = /* @__PURE__ */ new Map();
   uniquePeople.forEach((person) => {
@@ -5058,6 +5059,7 @@ const buildCompactPersonNameResolver = (people = []) => {
     const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
     if (nameKey) personByName.set(nameKey, [...personByName.get(nameKey) || [], person]);
     if (!firstName) return;
+    if (surnameKey) personBySurname.set(surnameKey, [...personBySurname.get(surnameKey) || [], person]);
     if (surnameKey) surnameCounts.set(surnameKey, (surnameCounts.get(surnameKey) || 0) + 1);
     if (surnameKey && firstName) surnameFirstNameCounts.set(firstNameKey, (surnameFirstNameCounts.get(firstNameKey) || 0) + 1);
   });
@@ -5065,9 +5067,15 @@ const buildCompactPersonNameResolver = (people = []) => {
     const key = normalisePersonName(stripPersonContext(name));
     const matches = key ? personByName.get(key) || [] : [];
     if (matches[0]) return matches[0];
+    const inputParts = getNameParts(name);
+    const inputSurnameKey = normalisePersonName(inputParts.surname);
+    if (inputSurnameKey && !inputParts.firstName && !inputParts.firstInitial) {
+      const surnameMatches = personBySurname.get(inputSurnameKey) || [];
+      if (surnameMatches.length === 1) return surnameMatches[0];
+    }
     const visualSuffix = getVisualIdSuffix(name);
     if (!visualSuffix) return void 0;
-    const { surname, firstInitial } = getNameParts(name);
+    const { surname, firstInitial } = inputParts;
     const surnameKey = normalisePersonName(surname);
     return uniquePeople.find((person) => {
       const personSuffix = getLastThreeIdDigits(person);
@@ -9140,7 +9148,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
     [event.personnelRefs, instructorsData, traineesData]
   );
   const formatStaffTileName = (name) => staffNameResolver.formatCompactWithInitial(name);
-  const formatTraineeTileName = (name) => traineeNameResolver.formatCompact(name);
+  const formatTraineeTileName = (name) => traineeNameResolver.formatCompactWithInitial(name);
   const formatMixedTileName = (name) => mixedNameResolver.formatCompact(name);
   const isSmallTile = tileWidth < 60;
   const isEndSegment = segment.segmentType === "start";

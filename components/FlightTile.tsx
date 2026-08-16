@@ -274,7 +274,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
       [event.personnelRefs, instructorsData, traineesData]
   );
   const formatStaffTileName = (name: unknown) => staffNameResolver.formatCompactWithInitial(name);
-  const formatTraineeTileName = (name: unknown) => traineeNameResolver.formatCompact(name);
+  const formatTraineeTileName = (name: unknown) => traineeNameResolver.formatCompactWithInitial(name);
   const formatMixedTileName = (name: unknown) => mixedNameResolver.formatCompact(name);
   
   // Check if tile is too small for content (threshold e.g. 60px ~ 18 mins)

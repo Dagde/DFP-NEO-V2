@@ -133,6 +133,7 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
     return source.findIndex(candidate => getPersonIdentityDedupeKey(candidate) === key) === index;
   });
   const personByName = new Map<string, PersonIdentityRecord[]>();
+  const personBySurname = new Map<string, PersonIdentityRecord[]>();
   const surnameCounts = new Map<string, number>();
   const surnameFirstNameCounts = new Map<string, number>();
 
@@ -144,6 +145,7 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
     const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
     if (nameKey) personByName.set(nameKey, [...(personByName.get(nameKey) || []), person]);
     if (!firstName) return;
+    if (surnameKey) personBySurname.set(surnameKey, [...(personBySurname.get(surnameKey) || []), person]);
     if (surnameKey) surnameCounts.set(surnameKey, (surnameCounts.get(surnameKey) || 0) + 1);
     if (surnameKey && firstName) surnameFirstNameCounts.set(firstNameKey, (surnameFirstNameCounts.get(firstNameKey) || 0) + 1);
   });
@@ -152,9 +154,15 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
     const key = normalisePersonName(stripPersonContext(name));
     const matches = key ? personByName.get(key) || [] : [];
     if (matches[0]) return matches[0];
+    const inputParts = getNameParts(name);
+    const inputSurnameKey = normalisePersonName(inputParts.surname);
+    if (inputSurnameKey && !inputParts.firstName && !inputParts.firstInitial) {
+      const surnameMatches = personBySurname.get(inputSurnameKey) || [];
+      if (surnameMatches.length === 1) return surnameMatches[0];
+    }
     const visualSuffix = getVisualIdSuffix(name);
     if (!visualSuffix) return undefined;
-    const { surname, firstInitial } = getNameParts(name);
+    const { surname, firstInitial } = inputParts;
     const surnameKey = normalisePersonName(surname);
     return uniquePeople.find(person => {
       const personSuffix = getLastThreeIdDigits(person);
