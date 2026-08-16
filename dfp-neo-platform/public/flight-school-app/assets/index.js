@@ -111656,12 +111656,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return events.filter((event) => !removeEventIds.has(event.id));
   };
   const repairGeneratedGroundConflicts = (events) => {
-    const isGeneratedGround = (event) => event.type === "ground" && event._source === "generated";
+    const isGeneratedRepairableTrainingEvent = (event) => (event.type === "ground" || event.type === "cpt") && event._source === "generated";
     const groundResourceCount = Math.max(
       6,
       ...events.map((event) => event.resourceId?.match(/^Ground (\d+)$/)?.[1]).filter((value) => !!value).map((value) => Number(value)).filter((value) => Number.isFinite(value))
     );
     const groundResources = Array.from({ length: groundResourceCount }, (_, index) => `Ground ${index + 1}`);
+    const cptResourceCount = Math.max(
+      cptCount,
+      ...events.map((event) => event.resourceId?.match(/^CPT (\d+)$/)?.[1]).filter((value) => !!value).map((value) => Number(value)).filter((value) => Number.isFinite(value))
+    );
+    const cptResources = Array.from({ length: cptResourceCount }, (_, index) => `CPT ${index + 1}`);
+    const getRepairResources = (event) => event.type === "cpt" ? cptResources : groundResources;
     const timeIncrement = 15 / 60;
     const eventWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails);
     const windowsOverlap = (a, b) => a.start < b.end && a.end > b.start;
@@ -111717,7 +111723,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (!trainee) return true;
       return isInstructorEligibleByUnit(instructor, trainee);
     };
-    const findGroundRepair = (event, acceptedEvents2) => {
+    const findGeneratedTrainingRepair = (event, acceptedEvents2) => {
       const trainee = trainees.find((t) => personnelNamesMatch(t.fullName, event._traineeName || event.student || event.pilot));
       const currentInstructor = instructors.find((instructor) => instructor.name === event.instructor);
       const eligibleInstructors = instructors.filter((instructor) => canUseInstructorForGround(instructor, trainee)).sort((a, b) => {
@@ -111739,7 +111745,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ].filter((time, index, list) => list.findIndex((value) => Math.abs(value - time) < 1e-3) === index);
       const resourceCandidates = [
         event.resourceId,
-        ...groundResources.filter((resourceId) => resourceId !== event.resourceId)
+        ...getRepairResources(event).filter((resourceId) => resourceId !== event.resourceId)
       ].filter((resourceId) => !!resourceId);
       for (const instructor of instructorCandidates) {
         for (const startTime of timeCandidates) {
@@ -111763,8 +111769,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return null;
     };
-    const acceptedEvents = events.filter((event) => !isGeneratedGround(event));
-    const generatedGroundEvents = events.filter(isGeneratedGround);
+    const acceptedEvents = events.filter((event) => !isGeneratedRepairableTrainingEvent(event));
+    const generatedGroundEvents = events.filter(isGeneratedRepairableTrainingEvent);
     let moved = 0;
     let dropped = 0;
     generatedGroundEvents.forEach((event) => {
@@ -111772,15 +111778,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         acceptedEvents.push(event);
         return;
       }
-      const repaired = findGroundRepair(event, acceptedEvents);
+      const repaired = findGeneratedTrainingRepair(event, acceptedEvents);
       if (repaired) {
         moved++;
         acceptedEvents.push(repaired);
         return;
       }
       dropped++;
-      console.warn("[GROUND-REPAIR] Dropped generated ground event with no conflict-free placement:", {
+      console.warn("[GROUND-REPAIR] Dropped generated training event with no conflict-free placement:", {
         flightNumber: event.flightNumber,
+        type: event.type,
         trainee: event.student || event._traineeName,
         instructor: event.instructor,
         startTime: event.startTime,
@@ -111788,7 +111795,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
     });
     if (moved > 0 || dropped > 0) {
-      console.warn(`[GROUND-REPAIR] Generated ground cleanup complete. Moved: ${moved}, dropped: ${dropped}.`);
+      console.warn(`[GROUND-REPAIR] Generated ground/CPT cleanup complete. Moved: ${moved}, dropped: ${dropped}.`);
     }
     return acceptedEvents;
   };

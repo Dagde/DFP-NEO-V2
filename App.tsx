@@ -21730,7 +21730,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         events: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[]
     ): (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[] => {
         type BuildEvent = Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string };
-        const isGeneratedGround = (event: BuildEvent): boolean => event.type === 'ground' && event._source === 'generated';
+        const isGeneratedRepairableTrainingEvent = (event: BuildEvent): boolean => (
+            (event.type === 'ground' || event.type === 'cpt') && event._source === 'generated'
+        );
         const groundResourceCount = Math.max(
             6,
             ...events
@@ -21740,6 +21742,16 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 .filter(value => Number.isFinite(value))
         );
         const groundResources = Array.from({ length: groundResourceCount }, (_, index) => `Ground ${index + 1}`);
+        const cptResourceCount = Math.max(
+            cptCount,
+            ...events
+                .map(event => event.resourceId?.match(/^CPT (\d+)$/)?.[1])
+                .filter((value): value is string => !!value)
+                .map(value => Number(value))
+                .filter(value => Number.isFinite(value))
+        );
+        const cptResources = Array.from({ length: cptResourceCount }, (_, index) => `CPT ${index + 1}`);
+        const getRepairResources = (event: BuildEvent): string[] => event.type === 'cpt' ? cptResources : groundResources;
         const timeIncrement = 15 / 60;
 
         const eventWindow = (event: Omit<ScheduleEvent, 'date'>): { start: number; end: number } =>
@@ -21821,7 +21833,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return isInstructorEligibleByUnit(instructor, trainee);
         };
 
-        const findGroundRepair = (event: BuildEvent, acceptedEvents: BuildEvent[]): BuildEvent | null => {
+        const findGeneratedTrainingRepair = (event: BuildEvent, acceptedEvents: BuildEvent[]): BuildEvent | null => {
             const trainee = trainees.find(t => personnelNamesMatch(t.fullName, event._traineeName || event.student || event.pilot));
             const currentInstructor = instructors.find(instructor => instructor.name === event.instructor);
             const eligibleInstructors = instructors
@@ -21847,7 +21859,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             ].filter((time, index, list) => list.findIndex(value => Math.abs(value - time) < 0.001) === index);
             const resourceCandidates = [
                 event.resourceId,
-                ...groundResources.filter(resourceId => resourceId !== event.resourceId)
+                ...getRepairResources(event).filter(resourceId => resourceId !== event.resourceId)
             ].filter((resourceId): resourceId is string => !!resourceId);
 
             for (const instructor of instructorCandidates) {
@@ -21876,8 +21888,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return null;
         };
 
-        const acceptedEvents: BuildEvent[] = events.filter(event => !isGeneratedGround(event));
-        const generatedGroundEvents = events.filter(isGeneratedGround);
+        const acceptedEvents: BuildEvent[] = events.filter(event => !isGeneratedRepairableTrainingEvent(event));
+        const generatedGroundEvents = events.filter(isGeneratedRepairableTrainingEvent);
         let moved = 0;
         let dropped = 0;
 
@@ -21887,7 +21899,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 return;
             }
 
-            const repaired = findGroundRepair(event, acceptedEvents);
+            const repaired = findGeneratedTrainingRepair(event, acceptedEvents);
             if (repaired) {
                 moved++;
                 acceptedEvents.push(repaired);
@@ -21895,8 +21907,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             }
 
             dropped++;
-            console.warn('[GROUND-REPAIR] Dropped generated ground event with no conflict-free placement:', {
+            console.warn('[GROUND-REPAIR] Dropped generated training event with no conflict-free placement:', {
                 flightNumber: event.flightNumber,
+                type: event.type,
                 trainee: event.student || event._traineeName,
                 instructor: event.instructor,
                 startTime: event.startTime,
@@ -21905,7 +21918,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         });
 
         if (moved > 0 || dropped > 0) {
-            console.warn(`[GROUND-REPAIR] Generated ground cleanup complete. Moved: ${moved}, dropped: ${dropped}.`);
+            console.warn(`[GROUND-REPAIR] Generated ground/CPT cleanup complete. Moved: ${moved}, dropped: ${dropped}.`);
         }
 
         return acceptedEvents;
