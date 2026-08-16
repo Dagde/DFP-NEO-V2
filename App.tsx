@@ -12534,7 +12534,9 @@ function generateDfpInternal(
         const nextDiag = describeBuildTrainingEventForDiag(ev.next);
         const plusOneDiag = describeBuildTrainingEventForDiag(ev.plusOne);
         return ({
-        name,
+        name: trainee?.fullName || traineeKey,
+        traineeIdNumber: trainee?.idNumber ?? null,
+        traineeIdentityKey: traineeKey,
         course: trainee?.course || null,
         nextCode: ev.next?.code || null,
         nextType: ev.next?.type || null,
@@ -13218,7 +13220,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     .some((entry: any) => String(entry?.notes || '').trim()),
             }));
         return {
-            traineeIdentityKey: traineeKey,
+            traineeIdentityKey: getBuildTraineeKey(trainee),
             traineeIdNumber: trainee?.idNumber ?? null,
             item: matchedItem,
             details: {
