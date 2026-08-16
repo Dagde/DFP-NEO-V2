@@ -234,6 +234,7 @@ export const LmpEventEditModal: React.FC<{
     onCancel: () => void;
     onSave: (updatedItem: SyllabusItemDetail) => void;
 }> = ({ item, aircraftConfigurations, testingOfficerQualifications, description = 'Update the event details used by Individual LMP and NEO Build.', onCancel, onSave }) => {
+    const inheritsMasterTestSettings = item.lmpSource === 'master' || Boolean(item.masterEventId);
     const [code, setCode] = useState(item.code || item.id || '');
     const [eventDescription, setEventDescription] = useState(item.eventDescription || '');
     const [type, setType] = useState<SyllabusItemDetail['type']>(item.type || 'Flight');
@@ -381,8 +382,9 @@ export const LmpEventEditModal: React.FC<{
                             <label className="space-y-1">
                                 <span className="text-xs font-semibold text-gray-300">Test Event Type</span>
                                 <select
-                                    className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white"
+                                    className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
                                     value={testEventType}
+                                    disabled={inheritsMasterTestSettings}
                                     onChange={(event) => {
                                         const nextType = event.target.value as SyllabusItemDetail['testEventType'];
                                         setTestEventType(nextType);
@@ -394,14 +396,18 @@ export const LmpEventEditModal: React.FC<{
                                     <option value="FLIGHT_TEST">Flight Test</option>
                                     <option value="SIMULATOR_TEST">Simulator Test</option>
                                 </select>
-                                <span className="block text-xs text-gray-500">This Individual LMP value is used by scheduling for this trainee.</span>
+                                <span className="block text-xs text-gray-500">
+                                    {inheritsMasterTestSettings
+                                        ? 'Inherited from Master LMP for this event.'
+                                        : 'This Individual LMP value is used by scheduling for this trainee.'}
+                                </span>
                             </label>
                             <label className={`space-y-1 ${testEventType === 'NONE' ? 'opacity-50' : ''}`}>
                                 <span className="text-xs font-semibold text-gray-300">Testing Officer Qualification</span>
                                 <select
                                     className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white disabled:cursor-not-allowed"
                                     value={testingOfficerQualificationId}
-                                    disabled={testEventType === 'NONE'}
+                                    disabled={testEventType === 'NONE' || inheritsMasterTestSettings}
                                     onChange={(event) => setTestingOfficerQualificationId(event.target.value)}
                                 >
                                     <option value="">Select one qualification</option>
@@ -419,8 +425,9 @@ export const LmpEventEditModal: React.FC<{
                                 <input
                                     type="checkbox"
                                     checked={useTestingOfficerSecondaryCallsign}
+                                    disabled={inheritsMasterTestSettings}
                                     onChange={(event) => setUseTestingOfficerSecondaryCallsign(event.target.checked)}
-                                    className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                    className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
                                 />
                                 <span>
                                     <span className="block text-xs font-semibold text-gray-200">Use Testing Officer secondary callsign</span>

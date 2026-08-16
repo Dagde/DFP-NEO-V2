@@ -21490,6 +21490,7 @@ const AircraftConfigCheckboxes = ({ value, definitions, onChange }) => {
   ] });
 };
 const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifications, description = "Update the event details used by Individual LMP and NEO Build.", onCancel, onSave }) => {
+  const inheritsMasterTestSettings = item.lmpSource === "master" || Boolean(item.masterEventId);
   const [code, setCode] = reactExports.useState(item.code || item.id || "");
   const [eventDescription, setEventDescription] = reactExports.useState(item.eventDescription || "");
   const [type, setType] = reactExports.useState(item.type || "Flight");
@@ -21642,8 +21643,9 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "select",
               {
-                className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white",
+                className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60",
                 value: testEventType,
+                disabled: inheritsMasterTestSettings,
                 onChange: (event) => {
                   const nextType = event.target.value;
                   setTestEventType(nextType);
@@ -21657,7 +21659,7 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
                 ]
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: "This Individual LMP value is used by scheduling for this trainee." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: inheritsMasterTestSettings ? "Inherited from Master LMP for this event." : "This Individual LMP value is used by scheduling for this trainee." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `space-y-1 ${testEventType === "NONE" ? "opacity-50" : ""}`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-300", children: "Testing Officer Qualification" }),
@@ -21666,7 +21668,7 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
               {
                 className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white disabled:cursor-not-allowed",
                 value: testingOfficerQualificationId,
-                disabled: testEventType === "NONE",
+                disabled: testEventType === "NONE" || inheritsMasterTestSettings,
                 onChange: (event) => setTestingOfficerQualificationId(event.target.value),
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select one qualification" }),
@@ -21686,8 +21688,9 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
             {
               type: "checkbox",
               checked: useTestingOfficerSecondaryCallsign,
+              disabled: inheritsMasterTestSettings,
               onChange: (event) => setUseTestingOfficerSecondaryCallsign(event.target.checked),
-              className: "mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
+              className: "mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -98547,9 +98550,6 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS = [
   "phase",
   "module",
   "type",
-  "testEventType",
-  "testingOfficerQualificationId",
-  "useTestingOfficerSecondaryCallsign",
   "sortieType",
   "dayNight",
   "methodOfDelivery",

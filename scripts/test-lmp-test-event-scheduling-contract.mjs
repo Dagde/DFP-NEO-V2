@@ -24,18 +24,23 @@ for (const field of [
   'useTestingOfficerSecondaryCallsign',
 ]) {
   assert(
-    appEditableContract.includes(`'${field}'`),
-    `Individual LMP frontend save contract must retain ${field}.`,
+    !appEditableContract.includes(`'${field}'`),
+    `Master LMP must remain authoritative for ${field} in the frontend merge.`,
   );
   assert(
-    serverEditableContract.includes(`'${field}'`),
-    `Individual LMP server sync contract must retain ${field}.`,
+    !serverEditableContract.includes(`'${field}'`),
+    `Master LMP must remain authoritative for ${field} in the server sync.`,
   );
   assert(
     individualLmpSource.includes(field),
     `Individual LMP editor must expose ${field}.`,
   );
 }
+assert(
+  individualLmpSource.includes("item.lmpSource === 'master'")
+    && individualLmpSource.includes('Inherited from Master LMP for this event.'),
+  'Master-sourced Individual LMP test settings must be visibly inherited and read-only.',
+);
 
 assert(
   helperSource.includes('if (!isLmpTestEvent(testEventType)) return candidates;'),
