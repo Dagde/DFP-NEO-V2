@@ -8921,25 +8921,34 @@ function generateDfpInternal(
     });
     const serialiseNeoBuildAttemptTimingMap = (
         source: Record<string, NeoBuildAttemptTimingBucket>,
-        limit: number = 20
+        limit: number = 20,
+        includeNested: boolean = false
     ): Record<string, any> => Object.fromEntries(
         Object.entries(source)
             .sort((a, b) => b[1].totalMs - a[1].totalMs)
             .slice(0, limit)
             .map(([key, bucket]) => {
                 const serialised = serialiseNeoBuildAttemptTimingBucket(bucket);
-                if (bucket.byReason) serialised.byReason = serialiseNeoBuildAttemptTimingMap(bucket.byReason, 12);
-                if (bucket.byType) serialised.byType = serialiseNeoBuildAttemptTimingMap(bucket.byType, 8);
+                if (includeNested && bucket.byReason) {
+                    serialised.byReason = serialiseNeoBuildAttemptTimingMap(bucket.byReason, 12, false);
+                }
+                if (includeNested && bucket.byType) {
+                    serialised.byType = serialiseNeoBuildAttemptTimingMap(bucket.byType, 8, false);
+                }
                 return [key, serialised];
             })
     );
-    const getCompactNeoBuildAttemptTiming = () => ({
-        overall: serialiseNeoBuildAttemptTimingBucket(neoBuildAttemptTiming.overall),
-        byList: serialiseNeoBuildAttemptTimingMap(neoBuildAttemptTiming.byList, 30),
-        byType: serialiseNeoBuildAttemptTimingMap(neoBuildAttemptTiming.byType, 10),
-        byReason: serialiseNeoBuildAttemptTimingMap(neoBuildAttemptTiming.byReason, 30),
-        slowest: neoBuildAttemptTiming.slowest,
-    });
+    const getCompactNeoBuildAttemptTiming = () => {
+        const includeNestedTiming = isDetailedNeoBuildDiagnosticsEnabled;
+        return {
+            overall: serialiseNeoBuildAttemptTimingBucket(neoBuildAttemptTiming.overall),
+            byList: serialiseNeoBuildAttemptTimingMap(neoBuildAttemptTiming.byList, includeNestedTiming ? 30 : 12, includeNestedTiming),
+            byType: serialiseNeoBuildAttemptTimingMap(neoBuildAttemptTiming.byType, includeNestedTiming ? 10 : 6, false),
+            byReason: serialiseNeoBuildAttemptTimingMap(neoBuildAttemptTiming.byReason, includeNestedTiming ? 30 : 12, false),
+            slowest: neoBuildAttemptTiming.slowest.slice(0, includeNestedTiming ? 30 : 10),
+            detailMode: includeNestedTiming ? 'detailed' : 'compact',
+        };
+    };
 
     const normaliseTaskTraceText = (value?: any): string => String(value || '').trim().toLowerCase();
     const taskTraceLabels = neoBuildDiag.taskProvenance.watchedLabels as string[];
