@@ -12697,8 +12697,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               )}
             </div>
             <div className="mb-4 grid gap-3 rounded border border-cyan-300/30 bg-gray-950/70 p-3 md:grid-cols-2">
-              <NumberField label="Default Pre Event Time" value={insertEventTimingDefaults.preFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventTimingDefaults({ preFlightTime: value })} />
-              <NumberField label="Default Post Event Time" value={insertEventTimingDefaults.postFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventTimingDefaults({ postFlightTime: value })} />
+              <NumberField label="Default Pre Event Time" value={insertEventTimingDefaults.preFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} min={0} step={0.1} commitOnChange onChange={(value) => updateInsertEventTimingDefaults({ preFlightTime: value })} />
+              <NumberField label="Default Post Event Time" value={insertEventTimingDefaults.postFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} min={0} step={0.1} commitOnChange onChange={(value) => updateInsertEventTimingDefaults({ postFlightTime: value })} />
             </div>
             <div className="space-y-3">
               {insertEventTypes.map((eventType, eventTypeIndex) => (
