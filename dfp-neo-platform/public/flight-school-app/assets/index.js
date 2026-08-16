@@ -21669,13 +21669,13 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
     );
     const normalizedPreFlightTime = clampLmpHourToTenths(preFlightTime, 0, 0);
     const normalizedPostFlightTime = clampLmpHourToTenths(postFlightTime, 0, 0);
-    const isMasterDerivedItem = item.lmpSource === "master" || Boolean(item.masterEventId);
+    const supportsTimingOverrides = item.lmpSource === "master" || item.lmpSource === "custom" || Boolean(item.masterEventId);
     const existingTimingOverrides = item.individualTimingOverrides || {};
     const timingOverrides = { ...existingTimingOverrides };
-    if (isMasterDerivedItem && normalizedPreFlightTime !== clampLmpHourToTenths(item.preFlightTime ?? 0, 0, 0)) {
+    if (supportsTimingOverrides && normalizedPreFlightTime !== clampLmpHourToTenths(item.preFlightTime ?? 0, 0, 0)) {
       timingOverrides.preFlightTime = true;
     }
-    if (isMasterDerivedItem && normalizedPostFlightTime !== clampLmpHourToTenths(item.postFlightTime ?? 0, 0, 0)) {
+    if (supportsTimingOverrides && normalizedPostFlightTime !== clampLmpHourToTenths(item.postFlightTime ?? 0, 0, 0)) {
       timingOverrides.postFlightTime = true;
     }
     const hasTimingOverrides = Object.values(timingOverrides).some(Boolean);
@@ -21694,7 +21694,7 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
       totalEventHours: clampLmpHourToTenths(totalEventHours, 0.3, 0.3),
       preFlightTime: normalizedPreFlightTime,
       postFlightTime: normalizedPostFlightTime,
-      ...isMasterDerivedItem && hasTimingOverrides ? { individualTimingOverrides: timingOverrides } : {},
+      ...supportsTimingOverrides && hasTimingOverrides ? { individualTimingOverrides: timingOverrides } : {},
       resourceNumber: roundedResourceNumber,
       resourceCount: roundedResourceNumber,
       acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(acceptableAircraftConfigs, aircraftConfigurations),
@@ -117326,6 +117326,38 @@ const App = () => {
     () => getInsertEventTimingDefaults(platformConfig),
     [platformConfig]
   );
+  const applyInsertEventTimingDefaultsToCustomLmp = reactExports.useCallback((items) => {
+    let changed = false;
+    const nextItems = items.map((item) => {
+      const isCustomInsertedItem = item.lmpSource === "custom" || isLmpOverlayItem(item) && item.lmpSource !== "remedial" && item.isRemedial !== true;
+      if (!isCustomInsertedItem) return item;
+      const timingOverrides = item.individualTimingOverrides || {};
+      const nextPreFlightTime = timingOverrides.preFlightTime === true ? item.preFlightTime : insertEventTimingDefaults.preFlightTime;
+      const nextPostFlightTime = timingOverrides.postFlightTime === true ? item.postFlightTime : insertEventTimingDefaults.postFlightTime;
+      if (nextPreFlightTime === item.preFlightTime && nextPostFlightTime === item.postFlightTime) {
+        return item;
+      }
+      changed = true;
+      return {
+        ...item,
+        preFlightTime: nextPreFlightTime,
+        postFlightTime: nextPostFlightTime
+      };
+    });
+    return changed ? nextItems : items;
+  }, [insertEventTimingDefaults]);
+  reactExports.useEffect(() => {
+    setTraineeLMPs((prev) => {
+      let changed = false;
+      const next = /* @__PURE__ */ new Map();
+      prev.forEach((items, traineeName) => {
+        const normalisedItems = applyInsertEventTimingDefaultsToCustomLmp(items);
+        if (normalisedItems !== items) changed = true;
+        next.set(traineeName, normalisedItems);
+      });
+      return changed ? next : prev;
+    });
+  }, [applyInsertEventTimingDefaultsToCustomLmp]);
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
   const isContractorStaffRole2 = (instructor) => Boolean(instructor) && getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("contractor");

@@ -287,13 +287,13 @@ export const LmpEventEditModal: React.FC<{
         );
         const normalizedPreFlightTime = clampLmpHourToTenths(preFlightTime, 0, 0);
         const normalizedPostFlightTime = clampLmpHourToTenths(postFlightTime, 0, 0);
-        const isMasterDerivedItem = item.lmpSource === 'master' || Boolean(item.masterEventId);
+        const supportsTimingOverrides = item.lmpSource === 'master' || item.lmpSource === 'custom' || Boolean(item.masterEventId);
         const existingTimingOverrides = (item.individualTimingOverrides || {}) as NonNullable<SyllabusItemDetail['individualTimingOverrides']>;
         const timingOverrides: NonNullable<SyllabusItemDetail['individualTimingOverrides']> = { ...existingTimingOverrides };
-        if (isMasterDerivedItem && normalizedPreFlightTime !== clampLmpHourToTenths(item.preFlightTime ?? 0, 0, 0)) {
+        if (supportsTimingOverrides && normalizedPreFlightTime !== clampLmpHourToTenths(item.preFlightTime ?? 0, 0, 0)) {
             timingOverrides.preFlightTime = true;
         }
-        if (isMasterDerivedItem && normalizedPostFlightTime !== clampLmpHourToTenths(item.postFlightTime ?? 0, 0, 0)) {
+        if (supportsTimingOverrides && normalizedPostFlightTime !== clampLmpHourToTenths(item.postFlightTime ?? 0, 0, 0)) {
             timingOverrides.postFlightTime = true;
         }
         const hasTimingOverrides = Object.values(timingOverrides).some(Boolean);
@@ -314,7 +314,7 @@ export const LmpEventEditModal: React.FC<{
             totalEventHours: clampLmpHourToTenths(totalEventHours, 0.3, 0.3),
             preFlightTime: normalizedPreFlightTime,
             postFlightTime: normalizedPostFlightTime,
-            ...(isMasterDerivedItem && hasTimingOverrides ? { individualTimingOverrides: timingOverrides } : {}),
+            ...(supportsTimingOverrides && hasTimingOverrides ? { individualTimingOverrides: timingOverrides } : {}),
             resourceNumber: roundedResourceNumber,
             resourceCount: roundedResourceNumber,
             acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(acceptableAircraftConfigs, aircraftConfigurations),

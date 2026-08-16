@@ -28493,6 +28493,49 @@ const App: React.FC = () => {
         () => getInsertEventTimingDefaults(platformConfig),
         [platformConfig]
     );
+    const applyInsertEventTimingDefaultsToCustomLmp = useCallback((items: SyllabusItemDetail[]): SyllabusItemDetail[] => {
+        let changed = false;
+        const nextItems = items.map((item) => {
+            const isCustomInsertedItem = item.lmpSource === 'custom' || (
+                isLmpOverlayItem(item) &&
+                item.lmpSource !== 'remedial' &&
+                item.isRemedial !== true
+            );
+            if (!isCustomInsertedItem) return item;
+
+            const timingOverrides = item.individualTimingOverrides || {};
+            const nextPreFlightTime = timingOverrides.preFlightTime === true
+                ? item.preFlightTime
+                : insertEventTimingDefaults.preFlightTime;
+            const nextPostFlightTime = timingOverrides.postFlightTime === true
+                ? item.postFlightTime
+                : insertEventTimingDefaults.postFlightTime;
+
+            if (nextPreFlightTime === item.preFlightTime && nextPostFlightTime === item.postFlightTime) {
+                return item;
+            }
+
+            changed = true;
+            return {
+                ...item,
+                preFlightTime: nextPreFlightTime,
+                postFlightTime: nextPostFlightTime,
+            };
+        });
+        return changed ? nextItems : items;
+    }, [insertEventTimingDefaults]);
+    useEffect(() => {
+        setTraineeLMPs(prev => {
+            let changed = false;
+            const next = new Map<string, SyllabusItemDetail[]>();
+            prev.forEach((items, traineeName) => {
+                const normalisedItems = applyInsertEventTimingDefaultsToCustomLmp(items);
+                if (normalisedItems !== items) changed = true;
+                next.set(traineeName, normalisedItems);
+            });
+            return changed ? next : prev;
+        });
+    }, [applyInsertEventTimingDefaultsToCustomLmp]);
     const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
     const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
     const isContractorStaffRole = (instructor?: Instructor | null): boolean => Boolean(instructor) && (
