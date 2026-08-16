@@ -94192,6 +94192,61 @@ const stripGeneratedTrainingReportFollowUpLines = (value) => String(value || "")
   return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
 }).join("\n").replace(/\n{3,}/g, "\n\n").trim();
 const getDefaultHasTraineesForUnit = (_unitCode) => false;
+const normaliseDfpTimezoneKey = (value) => String(value || "").trim().toUpperCase();
+const getDfpOffsetHoursForTimezone = (timeZone, at = /* @__PURE__ */ new Date()) => {
+  const cleanTimeZone = String(timeZone || "").trim();
+  if (!cleanTimeZone) return null;
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: cleanTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23"
+    }).formatToParts(at);
+    const values = new Map(parts.map((part) => [part.type, part.value]));
+    const year = Number(values.get("year"));
+    const month = Number(values.get("month"));
+    const day = Number(values.get("day"));
+    const hour = Number(values.get("hour"));
+    const minute = Number(values.get("minute"));
+    const second = Number(values.get("second"));
+    if ([year, month, day, hour, minute, second].some((value) => !Number.isFinite(value))) return null;
+    const timezoneAsUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+    const actualUtc = Date.UTC(
+      at.getUTCFullYear(),
+      at.getUTCMonth(),
+      at.getUTCDate(),
+      at.getUTCHours(),
+      at.getUTCMinutes(),
+      at.getUTCSeconds()
+    );
+    return Math.round((timezoneAsUtc - actualUtc) / 6e4) / 60;
+  } catch {
+    return null;
+  }
+};
+const getDfpSystemUtcOffsetHours = () => {
+  const offsetMinutes = -(/* @__PURE__ */ new Date()).getTimezoneOffset();
+  return Math.round(offsetMinutes / 60 * 2) / 2;
+};
+const dfpLocationMatchesTimezoneKey = (location, key) => {
+  if (!key) return false;
+  return [
+    location?.code,
+    location?.iataCode,
+    location?.icao,
+    location?.icaoCode,
+    location?.settings?.iataCode,
+    location?.settings?.icaoCode,
+    location?.settings?.legacyCode,
+    ...Array.isArray(location?.aliases) ? location.aliases : [],
+    ...Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []
+  ].some((value) => normaliseDfpTimezoneKey(value) === key);
+};
 const applyDefaultUnitTraineeAvailability = (config) => {
   if (!config || !Array.isArray(config.units)) return config;
   let changed = false;
@@ -112654,6 +112709,23 @@ const App = () => {
     const saved = localStorage.getItem("timezoneOffset");
     return saved ? parseFloat(saved) : 10;
   });
+  const effectiveDfpTimezoneOffset = reactExports.useMemo(() => {
+    const units2 = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
+    const locations2 = Array.isArray(platformConfig?.locations) ? platformConfig.locations : [];
+    const cleanUnitCode = normaliseDfpTimezoneKey(activeUnitCode);
+    const activeUnit = units2.find((unit) => normaliseDfpTimezoneKey(unit?.code) === cleanUnitCode);
+    const locationKey = normaliseDfpTimezoneKey(school || activeUnit?.locationCode);
+    const activeLocation = locations2.find((location) => dfpLocationMatchesTimezoneKey(location, locationKey));
+    const useSystemOffset = Boolean(activeLocation?.useSystemTimezoneOffset ?? activeLocation?.settings?.useSystemTimezoneOffset);
+    if (useSystemOffset) return getDfpSystemUtcOffsetHours();
+    const configuredOffset = Number(activeLocation?.timezoneOffset ?? activeLocation?.settings?.timezoneOffset);
+    if (Number.isFinite(configuredOffset)) return configuredOffset;
+    const locationTimezone = activeLocation?.timezone || activeLocation?.timeZone || activeLocation?.settings?.timezone;
+    const resolvedOffset = getDfpOffsetHoursForTimezone(locationTimezone);
+    if (resolvedOffset !== null) return resolvedOffset;
+    const fallbackOffset = Number(timezoneOffset);
+    return Number.isFinite(fallbackOffset) ? fallbackOffset : 10;
+  }, [activeUnitCode, platformConfig, school, timezoneOffset]);
   const [showDepartureDensityOverlay, setShowDepartureDensityOverlay] = reactExports.useState(() => {
     const saved = localStorage.getItem("showDepartureDensityOverlay");
     return saved !== null ? JSON.parse(saved) : false;
@@ -112675,7 +112747,7 @@ const App = () => {
   );
   const flightAuthorisationRequired = effectiveTileStatusSettings.flightAuthorisationRequired;
   const getLocalDateString2 = (date2 = /* @__PURE__ */ new Date()) => {
-    const offsetMs = timezoneOffset * 60 * 60 * 1e3;
+    const offsetMs = effectiveDfpTimezoneOffset * 60 * 60 * 1e3;
     const adjustedDate = new Date(date2.getTime() + offsetMs);
     const year = adjustedDate.getUTCFullYear();
     const month = String(adjustedDate.getUTCMonth() + 1).padStart(2, "0");

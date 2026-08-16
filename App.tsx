@@ -202,6 +202,66 @@ const stripGeneratedTrainingReportFollowUpLines = (value: unknown): string => (
 
 const getDefaultHasTraineesForUnit = (_unitCode: unknown): boolean => false;
 
+const normaliseDfpTimezoneKey = (value: unknown): string => String(value || '').trim().toUpperCase();
+
+const getDfpOffsetHoursForTimezone = (timeZone: unknown, at: Date = new Date()): number | null => {
+    const cleanTimeZone = String(timeZone || '').trim();
+    if (!cleanTimeZone) return null;
+    try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: cleanTimeZone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hourCycle: 'h23',
+        }).formatToParts(at);
+        const values = new Map(parts.map((part) => [part.type, part.value]));
+        const year = Number(values.get('year'));
+        const month = Number(values.get('month'));
+        const day = Number(values.get('day'));
+        const hour = Number(values.get('hour'));
+        const minute = Number(values.get('minute'));
+        const second = Number(values.get('second'));
+        if ([year, month, day, hour, minute, second].some((value) => !Number.isFinite(value))) return null;
+
+        const timezoneAsUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+        const actualUtc = Date.UTC(
+            at.getUTCFullYear(),
+            at.getUTCMonth(),
+            at.getUTCDate(),
+            at.getUTCHours(),
+            at.getUTCMinutes(),
+            at.getUTCSeconds(),
+        );
+        return Math.round((timezoneAsUtc - actualUtc) / 60000) / 60;
+    } catch {
+        return null;
+    }
+};
+
+const getDfpSystemUtcOffsetHours = (): number => {
+    const offsetMinutes = -new Date().getTimezoneOffset();
+    return Math.round((offsetMinutes / 60) * 2) / 2;
+};
+
+const dfpLocationMatchesTimezoneKey = (location: any, key: string): boolean => {
+    if (!key) return false;
+    return [
+        location?.code,
+        location?.iataCode,
+        location?.icao,
+        location?.icaoCode,
+        location?.settings?.iataCode,
+        location?.settings?.icaoCode,
+        location?.settings?.legacyCode,
+        ...(Array.isArray(location?.aliases) ? location.aliases : []),
+        ...(Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []),
+    ].some((value) => normaliseDfpTimezoneKey(value) === key);
+};
+
 const applyDefaultUnitTraineeAvailability = (config: PlatformConfig | null): PlatformConfig | null => {
     if (!config || !Array.isArray(config.units)) return config;
     let changed = false;
@@ -23007,6 +23067,26 @@ const App: React.FC = () => {
         const saved = localStorage.getItem('timezoneOffset');
         return saved ? parseFloat(saved) : 10; // Default to UTC+10 (AEST); location timezones override this where available.
     });
+    const effectiveDfpTimezoneOffset = useMemo(() => {
+        const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
+        const locations = Array.isArray(platformConfig?.locations) ? platformConfig.locations : [];
+        const cleanUnitCode = normaliseDfpTimezoneKey(activeUnitCode);
+        const activeUnit = units.find((unit: any) => normaliseDfpTimezoneKey(unit?.code) === cleanUnitCode);
+        const locationKey = normaliseDfpTimezoneKey(school || activeUnit?.locationCode);
+        const activeLocation = locations.find((location: any) => dfpLocationMatchesTimezoneKey(location, locationKey));
+        const useSystemOffset = Boolean(activeLocation?.useSystemTimezoneOffset ?? activeLocation?.settings?.useSystemTimezoneOffset);
+        if (useSystemOffset) return getDfpSystemUtcOffsetHours();
+
+        const configuredOffset = Number(activeLocation?.timezoneOffset ?? activeLocation?.settings?.timezoneOffset);
+        if (Number.isFinite(configuredOffset)) return configuredOffset;
+
+        const locationTimezone = activeLocation?.timezone || activeLocation?.timeZone || activeLocation?.settings?.timezone;
+        const resolvedOffset = getDfpOffsetHoursForTimezone(locationTimezone);
+        if (resolvedOffset !== null) return resolvedOffset;
+
+        const fallbackOffset = Number(timezoneOffset);
+        return Number.isFinite(fallbackOffset) ? fallbackOffset : 10;
+    }, [activeUnitCode, platformConfig, school, timezoneOffset]);
 
     // Validation Settings State
     const [showDepartureDensityOverlay, setShowDepartureDensityOverlay] = useState<boolean>(() => {
@@ -23038,7 +23118,7 @@ const App: React.FC = () => {
     // Helper function to get local date string with timezone offset
     const getLocalDateString = (date: Date = new Date()): string => {
         // Apply timezone offset
-        const offsetMs = timezoneOffset * 60 * 60 * 1000;
+        const offsetMs = effectiveDfpTimezoneOffset * 60 * 60 * 1000;
         const adjustedDate = new Date(date.getTime() + offsetMs);
 
         const year = adjustedDate.getUTCFullYear();
