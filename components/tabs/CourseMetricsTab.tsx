@@ -157,6 +157,11 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
     return Array.from(new Set(names));
   };
 
+  const isStandbyEvent = (event: ScheduleEvent): boolean => {
+    const resourceId = String(event.resourceId || '').trim().toUpperCase();
+    return resourceId.startsWith('STBY') || resourceId.startsWith('FTD-STBY') || resourceId.startsWith('BNF-STBY');
+  };
+
   const airCombatCourseStats = useMemo(() => {
     const streams = new Map<string, {
       key: string;
@@ -249,7 +254,7 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
       });
     });
 
-    events.forEach(event => {
+    events.filter(event => !isStandbyEvent(event)).forEach(event => {
       const eventStreamCode = getAirCombatEventStreamCode(event);
       streams.forEach(stream => {
         if (normaliseAirCombatStreamCode(stream.code) !== eventStreamCode) return;
@@ -352,7 +357,7 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
       availableTraineesPerCourse.set(course, availableCount);
     });
     
-    events.forEach(e => {
+    events.filter(event => !isStandbyEvent(event)).forEach(e => {
       if (e.flightNumber !== 'Ground School') {
         // Try student first, then pilot to find the trainee's course
         const course = getCourseFromStudent(e.student || '') ||

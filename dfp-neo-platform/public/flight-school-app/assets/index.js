@@ -46482,6 +46482,10 @@ const PeopleTab = ({
     if (event.type === "cpt") return "cpt";
     return "ground";
   };
+  const isStandbyEvent = (event) => {
+    const resourceId = String(event.resourceId || "").trim().toUpperCase();
+    return resourceId.startsWith("STBY") || resourceId.startsWith("FTD-STBY") || resourceId.startsWith("BNF-STBY");
+  };
   const formatMilitaryTime2 = (timeString) => {
     if (!timeString) return "";
     return timeString.replace(":", "");
@@ -46524,9 +46528,8 @@ const PeopleTab = ({
     return waitingList.sort((a, b) => (a.trainee?.name ?? "Unknown").localeCompare(b.trainee?.name ?? "Unknown"));
   }, [traineesData, traineeLMPs, scores]);
   const stats = reactExports.useMemo(() => {
-    const flightOrFtdEvents = events.filter(
-      (e) => (e.type === "flight" || e.type === "ftd") && !e.resourceId?.startsWith("STBY") && !e.resourceId?.startsWith("FTD-STBY") && !e.resourceId?.startsWith("BNF-STBY")
-    );
+    const scheduledEvents = events.filter((e) => !isStandbyEvent(e));
+    const flightOrFtdEvents = scheduledEvents.filter((e) => e.type === "flight" || e.type === "ftd");
     const instructorMap = new Map(instructorsData.map((i) => [i.name, i]));
     const instructorLoadRows = /* @__PURE__ */ new Map();
     const ensureInstructorLoadRow = (key, instructor, fallbackName) => {
@@ -46549,7 +46552,7 @@ const PeopleTab = ({
       }
       return row;
     };
-    events.forEach((event) => {
+    scheduledEvents.forEach((event) => {
       if (!event.instructor) return;
       const key = getEventInstructorIdentityKey(event, instructorMap);
       if (!key) return;
@@ -47525,6 +47528,10 @@ const CourseMetricsTab = ({
     ].map((name) => String(name || "").trim()).filter((name) => name && !/^TBA$/i.test(name));
     return Array.from(new Set(names));
   };
+  const isStandbyEvent = (event) => {
+    const resourceId = String(event.resourceId || "").trim().toUpperCase();
+    return resourceId.startsWith("STBY") || resourceId.startsWith("FTD-STBY") || resourceId.startsWith("BNF-STBY");
+  };
   const airCombatCourseStats = reactExports.useMemo(() => {
     const streams = /* @__PURE__ */ new Map();
     const ensureStream = (kind, code, title, unitCode, locationCode) => {
@@ -47593,7 +47600,7 @@ const CourseMetricsTab = ({
         if (matchesAirCombatAssignment(item, stream.kind, stream.code)) addSyllabusItemToStream(stream, item);
       });
     });
-    events.forEach((event) => {
+    events.filter((event) => !isStandbyEvent(event)).forEach((event) => {
       const eventStreamCode = getAirCombatEventStreamCode(event);
       streams.forEach((stream) => {
         if (normaliseAirCombatStreamCode(stream.code) !== eventStreamCode) return;
@@ -47677,7 +47684,7 @@ const CourseMetricsTab = ({
       });
       availableTraineesPerCourse.set(course, availableCount);
     });
-    events.forEach((e) => {
+    events.filter((event) => !isStandbyEvent(event)).forEach((e) => {
       if (e.flightNumber !== "Ground School") {
         const course = getCourseFromStudent(e.student || "") || getCourseFromStudent(e.pilot || "");
         if (course && eventsPerCourse.has(course)) {

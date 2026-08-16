@@ -88,6 +88,11 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
     return 'ground';
   };
 
+  const isStandbyEvent = (event: ScheduleEvent): boolean => {
+    const resourceId = String(event.resourceId || '').trim().toUpperCase();
+    return resourceId.startsWith('STBY') || resourceId.startsWith('FTD-STBY') || resourceId.startsWith('BNF-STBY');
+  };
+
   const formatMilitaryTime = (timeString: string | undefined): string => {
     if (!timeString) return '';
     return timeString.replace(':', '');
@@ -143,12 +148,8 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
   const stats = useMemo(() => {
     // Exclude STBY events: STBY events may have instructor='TBA' (no real instructor found)
     // which causes trainees to incorrectly appear in 'Other Instructors' stats
-    const flightOrFtdEvents = events.filter(e =>
-      (e.type === 'flight' || e.type === 'ftd') &&
-      !e.resourceId?.startsWith('STBY') &&
-      !e.resourceId?.startsWith('FTD-STBY') &&
-      !e.resourceId?.startsWith('BNF-STBY')
-    );
+    const scheduledEvents = events.filter(e => !isStandbyEvent(e));
+    const flightOrFtdEvents = scheduledEvents.filter(e => e.type === 'flight' || e.type === 'ftd');
     
     const instructorMap = new Map<string, Instructor>(instructorsData.map(i => [i.name, i]));
     const instructorLoadRows = new Map<string, {
@@ -179,7 +180,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
       }
       return row;
     };
-    events.forEach(event => {
+    scheduledEvents.forEach(event => {
       if (!event.instructor) return;
       const key = getEventInstructorIdentityKey(event, instructorMap);
       if (!key) return;
