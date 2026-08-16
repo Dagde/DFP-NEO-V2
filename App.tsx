@@ -22419,7 +22419,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         return report;
     };
 
-    generateBuildConflictDiagnostic(sortedEvents);
+    const finalConflictReport = generateBuildConflictDiagnostic(sortedEvents);
     remedialPriorityEvents.forEach(priorityEvent => {
         const eventTrainee = priorityEvent.student || priorityEvent.pilot || '';
         const priorityCodes = new Set([
@@ -22734,6 +22734,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return acc;
         }, {}),
         unplacedRecoverySummary: neoBuildDiag.unplacedRecoverySummary,
+        conflictReport: {
+            totalConflicts: finalConflictReport.totalConflicts,
+            totalInvalidWindows: finalConflictReport.totalInvalidWindows,
+            summaryByType: finalConflictReport.summaryByType,
+            summaryByGeneratedType: finalConflictReport.summaryByGeneratedType,
+            conflictSample: finalConflictReport.conflicts.slice(0, 80),
+            invalidWindowSample: finalConflictReport.invalidWindows.slice(0, 40),
+        },
         personnelIdentitySummary: {
             totalEvents: sortedEvents.length,
             eventsWithStoredPersonnelId: finalEventsWithStoredPersonnelId.length,
@@ -22744,6 +22752,29 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             nameOnlySample: finalNameOnlyEvents.slice(0, 40),
         },
         firstEvents: sortedEvents.slice(0, 80).map(event => ({
+            id: event.id,
+            flightNumber: event.flightNumber,
+            type: event.type,
+            resourceId: event.resourceId,
+            startTime: event.startTime,
+            duration: event.duration,
+            instructor: event.instructor,
+            student: event.student,
+            pilot: event.pilot,
+            crew: event.crew,
+            flightType: event.flightType,
+            soloOrDual: (event as any).soloOrDual,
+            aircraftConfigId: (event as any).aircraftConfigId,
+            acceptableAircraftConfigs: (event as any).acceptableAircraftConfigs,
+            callsign: event.callsign,
+            source: (event as any)._source,
+            isNext: (event as any)._isNext,
+            traineeName: (event as any)._traineeName,
+            personnelIdentityStatus: getNeoBuildDiagnosticIdentityStatus(event),
+            personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(event),
+            staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(event),
+        })),
+        events: sortedEvents.map(event => ({
             id: event.id,
             flightNumber: event.flightNumber,
             type: event.type,
