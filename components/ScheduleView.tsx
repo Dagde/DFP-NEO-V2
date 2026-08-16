@@ -29,6 +29,7 @@ import {
 } from '../utils/unitCallsigns';
 import { getResourceCategory as getConfiguredResourceCategory } from '../utils/resourceDisplayNames';
 import { getEffectiveDispatchStaggerMinutes, type DispatchStaggerSettings } from '../utils/dispatchStagger';
+import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, recordDfpDragMoveDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
 import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
 import {
@@ -7700,11 +7701,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const didDragRef = useRef(false);
     const dragFrameRef = useRef<number | null>(null);
     const lastDragUpdateSignatureRef = useRef('');
+    const dragDiagnosticSessionRef = useRef<string | null>(null);
     const pendingDragUpdateRef = useRef<{
         updates: { eventId: string, newStartTime: number, newResourceId: string }[];
         realtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null;
         resourceConflictId: string | null;
         cptConflict: Conflict | null;
+        queuedAtMs: number;
+        signature: string;
     } | null>(null);
 
     const flushPendingDragUpdate = useCallback(() => {
@@ -7718,6 +7722,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         setRealtimeConflict(pending.realtimeConflict);
         setRealtimeResourceConflictId(pending.resourceConflictId);
         setDraggedCptConflict(pending.cptConflict);
+        recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
+            queuedAtMs: pending.queuedAtMs,
+            updateCount: pending.updates.length,
+            signature: pending.signature,
+        });
         onUpdateEvent(pending.updates);
     }, [onUpdateEvent]);
 
@@ -7753,6 +7762,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 setRealtimeResourceConflictId(null);
                 setDraggedCptConflict(null);
                 lastDragUpdateSignatureRef.current = '';
+                endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
+                dragDiagnosticSessionRef.current = null;
             }
         };
         
@@ -7983,6 +7994,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             if (initialPositions.size > 0) {
                 lastDragUpdateSignatureRef.current = '';
                 pendingDragUpdateRef.current = null;
+                dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
+                    board: 'DFP',
+                    eventId: event.id,
+                    eventType: event.type,
+                    flightNumber: event.flightNumber,
+                    resourceId: event.resourceId,
+                    draggedTileCount: initialPositions.size,
+                    eventCount: events.length,
+                    resourceCount: resources.length,
+                    zoomLevel,
+                });
                 setDraggingState({
                     mainEventId: event.id,
                     xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -8006,13 +8028,16 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     };
 
     const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+        const moveStartedAt = performance.now();
         if (!scheduleGridRef.current) {
             return;
         }
         didDragRef.current = true;
+        const geometryStartedAt = performance.now();
         const gridRect = scheduleGridRef.current.getBoundingClientRect();
         const xInGrid = e.clientX - gridRect.left;
         const yInGrid = e.clientY - gridRect.top;
+        const geometryMs = performance.now() - geometryStartedAt;
         
         // Update validate overlay position when hourly event rate mode is ON
         if (showDepartureDensityOverlay) {
@@ -8074,6 +8099,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             let resourceConflictId: string | null = null;
             let tempCptConflict: Conflict | null = null;
             let tempRealtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null = null;
+            const buildUpdatesStartedAt = performance.now();
 
             for (const [id, initialPos] of draggingState.initialPositions.entries()) {
                 const eventData = events.find(ev => ev.id === id);
@@ -8108,7 +8134,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     resourceConflictId = conflictingEvent.id;
                 }
             }
+            const buildUpdatesMs = performance.now() - buildUpdatesStartedAt;
             
+            const conflictStartedAt = performance.now();
             const mainUpdate = updates.find(u => u.eventId === draggingState.mainEventId);
             if (mainUpdate) {
                 const mainEvent = tempEvents.find(e => e.id === draggingState.mainEventId)!;
@@ -8154,11 +8182,23 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     }
                 }
             }
+            const conflictMs = performance.now() - conflictStartedAt;
 
             const updateSignature = updates
                 .map(update => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`)
                 .join('|');
             if (updateSignature === lastDragUpdateSignatureRef.current) {
+                recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+                    xInGrid,
+                    yInGrid,
+                    updateCount: updates.length,
+                    duplicateSkipped: true,
+                    totalMoveMs: performance.now() - moveStartedAt,
+                    geometryMs,
+                    buildUpdatesMs,
+                    conflictMs,
+                    signature: updateSignature,
+                });
                 return;
             }
             lastDragUpdateSignatureRef.current = updateSignature;
@@ -8167,7 +8207,20 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 realtimeConflict: tempRealtimeConflict,
                 resourceConflictId,
                 cptConflict: tempCptConflict,
+                queuedAtMs: performance.now(),
+                signature: updateSignature,
             };
+            recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+                xInGrid,
+                yInGrid,
+                updateCount: updates.length,
+                duplicateSkipped: false,
+                totalMoveMs: performance.now() - moveStartedAt,
+                geometryMs,
+                buildUpdatesMs,
+                conflictMs,
+                signature: updateSignature,
+            });
             if (dragFrameRef.current === null) {
                 dragFrameRef.current = window.requestAnimationFrame(() => {
                     dragFrameRef.current = null;
@@ -8195,6 +8248,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         setRealtimeConflict(null);
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
+        endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
+        dragDiagnosticSessionRef.current = null;
         
         // Clear validate overlay when mouse leaves
         setValidateOverlayTime(null);

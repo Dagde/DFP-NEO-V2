@@ -350,7 +350,7 @@ const SystemFreezeContext = reactExports.createContext({
   isActionAllowed: () => true,
   checkAndWarn: () => true
 });
-const STORAGE_KEY = "systemFreezeState";
+const STORAGE_KEY$1 = "systemFreezeState";
 const ORG_ID$1 = "default";
 const parseStoredFreezeState = (raw) => {
   if (!raw) return defaultFreezeState;
@@ -373,9 +373,9 @@ const parseStoredFreezeState = (raw) => {
 };
 const saveFreezeState = (nextState) => {
   if (nextState.isFrozen) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+    localStorage.setItem(STORAGE_KEY$1, JSON.stringify(nextState));
   } else {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY$1);
   }
 };
 const loadSharedFreezeState = async () => {
@@ -405,17 +405,17 @@ const saveSharedFreezeState = async (nextState) => {
 };
 const SystemFreezeProvider = ({ children }) => {
   const [freezeState, setFreezeState] = reactExports.useState(() => {
-    return parseStoredFreezeState(localStorage.getItem(STORAGE_KEY));
+    return parseStoredFreezeState(localStorage.getItem(STORAGE_KEY$1));
   });
   reactExports.useEffect(() => {
     saveFreezeState(freezeState);
   }, [freezeState]);
   reactExports.useEffect(() => {
     const syncFreezeState = () => {
-      setFreezeState(parseStoredFreezeState(localStorage.getItem(STORAGE_KEY)));
+      setFreezeState(parseStoredFreezeState(localStorage.getItem(STORAGE_KEY$1)));
     };
     const handleStorage = (event) => {
-      if (event.key === STORAGE_KEY) {
+      if (event.key === STORAGE_KEY$1) {
         setFreezeState(parseStoredFreezeState(event.newValue));
       }
     };
@@ -3176,6 +3176,127 @@ const handleEditableTextBeforeInput = (event, onChange, maxLength) => {
   event.stopPropagation();
   insertEditableTextAtCursor(event.currentTarget, " ", onChange, maxLength);
 };
+const REPORT_KEY = "__dfpDragDiagnostics";
+const STORAGE_KEY = "dfp_drag_diagnostics_report";
+const SAMPLE_LIMIT = 80;
+const nowMs = () => typeof performance !== "undefined" ? performance.now() : Date.now();
+const getReport = () => {
+  const existing = typeof window !== "undefined" ? window[REPORT_KEY] : null;
+  if (existing?.reportType === "dfp-drag-diagnostics") return existing;
+  const report = {
+    reportType: "dfp-drag-diagnostics",
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    version: 1,
+    activeSessionId: null,
+    sessions: []
+  };
+  if (typeof window !== "undefined") {
+    window[REPORT_KEY] = report;
+  }
+  return report;
+};
+const persistReport = (report) => {
+  report.generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(report));
+  } catch {
+  }
+};
+const getSession = (sessionId) => {
+  if (!sessionId) return null;
+  return getReport().sessions.find((session) => session.sessionId === sessionId) || null;
+};
+const pushLimited = (items, item, limit = SAMPLE_LIMIT) => {
+  const next = [...items, item];
+  if (next.length <= limit) return next;
+  return next.slice(next.length - limit);
+};
+const startDfpDragDiagnostic = (details) => {
+  if (typeof window === "undefined") return null;
+  const report = getReport();
+  const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const session = {
+    sessionId,
+    board: details.board,
+    startedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    endedAt: null,
+    eventId: details.eventId,
+    eventType: details.eventType || null,
+    flightNumber: details.flightNumber || null,
+    resourceId: details.resourceId || null,
+    draggedTileCount: details.draggedTileCount,
+    eventCount: details.eventCount,
+    resourceCount: details.resourceCount,
+    zoomLevel: details.zoomLevel,
+    moveCount: 0,
+    skippedDuplicateCount: 0,
+    flushCount: 0,
+    totalUpdateCount: 0,
+    maxPointerGapMs: 0,
+    maxTotalMoveMs: 0,
+    maxConflictMs: 0,
+    maxFlushDelayMs: 0,
+    samples: [],
+    flushSamples: []
+  };
+  report.activeSessionId = sessionId;
+  report.sessions = [...report.sessions, session].slice(-20);
+  persistReport(report);
+  return sessionId;
+};
+const recordDfpDragMoveDiagnostic = (sessionId, sample) => {
+  const session = getSession(sessionId);
+  if (!session) return;
+  session.moveCount += 1;
+  if (sample.duplicateSkipped) session.skippedDuplicateCount += 1;
+  session.totalUpdateCount += sample.updateCount;
+  session.maxTotalMoveMs = Math.max(session.maxTotalMoveMs, sample.totalMoveMs);
+  session.maxConflictMs = Math.max(session.maxConflictMs, sample.conflictMs);
+  const previous = session.samples[session.samples.length - 1];
+  const pointerGapMs = previous?.recordedAtMs ? nowMs() - previous.recordedAtMs : 0;
+  session.maxPointerGapMs = Math.max(session.maxPointerGapMs, pointerGapMs);
+  const compactSample = {
+    recordedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    recordedAtMs: nowMs(),
+    xInGrid: Number(sample.xInGrid.toFixed(1)),
+    yInGrid: Number(sample.yInGrid.toFixed(1)),
+    updateCount: sample.updateCount,
+    duplicateSkipped: sample.duplicateSkipped,
+    pointerGapMs: Number(pointerGapMs.toFixed(1)),
+    totalMoveMs: Number(sample.totalMoveMs.toFixed(2)),
+    geometryMs: Number(sample.geometryMs.toFixed(2)),
+    buildUpdatesMs: Number(sample.buildUpdatesMs.toFixed(2)),
+    conflictMs: Number(sample.conflictMs.toFixed(2)),
+    signature: sample.signature.slice(0, 260)
+  };
+  if (session.samples.length < 20 || compactSample.totalMoveMs >= 8 || compactSample.pointerGapMs >= 80) {
+    session.samples = pushLimited(session.samples, compactSample);
+  }
+  persistReport(getReport());
+};
+const recordDfpDragFlushDiagnostic = (sessionId, sample) => {
+  const session = getSession(sessionId);
+  if (!session) return;
+  const flushDelayMs = nowMs() - sample.queuedAtMs;
+  session.flushCount += 1;
+  session.maxFlushDelayMs = Math.max(session.maxFlushDelayMs, flushDelayMs);
+  session.flushSamples = pushLimited(session.flushSamples, {
+    flushedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    updateCount: sample.updateCount,
+    flushDelayMs: Number(flushDelayMs.toFixed(2)),
+    signature: sample.signature.slice(0, 260)
+  }, 40);
+  persistReport(getReport());
+};
+const endDfpDragDiagnostic = (sessionId) => {
+  const report = getReport();
+  const session = getSession(sessionId);
+  if (!session) return;
+  session.endedAt = (/* @__PURE__ */ new Date()).toISOString();
+  if (report.activeSessionId === sessionId) report.activeSessionId = null;
+  persistReport(report);
+};
+const getDfpDragDiagnosticReport = () => getReport();
 const DEFAULT_TASK_PROFILE_CONFIG = {
   flight_school: [],
   air_combat: [],
@@ -17151,6 +17272,7 @@ const ScheduleView = ({
   const didDragRef = reactExports.useRef(false);
   const dragFrameRef = reactExports.useRef(null);
   const lastDragUpdateSignatureRef = reactExports.useRef("");
+  const dragDiagnosticSessionRef = reactExports.useRef(null);
   const pendingDragUpdateRef = reactExports.useRef(null);
   const flushPendingDragUpdate = reactExports.useCallback(() => {
     if (dragFrameRef.current !== null) {
@@ -17163,6 +17285,11 @@ const ScheduleView = ({
     setRealtimeConflict(pending.realtimeConflict);
     setRealtimeResourceConflictId(pending.resourceConflictId);
     setDraggedCptConflict(pending.cptConflict);
+    recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
+      queuedAtMs: pending.queuedAtMs,
+      updateCount: pending.updates.length,
+      signature: pending.signature
+    });
     onUpdateEvent(pending.updates);
   }, [onUpdateEvent]);
   reactExports.useEffect(() => {
@@ -17190,6 +17317,8 @@ const ScheduleView = ({
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
         lastDragUpdateSignatureRef.current = "";
+        endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
+        dragDiagnosticSessionRef.current = null;
       }
     };
     document.addEventListener("mousemove", handleGlobalMouseMove);
@@ -17380,6 +17509,17 @@ const ScheduleView = ({
       if (initialPositions.size > 0) {
         lastDragUpdateSignatureRef.current = "";
         pendingDragUpdateRef.current = null;
+        dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
+          board: "DFP",
+          eventId: event.id,
+          eventType: event.type,
+          flightNumber: event.flightNumber,
+          resourceId: event.resourceId,
+          draggedTileCount: initialPositions.size,
+          eventCount: events.length,
+          resourceCount: resources.length,
+          zoomLevel
+        });
         setDraggingState({
           mainEventId: event.id,
           xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -17399,13 +17539,16 @@ const ScheduleView = ({
     }
   };
   const handleMouseMove = (e) => {
+    const moveStartedAt = performance.now();
     if (!scheduleGridRef.current) {
       return;
     }
     didDragRef.current = true;
+    const geometryStartedAt = performance.now();
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const yInGrid = e.clientY - gridRect.top;
+    const geometryMs = performance.now() - geometryStartedAt;
     if (showDepartureDensityOverlay) {
       const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
       setValidateOverlayTime(mouseTimeInHours);
@@ -17454,6 +17597,7 @@ const ScheduleView = ({
       let resourceConflictId = null;
       let tempCptConflict = null;
       let tempRealtimeConflict = null;
+      const buildUpdatesStartedAt = performance.now();
       for (const [id, initialPos] of draggingState.initialPositions.entries()) {
         const eventData = events.find((ev) => ev.id === id);
         if (!eventData) continue;
@@ -17477,6 +17621,8 @@ const ScheduleView = ({
           resourceConflictId = conflictingEvent.id;
         }
       }
+      const buildUpdatesMs = performance.now() - buildUpdatesStartedAt;
+      const conflictStartedAt = performance.now();
       const mainUpdate = updates.find((u) => u.eventId === draggingState.mainEventId);
       if (mainUpdate) {
         const mainEvent = tempEvents.find((e2) => e2.id === draggingState.mainEventId);
@@ -17518,8 +17664,20 @@ const ScheduleView = ({
           }
         }
       }
+      const conflictMs = performance.now() - conflictStartedAt;
       const updateSignature = updates.map((update) => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`).join("|");
       if (updateSignature === lastDragUpdateSignatureRef.current) {
+        recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+          xInGrid,
+          yInGrid,
+          updateCount: updates.length,
+          duplicateSkipped: true,
+          totalMoveMs: performance.now() - moveStartedAt,
+          geometryMs,
+          buildUpdatesMs,
+          conflictMs,
+          signature: updateSignature
+        });
         return;
       }
       lastDragUpdateSignatureRef.current = updateSignature;
@@ -17527,8 +17685,21 @@ const ScheduleView = ({
         updates,
         realtimeConflict: tempRealtimeConflict,
         resourceConflictId,
-        cptConflict: tempCptConflict
+        cptConflict: tempCptConflict,
+        queuedAtMs: performance.now(),
+        signature: updateSignature
       };
+      recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+        xInGrid,
+        yInGrid,
+        updateCount: updates.length,
+        duplicateSkipped: false,
+        totalMoveMs: performance.now() - moveStartedAt,
+        geometryMs,
+        buildUpdatesMs,
+        conflictMs,
+        signature: updateSignature
+      });
       if (dragFrameRef.current === null) {
         dragFrameRef.current = window.requestAnimationFrame(() => {
           dragFrameRef.current = null;
@@ -17553,6 +17724,8 @@ const ScheduleView = ({
     setRealtimeConflict(null);
     setRealtimeResourceConflictId(null);
     setDraggedCptConflict(null);
+    endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
+    dragDiagnosticSessionRef.current = null;
     setValidateOverlayTime(null);
     if (selectionStartPoint.current && isMultiSelectMode) {
       selectionStartPoint.current = null;
@@ -40405,6 +40578,7 @@ const NextDayBuildView = ({
   const didDragRef = reactExports.useRef(false);
   const dragFrameRef = reactExports.useRef(null);
   const lastDragUpdateSignatureRef = reactExports.useRef("");
+  const dragDiagnosticSessionRef = reactExports.useRef(null);
   const pendingDragUpdateRef = reactExports.useRef(null);
   const flushPendingDragUpdate = reactExports.useCallback(() => {
     if (dragFrameRef.current !== null) {
@@ -40417,6 +40591,11 @@ const NextDayBuildView = ({
     setRealtimeConflict(pending.realtimeConflict);
     setRealtimeResourceConflictId(pending.resourceConflictId);
     setDraggedCptConflict(pending.cptConflict);
+    recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
+      queuedAtMs: pending.queuedAtMs,
+      updateCount: pending.updates.length,
+      signature: pending.signature
+    });
     onUpdateEvent(pending.updates);
   }, [onUpdateEvent]);
   reactExports.useEffect(() => {
@@ -40571,6 +40750,17 @@ const NextDayBuildView = ({
       if (initialPositions.size > 0) {
         lastDragUpdateSignatureRef.current = "";
         pendingDragUpdateRef.current = null;
+        dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
+          board: "NEO Build Schedule",
+          eventId: event.id,
+          eventType: event.type,
+          flightNumber: event.flightNumber,
+          resourceId: event.resourceId,
+          draggedTileCount: initialPositions.size,
+          eventCount: events.length,
+          resourceCount: resources.length,
+          zoomLevel
+        });
         setDraggingState({
           mainEventId: event.id,
           xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -40590,11 +40780,14 @@ const NextDayBuildView = ({
     }
   };
   const handleMouseMove = (e) => {
+    const moveStartedAt = performance.now();
     if (!scheduleGridRef.current) return;
     didDragRef.current = true;
+    const geometryStartedAt = performance.now();
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const yInGrid = e.clientY - gridRect.top;
+    const geometryMs = performance.now() - geometryStartedAt;
     if (showDepartureDensityOverlay) {
       const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$3 * zoomLevel) + START_HOUR$3;
       setValidateOverlayTime(mouseTimeInHours);
@@ -40643,6 +40836,7 @@ const NextDayBuildView = ({
     let resourceConflictId = null;
     let tempCptConflict = null;
     let tempRealtimeConflict = null;
+    const buildUpdatesStartedAt = performance.now();
     for (const [id, initialPos] of draggingState.initialPositions.entries()) {
       const eventData = events.find((ev) => ev.id === id);
       if (!eventData) continue;
@@ -40662,6 +40856,8 @@ const NextDayBuildView = ({
         resourceConflictId = conflictingEvent.id;
       }
     }
+    const buildUpdatesMs = performance.now() - buildUpdatesStartedAt;
+    const conflictStartedAt = performance.now();
     updates.forEach((u) => {
       const idx = tempEvents.findIndex((e2) => e2.id === u.eventId);
       if (idx !== -1) {
@@ -40688,8 +40884,20 @@ const NextDayBuildView = ({
         }
       }
     }
+    const conflictMs = performance.now() - conflictStartedAt;
     const updateSignature = updates.map((update) => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`).join("|");
     if (updateSignature === lastDragUpdateSignatureRef.current) {
+      recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+        xInGrid,
+        yInGrid,
+        updateCount: updates.length,
+        duplicateSkipped: true,
+        totalMoveMs: performance.now() - moveStartedAt,
+        geometryMs,
+        buildUpdatesMs,
+        conflictMs,
+        signature: updateSignature
+      });
       return;
     }
     lastDragUpdateSignatureRef.current = updateSignature;
@@ -40697,8 +40905,21 @@ const NextDayBuildView = ({
       updates,
       realtimeConflict: tempRealtimeConflict,
       resourceConflictId,
-      cptConflict: tempCptConflict
+      cptConflict: tempCptConflict,
+      queuedAtMs: performance.now(),
+      signature: updateSignature
     };
+    recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+      xInGrid,
+      yInGrid,
+      updateCount: updates.length,
+      duplicateSkipped: false,
+      totalMoveMs: performance.now() - moveStartedAt,
+      geometryMs,
+      buildUpdatesMs,
+      conflictMs,
+      signature: updateSignature
+    });
     if (dragFrameRef.current === null) {
       dragFrameRef.current = window.requestAnimationFrame(() => {
         dragFrameRef.current = null;
@@ -40720,6 +40941,8 @@ const NextDayBuildView = ({
     setRealtimeResourceConflictId(null);
     setDraggedCptConflict(null);
     lastDragUpdateSignatureRef.current = "";
+    endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
+    dragDiagnosticSessionRef.current = null;
     setValidateOverlayTime(null);
     if (selectionStartPoint.current && (isMultiSelectMode || isPauseSelectMode)) {
       selectionStartPoint.current = null;
@@ -129157,6 +129380,9 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     const clickSamples = uiLagClickSamplesRef.current.map((sample) => ({ ...sample }));
     const longTaskSamples = uiLagLongTaskSamplesRef.current.map((sample) => ({ ...sample }));
     const frameDelaySamples = uiLagFrameDelaySamplesRef.current.map((sample) => ({ ...sample }));
+    const dragDiagnostics = getDfpDragDiagnosticReport();
+    const dragSessions = (dragDiagnostics.sessions || []).map((session) => ({ ...session }));
+    const worstDragSessions = [...dragSessions].sort((a, b) => Math.max(b.maxTotalMoveMs || 0, b.maxFlushDelayMs || 0, b.maxPointerGapMs || 0) - Math.max(a.maxTotalMoveMs || 0, a.maxFlushDelayMs || 0, a.maxPointerGapMs || 0)).slice(0, 12);
     const slowClicks = clickSamples.filter((sample) => (sample.secondFrameDelayMs ?? sample.firstFrameDelayMs ?? 0) >= 120).sort((a, b) => (b.secondFrameDelayMs ?? b.firstFrameDelayMs ?? 0) - (a.secondFrameDelayMs ?? a.firstFrameDelayMs ?? 0));
     const settingsClicks = clickSamples.filter((sample) => sample.target.dataUiLagRole?.startsWith("settings-") || /settings|platform|people|permissions|training|threshold|business|configuration/i.test(`${sample.target.text} ${sample.target.title || ""}`));
     const report = {
@@ -129176,19 +129402,37 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         longTaskCount: longTaskSamples.length,
         frameDelayCount: frameDelaySamples.length,
         settingsClickCount: settingsClicks.length,
+        dragSessionCount: dragSessions.length,
         worstClicks: slowClicks.slice(0, 20),
         worstLongTasks: [...longTaskSamples].sort((a, b) => b.durationMs - a.durationMs).slice(0, 20),
-        worstFrameDelays: [...frameDelaySamples].sort((a, b) => b.frameGapMs - a.frameGapMs).slice(0, 20)
+        worstFrameDelays: [...frameDelaySamples].sort((a, b) => b.frameGapMs - a.frameGapMs).slice(0, 20),
+        worstDragSessions
       },
       settingsClicks,
       clickSamples,
       longTaskSamples,
-      frameDelaySamples
+      frameDelaySamples,
+      dragDiagnostics: {
+        ...dragDiagnostics,
+        sessions: dragSessions
+      }
     };
     const unit = String(activeUnitCode || "unit").replace(/[^a-z0-9-]+/gi, "-");
     const filename = `dfp-ui-lag-diagnostics_${unit}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
     downloadJsonDiagnosticFile(filename, report);
   }, [activeUnitCode]);
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.__downloadDfpDragDiagnostic = () => {
+      const report = getDfpDragDiagnosticReport();
+      const unit = String(latestUiLagContextRef.current.activeUnitCode || "unit").replace(/[^a-z0-9-]+/gi, "-");
+      const filename = `dfp-drag-diagnostics_${unit}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
+      downloadJsonDiagnosticFile(filename, report);
+    };
+    return () => {
+      delete window.__downloadDfpDragDiagnostic;
+    };
+  }, []);
   reactExports.useEffect(() => {
     try {
       window.localStorage.setItem("dfp_live_sync_enabled", liveSyncEnabled ? "true" : "false");

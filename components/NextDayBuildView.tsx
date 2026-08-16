@@ -7,6 +7,7 @@ import AirframeColumn from './AirframeColumn';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { getResourceCategory as getConfiguredResourceCategory } from '../utils/resourceDisplayNames';
+import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, recordDfpDragMoveDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
 
 
 interface NextDayBuildViewProps {
@@ -142,11 +143,14 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     const didDragRef = useRef(false);
     const dragFrameRef = useRef<number | null>(null);
     const lastDragUpdateSignatureRef = useRef('');
+    const dragDiagnosticSessionRef = useRef<string | null>(null);
     const pendingDragUpdateRef = useRef<{
         updates: { eventId: string, newStartTime: number, newResourceId: string }[];
         realtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null;
         resourceConflictId: string | null;
         cptConflict: Conflict | null;
+        queuedAtMs: number;
+        signature: string;
     } | null>(null);
 
     const flushPendingDragUpdate = useCallback(() => {
@@ -160,6 +164,11 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         setRealtimeConflict(pending.realtimeConflict);
         setRealtimeResourceConflictId(pending.resourceConflictId);
         setDraggedCptConflict(pending.cptConflict);
+        recordDfpDragFlushDiagnostic(dragDiagnosticSessionRef.current, {
+            queuedAtMs: pending.queuedAtMs,
+            updateCount: pending.updates.length,
+            signature: pending.signature,
+        });
         onUpdateEvent(pending.updates);
     }, [onUpdateEvent]);
 
@@ -344,6 +353,17 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             if (initialPositions.size > 0) {
                 lastDragUpdateSignatureRef.current = '';
                 pendingDragUpdateRef.current = null;
+                dragDiagnosticSessionRef.current = startDfpDragDiagnostic({
+                    board: 'NEO Build Schedule',
+                    eventId: event.id,
+                    eventType: event.type,
+                    flightNumber: event.flightNumber,
+                    resourceId: event.resourceId,
+                    draggedTileCount: initialPositions.size,
+                    eventCount: events.length,
+                    resourceCount: resources.length,
+                    zoomLevel,
+                });
                 setDraggingState({
                     mainEventId: event.id,
                     xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -367,11 +387,14 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     };
 
     const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+        const moveStartedAt = performance.now();
         if (!scheduleGridRef.current) return;
         didDragRef.current = true;
+        const geometryStartedAt = performance.now();
         const gridRect = scheduleGridRef.current.getBoundingClientRect();
         const xInGrid = e.clientX - gridRect.left;
         const yInGrid = e.clientY - gridRect.top;
+        const geometryMs = performance.now() - geometryStartedAt;
 
         // Update validate overlay position when validation mode OR hourly event rate mode is ON
         if (showDepartureDensityOverlay) {
@@ -435,6 +458,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         let resourceConflictId: string | null = null;
         let tempCptConflict: Conflict | null = null;
         let tempRealtimeConflict: { conflictingEventId: string; conflictedPersonName: string; } | null = null;
+        const buildUpdatesStartedAt = performance.now();
 
         for (const [id, initialPos] of draggingState.initialPositions.entries()) {
             const eventData = events.find(ev => ev.id === id);
@@ -464,7 +488,9 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                 resourceConflictId = conflictingEvent.id;
             }
         }
+        const buildUpdatesMs = performance.now() - buildUpdatesStartedAt;
 
+        const conflictStartedAt = performance.now();
         updates.forEach(u => {
             const idx = tempEvents.findIndex(e => e.id === u.eventId);
             if (idx !== -1) {
@@ -492,11 +518,23 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                 }
             }
         }
+        const conflictMs = performance.now() - conflictStartedAt;
 
         const updateSignature = updates
             .map(update => `${update.eventId}:${update.newStartTime}:${update.newResourceId}`)
             .join('|');
         if (updateSignature === lastDragUpdateSignatureRef.current) {
+            recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+                xInGrid,
+                yInGrid,
+                updateCount: updates.length,
+                duplicateSkipped: true,
+                totalMoveMs: performance.now() - moveStartedAt,
+                geometryMs,
+                buildUpdatesMs,
+                conflictMs,
+                signature: updateSignature,
+            });
             return;
         }
         lastDragUpdateSignatureRef.current = updateSignature;
@@ -505,7 +543,20 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             realtimeConflict: tempRealtimeConflict,
             resourceConflictId,
             cptConflict: tempCptConflict,
+            queuedAtMs: performance.now(),
+            signature: updateSignature,
         };
+        recordDfpDragMoveDiagnostic(dragDiagnosticSessionRef.current, {
+            xInGrid,
+            yInGrid,
+            updateCount: updates.length,
+            duplicateSkipped: false,
+            totalMoveMs: performance.now() - moveStartedAt,
+            geometryMs,
+            buildUpdatesMs,
+            conflictMs,
+            signature: updateSignature,
+        });
         if (dragFrameRef.current === null) {
             dragFrameRef.current = window.requestAnimationFrame(() => {
                 dragFrameRef.current = null;
@@ -530,6 +581,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
         lastDragUpdateSignatureRef.current = '';
+        endDfpDragDiagnostic(dragDiagnosticSessionRef.current);
+        dragDiagnosticSessionRef.current = null;
         
         // Clear validate overlay when mouse leaves
         setValidateOverlayTime(null);

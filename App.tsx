@@ -10,6 +10,7 @@ import { setCurrentUser, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
 import { initialiseLiveChangeBus, LIVE_CHANGE_EVENT } from './utils/liveChangeBus';
 import { isEditableElement } from './utils/editableKeyEvents';
+import { getDfpDragDiagnosticReport } from './utils/dfpDragDiagnostics';
 import {
     buildPlatformDataScopeQuery,
     getPlatformDataScopeForLocation,
@@ -42801,6 +42802,12 @@ appliedUpdates.forEach(update => {
         const clickSamples = uiLagClickSamplesRef.current.map(sample => ({ ...sample }));
         const longTaskSamples = uiLagLongTaskSamplesRef.current.map(sample => ({ ...sample }));
         const frameDelaySamples = uiLagFrameDelaySamplesRef.current.map(sample => ({ ...sample }));
+        const dragDiagnostics = getDfpDragDiagnosticReport();
+        const dragSessions = (dragDiagnostics.sessions || []).map(session => ({ ...session }));
+        const worstDragSessions = [...dragSessions].sort((a, b) => (
+            Math.max(b.maxTotalMoveMs || 0, b.maxFlushDelayMs || 0, b.maxPointerGapMs || 0)
+            - Math.max(a.maxTotalMoveMs || 0, a.maxFlushDelayMs || 0, a.maxPointerGapMs || 0)
+        )).slice(0, 12);
         const slowClicks = clickSamples
             .filter(sample => (sample.secondFrameDelayMs ?? sample.firstFrameDelayMs ?? 0) >= 120)
             .sort((a, b) => (b.secondFrameDelayMs ?? b.firstFrameDelayMs ?? 0) - (a.secondFrameDelayMs ?? a.firstFrameDelayMs ?? 0));
@@ -42825,19 +42832,38 @@ appliedUpdates.forEach(update => {
                 longTaskCount: longTaskSamples.length,
                 frameDelayCount: frameDelaySamples.length,
                 settingsClickCount: settingsClicks.length,
+                dragSessionCount: dragSessions.length,
                 worstClicks: slowClicks.slice(0, 20),
                 worstLongTasks: [...longTaskSamples].sort((a, b) => b.durationMs - a.durationMs).slice(0, 20),
                 worstFrameDelays: [...frameDelaySamples].sort((a, b) => b.frameGapMs - a.frameGapMs).slice(0, 20),
+                worstDragSessions,
             },
             settingsClicks,
             clickSamples,
             longTaskSamples,
             frameDelaySamples,
+            dragDiagnostics: {
+                ...dragDiagnostics,
+                sessions: dragSessions,
+            },
         };
         const unit = String(activeUnitCode || 'unit').replace(/[^a-z0-9-]+/gi, '-');
         const filename = `dfp-ui-lag-diagnostics_${unit}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
         downloadJsonDiagnosticFile(filename, report);
     }, [activeUnitCode]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        (window as any).__downloadDfpDragDiagnostic = () => {
+            const report = getDfpDragDiagnosticReport();
+            const unit = String(latestUiLagContextRef.current.activeUnitCode || 'unit').replace(/[^a-z0-9-]+/gi, '-');
+            const filename = `dfp-drag-diagnostics_${unit}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
+            downloadJsonDiagnosticFile(filename, report);
+        };
+        return () => {
+            delete (window as any).__downloadDfpDragDiagnostic;
+        };
+    }, []);
 
     useEffect(() => {
         try {
