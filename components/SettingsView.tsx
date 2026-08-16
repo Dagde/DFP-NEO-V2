@@ -1135,7 +1135,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                    : [evt.config || 'ANY'];
                                                return (
                                                    <div key={eventKey} className="rounded-lg border border-gray-700 bg-gray-900/70 p-3">
-                                                       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_90px_110px_110px_minmax(0,1fr)_minmax(0,1fr)_80px_auto]">
+                                                       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
                                                            <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
                                                                Event
                                                                <input
@@ -1201,23 +1201,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                                    className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
                                                                />
                                                            </label>
-                                                           <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
-                                                               A/C
-                                                               <input
-                                                                   type="number"
-                                                                   min={1}
-                                                                   max={24}
-                                                                   value={Math.max(1, Number(evt.aircraftCount) || 1)}
-                                                                   onChange={e => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(e.target.value) || 1))) })}
-                                                                   onKeyDownCapture={stopEditableKeyPropagation}
-                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                                                               />
-                                                           </label>
                                                            <button onClick={() => handleRemoveSctEvent(eventKey)} className="mt-[18px] flex h-[34px] items-center justify-center rounded border border-red-500/30 bg-red-950/40 px-3 text-xs font-bold text-red-200 hover:bg-red-900/50">
                                                                Delete
                                                            </button>
                                                        </div>
-                                                       <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
+                                                       <div className="mt-3 grid gap-3 lg:grid-cols-[180px_minmax(0,0.9fr)_minmax(0,1.7fr)_90px]">
                                                            <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
                                                                Unit
                                                                <select
@@ -1255,6 +1243,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                                    ))}
                                                                </div>
                                                            </div>
+                                                           <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
+                                                               A/C
+                                                               <input
+                                                                   type="number"
+                                                                   min={1}
+                                                                   max={24}
+                                                                   value={Math.max(1, Number(evt.aircraftCount) || 1)}
+                                                                   onChange={e => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(e.target.value) || 1))) })}
+                                                                   onKeyDownCapture={stopEditableKeyPropagation}
+                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                                                               />
+                                                           </label>
                                                        </div>
                                                    </div>
                                                );
