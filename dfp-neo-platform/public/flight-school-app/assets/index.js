@@ -100521,7 +100521,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const type = String(eventType || "").trim().toLowerCase();
     const configuredMinutes = getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, type);
     if (configuredMinutes > 0) return Math.max(1, configuredMinutes);
-    if (type === "flight" || type === "ftd" || type === "sim" || type === "simulator" || type === "cpt") return 1;
+    if (type === "cpt") return 5;
+    if (type === "flight" || type === "ftd" || type === "sim" || type === "simulator") return 1;
     return 15;
   };
   const getDispatchSearchStepHours = (eventType) => getDispatchSearchStepMinutes(eventType) / 60;
@@ -105683,6 +105684,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     listDiag.generatedDelta = listDiag.generatedEventsAtEnd - listDiag.generatedEventsAtStart;
     listDiag.durationMs = Math.round(performance.now() - scheduleListStartedAt);
     listDiag.passes = passNumber;
+    const topRejectionReasons = Object.entries(listDiag.rejectionReasons).sort((a, b) => b[1] - a[1]);
+    const topRejectionPatterns = Object.values(listDiag.rejectionPatterns).sort((a, b) => b.count - a.count);
     neoBuildDiag.scheduleFlow.push({
       listName,
       type,
@@ -105702,8 +105705,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       blockedPrimaryMissing: listDiag.blockedPrimaryMissing,
       cachedResourceRejections: listDiag.cachedResourceRejections,
       passSummaries: listDiag.passSummaries.slice(-12),
-      topRejectionReasons: Object.entries(listDiag.rejectionReasons).sort((a, b) => b[1] - a[1]).slice(0, 8),
-      topRejectionPatterns: Object.values(listDiag.rejectionPatterns).sort((a, b) => b.count - a.count).slice(0, 12),
+      topRejectionReasons: topRejectionReasons.slice(0, 8),
+      topRejectionPatterns: topRejectionPatterns.slice(0, 12),
       firstSearchWindowSample: listDiag.searchWindowSamples[0] || null,
       firstRejectionSample: listDiag.rejectionSamples[0] || null,
       placedSample: listDiag.placed.slice(0, 12),
@@ -105718,8 +105721,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       successes: listDiag.successes,
       generatedDelta: listDiag.generatedDelta,
       cachedResourceRejections: listDiag.cachedResourceRejections,
-      topRejectionReasons: Object.entries(listDiag.rejectionReasons).sort((a, b) => b[1] - a[1]).slice(0, 5),
-      topRejectionPatterns: Object.values(listDiag.rejectionPatterns).sort((a, b) => b.count - a.count).slice(0, 5)
+      topRejectionReasons: topRejectionReasons.slice(0, 5),
+      topRejectionPatterns: isDetailedNeoBuildDiagnosticsEnabled ? topRejectionPatterns.slice(0, 5) : topRejectionPatterns.slice(0, 3).map((pattern) => ({
+        count: pattern.count,
+        reason: pattern.reason,
+        event: pattern.event,
+        type: pattern.type,
+        firstDisplayTime: pattern.firstDisplayTime,
+        lastDisplayTime: pattern.lastDisplayTime
+      }))
     });
     saveNeoBuildDiag(`schedule-list-end:${listName}`);
   };
