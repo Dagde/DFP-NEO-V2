@@ -44835,26 +44835,28 @@ appliedUpdates.forEach(update => {
         return getPersonnel(event).some(person => buildIntelligencePersonnelSet.has(person));
     }, [buildIntelligenceCourseSet, buildIntelligencePersonnelSet, getBuildIntelligenceEventCourse]);
 
+    const buildIntelligenceHasPendingBuildEvents = nextDayBuildEvents.length > 0;
+    const buildIntelligenceDate = buildIntelligenceHasPendingBuildEvents ? buildDfpDate : date;
+
     const buildIntelligenceEvents = useMemo(() => {
-        const hasPendingBuildEvents = nextDayBuildEvents.length > 0;
-        const sourceEvents = hasPendingBuildEvents
+        const sourceEvents = buildIntelligenceHasPendingBuildEvents
             ? nextDayBuildEvents.map(event => ({ ...event, date: buildDfpDate }))
-            : (publishedSchedules[buildDfpDate] || []).map(event => ({
+            : (publishedSchedules[date] || []).map(event => ({
                 ...event,
-                date: event.date || buildDfpDate,
+                date: event.date || date,
             }));
         return sourceEvents.filter(eventMatchesBuildIntelligenceScope);
-    }, [buildDfpDate, eventMatchesBuildIntelligenceScope, nextDayBuildEvents, publishedSchedules]);
+    }, [buildDfpDate, buildIntelligenceHasPendingBuildEvents, date, eventMatchesBuildIntelligenceScope, nextDayBuildEvents, publishedSchedules]);
 
     const buildIntelligenceAnalysis = useMemo<BuildAnalysis | null>(() => {
-        const baseAnalysis = lastBuildAnalysis || (
+        const baseAnalysis = (buildIntelligenceHasPendingBuildEvents && lastBuildAnalysis) || (
             buildIntelligenceEvents.length > 0
                 ? analyzeBuildResults(
                     buildIntelligenceEvents.map(({ date: _date, ...event }) => event),
                     coursePercentages,
                     buildIntelligenceActiveCourses,
                     availableAircraftCount,
-                    buildDfpDate,
+                    buildIntelligenceDate,
                     allTraineesData,
                     traineeLMPs,
                     scores,
@@ -44914,10 +44916,11 @@ appliedUpdates.forEach(update => {
     }, [
         allTraineesData,
         availableAircraftCount,
-        buildDfpDate,
         buildIntelligenceActiveCourses,
         buildIntelligenceCourseSet,
+        buildIntelligenceDate,
         buildIntelligenceEvents,
+        buildIntelligenceHasPendingBuildEvents,
         coursePercentages,
         lastBuildAnalysis,
         publishedSchedules,
@@ -46424,7 +46427,7 @@ appliedUpdates.forEach(update => {
                 />;
             case 'BuildIntelligence':
                  return <BuildIntelligenceView
-                            date={buildDfpDate}
+                            date={buildIntelligenceDate}
                             events={buildIntelligenceEvents}
                             instructorsData={instructorsData}
                             traineesData={traineesData}
@@ -46449,7 +46452,7 @@ appliedUpdates.forEach(update => {
                             timezoneOffset={timezoneOffset}
                             dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, '0')}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, '0')}`}
                             dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, '0')}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, '0')}`}
-                            buildDate={buildDfpDate}
+                            buildDate={buildIntelligenceDate}
                             analysis={buildIntelligenceAnalysis}
                             resourceDisplayNames={resourceDisplayNames}
                             instructorLabel={instructorLabel}

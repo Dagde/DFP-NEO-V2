@@ -130502,21 +130502,22 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (eventCourse) return buildIntelligenceCourseSet.has(eventCourse);
     return getPersonnel(event).some((person) => buildIntelligencePersonnelSet.has(person));
   }, [buildIntelligenceCourseSet, buildIntelligencePersonnelSet, getBuildIntelligenceEventCourse]);
+  const buildIntelligenceHasPendingBuildEvents = nextDayBuildEvents.length > 0;
+  const buildIntelligenceDate = buildIntelligenceHasPendingBuildEvents ? buildDfpDate : date;
   const buildIntelligenceEvents = reactExports.useMemo(() => {
-    const hasPendingBuildEvents = nextDayBuildEvents.length > 0;
-    const sourceEvents = hasPendingBuildEvents ? nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate })) : (publishedSchedules[buildDfpDate] || []).map((event) => ({
+    const sourceEvents = buildIntelligenceHasPendingBuildEvents ? nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate })) : (publishedSchedules[date] || []).map((event) => ({
       ...event,
-      date: event.date || buildDfpDate
+      date: event.date || date
     }));
     return sourceEvents.filter(eventMatchesBuildIntelligenceScope);
-  }, [buildDfpDate, eventMatchesBuildIntelligenceScope, nextDayBuildEvents, publishedSchedules]);
+  }, [buildDfpDate, buildIntelligenceHasPendingBuildEvents, date, eventMatchesBuildIntelligenceScope, nextDayBuildEvents, publishedSchedules]);
   const buildIntelligenceAnalysis = reactExports.useMemo(() => {
-    const baseAnalysis = lastBuildAnalysis || (buildIntelligenceEvents.length > 0 ? analyzeBuildResults(
+    const baseAnalysis = buildIntelligenceHasPendingBuildEvents && lastBuildAnalysis || (buildIntelligenceEvents.length > 0 ? analyzeBuildResults(
       buildIntelligenceEvents.map(({ date: _date, ...event }) => event),
       coursePercentages,
       buildIntelligenceActiveCourses,
       availableAircraftCount,
-      buildDfpDate,
+      buildIntelligenceDate,
       allTraineesData,
       traineeLMPs,
       scores,
@@ -130569,10 +130570,11 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, [
     allTraineesData,
     availableAircraftCount,
-    buildDfpDate,
     buildIntelligenceActiveCourses,
     buildIntelligenceCourseSet,
+    buildIntelligenceDate,
     buildIntelligenceEvents,
+    buildIntelligenceHasPendingBuildEvents,
     coursePercentages,
     lastBuildAnalysis,
     publishedSchedules,
@@ -131987,7 +131989,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           BuildIntelligenceView,
           {
-            date: buildDfpDate,
+            date: buildIntelligenceDate,
             events: buildIntelligenceEvents,
             instructorsData,
             traineesData,
@@ -132012,7 +132014,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             timezoneOffset,
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
-            buildDate: buildDfpDate,
+            buildDate: buildIntelligenceDate,
             analysis: buildIntelligenceAnalysis,
             resourceDisplayNames,
             instructorLabel: instructorLabel2,
