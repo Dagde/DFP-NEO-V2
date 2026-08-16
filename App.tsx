@@ -6037,6 +6037,7 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS: (keyof SyllabusItemDetail)[] = [
     'duration',
     'preFlightTime',
     'postFlightTime',
+    'individualTimingOverrides',
     'prerequisites',
     'prerequisitesGround',
     'prerequisitesFlying',
@@ -6059,6 +6060,20 @@ const getIndividualLmpMasterOverrides = (
     if (!item) return {};
     const overrides = INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((nextOverrides, field) => {
         if (Object.prototype.hasOwnProperty.call(item, field)) {
+            if (field === 'preFlightTime' || field === 'postFlightTime') {
+                const explicitTimingOverrides = item.individualTimingOverrides || {};
+                const hasExplicitTimingOverride = explicitTimingOverrides[field] === true;
+                const individualValue = getNonNegativeFiniteNumber((item as any)[field]);
+                const masterValue = getNonNegativeFiniteNumber((masterItem as any)?.[field]);
+                const legacyLooksLikeMissingTiming =
+                    !hasExplicitTimingOverride &&
+                    masterValue !== null &&
+                    masterValue > 0 &&
+                    (individualValue === null || individualValue === 0);
+                if (legacyLooksLikeMissingTiming) {
+                    return nextOverrides;
+                }
+            }
             (nextOverrides as any)[field] = (item as any)[field];
         }
         return nextOverrides;
@@ -34024,6 +34039,8 @@ const App: React.FC = () => {
             else if (remEvent.type === 'Flight') { codeSuffix = `RF${typeCounts.Flight}`; type = 'Flight'; }
 
             const remedialCode = remEvent.code || `${baseEventCode}-${codeSuffix}`;
+            const remedialPreFlightTime = eventToRemediate.preFlightTime || 0;
+            const remedialPostFlightTime = eventToRemediate.postFlightTime || 0;
 
             const newItem: SyllabusItemDetail = {
                 ...remedialTemplate,
@@ -34034,10 +34051,10 @@ const App: React.FC = () => {
                 module: 'Remedial', prerequisites: [lastNewEventId],
                 dayNight: remEvent.dayNight || eventToRemediate.dayNight || 'Day',
                 duration: remEvent.duration, flightOrSimHours: remEvent.duration,
-                totalEventHours: remEvent.duration + (type === 'Ground School' ? 0.25 : 1.0), type,
+                totalEventHours: remEvent.duration + remedialPreFlightTime + remedialPostFlightTime, type,
                 prerequisitesGround: [], prerequisitesFlying: [],
-                preFlightTime: type === 'Ground School' ? 0.25 : (type === 'FTD' ? 0.5 : 1.0),
-                postFlightTime: type === 'Ground School' ? 0 : (type === 'FTD' ? 0.5 : 0.5),
+                preFlightTime: remedialPreFlightTime,
+                postFlightTime: remedialPostFlightTime,
                 location: '', methodOfDelivery: [], methodOfAssessment: [], resourcesPhysical: [], resourceNumber: 0, resourcesHuman: [remEvent.instructor], eventDetailsCommon: [], eventDetailsSortie: [],
             };
             remedialPackageItems.push(newItem);

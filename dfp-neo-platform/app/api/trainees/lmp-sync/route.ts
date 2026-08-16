@@ -49,6 +49,7 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS = [
   'duration',
   'preFlightTime',
   'postFlightTime',
+  'individualTimingOverrides',
   'prerequisites',
   'prerequisitesGround',
   'prerequisitesFlying',
@@ -60,10 +61,23 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS = [
   'trainingReportLastExtendedByAssessmentId',
 ];
 
-const getIndividualLmpMasterOverrides = (item?: any): Record<string, any> => {
+const getIndividualLmpMasterOverrides = (item?: any, masterItem?: any): Record<string, any> => {
   if (!item) return {};
   return INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((overrides, field) => {
     if (Object.prototype.hasOwnProperty.call(item, field)) {
+      if (field === 'preFlightTime' || field === 'postFlightTime') {
+        const hasExplicitTimingOverride = item?.individualTimingOverrides?.[field] === true;
+        const individualValue = typeof item[field] === 'number' && Number.isFinite(item[field]) ? item[field] : null;
+        const masterValue = typeof masterItem?.[field] === 'number' && Number.isFinite(masterItem[field]) ? masterItem[field] : null;
+        const legacyLooksLikeMissingTiming =
+          !hasExplicitTimingOverride &&
+          masterValue !== null &&
+          masterValue > 0 &&
+          (individualValue === null || individualValue === 0);
+        if (legacyLooksLikeMissingTiming) {
+          return overrides;
+        }
+      }
       overrides[field] = item[field];
     }
     return overrides;
@@ -135,7 +149,7 @@ const mergeIndividualLmpWithMaster = (
 
     return {
       ...masterItem,
-      ...getIndividualLmpMasterOverrides(existingItem),
+      ...getIndividualLmpMasterOverrides(existingItem, masterItem),
       id: masterItem.id,
       masterEventId: getMasterEventId(masterItem),
       lmpSource: 'master',

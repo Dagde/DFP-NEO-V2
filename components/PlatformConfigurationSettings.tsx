@@ -12669,9 +12669,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="mb-3 flex flex-wrap items-center gap-3">
               <div>
                 <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-cyan-200/80">Subset of Scheduling Rule Sets</div>
-                <h5 className="text-sm font-bold text-cyan-100">Individual LMP Insert Event Types</h5>
+                <h5 className="text-sm font-bold text-cyan-100">Individual LMP Insert Event Defaults</h5>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">
-                  Controls the event types available from the Individual LMP Insert Event action. Labels are capped at {INSERT_EVENT_LABEL_MAX_LENGTH} characters because they are used on schedule tiles.
+                  Controls the default duration, resource, pre-event and post-event values for custom events inserted into an Individual LMP. Each inserted event remains editable inside the trainee's Individual LMP.
                 </p>
               </div>
               {canEdit && (
@@ -12708,8 +12708,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <NumberField label="Flt/Sim Hrs" value={eventType.flightOrSimHours} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value })} />
                   <NumberField label="Resources" value={eventType.resourceCount} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) })} />
                   <NumberField label="Total Hrs" value={eventType.totalEventHours} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value })} />
-                  <NumberField label="Pre Time" value={eventType.preFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value })} />
-                  <NumberField label="Post Time" value={eventType.postFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value })} />
+                  <NumberField label="Default Pre" value={eventType.preFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value })} />
+                  <NumberField label="Default Post" value={eventType.postFlightTime} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value })} />
                   <div className="flex items-end">
                     <button
                       type="button"

@@ -21649,6 +21649,18 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
       splitListInput(resourcesPhysical),
       roundedResourceNumber
     );
+    const normalizedPreFlightTime = clampLmpHourToTenths(preFlightTime, 0, 0);
+    const normalizedPostFlightTime = clampLmpHourToTenths(postFlightTime, 0, 0);
+    const isMasterDerivedItem = item.lmpSource === "master" || Boolean(item.masterEventId);
+    const existingTimingOverrides = item.individualTimingOverrides || {};
+    const timingOverrides = { ...existingTimingOverrides };
+    if (isMasterDerivedItem && normalizedPreFlightTime !== clampLmpHourToTenths(item.preFlightTime ?? 0, 0, 0)) {
+      timingOverrides.preFlightTime = true;
+    }
+    if (isMasterDerivedItem && normalizedPostFlightTime !== clampLmpHourToTenths(item.postFlightTime ?? 0, 0, 0)) {
+      timingOverrides.postFlightTime = true;
+    }
+    const hasTimingOverrides = Object.values(timingOverrides).some(Boolean);
     onSave({
       ...item,
       code: trimmedCode,
@@ -21662,8 +21674,9 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
       duration: clampLmpHourToTenths(duration, 0.3, 0.3),
       flightOrSimHours: clampLmpHourToTenths(flightOrSimHours, 0, 0),
       totalEventHours: clampLmpHourToTenths(totalEventHours, 0.3, 0.3),
-      preFlightTime: clampLmpHourToTenths(preFlightTime, 0, 0),
-      postFlightTime: clampLmpHourToTenths(postFlightTime, 0, 0),
+      preFlightTime: normalizedPreFlightTime,
+      postFlightTime: normalizedPostFlightTime,
+      ...isMasterDerivedItem && hasTimingOverrides ? { individualTimingOverrides: timingOverrides } : {},
       resourceNumber: roundedResourceNumber,
       resourceCount: roundedResourceNumber,
       acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(acceptableAircraftConfigs, aircraftConfigurations),
@@ -81651,12 +81664,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide text-cyan-200/80", children: "Subset of Scheduling Rule Sets" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Individual LMP Insert Event Types" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: [
-                "Controls the event types available from the Individual LMP Insert Event action. Labels are capped at ",
-                INSERT_EVENT_LABEL_MAX_LENGTH,
-                " characters because they are used on schedule tiles."
-              ] })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Individual LMP Insert Event Defaults" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: "Controls the default duration, resource, pre-event and post-event values for custom events inserted into an Individual LMP. Each inserted event remains editable inside the trainee's Individual LMP." })
             ] }),
             canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addInsertEventType, disabled: !canEditSection("platform-scheduling-rule-sets"), className: "ml-auto rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Event Type" })
           ] }),
@@ -81696,8 +81705,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Flt/Sim Hrs", value: eventType.flightOrSimHours, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Resources", value: eventType.resourceCount, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Hrs", value: eventType.totalEventHours, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre Time", value: eventType.preFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post Time", value: eventType.postFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Default Pre", value: eventType.preFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Default Post", value: eventType.postFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -98891,6 +98900,7 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS = [
   "duration",
   "preFlightTime",
   "postFlightTime",
+  "individualTimingOverrides",
   "prerequisites",
   "prerequisitesGround",
   "prerequisitesFlying",
@@ -98909,6 +98919,16 @@ const getIndividualLmpMasterOverrides = (item, masterItem) => {
   if (!item) return {};
   const overrides = INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((nextOverrides, field) => {
     if (Object.prototype.hasOwnProperty.call(item, field)) {
+      if (field === "preFlightTime" || field === "postFlightTime") {
+        const explicitTimingOverrides = item.individualTimingOverrides || {};
+        const hasExplicitTimingOverride = explicitTimingOverrides[field] === true;
+        const individualValue = getNonNegativeFiniteNumber(item[field]);
+        const masterValue = getNonNegativeFiniteNumber(masterItem?.[field]);
+        const legacyLooksLikeMissingTiming = !hasExplicitTimingOverride && masterValue !== null && masterValue > 0 && (individualValue === null || individualValue === 0);
+        if (legacyLooksLikeMissingTiming) {
+          return nextOverrides;
+        }
+      }
       nextOverrides[field] = item[field];
     }
     return nextOverrides;
@@ -121695,6 +121715,8 @@ ${error instanceof Error ? error.message : String(error)}`,
         type = "Flight";
       }
       const remedialCode = remEvent.code || `${baseEventCode}-${codeSuffix}`;
+      const remedialPreFlightTime = eventToRemediate.preFlightTime || 0;
+      const remedialPostFlightTime = eventToRemediate.postFlightTime || 0;
       const newItem = {
         ...remedialTemplate,
         id: remedialCode,
@@ -121708,12 +121730,12 @@ ${error instanceof Error ? error.message : String(error)}`,
         dayNight: remEvent.dayNight || eventToRemediate.dayNight || "Day",
         duration: remEvent.duration,
         flightOrSimHours: remEvent.duration,
-        totalEventHours: remEvent.duration + (type === "Ground School" ? 0.25 : 1),
+        totalEventHours: remEvent.duration + remedialPreFlightTime + remedialPostFlightTime,
         type,
         prerequisitesGround: [],
         prerequisitesFlying: [],
-        preFlightTime: type === "Ground School" ? 0.25 : type === "FTD" ? 0.5 : 1,
-        postFlightTime: type === "Ground School" ? 0 : type === "FTD" ? 0.5 : 0.5,
+        preFlightTime: remedialPreFlightTime,
+        postFlightTime: remedialPostFlightTime,
         location: "",
         methodOfDelivery: [],
         methodOfAssessment: [],

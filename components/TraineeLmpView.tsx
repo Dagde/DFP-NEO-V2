@@ -285,6 +285,18 @@ export const LmpEventEditModal: React.FC<{
             splitListInput(resourcesPhysical),
             roundedResourceNumber
         );
+        const normalizedPreFlightTime = clampLmpHourToTenths(preFlightTime, 0, 0);
+        const normalizedPostFlightTime = clampLmpHourToTenths(postFlightTime, 0, 0);
+        const isMasterDerivedItem = item.lmpSource === 'master' || Boolean(item.masterEventId);
+        const existingTimingOverrides = (item.individualTimingOverrides || {}) as NonNullable<SyllabusItemDetail['individualTimingOverrides']>;
+        const timingOverrides: NonNullable<SyllabusItemDetail['individualTimingOverrides']> = { ...existingTimingOverrides };
+        if (isMasterDerivedItem && normalizedPreFlightTime !== clampLmpHourToTenths(item.preFlightTime ?? 0, 0, 0)) {
+            timingOverrides.preFlightTime = true;
+        }
+        if (isMasterDerivedItem && normalizedPostFlightTime !== clampLmpHourToTenths(item.postFlightTime ?? 0, 0, 0)) {
+            timingOverrides.postFlightTime = true;
+        }
+        const hasTimingOverrides = Object.values(timingOverrides).some(Boolean);
         onSave({
             ...item,
             code: trimmedCode,
@@ -300,8 +312,9 @@ export const LmpEventEditModal: React.FC<{
             duration: clampLmpHourToTenths(duration, 0.3, 0.3),
             flightOrSimHours: clampLmpHourToTenths(flightOrSimHours, 0, 0),
             totalEventHours: clampLmpHourToTenths(totalEventHours, 0.3, 0.3),
-            preFlightTime: clampLmpHourToTenths(preFlightTime, 0, 0),
-            postFlightTime: clampLmpHourToTenths(postFlightTime, 0, 0),
+            preFlightTime: normalizedPreFlightTime,
+            postFlightTime: normalizedPostFlightTime,
+            ...(isMasterDerivedItem && hasTimingOverrides ? { individualTimingOverrides: timingOverrides } : {}),
             resourceNumber: roundedResourceNumber,
             resourceCount: roundedResourceNumber,
             acceptableAircraftConfigs: normaliseSelectedAircraftConfigurations(acceptableAircraftConfigs, aircraftConfigurations),

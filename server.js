@@ -5861,6 +5861,7 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC = [
   'duration',
   'preFlightTime',
   'postFlightTime',
+  'individualTimingOverrides',
   'prerequisites',
   'prerequisitesGround',
   'prerequisitesFlying',
@@ -5923,6 +5924,19 @@ const getIndividualLmpMasterOverridesForSync = (item, masterItem) => {
   if (!item) return {};
   const overrides = INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC.reduce((nextOverrides, field) => {
     if (Object.prototype.hasOwnProperty.call(item, field)) {
+      if (field === 'preFlightTime' || field === 'postFlightTime') {
+        const hasExplicitTimingOverride = item?.individualTimingOverrides?.[field] === true;
+        const individualValue = typeof item[field] === 'number' && Number.isFinite(item[field]) ? item[field] : null;
+        const masterValue = typeof masterItem?.[field] === 'number' && Number.isFinite(masterItem[field]) ? masterItem[field] : null;
+        const legacyLooksLikeMissingTiming =
+          !hasExplicitTimingOverride &&
+          masterValue !== null &&
+          masterValue > 0 &&
+          (individualValue === null || individualValue === 0);
+        if (legacyLooksLikeMissingTiming) {
+          return nextOverrides;
+        }
+      }
       nextOverrides[field] = item[field];
     }
     return nextOverrides;
