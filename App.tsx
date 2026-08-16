@@ -5540,10 +5540,28 @@ const makePersonnelIdentityRef = (
 
 const getPersonnelIdentityRefs = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): PersonnelIdentityRef[] => {
     const refsByKey = new Map<string, PersonnelIdentityRef>();
+    const addStoredRef = (storedRef: any) => {
+        const role = storedRef?.personType === 'staff' || storedRef?.personType === 'trainee'
+            ? storedRef.personType as PersonnelIdentityRole
+            : null;
+        const label = String(storedRef?.name || '').trim();
+        if (!role || !label || isPlaceholderPersonnelName(label)) return;
+        const ref = makePersonnelIdentityRef(label, role, {
+            id: storedRef.id,
+            idNumber: storedRef.idNumber,
+            name: label,
+            fullName: label,
+        } as Partial<NeoBuildIdentityPersonRecord>);
+        if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
+    };
     const addRef = (label: string | undefined, role: PersonnelIdentityRole) => {
         const ref = makePersonnelIdentityRef(label, role);
         if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
     };
+
+    if (Array.isArray(event.personnelRefs)) {
+        event.personnelRefs.forEach(addStoredRef);
+    }
 
     const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
     const isSctEvent = isContinuationScheduleEvent(event);
@@ -14223,13 +14241,41 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             start: startTime - (syllabusItem.preFlightTime || 0),
             end: startTime + scheduledDuration + (syllabusItem.postFlightTime || 0),
         };
+        const getPersonnelTurnaroundConflict = (
+            person: NeoBuildIdentityPersonRecord,
+            role: PersonnelIdentityRole,
+            proposedEvent: Omit<ScheduleEvent, 'date'>
+        ): { event: Omit<ScheduleEvent, 'date'>; actualGap: number; requiredGap: number } | null => {
+            const proposedHasTurnaround = proposedEvent.type === 'flight' || proposedEvent.type === 'ftd' || proposedEvent.type === 'cpt';
+            if (!proposedHasTurnaround) return null;
+
+            for (const existing of getGeneratedEventsForPersonRecord(person, role)) {
+                if (!eventHasNeoBuildPersonIdentity(existing, person, role)) continue;
+                if (existing.type !== 'flight' && existing.type !== 'ftd' && existing.type !== 'cpt') continue;
+
+                if (proposedEvent.startTime >= existing.startTime) {
+                    const actualGap = proposedEvent.startTime - (existing.startTime + existing.duration);
+                    const requiredGap = getPriorityTurnaround(existing);
+                    if (actualGap >= -0.001 && actualGap < requiredGap - 0.001) {
+                        return { event: existing, actualGap, requiredGap };
+                    }
+                } else {
+                    const actualGap = existing.startTime - (proposedEvent.startTime + proposedEvent.duration);
+                    const requiredGap = getPriorityTurnaround(proposedEvent);
+                    if (actualGap >= -0.001 && actualGap < requiredGap - 0.001) {
+                        return { event: existing, actualGap, requiredGap };
+                    }
+                }
+            }
+
+            return null;
+        };
         if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_STATICALLY_UNAVAILABLE');
             return traceScheduleReject('TRAINEE_STATICALLY_UNAVAILABLE', { proposedBookingWindow });
         }
 
         const traineeOverlapEvents = getGeneratedEventsForPersonRecord(trainee, 'trainee').filter(e => {
-            if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
             const hasTraineeConflict = eventHasNeoBuildPersonIdentity(e, trainee, 'trainee');
             if (!hasTraineeConflict) return false;
             const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -14263,42 +14309,24 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 flightNumber: syllabusItem.code,
                 type,
             } as Omit<ScheduleEvent, 'date'>;
-            const traineeTurnaroundConflict = getGeneratedEventsForPersonRecord(trainee, 'trainee').find(existing => {
-                if (isStbyResource(existing.resourceId)) return false;
-                const hasTraineeTurnaroundConflict = eventHasNeoBuildPersonIdentity(existing, trainee, 'trainee');
-                if (!hasTraineeTurnaroundConflict) return false;
-                if (existing.type !== 'flight' && existing.type !== 'ftd' && existing.type !== 'cpt') return false;
-                if (startTime >= existing.startTime) {
-                    const gap = startTime - (existing.startTime + existing.duration);
-                    return gap >= -0.001 && gap < getPriorityTurnaround(existing) - 0.001;
-                }
-                const gap = existing.startTime - (startTime + scheduledDuration);
-                return gap >= -0.001 && gap < getPriorityTurnaround(proposedEventForTurnaround) - 0.001;
-            });
+            const traineeTurnaroundConflict = getPersonnelTurnaroundConflict(trainee, 'trainee', proposedEventForTurnaround);
             if (traineeTurnaroundConflict) {
-                const proposedAfterExisting = startTime >= traineeTurnaroundConflict.startTime;
-                const actualGap = proposedAfterExisting
-                    ? startTime - (traineeTurnaroundConflict.startTime + traineeTurnaroundConflict.duration)
-                    : traineeTurnaroundConflict.startTime - (startTime + scheduledDuration);
-                const requiredGap = proposedAfterExisting
-                    ? getPriorityTurnaround(traineeTurnaroundConflict)
-                    : getPriorityTurnaround(proposedEventForTurnaround);
                 return traceScheduleReject('TRAINEE_TURNAROUND', {
                     conflictingEvent: {
-                        id: traineeTurnaroundConflict.id,
-                        type: traineeTurnaroundConflict.type,
-                        flightNumber: traineeTurnaroundConflict.flightNumber,
-                        startTime: traineeTurnaroundConflict.startTime,
-                        endTime: traineeTurnaroundConflict.startTime + traineeTurnaroundConflict.duration,
-                        resourceId: traineeTurnaroundConflict.resourceId,
-                        instructor: traineeTurnaroundConflict.instructor || null,
-                        student: traineeTurnaroundConflict.student || null,
-                        pilot: traineeTurnaroundConflict.pilot || null,
-                        source: (traineeTurnaroundConflict as any)._source || null,
-                        personRoleRefs: getPersonnelIdentityRefs(traineeTurnaroundConflict).filter(ref => personnelNamesMatch(ref.label, trainee.fullName)),
+                        id: traineeTurnaroundConflict.event.id,
+                        type: traineeTurnaroundConflict.event.type,
+                        flightNumber: traineeTurnaroundConflict.event.flightNumber,
+                        startTime: traineeTurnaroundConflict.event.startTime,
+                        endTime: traineeTurnaroundConflict.event.startTime + traineeTurnaroundConflict.event.duration,
+                        resourceId: traineeTurnaroundConflict.event.resourceId,
+                        instructor: traineeTurnaroundConflict.event.instructor || null,
+                        student: traineeTurnaroundConflict.event.student || null,
+                        pilot: traineeTurnaroundConflict.event.pilot || null,
+                        source: (traineeTurnaroundConflict.event as any)._source || null,
+                        personRoleRefs: getPersonnelIdentityRefs(traineeTurnaroundConflict.event).filter(ref => personnelNamesMatch(ref.label, trainee.fullName)),
                     },
-                    actualGap,
-                    requiredGap,
+                    actualGap: traineeTurnaroundConflict.actualGap,
+                    requiredGap: traineeTurnaroundConflict.requiredGap,
                     traineeOverlapRole: options.traineeOverlapRole || 'any',
                     proposedBookingWindow,
                 });
@@ -14464,7 +14492,6 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 // ── BUILD-TIME OVERLAP CHECK (BNF night pass) ────────────────────────
                 // Any instructor booking-window overlap blocks assignment, regardless of event type.
                 const hasOverlap = getGeneratedEventsForPersonRecord(instructor, 'staff').some(e => {
-                         if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
                          if (!eventHasNeoBuildPersonIdentity(e, instructor, 'staff')) return false;
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
                          const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
@@ -14501,6 +14528,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                      });
                 if (hasOverlap) return null;
                 // ─────────────────────────────────────────────────────────────────────
+
+                const bnfInstructorTurnaroundConflict = getPersonnelTurnaroundConflict(instructor, 'staff', {
+                    startTime,
+                    duration: scheduledDuration,
+                    flightNumber: syllabusItemForCheck.code,
+                    type,
+                } as Omit<ScheduleEvent, 'date'>);
+                if (bnfInstructorTurnaroundConflict) return null;
 
                 // Special check for second night flight turnaround for the same crew
                 if (isNightPass && isPlusOneCheck) {
@@ -14863,7 +14898,6 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 // ── BUILD-TIME OVERLAP CHECK (main candidate loop) ───────────────────
                 // Any instructor booking-window overlap blocks assignment, regardless of event type.
                 const overlappingEvents = getGeneratedEventsForPersonRecord(ip, 'staff').filter(e => {
-                         if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
                          if (!eventHasNeoBuildPersonIdentity(e, ip, 'staff')) return false;
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
                          const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
@@ -14940,6 +14974,37 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     }
                 }
                 // ─────────────────────────────────────────────────────────────────────
+
+                const instructorTurnaroundConflict = getPersonnelTurnaroundConflict(ip, 'staff', {
+                    startTime,
+                    duration: scheduledDuration,
+                    flightNumber: syllabusItemForCheck.code,
+                    type,
+                } as Omit<ScheduleEvent, 'date'>);
+                if (instructorTurnaroundConflict) {
+                    _dRej.timeOverlap++;
+                    if (isTracedRemedialAttempt) {
+                        traceMandatoryRemedial('instructorAllocationTrace', {
+                            phase: 'candidate-rejected',
+                            reason: 'INSTRUCTOR_TURNAROUND',
+                            trainee: traineeForCheck.fullName,
+                            event: syllabusItemForCheck.code,
+                            instructor: ip.name,
+                            startTime,
+                            displayTime: _fmtT(startTime),
+                            conflictingEvent: {
+                                flightNumber: instructorTurnaroundConflict.event.flightNumber,
+                                type: instructorTurnaroundConflict.event.type,
+                                startTime: instructorTurnaroundConflict.event.startTime,
+                                endTime: instructorTurnaroundConflict.event.startTime + instructorTurnaroundConflict.event.duration,
+                                resourceId: instructorTurnaroundConflict.event.resourceId,
+                            },
+                            actualGap: instructorTurnaroundConflict.actualGap,
+                            requiredGap: instructorTurnaroundConflict.requiredGap,
+                        });
+                    }
+                    continue;
+                }
 
                 const ipEvents = [
                     ...getGeneratedEventsForPersonRecord(ip, 'staff'),
@@ -20639,6 +20704,28 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             // Use full booking window (pre+post) of the existing event
             const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
             return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
+        }) && !events.some(e => {
+            if (!eventHasNeoBuildPersonIdentity(e, instructor, 'staff')) return false;
+            if (e.type !== 'flight' && e.type !== 'ftd' && e.type !== 'cpt') return false;
+            const proposedType = syllabusItem.type === 'FTD'
+                ? 'ftd'
+                : syllabusItem.type === 'Ground School' && syllabusItem.code.includes('CPT')
+                    ? 'cpt'
+                    : syllabusItem.type === 'Flight'
+                        ? 'flight'
+                        : 'ground';
+            const proposedEvent = {
+                startTime,
+                duration,
+                flightNumber: syllabusItem.code,
+                type: proposedType,
+            } as Omit<ScheduleEvent, 'date'>;
+            if (startTime >= e.startTime) {
+                const actualGap = startTime - (e.startTime + e.duration);
+                return actualGap >= -0.001 && actualGap < getPriorityTurnaround(e) - 0.001;
+            }
+            const actualGap = e.startTime - (startTime + duration);
+            return actualGap >= -0.001 && actualGap < getPriorityTurnaround(proposedEvent) - 0.001;
         });
     };
 

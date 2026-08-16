@@ -98666,10 +98666,25 @@ const makePersonnelIdentityRef = (label, role, identity, allPeople = []) => {
 };
 const getPersonnelIdentityRefs = (event) => {
   const refsByKey = /* @__PURE__ */ new Map();
+  const addStoredRef = (storedRef) => {
+    const role = storedRef?.personType === "staff" || storedRef?.personType === "trainee" ? storedRef.personType : null;
+    const label = String(storedRef?.name || "").trim();
+    if (!role || !label || isPlaceholderPersonnelName(label)) return;
+    const ref = makePersonnelIdentityRef(label, role, {
+      id: storedRef.id,
+      idNumber: storedRef.idNumber,
+      name: label,
+      fullName: label
+    });
+    if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
+  };
   const addRef = (label, role) => {
     const ref = makePersonnelIdentityRef(label, role);
     if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
   };
+  if (Array.isArray(event.personnelRefs)) {
+    event.personnelRefs.forEach(addStoredRef);
+  }
   const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isSctEvent = isContinuationScheduleEvent(event);
   if (isTaskingEvent2) {
@@ -105408,12 +105423,33 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       start: startTime - (syllabusItem.preFlightTime || 0),
       end: startTime + scheduledDuration + (syllabusItem.postFlightTime || 0)
     };
+    const getPersonnelTurnaroundConflict = (person, role, proposedEvent) => {
+      const proposedHasTurnaround = proposedEvent.type === "flight" || proposedEvent.type === "ftd" || proposedEvent.type === "cpt";
+      if (!proposedHasTurnaround) return null;
+      for (const existing of getGeneratedEventsForPersonRecord(person, role)) {
+        if (!eventHasNeoBuildPersonIdentity(existing, person, role)) continue;
+        if (existing.type !== "flight" && existing.type !== "ftd" && existing.type !== "cpt") continue;
+        if (proposedEvent.startTime >= existing.startTime) {
+          const actualGap = proposedEvent.startTime - (existing.startTime + existing.duration);
+          const requiredGap = getPriorityTurnaround(existing);
+          if (actualGap >= -1e-3 && actualGap < requiredGap - 1e-3) {
+            return { event: existing, actualGap, requiredGap };
+          }
+        } else {
+          const actualGap = existing.startTime - (proposedEvent.startTime + proposedEvent.duration);
+          const requiredGap = getPriorityTurnaround(proposedEvent);
+          if (actualGap >= -1e-3 && actualGap < requiredGap - 1e-3) {
+            return { event: existing, actualGap, requiredGap };
+          }
+        }
+      }
+      return null;
+    };
     if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
       return traceScheduleReject("TRAINEE_STATICALLY_UNAVAILABLE", { proposedBookingWindow });
     }
     const traineeOverlapEvents = getGeneratedEventsForPersonRecord(trainee, "trainee").filter((e) => {
-      if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
       const hasTraineeConflict = eventHasNeoBuildPersonIdentity(e, trainee, "trainee");
       if (!hasTraineeConflict) return false;
       const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -105442,41 +105478,29 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     if (options.enforcePersonnelTurnaround && (type === "flight" || type === "ftd" || type === "cpt")) {
       const proposedEventForTurnaround = {
+        startTime,
+        duration: scheduledDuration,
         flightNumber: syllabusItem.code,
         type
       };
-      const traineeTurnaroundConflict = getGeneratedEventsForPersonRecord(trainee, "trainee").find((existing) => {
-        if (isStbyResource(existing.resourceId)) return false;
-        const hasTraineeTurnaroundConflict = eventHasNeoBuildPersonIdentity(existing, trainee, "trainee");
-        if (!hasTraineeTurnaroundConflict) return false;
-        if (existing.type !== "flight" && existing.type !== "ftd" && existing.type !== "cpt") return false;
-        if (startTime >= existing.startTime) {
-          const gap2 = startTime - (existing.startTime + existing.duration);
-          return gap2 >= -1e-3 && gap2 < getPriorityTurnaround(existing) - 1e-3;
-        }
-        const gap = existing.startTime - (startTime + scheduledDuration);
-        return gap >= -1e-3 && gap < getPriorityTurnaround(proposedEventForTurnaround) - 1e-3;
-      });
+      const traineeTurnaroundConflict = getPersonnelTurnaroundConflict(trainee, "trainee", proposedEventForTurnaround);
       if (traineeTurnaroundConflict) {
-        const proposedAfterExisting = startTime >= traineeTurnaroundConflict.startTime;
-        const actualGap = proposedAfterExisting ? startTime - (traineeTurnaroundConflict.startTime + traineeTurnaroundConflict.duration) : traineeTurnaroundConflict.startTime - (startTime + scheduledDuration);
-        const requiredGap = proposedAfterExisting ? getPriorityTurnaround(traineeTurnaroundConflict) : getPriorityTurnaround(proposedEventForTurnaround);
         return traceScheduleReject("TRAINEE_TURNAROUND", {
           conflictingEvent: {
-            id: traineeTurnaroundConflict.id,
-            type: traineeTurnaroundConflict.type,
-            flightNumber: traineeTurnaroundConflict.flightNumber,
-            startTime: traineeTurnaroundConflict.startTime,
-            endTime: traineeTurnaroundConflict.startTime + traineeTurnaroundConflict.duration,
-            resourceId: traineeTurnaroundConflict.resourceId,
-            instructor: traineeTurnaroundConflict.instructor || null,
-            student: traineeTurnaroundConflict.student || null,
-            pilot: traineeTurnaroundConflict.pilot || null,
-            source: traineeTurnaroundConflict._source || null,
-            personRoleRefs: getPersonnelIdentityRefs(traineeTurnaroundConflict).filter((ref) => personnelNamesMatch(ref.label, trainee.fullName))
+            id: traineeTurnaroundConflict.event.id,
+            type: traineeTurnaroundConflict.event.type,
+            flightNumber: traineeTurnaroundConflict.event.flightNumber,
+            startTime: traineeTurnaroundConflict.event.startTime,
+            endTime: traineeTurnaroundConflict.event.startTime + traineeTurnaroundConflict.event.duration,
+            resourceId: traineeTurnaroundConflict.event.resourceId,
+            instructor: traineeTurnaroundConflict.event.instructor || null,
+            student: traineeTurnaroundConflict.event.student || null,
+            pilot: traineeTurnaroundConflict.event.pilot || null,
+            source: traineeTurnaroundConflict.event._source || null,
+            personRoleRefs: getPersonnelIdentityRefs(traineeTurnaroundConflict.event).filter((ref) => personnelNamesMatch(ref.label, trainee.fullName))
           },
-          actualGap,
-          requiredGap,
+          actualGap: traineeTurnaroundConflict.actualGap,
+          requiredGap: traineeTurnaroundConflict.requiredGap,
           traineeOverlapRole: options.traineeOverlapRole || "any",
           proposedBookingWindow
         });
@@ -105614,7 +105638,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup >= totalEventLimit) return null;
         }
         const hasOverlap = getGeneratedEventsForPersonRecord(instructor2, "staff").some((e) => {
-          if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!eventHasNeoBuildPersonIdentity(e, instructor2, "staff")) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
@@ -105649,6 +105672,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           return overlaps;
         });
         if (hasOverlap) return null;
+        const bnfInstructorTurnaroundConflict = getPersonnelTurnaroundConflict(instructor2, "staff", {
+          startTime,
+          duration: scheduledDuration,
+          flightNumber: syllabusItemForCheck.code,
+          type
+        });
+        if (bnfInstructorTurnaroundConflict) return null;
         if (isNightPass && isPlusOneCheck) {
           const { next } = traineeNextEventMap.get(getBuildTraineeKey(traineeForCheck));
           const firstNightEvent = getGeneratedEventsForPersonRecord(traineeForCheck, "trainee").find(
@@ -105922,7 +105952,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
         }
         const overlappingEvents = getGeneratedEventsForPersonRecord(ip, "staff").filter((e) => {
-          if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!eventHasNeoBuildPersonIdentity(e, ip, "staff")) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
@@ -105994,6 +106023,36 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             }
             continue;
           }
+        }
+        const instructorTurnaroundConflict = getPersonnelTurnaroundConflict(ip, "staff", {
+          startTime,
+          duration: scheduledDuration,
+          flightNumber: syllabusItemForCheck.code,
+          type
+        });
+        if (instructorTurnaroundConflict) {
+          _dRej.timeOverlap++;
+          if (isTracedRemedialAttempt) {
+            traceMandatoryRemedial("instructorAllocationTrace", {
+              phase: "candidate-rejected",
+              reason: "INSTRUCTOR_TURNAROUND",
+              trainee: traineeForCheck.fullName,
+              event: syllabusItemForCheck.code,
+              instructor: ip.name,
+              startTime,
+              displayTime: _fmtT(startTime),
+              conflictingEvent: {
+                flightNumber: instructorTurnaroundConflict.event.flightNumber,
+                type: instructorTurnaroundConflict.event.type,
+                startTime: instructorTurnaroundConflict.event.startTime,
+                endTime: instructorTurnaroundConflict.event.startTime + instructorTurnaroundConflict.event.duration,
+                resourceId: instructorTurnaroundConflict.event.resourceId
+              },
+              actualGap: instructorTurnaroundConflict.actualGap,
+              requiredGap: instructorTurnaroundConflict.requiredGap
+            });
+          }
+          continue;
         }
         const ipEvents = [
           ...getGeneratedEventsForPersonRecord(ip, "staff"),
@@ -110932,6 +110991,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (!eventHasNeoBuildPersonIdentity(e, instructor, "staff")) return false;
         const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
         return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
+      }) && !events.some((e) => {
+        if (!eventHasNeoBuildPersonIdentity(e, instructor, "staff")) return false;
+        if (e.type !== "flight" && e.type !== "ftd" && e.type !== "cpt") return false;
+        const proposedType = syllabusItem.type === "FTD" ? "ftd" : syllabusItem.type === "Ground School" && syllabusItem.code.includes("CPT") ? "cpt" : syllabusItem.type === "Flight" ? "flight" : "ground";
+        const proposedEvent = {
+          flightNumber: syllabusItem.code,
+          type: proposedType
+        };
+        if (startTime >= e.startTime) {
+          const actualGap2 = startTime - (e.startTime + e.duration);
+          return actualGap2 >= -1e-3 && actualGap2 < getPriorityTurnaround(e) - 1e-3;
+        }
+        const actualGap = e.startTime - (startTime + duration);
+        return actualGap >= -1e-3 && actualGap < getPriorityTurnaround(proposedEvent) - 1e-3;
       });
     };
     const findBestInstructorForStby = (trainee, syllabusItem, startTime, duration, type, events) => {
