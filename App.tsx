@@ -5917,6 +5917,7 @@ const getHighestPriorityTaskingSemanticKey = (event: ScheduleEvent): string => {
         Number.isFinite(Number(event.startTime)) ? Number(event.startTime).toFixed(3) : '',
         Number.isFinite(Number(event.duration)) ? Number(event.duration).toFixed(3) : '',
         getHighestPriorityTaskingAircraftIndex(event),
+        event.isFormation === true || Number(event.formationSize || 0) > 1 ? 'FORMATION' : 'STANDARD',
         normaliseHighestPriorityIdentityText(event.origin || event.depPoint),
         normaliseHighestPriorityIdentityText(event.destination || event.arrivalPoint),
         normaliseHighestPriorityIdentityText(event.aircraftConfigId),
@@ -16637,6 +16638,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         taskingRequestId: event.taskingRequestId || null,
         aircraftIndex: event.taskingAircraftIndex || null,
         aircraftCount: event.taskingAircraftCount || null,
+        isFormation: event.isFormation === true || Number(event.formationSize || 0) > 1,
+        formationId: event.formationId || null,
+        formationPosition: event.formationPosition || null,
+        formationSize: event.formationSize || null,
         flightNumber: event.flightNumber,
         requestedStartTime: event.startTime,
         duration: event.duration,
@@ -16702,6 +16707,17 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 ...resourceOptions.slice(preferredIndex),
                 ...resourceOptions.slice(0, preferredIndex),
             ];
+        };
+        const getTaskingFormationCallsign = (priorityEvent: ScheduleEvent): string => {
+            if (priorityEvent.isFormation !== true || !priorityEvent.formationId) return priorityEvent.callsign || '';
+            const position = Math.max(1, Math.floor(Number(priorityEvent.formationPosition || priorityEvent.taskingAircraftIndex) || 1));
+            const base = String(priorityEvent.callsign || priorityEvent.taskingDisplayLabel || priorityEvent.flightNumber || 'FORM')
+                .trim()
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '')
+                .replace(/\d+$/, '')
+                .slice(0, 8) || 'FORM';
+            return `${base}${position}`;
         };
         const assignTaskingStaff = (
             candidate: Omit<ScheduleEvent, 'date'>,
@@ -16935,7 +16951,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
                 const resourceOptionsAtTime = getTaskingResourceOptionsForFlow(priorityEvent, roundedTime);
                 if (priorityEvent.type === 'flight') {
-                    const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(roundedTime, 1);
+                    const formationGroupId = priorityEvent.isFormation === true && priorityEvent.formationId
+                        ? priorityEvent.formationId
+                        : undefined;
+                    const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(roundedTime, 1, {
+                        excludedFormationId: formationGroupId,
+                    });
                     if (dispatchLimitViolation) {
                         if (attemptSummary.length < 12) {
                             attemptSummary.push({
@@ -16977,11 +16998,15 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         resourceId,
                         aircraftConfigId: getAircraftConfigIdForResource(resourceId),
                         acceptableAircraftConfigs: normaliseAircraftConfigRequirement(priorityEvent),
+                        callsign: getTaskingFormationCallsign(priorityEvent),
                         _source: 'highest-priority-tasking',
                         _isNext: true,
                         _traineeName: '',
                     };
-                    if (hasDispatchStaggerConflict(candidate.type, roundedTime, generatedEvents)) {
+                    if (hasDispatchStaggerConflict(candidate.type, roundedTime, generatedEvents, {
+                        allowSameFormationTakeoff: Boolean(candidate.formationId),
+                        formationGroupId: candidate.formationId,
+                    })) {
                         const reason = candidate.type === 'flight' ? 'TAKEOFF_SEPARATION_VIOLATION' : 'SIMULATOR_STAGGER_VIOLATION';
                         if (attemptSummary.length < 12) {
                             attemptSummary.push({
@@ -46673,6 +46698,7 @@ appliedUpdates.forEach(update => {
                     onNavigateToSettingsSection={handleNavigateToSettingsSection}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     unitCallsignSettings={activeUnitCallsignSettings}
+                    formationCallsigns={formationCallsigns}
                     onAddPriorityEvents={(eventsToAdd) => {
                         setHighestPriorityEvents(prev => mergeHighestPriorityEvents(prev, eventsToAdd));
                     }}

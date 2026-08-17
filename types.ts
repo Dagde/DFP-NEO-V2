@@ -347,6 +347,7 @@ export interface ScheduleEvent {
   formationType?: string;
   formationPosition?: number;
   formationSize?: number;
+  isFormation?: boolean;
   crewSelectionOrder?: string[];
   callsign?: string;
   testEventType?: LmpTestEventType;

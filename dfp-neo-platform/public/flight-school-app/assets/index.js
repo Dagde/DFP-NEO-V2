@@ -42343,6 +42343,7 @@ const TaskingRequestTable = ({
   crewRequirementPresets,
   crewPositionTerminology,
   unitCallsignEntries,
+  formationCallsignEntries,
   callsignNumberOptions,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
@@ -42389,7 +42390,8 @@ const TaskingRequestTable = ({
       const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
       const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
       const selectedConfig = aircraftConfigOptions.find((definition) => definition.id === request.aircraftConfigId);
-      const showCallsignUnitLabels = new Set(unitCallsignEntries.map((entry) => entry.unitCode)).size > 1;
+      const callsignEntriesForRequest = request.isFormation === true && formationCallsignEntries.length > 0 ? formationCallsignEntries : unitCallsignEntries;
+      const showCallsignUnitLabels = new Set(callsignEntriesForRequest.map((entry) => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
       const isExpanded = expandedTaskingIds.has(request.id);
       const taskingHeaderTitle = request.tasking.trim() || "New directed task request";
@@ -42509,11 +42511,11 @@ const TaskingRequestTable = ({
                 )
               ] })
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Callsign", hint: request.callsign || "Unit callsign", children: unitCallsignEntries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Callsign", hint: request.callsign || "Unit callsign", children: callsignEntriesForRequest.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "select",
                 {
-                  value: request.callsignBase || unitCallsignEntries[0]?.callsign || "",
+                  value: request.callsignBase || callsignEntriesForRequest[0]?.callsign || "",
                   onChange: (event) => {
                     const callsignBase = event.target.value;
                     const callsignNumber = Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0;
@@ -42526,7 +42528,7 @@ const TaskingRequestTable = ({
                     });
                   },
                   className: taskingControlClass,
-                  children: unitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: showCallsignUnitLabels ? `${entry.callsign} (${entry.unitCode})` : entry.callsign }, entry.id))
+                  children: callsignEntriesForRequest.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: showCallsignUnitLabels ? `${entry.callsign} (${entry.unitCode})` : entry.callsign }, entry.id))
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -42535,7 +42537,7 @@ const TaskingRequestTable = ({
                   value: Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0,
                   onChange: (event) => {
                     const callsignNumber = Number(event.target.value);
-                    const callsignBase = request.callsignBase || unitCallsignEntries[0]?.callsign || "";
+                    const callsignBase = request.callsignBase || callsignEntriesForRequest[0]?.callsign || "";
                     onUpdateTaskingRequest(request.id, {
                       callsignBase,
                       callsignNumber,
@@ -42549,23 +42551,56 @@ const TaskingRequestTable = ({
                 }
               )
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-10 items-center rounded-md border border-amber-400/30 bg-amber-500/10 px-3 text-xs font-semibold text-amber-100", children: "Configure unit callsigns in Settings." }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
               TaskingFieldPanel,
               {
                 label: "Aircraft",
-                hint: `${request.aircraftCount || 1} required`,
+                hint: request.isFormation && request.aircraftCount > 1 ? `${request.aircraftCount} aircraft formation` : `${request.aircraftCount || 1} required`,
                 className: "[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col",
-                contentClassName: "flex flex-1 items-center",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "number",
-                    min: 1,
-                    value: request.aircraftCount,
-                    onChange: (event) => onUpdateTaskingRequest(request.id, { aircraftCount: Math.max(1, parseInt(event.target.value, 10) || 1), submitted: false, saved: false }),
-                    className: taskingControlClass
-                  }
-                )
+                contentClassName: "flex flex-1 flex-col justify-center gap-2",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 1,
+                      value: request.aircraftCount,
+                      onChange: (event) => {
+                        const aircraftCount = Math.max(1, parseInt(event.target.value, 10) || 1);
+                        onUpdateTaskingRequest(request.id, {
+                          aircraftCount,
+                          isFormation: aircraftCount > 1 ? request.isFormation : false,
+                          submitted: false,
+                          saved: false
+                        });
+                      },
+                      className: taskingControlClass
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-h-[1.75rem] items-center gap-2 rounded-md border border-slate-700/80 bg-slate-950/35 px-2 py-1 text-xs font-semibold text-slate-200", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: request.isFormation === true,
+                        onChange: (event) => {
+                          const checked = event.target.checked;
+                          const nextCallsignBase = checked && formationCallsignEntries.length > 0 ? formationCallsignEntries[0].callsign : request.callsignBase;
+                          onUpdateTaskingRequest(request.id, {
+                            isFormation: checked,
+                            aircraftCount: checked ? Math.max(2, Math.floor(Number(request.aircraftCount) || 1)) : request.aircraftCount,
+                            callsignBase: nextCallsignBase,
+                            callsign: nextCallsignBase ? buildUnitEventCallsign(nextCallsignBase, request.callsignNumber || 0) : request.callsign,
+                            submitted: false,
+                            saved: false
+                          });
+                        },
+                        className: "h-4 w-4 rounded border-slate-500 bg-slate-900 text-cyan-500 focus:ring-cyan-400"
+                      }
+                    ),
+                    "Formation"
+                  ] })
+                ]
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -42727,6 +42762,7 @@ const PrioritiesView = ({
   standardMissionProfiles = [],
   onSaveStandardMissionProfile,
   unitCallsignSettings,
+  formationCallsigns = [],
   staffQualificationCatalogue: staffQualificationCatalogue2,
   instructorLabel: instructorLabel2 = "Instructor",
   continuationShortLabel = "ContT",
@@ -42947,6 +42983,33 @@ const PrioritiesView = ({
       return true;
     });
   }, [activeCallsignUnitCodes, unitCallsignSettings]);
+  const formationCallsignEntries = reactExports.useMemo(() => {
+    const activeUnits = new Set(activeCallsignUnitCodes);
+    const normalise = (value) => String(value || "").trim().toUpperCase();
+    const activeLocation = normalise(school);
+    const activeLocationTokens = new Set([
+      activeLocation,
+      activeLocation.replace(/^Y(?=[A-Z0-9]{3}$)/, ""),
+      activeLocation.length === 3 ? `Y${activeLocation}` : ""
+    ].filter(Boolean));
+    const seen = /* @__PURE__ */ new Set();
+    return formationCallsigns.map((callsign, index) => {
+      const unitCode = normalise(callsign.unit);
+      const code = normalise(callsign.code || callsign.name);
+      if (!code) return null;
+      if (unitCode && activeUnits.size > 0 && !activeUnits.has(unitCode)) return null;
+      const locationTokens = [callsign.location, callsign.locationCode].map(normalise).filter(Boolean);
+      if (locationTokens.length > 0 && !locationTokens.some((token) => activeLocationTokens.has(token))) return null;
+      const key = `${unitCode || activeTaskingUnitCode}::${code}`;
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return {
+        id: `formation-callsign-${unitCode || "unit"}-${code}-${index}`,
+        unitCode: unitCode || activeTaskingUnitCode,
+        callsign: code
+      };
+    }).filter(Boolean);
+  }, [activeCallsignUnitCodes, activeTaskingUnitCode, formationCallsigns, school]);
   const defaultUnitCallsign = reactExports.useMemo(
     () => activeCallsignUnitCodes.map((unitCode) => getDefaultUnitCallsign(unitCallsignSettings, unitCode)).find(Boolean) || "",
     [activeCallsignUnitCodes, unitCallsignSettings]
@@ -43751,6 +43814,7 @@ const PrioritiesView = ({
       depPoint: request.depPoint || school,
       arrivalPoint: request.arrivalPoint || school,
       aircraftCount: Math.max(1, parseInt(String(request.aircraftCount || "1"), 10) || 1),
+      isFormation: request.isFormation === true,
       aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
       crewRequirement: request.crewRequirement || { mode: "aircraft_default" },
       callsignBase: request.callsignBase || defaultUnitCallsign || "",
@@ -43773,6 +43837,7 @@ const PrioritiesView = ({
       Number.isFinite(Number(request.duration)) ? Number(request.duration).toFixed(3) : "",
       Math.max(1, Math.floor(Number(request.aircraftCount) || 1)),
       aircraftIndex,
+      request.isFormation === true ? "FORMATION" : "STANDARD",
       String(request.depPoint || "").trim().toUpperCase(),
       String(request.arrivalPoint || "").trim().toUpperCase(),
       String(request.aircraftConfigId || "").trim().toUpperCase(),
@@ -43940,6 +44005,7 @@ const PrioritiesView = ({
       depPoint: school,
       arrivalPoint: school,
       aircraftCount: 1,
+      isFormation: false,
       aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
       crewRequirement: isSingleSeatAircraft ? { mode: "custom", roles: [{ role: "Pilot", count: 1 }] } : { mode: "aircraft_default" },
       callsignBase: defaultUnitCallsign,
@@ -44020,6 +44086,8 @@ const PrioritiesView = ({
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
+    const isFormation = request.isFormation === true && aircraftCount > 1;
+    const formationId = isFormation ? `tasking-formation-${request.id}` : void 0;
     const aircraftConfigId = request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
     const callsignBase = request.callsignBase || defaultUnitCallsign;
     const callsignNumber = Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0;
@@ -44036,6 +44104,7 @@ const PrioritiesView = ({
       `Dep Point: ${depPoint}`,
       `Arrival Point: ${arrivalPoint}`,
       `Aircraft requested: ${aircraftCount}`,
+      isFormation ? "Formation: Yes" : "Formation: No",
       `Crew required: ${formatCrewRequirementSummary(request.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}`
     ].join("\n");
     return Array.from({ length: aircraftCount }, (_, index) => ({
@@ -44071,6 +44140,11 @@ const PrioritiesView = ({
       fixedCrewUnitCode: request.unitCode || activeTaskingUnitCode,
       taskingAircraftIndex: index + 1,
       taskingAircraftCount: aircraftCount,
+      isFormation,
+      formationId,
+      formationType: isFormation ? "Directed Task Formation" : void 0,
+      formationPosition: isFormation ? index + 1 : void 0,
+      formationSize: isFormation ? aircraftCount : void 0,
       dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
       notes,
       priority: schedulerPriority,
@@ -44079,7 +44153,7 @@ const PrioritiesView = ({
       crewRequirement: request.crewRequirement || { mode: "aircraft_default" }
     }));
   };
-  const taskingPriorityEventNeedsSync = (expected, actual) => !actual || actual.date !== expected.date || actual.flightNumber !== expected.flightNumber || actual.taskingName !== expected.taskingName || actual.taskingDisplayLabel !== expected.taskingDisplayLabel || actual.startTime !== expected.startTime || actual.duration !== expected.duration || actual.priority !== expected.priority || actual.isMandatoryTasking !== expected.isMandatoryTasking || actual.origin !== expected.origin || actual.destination !== expected.destination || actual.callsign !== expected.callsign || actual.aircraftConfigId !== expected.aircraftConfigId || actual.taskingAircraftCount !== expected.taskingAircraftCount || JSON.stringify(actual.crewRequirement || null) !== JSON.stringify(expected.crewRequirement || null);
+  const taskingPriorityEventNeedsSync = (expected, actual) => !actual || actual.date !== expected.date || actual.flightNumber !== expected.flightNumber || actual.taskingName !== expected.taskingName || actual.taskingDisplayLabel !== expected.taskingDisplayLabel || actual.startTime !== expected.startTime || actual.duration !== expected.duration || actual.priority !== expected.priority || actual.isMandatoryTasking !== expected.isMandatoryTasking || actual.origin !== expected.origin || actual.destination !== expected.destination || actual.callsign !== expected.callsign || actual.aircraftConfigId !== expected.aircraftConfigId || actual.taskingAircraftCount !== expected.taskingAircraftCount || actual.isFormation !== expected.isFormation || actual.formationId !== expected.formationId || actual.formationPosition !== expected.formationPosition || actual.formationSize !== expected.formationSize || JSON.stringify(actual.crewRequirement || null) !== JSON.stringify(expected.crewRequirement || null);
   reactExports.useEffect(() => {
     visibleTaskingRequests.filter((request) => request.submitted && !request.ignored).forEach((request) => {
       const expectedEvents = buildTaskingPriorityEvents(request);
@@ -45952,6 +46026,7 @@ const PrioritiesView = ({
             crewRequirementPresets,
             crewPositionTerminology,
             unitCallsignEntries,
+            formationCallsignEntries,
             callsignNumberOptions,
             onUpdateTaskingRequest: updateTaskingRequest,
             onRemoveTaskingRequest: removeTaskingRequest,
@@ -99518,6 +99593,7 @@ const getHighestPriorityTaskingSemanticKey = (event) => {
     Number.isFinite(Number(event.startTime)) ? Number(event.startTime).toFixed(3) : "",
     Number.isFinite(Number(event.duration)) ? Number(event.duration).toFixed(3) : "",
     getHighestPriorityTaskingAircraftIndex(event),
+    event.isFormation === true || Number(event.formationSize || 0) > 1 ? "FORMATION" : "STANDARD",
     normaliseHighestPriorityIdentityText(event.origin || event.depPoint),
     normaliseHighestPriorityIdentityText(event.destination || event.arrivalPoint),
     normaliseHighestPriorityIdentityText(event.aircraftConfigId),
@@ -108030,6 +108106,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     taskingRequestId: event.taskingRequestId || null,
     aircraftIndex: event.taskingAircraftIndex || null,
     aircraftCount: event.taskingAircraftCount || null,
+    isFormation: event.isFormation === true || Number(event.formationSize || 0) > 1,
+    formationId: event.formationId || null,
+    formationPosition: event.formationPosition || null,
+    formationSize: event.formationSize || null,
     flightNumber: event.flightNumber,
     requestedStartTime: event.startTime,
     duration: event.duration,
@@ -108090,6 +108170,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         ...resourceOptions.slice(preferredIndex),
         ...resourceOptions.slice(0, preferredIndex)
       ];
+    };
+    const getTaskingFormationCallsign = (priorityEvent) => {
+      if (priorityEvent.isFormation !== true || !priorityEvent.formationId) return priorityEvent.callsign || "";
+      const position = Math.max(1, Math.floor(Number(priorityEvent.formationPosition || priorityEvent.taskingAircraftIndex) || 1));
+      const base = String(priorityEvent.callsign || priorityEvent.taskingDisplayLabel || priorityEvent.flightNumber || "FORM").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/\d+$/, "").slice(0, 8) || "FORM";
+      return `${base}${position}`;
     };
     const assignTaskingStaff = (candidate, requiredStaffCount) => {
       if (isAirCombatBuild) {
@@ -108296,7 +108382,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const resourceOptionsAtTime = getTaskingResourceOptionsForFlow(priorityEvent, roundedTime);
         if (priorityEvent.type === "flight") {
-          const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(roundedTime, 1);
+          const formationGroupId = priorityEvent.isFormation === true && priorityEvent.formationId ? priorityEvent.formationId : void 0;
+          const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(roundedTime, 1, {
+            excludedFormationId: formationGroupId
+          });
           if (dispatchLimitViolation) {
             if (attemptSummary.length < 12) {
               attemptSummary.push({
@@ -108338,11 +108427,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             resourceId,
             aircraftConfigId: getAircraftConfigIdForResource(resourceId),
             acceptableAircraftConfigs: normaliseAircraftConfigRequirement(priorityEvent),
+            callsign: getTaskingFormationCallsign(priorityEvent),
             _source: "highest-priority-tasking",
             _isNext: true,
             _traineeName: ""
           };
-          if (hasDispatchStaggerConflict(candidate.type, roundedTime, generatedEvents)) {
+          if (hasDispatchStaggerConflict(candidate.type, roundedTime, generatedEvents, {
+            allowSameFormationTakeoff: Boolean(candidate.formationId),
+            formationGroupId: candidate.formationId
+          })) {
             const reason = candidate.type === "flight" ? "TAKEOFF_SEPARATION_VIOLATION" : "SIMULATOR_STAGGER_VIOLATION";
             if (attemptSummary.length < 12) {
               attemptSummary.push({
@@ -132904,6 +132997,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             unitCallsignSettings: activeUnitCallsignSettings,
+            formationCallsigns,
             onAddPriorityEvents: (eventsToAdd) => {
               setHighestPriorityEvents((prev) => mergeHighestPriorityEvents(prev, eventsToAdd));
             },
