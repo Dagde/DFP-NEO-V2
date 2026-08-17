@@ -108781,17 +108781,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return null;
     };
     const hasAirCombatNonFormationTakeoffConflict = (startTime) => hasDispatchStaggerConflict("flight", startTime, generatedEvents);
-    const normaliseFormationContextToken2 = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const expandFormationLocationAliases2 = (value) => {
-      const token = normaliseFormationContextToken2(value);
+    const normaliseFormationContextToken = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const expandFormationLocationAliases = (value) => {
+      const token = normaliseFormationContextToken(value);
       if (!token) return [];
       const aliases = /* @__PURE__ */ new Set([token]);
       if (token.startsWith("Y") && token.length === 4) aliases.add(token.slice(1));
       if (token.length === 3) aliases.add(`Y${token}`);
       try {
         Object.entries(config.locationAbbreviations || {}).forEach(([name, abbreviation]) => {
-          const nameToken = normaliseFormationContextToken2(name);
-          const abbreviationToken = normaliseFormationContextToken2(abbreviation);
+          const nameToken = normaliseFormationContextToken(name);
+          const abbreviationToken = normaliseFormationContextToken(abbreviation);
           if (token === nameToken || token === abbreviationToken || token === `Y${abbreviationToken}`) {
             aliases.add(nameToken);
             aliases.add(abbreviationToken);
@@ -108810,26 +108810,26 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           member.staff.unit ? config.unitLocations?.[member.staff.unit] : ""
         ])
       ];
-      return new Set(rawValues.flatMap(expandFormationLocationAliases2));
+      return new Set(rawValues.flatMap(expandFormationLocationAliases));
     };
     const getAirCombatFormationCallsignContext = (members, formationUnit) => {
-      const memberUnitTokens = new Set(members.map((member) => normaliseFormationContextToken2(member.staff.unit)).filter(Boolean));
-      const activeUnitTokens = new Set(String(buildActiveUnitCode || "").split("+").map(normaliseFormationContextToken2).filter(Boolean));
+      const memberUnitTokens = new Set(members.map((member) => normaliseFormationContextToken(member.staff.unit)).filter(Boolean));
+      const activeUnitTokens = new Set(String(buildActiveUnitCode || "").split("+").map(normaliseFormationContextToken).filter(Boolean));
       const allowedUnitTokens = new Set([
         ...memberUnitTokens,
         ...activeUnitTokens,
-        normaliseFormationContextToken2(formationUnit)
+        normaliseFormationContextToken(formationUnit)
       ].filter(Boolean));
       const locationAliases = getAirCombatFormationLocationAliases(members);
       return { memberUnitTokens, activeUnitTokens, allowedUnitTokens, locationAliases };
     };
     const formationCallsignMatchesAirCombatContext = (callsign, members, formationUnit) => {
-      const configuredUnit = normaliseFormationContextToken2(callsign.unit);
+      const configuredUnit = normaliseFormationContextToken(callsign.unit);
       const { allowedUnitTokens, locationAliases } = getAirCombatFormationCallsignContext(members, formationUnit);
       const unitMatches = !configuredUnit || allowedUnitTokens.size === 0 || allowedUnitTokens.has(configuredUnit);
       const callsignLocationAliases = [
-        ...expandFormationLocationAliases2(callsign.location),
-        ...expandFormationLocationAliases2(callsign.locationCode)
+        ...expandFormationLocationAliases(callsign.location),
+        ...expandFormationLocationAliases(callsign.locationCode)
       ];
       const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some((alias) => locationAliases.has(alias));
       return unitMatches && locationMatches;
@@ -108896,10 +108896,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         };
         callsignAudit = (config.formationCallsigns || []).map((callsign) => {
           const normalisedCode = normalizeFormationCallsignCode(callsign.code);
-          const configuredUnit = normaliseFormationContextToken2(callsign.unit);
+          const configuredUnit = normaliseFormationContextToken(callsign.unit);
           const callsignLocationAliases = [
-            ...expandFormationLocationAliases2(callsign.location),
-            ...expandFormationLocationAliases2(callsign.locationCode)
+            ...expandFormationLocationAliases(callsign.location),
+            ...expandFormationLocationAliases(callsign.locationCode)
           ];
           const unitMatches = !configuredUnit || context.allowedUnitTokens.size === 0 || context.allowedUnitTokens.has(configuredUnit);
           const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some((alias) => context.locationAliases.has(alias));
@@ -110557,6 +110557,27 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return (prefix || school || "FORM").slice(0, 4).toUpperCase();
   };
   const normalizeFormationCallsignCode = (callsign) => String(callsign || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  const normaliseBuildFormationContextToken = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const expandBuildFormationLocationAliases = (value) => {
+    const token = normaliseBuildFormationContextToken(value);
+    if (!token) return [];
+    const aliases = /* @__PURE__ */ new Set([token]);
+    if (token.startsWith("Y") && token.length === 4) aliases.add(token.slice(1));
+    if (token.length === 3) aliases.add(`Y${token}`);
+    try {
+      Object.entries(config.locationAbbreviations || {}).forEach(([name, abbreviation]) => {
+        const nameToken = normaliseBuildFormationContextToken(name);
+        const abbreviationToken = normaliseBuildFormationContextToken(abbreviation);
+        if (token === nameToken || token === abbreviationToken || token === `Y${abbreviationToken}`) {
+          aliases.add(nameToken);
+          aliases.add(abbreviationToken);
+          aliases.add(`Y${abbreviationToken}`);
+        }
+      });
+    } catch {
+    }
+    return Array.from(aliases);
+  };
   const eventUsesFormationCallsignBase = (eventCallsign, callsignBase) => {
     const normalizedCallsign = normalizeFormationCallsignCode(eventCallsign);
     const normalizedBase = normalizeFormationCallsignCode(callsignBase);
@@ -110576,12 +110597,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const leadEvent = stagedEvents[0];
     const formationUnit = selectedTrainees.find((trainee) => String(trainee.unit || "").trim())?.unit || "";
     const formationContext = (() => {
-      const traineeUnitTokens = new Set(selectedTrainees.map((trainee) => normaliseFormationContextToken(trainee.unit)).filter(Boolean));
-      const activeUnitTokens = new Set(String(buildActiveUnitCode || "").split("+").map(normaliseFormationContextToken).filter(Boolean));
+      const traineeUnitTokens = new Set(selectedTrainees.map((trainee) => normaliseBuildFormationContextToken(trainee.unit)).filter(Boolean));
+      const activeUnitTokens = new Set(String(buildActiveUnitCode || "").split("+").map(normaliseBuildFormationContextToken).filter(Boolean));
       const allowedUnitTokens = new Set([
         ...traineeUnitTokens,
         ...activeUnitTokens,
-        normaliseFormationContextToken(formationUnit)
+        normaliseBuildFormationContextToken(formationUnit)
       ].filter(Boolean));
       const locationAliases = new Set([
         school,
@@ -110589,15 +110610,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           trainee.location,
           trainee.unit ? config.unitLocations?.[trainee.unit] : ""
         ])
-      ].flatMap(expandFormationLocationAliases));
+      ].flatMap(expandBuildFormationLocationAliases));
       return { allowedUnitTokens, locationAliases };
     })();
     const formationCallsignMatchesContext = (callsign) => {
-      const configuredUnit = normaliseFormationContextToken(callsign.unit);
+      const configuredUnit = normaliseBuildFormationContextToken(callsign.unit);
       const unitMatches = !configuredUnit || formationContext.allowedUnitTokens.size === 0 || formationContext.allowedUnitTokens.has(configuredUnit);
       const callsignLocationAliases = [
-        ...expandFormationLocationAliases(callsign.location),
-        ...expandFormationLocationAliases(callsign.locationCode)
+        ...expandBuildFormationLocationAliases(callsign.location),
+        ...expandBuildFormationLocationAliases(callsign.locationCode)
       ];
       const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some((alias) => formationContext.locationAliases.has(alias));
       return unitMatches && locationMatches;

@@ -19622,6 +19622,31 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     const normalizeFormationCallsignCode = (callsign?: string | null): string =>
         String(callsign || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
 
+    const normaliseBuildFormationContextToken = (value?: string | null): string =>
+        String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    const expandBuildFormationLocationAliases = (value?: string | null): string[] => {
+        const token = normaliseBuildFormationContextToken(value);
+        if (!token) return [];
+        const aliases = new Set<string>([token]);
+        if (token.startsWith('Y') && token.length === 4) aliases.add(token.slice(1));
+        if (token.length === 3) aliases.add(`Y${token}`);
+        try {
+            Object.entries(config.locationAbbreviations || {}).forEach(([name, abbreviation]) => {
+                const nameToken = normaliseBuildFormationContextToken(name);
+                const abbreviationToken = normaliseBuildFormationContextToken(abbreviation);
+                if (token === nameToken || token === abbreviationToken || token === `Y${abbreviationToken}`) {
+                    aliases.add(nameToken);
+                    aliases.add(abbreviationToken);
+                    aliases.add(`Y${abbreviationToken}`);
+                }
+            });
+        } catch {
+            // Callsign location aliasing is advisory only; never let it stop a build.
+        }
+        return Array.from(aliases);
+    };
+
     const eventUsesFormationCallsignBase = (eventCallsign: string | undefined, callsignBase: string): boolean => {
         const normalizedCallsign = normalizeFormationCallsignCode(eventCallsign);
         const normalizedBase = normalizeFormationCallsignCode(callsignBase);
@@ -19652,12 +19677,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const leadEvent = stagedEvents[0];
         const formationUnit = selectedTrainees.find(trainee => String(trainee.unit || '').trim())?.unit || '';
         const formationContext = (() => {
-            const traineeUnitTokens = new Set(selectedTrainees.map(trainee => normaliseFormationContextToken(trainee.unit)).filter(Boolean));
-            const activeUnitTokens = new Set(String(buildActiveUnitCode || '').split('+').map(normaliseFormationContextToken).filter(Boolean));
+            const traineeUnitTokens = new Set(selectedTrainees.map(trainee => normaliseBuildFormationContextToken(trainee.unit)).filter(Boolean));
+            const activeUnitTokens = new Set(String(buildActiveUnitCode || '').split('+').map(normaliseBuildFormationContextToken).filter(Boolean));
             const allowedUnitTokens = new Set([
                 ...traineeUnitTokens,
                 ...activeUnitTokens,
-                normaliseFormationContextToken(formationUnit),
+                normaliseBuildFormationContextToken(formationUnit),
             ].filter(Boolean));
             const locationAliases = new Set([
                 school,
@@ -19665,15 +19690,15 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     (trainee as any).location,
                     trainee.unit ? config.unitLocations?.[trainee.unit] : '',
                 ])),
-            ].flatMap(expandFormationLocationAliases));
+            ].flatMap(expandBuildFormationLocationAliases));
             return { allowedUnitTokens, locationAliases };
         })();
         const formationCallsignMatchesContext = (callsign: FormationCallsign): boolean => {
-            const configuredUnit = normaliseFormationContextToken(callsign.unit);
+            const configuredUnit = normaliseBuildFormationContextToken(callsign.unit);
             const unitMatches = !configuredUnit || formationContext.allowedUnitTokens.size === 0 || formationContext.allowedUnitTokens.has(configuredUnit);
             const callsignLocationAliases = [
-                ...expandFormationLocationAliases(callsign.location),
-                ...expandFormationLocationAliases(callsign.locationCode),
+                ...expandBuildFormationLocationAliases(callsign.location),
+                ...expandBuildFormationLocationAliases(callsign.locationCode),
             ];
             const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some(alias => formationContext.locationAliases.has(alias));
             return unitMatches && locationMatches;
