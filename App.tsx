@@ -42041,7 +42041,7 @@ appliedUpdates.forEach(update => {
             ? Math.min(requestedFormationSize, Math.max(1, availableFormationResources.length))
             : 1;
         const formationId = formationSize > 1 ? uuidv4() : undefined;
-        const configuredFormationCallsignBase = callsignOptions.map(getFormationCallsignBase).find(Boolean) || '';
+        const configuredFormationCallsignBase = neoAssistCallsignOptions.map(getFormationCallsignBase).find(Boolean) || '';
         const callsignBase = formationSize > 1
             ? (configuredFormationCallsignBase || getFormationCallsignBase(draft.callsign))
             : getFormationCallsignBase(draft.callsign);
@@ -42079,7 +42079,7 @@ appliedUpdates.forEach(update => {
                 formationSize: formationSize > 1 ? formationSize : draft.formationSize,
             };
         });
-    }, [activeAircraftResourcePrefix, callsignOptions]);
+    }, [activeAircraftResourcePrefix, neoAssistCallsignOptions]);
 
     const handleProgramScheduleExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
         if (isPastDfpDate(date)) {

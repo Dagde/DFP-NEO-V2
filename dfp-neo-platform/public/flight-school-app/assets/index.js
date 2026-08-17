@@ -35032,7 +35032,7 @@ const AddFlightTileModal = ({
   const [aircraftCount, setAircraftCount] = reactExports.useState(1);
   const [formationCrew, setFormationCrew] = reactExports.useState([]);
   const [callsign, setCallsign] = reactExports.useState("");
-  const [callsignOptions2, setCallsignOptions] = reactExports.useState([]);
+  const [callsignOptions, setCallsignOptions] = reactExports.useState([]);
   const [unitCallsignBase, setUnitCallsignBase] = reactExports.useState("");
   const [unitCallsignNumber, setUnitCallsignNumber] = reactExports.useState(0);
   const [notes, setNotes] = reactExports.useState("");
@@ -95042,7 +95042,7 @@ const DfpSidePanelTimeline = ({
   onUpdateCptCount,
   locationCode,
   trainingAreas,
-  callsignOptions: callsignOptions2,
+  callsignOptions,
   staffListNames,
   formatResourceLabel: formatResourceLabel2,
   operationalModel,
@@ -95531,7 +95531,7 @@ const DfpSidePanelTimeline = ({
     });
   }, [assistFormationSize, canSelectFormationCrew, selectedCrewName]);
   const normaliseAssistFormationCallsignBase = (callsign) => String(callsign || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/\d+$/g, "");
-  const getConfiguredAssistFormationCallsignBase = () => callsignOptions2.map(normaliseAssistFormationCallsignBase).find(Boolean) || "";
+  const getConfiguredAssistFormationCallsignBase = () => callsignOptions.map(normaliseAssistFormationCallsignBase).find(Boolean) || "";
   const getAssistFormationCallsignBase = () => {
     const configuredBase = getConfiguredAssistFormationCallsignBase();
     if (assistFormationSize > 1 && configuredBase) return configuredBase;
@@ -97527,7 +97527,7 @@ const DfpSidePanelTimeline = ({
                 placeholder: "CSIGN"
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-callsign-options", children: callsignOptions2.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: callsign }, callsign)) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-callsign-options", children: callsignOptions.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: callsign }, callsign)) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Assigned Area",
@@ -128875,7 +128875,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     const isFlightFormation = requestedFormationSize > 1 && isActiveAircraftResource(firstResourceId);
     const formationSize = isFlightFormation ? Math.min(requestedFormationSize, Math.max(1, availableFormationResources.length)) : 1;
     const formationId = formationSize > 1 ? v4() : void 0;
-    const configuredFormationCallsignBase = callsignOptions.map(getFormationCallsignBase).find(Boolean) || "";
+    const configuredFormationCallsignBase = neoAssistCallsignOptions.map(getFormationCallsignBase).find(Boolean) || "";
     const callsignBase = formationSize > 1 ? configuredFormationCallsignBase || getFormationCallsignBase(draft.callsign) : getFormationCallsignBase(draft.callsign);
     const crewSelectionOrder = Array.isArray(draft.crewSelectionOrder) ? draft.crewSelectionOrder.filter((name) => typeof name === "string" && name.trim().length > 0) : [];
     return Array.from({ length: formationSize }, (_, index) => {
@@ -128901,7 +128901,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         formationSize: formationSize > 1 ? formationSize : draft.formationSize
       };
     });
-  }, [activeAircraftResourcePrefix, callsignOptions]);
+  }, [activeAircraftResourcePrefix, neoAssistCallsignOptions]);
   const handleProgramScheduleExternalEventDrop = reactExports.useCallback((draft, placement) => {
     if (isPastDfpDate(date)) {
       denyPastDfpEdit("add tiles");
