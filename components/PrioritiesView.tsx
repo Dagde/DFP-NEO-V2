@@ -3778,8 +3778,15 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           })
           .forEach(event => onUpdatePriorityEvent(event.id, { date: buildDfpDate }));
   }, [activeScheduleEvents, buildDfpDate, highestPriorityEvents, onDeletePriorityEvent, onUpdatePriorityEvent]);
-  const standardPriorityEvents = highestPriorityEvents;
-  const stalePriorityEvents = highestPriorityEvents.filter(event => !priorityEventMatchesBuildDate(event));
+  const isGeneratedTaskingFormationMember = (event: ScheduleEvent): boolean => (
+      !!event.taskingRequestId &&
+      Number(event.formationSize || 0) > 1 &&
+      Number(event.formationPosition || 0) > 0 &&
+      String(event.id || '').startsWith('tasking-')
+  );
+  const displayPriorityEvents = highestPriorityEvents.filter(event => !isGeneratedTaskingFormationMember(event));
+  const standardPriorityEvents = displayPriorityEvents;
+  const stalePriorityEvents = displayPriorityEvents.filter(event => !priorityEventMatchesBuildDate(event));
   
   // Calculate incomplete remedials for display
   const incompleteRemedials = useMemo(() => {

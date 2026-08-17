@@ -44842,8 +44842,10 @@ const PrioritiesView = ({
       return /^\d{4}-\d{2}-\d{2}$/.test(eventDate) && eventDate < buildDfpDate && eventDate >= today;
     }).forEach((event) => onUpdatePriorityEvent(event.id, { date: buildDfpDate }));
   }, [activeScheduleEvents, buildDfpDate, highestPriorityEvents, onDeletePriorityEvent, onUpdatePriorityEvent]);
-  const standardPriorityEvents = highestPriorityEvents;
-  const stalePriorityEvents = highestPriorityEvents.filter((event) => !priorityEventMatchesBuildDate(event));
+  const isGeneratedTaskingFormationMember = (event) => !!event.taskingRequestId && Number(event.formationSize || 0) > 1 && Number(event.formationPosition || 0) > 0 && String(event.id || "").startsWith("tasking-");
+  const displayPriorityEvents = highestPriorityEvents.filter((event) => !isGeneratedTaskingFormationMember(event));
+  const standardPriorityEvents = displayPriorityEvents;
+  const stalePriorityEvents = displayPriorityEvents.filter((event) => !priorityEventMatchesBuildDate(event));
   reactExports.useMemo(() => {
     const list = [];
     traineesData.forEach((t) => {
@@ -99595,6 +99597,7 @@ const getHighestPriorityTaskingSemanticKey = (event) => {
   const unitCode = normaliseHighestPriorityIdentityText(
     event.taskingUnitCode || event.unitCode || event.fixedCrewUnitCode || event.unit || ""
   );
+  const isFormationTasking = event.isFormation === true || Number(event.formationSize || 0) > 1;
   return [
     "tasking",
     unitCode,
@@ -99602,8 +99605,8 @@ const getHighestPriorityTaskingSemanticKey = (event) => {
     taskingLabel,
     Number.isFinite(Number(event.startTime)) ? Number(event.startTime).toFixed(3) : "",
     Number.isFinite(Number(event.duration)) ? Number(event.duration).toFixed(3) : "",
-    getHighestPriorityTaskingAircraftIndex(event),
-    event.isFormation === true || Number(event.formationSize || 0) > 1 ? "FORMATION" : "STANDARD",
+    isFormationTasking ? "FORMATION" : getHighestPriorityTaskingAircraftIndex(event),
+    isFormationTasking ? "FORMATION" : "STANDARD",
     normaliseHighestPriorityIdentityText(event.origin || event.depPoint),
     normaliseHighestPriorityIdentityText(event.destination || event.arrivalPoint),
     normaliseHighestPriorityIdentityText(event.aircraftConfigId),
@@ -108181,10 +108184,174 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         ...resourceOptions.slice(0, preferredIndex)
       ];
     };
-    const getTaskingFormationCallsign = (priorityEvent, positionOverride) => {
+    const normaliseTaskingFormationToken = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const normaliseTaskingFormationBase = (value) => normaliseTaskingFormationToken(value).replace(/\d+$/, "").slice(0, 8);
+    const expandTaskingFormationLocationAliases = (value) => {
+      const token = normaliseTaskingFormationToken(value);
+      if (!token) return [];
+      const aliases = /* @__PURE__ */ new Set([token]);
+      if (/^Y[A-Z0-9]{3}$/.test(token)) aliases.add(token.slice(1));
+      if (/^[A-Z0-9]{3}$/.test(token)) aliases.add(`Y${token}`);
+      try {
+        Object.entries(config.locationAbbreviations || {}).forEach(([name, abbreviation]) => {
+          const nameToken = normaliseTaskingFormationToken(name);
+          const abbreviationToken = normaliseTaskingFormationToken(abbreviation);
+          if (token === nameToken || token === abbreviationToken) {
+            if (nameToken) aliases.add(nameToken);
+            if (abbreviationToken) {
+              aliases.add(abbreviationToken);
+              aliases.add(`Y${abbreviationToken}`);
+            }
+          }
+        });
+      } catch {
+      }
+      return Array.from(aliases);
+    };
+    const getTaskingFormationContext = (priorityEvent) => {
+      const rawUnitValues = [
+        priorityEvent.taskingUnitCode,
+        priorityEvent.unitCode,
+        priorityEvent.fixedCrewUnitCode,
+        priorityEvent.unit,
+        buildActiveUnitCode,
+        ...String(buildActiveUnitCode || "").split("+"),
+        ...priorityEvent.taskingUnitCodes || [],
+        ...priorityEvent.unitCodes || []
+      ];
+      const allowedUnitTokens = new Set(rawUnitValues.flatMap((value) => String(value || "").split("+")).map(normaliseTaskingFormationToken).filter(Boolean));
+      const locationValues = [
+        school,
+        priorityEvent.origin,
+        priorityEvent.depPoint,
+        priorityEvent.destination,
+        priorityEvent.arrivalPoint
+      ];
+      Object.entries(config.unitLocations || {}).forEach(([unit, location]) => {
+        if (allowedUnitTokens.has(normaliseTaskingFormationToken(unit))) locationValues.push(location);
+      });
+      const locationAliases = new Set(locationValues.flatMap(expandTaskingFormationLocationAliases).filter(Boolean));
+      return { allowedUnitTokens, locationAliases };
+    };
+    const taskingFormationCallsignContextScore = (priorityEvent, callsign) => {
+      const context = getTaskingFormationContext(priorityEvent);
+      const configuredUnit = normaliseTaskingFormationToken(callsign.unit);
+      const callsignLocationAliases = [
+        ...expandTaskingFormationLocationAliases(callsign.location),
+        ...expandTaskingFormationLocationAliases(callsign.locationCode)
+      ];
+      const unitMatches = !configuredUnit || context.allowedUnitTokens.size === 0 || context.allowedUnitTokens.has(configuredUnit);
+      const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some((alias) => context.locationAliases.has(alias));
+      if (unitMatches && locationMatches) return 3;
+      if (unitMatches) return 2;
+      if (locationMatches) return 1;
+      return 0;
+    };
+    const eventUsesTaskingFormationBase = (eventCallsign, callsignBase) => {
+      const normalisedCallsign = normaliseTaskingFormationToken(eventCallsign);
+      const normalisedBase = normaliseTaskingFormationBase(callsignBase);
+      if (!normalisedCallsign || !normalisedBase) return false;
+      return normalisedCallsign === normalisedBase || new RegExp(`^${normalisedBase}\\d+$`).test(normalisedCallsign);
+    };
+    const getTaskingFormationCallsignConflicts = (callsignBase, startTime, duration) => {
+      const normalisedBase = normaliseTaskingFormationBase(callsignBase);
+      if (!normalisedBase) return [];
+      const endTime = startTime + duration;
+      return generatedEvents.filter((event) => {
+        const eventEnd = event.startTime + event.duration;
+        return event.startTime < endTime && eventEnd > startTime && eventUsesTaskingFormationBase(event.callsign, normalisedBase);
+      }).map((event) => ({
+        id: event.id || null,
+        callsign: event.callsign || null,
+        formationId: event.formationId || null,
+        flightNumber: event.flightNumber || null,
+        startTime: event.startTime,
+        endTime: event.startTime + event.duration,
+        resourceId: event.resourceId || null
+      }));
+    };
+    const isTaskingFormationCallsignBaseAvailable = (callsignBase, startTime, duration) => normaliseTaskingFormationBase(callsignBase) !== "" && getTaskingFormationCallsignConflicts(callsignBase, startTime, duration).length === 0;
+    const selectTaskingFormationCallsignBase = (priorityEvent, startTime, duration) => {
+      const configuredCandidates = (config.formationCallsigns || []).map((callsign) => ({
+        ...callsign,
+        code: normaliseTaskingFormationBase(callsign.code || callsign.name),
+        contextScore: taskingFormationCallsignContextScore(priorityEvent, callsign)
+      })).filter((callsign) => callsign.code).sort((left, right) => right.contextScore - left.contextScore || left.code.localeCompare(right.code));
+      const bestScore = configuredCandidates[0]?.contextScore || 0;
+      const scopedCandidates = configuredCandidates.filter((callsign) => callsign.contextScore === bestScore);
+      const orderedCandidates = orderBuildDeterministically(
+        scopedCandidates,
+        `tasking-formation-callsigns|${priorityEvent.taskingRequestId || priorityEvent.id}|${startTime}|${duration}`,
+        (callsign) => callsign.code || callsign.name
+      );
+      const available = orderedCandidates.find(
+        (callsign) => isTaskingFormationCallsignBaseAvailable(callsign.code, startTime, duration)
+      );
+      const inUseCandidates = configuredCandidates.filter((callsign) => !isTaskingFormationCallsignBaseAvailable(callsign.code, startTime, duration)).map((callsign) => callsign.code);
+      if (available) {
+        pushAirCombatDiag("formationCallsignDiagnostics", {
+          phase: "tasking-formation-callsign-selected",
+          selectedBase: available.code,
+          source: "configured",
+          startTime,
+          duration,
+          priorityEvent: getTaskingEventIdentity(priorityEvent),
+          formationSize: priorityEvent.formationSize || priorityEvent.taskingAircraftCount || priorityEvent.aircraftCount || null,
+          candidates: configuredCandidates.map((callsign) => ({
+            code: callsign.code,
+            name: callsign.name || null,
+            unit: callsign.unit || null,
+            location: callsign.location || null,
+            locationCode: callsign.locationCode || null,
+            contextScore: callsign.contextScore
+          })),
+          inUseCandidates
+        }, 300);
+        return {
+          base: available.code,
+          source: "configured",
+          candidates: configuredCandidates.map((callsign) => callsign.code),
+          inUseCandidates
+        };
+      }
+      const fallbackCandidates = [
+        priorityEvent.callsign,
+        priorityEvent.taskingDisplayLabel,
+        priorityEvent.flightNumber,
+        "FORM"
+      ].map((candidate) => normaliseTaskingFormationBase(candidate).slice(0, 4)).filter(Boolean);
+      const fallbackBase = fallbackCandidates.find(
+        (candidate) => isTaskingFormationCallsignBaseAvailable(candidate, startTime, duration)
+      ) || "FORM";
+      pushAirCombatDiag("formationCallsignDiagnostics", {
+        phase: "tasking-formation-callsign-fallback",
+        selectedBase: fallbackBase,
+        source: "fallback",
+        startTime,
+        duration,
+        priorityEvent: getTaskingEventIdentity(priorityEvent),
+        configuredCandidates: configuredCandidates.map((callsign) => ({
+          code: callsign.code,
+          contextScore: callsign.contextScore
+        })),
+        inUseCandidates,
+        fallbackCandidates,
+        fallbackConflicts: fallbackCandidates.map((candidate) => ({
+          candidate,
+          conflicts: getTaskingFormationCallsignConflicts(candidate, startTime, duration)
+        }))
+      }, 300);
+      return {
+        base: fallbackBase,
+        source: "fallback",
+        candidates: configuredCandidates.map((callsign) => callsign.code),
+        inUseCandidates
+      };
+    };
+    const getTaskingFormationCallsign = (priorityEvent, positionOverride, selectedBase) => {
       if (priorityEvent.isFormation !== true || !priorityEvent.formationId) return priorityEvent.callsign || "";
       const position = Math.max(1, Math.floor(Number(positionOverride || priorityEvent.formationPosition || priorityEvent.taskingAircraftIndex) || 1));
-      const base = String(priorityEvent.callsign || priorityEvent.taskingDisplayLabel || priorityEvent.flightNumber || "FORM").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/\d+$/, "").slice(0, 8) || "FORM";
+      const base = normaliseTaskingFormationBase(selectedBase) || normaliseTaskingFormationBase(priorityEvent.callsign || priorityEvent.taskingDisplayLabel || priorityEvent.flightNumber || "FORM") || "FORM";
       return `${base}${position}`;
     };
     const assignTaskingStaff = (candidate, requiredStaffCount) => {
@@ -108394,6 +108561,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
         }
         const resourceOptionsAtTime = getTaskingResourceOptionsForFlow(priorityEvent, roundedTime);
+        const formationCallsignSelection = requestedFormationSize > 1 ? selectTaskingFormationCallsignBase(priorityEvent, roundedTime, priorityEvent.duration) : null;
         if (priorityEvent.type === "flight") {
           const formationGroupId = requestedFormationSize > 1 && priorityFormationId ? priorityFormationId : void 0;
           const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(roundedTime, requestedFormationSize, {
@@ -108453,7 +108621,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               formationType: requestedFormationSize > 1 ? "Directed Task Formation" : priorityEvent.formationType,
               formationPosition: requestedFormationSize > 1 ? memberIndex : priorityEvent.formationPosition,
               formationSize: requestedFormationSize > 1 ? requestedFormationSize : priorityEvent.formationSize,
-              callsign: requestedFormationSize > 1 ? getTaskingFormationCallsign({ ...priorityEvent, formationId: priorityFormationId, isFormation: true }, memberIndex) : getTaskingFormationCallsign(priorityEvent),
+              callsign: requestedFormationSize > 1 ? getTaskingFormationCallsign({ ...priorityEvent, formationId: priorityFormationId, isFormation: true }, memberIndex, formationCallsignSelection?.base) : getTaskingFormationCallsign(priorityEvent),
+              isTaskingRequest: false,
               _source: "highest-priority-tasking",
               _isNext: true,
               _traineeName: ""
