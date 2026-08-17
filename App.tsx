@@ -21919,40 +21919,71 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         };
 
         const personnelTurnaroundFor = (earlierEvent: Omit<ScheduleEvent, 'date'>, laterEvent: Omit<ScheduleEvent, 'date'>): number => {
-            const earlierWindow = eventWindow(earlierEvent);
-            const laterWindow = eventWindow(laterEvent);
+            const earlierWindow = getCachedRepairEventMeta(earlierEvent as BuildEvent).window;
+            const laterWindow = getCachedRepairEventMeta(laterEvent as BuildEvent).window;
             const lmpBriefDebriefGap = Math.max(0, earlierWindow.end - (earlierEvent.startTime + earlierEvent.duration)) +
                 Math.max(0, laterEvent.startTime - laterWindow.start);
             return Math.max(resourceTurnaroundFor(earlierEvent), lmpBriefDebriefGap);
         };
 
+        const repairEventMetaCache = new WeakMap<BuildEvent, {
+            window: { start: number; end: number };
+            personnelKeys: Set<string>;
+            classification: ReturnType<typeof getGeneratedEventDayNightClassification>;
+            isStby: boolean;
+            turnaround: number;
+        }>();
+        const getCachedRepairEventMeta = (event: BuildEvent) => {
+            let cached = repairEventMetaCache.get(event);
+            if (!cached) {
+                cached = {
+                    window: eventWindow(event),
+                    personnelKeys: new Set(getPersonnelIdentityRefs(event).map(ref => ref.key)),
+                    classification: getGeneratedEventDayNightClassification(event),
+                    isStby: isStbyResource(event.resourceId),
+                    turnaround: resourceTurnaroundFor(event),
+                };
+                repairEventMetaCache.set(event, cached);
+            }
+            return cached;
+        };
+        const hasCommonRepairPersonnel = (
+            candidateMeta: ReturnType<typeof getCachedRepairEventMeta>,
+            existingMeta: ReturnType<typeof getCachedRepairEventMeta>,
+        ): boolean => {
+            for (const key of candidateMeta.personnelKeys) {
+                if (existingMeta.personnelKeys.has(key)) return true;
+            }
+            return false;
+        };
+
         const hasBuildConflict = (candidate: BuildEvent, acceptedEvents: BuildEvent[]): boolean => {
-            const candidateWindow = eventWindow(candidate);
+            const candidateMeta = getCachedRepairEventMeta(candidate);
 
             return acceptedEvents.some(existing => {
                 if (existing.id === candidate.id) return false;
+                const existingMeta = getCachedRepairEventMeta(existing);
 
                 if (
                     existing.resourceId === candidate.resourceId &&
-                    !isStbyResource(existing.resourceId) &&
-                    !isStbyResource(candidate.resourceId)
+                    !existingMeta.isStby &&
+                    !candidateMeta.isStby
                 ) {
                     const candidateAfterExistingGap = candidate.startTime - (existing.startTime + existing.duration);
-                    if (candidate.startTime >= existing.startTime && candidateAfterExistingGap < resourceTurnaroundFor(candidate)) {
+                    if (candidate.startTime >= existing.startTime && candidateAfterExistingGap < candidateMeta.turnaround) {
                         return true;
                     }
 
                     const existingAfterCandidateGap = existing.startTime - (candidate.startTime + candidate.duration);
-                    if (existing.startTime >= candidate.startTime && existingAfterCandidateGap < resourceTurnaroundFor(existing)) {
+                    if (existing.startTime >= candidate.startTime && existingAfterCandidateGap < existingMeta.turnaround) {
                         return true;
                     }
 
                     if (isOverlapping(candidate, existing)) return true;
                 }
 
-                if (getCommonPersonnel(candidate, existing).length > 0) {
-                    const existingWindow = eventWindow(existing);
-                    if (windowsOverlap(candidateWindow, existingWindow)) return true;
+                if (hasCommonRepairPersonnel(candidateMeta, existingMeta)) {
+                    if (windowsOverlap(candidateMeta.window, existingMeta.window)) return true;
 
                     if (candidate.startTime >= existing.startTime) {
                         const requiredGap = personnelTurnaroundFor(existing, candidate);
@@ -21964,12 +21995,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         if (actualGap < requiredGap - 0.001) return true;
                     }
 
-                    const candidateClassification = getGeneratedEventDayNightClassification(candidate);
-                    const existingClassification = getGeneratedEventDayNightClassification(existing);
                     if (
-                        candidateClassification !== 'Day/Night' &&
-                        existingClassification !== 'Day/Night' &&
-                        candidateClassification !== existingClassification
+                        candidateMeta.classification !== 'Day/Night' &&
+                        existingMeta.classification !== 'Day/Night' &&
+                        candidateMeta.classification !== existingMeta.classification
                     ) {
                         return true;
                     }
@@ -22080,10 +22109,18 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         .filter(eventMatchesTaskTrace)
         .forEach(event => traceTaskProvenance('finalCleanup', 'before-final-cleanup', event));
     const dayNightSeparatedEvents = enforceBuildDayNightSeparation(generatedEvents);
+    markBuildTiming('final-cleanup:day-night-guard-complete', {
+        input: generatedEventsBeforeFinalCleanup,
+        output: dayNightSeparatedEvents.length,
+    });
     dayNightSeparatedEvents
         .filter(eventMatchesTaskTrace)
         .forEach(event => traceTaskProvenance('finalCleanup', 'after-day-night-guard', event));
     const conflictSafeEvents = repairGeneratedGroundConflicts(dayNightSeparatedEvents);
+    markBuildTiming('final-cleanup:ground-repair-complete', {
+        input: dayNightSeparatedEvents.length,
+        output: conflictSafeEvents.length,
+    });
     conflictSafeEvents
         .filter(eventMatchesTaskTrace)
         .forEach(event => traceTaskProvenance('finalCleanup', 'after-ground-repair', event));
@@ -22146,6 +22183,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             })
             .filter((event): event is Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string } => Boolean(event))
         : conflictSafeEvents;
+    markBuildTiming('final-cleanup:crew-guard-complete', {
+        input: conflictSafeEvents.length,
+        output: finalCrewSafeEvents.length,
+        removedByPooledCrewManifestGuard: conflictSafeEvents.length - finalCrewSafeEvents.length,
+    });
     neoBuildDiag.finalCleanup = {
         beforeDayNightGuard: generatedEventsBeforeFinalCleanup,
         afterDayNightGuard: dayNightSeparatedEvents.length,
@@ -22166,6 +22208,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return orderA - orderB; // Sort by resource order first
         }
         return a.startTime - b.startTime; // Then by start time within same resource
+    });
+    markBuildTiming('final-cleanup:resource-sort-complete', {
+        events: sortedEvents.length,
     });
     sortedEvents
         .filter(eventMatchesTaskTrace)

@@ -112340,29 +112340,50 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return 0;
     };
     const personnelTurnaroundFor = (earlierEvent, laterEvent) => {
-      const earlierWindow = eventWindow(earlierEvent);
-      const laterWindow = eventWindow(laterEvent);
+      const earlierWindow = getCachedRepairEventMeta(earlierEvent).window;
+      const laterWindow = getCachedRepairEventMeta(laterEvent).window;
       const lmpBriefDebriefGap = Math.max(0, earlierWindow.end - (earlierEvent.startTime + earlierEvent.duration)) + Math.max(0, laterEvent.startTime - laterWindow.start);
       return Math.max(resourceTurnaroundFor(earlierEvent), lmpBriefDebriefGap);
     };
+    const repairEventMetaCache = /* @__PURE__ */ new WeakMap();
+    const getCachedRepairEventMeta = (event) => {
+      let cached = repairEventMetaCache.get(event);
+      if (!cached) {
+        cached = {
+          window: eventWindow(event),
+          personnelKeys: new Set(getPersonnelIdentityRefs(event).map((ref) => ref.key)),
+          classification: getGeneratedEventDayNightClassification(event),
+          isStby: isStbyResource(event.resourceId),
+          turnaround: resourceTurnaroundFor(event)
+        };
+        repairEventMetaCache.set(event, cached);
+      }
+      return cached;
+    };
+    const hasCommonRepairPersonnel = (candidateMeta, existingMeta) => {
+      for (const key of candidateMeta.personnelKeys) {
+        if (existingMeta.personnelKeys.has(key)) return true;
+      }
+      return false;
+    };
     const hasBuildConflict = (candidate, acceptedEvents2) => {
-      const candidateWindow = eventWindow(candidate);
+      const candidateMeta = getCachedRepairEventMeta(candidate);
       return acceptedEvents2.some((existing) => {
         if (existing.id === candidate.id) return false;
-        if (existing.resourceId === candidate.resourceId && !isStbyResource(existing.resourceId) && !isStbyResource(candidate.resourceId)) {
+        const existingMeta = getCachedRepairEventMeta(existing);
+        if (existing.resourceId === candidate.resourceId && !existingMeta.isStby && !candidateMeta.isStby) {
           const candidateAfterExistingGap = candidate.startTime - (existing.startTime + existing.duration);
-          if (candidate.startTime >= existing.startTime && candidateAfterExistingGap < resourceTurnaroundFor(candidate)) {
+          if (candidate.startTime >= existing.startTime && candidateAfterExistingGap < candidateMeta.turnaround) {
             return true;
           }
           const existingAfterCandidateGap = existing.startTime - (candidate.startTime + candidate.duration);
-          if (existing.startTime >= candidate.startTime && existingAfterCandidateGap < resourceTurnaroundFor(existing)) {
+          if (existing.startTime >= candidate.startTime && existingAfterCandidateGap < existingMeta.turnaround) {
             return true;
           }
           if (isOverlapping(candidate, existing)) return true;
         }
-        if (getCommonPersonnel(candidate, existing).length > 0) {
-          const existingWindow = eventWindow(existing);
-          if (windowsOverlap(candidateWindow, existingWindow)) return true;
+        if (hasCommonRepairPersonnel(candidateMeta, existingMeta)) {
+          if (windowsOverlap(candidateMeta.window, existingMeta.window)) return true;
           if (candidate.startTime >= existing.startTime) {
             const requiredGap = personnelTurnaroundFor(existing, candidate);
             const actualGap = candidate.startTime - (existing.startTime + existing.duration);
@@ -112372,9 +112393,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             const actualGap = existing.startTime - (candidate.startTime + candidate.duration);
             if (actualGap < requiredGap - 1e-3) return true;
           }
-          const candidateClassification = getGeneratedEventDayNightClassification(candidate);
-          const existingClassification = getGeneratedEventDayNightClassification(existing);
-          if (candidateClassification !== "Day/Night" && existingClassification !== "Day/Night" && candidateClassification !== existingClassification) {
+          if (candidateMeta.classification !== "Day/Night" && existingMeta.classification !== "Day/Night" && candidateMeta.classification !== existingMeta.classification) {
             return true;
           }
         }
@@ -112464,8 +112483,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const generatedEventsBeforeFinalCleanup = generatedEvents.length;
   generatedEvents.filter(eventMatchesTaskTrace).forEach((event) => traceTaskProvenance("finalCleanup", "before-final-cleanup", event));
   const dayNightSeparatedEvents = enforceBuildDayNightSeparation(generatedEvents);
+  markBuildTiming("final-cleanup:day-night-guard-complete", {
+    input: generatedEventsBeforeFinalCleanup,
+    output: dayNightSeparatedEvents.length
+  });
   dayNightSeparatedEvents.filter(eventMatchesTaskTrace).forEach((event) => traceTaskProvenance("finalCleanup", "after-day-night-guard", event));
   const conflictSafeEvents = repairGeneratedGroundConflicts(dayNightSeparatedEvents);
+  markBuildTiming("final-cleanup:ground-repair-complete", {
+    input: dayNightSeparatedEvents.length,
+    output: conflictSafeEvents.length
+  });
   conflictSafeEvents.filter(eventMatchesTaskTrace).forEach((event) => traceTaskProvenance("finalCleanup", "after-ground-repair", event));
   const getPooledCrewFinalManifestMinimum = (event) => {
     const eventCrewComposition = getBuildAircraftCrewCompositionForEvent(event);
@@ -112520,6 +112547,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       soloOrDual: "Dual"
     };
   }).filter((event) => Boolean(event)) : conflictSafeEvents;
+  markBuildTiming("final-cleanup:crew-guard-complete", {
+    input: conflictSafeEvents.length,
+    output: finalCrewSafeEvents.length,
+    removedByPooledCrewManifestGuard: conflictSafeEvents.length - finalCrewSafeEvents.length
+  });
   neoBuildDiag.finalCleanup = {
     beforeDayNightGuard: generatedEventsBeforeFinalCleanup,
     afterDayNightGuard: dayNightSeparatedEvents.length,
@@ -112537,6 +112569,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return orderA - orderB;
     }
     return a.startTime - b.startTime;
+  });
+  markBuildTiming("final-cleanup:resource-sort-complete", {
+    events: sortedEvents.length
   });
   sortedEvents.filter(eventMatchesTaskTrace).forEach((event) => traceTaskProvenance("finalEvents", "final-sorted-event", event));
   if (neoBuildDiag.fixedCrewPriority?.sctCrewTrace) {
