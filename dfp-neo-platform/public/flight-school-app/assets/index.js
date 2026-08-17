@@ -42486,7 +42486,7 @@ const TaskingRequestTable = ({
               }
             ) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.5fr)_minmax(0,1.3fr)_minmax(0,0.52fr)_minmax(0,0.8fr)]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.5fr)_minmax(0,1.25fr)_minmax(0,0.46fr)_minmax(0,0.62fr)_minmax(0,0.74fr)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Route", hint: `${request.depPoint || "Departure"} -> ${request.arrivalPoint || "Arrival"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-1.5 [&_input]:h-7 [&_input]:px-2 [&_input]:text-[11px]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-600", children: "Dep" }),
@@ -42551,56 +42551,62 @@ const TaskingRequestTable = ({
                 }
               )
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-10 items-center rounded-md border border-amber-400/30 bg-amber-500/10 px-3 text-xs font-semibold text-amber-100", children: "Configure unit callsigns in Settings." }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingFieldPanel,
               {
                 label: "Aircraft",
                 hint: request.isFormation && request.aircraftCount > 1 ? `${request.aircraftCount} aircraft formation` : `${request.aircraftCount || 1} required`,
                 className: "[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col",
-                contentClassName: "flex flex-1 flex-col justify-center gap-2",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "number",
-                      min: 1,
-                      value: request.aircraftCount,
-                      onChange: (event) => {
-                        const aircraftCount = Math.max(1, parseInt(event.target.value, 10) || 1);
-                        onUpdateTaskingRequest(request.id, {
-                          aircraftCount,
-                          isFormation: aircraftCount > 1 ? request.isFormation : false,
-                          submitted: false,
-                          saved: false
-                        });
-                      },
-                      className: taskingControlClass
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-h-[1.75rem] items-center gap-2 rounded-md border border-slate-700/80 bg-slate-950/35 px-2 py-1 text-xs font-semibold text-slate-200", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        checked: request.isFormation === true,
-                        onChange: (event) => {
-                          const checked = event.target.checked;
-                          const nextCallsignBase = checked && formationCallsignEntries.length > 0 ? formationCallsignEntries[0].callsign : request.callsignBase;
-                          onUpdateTaskingRequest(request.id, {
-                            isFormation: checked,
-                            aircraftCount: checked ? Math.max(2, Math.floor(Number(request.aircraftCount) || 1)) : request.aircraftCount,
-                            callsignBase: nextCallsignBase,
-                            callsign: nextCallsignBase ? buildUnitEventCallsign(nextCallsignBase, request.callsignNumber || 0) : request.callsign,
-                            submitted: false,
-                            saved: false
-                          });
-                        },
-                        className: "h-4 w-4 rounded border-slate-500 bg-slate-900 text-cyan-500 focus:ring-cyan-400"
-                      }
-                    ),
-                    "Formation"
-                  ] })
-                ]
+                contentClassName: "flex flex-1 items-center",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "number",
+                    min: 1,
+                    value: request.aircraftCount,
+                    onChange: (event) => {
+                      const aircraftCount = Math.max(1, parseInt(event.target.value, 10) || 1);
+                      onUpdateTaskingRequest(request.id, {
+                        aircraftCount,
+                        isFormation: aircraftCount > 1 ? request.isFormation : false,
+                        submitted: false,
+                        saved: false
+                      });
+                    },
+                    className: taskingControlClass
+                  }
+                )
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TaskingFieldPanel,
+              {
+                label: "Formation",
+                hint: request.isFormation && request.aircraftCount > 1 ? "One priority row" : "Separate aircraft rows",
+                className: "[&>div:first-child]:flex [&>div:first-child]:flex-1 [&>div:first-child]:flex-col",
+                contentClassName: "flex flex-1 items-center",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    role: "checkbox",
+                    "aria-checked": request.isFormation === true,
+                    onClick: () => {
+                      const checked = request.isFormation !== true;
+                      const nextCallsignBase = checked && formationCallsignEntries.length > 0 ? formationCallsignEntries[0].callsign : request.callsignBase;
+                      onUpdateTaskingRequest(request.id, {
+                        isFormation: checked,
+                        aircraftCount: checked ? Math.max(2, Math.floor(Number(request.aircraftCount) || 1)) : request.aircraftCount,
+                        callsignBase: nextCallsignBase,
+                        callsign: nextCallsignBase ? buildUnitEventCallsign(nextCallsignBase, request.callsignNumber || 0) : request.callsign,
+                        submitted: false,
+                        saved: false
+                      });
+                    },
+                    className: `flex h-10 w-full items-center justify-center rounded-md border px-3 text-sm font-black transition ${request.isFormation === true ? "border-cyan-300 bg-cyan-500/25 text-cyan-50 shadow-[0_0_0_1px_rgba(103,232,249,0.35)]" : "border-slate-600 bg-slate-800 text-slate-200 hover:border-cyan-400/60"}`,
+                    children: request.isFormation === true ? "ON" : "OFF"
+                  }
+                )
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
