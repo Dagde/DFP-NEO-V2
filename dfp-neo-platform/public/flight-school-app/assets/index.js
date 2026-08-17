@@ -43763,11 +43763,34 @@ const PrioritiesView = ({
       ignored: Boolean(request.ignored)
     };
   };
+  const getTaskingRequestSemanticKey = (request) => {
+    const aircraftIndex = 1;
+    return [
+      normaliseTaskingUnitCode(request.unitCode) || getTaskingRequestScopeCodes(request).join("+") || activeTaskingUnitCode,
+      String(request.date || "").trim(),
+      String(request.tasking || "").trim().toUpperCase().replace(/\s+/g, " "),
+      Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff).toFixed(3) : "",
+      Number.isFinite(Number(request.duration)) ? Number(request.duration).toFixed(3) : "",
+      Math.max(1, Math.floor(Number(request.aircraftCount) || 1)),
+      aircraftIndex,
+      String(request.depPoint || "").trim().toUpperCase(),
+      String(request.arrivalPoint || "").trim().toUpperCase(),
+      String(request.aircraftConfigId || "").trim().toUpperCase(),
+      String(request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium")).trim().toUpperCase()
+    ].join(":");
+  };
+  const dedupeTaskingRequests = (requests) => {
+    const byKey = /* @__PURE__ */ new Map();
+    requests.forEach((request) => {
+      byKey.set(getTaskingRequestSemanticKey(request), request);
+    });
+    return Array.from(byKey.values());
+  };
   const loadStoredTaskingRequests = () => {
     try {
       const stored = localStorage.getItem(TASKING_REQUEST_STORAGE_KEY$1);
       const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed) ? parsed.map(normaliseTaskingRequest) : [];
+      return Array.isArray(parsed) ? dedupeTaskingRequests(parsed.map(normaliseTaskingRequest)) : [];
     } catch {
       return [];
     }
@@ -43857,6 +43880,11 @@ const PrioritiesView = ({
     localStorage.setItem(currencyDraftStorageKey, JSON.stringify(currencyDraftEvents));
   }, [currencyDraftEvents]);
   reactExports.useEffect(() => {
+    const dedupedTaskingRequests = dedupeTaskingRequests(taskingRequests);
+    if (dedupedTaskingRequests.length !== taskingRequests.length) {
+      setTaskingRequests(dedupedTaskingRequests);
+      return;
+    }
     localStorage.setItem(TASKING_REQUEST_STORAGE_KEY$1, JSON.stringify(taskingRequests));
     window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT$1));
   }, [taskingRequests]);
@@ -99464,9 +99492,41 @@ const highestPriorityEventBelongsToUnit = (event, unitCode) => {
   ].map((value) => String(value || "").toUpperCase());
   return displayFields.some((value) => value.includes(`/${targetUnit}`) || value.includes(` ${targetUnit}`) || value.includes(`-${targetUnit}`));
 };
+const normaliseHighestPriorityIdentityText = (value) => String(value || "").trim().toUpperCase().replace(/\s+/g, " ");
+const getHighestPriorityTaskingAircraftIndex = (event) => {
+  const explicitIndex = Number(event.taskingAircraftIndex);
+  if (Number.isFinite(explicitIndex) && explicitIndex > 0) return Math.floor(explicitIndex);
+  const groupMatch = String(event.group || "").match(/aircraft\s+(\d+)/i);
+  if (groupMatch) {
+    const parsed = Number(groupMatch[1]);
+    if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
+  }
+  return 1;
+};
+const getHighestPriorityTaskingSemanticKey = (event) => {
+  const taskingLabel = normaliseHighestPriorityIdentityText(
+    event.taskingName || event.taskingDisplayLabel || event.flightNumber || "Directed Task"
+  );
+  const unitCode = normaliseHighestPriorityIdentityText(
+    event.taskingUnitCode || event.unitCode || event.fixedCrewUnitCode || event.unit || ""
+  );
+  return [
+    "tasking",
+    unitCode,
+    normaliseHighestPriorityIdentityText(event.date),
+    taskingLabel,
+    Number.isFinite(Number(event.startTime)) ? Number(event.startTime).toFixed(3) : "",
+    Number.isFinite(Number(event.duration)) ? Number(event.duration).toFixed(3) : "",
+    getHighestPriorityTaskingAircraftIndex(event),
+    normaliseHighestPriorityIdentityText(event.origin || event.depPoint),
+    normaliseHighestPriorityIdentityText(event.destination || event.arrivalPoint),
+    normaliseHighestPriorityIdentityText(event.aircraftConfigId),
+    normaliseHighestPriorityIdentityText(event.priority || (event.isMandatoryTasking ? "High" : ""))
+  ].join(":");
+};
 const getHighestPriorityEventReplacementKey = (event) => {
-  if (event.taskingRequestId) {
-    return `tasking:${event.taskingRequestId}:${event.taskingAircraftIndex || 1}`;
+  if (event.isTaskingRequest === true || event.taskingRequestId || String(event.id || "").startsWith("tasking-")) {
+    return getHighestPriorityTaskingSemanticKey(event);
   }
   if (event.currencyDraftId) {
     return `currency:${event.currencyDraftId}:${event.taskingAircraftIndex || event.id}`;
@@ -117850,20 +117910,7 @@ const App = () => {
     pruneDailySnapshotCache();
   }, []);
   const [nextDayBuildEvents, setNextDayBuildEvents] = reactExports.useState([]);
-  const [buildDfpDate, setBuildDfpDate] = reactExports.useState(() => {
-    try {
-      const saved = localStorage.getItem("dfp_build_date");
-      if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
-        const today = /* @__PURE__ */ new Date();
-        const todayStr = today.toISOString().split("T")[0];
-        if (saved > todayStr) return saved;
-      }
-    } catch (e) {
-    }
-    const tomorrow = /* @__PURE__ */ new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split("T")[0];
-  });
+  const [buildDfpDate, setBuildDfpDate] = reactExports.useState(() => date);
   const buildDfpSunTimes = reactExports.useMemo(() => getSunTimesForDate(buildDfpDate), [buildDfpDate, getSunTimesForDate]);
   const buildDfpDaylightTimes = reactExports.useMemo(() => ({
     firstLight: buildDfpSunTimes?.hasFirstLight ? buildDfpSunTimes.firstLight : null,
@@ -119798,21 +119845,8 @@ ${"=".repeat(60)}`);
     }
   }, [buildDfpDate]);
   reactExports.useEffect(() => {
-    const updateBuildDate = () => {
-      const tomorrow = /* @__PURE__ */ new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = getLocalDateString2(tomorrow);
-      const todayStr = getLocalDateString2();
-      if (buildDfpDate <= todayStr) {
-        setBuildDfpDate(tomorrowStr);
-      }
-    };
-    updateBuildDate();
-    const checkInterval = setInterval(() => {
-      updateBuildDate();
-    }, 6e4);
-    return () => clearInterval(checkInterval);
-  }, [timezoneOffset]);
+    if (buildDfpDate !== date) setBuildDfpDate(date);
+  }, [buildDfpDate, date]);
   const eventsForDate = reactExports.useMemo(() => {
     const events2 = publishedSchedules[date] || [];
     if (shouldRecordDfpRenderDiagnostics()) {
@@ -122524,7 +122558,10 @@ ${error instanceof Error ? error.message : String(error)}`,
       currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
     setNextDayBuildEvents([]);
-    setBuildDfpDate(getLocalDateString2(currentDate));
+    const nextDate = getLocalDateString2(currentDate);
+    setBuildDfpDate(nextDate);
+    setDate(nextDate);
+    void loadSnapshotForDate(nextDate);
   };
   const handleAddTrainee = reactExports.useCallback(async (newTrainee) => {
     const traineeToCreate = {
@@ -123547,10 +123584,12 @@ ${error instanceof Error ? error.message : String(error)}`,
     currentDate.setUTCDate(currentDate.getUTCDate() + increment);
     const newDateStr = currentDate.toISOString().split("T")[0];
     setDate(newDateStr);
+    setBuildDfpDate(newDateStr);
     void loadSnapshotForDate(newDateStr);
   };
   const handleDateSelect = (selectedDate) => {
     setDate(selectedDate);
+    setBuildDfpDate(selectedDate);
     void loadSnapshotForDate(selectedDate);
   };
   const shouldInsertTrainingReportExtraEvent = (assessment) => assessment.dcoResult === "DPCO" && assessment.dpcoFollowUp?.action === "extra-event" || assessment.dcoResult === "DNCO" && assessment.dncoFollowUp?.requestExtraFlight === true;

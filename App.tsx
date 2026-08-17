@@ -5887,9 +5887,46 @@ const highestPriorityEventBelongsToUnit = (event: ScheduleEvent, unitCode: strin
     ));
 };
 
+const normaliseHighestPriorityIdentityText = (value: unknown): string => (
+    String(value || '').trim().toUpperCase().replace(/\s+/g, ' ')
+);
+
+const getHighestPriorityTaskingAircraftIndex = (event: ScheduleEvent): number => {
+    const explicitIndex = Number(event.taskingAircraftIndex);
+    if (Number.isFinite(explicitIndex) && explicitIndex > 0) return Math.floor(explicitIndex);
+    const groupMatch = String(event.group || '').match(/aircraft\s+(\d+)/i);
+    if (groupMatch) {
+        const parsed = Number(groupMatch[1]);
+        if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
+    }
+    return 1;
+};
+
+const getHighestPriorityTaskingSemanticKey = (event: ScheduleEvent): string => {
+    const taskingLabel = normaliseHighestPriorityIdentityText(
+        event.taskingName || event.taskingDisplayLabel || event.flightNumber || 'Directed Task'
+    );
+    const unitCode = normaliseHighestPriorityIdentityText(
+        event.taskingUnitCode || event.unitCode || event.fixedCrewUnitCode || event.unit || ''
+    );
+    return [
+        'tasking',
+        unitCode,
+        normaliseHighestPriorityIdentityText(event.date),
+        taskingLabel,
+        Number.isFinite(Number(event.startTime)) ? Number(event.startTime).toFixed(3) : '',
+        Number.isFinite(Number(event.duration)) ? Number(event.duration).toFixed(3) : '',
+        getHighestPriorityTaskingAircraftIndex(event),
+        normaliseHighestPriorityIdentityText(event.origin || event.depPoint),
+        normaliseHighestPriorityIdentityText(event.destination || event.arrivalPoint),
+        normaliseHighestPriorityIdentityText(event.aircraftConfigId),
+        normaliseHighestPriorityIdentityText(event.priority || (event.isMandatoryTasking ? 'High' : '')),
+    ].join(':');
+};
+
 const getHighestPriorityEventReplacementKey = (event: ScheduleEvent): string => {
-    if (event.taskingRequestId) {
-        return `tasking:${event.taskingRequestId}:${event.taskingAircraftIndex || 1}`;
+    if (event.isTaskingRequest === true || event.taskingRequestId || String(event.id || '').startsWith('tasking-')) {
+        return getHighestPriorityTaskingSemanticKey(event);
     }
     if (event.currencyDraftId) {
         return `currency:${event.currencyDraftId}:${event.taskingAircraftIndex || event.id}`;
@@ -28413,21 +28450,7 @@ const App: React.FC = () => {
 
     // NDB state
     const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
-    const [buildDfpDate, setBuildDfpDate] = useState<string>(() => {
-        // Restore build date from localStorage if it's in the future (persists across hard refresh)
-        try {
-            const saved = localStorage.getItem('dfp_build_date');
-            if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
-                const today = new Date();
-                const todayStr = today.toISOString().split('T')[0];
-                // Only restore if saved date is tomorrow or later (don't restore past dates)
-                if (saved > todayStr) return saved;
-            }
-        } catch (e) { /* ignore */ }
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        return tomorrow.toISOString().split('T')[0];
-    });
+    const [buildDfpDate, setBuildDfpDate] = useState<string>(() => date);
     const buildDfpSunTimes = useMemo(() => getSunTimesForDate(buildDfpDate), [buildDfpDate, getSunTimesForDate]);
     const buildDfpDaylightTimes = useMemo(() => ({
         firstLight: buildDfpSunTimes?.hasFirstLight ? buildDfpSunTimes.firstLight : null,
@@ -30677,56 +30700,10 @@ const App: React.FC = () => {
         try { localStorage.setItem('dfp_build_date', buildDfpDate); } catch (e) { /* ignore */ }
     }, [buildDfpDate]);
 
-    // Auto-update buildDfpDate to tomorrow's date on mount and daily
-    // GUARD: Only advance to tomorrow if buildDfpDate is today or in the past.
-    // If the user has set a future build date (e.g. day after tomorrow), preserve it.
+    // NEO Build uses the Active DFP date selected by the user.
     useEffect(() => {
-        const updateBuildDate = () => {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowStr = getLocalDateString(tomorrow);
-            const todayStr = getLocalDateString();
-
-            // Only reset to tomorrow if buildDfpDate is today or PAST today
-            // (i.e., don't override a future build date the user intentionally set)
-            if (buildDfpDate <= todayStr) {
-                setBuildDfpDate(tomorrowStr);
-            }
-        };
-
-        // Update immediately on mount
-        updateBuildDate();
-
-        // Set up interval to check and update at midnight
-        const checkInterval = setInterval(() => {
-            updateBuildDate();
-        }, 60000); // Check every minute
-
-
-
-    const handleNavigateToProfile = (user: any) => {
-       // Use setSelectedPersonForProfile to directly open the profile
-       // This works the same way as clicking on a trainee name in CourseRoster
-       if (user.userType === 'STAFF') {
-          setSelectedPersonForProfile({
-             name: user.name,
-             idNumber: user.personnelId,
-             role: user.role || 'Pilot'
-          } as Instructor);
-          handleNavigation('Instructors');
-             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
-       } else if (user.userType === 'TRAINEE') {
-          setSelectedPersonForProfile({
-             name: user.name,
-             idNumber: user.personnelId,
-             role: user.role || 'Trainee'
-          } as Trainee);
-          handleNavigation('CourseRoster');
-             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
-       }
-    };
-    return () => clearInterval(checkInterval);
-    }, [timezoneOffset]); // Re-run when timezone changes
+        if (buildDfpDate !== date) setBuildDfpDate(date);
+    }, [buildDfpDate, date]);
 
     const eventsForDate = useMemo(() => {
         // This is used for LOGIC (like conflict checks), not rendering.
@@ -34230,7 +34207,10 @@ const App: React.FC = () => {
         }
         // Clear build events when navigating to a different date to prevent ghost tiles
         setNextDayBuildEvents([]);
-        setBuildDfpDate(getLocalDateString(currentDate));
+        const nextDate = getLocalDateString(currentDate);
+        setBuildDfpDate(nextDate);
+        setDate(nextDate);
+        void loadSnapshotForDate(nextDate);
     };
 
     const handleAddTrainee = useCallback(async (newTrainee: Trainee) => {
@@ -35441,12 +35421,14 @@ const App: React.FC = () => {
         currentDate.setUTCDate(currentDate.getUTCDate() + increment);
         const newDateStr = currentDate.toISOString().split('T')[0];
         setDate(newDateStr);
+        setBuildDfpDate(newDateStr);
         void loadSnapshotForDate(newDateStr);
     };
 
     // Navigate directly to a specific date (used by calendar dropdown on date selector)
     const handleDateSelect = (selectedDate: string) => {
         setDate(selectedDate);
+        setBuildDfpDate(selectedDate);
         void loadSnapshotForDate(selectedDate);
     };
 

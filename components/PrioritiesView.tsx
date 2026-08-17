@@ -2385,11 +2385,34 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       ignored: Boolean(request.ignored),
     });
   };
+  const getTaskingRequestSemanticKey = (request: TaskingRequest): string => {
+    const aircraftIndex = 1;
+    return [
+      normaliseTaskingUnitCode(request.unitCode) || getTaskingRequestScopeCodes(request).join('+') || activeTaskingUnitCode,
+      String(request.date || '').trim(),
+      String(request.tasking || '').trim().toUpperCase().replace(/\s+/g, ' '),
+      Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff).toFixed(3) : '',
+      Number.isFinite(Number(request.duration)) ? Number(request.duration).toFixed(3) : '',
+      Math.max(1, Math.floor(Number(request.aircraftCount) || 1)),
+      aircraftIndex,
+      String(request.depPoint || '').trim().toUpperCase(),
+      String(request.arrivalPoint || '').trim().toUpperCase(),
+      String(request.aircraftConfigId || '').trim().toUpperCase(),
+      String(request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium')).trim().toUpperCase(),
+    ].join(':');
+  };
+  const dedupeTaskingRequests = (requests: TaskingRequest[]): TaskingRequest[] => {
+    const byKey = new Map<string, TaskingRequest>();
+    requests.forEach(request => {
+      byKey.set(getTaskingRequestSemanticKey(request), request);
+    });
+    return Array.from(byKey.values());
+  };
   const loadStoredTaskingRequests = (): TaskingRequest[] => {
     try {
       const stored = localStorage.getItem(TASKING_REQUEST_STORAGE_KEY);
       const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed) ? parsed.map(normaliseTaskingRequest) : [];
+      return Array.isArray(parsed) ? dedupeTaskingRequests(parsed.map(normaliseTaskingRequest)) : [];
     } catch {
       return [];
     }
@@ -2536,6 +2559,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   }, [currencyDraftEvents]);
 
   useEffect(() => {
+    const dedupedTaskingRequests = dedupeTaskingRequests(taskingRequests);
+    if (dedupedTaskingRequests.length !== taskingRequests.length) {
+      setTaskingRequests(dedupedTaskingRequests);
+      return;
+    }
     localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(taskingRequests));
     window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
   }, [taskingRequests]);
