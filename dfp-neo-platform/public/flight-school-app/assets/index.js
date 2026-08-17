@@ -98968,7 +98968,7 @@ const personnelNamesMatch = (a, b) => {
   return !!left && left === right;
 };
 const isNeoBuildVerboseDiagnosticsEnabled = () => typeof window !== "undefined" && window.localStorage?.getItem("neo_build_verbose_diag") === "true";
-const createNeoBuildTimingReport = (buildDate, counters = {}) => {
+const createNeoBuildTimingReport = (buildDate, counters = {}, options = {}) => {
   const now = performance.now();
   return {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -98976,7 +98976,8 @@ const createNeoBuildTimingReport = (buildDate, counters = {}) => {
     phases: [],
     counters,
     startedAtMs: now,
-    lastMarkMs: now
+    lastMarkMs: now,
+    autoSave: options.autoSave === true
   };
 };
 const NEO_BUILD_GENERATION_START_DELAY_MS = 500;
@@ -99001,7 +99002,7 @@ const markNeoBuildTiming = (report, name, details) => {
   report.lastMarkMs = now;
   report.completedAt = (/* @__PURE__ */ new Date()).toISOString();
   report.totalElapsedMs = Math.round(now - report.startedAtMs);
-  saveNeoBuildTimingReport(report);
+  if (report.autoSave) saveNeoBuildTimingReport(report);
 };
 const getNeoBuildIdentityValue = (value) => String(value ?? "").trim();
 const getNeoBuildPersonDisplayLabel = (person) => String(person.fullName || person.name || "").trim();
@@ -126299,19 +126300,24 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       currentTraineeLMPs: traineeLMPs.size,
       scoresTrainees: scores.size,
       publishedEventsForBuildDate: (buildPublishedSchedules[buildDfpDate] || []).length
+    }, {
+      autoSave: localStorage.getItem("neo_build_live_diag") === "true"
     });
     markNeoBuildTiming(timingReport, "runBuildAlgorithm:start");
     let neoBuildDiagnosticDownloaded = false;
     const downloadNeoBuildDiagnosticAfterRun = (source) => {
       if (neoBuildDiagnosticDownloaded) return;
       markNeoBuildTiming(timingReport, `diagnostic-export:${source}:start`);
+      saveNeoBuildTimingReport(timingReport);
       const filename = downloadNeoBuildDiagnosticReport(source);
       if (filename) {
         neoBuildDiagnosticDownloaded = true;
         markNeoBuildTiming(timingReport, `diagnostic-export:${source}:downloaded`, { filename });
+        saveNeoBuildTimingReport(timingReport);
         setShowInfoNotification(`${activeOperationalModelLabel} NEO Build diagnostic downloaded: ${filename}`);
       } else {
         markNeoBuildTiming(timingReport, `diagnostic-export:${source}:unavailable`);
+        saveNeoBuildTimingReport(timingReport);
       }
     };
     setIsBuildingDfp(true);
@@ -127385,6 +127391,7 @@ ${conflictLines.join("\n")}${moreText}`,
           setIsBuildingDfp(false);
           handleNavigation("NextDayBuild");
           markNeoBuildTiming(timingReport, "runBuildAlgorithm:complete");
+          saveNeoBuildTimingReport(timingReport);
         }, NEO_BUILD_NAVIGATION_DELAY_MS);
       }
     }, NEO_BUILD_GENERATION_START_DELAY_MS);

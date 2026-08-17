@@ -5325,9 +5325,14 @@ interface NeoBuildTimingReport {
     lastMarkMs?: number;
     completedAt?: string;
     totalElapsedMs?: number;
+    autoSave?: boolean;
 }
 
-const createNeoBuildTimingReport = (buildDate: string, counters: Record<string, any> = {}): NeoBuildTimingReport => {
+const createNeoBuildTimingReport = (
+    buildDate: string,
+    counters: Record<string, any> = {},
+    options: { autoSave?: boolean } = {},
+): NeoBuildTimingReport => {
     const now = performance.now();
     return {
         timestamp: new Date().toISOString(),
@@ -5336,6 +5341,7 @@ const createNeoBuildTimingReport = (buildDate: string, counters: Record<string, 
         counters,
         startedAtMs: now,
         lastMarkMs: now,
+        autoSave: options.autoSave === true,
     };
 };
 
@@ -5367,7 +5373,7 @@ const markNeoBuildTiming = (
     report.lastMarkMs = now;
     report.completedAt = new Date().toISOString();
     report.totalElapsedMs = Math.round(now - report.startedAtMs);
-    saveNeoBuildTimingReport(report);
+    if (report.autoSave) saveNeoBuildTimingReport(report);
 };
 
 type PersonnelIdentityRole = 'staff' | 'trainee';
@@ -38980,19 +38986,24 @@ const App: React.FC = () => {
             currentTraineeLMPs: traineeLMPs.size,
             scoresTrainees: scores.size,
             publishedEventsForBuildDate: (buildPublishedSchedules[buildDfpDate] || []).length,
+        }, {
+            autoSave: localStorage.getItem('neo_build_live_diag') === 'true',
         });
         markNeoBuildTiming(timingReport, 'runBuildAlgorithm:start');
         let neoBuildDiagnosticDownloaded = false;
         const downloadNeoBuildDiagnosticAfterRun = (source: string) => {
             if (neoBuildDiagnosticDownloaded) return;
             markNeoBuildTiming(timingReport, `diagnostic-export:${source}:start`);
+            saveNeoBuildTimingReport(timingReport);
             const filename = downloadNeoBuildDiagnosticReport(source);
             if (filename) {
                 neoBuildDiagnosticDownloaded = true;
                 markNeoBuildTiming(timingReport, `diagnostic-export:${source}:downloaded`, { filename });
+                saveNeoBuildTimingReport(timingReport);
                 setShowInfoNotification(`${activeOperationalModelLabel} NEO Build diagnostic downloaded: ${filename}`);
             } else {
                 markNeoBuildTiming(timingReport, `diagnostic-export:${source}:unavailable`);
+                saveNeoBuildTimingReport(timingReport);
             }
         };
 
@@ -40192,6 +40203,7 @@ const App: React.FC = () => {
                     setIsBuildingDfp(false);
                     handleNavigation('NextDayBuild');
                     markNeoBuildTiming(timingReport, 'runBuildAlgorithm:complete');
+                    saveNeoBuildTimingReport(timingReport);
                 }, NEO_BUILD_NAVIGATION_DELAY_MS);
             }
         }, NEO_BUILD_GENERATION_START_DELAY_MS);
