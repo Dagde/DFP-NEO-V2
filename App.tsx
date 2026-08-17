@@ -19613,11 +19613,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     const hasNonFormationTakeoffConflict = (startTime: number): boolean =>
         hasDispatchStaggerConflict('flight', startTime, generatedEvents);
 
-    const getFallbackFormationCallsignBase = (leadEvent: Omit<ScheduleEvent, 'date'>): string => {
-        const instructorCallsign = instructors.find(ip => ip.name === leadEvent.instructor)?.callsign || '';
-        const prefix = instructorCallsign.match(/^[A-Za-z]+/)?.[0];
-        return (prefix || school || 'FORM').slice(0, 4).toUpperCase();
-    };
+    const getFallbackFormationCallsignBase = (): string => 'FORM';
 
     const normalizeFormationCallsignCode = (callsign?: string | null): string =>
         String(callsign || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
@@ -19674,7 +19670,6 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         startTime: number,
         duration: number
     ): { base: string; source: 'configured' | 'fallback'; name?: string; unit?: string; candidates: string[] } => {
-        const leadEvent = stagedEvents[0];
         const formationUnit = selectedTrainees.find(trainee => String(trainee.unit || '').trim())?.unit || '';
         const formationContext = (() => {
             const traineeUnitTokens = new Set(selectedTrainees.map(trainee => normaliseBuildFormationContextToken(trainee.unit)).filter(Boolean));
@@ -19704,11 +19699,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return unitMatches && locationMatches;
         };
         const configuredCandidates = config.formationCallsigns
-            .filter(callsign => normalizeFormationCallsignCode(callsign.code))
+            .filter(callsign => normalizeFormationCallsignCode(callsign.code || callsign.name))
             .filter(formationCallsignMatchesContext)
             .map(callsign => ({
                 ...callsign,
-                code: normalizeFormationCallsignCode(callsign.code),
+                code: normalizeFormationCallsignCode(callsign.code || callsign.name),
             }));
         const shuffledCandidates = orderBuildDeterministically(
             configuredCandidates,
@@ -19730,7 +19725,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         }
 
         return {
-            base: getFallbackFormationCallsignBase(leadEvent),
+            base: getFallbackFormationCallsignBase(),
             source: 'fallback',
             unit: formationUnit,
             candidates: configuredCandidates.map(callsign => callsign.code),
@@ -19986,7 +19981,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 );
                 const callsignBase = callsignSelection.base;
                 stagedEvents.forEach((event, index) => {
-                    event.callsign = `${callsignBase}${index + 1}`;
+                    const numberedCallsign = `${callsignBase}${index + 1}`;
+                    event.callsign = numberedCallsign;
+                    const generatedEvent = generatedEvents.find(candidate => candidate.id === event.id);
+                    if (generatedEvent) {
+                        generatedEvent.callsign = numberedCallsign;
+                    }
                     const trainee = selectedTrainees[index];
                     const traineeCounts = eventCounts.get(getBuildTraineeKey(trainee))!;
                     traineeCounts.flightFtd++;

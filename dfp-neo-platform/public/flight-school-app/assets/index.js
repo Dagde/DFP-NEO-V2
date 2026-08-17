@@ -34599,7 +34599,7 @@ const SelectLikeDropdown = ({
   dropdownKey
 }) => {
   const selected = options.find((option) => !option.isHeader && option.value === value);
-  const ringColour = accent === "emerald" ? "rgba(16,185,129,0.65)" : "rgba(14,165,233,0.65)";
+  const ringColour = accent === "emerald" ? "rgba(16,185,129,0.65)" : accent === "red" ? "rgba(248,113,113,0.75)" : "rgba(14,165,233,0.65)";
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     StableDropdown,
     {
@@ -35304,21 +35304,63 @@ const AddFlightTileModal = ({
   }, [findInstructorByRefOrName, findTraineeByRefOrName, normalisePersonNameForAddTile, personnelData]);
   const selectedPicHasIndividualCallsign = reactExports.useMemo(() => Boolean(resolveAssignedCallsign(picName, selectedPicRef)), [picName, resolveAssignedCallsign, selectedPicRef]);
   const locationFullName = currentLocationName || school;
-  const filteredFormationCallsigns = reactExports.useMemo(() => {
-    const currentLocation = String(locationFullName || "").trim().toUpperCase();
-    const activeFormationUnits = new Set((activeUnitCodes.length > 0 ? activeUnitCodes : [activeUnitCode]).map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean));
-    return (formationCallsigns || []).filter((fc) => {
-      const callsignLocation = String(fc.location || "").trim().toUpperCase();
-      const callsignLocationCode = String(fc.locationCode || "").trim().toUpperCase();
-      const callsignUnit = String(fc.unit || "").trim().toUpperCase();
-      const matchesLocation = callsignLocation === currentLocation || callsignLocationCode === currentLocation;
-      const matchesUnit = activeFormationUnits.size === 0 || !callsignUnit || activeFormationUnits.has(callsignUnit);
-      return matchesLocation && matchesUnit;
+  const normaliseFormationCallsignBase = reactExports.useCallback((value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/\d+$/g, ""), []);
+  const normaliseFormationContextToken = reactExports.useCallback((value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, ""), []);
+  const expandFormationLocationAliases = reactExports.useCallback((value) => {
+    const token = normaliseFormationContextToken(value);
+    if (!token) return [];
+    const aliases = /* @__PURE__ */ new Set([token]);
+    if (token.startsWith("Y") && token.length === 4) aliases.add(token.slice(1));
+    if (token.length === 3) aliases.add(`Y${token}`);
+    return Array.from(aliases);
+  }, [normaliseFormationContextToken]);
+  const eventUsesFormationCallsignBase = reactExports.useCallback((eventCallsign, callsignBase) => {
+    const normalisedCallsign = normaliseFormationCallsignBase(eventCallsign);
+    const normalisedBase = normaliseFormationCallsignBase(callsignBase);
+    if (!normalisedCallsign || !normalisedBase) return false;
+    return new RegExp(`^${normalisedBase}\\d+$`).test(normalisedCallsign);
+  }, [normaliseFormationCallsignBase]);
+  const isFormationCallsignInUse = reactExports.useCallback((callsignBase) => {
+    const normalisedBase = normaliseFormationCallsignBase(callsignBase);
+    if (!normalisedBase) return false;
+    const endTime = startTime + duration;
+    return eventsForDate.some((event) => {
+      if (initialEvent?.formationId && event.formationId === initialEvent.formationId) return false;
+      if (initialEvent?.id && event.id === initialEvent.id) return false;
+      const eventEnd = event.startTime + event.duration;
+      const overlaps = event.startTime < endTime && eventEnd > startTime;
+      return overlaps && eventUsesFormationCallsignBase(event.callsign, normalisedBase);
     });
-  }, [activeUnitCode, activeUnitCodes, formationCallsigns, locationFullName]);
+  }, [duration, eventUsesFormationCallsignBase, eventsForDate, initialEvent?.formationId, initialEvent?.id, normaliseFormationCallsignBase, startTime]);
+  const filteredFormationCallsigns = reactExports.useMemo(() => {
+    const selectedLocationAliases = /* @__PURE__ */ new Set([
+      ...expandFormationLocationAliases(locationFullName),
+      ...expandFormationLocationAliases(school)
+    ]);
+    const activeFormationUnits = new Set((activeUnitCodes.length > 0 ? activeUnitCodes : [activeUnitCode]).map((unit) => normaliseFormationContextToken(unit)).filter(Boolean));
+    return (formationCallsigns || []).filter((fc) => {
+      const callsignBase = normaliseFormationCallsignBase(fc.code || fc.name);
+      const callsignUnit = normaliseFormationContextToken(fc.unit);
+      const callsignLocationAliases = [
+        ...expandFormationLocationAliases(fc.location),
+        ...expandFormationLocationAliases(fc.locationCode)
+      ];
+      const matchesLocation = callsignLocationAliases.length === 0 || callsignLocationAliases.some((alias) => selectedLocationAliases.has(alias));
+      const matchesUnit = activeFormationUnits.size === 0 || !callsignUnit || activeFormationUnits.has(callsignUnit);
+      return Boolean(callsignBase) && matchesLocation && matchesUnit;
+    });
+  }, [activeUnitCode, activeUnitCodes, expandFormationLocationAliases, formationCallsigns, locationFullName, normaliseFormationCallsignBase, normaliseFormationContextToken, school]);
+  const selectedFormationCallsignConflict = reactExports.useMemo(() => Boolean(formationType) && isFormationCallsignInUse(formationType), [formationType, isFormationCallsignInUse]);
+  const selectableFormationCallsigns = reactExports.useMemo(() => {
+    const selectedBase = normaliseFormationCallsignBase(formationType);
+    return filteredFormationCallsigns.filter((callsign2) => {
+      const base = normaliseFormationCallsignBase(callsign2.code || callsign2.name);
+      return Boolean(base) && (base === selectedBase || !isFormationCallsignInUse(base));
+    });
+  }, [filteredFormationCallsigns, formationType, isFormationCallsignInUse, normaliseFormationCallsignBase]);
   const formationTypes = reactExports.useMemo(() => {
-    return filteredFormationCallsigns.map((cs) => cs.code);
-  }, [filteredFormationCallsigns]);
+    return selectableFormationCallsigns.map((cs) => normaliseFormationCallsignBase(cs.code || cs.name)).filter(Boolean);
+  }, [normaliseFormationCallsignBase, selectableFormationCallsigns]);
   const opAreas = reactExports.useMemo(() => {
     const areas = locationOpAreas[locationFullName];
     if (areas && areas.length > 0) return areas;
@@ -35332,8 +35374,13 @@ const AddFlightTileModal = ({
     setDestination(school);
   }, [school]);
   reactExports.useEffect(() => {
-    if (!formationType && formationTypes.length > 0) setFormationType(formationTypes[0]);
-  }, [formationType, formationTypes]);
+    if (!isSctFormationCode(flightNumber)) return;
+    const selectedBase = normaliseFormationCallsignBase(formationType);
+    const nextBase = selectedBase && formationTypes.includes(selectedBase) ? selectedBase : formationTypes[0] || "";
+    if (nextBase !== formationType) setFormationType(nextBase);
+    setCallsign(nextBase ? `${nextBase}1` : "");
+    setCallsignOptions(formationTypes);
+  }, [flightNumber, formationType, formationTypes, isSctFormationCode, normaliseFormationCallsignBase]);
   reactExports.useEffect(() => {
     const additionalCrewCount = isSctFormationCode(flightNumber) ? Math.max(0, aircraftCount - 1) : 0;
     setFormationCrew((prev) => Array.from({ length: additionalCrewCount }, (_, index) => ({
@@ -35679,6 +35726,7 @@ const AddFlightTileModal = ({
   };
   reactExports.useEffect(() => {
     if (isFixedCrewModel) return;
+    if (isSctFormationCode(flightNumber)) return;
     if (!picName) {
       setCallsign("");
       setCallsignOptions([]);
@@ -35714,7 +35762,7 @@ const AddFlightTileModal = ({
     }
     setCallsign("");
     setCallsignOptions([]);
-  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign]);
+  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign, flightNumber, isSctFormationCode]);
   reactExports.useEffect(() => {
     if (suppressNextCategoryResetRef.current) {
       suppressNextCategoryResetRef.current = false;
@@ -35778,6 +35826,7 @@ const AddFlightTileModal = ({
     setPicName(fixedCrewPic);
   }, [fixedCrewPic, isFixedCrewModel]);
   reactExports.useEffect(() => {
+    if (isSctFormationCode(flightNumber)) return;
     if (selectedPicHasIndividualCallsign && !isFixedCrewModel) return;
     if (!defaultUnitCallsign) {
       setCallsignOptions([]);
@@ -35787,7 +35836,7 @@ const AddFlightTileModal = ({
     const values = unitCallsignEntries.map((entry) => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
     setCallsignOptions(values);
     setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
-  }, [defaultUnitCallsign, isFixedCrewModel, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [defaultUnitCallsign, flightNumber, isFixedCrewModel, isSctFormationCode, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
   reactExports.useEffect(() => {
     if (!isSingleSeatAircraft) return;
     setFlightType("Solo");
@@ -36767,9 +36816,18 @@ const AddFlightTileModal = ({
                           width: 280,
                           placeholder: "Select callsign",
                           dropdownKey: "add-flight-formation-callsign",
-                          options: filteredFormationCallsigns.length > 0 ? filteredFormationCallsigns.map((cs) => ({ value: cs.code, label: `${cs.name} (${cs.code})` })) : [{ value: "", label: "No formation callsigns configured", disabled: true }]
+                          accent: selectedFormationCallsignConflict ? "red" : "sky",
+                          options: selectableFormationCallsigns.length > 0 ? selectableFormationCallsigns.map((cs) => {
+                            const base = normaliseFormationCallsignBase(cs.code || cs.name);
+                            const isSelectedConflict = base === normaliseFormationCallsignBase(formationType) && selectedFormationCallsignConflict;
+                            return {
+                              value: base,
+                              label: `${cs.name || base}${cs.code && cs.name ? ` (${cs.code})` : ""}${isSelectedConflict ? " - conflict" : ""}`
+                            };
+                          }) : [{ value: "", label: "No formation callsigns configured", disabled: true }]
                         }
-                      )
+                      ),
+                      selectedFormationCallsignConflict && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[11px] font-semibold text-red-300", children: "Callsign is already used by another formation during this flight window." })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Aircraft Count" }),
@@ -110551,11 +110609,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     (event) => event.type === "flight" && !event.resourceId.startsWith("STBY") && !event.resourceId.startsWith("BNF-STBY") && event.startTime > startTime - 1 && event.startTime <= startTime
   ).length;
   const hasNonFormationTakeoffConflict = (startTime) => hasDispatchStaggerConflict("flight", startTime, generatedEvents);
-  const getFallbackFormationCallsignBase = (leadEvent) => {
-    const instructorCallsign = instructors.find((ip) => ip.name === leadEvent.instructor)?.callsign || "";
-    const prefix = instructorCallsign.match(/^[A-Za-z]+/)?.[0];
-    return (prefix || school || "FORM").slice(0, 4).toUpperCase();
-  };
+  const getFallbackFormationCallsignBase = () => "FORM";
   const normalizeFormationCallsignCode = (callsign) => String(callsign || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
   const normaliseBuildFormationContextToken = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
   const expandBuildFormationLocationAliases = (value) => {
@@ -110594,7 +110648,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
   };
   const selectFormationCallsignBase = (selectedTrainees, stagedEvents, startTime, duration) => {
-    const leadEvent = stagedEvents[0];
     const formationUnit = selectedTrainees.find((trainee) => String(trainee.unit || "").trim())?.unit || "";
     const formationContext = (() => {
       const traineeUnitTokens = new Set(selectedTrainees.map((trainee) => normaliseBuildFormationContextToken(trainee.unit)).filter(Boolean));
@@ -110623,9 +110676,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some((alias) => formationContext.locationAliases.has(alias));
       return unitMatches && locationMatches;
     };
-    const configuredCandidates = config.formationCallsigns.filter((callsign) => normalizeFormationCallsignCode(callsign.code)).filter(formationCallsignMatchesContext).map((callsign) => ({
+    const configuredCandidates = config.formationCallsigns.filter((callsign) => normalizeFormationCallsignCode(callsign.code || callsign.name)).filter(formationCallsignMatchesContext).map((callsign) => ({
       ...callsign,
-      code: normalizeFormationCallsignCode(callsign.code)
+      code: normalizeFormationCallsignCode(callsign.code || callsign.name)
     }));
     const shuffledCandidates = orderBuildDeterministically(
       configuredCandidates,
@@ -110645,7 +110698,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     }
     return {
-      base: getFallbackFormationCallsignBase(leadEvent),
+      base: getFallbackFormationCallsignBase(),
       source: "fallback",
       unit: formationUnit,
       candidates: configuredCandidates.map((callsign) => callsign.code)
@@ -110879,7 +110932,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         );
         const callsignBase = callsignSelection.base;
         stagedEvents.forEach((event, index) => {
-          event.callsign = `${callsignBase}${index + 1}`;
+          const numberedCallsign = `${callsignBase}${index + 1}`;
+          event.callsign = numberedCallsign;
+          const generatedEvent = generatedEvents.find((candidate) => candidate.id === event.id);
+          if (generatedEvent) {
+            generatedEvent.callsign = numberedCallsign;
+          }
           const trainee = selectedTrainees[index];
           const traineeCounts = eventCounts.get(getBuildTraineeKey(trainee));
           traineeCounts.flightFtd++;

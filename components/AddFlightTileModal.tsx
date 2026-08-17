@@ -517,7 +517,7 @@ interface SelectLikeDropdownProps {
   placeholder?: string;
   width?: number;
   maxHeight?: number;
-  accent?: 'sky' | 'emerald';
+  accent?: 'sky' | 'emerald' | 'red';
   dropdownKey?: string;
 }
 
@@ -533,7 +533,11 @@ const SelectLikeDropdown: React.FC<SelectLikeDropdownProps> = ({
   dropdownKey,
 }) => {
   const selected = options.find(option => !option.isHeader && option.value === value);
-  const ringColour = accent === 'emerald' ? 'rgba(16,185,129,0.65)' : 'rgba(14,165,233,0.65)';
+  const ringColour = accent === 'emerald'
+    ? 'rgba(16,185,129,0.65)'
+    : accent === 'red'
+      ? 'rgba(248,113,113,0.75)'
+      : 'rgba(14,165,233,0.65)';
   return (
     <StableDropdown
       value={value}
@@ -2134,24 +2138,77 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   // ── Determine the current location full name from school ──────────────────
   const locationFullName = currentLocationName || school;
 
+  const normaliseFormationCallsignBase = useCallback((value?: string | null): string => (
+    String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/\d+$/g, '')
+  ), []);
+  const normaliseFormationContextToken = useCallback((value?: string | null): string => (
+    String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+  ), []);
+  const expandFormationLocationAliases = useCallback((value?: string | null): string[] => {
+    const token = normaliseFormationContextToken(value);
+    if (!token) return [];
+    const aliases = new Set<string>([token]);
+    if (token.startsWith('Y') && token.length === 4) aliases.add(token.slice(1));
+    if (token.length === 3) aliases.add(`Y${token}`);
+    return Array.from(aliases);
+  }, [normaliseFormationContextToken]);
+  const eventUsesFormationCallsignBase = useCallback((eventCallsign: string | undefined, callsignBase: string): boolean => {
+    const normalisedCallsign = normaliseFormationCallsignBase(eventCallsign);
+    const normalisedBase = normaliseFormationCallsignBase(callsignBase);
+    if (!normalisedCallsign || !normalisedBase) return false;
+    return new RegExp(`^${normalisedBase}\\d+$`).test(normalisedCallsign);
+  }, [normaliseFormationCallsignBase]);
+  const isFormationCallsignInUse = useCallback((callsignBase: string): boolean => {
+    const normalisedBase = normaliseFormationCallsignBase(callsignBase);
+    if (!normalisedBase) return false;
+    const endTime = startTime + duration;
+    return eventsForDate.some(event => {
+      if (initialEvent?.formationId && event.formationId === initialEvent.formationId) return false;
+      if (initialEvent?.id && event.id === initialEvent.id) return false;
+      const eventEnd = event.startTime + event.duration;
+      const overlaps = event.startTime < endTime && eventEnd > startTime;
+      return overlaps && eventUsesFormationCallsignBase(event.callsign, normalisedBase);
+    });
+  }, [duration, eventUsesFormationCallsignBase, eventsForDate, initialEvent?.formationId, initialEvent?.id, normaliseFormationCallsignBase, startTime]);
+
   const filteredFormationCallsigns = useMemo(() => {
-    const currentLocation = String(locationFullName || '').trim().toUpperCase();
+    const selectedLocationAliases = new Set([
+      ...expandFormationLocationAliases(locationFullName),
+      ...expandFormationLocationAliases(school),
+    ]);
     const activeFormationUnits = new Set((activeUnitCodes.length > 0 ? activeUnitCodes : [activeUnitCode])
-      .map(unit => String(unit || '').trim().toUpperCase())
+      .map(unit => normaliseFormationContextToken(unit))
       .filter(Boolean));
     return (formationCallsigns || []).filter(fc => {
-      const callsignLocation = String(fc.location || '').trim().toUpperCase();
-      const callsignLocationCode = String(fc.locationCode || '').trim().toUpperCase();
-      const callsignUnit = String(fc.unit || '').trim().toUpperCase();
-      const matchesLocation = callsignLocation === currentLocation || callsignLocationCode === currentLocation;
+      const callsignBase = normaliseFormationCallsignBase(fc.code || fc.name);
+      const callsignUnit = normaliseFormationContextToken(fc.unit);
+      const callsignLocationAliases = [
+        ...expandFormationLocationAliases(fc.location),
+        ...expandFormationLocationAliases(fc.locationCode),
+      ];
+      const matchesLocation = callsignLocationAliases.length === 0 || callsignLocationAliases.some(alias => selectedLocationAliases.has(alias));
       const matchesUnit = activeFormationUnits.size === 0 || !callsignUnit || activeFormationUnits.has(callsignUnit);
-      return matchesLocation && matchesUnit;
+      return Boolean(callsignBase) && matchesLocation && matchesUnit;
     });
-  }, [activeUnitCode, activeUnitCodes, formationCallsigns, locationFullName]);
+  }, [activeUnitCode, activeUnitCodes, expandFormationLocationAliases, formationCallsigns, locationFullName, normaliseFormationCallsignBase, normaliseFormationContextToken, school]);
+
+  const selectedFormationCallsignConflict = useMemo(() => (
+    Boolean(formationType) && isFormationCallsignInUse(formationType)
+  ), [formationType, isFormationCallsignInUse]);
+
+  const selectableFormationCallsigns = useMemo(() => {
+    const selectedBase = normaliseFormationCallsignBase(formationType);
+    return filteredFormationCallsigns.filter(callsign => {
+      const base = normaliseFormationCallsignBase(callsign.code || callsign.name);
+      return Boolean(base) && (base === selectedBase || !isFormationCallsignInUse(base));
+    });
+  }, [filteredFormationCallsigns, formationType, isFormationCallsignInUse, normaliseFormationCallsignBase]);
 
   const formationTypes = useMemo(() => {
-    return filteredFormationCallsigns.map(cs => cs.code);
-  }, [filteredFormationCallsigns]);
+    return selectableFormationCallsigns
+      .map(cs => normaliseFormationCallsignBase(cs.code || cs.name))
+      .filter(Boolean);
+  }, [normaliseFormationCallsignBase, selectableFormationCallsigns]);
 
   // ── Op Areas for this location ────────────────────────────────────────────
   const opAreas = useMemo(() => {
@@ -2171,8 +2228,15 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [school]);
 
   useEffect(() => {
-    if (!formationType && formationTypes.length > 0) setFormationType(formationTypes[0]);
-  }, [formationType, formationTypes]);
+    if (!isSctFormationCode(flightNumber)) return;
+    const selectedBase = normaliseFormationCallsignBase(formationType);
+    const nextBase = selectedBase && formationTypes.includes(selectedBase)
+      ? selectedBase
+      : formationTypes[0] || '';
+    if (nextBase !== formationType) setFormationType(nextBase);
+    setCallsign(nextBase ? `${nextBase}1` : '');
+    setCallsignOptions(formationTypes);
+  }, [flightNumber, formationType, formationTypes, isSctFormationCode, normaliseFormationCallsignBase]);
 
   useEffect(() => {
     const additionalCrewCount = isSctFormationCode(flightNumber) ? Math.max(0, aircraftCount - 1) : 0;
@@ -2649,6 +2713,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   useEffect(() => {
     if (isFixedCrewModel) return;
+    if (isSctFormationCode(flightNumber)) return;
     if (!picName) { setCallsign(''); setCallsignOptions([]); return; }
 
     // Determine PIC's unit (for filtering formation callsigns)
@@ -2690,7 +2755,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
     setCallsign('');
     setCallsignOptions([]);
-  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign]);
+  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign, flightNumber, isSctFormationCode]);
 
   // ── Auto-set duration from selected LMP event ─────────────────────────────
   // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)
@@ -2747,6 +2812,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [fixedCrewPic, isFixedCrewModel]);
 
   useEffect(() => {
+    if (isSctFormationCode(flightNumber)) return;
     if (selectedPicHasIndividualCallsign && !isFixedCrewModel) return;
     if (!defaultUnitCallsign) {
       setCallsignOptions([]);
@@ -2756,7 +2822,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const values = unitCallsignEntries.map(entry => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
     setCallsignOptions(values);
     setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
-  }, [defaultUnitCallsign, isFixedCrewModel, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [defaultUnitCallsign, flightNumber, isFixedCrewModel, isSctFormationCode, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
 
   useEffect(() => {
     if (!isSingleSeatAircraft) return;
@@ -3820,10 +3886,23 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         width={280}
                         placeholder="Select callsign"
                         dropdownKey="add-flight-formation-callsign"
-                        options={filteredFormationCallsigns.length > 0
-                          ? filteredFormationCallsigns.map(cs => ({ value: cs.code, label: `${cs.name} (${cs.code})` }))
+                        accent={selectedFormationCallsignConflict ? 'red' : 'sky'}
+                        options={selectableFormationCallsigns.length > 0
+                          ? selectableFormationCallsigns.map(cs => {
+                              const base = normaliseFormationCallsignBase(cs.code || cs.name);
+                              const isSelectedConflict = base === normaliseFormationCallsignBase(formationType) && selectedFormationCallsignConflict;
+                              return {
+                                value: base,
+                                label: `${cs.name || base}${cs.code && cs.name ? ` (${cs.code})` : ''}${isSelectedConflict ? ' - conflict' : ''}`,
+                              };
+                            })
                           : [{ value: '', label: 'No formation callsigns configured', disabled: true }]}
                       />
+                      {selectedFormationCallsignConflict && (
+                        <p className="mt-1 text-[11px] font-semibold text-red-300">
+                          Callsign is already used by another formation during this flight window.
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft Count</label>
