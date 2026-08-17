@@ -44051,6 +44051,21 @@ const PrioritiesView = ({
       crewRequirement: request.crewRequirement || { mode: "aircraft_default" }
     }));
   };
+  const taskingPriorityEventNeedsSync = (expected, actual) => !actual || actual.date !== expected.date || actual.flightNumber !== expected.flightNumber || actual.taskingName !== expected.taskingName || actual.taskingDisplayLabel !== expected.taskingDisplayLabel || actual.startTime !== expected.startTime || actual.duration !== expected.duration || actual.priority !== expected.priority || actual.isMandatoryTasking !== expected.isMandatoryTasking || actual.origin !== expected.origin || actual.destination !== expected.destination || actual.callsign !== expected.callsign || actual.aircraftConfigId !== expected.aircraftConfigId || actual.taskingAircraftCount !== expected.taskingAircraftCount || JSON.stringify(actual.crewRequirement || null) !== JSON.stringify(expected.crewRequirement || null);
+  reactExports.useEffect(() => {
+    visibleTaskingRequests.filter((request) => request.submitted && !request.ignored).forEach((request) => {
+      const expectedEvents = buildTaskingPriorityEvents(request);
+      const actualEvents = highestPriorityEvents.filter((event) => isTaskingPriorityEventForRequest(event, request.id));
+      const needsSync = expectedEvents.length !== actualEvents.length || expectedEvents.some((expected) => {
+        const expectedIndex = expected.taskingAircraftIndex || 1;
+        const actual = actualEvents.find((event) => (event.taskingAircraftIndex || 1) === expectedIndex);
+        return taskingPriorityEventNeedsSync(expected, actual);
+      });
+      if (needsSync) {
+        onAddPriorityEvents(expectedEvents);
+      }
+    });
+  }, [visibleTaskingRequests, highestPriorityEvents, activeTaskingUnitCodes.join("|")]);
   const setTaskingSchedulerPriority = (id, schedulerPriority) => {
     const request = taskingRequests.find((item) => item.id === id);
     if (!request) return;
@@ -44698,6 +44713,7 @@ const PrioritiesView = ({
     const eventDate = String(event.date || "").trim();
     return !eventDate || eventDate === buildDfpDate;
   };
+  const isDirectedTaskPriorityEvent = (event) => event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const matchesPriorityEventIdentity = (source, candidate) => candidate.id === source.id || !!source.currencyDraftId && candidate.currencyDraftId === source.currencyDraftId || !!source.taskingRequestId && candidate.taskingRequestId === source.taskingRequestId || !!source.sctRequestId && candidate.sctRequestId === source.sctRequestId;
   const isPriorityEventPublished = (event) => (publishedScheduleEvents || activeScheduleEvents).some((activeEvent) => matchesPriorityEventIdentity(event, activeEvent));
   const isPriorityEventScheduled = (event) => (scheduledBuildEvents || []).some((activeEvent) => matchesPriorityEventIdentity(event, activeEvent));
@@ -44709,7 +44725,7 @@ const PrioritiesView = ({
   reactExports.useEffect(() => {
     const today = getTodayDateString();
     highestPriorityEvents.filter(isPriorityEventPublished).forEach((event) => onDeletePriorityEvent(event.id));
-    highestPriorityEvents.filter((event) => !isPriorityEventPublished(event)).filter((event) => {
+    highestPriorityEvents.filter((event) => !isPriorityEventPublished(event)).filter((event) => !isDirectedTaskPriorityEvent(event)).filter((event) => {
       const eventDate = String(event.date || "").trim();
       return /^\d{4}-\d{2}-\d{2}$/.test(eventDate) && eventDate < buildDfpDate && eventDate >= today;
     }).forEach((event) => onUpdatePriorityEvent(event.id, { date: buildDfpDate }));
@@ -45098,9 +45114,9 @@ const PrioritiesView = ({
       const picName = getPriorityEventPicName(event);
       const aircraftConfigSummary = getAircraftConfigSummary(event);
       const eventDateLabel = formatPriorityDate(event.date);
-      const isDirectedTaskPriorityEvent = getPriorityEventGroup(event) === "tasking";
+      const isDirectedTaskPriorityEvent2 = getPriorityEventGroup(event) === "tasking";
       const deletePriorityEvent = () => {
-        if (isDirectedTaskPriorityEvent && event.taskingRequestId) {
+        if (isDirectedTaskPriorityEvent2 && event.taskingRequestId) {
           removeTaskingRequest(event.taskingRequestId);
           return;
         }
@@ -45143,8 +45159,8 @@ const PrioritiesView = ({
           "button",
           {
             type: "button",
-            "aria-label": isDirectedTaskPriorityEvent ? "Delete directed task" : "Delete priority event",
-            title: isDirectedTaskPriorityEvent ? "Delete directed task" : "Delete priority event",
+            "aria-label": isDirectedTaskPriorityEvent2 ? "Delete directed task" : "Delete priority event",
+            title: isDirectedTaskPriorityEvent2 ? "Delete directed task" : "Delete priority event",
             onClick: (e) => {
               e.stopPropagation();
               deletePriorityEvent();
@@ -99444,11 +99460,30 @@ const highestPriorityEventBelongsToUnit = (event, unitCode) => {
   ].map((value) => String(value || "").toUpperCase());
   return displayFields.some((value) => value.includes(`/${targetUnit}`) || value.includes(` ${targetUnit}`) || value.includes(`-${targetUnit}`));
 };
+const getHighestPriorityEventReplacementKey = (event) => {
+  if (event.taskingRequestId) {
+    return `tasking:${event.taskingRequestId}:${event.taskingAircraftIndex || 1}`;
+  }
+  if (event.currencyDraftId) {
+    return `currency:${event.currencyDraftId}:${event.taskingAircraftIndex || event.id}`;
+  }
+  if (event.sctRequestId) {
+    return `sct:${event.sctRequestId}:${event.id}`;
+  }
+  return `id:${event.id}`;
+};
+const dedupeHighestPriorityEvents = (events) => {
+  const byKey = /* @__PURE__ */ new Map();
+  events.forEach((event) => {
+    byKey.set(getHighestPriorityEventReplacementKey(event), event);
+  });
+  return Array.from(byKey.values());
+};
 const loadHighestPriorityEventsForUnitContext = (locationCode, unitCode) => {
   const targetLocation = normaliseHighestPriorityUnitCode(locationCode || "UNKNOWN");
   const targetUnit = normaliseHighestPriorityUnitCode(unitCode || "UNKNOWN");
   const baseKey = buildHighestPriorityEventsStorageKey(targetLocation, targetUnit);
-  const baseEvents = loadHighestPriorityEventsFromStorage(baseKey);
+  const baseEvents = dedupeHighestPriorityEvents(loadHighestPriorityEventsFromStorage(baseKey));
   if (parseHighestPriorityUnitCodes(targetUnit).length > 1) return baseEvents;
   try {
     if (typeof localStorage === "undefined") return baseEvents;
@@ -99467,7 +99502,7 @@ const loadHighestPriorityEventsForUnitContext = (locationCode, unitCode) => {
         seenIds.add(event.id);
       });
     }
-    return merged;
+    return dedupeHighestPriorityEvents(merged);
   } catch (error) {
     console.warn("[HighestPriorityEvents] Failed to recover combined-unit priority rows", error);
     return baseEvents;
@@ -118540,7 +118575,12 @@ const App = () => {
       return;
     }
     try {
-      localStorage.setItem(highestPriorityEventsStorageKey, JSON.stringify(highestPriorityEvents));
+      const dedupedHighestPriorityEvents = dedupeHighestPriorityEvents(highestPriorityEvents);
+      if (dedupedHighestPriorityEvents.length !== highestPriorityEvents.length) {
+        setHighestPriorityEvents(dedupedHighestPriorityEvents);
+        return;
+      }
+      localStorage.setItem(highestPriorityEventsStorageKey, JSON.stringify(dedupedHighestPriorityEvents));
     } catch (error) {
       console.warn("[HighestPriorityEvents] Failed to persist events", error);
     }
@@ -126019,28 +126059,16 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       logRoutineAppDebug("✅ Training reports already in sync with Active DFP");
     }
   };
-  const getPriorityEventReplacementKey = (event) => {
-    if (event.taskingRequestId) {
-      return `tasking:${event.taskingRequestId}:${event.taskingAircraftIndex || 1}`;
-    }
-    if (event.currencyDraftId) {
-      return `currency:${event.currencyDraftId}:${event.taskingAircraftIndex || event.id}`;
-    }
-    if (event.sctRequestId) {
-      return `sct:${event.sctRequestId}:${event.id}`;
-    }
-    return `id:${event.id}`;
-  };
   const mergeHighestPriorityEvents = (prevEvents, eventsToAdd) => {
     const incomingIds = new Set(eventsToAdd.map((event) => event.id));
-    const incomingKeys = new Set(eventsToAdd.map(getPriorityEventReplacementKey));
+    const incomingKeys = new Set(eventsToAdd.map(getHighestPriorityEventReplacementKey));
     const incomingTaskingRequestIds = new Set(
       eventsToAdd.map((event) => event.taskingRequestId).filter((id) => Boolean(id))
     );
-    return [
-      ...prevEvents.filter((event) => !incomingIds.has(event.id) && !incomingKeys.has(getPriorityEventReplacementKey(event)) && !(event.taskingRequestId && incomingTaskingRequestIds.has(event.taskingRequestId))),
+    return dedupeHighestPriorityEvents([
+      ...prevEvents.filter((event) => !incomingIds.has(event.id) && !incomingKeys.has(getHighestPriorityEventReplacementKey(event)) && !(event.taskingRequestId && incomingTaskingRequestIds.has(event.taskingRequestId))),
       ...eventsToAdd
-    ];
+    ]);
   };
   const handleUpdatePriorityEvent = (eventId, updates) => {
     setHighestPriorityEvents(

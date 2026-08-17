@@ -2786,6 +2786,41 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     }));
   };
 
+  const taskingPriorityEventNeedsSync = (expected: ScheduleEvent, actual?: ScheduleEvent): boolean => (
+    !actual ||
+    actual.date !== expected.date ||
+    actual.flightNumber !== expected.flightNumber ||
+    actual.taskingName !== expected.taskingName ||
+    actual.taskingDisplayLabel !== expected.taskingDisplayLabel ||
+    actual.startTime !== expected.startTime ||
+    actual.duration !== expected.duration ||
+    actual.priority !== expected.priority ||
+    actual.isMandatoryTasking !== expected.isMandatoryTasking ||
+    actual.origin !== expected.origin ||
+    actual.destination !== expected.destination ||
+    actual.callsign !== expected.callsign ||
+    actual.aircraftConfigId !== expected.aircraftConfigId ||
+    actual.taskingAircraftCount !== expected.taskingAircraftCount ||
+    JSON.stringify(actual.crewRequirement || null) !== JSON.stringify(expected.crewRequirement || null)
+  );
+
+  useEffect(() => {
+    visibleTaskingRequests
+      .filter(request => request.submitted && !request.ignored)
+      .forEach(request => {
+        const expectedEvents = buildTaskingPriorityEvents(request);
+        const actualEvents = highestPriorityEvents.filter(event => isTaskingPriorityEventForRequest(event, request.id));
+        const needsSync = expectedEvents.length !== actualEvents.length || expectedEvents.some(expected => {
+          const expectedIndex = expected.taskingAircraftIndex || 1;
+          const actual = actualEvents.find(event => (event.taskingAircraftIndex || 1) === expectedIndex);
+          return taskingPriorityEventNeedsSync(expected, actual);
+        });
+        if (needsSync) {
+          onAddPriorityEvents(expectedEvents);
+        }
+      });
+  }, [visibleTaskingRequests, highestPriorityEvents, activeTaskingUnitCodes.join('|')]);
+
   const setTaskingSchedulerPriority = (id: string, schedulerPriority: TaskingSchedulerPriority) => {
     const request = taskingRequests.find(item => item.id === id);
     if (!request) return;
@@ -3580,6 +3615,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const eventDate = String(event.date || '').trim();
       return !eventDate || eventDate === buildDfpDate;
   };
+  const isDirectedTaskPriorityEvent = (event: ScheduleEvent): boolean => (
+      event.isTaskingRequest === true ||
+      !!event.taskingRequestId ||
+      String(event.id || '').startsWith('tasking-')
+  );
   const matchesPriorityEventIdentity = (source: ScheduleEvent, candidate: ScheduleEvent): boolean => (
       candidate.id === source.id ||
       (!!source.currencyDraftId && candidate.currencyDraftId === source.currencyDraftId) ||
@@ -3604,6 +3644,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           .forEach(event => onDeletePriorityEvent(event.id));
       highestPriorityEvents
           .filter(event => !isPriorityEventPublished(event))
+          .filter(event => !isDirectedTaskPriorityEvent(event))
           .filter(event => {
               const eventDate = String(event.date || '').trim();
               return /^\d{4}-\d{2}-\d{2}$/.test(eventDate)

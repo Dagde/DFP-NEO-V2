@@ -5887,11 +5887,32 @@ const highestPriorityEventBelongsToUnit = (event: ScheduleEvent, unitCode: strin
     ));
 };
 
+const getHighestPriorityEventReplacementKey = (event: ScheduleEvent): string => {
+    if (event.taskingRequestId) {
+        return `tasking:${event.taskingRequestId}:${event.taskingAircraftIndex || 1}`;
+    }
+    if (event.currencyDraftId) {
+        return `currency:${event.currencyDraftId}:${event.taskingAircraftIndex || event.id}`;
+    }
+    if (event.sctRequestId) {
+        return `sct:${event.sctRequestId}:${event.id}`;
+    }
+    return `id:${event.id}`;
+};
+
+const dedupeHighestPriorityEvents = (events: ScheduleEvent[]): ScheduleEvent[] => {
+    const byKey = new Map<string, ScheduleEvent>();
+    events.forEach((event) => {
+        byKey.set(getHighestPriorityEventReplacementKey(event), event);
+    });
+    return Array.from(byKey.values());
+};
+
 const loadHighestPriorityEventsForUnitContext = (locationCode: string, unitCode: string): ScheduleEvent[] => {
     const targetLocation = normaliseHighestPriorityUnitCode(locationCode || 'UNKNOWN');
     const targetUnit = normaliseHighestPriorityUnitCode(unitCode || 'UNKNOWN');
     const baseKey = buildHighestPriorityEventsStorageKey(targetLocation, targetUnit);
-    const baseEvents = loadHighestPriorityEventsFromStorage(baseKey);
+    const baseEvents = dedupeHighestPriorityEvents(loadHighestPriorityEventsFromStorage(baseKey));
     if (parseHighestPriorityUnitCodes(targetUnit).length > 1) return baseEvents;
 
     try {
@@ -5911,7 +5932,7 @@ const loadHighestPriorityEventsForUnitContext = (locationCode: string, unitCode:
                 seenIds.add(event.id);
             });
         }
-        return merged;
+        return dedupeHighestPriorityEvents(merged);
     } catch (error) {
         console.warn('[HighestPriorityEvents] Failed to recover combined-unit priority rows', error);
         return baseEvents;
@@ -29227,7 +29248,12 @@ const App: React.FC = () => {
             return;
         }
         try {
-            localStorage.setItem(highestPriorityEventsStorageKey, JSON.stringify(highestPriorityEvents));
+            const dedupedHighestPriorityEvents = dedupeHighestPriorityEvents(highestPriorityEvents);
+            if (dedupedHighestPriorityEvents.length !== highestPriorityEvents.length) {
+                setHighestPriorityEvents(dedupedHighestPriorityEvents);
+                return;
+            }
+            localStorage.setItem(highestPriorityEventsStorageKey, JSON.stringify(dedupedHighestPriorityEvents));
         } catch (error) {
             console.warn('[HighestPriorityEvents] Failed to persist events', error);
         }
@@ -38458,35 +38484,22 @@ const App: React.FC = () => {
         }
     };
 
-    const getPriorityEventReplacementKey = (event: ScheduleEvent): string => {
-        if (event.taskingRequestId) {
-            return `tasking:${event.taskingRequestId}:${event.taskingAircraftIndex || 1}`;
-        }
-        if (event.currencyDraftId) {
-            return `currency:${event.currencyDraftId}:${event.taskingAircraftIndex || event.id}`;
-        }
-        if (event.sctRequestId) {
-            return `sct:${event.sctRequestId}:${event.id}`;
-        }
-        return `id:${event.id}`;
-    };
-
     const mergeHighestPriorityEvents = (prevEvents: ScheduleEvent[], eventsToAdd: ScheduleEvent[]): ScheduleEvent[] => {
         const incomingIds = new Set(eventsToAdd.map(event => event.id));
-        const incomingKeys = new Set(eventsToAdd.map(getPriorityEventReplacementKey));
+        const incomingKeys = new Set(eventsToAdd.map(getHighestPriorityEventReplacementKey));
         const incomingTaskingRequestIds = new Set(
             eventsToAdd
                 .map(event => event.taskingRequestId)
                 .filter((id): id is string => Boolean(id))
         );
-        return [
+        return dedupeHighestPriorityEvents([
             ...prevEvents.filter(event => (
                 !incomingIds.has(event.id) &&
-                !incomingKeys.has(getPriorityEventReplacementKey(event)) &&
+                !incomingKeys.has(getHighestPriorityEventReplacementKey(event)) &&
                 !(event.taskingRequestId && incomingTaskingRequestIds.has(event.taskingRequestId))
             )),
             ...eventsToAdd,
-        ];
+        ]);
     };
 
     const handleUpdatePriorityEvent = (eventId: string, updates: Partial<ScheduleEvent>) => {
