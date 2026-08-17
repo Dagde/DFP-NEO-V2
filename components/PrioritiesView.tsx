@@ -814,22 +814,36 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
         : <>Add names in {renderDirectedTaskSettingsLink()}, or type a task.</>;
       return (
         <div key={request.id} className="overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
-          <button
-            type="button"
-            onClick={() => toggleTaskingExpanded(request.id)}
-            className="flex w-full items-center justify-between gap-3 bg-cyan-950/80 px-4 py-3 text-left transition hover:bg-cyan-900/80"
-            aria-expanded={isExpanded}
-          >
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-black text-cyan-50">{taskingHeaderTitle}</span>
-              <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Directed Task Request</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-2 text-right">
-              <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderDate}</span>
-              <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderTime}</span>
-              <span className={`text-sm font-black text-cyan-100 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>v</span>
-            </span>
-          </button>
+          <div className="flex w-full items-center gap-3 bg-cyan-950/80 px-4 py-3 transition hover:bg-cyan-900/80">
+            <button
+              type="button"
+              onClick={() => toggleTaskingExpanded(request.id)}
+              className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+              aria-expanded={isExpanded}
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-black text-cyan-50">{taskingHeaderTitle}</span>
+                <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Directed Task Request</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2 text-right">
+                <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderDate}</span>
+                <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderTime}</span>
+                <span className={`text-sm font-black text-cyan-100 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>v</span>
+              </span>
+            </button>
+            <button
+                type="button"
+                aria-label="Delete directed task"
+                title="Delete directed task"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRemoveTaskingRequest(request.id);
+                }}
+                className="inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100 focus:outline-none focus:ring-2 focus:ring-red-400/60"
+              >
+                <TrashIcon aria-hidden="true" className="h-4 w-4" />
+            </button>
+          </div>
 
           <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
             <div className="min-h-0 overflow-hidden">
@@ -1016,9 +1030,12 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 })}
                 <button
                   onClick={() => onRemoveTaskingRequest(request.id)}
-                  className="h-8 rounded-md border border-red-500/30 bg-red-500/10 px-2 text-xs font-semibold text-red-200 hover:border-red-400/60 hover:bg-red-500/20"
+                  aria-label="Delete directed task"
+                  title="Delete directed task"
+                  className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-2 text-xs font-semibold text-red-200 hover:border-red-400/60 hover:bg-red-500/20"
                 >
-                  Remove
+                  <TrashIcon aria-hidden="true" className="h-4 w-4" />
+                  Delete
                 </button>
               </div>
             </TaskingFieldPanel>
@@ -2651,16 +2668,31 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   }, [highestPriorityEvents, activeTaskingUnitCodes.join('|')]);
 
   const updateTaskingRequest = (id: string, updates: Partial<TaskingRequest>) => {
-    if (updates.submitted === false) {
+    const currentRequest = taskingRequests.find(request => request.id === id);
+    const isSubmittedEdit = Boolean(
+      currentRequest?.submitted &&
+      updates.submitted === false &&
+      updates.saved === false &&
+      updates.ignored !== true
+    );
+    if (updates.submitted === false && !isSubmittedEdit) {
       removeTaskingPriorityEvents(id);
     }
-    const nextUpdates = isSingleSeatAircraft
+    const appliedUpdates = isSubmittedEdit
       ? {
           ...updates,
-          flightType: 'Solo' as const,
-          crewRequirement: updates.crewRequirement || { mode: 'custom' as const, roles: [{ role: 'Pilot', count: 1 }] },
+          saved: true,
+          submitted: true,
+          ignored: false,
         }
       : updates;
+    const nextUpdates = isSingleSeatAircraft
+      ? {
+          ...appliedUpdates,
+          flightType: 'Solo' as const,
+          crewRequirement: appliedUpdates.crewRequirement || { mode: 'custom' as const, roles: [{ role: 'Pilot', count: 1 }] },
+        }
+      : appliedUpdates;
     setTaskingRequests(prev => prev.map(request => (
       request.id === id
         ? {
@@ -2672,6 +2704,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           }
         : request
     )));
+    if (isSubmittedEdit && currentRequest) {
+      const nextRequest: TaskingRequest = {
+        ...currentRequest,
+        ...nextUpdates,
+        saved: nextUpdates.saved ?? currentRequest.saved,
+        submitted: nextUpdates.submitted ?? currentRequest.submitted,
+        ignored: nextUpdates.ignored ?? currentRequest.ignored,
+      };
+      onAddPriorityEvents(buildTaskingPriorityEvents(nextRequest));
+    }
   };
 
   const buildTaskingPriorityEvents = (request: TaskingRequest): ScheduleEvent[] => {
@@ -2779,10 +2821,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const submitTaskingRequest = async (id: string) => {
     const request = taskingRequests.find(item => item.id === id);
     if (!request) return;
-    if (isTaskingRequestInHighestPriority(id)) {
-      await showDarkAlert('Already added to Highest Priority Events list.', 'Already Added', 'info');
-      return;
-    }
     const priorityEvents = buildTaskingPriorityEvents(request);
     onAddPriorityEvents(priorityEvents);
     updateTaskingRequest(id, { saved: true, submitted: true, ignored: false });
@@ -3638,6 +3676,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   const updatePriorityEventScheduler = (event: ScheduleEvent, schedulerValue: 'Mandatory' | 'Desirable' | 'Ignore') => {
     if (schedulerValue === 'Ignore') {
+      if (event.taskingRequestId) {
+        ignoreTaskingRequest(event.taskingRequestId);
+        return;
+      }
       onDeletePriorityEvent(event.id);
       return;
     }
@@ -4048,6 +4090,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const picName = getPriorityEventPicName(event);
       const aircraftConfigSummary = getAircraftConfigSummary(event);
       const eventDateLabel = formatPriorityDate(event.date);
+      const isDirectedTaskPriorityEvent = getPriorityEventGroup(event) === 'tasking';
+      const deletePriorityEvent = () => {
+        if (isDirectedTaskPriorityEvent && event.taskingRequestId) {
+          removeTaskingRequest(event.taskingRequestId);
+          return;
+        }
+        onDeletePriorityEvent(event.id);
+      };
 
       return (
         <tr key={event.id} onClick={() => onSelectEvent(event)} className={rowClass}>
@@ -4090,11 +4140,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           <td className="border border-slate-700/80 px-1.5 py-1.5 text-center">
             <button
               type="button"
-              aria-label="Delete priority event"
-              title="Delete priority event"
+              aria-label={isDirectedTaskPriorityEvent ? 'Delete directed task' : 'Delete priority event'}
+              title={isDirectedTaskPriorityEvent ? 'Delete directed task' : 'Delete priority event'}
               onClick={(e) => {
                 e.stopPropagation();
-                onDeletePriorityEvent(event.id);
+                deletePriorityEvent();
               }}
               className="inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100"
             >

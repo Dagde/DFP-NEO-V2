@@ -38458,6 +38458,37 @@ const App: React.FC = () => {
         }
     };
 
+    const getPriorityEventReplacementKey = (event: ScheduleEvent): string => {
+        if (event.taskingRequestId) {
+            return `tasking:${event.taskingRequestId}:${event.taskingAircraftIndex || 1}`;
+        }
+        if (event.currencyDraftId) {
+            return `currency:${event.currencyDraftId}:${event.taskingAircraftIndex || event.id}`;
+        }
+        if (event.sctRequestId) {
+            return `sct:${event.sctRequestId}:${event.id}`;
+        }
+        return `id:${event.id}`;
+    };
+
+    const mergeHighestPriorityEvents = (prevEvents: ScheduleEvent[], eventsToAdd: ScheduleEvent[]): ScheduleEvent[] => {
+        const incomingIds = new Set(eventsToAdd.map(event => event.id));
+        const incomingKeys = new Set(eventsToAdd.map(getPriorityEventReplacementKey));
+        const incomingTaskingRequestIds = new Set(
+            eventsToAdd
+                .map(event => event.taskingRequestId)
+                .filter((id): id is string => Boolean(id))
+        );
+        return [
+            ...prevEvents.filter(event => (
+                !incomingIds.has(event.id) &&
+                !incomingKeys.has(getPriorityEventReplacementKey(event)) &&
+                !(event.taskingRequestId && incomingTaskingRequestIds.has(event.taskingRequestId))
+            )),
+            ...eventsToAdd,
+        ];
+    };
+
     const handleUpdatePriorityEvent = (eventId: string, updates: Partial<ScheduleEvent>) => {
         setHighestPriorityEvents(prevEvents =>
             prevEvents.map(event =>
@@ -46648,13 +46679,7 @@ appliedUpdates.forEach(update => {
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     unitCallsignSettings={activeUnitCallsignSettings}
                     onAddPriorityEvents={(eventsToAdd) => {
-                        setHighestPriorityEvents(prev => {
-                            const incomingIds = new Set(eventsToAdd.map(event => event.id));
-                            return [
-                                ...prev.filter(event => !incomingIds.has(event.id)),
-                                ...eventsToAdd,
-                            ];
-                        });
+                        setHighestPriorityEvents(prev => mergeHighestPriorityEvents(prev, eventsToAdd));
                     }}
                     onAddBuildEvents={(eventsToAdd) => {
                         const incomingIds = new Set(eventsToAdd.map(event => event.id));
@@ -49284,13 +49309,7 @@ appliedUpdates.forEach(update => {
                                     onUpdateFixedCrewTrainingPriorities={setFixedCrewTrainingPriorities}
                                     highestPriorityEvents={highestPriorityEvents}
                                     onAddPriorityEvents={(eventsToAdd) => {
-                                        setHighestPriorityEvents(prev => {
-                                            const incomingIds = new Set(eventsToAdd.map(event => event.id));
-                                            return [
-                                                ...prev.filter(event => !incomingIds.has(event.id)),
-                                                ...eventsToAdd,
-                                            ];
-                                        });
+                                        setHighestPriorityEvents(prev => mergeHighestPriorityEvents(prev, eventsToAdd));
                                     }}
                                     onDeletePriorityEvent={handleDeletePriorityEvent}
                                     sctFlights={sctFlights}

@@ -42405,26 +42405,42 @@ const TaskingRequestTable = ({
         ", or type a task."
       ] });
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "button",
-          {
-            type: "button",
-            onClick: () => toggleTaskingExpanded(request.id),
-            className: "flex w-full items-center justify-between gap-3 bg-cyan-950/80 px-4 py-3 text-left transition hover:bg-cyan-900/80",
-            "aria-expanded": isExpanded,
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-black text-cyan-50", children: taskingHeaderTitle }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Directed Task Request" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex shrink-0 items-center gap-2 text-right", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white", children: taskingHeaderDate }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white", children: taskingHeaderTime }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-black text-cyan-100 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`, children: "v" })
-              ] })
-            ]
-          }
-        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-full items-center gap-3 bg-cyan-950/80 px-4 py-3 transition hover:bg-cyan-900/80", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => toggleTaskingExpanded(request.id),
+              className: "flex min-w-0 flex-1 items-center justify-between gap-3 text-left",
+              "aria-expanded": isExpanded,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-black text-cyan-50", children: taskingHeaderTitle }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Directed Task Request" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex shrink-0 items-center gap-2 text-right", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white", children: taskingHeaderDate }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white", children: taskingHeaderTime }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-black text-cyan-100 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`, children: "v" })
+                ] })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              "aria-label": "Delete directed task",
+              title: "Delete directed task",
+              onClick: (event) => {
+                event.stopPropagation();
+                onRemoveTaskingRequest(request.id);
+              },
+              className: "inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100 focus:outline-none focus:ring-2 focus:ring-red-400/60",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
+            }
+          )
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Directed Task", hint: directedTaskHint, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -42603,12 +42619,17 @@ const TaskingRequestTable = ({
                       `${request.id}-${priority}`
                     );
                   }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "button",
                     {
                       onClick: () => onRemoveTaskingRequest(request.id),
-                      className: "h-8 rounded-md border border-red-500/30 bg-red-500/10 px-2 text-xs font-semibold text-red-200 hover:border-red-400/60 hover:bg-red-500/20",
-                      children: "Remove"
+                      "aria-label": "Delete directed task",
+                      title: "Delete directed task",
+                      className: "inline-flex h-8 items-center justify-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-2 text-xs font-semibold text-red-200 hover:border-red-400/60 hover:bg-red-500/20",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" }),
+                        "Delete"
+                      ]
                     }
                   )
                 ] })
@@ -43928,14 +43949,24 @@ const PrioritiesView = ({
     setTaskingRequests((prev) => prev.map((request) => taskingRequestMatchesActiveScope(request) && request.submitted && !isTaskingRequestInHighestPriority(request.id) ? { ...request, submitted: false, ignored: true } : request));
   }, [highestPriorityEvents, activeTaskingUnitCodes.join("|")]);
   const updateTaskingRequest = (id, updates) => {
-    if (updates.submitted === false) {
+    const currentRequest = taskingRequests.find((request) => request.id === id);
+    const isSubmittedEdit = Boolean(
+      currentRequest?.submitted && updates.submitted === false && updates.saved === false && updates.ignored !== true
+    );
+    if (updates.submitted === false && !isSubmittedEdit) {
       removeTaskingPriorityEvents(id);
     }
-    const nextUpdates = isSingleSeatAircraft ? {
+    const appliedUpdates = isSubmittedEdit ? {
       ...updates,
-      flightType: "Solo",
-      crewRequirement: updates.crewRequirement || { mode: "custom", roles: [{ role: "Pilot", count: 1 }] }
+      saved: true,
+      submitted: true,
+      ignored: false
     } : updates;
+    const nextUpdates = isSingleSeatAircraft ? {
+      ...appliedUpdates,
+      flightType: "Solo",
+      crewRequirement: appliedUpdates.crewRequirement || { mode: "custom", roles: [{ role: "Pilot", count: 1 }] }
+    } : appliedUpdates;
     setTaskingRequests((prev) => prev.map((request) => request.id === id ? {
       ...request,
       ...nextUpdates,
@@ -43943,6 +43974,16 @@ const PrioritiesView = ({
       submitted: nextUpdates.submitted ?? request.submitted,
       ignored: nextUpdates.ignored ?? request.ignored
     } : request));
+    if (isSubmittedEdit && currentRequest) {
+      const nextRequest = {
+        ...currentRequest,
+        ...nextUpdates,
+        saved: nextUpdates.saved ?? currentRequest.saved,
+        submitted: nextUpdates.submitted ?? currentRequest.submitted,
+        ignored: nextUpdates.ignored ?? currentRequest.ignored
+      };
+      onAddPriorityEvents(buildTaskingPriorityEvents(nextRequest));
+    }
   };
   const buildTaskingPriorityEvents = (request) => {
     const tasking = request.tasking.trim();
@@ -44032,6 +44073,13 @@ const PrioritiesView = ({
     removeTaskingPriorityEvents(id);
     setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
     logAudit("Priorities", "Delete", "Removed directed-task request", removed?.tasking || id);
+  };
+  const ignoreTaskingRequest = (id) => {
+    const request = taskingRequests.find((item) => item.id === id);
+    if (!request) return;
+    removeTaskingPriorityEvents(id);
+    updateTaskingRequest(id, { saved: true, submitted: false, ignored: true });
+    logAudit("Priorities", "Ignore", "Ignored directed-task request", `${request.tasking || "Untitled directed-task request"} on ${request.date || "any build date"}`);
   };
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
@@ -44704,6 +44752,10 @@ const PrioritiesView = ({
   const getPriorityEventSchedulerValue = (event) => event.isMandatoryTasking || event.priority === "High" ? "Mandatory" : "Desirable";
   const updatePriorityEventScheduler = (event, schedulerValue) => {
     if (schedulerValue === "Ignore") {
+      if (event.taskingRequestId) {
+        ignoreTaskingRequest(event.taskingRequestId);
+        return;
+      }
       onDeletePriorityEvent(event.id);
       return;
     }
@@ -45046,6 +45098,14 @@ const PrioritiesView = ({
       const picName = getPriorityEventPicName(event);
       const aircraftConfigSummary = getAircraftConfigSummary(event);
       const eventDateLabel = formatPriorityDate(event.date);
+      const isDirectedTaskPriorityEvent = getPriorityEventGroup(event) === "tasking";
+      const deletePriorityEvent = () => {
+        if (isDirectedTaskPriorityEvent && event.taskingRequestId) {
+          removeTaskingRequest(event.taskingRequestId);
+          return;
+        }
+        onDeletePriorityEvent(event.id);
+      };
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { onClick: () => onSelectEvent(event), className: rowClass, children: [
         index === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "td",
@@ -45083,11 +45143,11 @@ const PrioritiesView = ({
           "button",
           {
             type: "button",
-            "aria-label": "Delete priority event",
-            title: "Delete priority event",
+            "aria-label": isDirectedTaskPriorityEvent ? "Delete directed task" : "Delete priority event",
+            title: isDirectedTaskPriorityEvent ? "Delete directed task" : "Delete priority event",
             onClick: (e) => {
               e.stopPropagation();
-              onDeletePriorityEvent(event.id);
+              deletePriorityEvent();
             },
             className: "inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100",
             children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
@@ -125959,6 +126019,29 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       logRoutineAppDebug("✅ Training reports already in sync with Active DFP");
     }
   };
+  const getPriorityEventReplacementKey = (event) => {
+    if (event.taskingRequestId) {
+      return `tasking:${event.taskingRequestId}:${event.taskingAircraftIndex || 1}`;
+    }
+    if (event.currencyDraftId) {
+      return `currency:${event.currencyDraftId}:${event.taskingAircraftIndex || event.id}`;
+    }
+    if (event.sctRequestId) {
+      return `sct:${event.sctRequestId}:${event.id}`;
+    }
+    return `id:${event.id}`;
+  };
+  const mergeHighestPriorityEvents = (prevEvents, eventsToAdd) => {
+    const incomingIds = new Set(eventsToAdd.map((event) => event.id));
+    const incomingKeys = new Set(eventsToAdd.map(getPriorityEventReplacementKey));
+    const incomingTaskingRequestIds = new Set(
+      eventsToAdd.map((event) => event.taskingRequestId).filter((id) => Boolean(id))
+    );
+    return [
+      ...prevEvents.filter((event) => !incomingIds.has(event.id) && !incomingKeys.has(getPriorityEventReplacementKey(event)) && !(event.taskingRequestId && incomingTaskingRequestIds.has(event.taskingRequestId))),
+      ...eventsToAdd
+    ];
+  };
   const handleUpdatePriorityEvent = (eventId, updates) => {
     setHighestPriorityEvents(
       (prevEvents) => prevEvents.map(
@@ -132751,13 +132834,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             unitCallsignSettings: activeUnitCallsignSettings,
             onAddPriorityEvents: (eventsToAdd) => {
-              setHighestPriorityEvents((prev) => {
-                const incomingIds = new Set(eventsToAdd.map((event) => event.id));
-                return [
-                  ...prev.filter((event) => !incomingIds.has(event.id)),
-                  ...eventsToAdd
-                ];
-              });
+              setHighestPriorityEvents((prev) => mergeHighestPriorityEvents(prev, eventsToAdd));
             },
             onAddBuildEvents: (eventsToAdd) => {
               const incomingIds = new Set(eventsToAdd.map((event) => event.id));
@@ -135142,13 +135219,7 @@ Do you want to replace the existing entry?`,
                         onUpdateFixedCrewTrainingPriorities: setFixedCrewTrainingPriorities,
                         highestPriorityEvents,
                         onAddPriorityEvents: (eventsToAdd) => {
-                          setHighestPriorityEvents((prev) => {
-                            const incomingIds = new Set(eventsToAdd.map((event) => event.id));
-                            return [
-                              ...prev.filter((event) => !incomingIds.has(event.id)),
-                              ...eventsToAdd
-                            ];
-                          });
+                          setHighestPriorityEvents((prev) => mergeHighestPriorityEvents(prev, eventsToAdd));
                         },
                         onDeletePriorityEvent: handleDeletePriorityEvent,
                         sctFlights,
