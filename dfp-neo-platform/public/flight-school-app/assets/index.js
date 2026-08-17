@@ -103807,6 +103807,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
   }
   function saveCurrencyPriorityDiagnostics(stage) {
+    if (!isDetailedNeoBuildDiagnosticsEnabled && stage !== "final") return;
     const payload = {
       stage,
       buildDate,
@@ -112243,7 +112244,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     saveCurrencyPriorityDiagnostics("currency-priority-compression-complete");
   };
   if (!isAirCombatBuild) {
+    markBuildTiming("currency-priority-compression:start", {
+      priorityEvents: currencyPriorityEvents.length
+    });
     compressCurrencyFlightPlacements();
+    markBuildTiming("currency-priority-compression:complete", {
+      priorityEvents: currencyPriorityEvents.length,
+      generatedEvents: generatedEvents.length
+    });
   }
   recordProgress({ message: "Shuffling events for distribution...", percentage: 95 });
   recordProgress({ message: "Sorting events by resource order...", percentage: 98 });
