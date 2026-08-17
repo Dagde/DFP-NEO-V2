@@ -1387,9 +1387,16 @@ const DfpSidePanelTimeline: React.FC<{
             return next;
         });
     }, [assistFormationSize, canSelectFormationCrew, selectedCrewName]);
+    const normaliseAssistFormationCallsignBase = (callsign?: string): string => (
+        String(callsign || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/\d+$/g, '')
+    );
+    const getConfiguredAssistFormationCallsignBase = (): string => (
+        callsignOptions.map(normaliseAssistFormationCallsignBase).find(Boolean) || ''
+    );
     const getAssistFormationCallsignBase = () => {
-        const raw = (assistCallsign.trim() || 'CSIGN').toUpperCase();
-        return raw.replace(/[^A-Z0-9]/g, '').replace(/\d+$/g, '') || 'CSIGN';
+        const configuredBase = getConfiguredAssistFormationCallsignBase();
+        if (assistFormationSize > 1 && configuredBase) return configuredBase;
+        return normaliseAssistFormationCallsignBase(assistCallsign) || configuredBase || 'CSIGN';
     };
     const getAssistFormationCallsign = (position: number) => assistFormationSize > 1
         ? `${getAssistFormationCallsignBase()}${position}`
@@ -19644,18 +19651,43 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     ): { base: string; source: 'configured' | 'fallback'; name?: string; unit?: string; candidates: string[] } => {
         const leadEvent = stagedEvents[0];
         const formationUnit = selectedTrainees.find(trainee => String(trainee.unit || '').trim())?.unit || '';
-        const locationCode = school;
+        const formationContext = (() => {
+            const traineeUnitTokens = new Set(selectedTrainees.map(trainee => normaliseFormationContextToken(trainee.unit)).filter(Boolean));
+            const activeUnitTokens = new Set(String(buildActiveUnitCode || '').split('+').map(normaliseFormationContextToken).filter(Boolean));
+            const allowedUnitTokens = new Set([
+                ...traineeUnitTokens,
+                ...activeUnitTokens,
+                normaliseFormationContextToken(formationUnit),
+            ].filter(Boolean));
+            const locationAliases = new Set([
+                school,
+                ...(selectedTrainees.flatMap(trainee => [
+                    (trainee as any).location,
+                    trainee.unit ? config.unitLocations?.[trainee.unit] : '',
+                ])),
+            ].flatMap(expandFormationLocationAliases));
+            return { allowedUnitTokens, locationAliases };
+        })();
+        const formationCallsignMatchesContext = (callsign: FormationCallsign): boolean => {
+            const configuredUnit = normaliseFormationContextToken(callsign.unit);
+            const unitMatches = !configuredUnit || formationContext.allowedUnitTokens.size === 0 || formationContext.allowedUnitTokens.has(configuredUnit);
+            const callsignLocationAliases = [
+                ...expandFormationLocationAliases(callsign.location),
+                ...expandFormationLocationAliases(callsign.locationCode),
+            ];
+            const locationMatches = callsignLocationAliases.length === 0 || callsignLocationAliases.some(alias => formationContext.locationAliases.has(alias));
+            return unitMatches && locationMatches;
+        };
         const configuredCandidates = config.formationCallsigns
             .filter(callsign => normalizeFormationCallsignCode(callsign.code))
-            .filter(callsign => !formationUnit || callsign.unit === formationUnit)
-            .filter(callsign => !callsign.locationCode || callsign.locationCode === locationCode)
+            .filter(formationCallsignMatchesContext)
             .map(callsign => ({
                 ...callsign,
                 code: normalizeFormationCallsignCode(callsign.code),
             }));
         const shuffledCandidates = orderBuildDeterministically(
             configuredCandidates,
-            `formation-callsigns|${formationUnit}|${locationCode}|${startTime}|${duration}`,
+            `formation-callsigns|${formationUnit}|${school}|${startTime}|${duration}`,
             callsign => callsign.code || callsign.name || callsign.id
         );
         const available = shuffledCandidates.find(callsign =>
@@ -42009,7 +42041,10 @@ appliedUpdates.forEach(update => {
             ? Math.min(requestedFormationSize, Math.max(1, availableFormationResources.length))
             : 1;
         const formationId = formationSize > 1 ? uuidv4() : undefined;
-        const callsignBase = getFormationCallsignBase(draft.callsign);
+        const configuredFormationCallsignBase = callsignOptions.map(getFormationCallsignBase).find(Boolean) || '';
+        const callsignBase = formationSize > 1
+            ? (configuredFormationCallsignBase || getFormationCallsignBase(draft.callsign))
+            : getFormationCallsignBase(draft.callsign);
         const crewSelectionOrder = Array.isArray(draft.crewSelectionOrder)
             ? draft.crewSelectionOrder.filter((name): name is string => typeof name === 'string' && name.trim().length > 0)
             : [];
@@ -42044,7 +42079,7 @@ appliedUpdates.forEach(update => {
                 formationSize: formationSize > 1 ? formationSize : draft.formationSize,
             };
         });
-    }, [activeAircraftResourcePrefix]);
+    }, [activeAircraftResourcePrefix, callsignOptions]);
 
     const handleProgramScheduleExternalEventDrop = useCallback((draft: ScheduleEvent, placement: NeoAssistDropPlacement) => {
         if (isPastDfpDate(date)) {
