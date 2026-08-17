@@ -44107,51 +44107,55 @@ const PrioritiesView = ({
       isFormation ? "Formation: Yes" : "Formation: No",
       `Crew required: ${formatCrewRequirementSummary(request.crewRequirement, aircraftCrewComposition, crewPositionTerminology)}`
     ].join("\n");
-    return Array.from({ length: aircraftCount }, (_, index) => ({
-      id: `tasking-${request.id}-${index + 1}`,
-      date: request.date || "",
-      type: "flight",
-      instructor: "",
-      student: "",
-      pilot: "",
-      group: aircraftCount > 1 ? `Aircraft ${index + 1} of ${aircraftCount}` : "Directed Task",
-      flightNumber: taskingDisplayLabel,
-      callsign: eventCallsign,
-      duration: Math.max(0.1, Number(request.duration) || 0.1),
-      startTime,
-      resourceId: "",
-      color: "bg-cyan-500/80",
-      flightType,
-      soloOrDual: flightType,
-      locationType: depPoint !== arrivalPoint ? "Land Away" : "Local",
-      origin: depPoint,
-      destination: arrivalPoint,
-      isTimeFixed: true,
-      isTaskingRequest: true,
-      isMandatoryTasking: schedulerPriority === "High",
-      taskingName: tasking,
-      taskingDisplayLabel,
-      taskingRequestId: request.id,
-      taskingUnitCode: request.unitCode || activeTaskingUnitCode,
-      taskingUnitCodes: request.unitCodes || activeTaskingUnitCodes,
-      unit: request.unitCode || activeTaskingUnitCode,
-      unitCode: request.unitCode || activeTaskingUnitCode,
-      fixedCrewUnit: request.unitCode || activeTaskingUnitCode,
-      fixedCrewUnitCode: request.unitCode || activeTaskingUnitCode,
-      taskingAircraftIndex: index + 1,
-      taskingAircraftCount: aircraftCount,
-      isFormation,
-      formationId,
-      formationType: isFormation ? "Directed Task Formation" : void 0,
-      formationPosition: isFormation ? index + 1 : void 0,
-      formationSize: isFormation ? aircraftCount : void 0,
-      dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
-      notes,
-      priority: schedulerPriority,
-      aircraftConfigId,
-      acceptableAircraftConfigs: [aircraftConfigId],
-      crewRequirement: request.crewRequirement || { mode: "aircraft_default" }
-    }));
+    const priorityRowCount = isFormation ? 1 : aircraftCount;
+    return Array.from({ length: priorityRowCount }, (_, index) => {
+      const aircraftIndex = index + 1;
+      return {
+        id: isFormation ? `tasking-${request.id}-formation` : `tasking-${request.id}-${aircraftIndex}`,
+        date: request.date || "",
+        type: "flight",
+        instructor: "",
+        student: "",
+        pilot: "",
+        group: isFormation ? `${aircraftCount} Aircraft Formation` : aircraftCount > 1 ? `Aircraft ${aircraftIndex} of ${aircraftCount}` : "Directed Task",
+        flightNumber: taskingDisplayLabel,
+        callsign: eventCallsign,
+        duration: Math.max(0.1, Number(request.duration) || 0.1),
+        startTime,
+        resourceId: "",
+        color: "bg-cyan-500/80",
+        flightType,
+        soloOrDual: flightType,
+        locationType: depPoint !== arrivalPoint ? "Land Away" : "Local",
+        origin: depPoint,
+        destination: arrivalPoint,
+        isTimeFixed: true,
+        isTaskingRequest: true,
+        isMandatoryTasking: schedulerPriority === "High",
+        taskingName: tasking,
+        taskingDisplayLabel,
+        taskingRequestId: request.id,
+        taskingUnitCode: request.unitCode || activeTaskingUnitCode,
+        taskingUnitCodes: request.unitCodes || activeTaskingUnitCodes,
+        unit: request.unitCode || activeTaskingUnitCode,
+        unitCode: request.unitCode || activeTaskingUnitCode,
+        fixedCrewUnit: request.unitCode || activeTaskingUnitCode,
+        fixedCrewUnitCode: request.unitCode || activeTaskingUnitCode,
+        taskingAircraftIndex: isFormation ? 1 : aircraftIndex,
+        taskingAircraftCount: aircraftCount,
+        isFormation,
+        formationId,
+        formationType: isFormation ? "Directed Task Formation" : void 0,
+        formationPosition: void 0,
+        formationSize: isFormation ? aircraftCount : void 0,
+        dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
+        notes,
+        priority: schedulerPriority,
+        aircraftConfigId,
+        acceptableAircraftConfigs: [aircraftConfigId],
+        crewRequirement: request.crewRequirement || { mode: "aircraft_default" }
+      };
+    });
   };
   const taskingPriorityEventNeedsSync = (expected, actual) => !actual || actual.date !== expected.date || actual.flightNumber !== expected.flightNumber || actual.taskingName !== expected.taskingName || actual.taskingDisplayLabel !== expected.taskingDisplayLabel || actual.startTime !== expected.startTime || actual.duration !== expected.duration || actual.priority !== expected.priority || actual.isMandatoryTasking !== expected.isMandatoryTasking || actual.origin !== expected.origin || actual.destination !== expected.destination || actual.callsign !== expected.callsign || actual.aircraftConfigId !== expected.aircraftConfigId || actual.taskingAircraftCount !== expected.taskingAircraftCount || actual.isFormation !== expected.isFormation || actual.formationId !== expected.formationId || actual.formationPosition !== expected.formationPosition || actual.formationSize !== expected.formationSize || JSON.stringify(actual.crewRequirement || null) !== JSON.stringify(expected.crewRequirement || null);
   reactExports.useEffect(() => {
@@ -108171,9 +108175,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         ...resourceOptions.slice(0, preferredIndex)
       ];
     };
-    const getTaskingFormationCallsign = (priorityEvent) => {
+    const getTaskingFormationCallsign = (priorityEvent, positionOverride) => {
       if (priorityEvent.isFormation !== true || !priorityEvent.formationId) return priorityEvent.callsign || "";
-      const position = Math.max(1, Math.floor(Number(priorityEvent.formationPosition || priorityEvent.taskingAircraftIndex) || 1));
+      const position = Math.max(1, Math.floor(Number(positionOverride || priorityEvent.formationPosition || priorityEvent.taskingAircraftIndex) || 1));
       const base = String(priorityEvent.callsign || priorityEvent.taskingDisplayLabel || priorityEvent.flightNumber || "FORM").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/\d+$/, "").slice(0, 8) || "FORM";
       return `${base}${position}`;
     };
@@ -108360,7 +108364,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return;
       }
       const searchEnd = isAirCombatBuild ? searchStart + priorityEvent.duration : activeWindowEnd;
+      const requestedFormationSize = priorityEvent.isFormation === true ? Math.max(2, Math.floor(Number(priorityEvent.formationSize || priorityEvent.taskingAircraftCount || priorityEvent.aircraftCount) || 1)) : 1;
+      const priorityFormationId = requestedFormationSize > 1 ? priorityEvent.formationId || `tasking-formation-${priorityEvent.taskingRequestId || priorityEvent.id}` : priorityEvent.formationId;
       let placedEvent = null;
+      let placedEvents = [];
       const attemptSummary = [];
       const requiredStaffCount = priorityEvent.type === "flight" ? Math.max(1, Math.min(2, getPriorityEventCrewCount(priorityEvent))) : priorityEvent.flightType === "Solo" || priorityEvent.soloOrDual === "Solo" ? 1 : 2;
       for (let time = searchStart; time + priorityEvent.duration <= searchEnd + 1e-3 && !placedEvent; time += timeIncrement) {
@@ -108382,8 +108389,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const resourceOptionsAtTime = getTaskingResourceOptionsForFlow(priorityEvent, roundedTime);
         if (priorityEvent.type === "flight") {
-          const formationGroupId = priorityEvent.isFormation === true && priorityEvent.formationId ? priorityEvent.formationId : void 0;
-          const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(roundedTime, 1, {
+          const formationGroupId = requestedFormationSize > 1 && priorityFormationId ? priorityFormationId : void 0;
+          const dispatchLimitViolation = getAirCombatHourlyDispatchLimitViolation(roundedTime, requestedFormationSize, {
             excludedFormationId: formationGroupId
           });
           if (dispatchLimitViolation) {
@@ -108419,112 +108426,150 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             startTime: roundedTime
           });
         }
-        for (const resourceId of resourceOptionsAtTime) {
-          const { date, ...eventWithoutDate } = priorityEvent;
-          const candidate = {
-            ...eventWithoutDate,
-            startTime: roundedTime,
-            resourceId,
-            aircraftConfigId: getAircraftConfigIdForResource(resourceId),
-            acceptableAircraftConfigs: normaliseAircraftConfigRequirement(priorityEvent),
-            callsign: getTaskingFormationCallsign(priorityEvent),
-            _source: "highest-priority-tasking",
-            _isNext: true,
-            _traineeName: ""
-          };
-          if (hasDispatchStaggerConflict(candidate.type, roundedTime, generatedEvents, {
-            allowSameFormationTakeoff: Boolean(candidate.formationId),
-            formationGroupId: candidate.formationId
-          })) {
-            const reason = candidate.type === "flight" ? "TAKEOFF_SEPARATION_VIOLATION" : "SIMULATOR_STAGGER_VIOLATION";
-            if (attemptSummary.length < 12) {
-              attemptSummary.push({
-                time: roundedTime,
-                displayTime: _fmtT(roundedTime),
-                resourceId,
-                outcome: "rejected",
-                reason,
-                configuredStaggerMinutes: getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, candidate.type)
-              });
+        const stagedEvents = [];
+        const usedResourcesAtTime = /* @__PURE__ */ new Set();
+        for (let memberIndex = 1; memberIndex <= requestedFormationSize; memberIndex++) {
+          let stagedMember = null;
+          for (const resourceId of resourceOptionsAtTime) {
+            if (usedResourcesAtTime.has(resourceId)) continue;
+            const { date, ...eventWithoutDate } = priorityEvent;
+            const candidate = {
+              ...eventWithoutDate,
+              id: requestedFormationSize > 1 ? `${priorityEvent.id}-${memberIndex}` : priorityEvent.id,
+              startTime: roundedTime,
+              resourceId,
+              aircraftConfigId: getAircraftConfigIdForResource(resourceId),
+              acceptableAircraftConfigs: normaliseAircraftConfigRequirement(priorityEvent),
+              taskingAircraftIndex: requestedFormationSize > 1 ? memberIndex : priorityEvent.taskingAircraftIndex,
+              taskingAircraftCount: requestedFormationSize > 1 ? requestedFormationSize : priorityEvent.taskingAircraftCount,
+              isFormation: requestedFormationSize > 1 ? true : priorityEvent.isFormation,
+              formationId: requestedFormationSize > 1 ? priorityFormationId : priorityEvent.formationId,
+              formationType: requestedFormationSize > 1 ? "Directed Task Formation" : priorityEvent.formationType,
+              formationPosition: requestedFormationSize > 1 ? memberIndex : priorityEvent.formationPosition,
+              formationSize: requestedFormationSize > 1 ? requestedFormationSize : priorityEvent.formationSize,
+              callsign: requestedFormationSize > 1 ? getTaskingFormationCallsign({ ...priorityEvent, formationId: priorityFormationId, isFormation: true }, memberIndex) : getTaskingFormationCallsign(priorityEvent),
+              _source: "highest-priority-tasking",
+              _isNext: true,
+              _traineeName: ""
+            };
+            if (hasDispatchStaggerConflict(candidate.type, roundedTime, generatedEvents, {
+              allowSameFormationTakeoff: Boolean(candidate.formationId),
+              formationGroupId: candidate.formationId
+            })) {
+              const reason = candidate.type === "flight" ? "TAKEOFF_SEPARATION_VIOLATION" : "SIMULATOR_STAGGER_VIOLATION";
+              if (attemptSummary.length < 12) {
+                attemptSummary.push({
+                  time: roundedTime,
+                  displayTime: _fmtT(roundedTime),
+                  resourceId,
+                  memberIndex,
+                  outcome: "rejected",
+                  reason,
+                  configuredStaggerMinutes: getEffectiveDispatchStaggerMinutes(dispatchStaggerSettings, candidate.type)
+                });
+              }
+              if (isAirCombatBuild) countAirCombatRejection(reason);
+              continue;
             }
-            if (isAirCombatBuild) countAirCombatRejection(reason);
-            continue;
-          }
-          const resourceConflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
-          if (resourceConflict) {
-            if (attemptSummary.length < 12) {
-              attemptSummary.push({
-                time: roundedTime,
-                displayTime: _fmtT(roundedTime),
-                resourceId,
-                outcome: "rejected",
-                reason: "RESOURCE_CONFLICT",
-                conflict: {
-                  id: resourceConflict.id,
-                  flightNumber: resourceConflict.flightNumber,
-                  startTime: resourceConflict.startTime,
-                  duration: resourceConflict.duration,
-                  resourceId: resourceConflict.resourceId,
-                  source: resourceConflict._source || null
-                }
-              });
+            const resourceConflict = generatedEvents.find((existing) => priorityResourceConflict(candidate, existing));
+            if (resourceConflict) {
+              if (attemptSummary.length < 12) {
+                attemptSummary.push({
+                  time: roundedTime,
+                  displayTime: _fmtT(roundedTime),
+                  resourceId,
+                  memberIndex,
+                  outcome: "rejected",
+                  reason: "RESOURCE_CONFLICT",
+                  conflict: {
+                    id: resourceConflict.id,
+                    flightNumber: resourceConflict.flightNumber,
+                    startTime: resourceConflict.startTime,
+                    duration: resourceConflict.duration,
+                    resourceId: resourceConflict.resourceId,
+                    source: resourceConflict._source || null
+                  }
+                });
+              }
+              if (isAirCombatBuild) countAirCombatRejection("RESOURCE_CONFLICT");
+              continue;
             }
-            if (isAirCombatBuild) countAirCombatRejection("RESOURCE_CONFLICT");
-            continue;
-          }
-          const assignedStaff = assignTaskingStaff(candidate, requiredStaffCount);
-          if (!assignedStaff) {
-            if (attemptSummary.length < 12) {
-              attemptSummary.push({
-                time: roundedTime,
-                displayTime: _fmtT(roundedTime),
-                resourceId,
-                outcome: "rejected",
-                reason: requiredStaffCount === 1 ? "NO_RANDOM_STAFF_AVAILABLE" : "NO_RANDOM_STAFF_PAIR_AVAILABLE"
-              });
+            const assignedStaff = assignTaskingStaff(candidate, requiredStaffCount);
+            if (!assignedStaff) {
+              if (attemptSummary.length < 12) {
+                attemptSummary.push({
+                  time: roundedTime,
+                  displayTime: _fmtT(roundedTime),
+                  resourceId,
+                  memberIndex,
+                  outcome: "rejected",
+                  reason: requiredStaffCount === 1 ? "NO_RANDOM_STAFF_AVAILABLE" : "NO_RANDOM_STAFF_PAIR_AVAILABLE"
+                });
+              }
+              if (isAirCombatBuild) countAirCombatRejection(requiredStaffCount === 1 ? "NO_STAFF_AVAILABLE" : "NO_STAFF_PAIR_AVAILABLE");
+              continue;
             }
-            if (isAirCombatBuild) countAirCombatRejection(requiredStaffCount === 1 ? "NO_STAFF_AVAILABLE" : "NO_STAFF_PAIR_AVAILABLE");
-            continue;
+            stagedMember = {
+              ...candidate,
+              pilot: assignedStaff.pilot,
+              crew: requiredStaffCount === 2 ? assignedStaff.crew || "" : "",
+              instructor: "",
+              flightType: requiredStaffCount === 1 ? "Solo" : "Dual",
+              soloOrDual: requiredStaffCount === 1 ? "Solo" : "Dual"
+            };
+            pushGeneratedEvent(stagedMember);
+            stagedEvents.push(stagedMember);
+            usedResourcesAtTime.add(resourceId);
+            break;
           }
-          placedEvent = {
-            ...candidate,
-            pilot: assignedStaff.pilot,
-            crew: requiredStaffCount === 2 ? assignedStaff.crew || "" : "",
-            instructor: "",
-            flightType: requiredStaffCount === 1 ? "Solo" : "Dual",
-            soloOrDual: requiredStaffCount === 1 ? "Solo" : "Dual"
-          };
+          if (!stagedMember) break;
+        }
+        if (stagedEvents.length === requestedFormationSize) {
+          placedEvents = stagedEvents;
+          placedEvent = stagedEvents[0] || null;
           break;
+        }
+        if (stagedEvents.length > 0) {
+          const stagedIds = new Set(stagedEvents.map((event) => event.id));
+          for (let index = generatedEvents.length - 1; index >= 0; index--) {
+            if (stagedIds.has(generatedEvents[index].id)) {
+              generatedEvents.splice(index, 1);
+            }
+          }
+          rebuildGeneratedEventIndexes();
         }
       }
       if (placedEvent) {
-        pushGeneratedEvent(placedEvent);
-        traceTaskProvenance("generatedPushes", "tasking-priority-placement", placedEvent, {
-          priorityEventId: priorityEvent.id,
-          taskingRequestId: priorityEvent.taskingRequestId || null,
-          taskingName: priorityEvent.taskingName || null,
-          flightNumber: priorityEvent.flightNumber,
-          flightNumberSource: "highest-priority-tasking-event",
-          taskingAircraftIndex: priorityEvent.taskingAircraftIndex || null,
-          taskingAircraftCount: priorityEvent.taskingAircraftCount || null
+        placedEvents.forEach((event) => {
+          traceTaskProvenance("generatedPushes", "tasking-priority-placement", event, {
+            priorityEventId: priorityEvent.id,
+            taskingRequestId: priorityEvent.taskingRequestId || null,
+            taskingName: priorityEvent.taskingName || null,
+            flightNumber: priorityEvent.flightNumber,
+            flightNumberSource: "highest-priority-tasking-event",
+            taskingAircraftIndex: event.taskingAircraftIndex || priorityEvent.taskingAircraftIndex || null,
+            taskingAircraftCount: event.taskingAircraftCount || priorityEvent.taskingAircraftCount || null
+          });
         });
         scheduledTaskingPriorityEventIds.add(priorityEvent.id);
-        [placedEvent.pilot, placedEvent.crew].filter(Boolean).forEach((staffName) => {
-          const staffCounts = eventCounts.get(staffName);
-          if (staffCounts) staffCounts.flightFtd++;
+        placedEvents.forEach((event) => {
+          [event.pilot, event.crew].filter(Boolean).forEach((staffName) => {
+            const staffCounts = eventCounts.get(staffName);
+            if (staffCounts) staffCounts.flightFtd++;
+          });
         });
         if (isAirCombatBuild) {
-          neoBuildDiag.airCombatPriority.placements.push({
+          placedEvents.forEach((event) => neoBuildDiag.airCombatPriority.placements.push({
             kind: "task",
-            event: placedEvent.flightNumber,
-            startTime: placedEvent.startTime,
-            resourceId: placedEvent.resourceId,
-            pilot: placedEvent.pilot || null,
-            crew: placedEvent.crew || null
-          });
+            event: event.flightNumber,
+            startTime: event.startTime,
+            resourceId: event.resourceId,
+            pilot: event.pilot || null,
+            crew: event.crew || null
+          }));
         }
         scheduledCount++;
-        buildDebugLog(`[Directed Task Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
+        buildDebugLog(`[Directed Task Priority] Scheduled ${priorityEvent.flightNumber} ${requestedFormationSize > 1 ? `${requestedFormationSize}-ship formation` : `${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""}`} at ${placedEvent.startTime.toFixed(2)} on ${placedEvents.map((event) => event.resourceId).join(", ")}`);
       } else {
         buildDebugLog(`[Directed Task Priority] Unable to schedule ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""}: no compatible aircraft slot from ${_fmtT(searchStart)} to ${_fmtT(searchEnd)}`);
       }
@@ -108539,6 +108584,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             crew: placedEvent.crew || null,
             aircraftConfigId: placedEvent.aircraftConfigId || null
           } : null,
+          scheduledEvents: placedEvents.map((event) => ({
+            id: event.id,
+            startTime: event.startTime,
+            resourceId: event.resourceId,
+            pilot: event.pilot || null,
+            crew: event.crew || null,
+            callsign: event.callsign || null,
+            formationPosition: event.formationPosition || null,
+            formationSize: event.formationSize || null,
+            aircraftConfigId: event.aircraftConfigId || null
+          })),
           searchStart,
           searchEnd,
           resourceOptions,
@@ -108565,6 +108621,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             origin: placedEvent.origin,
             destination: placedEvent.destination
           } : null,
+          scheduledEvents: placedEvents.map((event) => ({
+            id: event.id,
+            startTime: event.startTime,
+            displayTime: _fmtT(event.startTime),
+            resourceId: event.resourceId,
+            pilot: event.pilot || null,
+            crew: event.crew || null,
+            callsign: event.callsign || null,
+            formationPosition: event.formationPosition || null,
+            formationSize: event.formationSize || null,
+            aircraftConfigId: event.aircraftConfigId || null,
+            origin: event.origin,
+            destination: event.destination
+          })),
           searchStart,
           searchEnd,
           resourceOptions,
