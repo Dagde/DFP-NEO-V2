@@ -44730,7 +44730,7 @@ const PrioritiesView = ({
       return /^\d{4}-\d{2}-\d{2}$/.test(eventDate) && eventDate < buildDfpDate && eventDate >= today;
     }).forEach((event) => onUpdatePriorityEvent(event.id, { date: buildDfpDate }));
   }, [activeScheduleEvents, buildDfpDate, highestPriorityEvents, onDeletePriorityEvent, onUpdatePriorityEvent]);
-  const standardPriorityEvents = highestPriorityEvents.filter(priorityEventMatchesBuildDate);
+  const standardPriorityEvents = highestPriorityEvents;
   const stalePriorityEvents = highestPriorityEvents.filter((event) => !priorityEventMatchesBuildDate(event));
   reactExports.useMemo(() => {
     const list = [];
@@ -45107,8 +45107,9 @@ const PrioritiesView = ({
     ] }, `${group.key}-empty`);
     const renderEventRow = (event, group, index) => {
       const isScheduledInBuild = isPriorityEventScheduled(event);
-      const rowText = isScheduledInBuild ? "text-emerald-200" : "text-slate-100";
-      const rowClass = isScheduledInBuild ? "cursor-pointer bg-emerald-950/60 transition-colors odd:bg-emerald-900/35 hover:bg-emerald-900/55" : "cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50";
+      const matchesBuildDate = priorityEventMatchesBuildDate(event);
+      const rowText = isScheduledInBuild ? "text-emerald-200" : matchesBuildDate ? "text-slate-100" : "text-slate-400";
+      const rowClass = isScheduledInBuild ? "cursor-pointer bg-emerald-950/60 transition-colors odd:bg-emerald-900/35 hover:bg-emerald-900/55" : matchesBuildDate ? "cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50" : "cursor-pointer bg-slate-950/65 transition-colors odd:bg-slate-900/65 hover:bg-slate-800/70";
       const eventLabel = getPriorityEventLabel(event);
       const crewRequirementName = getPriorityEventCrewRequirementName(event);
       const picName = getPriorityEventPicName(event);
@@ -45132,7 +45133,10 @@ const PrioritiesView = ({
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`, title: eventLabel, children: eventLabel }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`, title: eventDateLabel, children: eventDateLabel }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: `border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`, title: matchesBuildDate ? eventDateLabel : `${eventDateLabel} - not scheduled for this build date`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: eventDateLabel }),
+          !matchesBuildDate && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[9px] font-black uppercase tracking-[0.12em] text-amber-300/80", children: "Not this build" })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 ${rowText}`, title: picName, children: picName }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 ${rowText}`, title: crewRequirementName, children: crewRequirementName }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 ${rowText}`, title: event.currency || "N/A", children: event.currency || "N/A" }),
@@ -46411,7 +46415,7 @@ const PrioritiesView = ({
             stalePriorityEvents.length,
             " saved row",
             stalePriorityEvents.length === 1 ? "" : "s",
-            " not included because the date does not match this build."
+            " shown but only scheduled when the build date matches."
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(PriorityEventTable, { events: standardPriorityEvents })

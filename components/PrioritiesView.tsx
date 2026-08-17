@@ -3653,7 +3653,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           })
           .forEach(event => onUpdatePriorityEvent(event.id, { date: buildDfpDate }));
   }, [activeScheduleEvents, buildDfpDate, highestPriorityEvents, onDeletePriorityEvent, onUpdatePriorityEvent]);
-  const standardPriorityEvents = highestPriorityEvents.filter(priorityEventMatchesBuildDate);
+  const standardPriorityEvents = highestPriorityEvents;
   const stalePriorityEvents = highestPriorityEvents.filter(event => !priorityEventMatchesBuildDate(event));
   
   // Calculate incomplete remedials for display
@@ -4122,10 +4122,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
     const renderEventRow = (event: ScheduleEvent, group: typeof groups[number], index: number) => {
       const isScheduledInBuild = isPriorityEventScheduled(event);
-      const rowText = isScheduledInBuild ? 'text-emerald-200' : 'text-slate-100';
+      const matchesBuildDate = priorityEventMatchesBuildDate(event);
+      const rowText = isScheduledInBuild
+        ? 'text-emerald-200'
+        : matchesBuildDate
+          ? 'text-slate-100'
+          : 'text-slate-400';
       const rowClass = isScheduledInBuild
         ? 'cursor-pointer bg-emerald-950/60 transition-colors odd:bg-emerald-900/35 hover:bg-emerald-900/55'
-        : 'cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50';
+        : matchesBuildDate
+          ? 'cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50'
+          : 'cursor-pointer bg-slate-950/65 transition-colors odd:bg-slate-900/65 hover:bg-slate-800/70';
       const eventLabel = getPriorityEventLabel(event);
       const crewRequirementName = getPriorityEventCrewRequirementName(event);
       const picName = getPriorityEventPicName(event);
@@ -4151,7 +4158,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </td>
           )}
           <td className={`truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`} title={eventLabel}>{eventLabel}</td>
-          <td className={`truncate border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`} title={eventDateLabel}>{eventDateLabel}</td>
+          <td className={`border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`} title={matchesBuildDate ? eventDateLabel : `${eventDateLabel} - not scheduled for this build date`}>
+            <span className="block truncate">{eventDateLabel}</span>
+            {!matchesBuildDate && <span className="block truncate text-[9px] font-black uppercase tracking-[0.12em] text-amber-300/80">Not this build</span>}
+          </td>
           <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={picName}>{picName}</td>
           <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={crewRequirementName}>{crewRequirementName}</td>
           <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={event.currency || 'N/A'}>{event.currency || 'N/A'}</td>
@@ -5418,7 +5428,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 </div>
                 {stalePriorityEvents.length > 0 && (
                     <div className="rounded border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-right text-[11px] font-semibold text-amber-100">
-                        {stalePriorityEvents.length} saved row{stalePriorityEvents.length === 1 ? '' : 's'} not included because the date does not match this build.
+                        {stalePriorityEvents.length} saved row{stalePriorityEvents.length === 1 ? '' : 's'} shown but only scheduled when the build date matches.
                     </div>
                 )}
             </div>
