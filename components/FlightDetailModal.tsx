@@ -3538,7 +3538,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 onClick={handleTrainingReportClick}
                                                 className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                             >
-                                                <span className="text-center leading-tight">Training<br/>Report</span>
+                                                <span className="text-center text-[11px] leading-tight break-words px-1">{trainingReportDisplayName}</span>
                                             </button>
                                         </div>
                                     )}
