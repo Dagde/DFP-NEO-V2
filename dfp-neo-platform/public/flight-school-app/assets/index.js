@@ -8327,7 +8327,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
             onClick: () => navigateIfAllowed("Syllabus"),
             disabled: !canOpen("Syllabus"),
             className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Syllabus" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Syllabus")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Syllabus" })
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "LMP" })
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -62711,7 +62711,7 @@ const SyllabusView = ({
               )
             ] }, item.id);
           }),
-          filteredSyllabusDetails.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-center text-gray-500 italic text-sm", children: "No events found for this syllabus." })
+          filteredSyllabusDetails.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 text-center text-gray-500 italic text-sm", children: "No events found for this LMP." })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto", children: hoveredItem || selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
           DetailView,
@@ -65610,7 +65610,7 @@ const AuthorisationFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-300 mb-2", children: "Flight Summary" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1 text-sm", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Syllabus:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Event:" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: event.flightNumber })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
@@ -65712,7 +65712,7 @@ const AuthorisationFlyout = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Flight Summary" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-4 gap-y-1 mt-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: "Syllabus", value: event.flightNumber }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: "Event", value: event.flightNumber }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: "Start Time", value: `${Math.floor(event.startTime)}:${String(Math.round(event.startTime % 1 * 60)).padStart(2, "0")}` }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: instructorLabel2, value: event.instructor }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: "Student", value: getStudentName(event.student) }),
@@ -68871,7 +68871,7 @@ const SettingsView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Blank Template Downloads" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Download blank templates for bulk uploads in the relevant Staff, Trainee, Syllabus and Organisation pages. Completed files are selected or dropped into those pages, not stored here." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Download blank templates for bulk uploads in the relevant Staff, Trainee, LMP and Organisation pages. Completed files are selected or dropped into those pages, not stored here." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -75230,7 +75230,7 @@ This permanently removes the organisation record from platform configuration and
     const linkedAccessRules = masterLmpAccessRules.filter((rule) => String(rule.lmpCode || "").trim().toUpperCase() === lmpCode.toUpperCase()).length;
     const password = await showDarkPrompt({
       title: "Delete Master LMP",
-      message: `Enter your password to delete ${lmpLabel}. This removes the catalogue row and ${linkedAccessRules} access rule${linkedAccessRules === 1 ? "" : "s"}. Existing syllabus content is not deleted (${linkedSyllabusCount} event${linkedSyllabusCount === 1 ? "" : "s"} linked).`,
+      message: `Enter your password to delete ${lmpLabel}. This removes the catalogue row and ${linkedAccessRules} access rule${linkedAccessRules === 1 ? "" : "s"}. Existing LMP event content is not deleted (${linkedSyllabusCount} event${linkedSyllabusCount === 1 ? "" : "s"} linked).`,
       inputLabel: "Password",
       inputType: "password",
       inputPlaceholder: "Enter password",
@@ -78585,7 +78585,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass, children: "Syllabus Content" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass, children: "LMP Event Content" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-[38px] items-center rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: [
                     linkedSyllabusCount,
                     " event",
@@ -89911,7 +89911,7 @@ const EditCourseFlyout = ({
                 academicLmpType && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: [
                   'Academic lessons from the "',
                   academicLmpType,
-                  `" course in the Syllabus will appear in each trainee's Academic LMP tab.`
+                  `" LMP will appear in each trainee's Academic LMP tab.`
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
@@ -132522,7 +132522,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         Settings: "Settings",
         TrainingRecords: "Training Records",
         CourseProgress: "Course Progress",
-        Syllabus: "Syllabus",
+        Syllabus: "LMP",
         Trainee: "Trainee Profile",
         CourseRoster: "Trainee Profile",
         Instructors: "Staff Profile",

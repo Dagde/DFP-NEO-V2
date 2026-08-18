@@ -192,13 +192,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             <span>Trainee</span>
           </button>
 
-          {/* Syllabus - Square Button with Smaller Text */}
+          {/* LMP - Square Button with Smaller Text */}
           <button
             onClick={() => navigateIfAllowed('Syllabus')}
             disabled={!canOpen('Syllabus')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Syllabus' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Syllabus')}`}
           >
-            <span className="text-center leading-tight">Syllabus</span>
+            <span className="text-center leading-tight">LMP</span>
           </button>
 
 {/* Course Progress - Square Button with Smaller Text */}

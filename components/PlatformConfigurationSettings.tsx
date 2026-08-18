@@ -4618,7 +4618,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     )).length;
     const password = await showDarkPrompt({
       title: 'Delete Master LMP',
-      message: `Enter your password to delete ${lmpLabel}. This removes the catalogue row and ${linkedAccessRules} access rule${linkedAccessRules === 1 ? '' : 's'}. Existing syllabus content is not deleted (${linkedSyllabusCount} event${linkedSyllabusCount === 1 ? '' : 's'} linked).`,
+      message: `Enter your password to delete ${lmpLabel}. This removes the catalogue row and ${linkedAccessRules} access rule${linkedAccessRules === 1 ? '' : 's'}. Existing LMP event content is not deleted (${linkedSyllabusCount} event${linkedSyllabusCount === 1 ? '' : 's'} linked).`,
       inputLabel: 'Password',
       inputType: 'password',
       inputPlaceholder: 'Enter password',
@@ -8665,7 +8665,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         onCommit={(value) => updateMasterLmpCatalogueEntry(index, { description: value })}
                       />
                       <div>
-                        <label className={labelClass}>Syllabus Content</label>
+                        <label className={labelClass}>LMP Event Content</label>
                         <div className="flex min-h-[38px] items-center rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100">
                           {linkedSyllabusCount} event{linkedSyllabusCount === 1 ? '' : 's'}
                         </div>

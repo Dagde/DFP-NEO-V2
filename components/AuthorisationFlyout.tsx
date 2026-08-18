@@ -474,7 +474,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                     <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
                         <h3 className="text-sm font-semibold text-gray-300 mb-2">Flight Summary</h3>
                         <div className="space-y-1 text-sm">
-                            <div className="flex justify-between"><span className="text-gray-400">Syllabus:</span><span className="text-white font-medium">{event.flightNumber}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Event:</span><span className="text-white font-medium">{event.flightNumber}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">Start Time:</span><span className="text-white font-medium">{Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">{instructorLabel}:</span><span className="text-white font-medium">{event.instructor}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">Student:</span><span className="text-white font-medium">{getStudentName(event.student)}</span></div>
@@ -565,7 +565,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                     <fieldset className="p-4 border border-gray-600 rounded-lg">
                         <legend className="px-2 text-sm font-semibold text-gray-300">Flight Summary</legend>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
-                            <InfoRow label="Syllabus"   value={event.flightNumber} />
+                            <InfoRow label="Event"      value={event.flightNumber} />
                             <InfoRow label="Start Time" value={`${Math.floor(event.startTime)}:${String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}`} />
                             <InfoRow label={instructorLabel} value={event.instructor} />
                             <InfoRow label="Student"    value={getStudentName(event.student)} />

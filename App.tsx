@@ -46208,7 +46208,7 @@ appliedUpdates.forEach(update => {
                 Settings: 'Settings',
                 TrainingRecords: 'Training Records',
                 CourseProgress: 'Course Progress',
-                Syllabus: 'Syllabus',
+                Syllabus: 'LMP',
                 Trainee: 'Trainee Profile',
                 CourseRoster: 'Trainee Profile',
                 Instructors: 'Staff Profile',

@@ -1633,7 +1633,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <legend className="px-2 text-sm font-semibold text-gray-300">Blank Template Downloads</legend>
                                 <div className="mt-2 space-y-2">
                                     <p className="text-xs text-gray-400">
-                                        Download blank templates for bulk uploads in the relevant Staff, Trainee, Syllabus and Organisation pages. Completed files are selected or dropped into those pages, not stored here.
+                                        Download blank templates for bulk uploads in the relevant Staff, Trainee, LMP and Organisation pages. Completed files are selected or dropped into those pages, not stored here.
                                     </p>
                                     <input
                                         ref={templateOverrideInputRef}

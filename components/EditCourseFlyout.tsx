@@ -268,7 +268,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                             ))}
                         </select>
                         {academicLmpType && (
-                            <p className="mt-1 text-xs text-sky-400/70 italic">Academic lessons from the "{academicLmpType}" course in the Syllabus will appear in each trainee's Academic LMP tab.</p>
+                            <p className="mt-1 text-xs text-sky-400/70 italic">Academic lessons from the "{academicLmpType}" LMP will appear in each trainee's Academic LMP tab.</p>
                         )}
                     </div>
 

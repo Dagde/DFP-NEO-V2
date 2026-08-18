@@ -2576,7 +2576,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               </div>
             );})}
             {filteredSyllabusDetails.length === 0 && (
-                <div className="p-4 text-center text-gray-500 italic text-sm">No events found for this syllabus.</div>
+                <div className="p-4 text-center text-gray-500 italic text-sm">No events found for this LMP.</div>
             )}
           </div>
         </div>
