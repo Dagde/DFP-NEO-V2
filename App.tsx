@@ -45891,6 +45891,66 @@ appliedUpdates.forEach(update => {
         navigator.clipboard?.writeText(summary).catch(() => {});
     }, []);
 
+    const openTodayDfpFromContextMenu = useCallback(() => {
+        setDate(getLocalDateString());
+        handleNavigation('Program Schedule');
+    }, [handleNavigation]);
+
+    const openStaffScheduleFromContextMenu = useCallback(() => {
+        handleNavigation(['NextDayBuild', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) ? 'NextDayInstructorSchedule' : 'InstructorSchedule');
+    }, [activeView, handleNavigation]);
+
+    const openTraineeScheduleFromContextMenu = useCallback(() => {
+        if (!activeUnitHasTrainees) return;
+        handleNavigation(['NextDayBuild', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) ? 'NextDayTraineeSchedule' : 'TraineeSchedule');
+    }, [activeUnitHasTrainees, activeView, handleNavigation]);
+
+    const openPauseFlightOpsFromContextMenu = useCallback(() => {
+        if (isViewingPastDfp) {
+            denyPastDfpEdit('pause flight operations');
+            return;
+        }
+        if (!canEditDfpTiles || !canRunNeoBuildForActiveModel) {
+            denyPlatformAction('Pause Flight Ops requires DFP tile edit permission and a NEO-capable operational model');
+            return;
+        }
+        const pauseDate = date;
+        setBuildDfpDate(pauseDate);
+        const activeDfpEventsForPause = (publishedSchedules[pauseDate] || []).map((e: ScheduleEvent) => {
+            const { date: _d, ...rest } = e as any;
+            return rest as Omit<ScheduleEvent, 'date'>;
+        });
+        setNextDayBuildEvents(activeDfpEventsForPause);
+        setPauseOriginalEvents(activeDfpEventsForPause);
+        setPauseCompletedEventIds(new Set());
+        setPauseIsSelectingCompleted(false);
+        setPausePanelPhase('configure');
+        setPauseStagedEvents([]);
+        handleNavigation('NextDayBuild');
+        setShowPausePanel(true);
+    }, [canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, publishedSchedules]);
+
+    const contextSettingsSections = useMemo(() => ([
+        { label: 'Configuration Health', sectionId: 'platform-configuration-health' },
+        { label: 'Organisation, Bases & Areas', sectionId: 'platform-organisation-locations' },
+        { label: 'Units & Ownership', sectionId: 'platform-units' },
+        { label: 'Aircraft Setup', sectionId: 'platform-aircraft-setup' },
+        { label: 'DFP Resource Rows', sectionId: 'platform-dfp-resource-rows' },
+        { label: 'Master LMP Access', sectionId: 'platform-master-lmp-access' },
+        { label: 'Scheduling Rule Sets', sectionId: 'platform-scheduling-rule-sets' },
+        { label: 'Business Rules', sectionId: 'business-rules' },
+        { label: 'Training Reports', sectionId: 'training-report-template' },
+        { label: 'ContT / Currency Events', sectionId: 'sct-events' },
+        { label: 'Crew Composition', sectionId: 'crew-composition' },
+        { label: 'Directed Task Lists', sectionId: 'platform-task-profiles' },
+        { label: 'User List', sectionId: 'user-list' },
+        { label: 'Permission Profiles', sectionId: 'platform-permission-profiles' },
+        { label: 'Rank, Terminology & Labels', sectionId: 'platform-rank-terminology' },
+        { label: 'Email & Account Activation', sectionId: 'email-activation' },
+        { label: 'Emergency', sectionId: 'emergency' },
+        { label: 'Licensing & Deployment', sectionId: 'platform-licensing' },
+    ]), []);
+
     const handleDfpWorkspaceContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
         const target = event.target as HTMLElement | null;
         const workspace = event.currentTarget;
@@ -45917,9 +45977,6 @@ appliedUpdates.forEach(update => {
         let subtitle = activeView;
         let kind = contextKind || 'workspace';
 
-        const openEventDetails = () => {
-            if (selectedEvent) handleOpenModal(selectedEvent);
-        };
         const allEventsForContextActions = [
             ...(eventSegmentsForDate || []),
             ...(publishedSchedules[date] || []),
@@ -45933,9 +45990,106 @@ appliedUpdates.forEach(update => {
                 : [];
         const selectedChangeBarEvents = selectedContextEvents.filter((candidateEvent) => hasChangeBarNotification(candidateEvent));
         const selectedEventHasChangeBar = selectedChangeBarEvents.length > 0;
-        const eventSummary = selectedEvent
-            ? `${selectedEvent.flightNumber || eventLabel || selectedEvent.id} ${selectedEvent.resourceId || ''} ${formatContextMenuTime(selectedEvent.startTime)}-${formatContextMenuTime(selectedEvent.startTime + selectedEvent.duration)}`.trim()
-            : '';
+        const isNextDayContextMenuView = ['NextDayBuild', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'Priorities'].includes(activeView);
+        const getLatestContextEvent = (candidate: ScheduleEvent): ScheduleEvent => {
+            const currentEvents = isNextDayContextMenuView
+                ? nextDayBuildEvents.map(e => ({ ...e, date: buildDfpDate } as ScheduleEvent))
+                : eventsForDate;
+            return currentEvents.find(e => e.id === candidate.id) || candidate;
+        };
+        const openContextEventInDetails = (candidate: ScheduleEvent, edit = false) => {
+            handleOpenModal(getLatestContextEvent(candidate));
+            setIsEditingDefault(edit);
+        };
+        const openContextAuth = (candidate: ScheduleEvent) => {
+            if (!flightAuthorisationRequired) return;
+            setEventForAuth(getLatestContextEvent(candidate));
+            setShowAuthFlyout(true);
+        };
+        const openContextPostFlight = (candidate: ScheduleEvent) => {
+            setEventForPostFlight(getLatestContextEvent(candidate));
+            setSelectedEvent(null);
+            handleNavigation('PostFlight');
+        };
+        const findContextTrainee = (candidate: ScheduleEvent): Trainee | undefined => {
+            const traineeName = String(candidate.student || (candidate as any).trainee || '').trim();
+            if (!traineeName) return undefined;
+            return allTraineesData.find(t => (
+                t.fullName === traineeName ||
+                t.name === traineeName ||
+                t.idNumber === (candidate as any).studentId ||
+                t.idNumber === (candidate as any).traineeId
+            ));
+        };
+        const findContextStaff = (name?: string | null): Instructor | undefined => {
+            const staffName = String(name || '').trim();
+            if (!staffName) return undefined;
+            return instructorsData.find(i => i.name === staffName || i.idNumber === staffName || (i as any).personnelId === staffName);
+        };
+        const openContextTrainingReport = (candidate: ScheduleEvent) => {
+            const trainee = findContextTrainee(candidate);
+            if (!trainee) {
+                setShowInfoNotification(`No trainee profile was found for ${candidate.flightNumber || 'this event'}.`);
+                return;
+            }
+            if (!canViewTraineePt051(trainee)) {
+                denyPlatformAction(`${configuredTrainingReportDisplayName} record`);
+                return;
+            }
+            setEventForPt051(getLatestContextEvent(candidate));
+            setSelectedTraineeForHateSheet(trainee);
+            handleNavigation('PT051');
+        };
+        const addPersonProfileItems = (items: DfpContextMenuItem[], candidate: ScheduleEvent) => {
+            const staffNames = Array.from(new Set([
+                candidate.instructor,
+                candidate.pilot,
+                (candidate as any).captain,
+                (candidate as any).crew,
+            ].map(value => String(value || '').trim()).filter(Boolean)));
+            if (staffNames.length === 1) {
+                items.push({
+                    label: 'Staff Profile',
+                    detail: staffNames[0],
+                    onSelect: () => {
+                        const staff = findContextStaff(staffNames[0]);
+                        if (staff) {
+                            setSelectedPersonForProfile(staff);
+                            handleNavigation('Instructors');
+                        }
+                    },
+                });
+            } else if (staffNames.length > 1) {
+                staffNames.forEach(staffName => {
+                    items.push({
+                        label: `Staff Profile - ${staffName}`,
+                        onSelect: () => {
+                            const staff = findContextStaff(staffName);
+                            if (staff) {
+                                setSelectedPersonForProfile(staff);
+                                handleNavigation('Instructors');
+                            }
+                        },
+                    });
+                });
+            }
+            if (activeUnitHasTrainees) {
+                const trainee = findContextTrainee(candidate);
+                items.push({
+                    label: 'Trainee Profile',
+                    detail: trainee?.fullName || candidate.student || '',
+                    disabled: !trainee,
+                    onSelect: () => trainee && openTraineeProfileTab(trainee, null),
+                });
+            }
+        };
+        const addCommonNavigationItems = (items: DfpContextMenuItem[]) => {
+            items.push(
+                { label: 'Staff Schedule', onSelect: openStaffScheduleFromContextMenu },
+                ...(activeUnitHasTrainees ? [{ label: 'Trainee Schedule', onSelect: openTraineeScheduleFromContextMenu } as DfpContextMenuItem] : []),
+                { label: 'My Home', onSelect: () => handleNavigation('MyDashboard') }
+            );
+        };
 
         if (selectedEvent && contextKind !== 'aircraft' && contextKind !== 'aircraft-slot') {
             const isSimulatorEvent = selectedEvent.type === 'ftd' || selectedEvent.type === 'cpt';
@@ -45953,18 +46107,31 @@ appliedUpdates.forEach(update => {
                 primaryPerson || selectedEvent.instructor || selectedEvent.pilot || '',
                 secondaryPerson || selectedEvent.student || selectedEvent.crew || '',
             ].filter(Boolean).join(' | ');
-            menuItems.push(
-                { label: 'Open Details', detail: 'Open the selected schedule event.', onSelect: openEventDetails },
-                { label: 'Edit Event', detail: canEditActiveDfp ? 'Open details in the normal edit workflow.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: openEventDetails },
-                { label: selectedEvent.type === 'flight' ? 'Assign Aircraft' : 'Open Flight Line', detail: canOpenFlightLine ? 'Open the aircraft flight-line panel.' : 'Flight Line access is not available for this profile.', disabled: !canOpenFlightLine, onSelect: () => {
-                    setShowDfpSidePanel(false);
-                    setShowFlightLinePanel(true);
-                }},
-                { label: 'Select Tile', detail: 'Add this tile to the current DFP selection.', onSelect: () => {
-                    setSelectedEventIds(new Set([...Array.from(selectedEventIds), selectedEvent.id]));
-                }},
-                { label: 'Copy Event Summary', detail: eventSummary, onSelect: () => copyContextSummary(eventSummary) }
-            );
+            const isNeoBuildScheduleView = ['NextDayBuild', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
+            if (isNeoBuildScheduleView) {
+                menuItems.push(
+                    { label: 'Go to DFP', onSelect: openTodayDfpFromContextMenu },
+                    { label: 'Delete', detail: 'Open the event so Delete can be confirmed.', danger: true, onSelect: () => openContextEventInDetails(selectedEvent) }
+                );
+                addPersonProfileItems(menuItems, selectedEvent);
+                menuItems.push({ label: 'My Home', onSelect: () => handleNavigation('MyDashboard') });
+            } else {
+                menuItems.push(
+                    { label: 'EDIT', detail: canEditActiveDfp ? 'Open Flight Details edit mode.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: () => openContextEventInDetails(selectedEvent, true) },
+                    { label: 'Flight Authorisation', detail: flightAuthorisationRequired ? 'Open Flight Authorisation.' : 'Disabled in Business Rules.', disabled: !flightAuthorisationRequired, onSelect: () => openContextAuth(selectedEvent) },
+                    { label: 'Post Flight Times', onSelect: () => openContextPostFlight(selectedEvent) },
+                    { label: configuredTrainingReportDisplayName, detail: 'Open the report for this event.', disabled: !activeUnitHasTrainees || !findContextTrainee(selectedEvent), onSelect: () => openContextTrainingReport(selectedEvent) },
+                    { label: 'LMP', detail: 'Open the trainee LMP for this event.', disabled: !activeUnitHasTrainees || !findContextTrainee(selectedEvent), onSelect: () => {
+                        const trainee = findContextTrainee(selectedEvent);
+                        if (trainee) openTraineeProfileTab(trainee, 'lmp');
+                    }},
+                    { label: 'NEO', detail: 'Show conflict resolution.', onSelect: () => handleNeoClick(selectedEvent) },
+                    { label: 'Send Alert', detail: 'Open the event alert panel.', onSelect: () => openContextEventInDetails(selectedEvent) },
+                    { label: 'Delete', detail: 'Open the event so Delete can be confirmed.', danger: true, onSelect: () => openContextEventInDetails(selectedEvent) }
+                );
+                addPersonProfileItems(menuItems, selectedEvent);
+                menuItems.push({ label: 'My Home', onSelect: () => handleNavigation('MyDashboard') });
+            }
             if (selectedEventHasChangeBar) {
                 menuItems.push({
                     label: selectedChangeBarEvents.length > 1 ? `Remove Change Bar Notifications (${selectedChangeBarEvents.length})` : 'Remove Change Bar Notification',
@@ -45972,9 +46139,6 @@ appliedUpdates.forEach(update => {
                     disabled: !canEditActiveDfp,
                     onSelect: () => handleRemoveChangeBarNotification(selectedChangeBarEvents),
                 });
-            }
-            if (canUseValidation) {
-                menuItems.push({ label: showValidation ? 'Hide Validation' : 'Show Validation', detail: 'Toggle schedule validation overlay.', onSelect: () => setShowValidation(!showValidation) });
             }
         } else if (aircraftNumber || contextKind === 'aircraft' || contextKind === 'aircraft-slot') {
             title = aircraftNumber ? `Aircraft ${aircraftNumber}` : 'Aircraft';
@@ -46018,31 +46182,81 @@ appliedUpdates.forEach(update => {
             title = 'Empty Schedule Space';
             subtitle = [gridResource, formatContextMenuTime(time)].filter(Boolean).join(' | ');
             kind = 'empty-schedule-space';
+            const isNeoBuildScheduleView = ['NextDayBuild', 'ProgramData'].includes(activeView);
             menuItems.push(
+                ...(isNeoBuildScheduleView ? [{ label: 'Go to DFP', onSelect: openTodayDfpFromContextMenu } as DfpContextMenuItem] : []),
+                { label: 'Staff Schedule', onSelect: openStaffScheduleFromContextMenu },
+                ...(activeUnitHasTrainees ? [{ label: 'Trainee Schedule', onSelect: openTraineeScheduleFromContextMenu } as DfpContextMenuItem] : []),
                 { label: 'Add Flight Tile', detail: canEditActiveDfp ? 'Create a new flight event.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: () => {
                     setIsAddingTile(true);
-                    handleOpenModal(null, { type: 'flight' });
+                    handleOpenModal(null, { type: 'flight', oracleContext: isNeoBuildScheduleView ? 'nextDayBuild' : null });
                 }},
                 { label: 'Add Ground Tile', detail: canEditActiveDfp ? 'Create a new ground event.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
-                { label: 'Open Flight Line', detail: canOpenFlightLine ? 'Open aircraft inventory and unavailable bays.' : 'Flight Line access is not available for this profile.', disabled: !canOpenFlightLine, onSelect: () => {
-                    setShowDfpSidePanel(false);
-                    setShowFlightLinePanel(true);
-                }}
+                { label: showValidation ? 'Validation Check OFF' : 'Validation Check ON', disabled: !canUseValidation, onSelect: () => setShowValidation(!showValidation) },
+                { label: showDepartureDensityOverlay ? 'Hourly Event Rate OFF' : 'Hourly Event Rate ON', onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
+                { label: isMagnifierEnabled ? 'Magnifier OFF' : 'Magnifier ON', onSelect: () => setIsMagnifierEnabled(!isMagnifierEnabled) },
+                { label: isMultiSelectMode ? 'Multi Select OFF' : 'Multi Select ON', onSelect: () => handleSetIsMultiSelectMode(!isMultiSelectMode) },
+                ...(isNeoBuildScheduleView ? [] : [
+                    { label: 'Pause Flight Ops', disabled: !canEditActiveDfp || !canRunNeoBuildForActiveModel, onSelect: openPauseFlightOpsFromContextMenu },
+                    { label: 'Directed Tasks', onSelect: () => handleNavigation('Priorities') },
+                    { label: 'Emergency', onSelect: () => handleNavigateToSettingsSection({ sectionId: 'emergency' }) },
+                ] as DfpContextMenuItem[]),
+                { label: 'My Home', onSelect: () => handleNavigation('MyDashboard') }
             );
-            if (canUseValidation) {
-                menuItems.push({ label: showValidation ? 'Hide Validation' : 'Show Validation', detail: 'Toggle schedule validation overlay.', onSelect: () => setShowValidation(!showValidation) });
-            }
         } else {
-            title = 'DFP Workspace';
+            const pageLabels: Record<string, string> = {
+                Settings: 'Settings',
+                TrainingRecords: 'Training Records',
+                CourseProgress: 'Course Progress',
+                Syllabus: 'Syllabus',
+                Trainee: 'Trainee Profile',
+                CourseRoster: 'Trainee Profile',
+                Instructors: 'Staff Profile',
+                InstructorSchedule: 'Staff Schedule',
+                TraineeSchedule: 'Trainee Schedule',
+                MyDashboard: 'My Home',
+                DutyPilot: 'Duty Pilot',
+                Priorities: 'Priorities',
+                BuildIntelligence: 'Build Intelligence',
+            };
+            title = pageLabels[activeView] || 'DFP Workspace';
             subtitle = activeView;
             kind = 'workspace';
-            menuItems.push(
-                { label: activeView === 'Program Schedule' ? 'Open Flight Line' : 'Go To DFP', detail: activeView === 'Program Schedule' && !canOpenFlightLine ? 'Flight Line access is not available for this profile.' : 'Return to the main schedule workspace.', disabled: activeView === 'Program Schedule' && !canOpenFlightLine, onSelect: () => {
-                    if (activeView !== 'Program Schedule') handleNavigation('Program Schedule');
-                    else setShowFlightLinePanel(true);
-                }},
-                { label: 'Open Admin Panel', detail: 'Available to platform administrators.', disabled: !['ADMIN', 'SUPER_ADMIN'].includes(String(sessionUser?.role || authUser?.role || '').toUpperCase()), onSelect: () => setShowAdminPanel(true) }
-            );
+            if (activeView !== 'Program Schedule') {
+                menuItems.push({ label: 'Go to DFP', onSelect: openTodayDfpFromContextMenu });
+            }
+            if (activeView === 'Settings') {
+                contextSettingsSections.forEach(section => {
+                    if (section.sectionId === 'trainee-database' && !activeUnitHasTrainees) return;
+                    menuItems.push({
+                        label: section.label,
+                        onSelect: () => handleNavigateToSettingsSection({ sectionId: section.sectionId }),
+                    });
+                });
+            } else if (activeView === 'CourseProgress') {
+                menuItems.push(
+                    { label: 'Course Progress', onSelect: () => handleNavigation('CourseProgress') },
+                    { label: 'Course Scores', onSelect: () => handleNavigation('CourseProgress') },
+                    { label: 'Course Rankings', onSelect: () => handleNavigation('CourseProgress') }
+                );
+            } else if (activeView === 'Syllabus') {
+                menuItems.push(
+                    { label: 'Manage LMPs', onSelect: () => handleNavigateToSettingsSection({ sectionId: 'platform-master-lmp-access' }) },
+                    { label: 'Add Event', onSelect: () => handleNavigation('Syllabus') }
+                );
+            } else if (activeView === 'CourseRoster' || activeView === 'Trainee') {
+                if (activeUnitHasTrainees) menuItems.push({ label: 'Add Trainee', onSelect: () => handleNavigation('CourseRoster') });
+            } else if (activeView === 'Instructors') {
+                menuItems.push({ label: 'Add Staff', onSelect: () => handleNavigation('Instructors') });
+            } else if (activeView === 'Priorities') {
+                menuItems.push(
+                    { label: 'Flying Windows & Capacity', onSelect: () => handleNavigation('Priorities') },
+                    { label: `${instructorLabel || 'Instructor'} Rules`, onSelect: () => handleNavigation('Priorities') },
+                    { label: 'Course Demand', onSelect: () => handleNavigation('Priorities') },
+                    { label: 'Directed Tasks', onSelect: () => handleNavigation('Priorities') }
+                );
+            }
+            addCommonNavigationItems(menuItems);
         }
 
         if (menuItems.length === 0) return;
@@ -46055,25 +46269,47 @@ appliedUpdates.forEach(update => {
             items: menuItems,
         });
     }, [
+        activeUnitHasTrainees,
         activeView,
-        authUser?.role,
+        allTraineesData,
+        buildDfpDate,
         buildResources,
         canEditDfpTiles,
         canOpenFlightLine,
+        canRunNeoBuildForActiveModel,
         canRunValidation,
-        closeDfpContextMenu,
+        canViewTraineePt051,
+        configuredTrainingReportDisplayName,
+        contextSettingsSections,
         copyContextSummary,
+        date,
+        denyPlatformAction,
         eventSegmentsForDate,
+        eventsForDate,
+        flightAuthorisationRequired,
         formatContextMenuTime,
         getContextMenuEvent,
+        handleNavigateToSettingsSection,
+        handleNeoClick,
         handleRemoveChangeBarNotification,
         handleNavigation,
         handleOpenModal,
+        handleSetIsMultiSelectMode,
         hasChangeBarNotification,
+        instructorLabel,
+        instructorsData,
+        isMagnifierEnabled,
+        isMultiSelectMode,
         isViewingPastDfp,
+        nextDayBuildEvents,
+        openPauseFlightOpsFromContextMenu,
+        openStaffScheduleFromContextMenu,
+        openTodayDfpFromContextMenu,
+        openTraineeProfileTab,
+        openTraineeScheduleFromContextMenu,
+        publishedSchedules,
         selectedEventIds,
-        sessionUser?.role,
-        setSelectedEventIds,
+        showDepartureDensityOverlay,
         showValidation,
     ]);
 
