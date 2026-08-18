@@ -49849,12 +49849,7 @@ appliedUpdates.forEach(update => {
 
                         handleNavigation('PT051');
                     }}
-                    trainingReportDisplayName={getTrainingReportDisplayNameForUnit(
-                        (selectedEvent as any).unit ||
-                        (selectedEvent as any).unitCode ||
-                        allTraineesData.find(trainee => trainee.fullName === selectedEvent.student || trainee.name === selectedEvent.student)?.unit ||
-                        activeUnitCode
-                    )}
+                    trainingReportDisplayName={configuredTrainingReportDisplayName}
                     onOpenTrainingReport={(normaliseOperationalModel(activeOperationalModel) === 'air_combat' || isFixedCrewLikeOperationalModel(activeOperationalModel))
                         ? handleOpenAirCombatTrainingReportFromFlightDetails
                         : undefined}

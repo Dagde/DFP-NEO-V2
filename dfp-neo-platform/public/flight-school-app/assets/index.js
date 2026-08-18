@@ -135891,9 +135891,7 @@ Do you want to replace the existing entry?`,
             logAudit("Flight Detail", "View", `Viewed ${configuredTrainingReportDisplayName} for ${trainee.fullName} - Event: ${reportEvent.flightNumber} (${reportEvent.date})`);
             handleNavigation("PT051");
           },
-          trainingReportDisplayName: getTrainingReportDisplayNameForUnit(
-            selectedEvent.unit || selectedEvent.unitCode || allTraineesData.find((trainee) => trainee.fullName === selectedEvent.student || trainee.name === selectedEvent.student)?.unit || activeUnitCode
-          ),
+          trainingReportDisplayName: configuredTrainingReportDisplayName,
           onOpenTrainingReport: normaliseOperationalModel(activeOperationalModel) === "air_combat" || isFixedCrewLikeOperationalModel(activeOperationalModel) ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
           onOpenAuth: (e) => {
             if (!flightAuthorisationRequired) {
