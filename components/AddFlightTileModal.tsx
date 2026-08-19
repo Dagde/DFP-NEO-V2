@@ -2240,11 +2240,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     return [];
   }, [locationOpAreas, locationFullName]);
 
-  // Set default area from opAreas
-  useEffect(() => {
-    setArea(opAreas[0] || '-');
-  }, [opAreas]);
-
   useEffect(() => {
     setOrigin(school);
     setDestination(school);
@@ -2272,7 +2267,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     )));
   }, [aircraftCount, flightNumber, formationType, formationTypes, isSctFormationCode, isSingleSeatAircraft]);
 
-  const areaOptions = useMemo(() => opAreas.map(a => ({ value: a, label: a })), [opAreas]);
+  const areaOptions = useMemo(() => [
+    { value: '', label: 'Blank' },
+    ...opAreas.map(a => ({ value: a, label: a })),
+  ], [opAreas]);
 
   // ── Aircraft options ──────────────────────────────────────────────────────
   const aircraftOptions = useMemo(() =>
@@ -2792,7 +2790,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     }
     setPicName(''); setStudentName(''); setPicSelectionValue(''); setStudentSelectionValue(''); setSelectedPicRef(null); setSelectedStudentRef(null); setFlightNumber('');
     setStartTime(8.0); setDuration(1.2);
-    setArea(opAreas[0] || '-'); setAircraftNumber('001');
+    setArea(''); setAircraftNumber('001');
     setOrigin(school); setDestination(school);
     setAircraftCount(1); setFormationCrew([]);
     setCallsign(''); setCallsignOptions([]); setNotes('');
@@ -2976,9 +2974,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       const resolvedDuration = Number(selectedItem.duration || selectedItem.flightOrSimHours);
       if (Number.isFinite(resolvedDuration) && resolvedDuration > 0) setDuration(resolvedDuration);
       if (selectedItem.type === 'FTD' || selectedItem.type === 'ftd') {
-        setArea('-');
-      } else if (!area || area === '-') {
-        setArea(opAreas[0] || '-');
+        setArea('');
       }
     }
     setGuidedStep('area');
@@ -3055,7 +3051,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setFlightNumber(initialEvent.flightNumber || '');
     setStartTime(Number(initialEvent.startTime) || 8);
     setDuration(Number(initialEvent.duration) || (initialCategory === 'sct' ? 2 : 4));
-    setArea(initialEvent.area || (opAreas[0] || '-'));
+    setArea(initialEvent.area || '');
     const parsedAircraftNumber = parseAircraftNumber(initialEvent.aircraftNumber || '001', aircraftNumberSettings);
     setAircraftNumber(parsedAircraftNumber.number || '001');
     setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
@@ -3892,7 +3888,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       onChange={event => { setArea(event.target.value); setGuidedStep('aircraft'); }}
                       className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
                     >
-                      <option value="">Select area</option>
                       {areaOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
                   </div>

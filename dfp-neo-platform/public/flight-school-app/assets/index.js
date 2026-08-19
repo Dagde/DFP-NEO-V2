@@ -35405,9 +35405,6 @@ const AddFlightTileModal = ({
     return [];
   }, [locationOpAreas, locationFullName]);
   reactExports.useEffect(() => {
-    setArea(opAreas[0] || "-");
-  }, [opAreas]);
-  reactExports.useEffect(() => {
     setOrigin(school);
     setDestination(school);
   }, [school]);
@@ -35427,7 +35424,10 @@ const AddFlightTileModal = ({
       studentName: isSingleSeatAircraft ? "" : prev[index]?.studentName || ""
     })));
   }, [aircraftCount, flightNumber, formationType, formationTypes, isSctFormationCode, isSingleSeatAircraft]);
-  const areaOptions = reactExports.useMemo(() => opAreas.map((a) => ({ value: a, label: a })), [opAreas]);
+  const areaOptions = reactExports.useMemo(() => [
+    { value: "", label: "Blank" },
+    ...opAreas.map((a) => ({ value: a, label: a }))
+  ], [opAreas]);
   const aircraftOptions = reactExports.useMemo(() => [{ value: "", label: "Skip aircraft number" }, ...Array.from({ length: 49 }, (_, i) => {
     const n = String(i + 1).padStart(3, "0");
     return { value: n, label: n };
@@ -35816,7 +35816,7 @@ const AddFlightTileModal = ({
     setFlightNumber("");
     setStartTime(8);
     setDuration(1.2);
-    setArea(opAreas[0] || "-");
+    setArea("");
     setAircraftNumber("001");
     setOrigin(school);
     setDestination(school);
@@ -35989,9 +35989,7 @@ const AddFlightTileModal = ({
       const resolvedDuration = Number(selectedItem.duration || selectedItem.flightOrSimHours);
       if (Number.isFinite(resolvedDuration) && resolvedDuration > 0) setDuration(resolvedDuration);
       if (selectedItem.type === "FTD" || selectedItem.type === "ftd") {
-        setArea("-");
-      } else if (!area || area === "-") {
-        setArea(opAreas[0] || "-");
+        setArea("");
       }
     }
     setGuidedStep("area");
@@ -36038,7 +36036,7 @@ const AddFlightTileModal = ({
     setFlightNumber(initialEvent.flightNumber || "");
     setStartTime(Number(initialEvent.startTime) || 8);
     setDuration(Number(initialEvent.duration) || (initialCategory === "sct" ? 2 : 4));
-    setArea(initialEvent.area || (opAreas[0] || "-"));
+    setArea(initialEvent.area || "");
     const parsedAircraftNumber = parseAircraftNumber(initialEvent.aircraftNumber || "001", aircraftNumberSettings);
     setAircraftNumber(parsedAircraftNumber.number || "001");
     setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
@@ -36810,7 +36808,7 @@ const AddFlightTileModal = ({
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "Area" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "select",
                         {
                           value: area,
@@ -36819,10 +36817,7 @@ const AddFlightTileModal = ({
                             setGuidedStep("aircraft");
                           },
                           className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
-                          children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select area" }),
-                            areaOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
-                          ]
+                          children: areaOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
                         }
                       )
                     ] }),
