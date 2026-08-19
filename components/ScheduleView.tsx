@@ -29,6 +29,7 @@ import {
 } from '../utils/unitCallsigns';
 import { getResourceCategory as getConfiguredResourceCategory } from '../utils/resourceDisplayNames';
 import { getEffectiveDispatchStaggerMinutes, type DispatchStaggerSettings } from '../utils/dispatchStagger';
+import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from '../utils/dispatchRate';
 import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, recordDfpDragMoveDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
 import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
@@ -92,6 +93,7 @@ interface ScheduleViewProps {
       conflictedPersonnel: string | null 
   };
   showDepartureDensityOverlay: boolean;
+  dispatchRateWindowMinutes?: number;
   showAircraftAvailability?: boolean;
   // NOTE: plannedAvailability and onUpdatePlannedAvailability removed.
   // The overlay is now independent from Build Factors.
@@ -136,6 +138,7 @@ interface ScheduleViewProps {
   formationCallsigns?: FormationCallsign[];
   buildRuleSettings?: {
     maxDispatchPerHour?: number;
+    dispatchRateWindowMinutes?: number;
     dispatchStaggerSettings?: DispatchStaggerSettings;
     preferredDutyPeriod?: number;
     maxCrewDutyPeriod?: number;
@@ -7261,7 +7264,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange,
     isOracleMode,
     isNeoBuild = false, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
-    detectConflictsForEvent, showDepartureDensityOverlay,
+    detectConflictsForEvent, showDepartureDensityOverlay, dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
     showAircraftAvailability, initialAvailability, apiBase, locationCode, unitCode, dayFlyingStart, dayFlyingEnd, onAvailabilityChange, onUserAvailabilityChange,
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     alertsData,
@@ -8110,7 +8113,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const yInGrid = e.clientY - gridRect.top;
         const geometryMs = performance.now() - geometryStartedAt;
         
-        // Update validate overlay position when hourly event rate mode is ON
+        // Update validate overlay position when dispatch rate mode is ON
         if (showDepartureDensityOverlay) {
             const mouseTimeInHours = (xInGrid / (PIXELS_PER_HOUR * zoomLevel)) + START_HOUR;
             setValidateOverlayTime(mouseTimeInHours);
@@ -8586,15 +8589,16 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         );
     };
 
-    // Render validate mode overlay (also used for hourly event rate display)
+    // Render validate mode overlay (also used for dispatch rate display)
     const renderValidateOverlay = () => {
         
-        // Overlay should show only when hourly event rate mode is active (independent of validation mode)
+        // Overlay should show only when dispatch rate mode is active (independent of validation mode)
         if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
         
-        // Calculate 1-hour window (30 minutes before and after mouse time)
-        const windowStart = validateOverlayTime - 0.5;
-        const windowEnd = validateOverlayTime + 0.5;
+        const windowMinutes = normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes);
+        const halfWindowHours = windowMinutes / 120;
+        const windowStart = validateOverlayTime - halfWindowHours;
+        const windowEnd = validateOverlayTime + halfWindowHours;
         
         // Count flights starting in this window (exclude STBY/BNF-STBY lines)
         const flightCount = events.filter(event => {
@@ -8644,7 +8648,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     }}
                 >
                     <div className="text-white text-xs font-semibold whitespace-nowrap">
-                        Flights starting in this hour: <span className="text-sky-400">{flightCount}</span>
+                        Flights starting in {windowMinutes} min: <span className="text-sky-400">{flightCount}</span>
                     </div>
                 </div>
             </>

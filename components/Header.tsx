@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import AuditButton from './AuditButton';
 import AuditFlyout from './AuditFlyout';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
+import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from '../utils/dispatchRate';
 
 type HeaderContextUnitOption = string | {
     code: string;
@@ -32,6 +33,7 @@ interface HeaderProps {
     onPauseFlightOps?: () => void;
     showDepartureDensityOverlay: boolean;
     onToggleDepartureDensityOverlay: () => void;
+    dispatchRateWindowMinutes?: number;
     canEditDfpTiles?: boolean;
     canOpenFlightLine?: boolean;
     canRunValidation?: boolean;
@@ -84,6 +86,7 @@ const Header: React.FC<HeaderProps> = ({
     onPauseFlightOps,
     showDepartureDensityOverlay, 
     onToggleDepartureDensityOverlay,
+    dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
     canEditDfpTiles = true,
     canOpenFlightLine = true,
     canRunValidation = true,
@@ -343,13 +346,13 @@ const Header: React.FC<HeaderProps> = ({
                             <span className="text-center leading-tight">Validation<br/>Check</span>
                         </button>
 
-                        {/* 5. Hourly Event Rate Button */}
+                        {/* 5. Dispatch Rate Button */}
                         <button
                           onClick={onToggleDepartureDensityOverlay}
                           className={`${headerButtonClass} ${showDepartureDensityOverlay ? 'active' : ''}`}
-                          title="Hourly Event Rate - Shows flight density in 1-hour window"
+                          title={`Dispatch Rate - Shows flight starts in a ${normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes)}-minute window`}
                         >
-                            <span className="text-center leading-tight">Hourly<br/>Event Rate</span>
+                            <span className="text-center leading-tight">Dispatch<br/>Rate</span>
                         </button>
 
                         {/* 6. Aircraft Available Button */}

@@ -104,6 +104,8 @@ interface SettingsViewWithMenuProps {
     currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
+    dispatchRateWindowMinutes?: number;
+    onUpdateDispatchRateWindowMinutes?: (value: number) => void;
     tileStatusSettings?: TileStatusSettings;
     onUpdateTileStatusSettings?: (settings: TileStatusSettings) => void;
     timezoneOffset: number;
@@ -557,7 +559,7 @@ const sectionSearchKeywords: Partial<Record<SettingsMenuSection, string[]>> = {
     'ftd turnaround', 'cpt turnaround', 'pre flight', 'post flight', 'booking window',
   ],
   'business-rules': [
-    'business rules', 'dispatch', 'dispatch rate', 'dispatch stagger', 'stagger', 'hourly event rate',
+    'business rules', 'dispatch', 'dispatch rate', 'dispatch window', 'dispatch stagger', 'stagger',
     'warning colours', 'tile warnings', 'authorisation warning', 'departure density',
   ],
   'data-loaders': [
@@ -1400,7 +1402,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 props.dayFlyingStart,
                 props.dayFlyingEnd,
             ),
-            'business-rules': collectSelectedSearchDataTerms(props.dispatchStaggerSettings, props.tileStatusSettings, props.maxDispatchPerHour, props.showDepartureDensityOverlay),
+            'business-rules': collectSelectedSearchDataTerms(props.dispatchStaggerSettings, props.tileStatusSettings, props.maxDispatchPerHour, props.dispatchRateWindowMinutes, props.showDepartureDensityOverlay),
             'user-list': collectSelectedSearchDataTerms(peopleTerms, permissionTerms),
             'staff-database': collectSelectedSearchDataTerms(props.instructorsData, rankTerminologyTerms),
             'trainee-database': collectSelectedSearchDataTerms(props.traineesData, props.courseColors),
@@ -1453,6 +1455,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         props.courseColors,
         props.eventLimits,
         props.dispatchStaggerSettings,
+        props.dispatchRateWindowMinutes,
         props.tileStatusSettings,
         props.maxDispatchPerHour,
         props.showDepartureDensityOverlay,

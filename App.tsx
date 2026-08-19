@@ -182,6 +182,7 @@ import {
     normaliseDispatchStaggerSettings,
     type DispatchStaggerSettings,
 } from './utils/dispatchStagger';
+import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from './utils/dispatchRate';
 import { getStaffUnavailabilityStatus } from './utils/fixedCrewAvailability';
 import { isSyllabusCourseShell } from './utils/syllabusCourseShell';
 import { debouncedAuditLog } from './utils/auditDebounce';
@@ -29519,6 +29520,7 @@ const App: React.FC = () => {
     const [preferredDutyPeriod, setPreferredDutyPeriod] = useState(8);
     const [maxCrewDutyPeriod, setMaxCrewDutyPeriod] = useState(10);
     const [maxDispatchPerHour, setMaxDispatchPerHour] = useState(8);
+    const [dispatchRateWindowMinutes, setDispatchRateWindowMinutes] = useState(DEFAULT_DISPATCH_RATE_WINDOW_MINUTES);
     const [dispatchStaggerSettings, setDispatchStaggerSettings] = useState<DispatchStaggerSettings>(DEFAULT_DISPATCH_STAGGER_SETTINGS);
     const [flightTurnaround, setFlightTurnaround] = useState(1.2);
     const [ftdTurnaround, setFtdTurnaround] = useState(0.5);
@@ -30514,6 +30516,7 @@ const App: React.FC = () => {
                 if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
                 if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
                 if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
+                if ((saved as any).dispatchRateWindowMinutes != null) setDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes((saved as any).dispatchRateWindowMinutes));
                 if ((saved as any).dispatchStaggerSettings) setDispatchStaggerSettings(normaliseDispatchStaggerSettings((saved as any).dispatchStaggerSettings));
                 if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
                 if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
@@ -30723,6 +30726,7 @@ const App: React.FC = () => {
             preferredDutyPeriod,
             maxCrewDutyPeriod,
             maxDispatchPerHour,
+            dispatchRateWindowMinutes,
             dispatchStaggerSettings,
             flightTurnaround,
             ftdTurnaround,
@@ -30770,6 +30774,7 @@ const App: React.FC = () => {
         locations, locationAbbreviations, serviceDefinitions, units, unitLocations, locationOpAreas,
         eventLimits,
         preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour, dispatchStaggerSettings,
+        dispatchRateWindowMinutes,
         flightTurnaround, ftdTurnaround, cptTurnaround,
         flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
@@ -46193,7 +46198,7 @@ appliedUpdates.forEach(update => {
                 }},
                 { label: 'Add Ground Tile', detail: canEditActiveDfp ? 'Create a new ground event.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
                 { label: showValidation ? 'Validation Check OFF' : 'Validation Check ON', disabled: !canUseValidation, onSelect: () => setShowValidation(!showValidation) },
-                { label: showDepartureDensityOverlay ? 'Hourly Event Rate OFF' : 'Hourly Event Rate ON', onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
+                { label: showDepartureDensityOverlay ? 'Dispatch Rate OFF' : 'Dispatch Rate ON', onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
                 { label: isMagnifierEnabled ? 'Magnifier OFF' : 'Magnifier ON', onSelect: () => setIsMagnifierEnabled(!isMagnifierEnabled) },
                 { label: isMultiSelectMode ? 'Multi Select OFF' : 'Multi Select ON', onSelect: () => handleSetIsMultiSelectMode(!isMultiSelectMode) },
                 ...(isNeoBuildScheduleView ? [] : [
@@ -46516,6 +46521,7 @@ appliedUpdates.forEach(update => {
                            formationCallsigns={formationCallsigns}
                            buildRuleSettings={{
                                maxDispatchPerHour,
+                               dispatchRateWindowMinutes,
                                dispatchStaggerSettings,
                                preferredDutyPeriod,
                                maxCrewDutyPeriod,
@@ -46530,6 +46536,7 @@ appliedUpdates.forEach(update => {
                            onOracleMouseMove={handleOracleMouseMove}
                            onOracleMouseUp={handleOracleMouseUp}
                            showDepartureDensityOverlay={showDepartureDensityOverlay}
+                           dispatchRateWindowMinutes={dispatchRateWindowMinutes}
                            showAircraftAvailability={showAircraftAvailability}
                            initialAvailability={availableAircraftCount}
                            apiBase={getApiBaseUrl()}
@@ -47125,6 +47132,7 @@ appliedUpdates.forEach(update => {
                                }}
                             pauseWindowStart={showPausePanel ? pauseOverlayStart : null}
                             pauseWindowEnd={showPausePanel ? pauseOverlayEnd : null}
+                            dispatchRateWindowMinutes={dispatchRateWindowMinutes}
                             formatResourceLabel={formatResourceDisplayLabel}
                             aircraftConfigLabelsByResource={nextDayBuildAircraftConfigLabelsByResource}
                             aircraftNumberSettings={aircraftNumberSettings}
@@ -48381,6 +48389,8 @@ appliedUpdates.forEach(update => {
                     currentUserPermission={currentUserPermission}
                     maxDispatchPerHour={maxDispatchPerHour}
                     onUpdateMaxDispatchPerHour={setMaxDispatchPerHour}
+                    dispatchRateWindowMinutes={dispatchRateWindowMinutes}
+                    onUpdateDispatchRateWindowMinutes={(value) => setDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(value))}
                     dispatchStaggerSettings={dispatchStaggerSettings}
                     onUpdateDispatchStaggerSettings={(settings) => setDispatchStaggerSettings(normaliseDispatchStaggerSettings(settings))}
                     timezoneOffset={timezoneOffset}
@@ -49636,6 +49646,7 @@ appliedUpdates.forEach(update => {
                     onQuickTile={handleQuickTile}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
                     onToggleDepartureDensityOverlay={() => setShowDepartureDensityOverlay(!showDepartureDensityOverlay)}
+                    dispatchRateWindowMinutes={dispatchRateWindowMinutes}
                     canEditDfpTiles={canEditDfpTiles && !isViewingPastDfp}
                     canOpenFlightLine={canOpenFlightLine}
                     canRunValidation={canRunValidation}

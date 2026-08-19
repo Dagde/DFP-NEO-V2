@@ -26,6 +26,13 @@ import {
     normaliseDispatchStaggerSettings,
     type DispatchStaggerSettings,
 } from '../utils/dispatchStagger';
+import {
+    DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
+    DISPATCH_RATE_WINDOW_STEP_MINUTES,
+    MAX_DISPATCH_RATE_WINDOW_MINUTES,
+    MIN_DISPATCH_RATE_WINDOW_MINUTES,
+    normaliseDispatchRateWindowMinutes,
+} from '../utils/dispatchRate';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
@@ -134,6 +141,8 @@ interface SettingsViewProps {
     activeUnitHasTrainees?: boolean;
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
+    dispatchRateWindowMinutes?: number;
+    onUpdateDispatchRateWindowMinutes?: (value: number) => void;
     dispatchStaggerSettings?: DispatchStaggerSettings;
     onUpdateDispatchStaggerSettings?: (settings: DispatchStaggerSettings) => void;
     tileStatusSettings?: TileStatusSettings;
@@ -608,6 +617,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     activeUnitHasTrainees = true,
     maxDispatchPerHour,
     onUpdateMaxDispatchPerHour,
+    dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
+    onUpdateDispatchRateWindowMinutes,
     dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS,
     onUpdateDispatchStaggerSettings,
     tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
@@ -648,12 +659,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
     const [isEditingBusinessRules, setIsEditingBusinessRules] = useState(false);
     const [tempMaxDispatchPerHour, setTempMaxDispatchPerHour] = useState(maxDispatchPerHour);
+    const [tempDispatchRateWindowMinutes, setTempDispatchRateWindowMinutes] = useState(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
     const [tempDispatchStaggerSettings, setTempDispatchStaggerSettings] = useState<DispatchStaggerSettings>(resolvedDispatchStaggerSettings);
     const [tempTileStatusSettings, setTempTileStatusSettings] = useState<TileStatusSettings>(resolvedTileStatusSettings);
     const displayedDispatchStaggerSettings = isEditingBusinessRules ? tempDispatchStaggerSettings : resolvedDispatchStaggerSettings;
     const displayedTileStatusSettings = isEditingBusinessRules ? tempTileStatusSettings : resolvedTileStatusSettings;
     const displayedMaxDispatchPerHour = isEditingBusinessRules ? tempMaxDispatchPerHour : maxDispatchPerHour;
+    const displayedDispatchRateWindowMinutes = isEditingBusinessRules
+        ? tempDispatchRateWindowMinutes
+        : normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes);
     const canEditBusinessRules = canEditSettings && isEditingBusinessRules;
+    const handleDispatchRateWindowChange = (value: number) => {
+        setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(value));
+    };
     const handleDispatchStaggerChange = (updates: Partial<DispatchStaggerSettings>) => {
         setTempDispatchStaggerSettings((current) => normaliseDispatchStaggerSettings({
             ...current,
@@ -885,6 +903,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     const handleEditBusinessRules = () => {
         setTempMaxDispatchPerHour(maxDispatchPerHour);
+        setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
         setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
         setTempTileStatusSettings(resolvedTileStatusSettings);
         setIsEditingBusinessRules(true);
@@ -892,6 +911,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     const handleSaveBusinessRules = () => {
         onUpdateMaxDispatchPerHour(tempMaxDispatchPerHour);
+        const savedDispatchRateWindowMinutes = normaliseDispatchRateWindowMinutes(tempDispatchRateWindowMinutes);
+        if (onUpdateDispatchRateWindowMinutes) {
+            onUpdateDispatchRateWindowMinutes(savedDispatchRateWindowMinutes);
+        }
         if (onUpdateDispatchStaggerSettings) {
             onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings(tempDispatchStaggerSettings));
         }
@@ -905,12 +928,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             page: 'Settings - Business Rules',
             action: 'update',
             description: 'Updated business rule settings',
-            changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? 'none' : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? 'none' : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation: ${savedTileStatusSettings.flightAuthorisationRequired ? 'required' : 'optional'}; authorisation warnings: ${savedTileStatusSettings.authorizationWarningMinutes}/${savedTileStatusSettings.authorizationUrgentMinutes} min`,
+            changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; dispatch rate window: ${savedDispatchRateWindowMinutes} min; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? 'none' : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? 'none' : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation: ${savedTileStatusSettings.flightAuthorisationRequired ? 'required' : 'optional'}; authorisation warnings: ${savedTileStatusSettings.authorizationWarningMinutes}/${savedTileStatusSettings.authorizationUrgentMinutes} min`,
         });
     };
 
     const handleCancelBusinessRules = () => {
         setTempMaxDispatchPerHour(maxDispatchPerHour);
+        setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
         setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
         setTempTileStatusSettings(resolvedTileStatusSettings);
         setIsEditingBusinessRules(false);
@@ -1466,6 +1490,53 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     {canEditSettings && (
                                         <p className="mt-1 text-xs text-gray-400">
                                             Maximum number of dispatches allowed per hour
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                                        Dispatch Rate window
+                                    </label>
+                                    <div className="flex items-stretch gap-2">
+                                        <input
+                                            type="number"
+                                            min={MIN_DISPATCH_RATE_WINDOW_MINUTES}
+                                            max={MAX_DISPATCH_RATE_WINDOW_MINUTES}
+                                            step={DISPATCH_RATE_WINDOW_STEP_MINUTES}
+                                            value={displayedDispatchRateWindowMinutes}
+                                            onChange={(event) => handleDispatchRateWindowChange(Number(event.target.value))}
+                                            disabled={!canEditBusinessRules || !onUpdateDispatchRateWindowMinutes}
+                                            className={`w-[120px] px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
+                                                canEditBusinessRules && onUpdateDispatchRateWindowMinutes
+                                                    ? 'bg-gray-700 border-gray-600 text-white'
+                                                    : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
+                                            }`}
+                                        />
+                                        <div className="flex flex-col gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDispatchRateWindowChange(displayedDispatchRateWindowMinutes + DISPATCH_RATE_WINDOW_STEP_MINUTES)}
+                                                disabled={!canEditBusinessRules || !onUpdateDispatchRateWindowMinutes || displayedDispatchRateWindowMinutes >= MAX_DISPATCH_RATE_WINDOW_MINUTES}
+                                                className="h-[19px] w-8 rounded border border-gray-600 bg-gray-700 text-[10px] font-bold text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                                aria-label="Increase Dispatch Rate window by five minutes"
+                                            >
+                                                ▲
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDispatchRateWindowChange(displayedDispatchRateWindowMinutes - DISPATCH_RATE_WINDOW_STEP_MINUTES)}
+                                                disabled={!canEditBusinessRules || !onUpdateDispatchRateWindowMinutes || displayedDispatchRateWindowMinutes <= MIN_DISPATCH_RATE_WINDOW_MINUTES}
+                                                className="h-[19px] w-8 rounded border border-gray-600 bg-gray-700 text-[10px] font-bold text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                                aria-label="Decrease Dispatch Rate window by five minutes"
+                                            >
+                                                ▼
+                                            </button>
+                                        </div>
+                                        <span className="self-center text-xs text-gray-400">min</span>
+                                    </div>
+                                    {canEditSettings && (
+                                        <p className="mt-1 text-xs text-gray-400">
+                                            Window used by the DFP Dispatch Rate overlay. Default is 60 minutes.
                                         </p>
                                     )}
                                 </div>

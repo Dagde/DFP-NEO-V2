@@ -8,6 +8,7 @@ import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { getResourceCategory as getConfiguredResourceCategory } from '../utils/resourceDisplayNames';
 import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, recordDfpDragMoveDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
+import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from '../utils/dispatchRate';
 
 
 interface NextDayBuildViewProps {
@@ -28,6 +29,7 @@ interface NextDayBuildViewProps {
   showValidation: boolean;
   showPrePost: boolean;
   showDepartureDensityOverlay?: boolean;
+  dispatchRateWindowMinutes?: number;
   syllabusDetails: SyllabusItemDetail[];
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   seatConfigs: Map<string, string>;
@@ -109,7 +111,7 @@ const getResourceCategory = (res: string) => {
 
 export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     date, onDateChange, events, resources, instructors, airframeCount, standbyCount, ftdCount, cptCount,
-    onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, showDepartureDensityOverlay = false, syllabusDetails,
+    onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, showDepartureDensityOverlay = false, dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, syllabusDetails,
     personnelData, seatConfigs, daylightTimes, personnelConflicts, personnelConflictIds, unavailabilityConflicts,
     onCptConflict, isMultiSelectMode, selectedEventIds, setSelectedEventIds, traineesData,
     isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
@@ -465,7 +467,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         const yInGrid = e.clientY - gridRect.top;
         const geometryMs = performance.now() - geometryStartedAt;
 
-        // Update validate overlay position when validation mode OR hourly event rate mode is ON
+        // Update validate overlay position when validation mode OR dispatch rate mode is ON
         if (showDepartureDensityOverlay) {
             const mouseTimeInHours = (xInGrid / (PIXELS_PER_HOUR * zoomLevel)) + START_HOUR;
             setValidateOverlayTime(mouseTimeInHours);
@@ -873,14 +875,15 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         );
     };
 
-    // Render hourly event rate overlay (also used for validation)
+    // Render dispatch rate overlay (also used for validation)
     const renderValidateOverlay = () => {
-        // Overlay should show when either validation mode OR hourly event rate mode is active
+        // Overlay should show when either validation mode OR dispatch rate mode is active
         if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
         
-        // Calculate 1-hour window (30 minutes before and after mouse time)
-        const windowStart = validateOverlayTime - 0.5;
-        const windowEnd = validateOverlayTime + 0.5;
+        const windowMinutes = normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes);
+        const halfWindowHours = windowMinutes / 120;
+        const windowStart = validateOverlayTime - halfWindowHours;
+        const windowEnd = validateOverlayTime + halfWindowHours;
         
         // Count flights starting in this window (exclude STBY/BNF-STBY lines)
         const flightCount = events.filter(event => {
@@ -930,7 +933,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                     }}
                 >
                     <div className="text-white text-xs font-semibold whitespace-nowrap">
-                        Flights starting in this hour: <span className="text-sky-400">{flightCount}</span>
+                        Flights starting in {windowMinutes} min: <span className="text-sky-400">{flightCount}</span>
                     </div>
                 </div>
             </>

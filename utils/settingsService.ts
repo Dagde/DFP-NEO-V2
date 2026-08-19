@@ -15,6 +15,7 @@ import {
 import { DEFAULT_TILE_STATUS_SETTINGS, normaliseTileStatusSettings, type TileStatusSettings } from './tileStatusSettings';
 import { normaliseFixedCrewTileColourModeByUnit, type FixedCrewTileColourMode } from './fixedCrewTileColours';
 import { DEFAULT_DISPATCH_STAGGER_SETTINGS, normaliseDispatchStaggerSettings, type DispatchStaggerSettings } from './dispatchStagger';
+import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from './dispatchRate';
 import {
   DEFAULT_EMERGENCY_FREEZE_AUTHORITY,
   normaliseEmergencyFreezeAuthoritySettings,
@@ -50,6 +51,7 @@ export interface AppSettingsData {
   preferredDutyPeriod: number;
   maxCrewDutyPeriod: number;
   maxDispatchPerHour: number;
+  dispatchRateWindowMinutes: number;
   dispatchStaggerSettings: DispatchStaggerSettings;
   flightTurnaround: number;
   ftdTurnaround: number;
@@ -320,6 +322,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     preferredDutyPeriod: state.preferredDutyPeriod ?? 8,
     maxCrewDutyPeriod: state.maxCrewDutyPeriod ?? 10,
     maxDispatchPerHour: state.maxDispatchPerHour ?? 8,
+    dispatchRateWindowMinutes: normaliseDispatchRateWindowMinutes(state.dispatchRateWindowMinutes ?? DEFAULT_DISPATCH_RATE_WINDOW_MINUTES),
     dispatchStaggerSettings: normaliseDispatchStaggerSettings(state.dispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS),
     flightTurnaround: state.flightTurnaround ?? 1.2,
     ftdTurnaround: state.ftdTurnaround ?? 0.5,

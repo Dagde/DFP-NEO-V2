@@ -1785,6 +1785,19 @@ const getEffectiveDispatchStaggerMinutes = (settings, eventType) => {
   if (type === "flight") return normalised.flightNoMinimum ? 0 : normalised.flightMinutes;
   return 0;
 };
+const DEFAULT_DISPATCH_RATE_WINDOW_MINUTES = 60;
+const MIN_DISPATCH_RATE_WINDOW_MINUTES = 5;
+const MAX_DISPATCH_RATE_WINDOW_MINUTES = 240;
+const DISPATCH_RATE_WINDOW_STEP_MINUTES = 5;
+const normaliseDispatchRateWindowMinutes = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_DISPATCH_RATE_WINDOW_MINUTES;
+  const clamped = Math.min(
+    MAX_DISPATCH_RATE_WINDOW_MINUTES,
+    Math.max(MIN_DISPATCH_RATE_WINDOW_MINUTES, numeric)
+  );
+  return Math.round(clamped / DISPATCH_RATE_WINDOW_STEP_MINUTES) * DISPATCH_RATE_WINDOW_STEP_MINUTES;
+};
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 const OFFICIAL_SUNRISE_ZENITH = 90.833;
@@ -3048,6 +3061,7 @@ const buildSettingsSnapshot = (state) => {
     preferredDutyPeriod: state.preferredDutyPeriod ?? 8,
     maxCrewDutyPeriod: state.maxCrewDutyPeriod ?? 10,
     maxDispatchPerHour: state.maxDispatchPerHour ?? 8,
+    dispatchRateWindowMinutes: normaliseDispatchRateWindowMinutes(state.dispatchRateWindowMinutes ?? DEFAULT_DISPATCH_RATE_WINDOW_MINUTES),
     dispatchStaggerSettings: normaliseDispatchStaggerSettings(state.dispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS),
     flightTurnaround: state.flightTurnaround ?? 1.2,
     ftdTurnaround: state.ftdTurnaround ?? 0.5,
@@ -8674,6 +8688,7 @@ const Header = ({
   onPauseFlightOps,
   showDepartureDensityOverlay,
   onToggleDepartureDensityOverlay,
+  dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
   canEditDfpTiles = true,
   canOpenFlightLine = true,
   canRunValidation = true,
@@ -8903,11 +8918,11 @@ const Header = ({
           {
             onClick: onToggleDepartureDensityOverlay,
             className: `${headerButtonClass} ${showDepartureDensityOverlay ? "active" : ""}`,
-            title: "Hourly Event Rate - Shows flight density in 1-hour window",
+            title: `Dispatch Rate - Shows flight starts in a ${normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes)}-minute window`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
-              "Hourly",
+              "Dispatch",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Event Rate"
+              "Rate"
             ] })
           }
         ),
@@ -16862,6 +16877,7 @@ const ScheduleView = ({
   onOracleMouseUp,
   detectConflictsForEvent,
   showDepartureDensityOverlay,
+  dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
   showAircraftAvailability,
   initialAvailability,
   apiBase,
@@ -18032,8 +18048,10 @@ const ScheduleView = ({
   };
   const renderValidateOverlay = () => {
     if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
-    const windowStart = validateOverlayTime - 0.5;
-    const windowEnd = validateOverlayTime + 0.5;
+    const windowMinutes = normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes);
+    const halfWindowHours = windowMinutes / 120;
+    const windowStart = validateOverlayTime - halfWindowHours;
+    const windowEnd = validateOverlayTime + halfWindowHours;
     const flightCount = events.filter((event) => {
       if (event.type !== "flight") return false;
       if (event.resourceId?.startsWith("STBY") || event.resourceId?.startsWith("BNF-STBY")) return false;
@@ -18077,7 +18095,9 @@ const ScheduleView = ({
             transform: "translateX(-50%)"
           },
           children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-white text-xs font-semibold whitespace-nowrap", children: [
-            "Flights starting in this hour: ",
+            "Flights starting in ",
+            windowMinutes,
+            " min: ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: flightCount })
           ] })
         }
@@ -40659,6 +40679,7 @@ const NextDayBuildView = ({
   showValidation,
   showPrePost,
   showDepartureDensityOverlay = false,
+  dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
   syllabusDetails,
   personnelData,
   seatConfigs,
@@ -41344,8 +41365,10 @@ const NextDayBuildView = ({
   };
   const renderValidateOverlay = () => {
     if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
-    const windowStart = validateOverlayTime - 0.5;
-    const windowEnd = validateOverlayTime + 0.5;
+    const windowMinutes = normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes);
+    const halfWindowHours = windowMinutes / 120;
+    const windowStart = validateOverlayTime - halfWindowHours;
+    const windowEnd = validateOverlayTime + halfWindowHours;
     const flightCount = events.filter((event) => {
       if (event.type !== "flight") return false;
       if (event.resourceId?.startsWith("STBY") || event.resourceId?.startsWith("BNF-STBY")) return false;
@@ -41389,7 +41412,9 @@ const NextDayBuildView = ({
             transform: "translateX(-50%)"
           },
           children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-white text-xs font-semibold whitespace-nowrap", children: [
-            "Flights starting in this hour: ",
+            "Flights starting in ",
+            windowMinutes,
+            " min: ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: flightCount })
           ] })
         }
@@ -67975,6 +68000,8 @@ const SettingsView = ({
   activeUnitHasTrainees = true,
   maxDispatchPerHour,
   onUpdateMaxDispatchPerHour,
+  dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
+  onUpdateDispatchRateWindowMinutes,
   dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS,
   onUpdateDispatchStaggerSettings,
   tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
@@ -68012,12 +68039,17 @@ const SettingsView = ({
   const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
   const [isEditingBusinessRules, setIsEditingBusinessRules] = reactExports.useState(false);
   const [tempMaxDispatchPerHour, setTempMaxDispatchPerHour] = reactExports.useState(maxDispatchPerHour);
+  const [tempDispatchRateWindowMinutes, setTempDispatchRateWindowMinutes] = reactExports.useState(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
   const [tempDispatchStaggerSettings, setTempDispatchStaggerSettings] = reactExports.useState(resolvedDispatchStaggerSettings);
   const [tempTileStatusSettings, setTempTileStatusSettings] = reactExports.useState(resolvedTileStatusSettings);
   const displayedDispatchStaggerSettings = isEditingBusinessRules ? tempDispatchStaggerSettings : resolvedDispatchStaggerSettings;
   const displayedTileStatusSettings = isEditingBusinessRules ? tempTileStatusSettings : resolvedTileStatusSettings;
   const displayedMaxDispatchPerHour = isEditingBusinessRules ? tempMaxDispatchPerHour : maxDispatchPerHour;
+  const displayedDispatchRateWindowMinutes = isEditingBusinessRules ? tempDispatchRateWindowMinutes : normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes);
   const canEditBusinessRules = canEditSettings && isEditingBusinessRules;
+  const handleDispatchRateWindowChange = (value) => {
+    setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(value));
+  };
   const handleDispatchStaggerChange = (updates) => {
     setTempDispatchStaggerSettings((current) => normaliseDispatchStaggerSettings({
       ...current,
@@ -68196,12 +68228,17 @@ const SettingsView = ({
   };
   const handleEditBusinessRules = () => {
     setTempMaxDispatchPerHour(maxDispatchPerHour);
+    setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
     setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
     setTempTileStatusSettings(resolvedTileStatusSettings);
     setIsEditingBusinessRules(true);
   };
   const handleSaveBusinessRules = () => {
     onUpdateMaxDispatchPerHour(tempMaxDispatchPerHour);
+    const savedDispatchRateWindowMinutes = normaliseDispatchRateWindowMinutes(tempDispatchRateWindowMinutes);
+    if (onUpdateDispatchRateWindowMinutes) {
+      onUpdateDispatchRateWindowMinutes(savedDispatchRateWindowMinutes);
+    }
     if (onUpdateDispatchStaggerSettings) {
       onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings(tempDispatchStaggerSettings));
     }
@@ -68215,11 +68252,12 @@ const SettingsView = ({
       page: "Settings - Business Rules",
       action: "update",
       description: "Updated business rule settings",
-      changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? "none" : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? "none" : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation: ${savedTileStatusSettings.flightAuthorisationRequired ? "required" : "optional"}; authorisation warnings: ${savedTileStatusSettings.authorizationWarningMinutes}/${savedTileStatusSettings.authorizationUrgentMinutes} min`
+      changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; dispatch rate window: ${savedDispatchRateWindowMinutes} min; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? "none" : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? "none" : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation: ${savedTileStatusSettings.flightAuthorisationRequired ? "required" : "optional"}; authorisation warnings: ${savedTileStatusSettings.authorizationWarningMinutes}/${savedTileStatusSettings.authorizationUrgentMinutes} min`
     });
   };
   const handleCancelBusinessRules = () => {
     setTempMaxDispatchPerHour(maxDispatchPerHour);
+    setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
     setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
     setTempTileStatusSettings(resolvedTileStatusSettings);
     setIsEditingBusinessRules(false);
@@ -68724,6 +68762,50 @@ const SettingsView = ({
               }
             ),
             canEditSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Maximum number of dispatches allowed per hour" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Dispatch Rate window" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-stretch gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "number",
+                  min: MIN_DISPATCH_RATE_WINDOW_MINUTES,
+                  max: MAX_DISPATCH_RATE_WINDOW_MINUTES,
+                  step: DISPATCH_RATE_WINDOW_STEP_MINUTES,
+                  value: displayedDispatchRateWindowMinutes,
+                  onChange: (event) => handleDispatchRateWindowChange(Number(event.target.value)),
+                  disabled: !canEditBusinessRules || !onUpdateDispatchRateWindowMinutes,
+                  className: `w-[120px] px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && onUpdateDispatchRateWindowMinutes ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => handleDispatchRateWindowChange(displayedDispatchRateWindowMinutes + DISPATCH_RATE_WINDOW_STEP_MINUTES),
+                    disabled: !canEditBusinessRules || !onUpdateDispatchRateWindowMinutes || displayedDispatchRateWindowMinutes >= MAX_DISPATCH_RATE_WINDOW_MINUTES,
+                    className: "h-[19px] w-8 rounded border border-gray-600 bg-gray-700 text-[10px] font-bold text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40",
+                    "aria-label": "Increase Dispatch Rate window by five minutes",
+                    children: "▲"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => handleDispatchRateWindowChange(displayedDispatchRateWindowMinutes - DISPATCH_RATE_WINDOW_STEP_MINUTES),
+                    disabled: !canEditBusinessRules || !onUpdateDispatchRateWindowMinutes || displayedDispatchRateWindowMinutes <= MIN_DISPATCH_RATE_WINDOW_MINUTES,
+                    className: "h-[19px] w-8 rounded border border-gray-600 bg-gray-700 text-[10px] font-bold text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40",
+                    "aria-label": "Decrease Dispatch Rate window by five minutes",
+                    children: "▼"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "self-center text-xs text-gray-400", children: "min" })
+            ] }),
+            canEditSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Window used by the DFP Dispatch Rate overlay. Default is 60 minutes." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-4 border-t border-gray-700", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
@@ -84263,9 +84345,9 @@ const sectionSearchKeywords = {
     "business rules",
     "dispatch",
     "dispatch rate",
+    "dispatch window",
     "dispatch stagger",
     "stagger",
-    "hourly event rate",
     "warning colours",
     "tile warnings",
     "authorisation warning",
@@ -85296,7 +85378,7 @@ const SettingsViewWithMenu = (props) => {
         props.dayFlyingStart,
         props.dayFlyingEnd
       ),
-      "business-rules": collectSelectedSearchDataTerms(props.dispatchStaggerSettings, props.tileStatusSettings, props.maxDispatchPerHour, props.showDepartureDensityOverlay),
+      "business-rules": collectSelectedSearchDataTerms(props.dispatchStaggerSettings, props.tileStatusSettings, props.maxDispatchPerHour, props.dispatchRateWindowMinutes, props.showDepartureDensityOverlay),
       "user-list": collectSelectedSearchDataTerms(peopleTerms, permissionTerms),
       "staff-database": collectSelectedSearchDataTerms(props.instructorsData, rankTerminologyTerms),
       "trainee-database": collectSelectedSearchDataTerms(props.traineesData, props.courseColors),
@@ -85349,6 +85431,7 @@ const SettingsViewWithMenu = (props) => {
     props.courseColors,
     props.eventLimits,
     props.dispatchStaggerSettings,
+    props.dispatchRateWindowMinutes,
     props.tileStatusSettings,
     props.maxDispatchPerHour,
     props.showDepartureDensityOverlay,
@@ -118931,6 +119014,7 @@ const App = () => {
   const [preferredDutyPeriod, setPreferredDutyPeriod] = reactExports.useState(8);
   const [maxCrewDutyPeriod, setMaxCrewDutyPeriod] = reactExports.useState(10);
   const [maxDispatchPerHour, setMaxDispatchPerHour] = reactExports.useState(8);
+  const [dispatchRateWindowMinutes, setDispatchRateWindowMinutes] = reactExports.useState(DEFAULT_DISPATCH_RATE_WINDOW_MINUTES);
   const [dispatchStaggerSettings, setDispatchStaggerSettings] = reactExports.useState(DEFAULT_DISPATCH_STAGGER_SETTINGS);
   const [flightTurnaround, setFlightTurnaround] = reactExports.useState(1.2);
   const [ftdTurnaround, setFtdTurnaround] = reactExports.useState(0.5);
@@ -119759,6 +119843,7 @@ ${"=".repeat(60)}`);
         if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
         if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
         if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
+        if (saved.dispatchRateWindowMinutes != null) setDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(saved.dispatchRateWindowMinutes));
         if (saved.dispatchStaggerSettings) setDispatchStaggerSettings(normaliseDispatchStaggerSettings(saved.dispatchStaggerSettings));
         if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
         if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
@@ -119941,6 +120026,7 @@ ${"=".repeat(60)}`);
       preferredDutyPeriod,
       maxCrewDutyPeriod,
       maxDispatchPerHour,
+      dispatchRateWindowMinutes,
       dispatchStaggerSettings,
       flightTurnaround,
       ftdTurnaround,
@@ -119995,6 +120081,7 @@ ${"=".repeat(60)}`);
     maxCrewDutyPeriod,
     maxDispatchPerHour,
     dispatchStaggerSettings,
+    dispatchRateWindowMinutes,
     flightTurnaround,
     ftdTurnaround,
     cptTurnaround,
@@ -132507,7 +132594,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         } },
         { label: "Add Ground Tile", detail: canEditActiveDfp ? "Create a new ground event." : "Tile editing is not available for this DFP.", disabled: !canEditActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
         { label: showValidation ? "Validation Check OFF" : "Validation Check ON", disabled: !canUseValidation, onSelect: () => setShowValidation(!showValidation) },
-        { label: showDepartureDensityOverlay ? "Hourly Event Rate OFF" : "Hourly Event Rate ON", onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
+        { label: showDepartureDensityOverlay ? "Dispatch Rate OFF" : "Dispatch Rate ON", onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
         { label: isMagnifierEnabled ? "Magnifier OFF" : "Magnifier ON", onSelect: () => setIsMagnifierEnabled(!isMagnifierEnabled) },
         { label: isMultiSelectMode ? "Multi Select OFF" : "Multi Select ON", onSelect: () => handleSetIsMultiSelectMode(!isMultiSelectMode) },
         ...isNeoBuildScheduleView ? [] : [
@@ -132813,6 +132900,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             formationCallsigns,
             buildRuleSettings: {
               maxDispatchPerHour,
+              dispatchRateWindowMinutes,
               dispatchStaggerSettings,
               preferredDutyPeriod,
               maxCrewDutyPeriod,
@@ -132827,6 +132915,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onOracleMouseMove: handleOracleMouseMove,
             onOracleMouseUp: handleOracleMouseUp,
             showDepartureDensityOverlay,
+            dispatchRateWindowMinutes,
             showAircraftAvailability,
             initialAvailability: availableAircraftCount,
             apiBase: getApiBaseUrl(),
@@ -133396,6 +133485,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             },
             pauseWindowStart: showPausePanel ? pauseOverlayStart : null,
             pauseWindowEnd: showPausePanel ? pauseOverlayEnd : null,
+            dispatchRateWindowMinutes,
             formatResourceLabel: formatResourceDisplayLabel,
             aircraftConfigLabelsByResource: nextDayBuildAircraftConfigLabelsByResource,
             aircraftNumberSettings,
@@ -134563,6 +134653,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             currentUserPermission,
             maxDispatchPerHour,
             onUpdateMaxDispatchPerHour: setMaxDispatchPerHour,
+            dispatchRateWindowMinutes,
+            onUpdateDispatchRateWindowMinutes: (value) => setDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(value)),
             dispatchStaggerSettings,
             onUpdateDispatchStaggerSettings: (settings) => setDispatchStaggerSettings(normaliseDispatchStaggerSettings(settings)),
             timezoneOffset,
@@ -135664,6 +135756,7 @@ Do you want to replace the existing entry?`,
             onQuickTile: handleQuickTile,
             showDepartureDensityOverlay,
             onToggleDepartureDensityOverlay: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay),
+            dispatchRateWindowMinutes,
             canEditDfpTiles: canEditDfpTiles && !isViewingPastDfp,
             canOpenFlightLine,
             canRunValidation,
