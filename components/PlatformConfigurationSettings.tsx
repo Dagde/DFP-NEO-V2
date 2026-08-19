@@ -2383,6 +2383,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [taskProfilesUnlocked, setTaskProfilesUnlocked] = useState(false);
   const [sectionEditUnlocked, setSectionEditUnlocked] = useState<Record<string, boolean>>({});
   const [expandedMasterLmpAccessScopes, setExpandedMasterLmpAccessScopes] = useState<Set<string>>(new Set());
+  const [masterLmpCatalogueDraft, setMasterLmpCatalogueDraft] = useState<{
+    code: string;
+    name: string;
+    description: string;
+    status: 'ACTIVE' | 'INACTIVE';
+  } | null>(null);
+  const [masterLmpAccessDraft, setMasterLmpAccessDraft] = useState<{
+    lmpCode: string;
+    unitCode: string;
+    accessLevel: 'View' | 'Assign' | 'Manage';
+  } | null>(null);
   const [taskProfileDrafts, setTaskProfileDrafts] = useState<Record<string, string>>({});
   const [taskProfileAbbreviationDrafts, setTaskProfileAbbreviationDrafts] = useState<Record<string, string>>({});
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
@@ -4592,18 +4603,45 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     )));
   };
 
-  const addMasterLmpCatalogueEntry = () => {
+  const openAddMasterLmpCatalogueEntry = () => {
+    if (!canEdit) return;
     const nextNumber = masterLmpCatalogue.length + 1;
+    setSectionEditUnlocked((prev) => ({ ...prev, 'platform-master-lmp-access': true }));
+    setMasterLmpCatalogueDraft({
+      code: `New Master LMP ${nextNumber}`,
+      name: `New Master LMP ${nextNumber}`,
+      description: '',
+      status: 'ACTIVE',
+    });
+  };
+
+  const addMasterLmpCatalogueEntry = async () => {
+    if (!masterLmpCatalogueDraft) return;
+    const code = masterLmpCatalogueDraft.code.trim();
+    const name = masterLmpCatalogueDraft.name.trim() || code;
+    if (!code) {
+      await showDarkAlert('Enter a Master LMP code before adding the record.', 'Master LMP Code Required', 'warning');
+      return;
+    }
+    const duplicate = masterLmpCatalogue.some((entry) => (
+      String(entry.code || '').trim().toUpperCase() === code.toUpperCase()
+    ));
+    if (duplicate) {
+      await showDarkAlert(`Master LMP "${code}" already exists. Use a different code.`, 'Duplicate Master LMP', 'warning');
+      return;
+    }
     updateMasterLmpCatalogue([
       ...masterLmpCatalogue,
       {
         id: createClientRecordId('master-lmp-catalogue'),
-        code: `New Master LMP ${nextNumber}`,
-        name: `New Master LMP ${nextNumber}`,
-        description: '',
-        status: 'ACTIVE',
+        code,
+        name,
+        description: masterLmpCatalogueDraft.description.trim(),
+        status: masterLmpCatalogueDraft.status,
       },
     ]);
+    setMasterLmpCatalogueDraft(null);
+    onShowSuccess('Master LMP added. Press Save in Master LMP Access to apply the change.');
   };
 
   const deleteMasterLmpCatalogueEntry = async (index: number) => {
@@ -4660,23 +4698,40 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     )));
   };
 
-  const addMasterLmpAccessRule = () => {
+  const openAddMasterLmpAccessRule = async () => {
+    if (!canEdit) return;
+    if (masterLmpOptions.length === 0) {
+      await showDarkAlert('Add a Master LMP catalogue record first, then add access for it.', 'Master LMP Required', 'warning');
+      return;
+    }
     const defaultUnit = activePlatformUnit || configUnits.filter(isActiveRecord)[0];
+    setSectionEditUnlocked((prev) => ({ ...prev, 'platform-master-lmp-access': true }));
+    setMasterLmpAccessDraft({
+      lmpCode: masterLmpOptions[0] || '',
+      unitCode: defaultUnit?.code || '',
+      accessLevel: 'Assign',
+    });
+  };
+
+  const addMasterLmpAccessRule = () => {
+    if (!masterLmpAccessDraft) return;
     updateMasterLmpAccessRules([
       ...masterLmpAccessRules,
       {
         id: createClientRecordId('master-lmp-access'),
-        lmpCode: masterLmpOptions[0] || '',
+        lmpCode: masterLmpAccessDraft.lmpCode,
         organisationCode: primaryOrganisation?.code || '',
         locationCode: null,
-        unitCode: defaultUnit?.code || '',
+        unitCode: masterLmpAccessDraft.unitCode || null,
         aircraftTypeCode: null,
         parentOrganisationCode: null,
         operationalModel: null,
-        accessLevel: 'View',
+        accessLevel: masterLmpAccessDraft.accessLevel,
         status: 'ACTIVE',
       },
     ]);
+    setMasterLmpAccessDraft(null);
+    onShowSuccess('Master LMP access added. Press Save in Master LMP Access to apply the change.');
   };
 
   const removeMasterLmpAccessRule = (index: number) => {
@@ -8615,8 +8670,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-master-lmp-access')}
-              <button type="button" onClick={addMasterLmpCatalogueEntry} disabled={!canEditSection('platform-master-lmp-access')} className={platformActionButtonClass}>Add Master LMP</button>
-              <button type="button" onClick={addMasterLmpAccessRule} disabled={!canEditSection('platform-master-lmp-access')} className={platformActionButtonClass}>Add Access</button>
+              <button type="button" onClick={openAddMasterLmpCatalogueEntry} disabled={!canEdit} className={platformActionButtonClass}>Add Master LMP</button>
+              <button type="button" onClick={() => { void openAddMasterLmpAccessRule(); }} disabled={!canEdit} className={platformActionButtonClass}>Add LMP Access</button>
             </div>
           ) : null}
         />
@@ -8804,7 +8859,126 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             );
           })}
+          {visibleMasterLmpAccessRuleRows.length === 0 && (
+            <div className="rounded border border-dashed border-gray-700 bg-gray-950 px-3 py-4 text-sm font-semibold text-gray-300">
+              No Master LMP access rules configured.
+            </div>
+          )}
           </div>
+          {masterLmpCatalogueDraft && (
+            <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-xl overflow-hidden rounded-lg border border-cyan-500/40 bg-gray-900 shadow-2xl">
+                <div className="flex items-start justify-between gap-3 border-b border-gray-700 px-5 py-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Add Master LMP</h3>
+                    <p className="mt-1 text-xs text-gray-400">Create the selectable Master LMP record first. Access can be added after this record exists.</p>
+                  </div>
+                  <button type="button" onClick={() => setMasterLmpCatalogueDraft(null)} className="text-2xl leading-none text-gray-400 hover:text-white" aria-label="Close Add Master LMP">x</button>
+                </div>
+                <div className="space-y-4 px-5 py-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label>
+                      <span className={labelClass}>Code</span>
+                      <input
+                        value={masterLmpCatalogueDraft.code}
+                        onChange={(event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, code: event.target.value } : draft)}
+                        className="w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400"
+                        autoFocus
+                      />
+                    </label>
+                    <label>
+                      <span className={labelClass}>Name</span>
+                      <input
+                        value={masterLmpCatalogueDraft.name}
+                        onChange={(event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, name: event.target.value } : draft)}
+                        className="w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400"
+                      />
+                    </label>
+                  </div>
+                  <label>
+                    <span className={labelClass}>Description</span>
+                    <textarea
+                      value={masterLmpCatalogueDraft.description}
+                      onChange={(event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, description: event.target.value } : draft)}
+                      className="min-h-[90px] w-full resize-y rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400"
+                    />
+                  </label>
+                  <label>
+                    <span className={labelClass}>Status</span>
+                    <select
+                      value={masterLmpCatalogueDraft.status}
+                      onChange={(event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, status: event.target.value === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE' } : draft)}
+                      className="w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400"
+                    >
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="flex justify-end gap-2 border-t border-gray-700 bg-gray-950/60 px-5 py-4">
+                  <button type="button" onClick={() => setMasterLmpCatalogueDraft(null)} className="rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700">Cancel</button>
+                  <button type="button" onClick={() => { void addMasterLmpCatalogueEntry(); }} className="rounded-md bg-cyan-600 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-500">Add Master LMP</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {masterLmpAccessDraft && (
+            <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-lg overflow-hidden rounded-lg border border-cyan-500/40 bg-gray-900 shadow-2xl">
+                <div className="flex items-start justify-between gap-3 border-b border-gray-700 px-5 py-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Add Master LMP Access</h3>
+                    <p className="mt-1 text-xs text-gray-400">Choose which unit can view, assign or manage this Master LMP.</p>
+                  </div>
+                  <button type="button" onClick={() => setMasterLmpAccessDraft(null)} className="text-2xl leading-none text-gray-400 hover:text-white" aria-label="Close Add Master LMP Access">x</button>
+                </div>
+                <div className="space-y-4 px-5 py-4">
+                  <label>
+                    <span className={labelClass}>Master LMP</span>
+                    <select
+                      value={masterLmpAccessDraft.lmpCode}
+                      onChange={(event) => setMasterLmpAccessDraft((draft) => draft ? { ...draft, lmpCode: event.target.value } : draft)}
+                      className="w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400"
+                      autoFocus
+                    >
+                      {masterLmpOptions.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className={labelClass}>Unit</span>
+                    <select
+                      value={masterLmpAccessDraft.unitCode}
+                      onChange={(event) => setMasterLmpAccessDraft((draft) => draft ? { ...draft, unitCode: event.target.value } : draft)}
+                      className="w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400"
+                    >
+                      <option value="">All Units</option>
+                      {(visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code)).map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className={labelClass}>Access</span>
+                    <select
+                      value={masterLmpAccessDraft.accessLevel}
+                      onChange={(event) => setMasterLmpAccessDraft((draft) => draft ? { ...draft, accessLevel: event.target.value as 'View' | 'Assign' | 'Manage' } : draft)}
+                      className="w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400"
+                    >
+                      <option value="View">View</option>
+                      <option value="Assign">Assign</option>
+                      <option value="Manage">Manage</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="flex justify-end gap-2 border-t border-gray-700 bg-gray-950/60 px-5 py-4">
+                  <button type="button" onClick={() => setMasterLmpAccessDraft(null)} className="rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700">Cancel</button>
+                  <button type="button" onClick={addMasterLmpAccessRule} className="rounded-md bg-cyan-600 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-500">Add Access</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

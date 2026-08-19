@@ -73488,6 +73488,8 @@ const PlatformConfigurationSettings = ({
   const [taskProfilesUnlocked, setTaskProfilesUnlocked] = reactExports.useState(false);
   const [sectionEditUnlocked, setSectionEditUnlocked] = reactExports.useState({});
   const [expandedMasterLmpAccessScopes, setExpandedMasterLmpAccessScopes] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [masterLmpCatalogueDraft, setMasterLmpCatalogueDraft] = reactExports.useState(null);
+  const [masterLmpAccessDraft, setMasterLmpAccessDraft] = reactExports.useState(null);
   const [taskProfileDrafts, setTaskProfileDrafts] = reactExports.useState({});
   const [taskProfileAbbreviationDrafts, setTaskProfileAbbreviationDrafts] = reactExports.useState({});
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = reactExports.useState("");
@@ -75289,18 +75291,42 @@ This permanently removes the organisation record from platform configuration and
   const updateMasterLmpCatalogueEntry = (index, changes) => {
     updateMasterLmpCatalogue(masterLmpCatalogue.map((entry, entryIndex) => entryIndex === index ? { ...entry, ...changes } : entry));
   };
-  const addMasterLmpCatalogueEntry = () => {
+  const openAddMasterLmpCatalogueEntry = () => {
+    if (!canEdit) return;
     const nextNumber = masterLmpCatalogue.length + 1;
+    setSectionEditUnlocked((prev) => ({ ...prev, "platform-master-lmp-access": true }));
+    setMasterLmpCatalogueDraft({
+      code: `New Master LMP ${nextNumber}`,
+      name: `New Master LMP ${nextNumber}`,
+      description: "",
+      status: "ACTIVE"
+    });
+  };
+  const addMasterLmpCatalogueEntry = async () => {
+    if (!masterLmpCatalogueDraft) return;
+    const code = masterLmpCatalogueDraft.code.trim();
+    const name = masterLmpCatalogueDraft.name.trim() || code;
+    if (!code) {
+      await showDarkAlert("Enter a Master LMP code before adding the record.", "Master LMP Code Required", "warning");
+      return;
+    }
+    const duplicate = masterLmpCatalogue.some((entry) => String(entry.code || "").trim().toUpperCase() === code.toUpperCase());
+    if (duplicate) {
+      await showDarkAlert(`Master LMP "${code}" already exists. Use a different code.`, "Duplicate Master LMP", "warning");
+      return;
+    }
     updateMasterLmpCatalogue([
       ...masterLmpCatalogue,
       {
         id: createClientRecordId("master-lmp-catalogue"),
-        code: `New Master LMP ${nextNumber}`,
-        name: `New Master LMP ${nextNumber}`,
-        description: "",
-        status: "ACTIVE"
+        code,
+        name,
+        description: masterLmpCatalogueDraft.description.trim(),
+        status: masterLmpCatalogueDraft.status
       }
     ]);
+    setMasterLmpCatalogueDraft(null);
+    onShowSuccess("Master LMP added. Press Save in Master LMP Access to apply the change.");
   };
   const deleteMasterLmpCatalogueEntry = async (index) => {
     if (!canEdit) return;
@@ -75346,23 +75372,39 @@ This permanently removes the organisation record from platform configuration and
   const updateMasterLmpAccessRule = (index, changes) => {
     updateMasterLmpAccessRules(masterLmpAccessRules.map((rule, ruleIndex) => ruleIndex === index ? { ...rule, ...changes } : rule));
   };
-  const addMasterLmpAccessRule = () => {
+  const openAddMasterLmpAccessRule = async () => {
+    if (!canEdit) return;
+    if (masterLmpOptions.length === 0) {
+      await showDarkAlert("Add a Master LMP catalogue record first, then add access for it.", "Master LMP Required", "warning");
+      return;
+    }
     const defaultUnit = activePlatformUnit || configUnits.filter(isActiveRecord)[0];
+    setSectionEditUnlocked((prev) => ({ ...prev, "platform-master-lmp-access": true }));
+    setMasterLmpAccessDraft({
+      lmpCode: masterLmpOptions[0] || "",
+      unitCode: defaultUnit?.code || "",
+      accessLevel: "Assign"
+    });
+  };
+  const addMasterLmpAccessRule = () => {
+    if (!masterLmpAccessDraft) return;
     updateMasterLmpAccessRules([
       ...masterLmpAccessRules,
       {
         id: createClientRecordId("master-lmp-access"),
-        lmpCode: masterLmpOptions[0] || "",
+        lmpCode: masterLmpAccessDraft.lmpCode,
         organisationCode: primaryOrganisation?.code || "",
         locationCode: null,
-        unitCode: defaultUnit?.code || "",
+        unitCode: masterLmpAccessDraft.unitCode || null,
         aircraftTypeCode: null,
         parentOrganisationCode: null,
         operationalModel: null,
-        accessLevel: "View",
+        accessLevel: masterLmpAccessDraft.accessLevel,
         status: "ACTIVE"
       }
     ]);
+    setMasterLmpAccessDraft(null);
+    onShowSuccess("Master LMP access added. Press Save in Master LMP Access to apply the change.");
   };
   const removeMasterLmpAccessRule = (index) => {
     updateMasterLmpAccessRules(masterLmpAccessRules.filter((_, ruleIndex) => ruleIndex !== index));
@@ -78614,8 +78656,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           subtitle: "Restrict which locations and units can view, assign or manage each Master LMP. Empty location or unit values apply broadly.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-master-lmp-access"),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpCatalogueEntry, disabled: !canEditSection("platform-master-lmp-access"), className: platformActionButtonClass, children: "Add Master LMP" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpAccessRule, disabled: !canEditSection("platform-master-lmp-access"), className: platformActionButtonClass, children: "Add Access" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: openAddMasterLmpCatalogueEntry, disabled: !canEdit, className: platformActionButtonClass, children: "Add Master LMP" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => {
+              void openAddMasterLmpAccessRule();
+            }, disabled: !canEdit, className: platformActionButtonClass, children: "Add LMP Access" })
           ] }) : null
         }
       ),
@@ -78836,8 +78880,136 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 )
               ] })
             ] }, ruleKey);
-          })
-        ] })
+          }),
+          visibleMasterLmpAccessRuleRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950 px-3 py-4 text-sm font-semibold text-gray-300", children: "No Master LMP access rules configured." })
+        ] }),
+        masterLmpCatalogueDraft && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-xl overflow-hidden rounded-lg border border-cyan-500/40 bg-gray-900 shadow-2xl", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3 border-b border-gray-700 px-5 py-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Add Master LMP" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Create the selectable Master LMP record first. Access can be added after this record exists." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setMasterLmpCatalogueDraft(null), className: "text-2xl leading-none text-gray-400 hover:text-white", "aria-label": "Close Add Master LMP", children: "x" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 px-5 py-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 sm:grid-cols-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Code" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    value: masterLmpCatalogueDraft.code,
+                    onChange: (event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, code: event.target.value } : draft),
+                    className: "w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400",
+                    autoFocus: true
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Name" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    value: masterLmpCatalogueDraft.name,
+                    onChange: (event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, name: event.target.value } : draft),
+                    className: "w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400"
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Description" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "textarea",
+                {
+                  value: masterLmpCatalogueDraft.description,
+                  onChange: (event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, description: event.target.value } : draft),
+                  className: "min-h-[90px] w-full resize-y rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Status" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: masterLmpCatalogueDraft.status,
+                  onChange: (event) => setMasterLmpCatalogueDraft((draft) => draft ? { ...draft, status: event.target.value === "INACTIVE" ? "INACTIVE" : "ACTIVE" } : draft),
+                  className: "w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ACTIVE", children: "ACTIVE" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "INACTIVE", children: "INACTIVE" })
+                  ]
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 bg-gray-950/60 px-5 py-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setMasterLmpCatalogueDraft(null), className: "rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700", children: "Cancel" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => {
+              void addMasterLmpCatalogueEntry();
+            }, className: "rounded-md bg-cyan-600 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-500", children: "Add Master LMP" })
+          ] })
+        ] }) }),
+        masterLmpAccessDraft && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-lg overflow-hidden rounded-lg border border-cyan-500/40 bg-gray-900 shadow-2xl", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3 border-b border-gray-700 px-5 py-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Add Master LMP Access" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Choose which unit can view, assign or manage this Master LMP." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setMasterLmpAccessDraft(null), className: "text-2xl leading-none text-gray-400 hover:text-white", "aria-label": "Close Add Master LMP Access", children: "x" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 px-5 py-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Master LMP" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: masterLmpAccessDraft.lmpCode,
+                  onChange: (event) => setMasterLmpAccessDraft((draft) => draft ? { ...draft, lmpCode: event.target.value } : draft),
+                  className: "w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400",
+                  autoFocus: true,
+                  children: masterLmpOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Unit" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: masterLmpAccessDraft.unitCode,
+                  onChange: (event) => setMasterLmpAccessDraft((draft) => draft ? { ...draft, unitCode: event.target.value } : draft),
+                  className: "w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All Units" }),
+                    (visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code)).map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Access" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: masterLmpAccessDraft.accessLevel,
+                  onChange: (event) => setMasterLmpAccessDraft((draft) => draft ? { ...draft, accessLevel: event.target.value } : draft),
+                  className: "w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-cyan-400",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "View", children: "View" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Assign", children: "Assign" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Manage", children: "Manage" })
+                  ]
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 bg-gray-950/60 px-5 py-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setMasterLmpAccessDraft(null), className: "rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-700", children: "Cancel" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addMasterLmpAccessRule, className: "rounded-md bg-cyan-600 px-4 py-2 text-sm font-bold text-white hover:bg-cyan-500", children: "Add Access" })
+          ] })
+        ] }) })
       ] })
     ] }),
     shouldRenderSection("platform-standard-missions") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-standard-missions", className: getSectionClass("platform-standard-missions"), children: [
