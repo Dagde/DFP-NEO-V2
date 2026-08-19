@@ -84693,7 +84693,12 @@ const sectionSearchKeywords = {
     "operating areas",
     "course priority",
     "package priority",
-    "build rules"
+    "build rules",
+    "dispatch",
+    "dispatch rate",
+    "dispatch window",
+    "dispatch stagger",
+    "max dispatch"
   ],
   "appearance": [
     "appearance",
@@ -84937,7 +84942,15 @@ const sectionGroups = [
     description: "Event limits, duty rules, turnarounds, course exclusions and scheduling rule sets. Daily build factors stay in NEO Build > Priorities.",
     accent: "amber",
     defaultSection: "scheduling-rules",
-    sections: ["scheduling-rules", "people-profile"]
+    sections: ["scheduling-rules", "people-profile"],
+    searchSections: [
+      "scheduling-rules",
+      "event-limits",
+      "duty-turnaround",
+      "business-rules",
+      "platform-scheduling-rule-sets",
+      "people-profile"
+    ]
   },
   {
     label: "Records & Data",
@@ -85198,7 +85211,10 @@ const SettingsViewWithMenu = (props) => {
   });
   const [settingsSearch, setSettingsSearch] = reactExports.useState("");
   const settingsSearchQuery = settingsSearch.trim();
+  const deferredSettingsSearch = reactExports.useDeferredValue(settingsSearch);
+  const deferredSettingsSearchQuery = deferredSettingsSearch.trim();
   const isSearchActive = settingsSearchQuery.length > 0;
+  const isSearchFiltering = deferredSettingsSearchQuery.length > 0;
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [settingsSearchFocus, setSettingsSearchFocus] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
@@ -85256,7 +85272,7 @@ const SettingsViewWithMenu = (props) => {
     contentScrollRef.current?.scrollTo({ top: restoreScrollTop ?? 0, left: 0, behavior: "auto" });
   }, [activeSection]);
   const settingsDataSearchTermsBySection = reactExports.useMemo(() => {
-    if (!isSearchActive) return {};
+    if (!isSearchFiltering) return {};
     const platformConfig = props.platformConfig || null;
     const platformOrganisations = platformConfig?.organisations || [];
     const platformLocations = platformConfig?.locations || [];
@@ -85446,10 +85462,14 @@ const SettingsViewWithMenu = (props) => {
     props.fixedCrewTileColourMode,
     props.emergencyFreezeAuthority,
     props.currentUserQualificationIds,
-    isSearchActive
+    isSearchFiltering
   ]);
   const normaliseSearchText = (value) => value.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
-  const getSearchQueryTokens = () => normaliseSearchText(settingsSearchQuery).split(" ").filter(Boolean);
+  const searchQueryTokens = reactExports.useMemo(
+    () => normaliseSearchText(deferredSettingsSearchQuery).split(" ").filter(Boolean),
+    [deferredSettingsSearchQuery]
+  );
+  const getSearchQueryTokens = () => searchQueryTokens;
   const searchTokensMatchText = (tokens, text) => tokens.length > 0 && tokens.every((token) => text.includes(token));
   const getSettingsSearchParts = (section, groupLabel) => [
     groupLabel,
@@ -85591,13 +85611,14 @@ const SettingsViewWithMenu = (props) => {
   }, [activeSection, settingsSearchFocus]);
   const visibleSettingGroups = reactExports.useMemo(() => isSearchActive ? sectionGroups.map((group) => ({
     ...group,
-    visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label))
+    visibleSections: (group.searchSections || group.sections).filter((section) => matchesSettingsSearch(section, group.label))
   })).filter((group) => group.visibleSections.length > 0) : sectionGroups.map((group) => ({
     ...group,
     visibleSections: group.sections
   })), [
     isSearchActive,
-    settingsSearchQuery,
+    isSearchFiltering,
+    searchQueryTokens,
     settingsDataSearchTermsBySection,
     continuationCurrencyLabel
   ]);

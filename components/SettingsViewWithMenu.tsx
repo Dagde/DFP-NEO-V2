@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
@@ -668,7 +668,8 @@ const sectionSearchKeywords: Partial<Record<SettingsMenuSection, string[]>> = {
   ],
   'platform-scheduling-rule-sets': [
     'scheduling rule sets', 'rule sets', 'scheduler rules', 'aircraft rules', 'unit rules',
-    'operating areas', 'course priority', 'package priority', 'build rules',
+    'operating areas', 'course priority', 'package priority', 'build rules', 'dispatch',
+    'dispatch rate', 'dispatch window', 'dispatch stagger', 'max dispatch',
   ],
   'appearance': [
     'appearance', 'theme', 'dark', 'light', 'display', 'colour', 'color', 'fixed crew tile colour',
@@ -799,6 +800,7 @@ const sectionGroups: {
   accent: string;
   defaultSection: SettingsMenuSection;
   sections: SettingsMenuSection[];
+  searchSections?: SettingsMenuSection[];
 }[] = [
   {
     label: 'Organisation & Operations',
@@ -883,6 +885,14 @@ const sectionGroups: {
     accent: 'amber',
     defaultSection: 'scheduling-rules',
     sections: ['scheduling-rules', 'people-profile'],
+    searchSections: [
+      'scheduling-rules',
+      'event-limits',
+      'duty-turnaround',
+      'business-rules',
+      'platform-scheduling-rule-sets',
+      'people-profile',
+    ],
   },
   {
     label: 'Records & Data',
@@ -1189,7 +1199,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     });
     const [settingsSearch, setSettingsSearch] = useState('');
     const settingsSearchQuery = settingsSearch.trim();
+    const deferredSettingsSearch = useDeferredValue(settingsSearch);
+    const deferredSettingsSearchQuery = deferredSettingsSearch.trim();
     const isSearchActive = settingsSearchQuery.length > 0;
+    const isSearchFiltering = deferredSettingsSearchQuery.length > 0;
     const [settingsFocusTarget, setSettingsFocusTarget] = useState<{
         unitCode?: string;
         locationCode?: string;
@@ -1277,7 +1290,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     }, [activeSection]);
 
     const settingsDataSearchTermsBySection = useMemo<Partial<Record<SettingsMenuSection, string[]>>>(() => {
-        if (!isSearchActive) return {};
+        if (!isSearchFiltering) return {};
 
         const platformConfig = props.platformConfig || null;
         const platformOrganisations = platformConfig?.organisations || [];
@@ -1470,7 +1483,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         props.fixedCrewTileColourMode,
         props.emergencyFreezeAuthority,
         props.currentUserQualificationIds,
-        isSearchActive,
+        isSearchFiltering,
     ]);
 
     const normaliseSearchText = (value: string): string => (
@@ -1482,9 +1495,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             .trim()
     );
 
-    const getSearchQueryTokens = (): string[] => (
-        normaliseSearchText(settingsSearchQuery).split(' ').filter(Boolean)
+    const searchQueryTokens = useMemo(
+        () => normaliseSearchText(deferredSettingsSearchQuery).split(' ').filter(Boolean),
+        [deferredSettingsSearchQuery],
     );
+
+    const getSearchQueryTokens = (): string[] => searchQueryTokens;
 
     const searchTokensMatchText = (tokens: string[], text: string): boolean => (
         tokens.length > 0 && tokens.every(token => text.includes(token))
@@ -1681,7 +1697,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             ? sectionGroups
                 .map(group => ({
                     ...group,
-                    visibleSections: group.sections.filter(section => matchesSettingsSearch(section, group.label)),
+                    visibleSections: (group.searchSections || group.sections)
+                        .filter(section => matchesSettingsSearch(section, group.label)),
                 }))
                 .filter(group => group.visibleSections.length > 0)
             : sectionGroups.map(group => ({
@@ -1690,7 +1707,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             }))
     ), [
         isSearchActive,
-        settingsSearchQuery,
+        isSearchFiltering,
+        searchQueryTokens,
         settingsDataSearchTermsBySection,
         continuationCurrencyLabel,
     ]);
