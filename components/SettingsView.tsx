@@ -1506,7 +1506,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                             value={displayedDispatchRateWindowMinutes}
                                             onChange={(event) => handleDispatchRateWindowChange(Number(event.target.value))}
                                             disabled={!canEditBusinessRules || !onUpdateDispatchRateWindowMinutes}
-                                            className={`w-[120px] px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${
+                                            className={`w-[120px] px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                                 canEditBusinessRules && onUpdateDispatchRateWindowMinutes
                                                     ? 'bg-gray-700 border-gray-600 text-white'
                                                     : 'bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed'
