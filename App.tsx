@@ -359,6 +359,230 @@ type UiLagFrameDelaySample = {
     frameGapMs: number;
 };
 
+type FloatingDashboardWindowKind = 'MyDashboard' | 'SupervisorDashboard';
+
+type FloatingDashboardWindowFrame = {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+};
+
+type FloatingDashboardWindowProps = {
+    title: string;
+    frame: FloatingDashboardWindowFrame;
+    minWidth?: number;
+    minHeight?: number;
+    onFrameChange: (frame: FloatingDashboardWindowFrame) => void;
+    onClose: () => void;
+    children: React.ReactNode;
+};
+
+type FloatingDashboardDragState = {
+    mode: 'move' | 'resize';
+    handle?: string;
+    startX: number;
+    startY: number;
+    startFrame: FloatingDashboardWindowFrame;
+};
+
+const clampFloatingDashboardFrame = (
+    frame: FloatingDashboardWindowFrame,
+    minWidth: number,
+    minHeight: number,
+): FloatingDashboardWindowFrame => {
+    if (typeof window === 'undefined') return frame;
+    const margin = 8;
+    const maxWidth = Math.max(minWidth, window.innerWidth - margin * 2);
+    const maxHeight = Math.max(minHeight, window.innerHeight - margin * 2);
+    const width = Math.min(Math.max(frame.width, minWidth), maxWidth);
+    const height = Math.min(Math.max(frame.height, minHeight), maxHeight);
+    const left = Math.min(Math.max(frame.left, margin), Math.max(margin, window.innerWidth - width - margin));
+    const top = Math.min(Math.max(frame.top, margin), Math.max(margin, window.innerHeight - height - margin));
+    return { left, top, width, height };
+};
+
+const FloatingDashboardWindow: React.FC<FloatingDashboardWindowProps> = ({
+    title,
+    frame,
+    minWidth = 520,
+    minHeight = 360,
+    onFrameChange,
+    onClose,
+    children,
+}) => {
+    const dragStateRef = useRef<FloatingDashboardDragState | null>(null);
+    const frameRef = useRef(frame);
+    const onFrameChangeRef = useRef(onFrameChange);
+    const animationFrameRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        frameRef.current = frame;
+    }, [frame]);
+
+    useEffect(() => {
+        onFrameChangeRef.current = onFrameChange;
+    }, [onFrameChange]);
+
+    useEffect(() => {
+        const handleResize = () => {
+            onFrameChangeRef.current(clampFloatingDashboardFrame(frameRef.current, minWidth, minHeight));
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [minHeight, minWidth]);
+
+    useEffect(() => {
+        const finishDrag = () => {
+            dragStateRef.current = null;
+            if (animationFrameRef.current !== null) {
+                window.cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = null;
+            }
+        };
+        const handlePointerMove = (event: PointerEvent) => {
+            const dragState = dragStateRef.current;
+            if (!dragState) return;
+            event.preventDefault();
+            const dx = event.clientX - dragState.startX;
+            const dy = event.clientY - dragState.startY;
+            const start = dragState.startFrame;
+            let nextFrame: FloatingDashboardWindowFrame = start;
+
+            if (dragState.mode === 'move') {
+                nextFrame = {
+                    ...start,
+                    left: start.left + dx,
+                    top: start.top + dy,
+                };
+            } else {
+                const handle = dragState.handle || '';
+                let left = start.left;
+                let top = start.top;
+                let width = start.width;
+                let height = start.height;
+
+                if (handle.includes('e')) width = start.width + dx;
+                if (handle.includes('s')) height = start.height + dy;
+                if (handle.includes('w')) {
+                    width = start.width - dx;
+                    left = start.left + dx;
+                }
+                if (handle.includes('n')) {
+                    height = start.height - dy;
+                    top = start.top + dy;
+                }
+
+                if (width < minWidth) {
+                    if (handle.includes('w')) left -= minWidth - width;
+                    width = minWidth;
+                }
+                if (height < minHeight) {
+                    if (handle.includes('n')) top -= minHeight - height;
+                    height = minHeight;
+                }
+                nextFrame = { left, top, width, height };
+            }
+
+            const clamped = clampFloatingDashboardFrame(nextFrame, minWidth, minHeight);
+            if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = window.requestAnimationFrame(() => {
+                frameRef.current = clamped;
+                onFrameChangeRef.current(clamped);
+            });
+        };
+
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', finishDrag);
+        window.addEventListener('pointercancel', finishDrag);
+        return () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', finishDrag);
+            window.removeEventListener('pointercancel', finishDrag);
+            finishDrag();
+        };
+    }, [minHeight, minWidth]);
+
+    const startMove = (event: React.PointerEvent<HTMLDivElement>) => {
+        if ((event.target as HTMLElement).closest('button')) return;
+        event.preventDefault();
+        dragStateRef.current = {
+            mode: 'move',
+            startX: event.clientX,
+            startY: event.clientY,
+            startFrame: frameRef.current,
+        };
+    };
+
+    const startResize = (handle: string) => (event: React.PointerEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        dragStateRef.current = {
+            mode: 'resize',
+            handle,
+            startX: event.clientX,
+            startY: event.clientY,
+            startFrame: frameRef.current,
+        };
+    };
+
+    const handleClass = 'absolute z-20 touch-none';
+    const resizeHandles = [
+        { key: 'n', className: 'left-4 right-4 top-0 h-2 cursor-ns-resize' },
+        { key: 's', className: 'bottom-0 left-4 right-4 h-2 cursor-ns-resize' },
+        { key: 'e', className: 'bottom-4 right-0 top-4 w-2 cursor-ew-resize' },
+        { key: 'w', className: 'bottom-4 left-0 top-4 w-2 cursor-ew-resize' },
+        { key: 'ne', className: 'right-0 top-0 h-4 w-4 cursor-nesw-resize' },
+        { key: 'nw', className: 'left-0 top-0 h-4 w-4 cursor-nwse-resize' },
+        { key: 'se', className: 'bottom-0 right-0 h-5 w-5 cursor-nwse-resize' },
+        { key: 'sw', className: 'bottom-0 left-0 h-5 w-5 cursor-nesw-resize' },
+    ];
+
+    return (
+        <div
+            className="fixed z-[180] flex flex-col overflow-hidden rounded-lg border border-slate-500/70 bg-slate-950 shadow-2xl shadow-black/45 ring-1 ring-white/10"
+            style={{
+                left: frame.left,
+                top: frame.top,
+                width: frame.width,
+                height: frame.height,
+            }}
+            role="dialog"
+            aria-label={title}
+        >
+            <div
+                className="flex h-10 shrink-0 cursor-move select-none items-center justify-between border-b border-slate-700 bg-slate-900 px-3 text-slate-100"
+                onPointerDown={startMove}
+            >
+                <div className="flex min-w-0 items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.7)]" />
+                    <span className="truncate text-sm font-bold">{title}</span>
+                </div>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="grid h-7 w-7 place-items-center rounded text-lg leading-none text-slate-300 hover:bg-slate-800 hover:text-white"
+                    aria-label={`Close ${title}`}
+                >
+                    x
+                </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+                {children}
+            </div>
+            {resizeHandles.map(handle => (
+                <div
+                    key={handle.key}
+                    className={`${handleClass} ${handle.className}`}
+                    onPointerDown={startResize(handle.key)}
+                    aria-hidden="true"
+                />
+            ))}
+            <div className="pointer-events-none absolute bottom-1 right-1 h-3 w-3 border-b-2 border-r-2 border-slate-400/70" />
+        </div>
+    );
+};
+
 const getUiLagTargetDescriptor = (target: EventTarget | null): UiLagTargetDescriptor => {
     const fallback: UiLagTargetDescriptor = {
         tagName: 'unknown',
@@ -23926,6 +24150,28 @@ const App: React.FC = () => {
         } catch (e) { /* ignore */ }
         return 'Program Schedule';
     });
+    const [floatingDashboardWindows, setFloatingDashboardWindows] = useState<Record<FloatingDashboardWindowKind, boolean>>({
+        MyDashboard: false,
+        SupervisorDashboard: false,
+    });
+    const [floatingDashboardFrames, setFloatingDashboardFrames] = useState<Record<FloatingDashboardWindowKind, FloatingDashboardWindowFrame>>(() => {
+        const viewportWidth = typeof window === 'undefined' ? 1440 : window.innerWidth;
+        const viewportHeight = typeof window === 'undefined' ? 900 : window.innerHeight;
+        return {
+            MyDashboard: clampFloatingDashboardFrame({
+                left: Math.max(128, Math.round((viewportWidth - 980) / 2)),
+                top: 88,
+                width: Math.min(980, Math.max(560, viewportWidth - 260)),
+                height: Math.min(760, Math.max(420, viewportHeight - 150)),
+            }, 520, 360),
+            SupervisorDashboard: clampFloatingDashboardFrame({
+                left: Math.max(150, Math.round((viewportWidth - 1040) / 2) + 24),
+                top: 96,
+                width: Math.min(1040, Math.max(620, viewportWidth - 300)),
+                height: Math.min(780, Math.max(440, viewportHeight - 170)),
+            }, 560, 380),
+        };
+    });
     const [programScheduleViewKey, setProgramScheduleViewKey] = useState(0);
     const lastProgramScheduleMountKeyRef = useRef('');
     const [requestedSettingsSection, setRequestedSettingsSection] = useState<{
@@ -30947,12 +31193,12 @@ const App: React.FC = () => {
         init();
     }, []);
 
-    // Sync training reports when navigating to MyDashboard so the dashboard is up to date.
+    // Sync training reports when My Home opens so the dashboard is up to date.
     useEffect(() => {
-        if (activeView === 'MyDashboard') {
+        if (activeView === 'MyDashboard' || floatingDashboardWindows.MyDashboard) {
             syncPt051WithActiveDfp(publishedSchedules, pt051Assessments);
         }
-    }, [activeView, publishedSchedules, pt051Assessments]);
+    }, [activeView, floatingDashboardWindows.MyDashboard, publishedSchedules, pt051Assessments]);
 
     // Sync priority events when continuation requests change
     useEffect(() => {
@@ -33162,6 +33408,11 @@ const App: React.FC = () => {
         if (isDashboard && date !== today) {
             setDate(today);
         }
+        if (view === 'MyDashboard' || view === 'SupervisorDashboard') {
+            setPreviousView(activeView);
+            setFloatingDashboardWindows(prev => ({ ...prev, [view]: true }));
+            return;
+        }
         setPreviousView(activeView);
         setActiveView(view);
         // Close Pause Flight Ops panel when navigating away and reset all pause state
@@ -34184,7 +34435,7 @@ const App: React.FC = () => {
     };
 
     useEffect(() => {
-        if (!isAuthenticated || activeView !== 'MyDashboard') return;
+        if (!isAuthenticated || (activeView !== 'MyDashboard' && !floatingDashboardWindows.MyDashboard)) return;
         if (normaliseOperationalModel(activeOperationalModel) !== 'flight_school') return;
         if (eventCompletionsForDate.length === 0 || eventsForDate.length === 0 || allInstructorsData.length === 0 || syllabusDetails.length === 0) return;
 
@@ -34311,6 +34562,7 @@ const App: React.FC = () => {
         date,
         eventCompletionsForDate,
         eventsForDate,
+        floatingDashboardWindows.MyDashboard,
         isAuthenticated,
         syllabusDetails,
     ]);
@@ -46452,8 +46704,8 @@ appliedUpdates.forEach(update => {
     }, [activeUnitCode, resolveCourseMovementDirection, school, scopedApiPath]);
 
 
-    const renderActiveView = () => {
-        switch (activeView) {
+    const renderActiveView = (viewOverride: string = activeView) => {
+        switch (viewOverride) {
             case 'Program Schedule':
                 return <ScheduleView
                            key={programScheduleViewKey}
@@ -50005,6 +50257,30 @@ appliedUpdates.forEach(update => {
                 modelUnavailableViews={modelUnavailableRightViews}
                 operationalModel={activeOperationalModel}
             />
+            {floatingDashboardWindows.MyDashboard && (
+                <FloatingDashboardWindow
+                    title="My Home"
+                    frame={floatingDashboardFrames.MyDashboard}
+                    minWidth={520}
+                    minHeight={360}
+                    onFrameChange={(frame) => setFloatingDashboardFrames(prev => ({ ...prev, MyDashboard: frame }))}
+                    onClose={() => setFloatingDashboardWindows(prev => ({ ...prev, MyDashboard: false }))}
+                >
+                    {renderActiveView('MyDashboard')}
+                </FloatingDashboardWindow>
+            )}
+            {floatingDashboardWindows.SupervisorDashboard && (
+                <FloatingDashboardWindow
+                    title="Duty Pilot"
+                    frame={floatingDashboardFrames.SupervisorDashboard}
+                    minWidth={560}
+                    minHeight={380}
+                    onFrameChange={(frame) => setFloatingDashboardFrames(prev => ({ ...prev, SupervisorDashboard: frame }))}
+                    onClose={() => setFloatingDashboardWindows(prev => ({ ...prev, SupervisorDashboard: false }))}
+                >
+                    {renderActiveView('SupervisorDashboard')}
+                </FloatingDashboardWindow>
+            )}
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
 
             {selectedEvent && isAddingTile && (
