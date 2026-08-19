@@ -95217,12 +95217,25 @@ const FloatingDashboardWindow = ({
   onClose,
   children
 }) => {
+  const windowRef = reactExports.useRef(null);
   const dragStateRef = reactExports.useRef(null);
   const frameRef = reactExports.useRef(frame);
+  const pendingFrameRef = reactExports.useRef(frame);
   const onFrameChangeRef = reactExports.useRef(onFrameChange);
   const animationFrameRef = reactExports.useRef(null);
+  const previousBodyCursorRef = reactExports.useRef("");
+  const previousBodyUserSelectRef = reactExports.useRef("");
+  const applyFrameToWindow = (nextFrame) => {
+    const element = windowRef.current;
+    if (!element) return;
+    element.style.transform = `translate3d(${Math.round(nextFrame.left)}px, ${Math.round(nextFrame.top)}px, 0)`;
+    element.style.width = `${Math.round(nextFrame.width)}px`;
+    element.style.height = `${Math.round(nextFrame.height)}px`;
+  };
   reactExports.useEffect(() => {
     frameRef.current = frame;
+    pendingFrameRef.current = frame;
+    if (!dragStateRef.current) applyFrameToWindow(frame);
   }, [frame]);
   reactExports.useEffect(() => {
     onFrameChangeRef.current = onFrameChange;
@@ -95236,10 +95249,18 @@ const FloatingDashboardWindow = ({
   }, [minHeight, minWidth]);
   reactExports.useEffect(() => {
     const finishDrag = () => {
+      const dragState = dragStateRef.current;
       dragStateRef.current = null;
       if (animationFrameRef.current !== null) {
         window.cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
+      }
+      document.body.style.cursor = previousBodyCursorRef.current;
+      document.body.style.userSelect = previousBodyUserSelectRef.current;
+      if (dragState) {
+        frameRef.current = pendingFrameRef.current;
+        applyFrameToWindow(pendingFrameRef.current);
+        onFrameChangeRef.current(pendingFrameRef.current);
       }
     };
     const handlePointerMove = (event) => {
@@ -95283,10 +95304,12 @@ const FloatingDashboardWindow = ({
         nextFrame = { left, top, width, height };
       }
       const clamped = clampFloatingDashboardFrame(nextFrame, minWidth, minHeight);
+      pendingFrameRef.current = clamped;
       if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = window.requestAnimationFrame(() => {
         frameRef.current = clamped;
-        onFrameChangeRef.current(clamped);
+        applyFrameToWindow(clamped);
+        animationFrameRef.current = null;
       });
     };
     window.addEventListener("pointermove", handlePointerMove);
@@ -95302,6 +95325,12 @@ const FloatingDashboardWindow = ({
   const startMove = (event) => {
     if (event.target.closest("button")) return;
     event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    previousBodyCursorRef.current = document.body.style.cursor;
+    previousBodyUserSelectRef.current = document.body.style.userSelect;
+    document.body.style.cursor = "move";
+    document.body.style.userSelect = "none";
+    pendingFrameRef.current = frameRef.current;
     dragStateRef.current = {
       mode: "move",
       startX: event.clientX,
@@ -95312,6 +95341,12 @@ const FloatingDashboardWindow = ({
   const startResize = (handle) => (event) => {
     event.preventDefault();
     event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    previousBodyCursorRef.current = document.body.style.cursor;
+    previousBodyUserSelectRef.current = document.body.style.userSelect;
+    document.body.style.cursor = window.getComputedStyle(event.currentTarget).cursor;
+    document.body.style.userSelect = "none";
+    pendingFrameRef.current = frameRef.current;
     dragStateRef.current = {
       mode: "resize",
       handle,
@@ -95334,12 +95369,14 @@ const FloatingDashboardWindow = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
-      className: "fixed z-[180] flex flex-col overflow-hidden rounded-lg border border-slate-500/70 bg-slate-950 shadow-2xl shadow-black/45 ring-1 ring-white/10",
+      ref: windowRef,
+      className: "fixed left-0 top-0 z-[180] flex flex-col overflow-hidden rounded-lg border border-slate-500/70 bg-slate-950 shadow-2xl shadow-black/45 ring-1 ring-white/10",
       style: {
-        left: frame.left,
-        top: frame.top,
+        transform: `translate3d(${frame.left}px, ${frame.top}px, 0)`,
         width: frame.width,
-        height: frame.height
+        height: frame.height,
+        willChange: "transform, width, height",
+        contain: "layout paint"
       },
       role: "dialog",
       "aria-label": title,
