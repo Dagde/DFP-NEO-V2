@@ -2268,7 +2268,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [aircraftCount, flightNumber, formationType, formationTypes, isSctFormationCode, isSingleSeatAircraft]);
 
   const areaOptions = useMemo(() => [
-    { value: '', label: 'Blank' },
+    { value: '', label: '' },
     ...opAreas.map(a => ({ value: a, label: a })),
   ], [opAreas]);
 

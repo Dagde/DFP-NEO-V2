@@ -35425,7 +35425,7 @@ const AddFlightTileModal = ({
     })));
   }, [aircraftCount, flightNumber, formationType, formationTypes, isSctFormationCode, isSingleSeatAircraft]);
   const areaOptions = reactExports.useMemo(() => [
-    { value: "", label: "Blank" },
+    { value: "", label: "" },
     ...opAreas.map((a) => ({ value: a, label: a }))
   ], [opAreas]);
   const aircraftOptions = reactExports.useMemo(() => [{ value: "", label: "Skip aircraft number" }, ...Array.from({ length: 49 }, (_, i) => {
