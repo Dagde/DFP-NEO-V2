@@ -471,6 +471,7 @@ const formatMasterLmpHours = (value: unknown): string => {
 const DetailView: React.FC<{ 
     item: SyllabusItemDetail; 
     isEditing: boolean;
+    isAddingEvent?: boolean;
     editedItem: SyllabusItemDetail | null;
     onItemChange: (newItem: SyllabusItemDetail) => void;
     onDeleteEvent?: (item: SyllabusItemDetail) => void;
@@ -488,7 +489,10 @@ const DetailView: React.FC<{
     linkedEventOptions?: SyllabusItemDetail[];
     linkedEventOverrides?: Record<string, string>;
     onLinkedEventChange?: (item: SyllabusItemDetail, linkedEventCode: string) => void | Promise<void>;
-}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = '', isAirCombatModel = false, operationalModel = 'flight_school', staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
+    collectionTitle?: string;
+    codeExample?: string;
+    descriptionExample?: string;
+}> = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = '', isAirCombatModel = false, operationalModel = 'flight_school', staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = 'this Master LMP', codeExample = '', descriptionExample = '' }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -573,19 +577,36 @@ const DetailView: React.FC<{
     const selectedTestingOfficerQualification = testingOfficerQualifications.find(qualification => (
         qualification.id === currentItem.testingOfficerQualificationId
     ));
+    const cleanCodeExample = String(codeExample || '').trim();
+    const cleanDescriptionExample = String(descriptionExample || '').trim();
+    const addEventCodeHelp = cleanCodeExample
+        ? `Code is the short event identifier used in scheduling, prerequisites and reports. Example already saved in ${collectionTitle}: ${cleanCodeExample}.`
+        : `Code is the short event identifier used in scheduling, prerequisites and reports. Use the same style as the other events in ${collectionTitle}.`;
+    const addEventDescriptionHelp = cleanDescriptionExample
+        ? `Event Description is the plain English name of this one event. Example already saved in ${collectionTitle}: ${cleanDescriptionExample}.`
+        : `Event Description is the plain English name of this one event. It should describe what the crew or trainee will do in this event.`;
+    const AddEventHelp: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+        <p className="mt-2 rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100">
+            {children}
+        </p>
+    );
 
     return (
     <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 flex-1">
                 {isEditing ? (
-                    <EditableField label="Code" value={currentItem.code} onChange={(val) => handleFieldChange('code', val)} />
+                    <>
+                        <EditableField label={isAddingEvent ? 'Event Code' : 'Code'} value={currentItem.code} onChange={(val) => handleFieldChange('code', val)} />
+                        {isAddingEvent && <AddEventHelp>{addEventCodeHelp}</AddEventHelp>}
+                    </>
                 ) : (
                     <h2 className="text-3xl font-bold text-white">{item.code}</h2>
                 )}
                  {isEditing ? (
                     <div className="mt-2">
                         <EditableField label="Event Description" value={currentItem.eventDescription} onChange={(val) => handleFieldChange('eventDescription', val)} />
+                        {isAddingEvent && <AddEventHelp>{addEventDescriptionHelp}</AddEventHelp>}
                     </div>
                 ) : (
                     <p className="text-lg text-gray-400 mt-1">{item.eventDescription}</p>
@@ -977,7 +998,10 @@ const DetailView: React.FC<{
                <legend className="px-2 text-sm font-semibold text-gray-300">Event Description</legend>
                <div className="mt-2">
                    {isEditing ? (
-                       <EditableField label="Event Description" value={currentItem.eventDescription} onChange={(val) => handleFieldChange('eventDescription', val)} />
+                       <>
+                           <EditableField label="Event Description" value={currentItem.eventDescription} onChange={(val) => handleFieldChange('eventDescription', val)} />
+                           {isAddingEvent && <AddEventHelp>{addEventDescriptionHelp}</AddEventHelp>}
+                       </>
                    ) : (
                        <p className="text-gray-300 p-3 bg-gray-700/30 rounded-lg">{item.eventDescription || 'No description provided'}</p>
                    )}
@@ -1130,6 +1154,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       localStorage.getItem('neo_lmp_details_selected_package') || ''
   );
   const [editingCourseTitle, setEditingCourseTitle] = useState<string>('');
+  const [isAddingLmpEvent, setIsAddingLmpEvent] = useState(false);
   const isTrainingPackagesTab = activeTab === 'packages';
   const activeLmpType = getActiveLmpType(activeTab);
   const activeCollectionNoun = isTrainingPackagesTab ? 'package' : 'course';
@@ -1389,6 +1414,17 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
 
   const selectedCourseEventCount = filteredSyllabusDetails.length;
+  const addEventExamples = useMemo(() => {
+      const selectedItemId = selectedItem?.id || editedItem?.id || '';
+      const savedEvents = filteredSyllabusDetails
+          .filter(item => item.id !== selectedItemId)
+          .filter(item => !String(item.id || '').startsWith('new-'))
+          .filter(item => String(item.code || item.eventDescription || '').trim());
+      return {
+          code: String(savedEvents.find(item => String(item.code || '').trim())?.code || '').trim(),
+          description: String(savedEvents.find(item => String(item.eventDescription || '').trim())?.eventDescription || '').trim(),
+      };
+  }, [editedItem?.id, filteredSyllabusDetails, selectedItem?.id]);
   useEffect(() => {
       const rawCourseCodes = Array.from(new Set(syllabusDetails.flatMap((item: any) => (
           Array.isArray(item?.courses) ? item.courses : []
@@ -1624,6 +1660,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
         setHoveredItem(null);
         setIsEditing(false);
         setEditedItem(null);
+        setIsAddingLmpEvent(false);
         return;
     }
     if (courseLMPs.length === 0) {
@@ -1633,6 +1670,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
             setHoveredItem(null);
             setIsEditing(false);
             setEditedItem(null);
+            setIsAddingLmpEvent(false);
         }
         return;
     }
@@ -1642,6 +1680,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
         setHoveredItem(null);
         setIsEditing(false);
         setEditedItem(null);
+        setIsAddingLmpEvent(false);
     }
   }, [activeTab, courseLMPs, selectedCourseType, usesPackageTab]);
 
@@ -1686,10 +1725,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
     } else {
         setSelectedItem(null);
     }
+    setIsAddingLmpEvent(false);
     setHoveredItem(null);
   }, [activeTab, selectedCourseType]);
 
   const handleEdit = () => {
+      setIsAddingLmpEvent(false);
       setEditingCourseTitle(getCourseTitle(selectedCourseType));
       if (selectedItem) {
           setEditedItem(JSON.parse(JSON.stringify(selectedItem)));
@@ -1751,7 +1792,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           // If the course title was changed, update the module field on ALL items in this course
           const currentTitle = getCourseTitle(selectedCourseType);
           const newTitle = editingCourseTitle.trim();
-          if (newTitle && newTitle !== currentTitle) {
+          if (!isAddingLmpEvent && newTitle && newTitle !== currentTitle) {
               const courseItems = unitScopedSyllabusDetails.filter(item =>
                   item.isActive !== false &&
                   getItemLmpDetailsTab(item) === activeTab &&
@@ -1766,6 +1807,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           }
 
           setIsEditing(false);
+          setIsAddingLmpEvent(false);
           setEditedItem(null);
           setEditingCourseTitle('');
       } catch (err: any) {
@@ -1777,6 +1819,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
 
   const handleCancel = () => {
       setIsEditing(false);
+      setIsAddingLmpEvent(false);
       setEditedItem(null);
       setEditingCourseTitle('');
   };
@@ -2240,6 +2283,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           setHoveredItem(null);
           setEditedItem(null);
           setIsEditing(false);
+          setIsAddingLmpEvent(false);
           logAudit({ action: 'Create', description: `Created new ${activeCollectionNoun}: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: 'LMP/Event Details' });
       } catch (err: any) {
           await showDarkAlert(`Failed to create ${activeCollectionNoun}: ${err.message}`, 'Create Failed', 'error');
@@ -2292,6 +2336,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       if (onAddItem) onAddItem(newItem);
       setSelectedItem(newItem);
       setEditedItem(JSON.parse(JSON.stringify(newItem)));
+      setEditingCourseTitle(getCourseTitle(selectedCourseType));
+      setIsAddingLmpEvent(true);
       setIsEditing(true);
       // Persist to DB in background (save will finalize with real DB id)
       createSyllabusItem({ ...newItem, id: undefined }, `New event added via ${activeCollectionTitle} editor`)
@@ -2346,19 +2392,28 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       {/* Header */}
       <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-start border-b border-gray-700 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">LMP/Event Details: {isEditing ? (
-              <input
-                  type="text"
-                  value={editingCourseTitle}
-                  onChange={e => setEditingCourseTitle(e.target.value)}
-                  className="text-sky-400 bg-transparent border-b border-sky-400 outline-none text-2xl font-bold w-72 focus:border-sky-300"
-                  placeholder="Course title..."
-                  title="Edit course title"
-              />
-          ) : (
-              <span className="text-sky-400">{getCourseTitle(selectedCourseType)}</span>
-          )}</h1>
-          <p className="text-sm text-gray-400">{isEditing ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}` : activeCollectionTitle}</p>
+          <h1 className="text-2xl font-bold text-white">
+              {isAddingLmpEvent ? 'Add Event to: ' : 'LMP/Event Details: '}
+              {isEditing && !isAddingLmpEvent ? (
+                  <input
+                      type="text"
+                      value={editingCourseTitle}
+                      onChange={e => setEditingCourseTitle(e.target.value)}
+                      className="text-sky-400 bg-transparent border-b border-sky-400 outline-none text-2xl font-bold w-72 focus:border-sky-300"
+                      placeholder="Course title..."
+                      title="Edit course title"
+                  />
+              ) : (
+                  <span className="text-sky-400">{getCourseTitle(selectedCourseType)}</span>
+              )}
+          </h1>
+          <p className="text-sm text-gray-400">
+              {isAddingLmpEvent
+                  ? `This creates one event inside ${getCourseTitle(selectedCourseType)}. The ${activeCollectionTitle} title is fixed here; fill in the event code and event description below.`
+                  : isEditing
+                      ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}`
+                      : activeCollectionTitle}
+          </p>
           {shouldShowUnitTabs && (
               <div className="mt-3 flex flex-wrap gap-2">
                   {fixedCrewUnitTabs.map(unitCode => (
@@ -2372,6 +2427,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                               setHoveredItem(null);
                               setIsEditing(false);
                               setEditedItem(null);
+                              setIsAddingLmpEvent(false);
                           }}
                           className={`h-8 rounded-md border px-4 text-xs font-semibold transition ${
                               activeUnitTab === unitCode
@@ -2397,6 +2453,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     setHoveredItem(null);
                     setIsEditing(false);
                     setEditedItem(null);
+                    setIsAddingLmpEvent(false);
                 }}
                 className={`h-9 min-w-[136px] rounded px-4 text-sm font-semibold transition ${
                     activeTab === tab.id
@@ -2419,6 +2476,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     onChange={(e) => {
                         setSelectedCourseType(e.target.value);
                         setSelectedItem(null); // Clear selection when switching list
+                        setIsAddingLmpEvent(false);
                     }}
                     className="bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8"
                 >
@@ -2543,6 +2601,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     if (!isEditing && !isReorderingEvents) {
                         setHoveredItem(null);
                         setSelectedItem(item);
+                        setIsAddingLmpEvent(false);
                     }
                 }}
                 disabled={isEditing || isReorderingEvents}
@@ -2588,6 +2647,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                 <DetailView 
                     item={hoveredItem || selectedItem}
                     isEditing={isEditing}
+                    isAddingEvent={isAddingLmpEvent}
                     editedItem={editedItem}
                     onItemChange={setEditedItem}
                     onDeleteEvent={handleDeleteEventRequest}
@@ -2602,9 +2662,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                         staffQualificationCatalogue={staffQualificationCatalogue}
                         scoringMatrixElements={scoringMatrixElements}
                         onAddScoringMatrixElement={onAddScoringMatrixElement}
-	                    linkedEventOptions={filteredSyllabusDetails}
+                    linkedEventOptions={filteredSyllabusDetails}
                     linkedEventOverrides={linkedEventOverrides}
                     onLinkedEventChange={handleLinkedEventChange}
+                    collectionTitle={getCourseTitle(selectedCourseType)}
+                    codeExample={addEventExamples.code}
+                    descriptionExample={addEventExamples.description}
                 />
             ) : (
               <div className="flex items-center justify-center h-full">

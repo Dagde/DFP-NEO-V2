@@ -60802,7 +60802,7 @@ const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue: staffQualificationCatalogue2, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
+const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue: staffQualificationCatalogue2, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange, collectionTitle = "this Master LMP", codeExample = "", descriptionExample = "" }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -60869,11 +60869,22 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
     normaliseOperationalModel(operationalModel)
   );
   const selectedTestingOfficerQualification = testingOfficerQualifications.find((qualification) => qualification.id === currentItem.testingOfficerQualificationId);
+  const cleanCodeExample = String(codeExample || "").trim();
+  const cleanDescriptionExample = String(descriptionExample || "").trim();
+  const addEventCodeHelp = cleanCodeExample ? `Code is the short event identifier used in scheduling, prerequisites and reports. Example already saved in ${collectionTitle}: ${cleanCodeExample}.` : `Code is the short event identifier used in scheduling, prerequisites and reports. Use the same style as the other events in ${collectionTitle}.`;
+  const addEventDescriptionHelp = cleanDescriptionExample ? `Event Description is the plain English name of this one event. Example already saved in ${collectionTitle}: ${cleanDescriptionExample}.` : `Event Description is the plain English name of this one event. It should describe what the crew or trainee will do in this event.`;
+  const AddEventHelp = ({ children }) => /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100", children });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
-        isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(EditableField, { label: "Code", value: currentItem.code, onChange: (val) => handleFieldChange("code", val) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
-        isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(EditableField, { label: "Event Description", value: currentItem.eventDescription, onChange: (val) => handleFieldChange("eventDescription", val) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
+        isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(EditableField, { label: isAddingEvent ? "Event Code" : "Code", value: currentItem.code, onChange: (val) => handleFieldChange("code", val) }),
+          isAddingEvent && /* @__PURE__ */ jsxRuntimeExports.jsx(AddEventHelp, { children: addEventCodeHelp })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
+        isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(EditableField, { label: "Event Description", value: currentItem.eventDescription, onChange: (val) => handleFieldChange("eventDescription", val) }),
+          isAddingEvent && /* @__PURE__ */ jsxRuntimeExports.jsx(AddEventHelp, { children: addEventDescriptionHelp })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
       ] }),
       showAssessmentRequiredControl && /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "label",
@@ -61346,7 +61357,10 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Event Description" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(EditableField, { label: "Event Description", value: currentItem.eventDescription, onChange: (val) => handleFieldChange("eventDescription", val) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 p-3 bg-gray-700/30 rounded-lg", children: item.eventDescription || "No description provided" }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(EditableField, { label: "Event Description", value: currentItem.eventDescription, onChange: (val) => handleFieldChange("eventDescription", val) }),
+        isAddingEvent && /* @__PURE__ */ jsxRuntimeExports.jsx(AddEventHelp, { children: addEventDescriptionHelp })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 p-3 bg-gray-700/30 rounded-lg", children: item.eventDescription || "No description provided" }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Prerequisites" }),
@@ -61456,6 +61470,7 @@ const SyllabusView = ({
     () => localStorage.getItem("neo_lmp_details_selected_package") || ""
   );
   const [editingCourseTitle, setEditingCourseTitle] = reactExports.useState("");
+  const [isAddingLmpEvent, setIsAddingLmpEvent] = reactExports.useState(false);
   const isTrainingPackagesTab = activeTab === "packages";
   const activeLmpType = getActiveLmpType(activeTab);
   const activeCollectionNoun = isTrainingPackagesTab ? "package" : "course";
@@ -61665,6 +61680,14 @@ const SyllabusView = ({
     });
   }, [activeTab, unitScopedSyllabusDetails, selectedCourseType]);
   const selectedCourseEventCount = filteredSyllabusDetails.length;
+  const addEventExamples = reactExports.useMemo(() => {
+    const selectedItemId = selectedItem?.id || editedItem?.id || "";
+    const savedEvents = filteredSyllabusDetails.filter((item) => item.id !== selectedItemId).filter((item) => !String(item.id || "").startsWith("new-")).filter((item) => String(item.code || item.eventDescription || "").trim());
+    return {
+      code: String(savedEvents.find((item) => String(item.code || "").trim())?.code || "").trim(),
+      description: String(savedEvents.find((item) => String(item.eventDescription || "").trim())?.eventDescription || "").trim()
+    };
+  }, [editedItem?.id, filteredSyllabusDetails, selectedItem?.id]);
   reactExports.useEffect(() => {
     const rawCourseCodes = Array.from(new Set(syllabusDetails.flatMap((item) => Array.isArray(item?.courses) ? item.courses : []).map((code) => String(code || "").trim()).filter(Boolean)));
     const unitScopedCourseCodes = Array.from(new Set(unitScopedSyllabusDetails.flatMap((item) => Array.isArray(item?.courses) ? item.courses : []).map((code) => String(code || "").trim()).filter(Boolean)));
@@ -61876,6 +61899,7 @@ const SyllabusView = ({
       setHoveredItem(null);
       setIsEditing(false);
       setEditedItem(null);
+      setIsAddingLmpEvent(false);
       return;
     }
     if (courseLMPs.length === 0) {
@@ -61885,6 +61909,7 @@ const SyllabusView = ({
         setHoveredItem(null);
         setIsEditing(false);
         setEditedItem(null);
+        setIsAddingLmpEvent(false);
       }
       return;
     }
@@ -61894,6 +61919,7 @@ const SyllabusView = ({
       setHoveredItem(null);
       setIsEditing(false);
       setEditedItem(null);
+      setIsAddingLmpEvent(false);
     }
   }, [activeTab, courseLMPs, selectedCourseType, usesPackageTab]);
   reactExports.useEffect(() => {
@@ -61931,9 +61957,11 @@ const SyllabusView = ({
     } else {
       setSelectedItem(null);
     }
+    setIsAddingLmpEvent(false);
     setHoveredItem(null);
   }, [activeTab, selectedCourseType]);
   const handleEdit = () => {
+    setIsAddingLmpEvent(false);
     setEditingCourseTitle(getCourseTitle(selectedCourseType));
     if (selectedItem) {
       setEditedItem(JSON.parse(JSON.stringify(selectedItem)));
@@ -61985,7 +62013,7 @@ const SyllabusView = ({
       }
       const currentTitle = getCourseTitle(selectedCourseType);
       const newTitle = editingCourseTitle.trim();
-      if (newTitle && newTitle !== currentTitle) {
+      if (!isAddingLmpEvent && newTitle && newTitle !== currentTitle) {
         const courseItems = unitScopedSyllabusDetails.filter(
           (item) => item.isActive !== false && getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
         );
@@ -61996,6 +62024,7 @@ const SyllabusView = ({
         logAudit({ action: "Edit", description: `Renamed ${activeCollectionNoun}: ${selectedCourseType}`, changes: `Title: "${currentTitle}" renamed to "${newTitle}"`, page: "LMP/Event Details" });
       }
       setIsEditing(false);
+      setIsAddingLmpEvent(false);
       setEditedItem(null);
       setEditingCourseTitle("");
     } catch (err) {
@@ -62006,6 +62035,7 @@ const SyllabusView = ({
   };
   const handleCancel = () => {
     setIsEditing(false);
+    setIsAddingLmpEvent(false);
     setEditedItem(null);
     setEditingCourseTitle("");
   };
@@ -62431,6 +62461,7 @@ const SyllabusView = ({
       setHoveredItem(null);
       setEditedItem(null);
       setIsEditing(false);
+      setIsAddingLmpEvent(false);
       logAudit({ action: "Create", description: `Created new ${activeCollectionNoun}: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: "LMP/Event Details" });
     } catch (err) {
       await showDarkAlert(`Failed to create ${activeCollectionNoun}: ${err.message}`, "Create Failed", "error");
@@ -62477,6 +62508,8 @@ const SyllabusView = ({
     if (onAddItem) onAddItem(newItem);
     setSelectedItem(newItem);
     setEditedItem(JSON.parse(JSON.stringify(newItem)));
+    setEditingCourseTitle(getCourseTitle(selectedCourseType));
+    setIsAddingLmpEvent(true);
     setIsEditing(true);
     createSyllabusItem({ ...newItem, id: void 0 }, `New event added via ${activeCollectionTitle} editor`).then((saved) => {
       if (onAddItem) onAddItem(saved);
@@ -62527,8 +62560,8 @@ const SyllabusView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-start border-b border-gray-700 gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h1", { className: "text-2xl font-bold text-white", children: [
-            "LMP/Event Details: ",
-            isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            isAddingLmpEvent ? "Add Event to: " : "LMP/Event Details: ",
+            isEditing && !isAddingLmpEvent ? /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
                 type: "text",
@@ -62540,7 +62573,7 @@ const SyllabusView = ({
               }
             ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: getCourseTitle(selectedCourseType) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isEditing ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}` : activeCollectionTitle }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isAddingLmpEvent ? `This creates one event inside ${getCourseTitle(selectedCourseType)}. The ${activeCollectionTitle} title is fixed here; fill in the event code and event description below.` : isEditing ? `Editing ${activeCollectionNoun} title - changes apply to all events in this ${activeCollectionNoun}` : activeCollectionTitle }),
           shouldShowUnitTabs && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex flex-wrap gap-2", children: fixedCrewUnitTabs.map((unitCode) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -62552,6 +62585,7 @@ const SyllabusView = ({
                 setHoveredItem(null);
                 setIsEditing(false);
                 setEditedItem(null);
+                setIsAddingLmpEvent(false);
               },
               className: `h-8 rounded-md border px-4 text-xs font-semibold transition ${activeUnitTab === unitCode ? "border-emerald-400/80 bg-emerald-900/50 text-white" : "border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white"}`,
               children: unitCode
@@ -62570,6 +62604,7 @@ const SyllabusView = ({
                 setHoveredItem(null);
                 setIsEditing(false);
                 setEditedItem(null);
+                setIsAddingLmpEvent(false);
               },
               className: `h-9 min-w-[136px] rounded px-4 text-sm font-semibold transition ${activeTab === tab.id ? "border border-sky-500/70 bg-sky-900/65 text-white" : "border border-transparent text-gray-300 hover:bg-gray-800 hover:text-white"}`,
               children: tab.label
@@ -62588,6 +62623,7 @@ const SyllabusView = ({
                 onChange: (e) => {
                   setSelectedCourseType(e.target.value);
                   setSelectedItem(null);
+                  setIsAddingLmpEvent(false);
                 },
                 className: "bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8",
                 children: [
@@ -62710,6 +62746,7 @@ const SyllabusView = ({
                     if (!isEditing && !isReorderingEvents) {
                       setHoveredItem(null);
                       setSelectedItem(item);
+                      setIsAddingLmpEvent(false);
                     }
                   },
                   disabled: isEditing || isReorderingEvents,
@@ -62743,6 +62780,7 @@ const SyllabusView = ({
           {
             item: hoveredItem || selectedItem,
             isEditing,
+            isAddingEvent: isAddingLmpEvent,
             editedItem,
             onItemChange: setEditedItem,
             onDeleteEvent: handleDeleteEventRequest,
@@ -62759,7 +62797,10 @@ const SyllabusView = ({
             onAddScoringMatrixElement,
             linkedEventOptions: filteredSyllabusDetails,
             linkedEventOverrides,
-            onLinkedEventChange: handleLinkedEventChange
+            onLinkedEventChange: handleLinkedEventChange,
+            collectionTitle: getCourseTitle(selectedCourseType),
+            codeExample: addEventExamples.code,
+            descriptionExample: addEventExamples.description
           }
         ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
       ] })
