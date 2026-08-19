@@ -36272,6 +36272,8 @@ const AddFlightTileModal = ({
     twr_di: "TWR DI"
   };
   const fixedCrewEventFieldLabel = eventCategory === "lmp_currency" ? "Packages Event" : eventCategory === "sct" ? "Currency Event" : "Course Event";
+  const blankDataSlotClass = "min-h-[66px] rounded-md border border-transparent bg-transparent";
+  const blankDataPanelClass = "min-h-[120px] rounded-lg border border-transparent bg-transparent";
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "div",
     {
@@ -36522,7 +36524,7 @@ const AddFlightTileModal = ({
                     selectedPicHasIndividualCallsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] text-gray-500", children: "PIC profile callsign is available; select a unit callsign if this tile needs one." })
                   ] })
                 ] }),
-                Math.max(1, Number(aircraftCount) || 1) > 1 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-500/25 bg-slate-950/35 p-3", children: [
+                Math.max(1, Number(aircraftCount) || 1) > 1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-500/25 bg-slate-950/35 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-[0.18em] text-emerald-200", children: "Formation Crew" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-slate-400", children: "Aircraft 1 uses the primary Crew and PIC above." })
@@ -36576,7 +36578,7 @@ const AddFlightTileModal = ({
                       ] })
                     ] }, `fixed-crew-formation-${index}`);
                   }) })
-                ] }),
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: blankDataPanelClass, "aria-hidden": "true" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Location" }),
@@ -36600,7 +36602,7 @@ const AddFlightTileModal = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$3(date) })
                   ] })
                 ] }),
-                locationType === "Land Away" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
+                locationType === "Land Away" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Origin" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -36629,6 +36631,9 @@ const AddFlightTileModal = ({
                       }
                     )
                   ] })
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", "aria-hidden": "true", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: blankDataSlotClass }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: blankDataSlotClass })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/45 p-3", children: [
@@ -36675,7 +36680,7 @@ const AddFlightTileModal = ({
                         }
                       )
                     ] }),
-                    flightType === "Dual" && eventCategory !== "twr_di" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    flightType === "Dual" && eventCategory !== "twr_di" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "Second Person" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs(
                         "select",
@@ -36689,7 +36694,7 @@ const AddFlightTileModal = ({
                           ]
                         }
                       )
-                    ] }),
+                    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: blankDataSlotClass, "aria-hidden": "true" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "Event" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -36820,7 +36825,7 @@ const AddFlightTileModal = ({
                     ] })
                   ] })
                 ] }),
-                isManualFormation && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-600 bg-gray-800/70 p-4", children: [
+                isManualFormation ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-600 bg-gray-800/70 p-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Formation Callsign" }),
@@ -36970,7 +36975,7 @@ const AddFlightTileModal = ({
                       ] })
                     ] }, index))
                   ] })
-                ] })
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-3 ${blankDataPanelClass}`, "aria-hidden": "true" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4", children: [
                 isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg p-3 mb-4 border border-gray-600", children: [
@@ -37041,7 +37046,7 @@ const AddFlightTileModal = ({
                   ] })
                 ] }),
                 !isDeploy && !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                  !isFixedCrewModel && !selectedPicHasIndividualCallsign && unitCallsignEntries.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-lg border border-sky-500/25 bg-sky-950/20 p-3", children: [
+                  !isFixedCrewModel && !selectedPicHasIndividualCallsign && unitCallsignEntries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-lg border border-sky-500/25 bg-sky-950/20 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Unit Callsign" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_96px] gap-3", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37075,7 +37080,7 @@ const AddFlightTileModal = ({
                         }
                       )
                     ] })
-                  ] }),
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mb-4 ${blankDataPanelClass}`, "aria-hidden": "true" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Location" }),
@@ -37098,7 +37103,7 @@ const AddFlightTileModal = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$3(date) })
                     ] })
                   ] }),
-                  locationType === "Land Away" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mt-3", children: [
+                  locationType === "Land Away" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mt-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Origin" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37127,6 +37132,9 @@ const AddFlightTileModal = ({
                         }
                       )
                     ] })
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mt-3", "aria-hidden": "true", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: blankDataSlotClass }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: blankDataSlotClass })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Notes" }),

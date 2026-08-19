@@ -3342,6 +3342,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     : eventCategory === 'sct'
       ? 'Currency Event'
       : 'Course Event';
+  const blankDataSlotClass = 'min-h-[66px] rounded-md border border-transparent bg-transparent';
+  const blankDataPanelClass = 'min-h-[120px] rounded-lg border border-transparent bg-transparent';
 
   return (
     <div
@@ -3592,7 +3594,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   )}
                 </div>
               </div>
-              {Math.max(1, Number(aircraftCount) || 1) > 1 && (
+              {Math.max(1, Number(aircraftCount) || 1) > 1 ? (
                 <div className="rounded-lg border border-emerald-500/25 bg-slate-950/35 p-3">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">Formation Crew</div>
@@ -3645,6 +3647,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     })}
                   </div>
                 </div>
+              ) : (
+                <div className={blankDataPanelClass} aria-hidden="true" />
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -3668,7 +3672,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   </div>
                 </div>
               </div>
-              {locationType === 'Land Away' && (
+              {locationType === 'Land Away' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Origin</label>
@@ -3692,6 +3696,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500"
                     />
                   </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4" aria-hidden="true">
+                  <div className={blankDataSlotClass} />
+                  <div className={blankDataSlotClass} />
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3752,7 +3761,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       ))}
                     </select>
                   </div>
-                  {flightType === 'Dual' && eventCategory !== 'twr_di' && (
+                  {flightType === 'Dual' && eventCategory !== 'twr_di' ? (
                     <div>
                       <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Second Person</label>
                       <select
@@ -3770,6 +3779,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         ))}
                       </select>
                     </div>
+                  ) : (
+                    <div className={blankDataSlotClass} aria-hidden="true" />
                   )}
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Event</label>
@@ -3875,7 +3886,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   </div>
                 </div>
               </div>
-              {isManualFormation && (
+              {isManualFormation ? (
                 <div className="mt-3 rounded-lg border border-gray-600 bg-gray-800/70 p-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -4037,6 +4048,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     ))}
                   </div>
                 </div>
+              ) : (
+                <div className={`mt-3 ${blankDataPanelClass}`} aria-hidden="true" />
               )}
             </div>
           )}
@@ -4080,7 +4093,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             {/* Flight type toggle + Location + Date + Notes — hidden when deploying */}
             {!isDeploy && !isFixedCrewModel && (
               <>
-                {!isFixedCrewModel && !selectedPicHasIndividualCallsign && unitCallsignEntries.length > 0 && (
+                {!isFixedCrewModel && !selectedPicHasIndividualCallsign && unitCallsignEntries.length > 0 ? (
                   <div className="mb-4 rounded-lg border border-sky-500/25 bg-sky-950/20 p-3">
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Unit Callsign</label>
                     <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-3">
@@ -4110,6 +4123,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       />
                     </div>
                   </div>
+                ) : (
+                  <div className={`mb-4 ${blankDataPanelClass}`} aria-hidden="true" />
                 )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -4132,7 +4147,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     </div>
                   </div>
                 </div>
-                {locationType === 'Land Away' && (
+                {locationType === 'Land Away' ? (
                   <div className="grid grid-cols-2 gap-4 mt-3">
                     <div>
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Origin</label>
@@ -4156,6 +4171,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
                       />
                     </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4 mt-3" aria-hidden="true">
+                    <div className={blankDataSlotClass} />
+                    <div className={blankDataSlotClass} />
                   </div>
                 )}
                 <div className="mt-3">
