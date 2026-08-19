@@ -22149,8 +22149,8 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, testingOfficerQualifi
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-200", children: "Use Testing Officer secondary callsign" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "Uses the selected officer's secondary callsign from their Staff Profile for this Flight Test." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-200", children: "Use secondary callsign for this event" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "Uses the selected Testing Officer's Secondary Callsign for this Flight Test." })
           ] })
         ] })
       ] }),
@@ -22543,7 +22543,7 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
         DetailCard$1,
         {
           label: "Secondary Callsign",
-          value: item.testEventType === "FLIGHT_TEST" ? item.useTestingOfficerSecondaryCallsign ? "Use Staff Profile secondary callsign" : "Do not use" : "N/A"
+          value: item.testEventType === "FLIGHT_TEST" ? item.useTestingOfficerSecondaryCallsign ? "Use secondary callsign for this event" : "Do not use" : "N/A"
         }
       )
     ] })
@@ -35319,6 +35319,28 @@ const AddFlightTileModal = ({
     return String(trainee?.traineeCallsign || formatPersonnelCallsign(traineeAssigned) || "").trim();
   }, [findInstructorByRefOrName, findTraineeByRefOrName, normalisePersonNameForAddTile, personnelData]);
   const selectedPicHasIndividualCallsign = reactExports.useMemo(() => Boolean(resolveAssignedCallsign(picName, selectedPicRef)), [picName, resolveAssignedCallsign, selectedPicRef]);
+  const resolveTestingOfficerSecondaryCallsign = reactExports.useCallback((name, selectedRef) => {
+    const instructor = findInstructorByRefOrName(name, selectedRef);
+    return String(instructor?.secondaryCallsign || instructor?.preferences?.secondaryCallsign || "").trim();
+  }, [findInstructorByRefOrName]);
+  const selectedLmpEventForFlight = reactExports.useMemo(() => {
+    const selectedCode = String(flightNumber || "").trim();
+    if (!selectedCode || eventCategory !== "lmp_event") return void 0;
+    const matchesCode = (item) => item.id === selectedCode || item.code === selectedCode;
+    const selectedName = flightType === "Solo" ? picName : studentName;
+    const selectedIndividualItem = selectedName ? traineeLMPs?.get(selectedName)?.find(matchesCode) : void 0;
+    if (selectedIndividualItem) return selectedIndividualItem;
+    const masterItem = syllabusDetails.find(matchesCode);
+    if (masterItem) return masterItem;
+    for (const items of traineeLMPs?.values() || []) {
+      const item = items.find(matchesCode);
+      if (item) return item;
+    }
+    return void 0;
+  }, [eventCategory, flightNumber, flightType, picName, studentName, syllabusDetails, traineeLMPs]);
+  const selectedLmpEventUsesTestingOfficerSecondaryCallsign = Boolean(
+    selectedLmpEventForFlight?.testEventType === "FLIGHT_TEST" && selectedLmpEventForFlight.useTestingOfficerSecondaryCallsign === true
+  );
   const locationFullName = currentLocationName || school;
   const normaliseFormationCallsignBase = reactExports.useCallback((value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/\d+$/g, ""), []);
   const normaliseFormationContextToken = reactExports.useCallback((value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, ""), []);
@@ -35753,14 +35775,15 @@ const AddFlightTileModal = ({
     if (inst) {
       picUnit = inst.unit || null;
       const primary = resolveAssignedCallsign(picName, selectedPicRef) || inst.callsign || buildCallsignFromNumber(inst.callsignNumber) || "";
-      const secondary = inst.secondaryCallsign || "";
+      const secondary = resolveTestingOfficerSecondaryCallsign(picName, selectedPicRef);
       const personal = [primary, secondary].filter(Boolean);
       const formation = (formationCallsigns || []).filter((fc) => fc.unit && picUnit && fc.unit === picUnit).map((fc) => fc.name || fc.code).filter(Boolean);
       const unitOptions = selectedPicHasIndividualCallsign ? [] : unitCallsignEntries.map((entry) => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
       const unitDefaultCallsign = buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber);
       const allOpts = [.../* @__PURE__ */ new Set([...personal, ...selectedPicHasIndividualCallsign ? formation : [], ...unitOptions])];
       setCallsignOptions(allOpts);
-      setCallsign(primary || unitDefaultCallsign || (allOpts[0] || ""));
+      const preferredCallsign = selectedLmpEventUsesTestingOfficerSecondaryCallsign && secondary ? secondary : primary;
+      setCallsign(preferredCallsign || unitDefaultCallsign || (allOpts[0] || ""));
       return;
     }
     const trainee = findTraineeByRefOrName(picName, selectedPicRef);
@@ -35778,7 +35801,7 @@ const AddFlightTileModal = ({
     }
     setCallsign("");
     setCallsignOptions([]);
-  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign, flightNumber, isSctFormationCode]);
+  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign, resolveTestingOfficerSecondaryCallsign, selectedLmpEventUsesTestingOfficerSecondaryCallsign, flightNumber, isSctFormationCode]);
   reactExports.useEffect(() => {
     if (suppressNextCategoryResetRef.current) {
       suppressNextCategoryResetRef.current = false;
@@ -35843,6 +35866,14 @@ const AddFlightTileModal = ({
   }, [fixedCrewPic, isFixedCrewModel]);
   reactExports.useEffect(() => {
     if (isSctFormationCode(flightNumber)) return;
+    if (selectedLmpEventUsesTestingOfficerSecondaryCallsign) {
+      const secondary = resolveTestingOfficerSecondaryCallsign(picName, selectedPicRef);
+      if (secondary) {
+        setCallsignOptions((prev) => [.../* @__PURE__ */ new Set([secondary, ...prev])]);
+        setCallsign(secondary);
+      }
+      return;
+    }
     if (selectedPicHasIndividualCallsign && !isFixedCrewModel) return;
     if (!defaultUnitCallsign) {
       setCallsignOptions([]);
@@ -35852,7 +35883,7 @@ const AddFlightTileModal = ({
     const values = unitCallsignEntries.map((entry) => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
     setCallsignOptions(values);
     setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
-  }, [defaultUnitCallsign, flightNumber, isFixedCrewModel, isSctFormationCode, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [defaultUnitCallsign, flightNumber, isFixedCrewModel, isSctFormationCode, picName, resolveTestingOfficerSecondaryCallsign, selectedLmpEventUsesTestingOfficerSecondaryCallsign, selectedPicHasIndividualCallsign, selectedPicRef, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
   reactExports.useEffect(() => {
     if (!isSingleSeatAircraft) return;
     setFlightType("Solo");
@@ -61287,8 +61318,8 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-200", children: "Use Testing Officer secondary callsign" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "Uses the selected officer's secondary callsign from their Staff Profile for this Flight Test." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-semibold text-gray-200", children: "Use secondary callsign for this event" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "Uses the selected Testing Officer's Secondary Callsign for this Flight Test." })
           ] })
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 mt-2 md:grid-cols-3", children: [
@@ -61310,7 +61341,7 @@ const DetailView = ({ item, isEditing, isAddingEvent = false, editedItem, onItem
           DetailCard,
           {
             label: "Secondary Callsign",
-            value: testEventType === "FLIGHT_TEST" ? currentItem.useTestingOfficerSecondaryCallsign ? "Use officer profile" : "Do not use" : "N/A"
+            value: testEventType === "FLIGHT_TEST" ? currentItem.useTestingOfficerSecondaryCallsign ? "Use secondary callsign for this event" : "Do not use" : "N/A"
           }
         )
       ] })

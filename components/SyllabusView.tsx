@@ -935,9 +935,9 @@ const DetailView: React.FC<{
                                 className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500"
                             />
                             <span>
-                                <span className="block text-xs font-semibold text-gray-200">Use Testing Officer secondary callsign</span>
+                                <span className="block text-xs font-semibold text-gray-200">Use secondary callsign for this event</span>
                                 <span className="mt-1 block text-xs text-gray-500">
-                                    Uses the selected officer's secondary callsign from their Staff Profile for this Flight Test.
+                                    Uses the selected Testing Officer's Secondary Callsign for this Flight Test.
                                 </span>
                             </span>
                         </label>
@@ -956,7 +956,7 @@ const DetailView: React.FC<{
                     <DetailCard
                         label="Secondary Callsign"
                         value={testEventType === 'FLIGHT_TEST'
-                            ? (currentItem.useTestingOfficerSecondaryCallsign ? 'Use officer profile' : 'Do not use')
+                            ? (currentItem.useTestingOfficerSecondaryCallsign ? 'Use secondary callsign for this event' : 'Do not use')
                             : 'N/A'}
                     />
                 </div>

@@ -2134,6 +2134,29 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     return String(trainee?.traineeCallsign || formatPersonnelCallsign(traineeAssigned) || '').trim();
   }, [findInstructorByRefOrName, findTraineeByRefOrName, normalisePersonNameForAddTile, personnelData]);
   const selectedPicHasIndividualCallsign = useMemo(() => Boolean(resolveAssignedCallsign(picName, selectedPicRef)), [picName, resolveAssignedCallsign, selectedPicRef]);
+  const resolveTestingOfficerSecondaryCallsign = useCallback((name?: string | null, selectedRef?: ScheduleEventPersonnelRef | null): string => {
+    const instructor = findInstructorByRefOrName(name, selectedRef);
+    return String(instructor?.secondaryCallsign || (instructor as any)?.preferences?.secondaryCallsign || '').trim();
+  }, [findInstructorByRefOrName]);
+  const selectedLmpEventForFlight = useMemo(() => {
+    const selectedCode = String(flightNumber || '').trim();
+    if (!selectedCode || eventCategory !== 'lmp_event') return undefined;
+    const matchesCode = (item: SyllabusItemDetail) => item.id === selectedCode || item.code === selectedCode;
+    const selectedName = flightType === 'Solo' ? picName : studentName;
+    const selectedIndividualItem = selectedName ? traineeLMPs?.get(selectedName)?.find(matchesCode) : undefined;
+    if (selectedIndividualItem) return selectedIndividualItem;
+    const masterItem = syllabusDetails.find(matchesCode);
+    if (masterItem) return masterItem;
+    for (const items of traineeLMPs?.values() || []) {
+      const item = items.find(matchesCode);
+      if (item) return item;
+    }
+    return undefined;
+  }, [eventCategory, flightNumber, flightType, picName, studentName, syllabusDetails, traineeLMPs]);
+  const selectedLmpEventUsesTestingOfficerSecondaryCallsign = Boolean(
+    selectedLmpEventForFlight?.testEventType === 'FLIGHT_TEST'
+    && selectedLmpEventForFlight.useTestingOfficerSecondaryCallsign === true
+  );
 
   // ── Determine the current location full name from school ──────────────────
   const locationFullName = currentLocationName || school;
@@ -2725,7 +2748,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       picUnit = inst.unit || null;
       // Build callsign: prefer explicit callsign string, fall back to callsignNumber + school prefix
       const primary   = resolveAssignedCallsign(picName, selectedPicRef) || inst.callsign || buildCallsignFromNumber((inst as any).callsignNumber) || '';
-      const secondary = inst.secondaryCallsign || '';
+      const secondary = resolveTestingOfficerSecondaryCallsign(picName, selectedPicRef);
       const personal  = [primary, secondary].filter(Boolean);
       // Add formation callsigns that belong to the same unit as the PIC
       const formation = (formationCallsigns || []).filter(fc => fc.unit && picUnit && fc.unit === picUnit).map(fc => fc.name || fc.code).filter(Boolean);
@@ -2733,7 +2756,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       const unitDefaultCallsign = buildUnitEventCallsign(unitCallsignBase || defaultUnitCallsign, unitCallsignNumber);
       const allOpts   = [...new Set([...personal, ...(selectedPicHasIndividualCallsign ? formation : []), ...unitOptions])];
       setCallsignOptions(allOpts);
-      setCallsign(primary || unitDefaultCallsign || (allOpts[0] || ''));
+      const preferredCallsign = selectedLmpEventUsesTestingOfficerSecondaryCallsign && secondary ? secondary : primary;
+      setCallsign(preferredCallsign || unitDefaultCallsign || (allOpts[0] || ''));
       return;
     }
 
@@ -2755,7 +2779,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
     setCallsign('');
     setCallsignOptions([]);
-  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign, flightNumber, isSctFormationCode]);
+  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign, resolveTestingOfficerSecondaryCallsign, selectedLmpEventUsesTestingOfficerSecondaryCallsign, flightNumber, isSctFormationCode]);
 
   // ── Auto-set duration from selected LMP event ─────────────────────────────
   // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)
@@ -2813,6 +2837,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   useEffect(() => {
     if (isSctFormationCode(flightNumber)) return;
+    if (selectedLmpEventUsesTestingOfficerSecondaryCallsign) {
+      const secondary = resolveTestingOfficerSecondaryCallsign(picName, selectedPicRef);
+      if (secondary) {
+        setCallsignOptions(prev => [...new Set([secondary, ...prev])]);
+        setCallsign(secondary);
+      }
+      return;
+    }
     if (selectedPicHasIndividualCallsign && !isFixedCrewModel) return;
     if (!defaultUnitCallsign) {
       setCallsignOptions([]);
@@ -2822,7 +2854,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const values = unitCallsignEntries.map(entry => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
     setCallsignOptions(values);
     setCallsign(buildUnitEventCallsign(base, unitCallsignNumber));
-  }, [defaultUnitCallsign, flightNumber, isFixedCrewModel, isSctFormationCode, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [defaultUnitCallsign, flightNumber, isFixedCrewModel, isSctFormationCode, picName, resolveTestingOfficerSecondaryCallsign, selectedLmpEventUsesTestingOfficerSecondaryCallsign, selectedPicHasIndividualCallsign, selectedPicRef, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
 
   useEffect(() => {
     if (!isSingleSeatAircraft) return;
