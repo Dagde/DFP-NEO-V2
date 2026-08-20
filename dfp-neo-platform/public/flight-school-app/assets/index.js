@@ -85350,10 +85350,12 @@ const TraineeReallocationSection = () => {
   const [loading, setLoading] = reactExports.useState(false);
   const [applying, setApplying] = reactExports.useState(false);
   const [error, setError] = reactExports.useState("");
+  const [message, setMessage] = reactExports.useState("");
   const [preview, setPreview] = reactExports.useState(null);
   const loadPreview = async (mode = "missingOnly") => {
     setLoading(true);
     setError("");
+    setMessage("");
     try {
       const response = await fetch(`/api/trainee-reallocation/preview?mode=${mode}`, { credentials: "include" });
       const data = await response.json().catch(() => ({}));
@@ -85361,6 +85363,7 @@ const TraineeReallocationSection = () => {
         throw new Error(data?.error || `Preview failed with HTTP ${response.status}`);
       }
       setPreview(data);
+      setMessage(`Preview found ${data?.summary?.target ?? 0} trainee${(data?.summary?.target ?? 0) === 1 ? "" : "s"} needing allocation.`);
     } catch (err) {
       setPreview(null);
       setError(err instanceof Error ? err.message : String(err));
@@ -85371,6 +85374,7 @@ const TraineeReallocationSection = () => {
   const applyMissingOnly = async () => {
     setApplying(true);
     setError("");
+    setMessage("");
     try {
       const response = await fetch("/api/trainee-reallocation/apply", {
         method: "POST",
@@ -85383,6 +85387,7 @@ const TraineeReallocationSection = () => {
         throw new Error(data?.error || `Apply failed with HTTP ${response.status}`);
       }
       setPreview(data);
+      setMessage(`Applied ${data?.summary?.updated ?? 0}/${data?.summary?.total ?? 0} trainee allocation update${(data?.summary?.updated ?? 0) === 1 ? "" : "s"}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -85395,6 +85400,8 @@ const TraineeReallocationSection = () => {
     acc[unit] = (acc[unit] || 0) + 1;
     return acc;
   }, {});
+  const diagnosticUnits = preview?.diagnostics?.units && typeof preview.diagnostics.units === "object" ? Object.entries(preview.diagnostics.units) : [];
+  const errorDetails = Array.isArray(preview?.errorDetails) ? preview.errorDetails : [];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -85425,6 +85432,7 @@ const TraineeReallocationSection = () => {
       ] })
     ] }),
     error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-100", children: error }),
+    message && !error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-emerald-500/40 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100", children: message }),
     preview?.summary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Target Trainees" }),
@@ -85453,7 +85461,55 @@ const TraineeReallocationSection = () => {
           count === 1 ? "" : "s"
         ] })
       ] }, unit)) })
-    ] })
+    ] }),
+    diagnosticUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Allocation Diagnostics" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-gray-700", children: diagnosticUnits.map(([unit, diag]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 px-4 py-3 text-sm text-gray-200 md:grid-cols-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-white", children: unit }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400", children: [
+            diag?.targetTrainees ?? 0,
+            " target / ",
+            diag?.activeTrainees ?? 0,
+            " active"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Assignable Staff" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: diag?.assignableStaff ?? 0 })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Fallback Pool" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: diag?.usedFallbackStaffPool ? "Used" : "No" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Warnings" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: Array.isArray(diag?.warnings) && diag.warnings.length ? diag.warnings.join(", ") : "None" })
+        ] })
+      ] }, unit)) })
+    ] }),
+    allocations.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Target Allocations" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-96 overflow-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 bg-gray-900 text-xs uppercase tracking-wide text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Trainee" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Course" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Primary" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Secondary" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 text-gray-100", children: allocations.slice(0, 80).map((allocation) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: allocation.fullName || allocation.name }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: allocation.course || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: allocation.primaryInstructors?.join(", ") || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: allocation.secondaryInstructors?.join(", ") || "-" })
+        ] }, allocation.id)) })
+      ] }) })
+    ] }),
+    errorDetails.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 px-4 py-3 text-sm text-red-100", children: errorDetails.slice(0, 10).map((detail) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      detail.name || detail.traineeId,
+      ": ",
+      detail.error
+    ] }, detail.traineeId || detail.name)) })
   ] });
 };
 const SettingsViewWithMenu = (props) => {

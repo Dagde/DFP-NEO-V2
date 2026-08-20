@@ -1076,11 +1076,13 @@ const TraineeReallocationSection: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [applying, setApplying] = useState(false);
     const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
     const [preview, setPreview] = useState<any>(null);
 
     const loadPreview = async (mode: 'all' | 'missingOnly' = 'missingOnly') => {
         setLoading(true);
         setError('');
+        setMessage('');
         try {
             const response = await fetch(`/api/trainee-reallocation/preview?mode=${mode}`, { credentials: 'include' });
             const data = await response.json().catch(() => ({}));
@@ -1088,6 +1090,7 @@ const TraineeReallocationSection: React.FC = () => {
                 throw new Error(data?.error || `Preview failed with HTTP ${response.status}`);
             }
             setPreview(data);
+            setMessage(`Preview found ${data?.summary?.target ?? 0} trainee${(data?.summary?.target ?? 0) === 1 ? '' : 's'} needing allocation.`);
         } catch (err) {
             setPreview(null);
             setError(err instanceof Error ? err.message : String(err));
@@ -1099,6 +1102,7 @@ const TraineeReallocationSection: React.FC = () => {
     const applyMissingOnly = async () => {
         setApplying(true);
         setError('');
+        setMessage('');
         try {
             const response = await fetch('/api/trainee-reallocation/apply', {
                 method: 'POST',
@@ -1111,6 +1115,7 @@ const TraineeReallocationSection: React.FC = () => {
                 throw new Error(data?.error || `Apply failed with HTTP ${response.status}`);
             }
             setPreview(data);
+            setMessage(`Applied ${data?.summary?.updated ?? 0}/${data?.summary?.total ?? 0} trainee allocation update${(data?.summary?.updated ?? 0) === 1 ? '' : 's'}.`);
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         } finally {
@@ -1126,6 +1131,10 @@ const TraineeReallocationSection: React.FC = () => {
         acc[unit] = (acc[unit] || 0) + 1;
         return acc;
     }, {});
+    const diagnosticUnits = preview?.diagnostics?.units && typeof preview.diagnostics.units === 'object'
+        ? Object.entries(preview.diagnostics.units)
+        : [];
+    const errorDetails = Array.isArray(preview?.errorDetails) ? preview.errorDetails : [];
 
     return (
         <div className="space-y-4">
@@ -1157,6 +1166,11 @@ const TraineeReallocationSection: React.FC = () => {
             {error && (
                 <div className="rounded-lg border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-100">
                     {error}
+                </div>
+            )}
+            {message && !error && (
+                <div className="rounded-lg border border-emerald-500/40 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100">
+                    {message}
                 </div>
             )}
 
@@ -1194,6 +1208,74 @@ const TraineeReallocationSection: React.FC = () => {
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {diagnosticUnits.length > 0 && (
+                <div className="rounded-lg border border-gray-700 bg-gray-800">
+                    <div className="border-b border-gray-700 px-4 py-3">
+                        <h3 className="text-sm font-semibold text-white">Allocation Diagnostics</h3>
+                    </div>
+                    <div className="divide-y divide-gray-700">
+                        {diagnosticUnits.map(([unit, diag]: [string, any]) => (
+                            <div key={unit} className="grid grid-cols-1 gap-3 px-4 py-3 text-sm text-gray-200 md:grid-cols-4">
+                                <div>
+                                    <div className="font-semibold text-white">{unit}</div>
+                                    <div className="text-xs text-gray-400">{diag?.targetTrainees ?? 0} target / {diag?.activeTrainees ?? 0} active</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs uppercase tracking-wide text-gray-400">Assignable Staff</div>
+                                    <div>{diag?.assignableStaff ?? 0}</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs uppercase tracking-wide text-gray-400">Fallback Pool</div>
+                                    <div>{diag?.usedFallbackStaffPool ? 'Used' : 'No'}</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs uppercase tracking-wide text-gray-400">Warnings</div>
+                                    <div>{Array.isArray(diag?.warnings) && diag.warnings.length ? diag.warnings.join(', ') : 'None'}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {allocations.length > 0 && (
+                <div className="rounded-lg border border-gray-700 bg-gray-800">
+                    <div className="border-b border-gray-700 px-4 py-3">
+                        <h3 className="text-sm font-semibold text-white">Target Allocations</h3>
+                    </div>
+                    <div className="max-h-96 overflow-auto">
+                        <table className="min-w-full text-left text-sm">
+                            <thead className="sticky top-0 bg-gray-900 text-xs uppercase tracking-wide text-gray-400">
+                                <tr>
+                                    <th className="px-4 py-2">Trainee</th>
+                                    <th className="px-4 py-2">Course</th>
+                                    <th className="px-4 py-2">Primary</th>
+                                    <th className="px-4 py-2">Secondary</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-700 text-gray-100">
+                                {allocations.slice(0, 80).map((allocation: any) => (
+                                    <tr key={allocation.id}>
+                                        <td className="px-4 py-2">{allocation.fullName || allocation.name}</td>
+                                        <td className="px-4 py-2">{allocation.course || '-'}</td>
+                                        <td className="px-4 py-2">{allocation.primaryInstructors?.join(', ') || '-'}</td>
+                                        <td className="px-4 py-2">{allocation.secondaryInstructors?.join(', ') || '-'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {errorDetails.length > 0 && (
+                <div className="rounded-lg border border-red-500/40 bg-red-950/30 px-4 py-3 text-sm text-red-100">
+                    {errorDetails.slice(0, 10).map((detail: any) => (
+                        <div key={detail.traineeId || detail.name}>{detail.name || detail.traineeId}: {detail.error}</div>
+                    ))}
                 </div>
             )}
         </div>

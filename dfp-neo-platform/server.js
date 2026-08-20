@@ -2904,16 +2904,55 @@ function normaliseInstructorListForReallocation(value) {
   return trimmed.split(/[;|]/).map(name => name.trim()).filter(Boolean);
 }
 
+function normaliseReallocationToken(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function normaliseReallocationUnit(value) {
+  return normaliseReallocationToken(value).toUpperCase();
+}
+
+function getReallocationQualificationIds(person) {
+  const values = [];
+  const add = (value) => {
+    const token = normaliseReallocationToken(value);
+    if (token && !values.includes(token)) values.push(token);
+  };
+  const collect = (source) => {
+    if (Array.isArray(source)) {
+      source.forEach(collect);
+      return;
+    }
+    if (source && typeof source === 'object') {
+      add(source.id || source.code || source.name || source.label);
+      return;
+    }
+    String(source || '').split(/[,;|\n]/).forEach(add);
+  };
+  collect(person?.preferences?.qualifications);
+  collect(person?.qualifications);
+  if (person?.isQFI) add('qfi');
+  if (person?.isCFI) add('cfi');
+  if (person?.isOFI) add('ofi');
+  if (person?.isIRE) add('ire');
+  if (person?.isTestingOfficer) add('testing-officer');
+  return values;
+}
+
 function isAssignableTraineeInstructor(person, options = {}) {
   if (!person || person.isActive === false) return false;
   if (person.isExecutive && !options.includeExecutives) return false;
   const role = String(person.role || '').toUpperCase();
+  const category = String(person.category || '').toUpperCase();
+  const qualificationIds = getReallocationQualificationIds(person);
   return Boolean(
     person.isQFI ||
     person.isCFI ||
     person.isOFI ||
     person.isIRE ||
     person.isTestingOfficer ||
+    qualificationIds.some(id => ['qfi', 'cfi', 'ofi', 'ire', 'testingofficer', 'testing-officer', 'instructor'].includes(id)) ||
+    ['A', 'B', 'C', 'D'].includes(category) ||
     role.includes('QFI') ||
     role.includes('IP') ||
     role.includes('INSTRUCTOR')
@@ -2987,18 +3026,24 @@ function buildReallocation(trainees, personnel, options = {}) {
   };
 
   for (const unit of units) {
-    const unitAllTrainees = trainees.filter(t => t.unit === unit);
+    const normalisedUnit = normaliseReallocationUnit(unit);
+    const unitAllTrainees = trainees.filter(t => normaliseReallocationUnit(t.unit) === normalisedUnit);
     const unitTrainees = mode === 'missingOnly'
       ? unitAllTrainees.filter(t => (
         normaliseInstructorListForReallocation(t.primaryInstructor).length === 0 ||
         normaliseInstructorListForReallocation(t.secondaryInstructor).length < minSecondaryPerTrainee
       ))
       : unitAllTrainees;
-    const unitStaff = personnel.filter(p => p.unit === unit && isAssignableTraineeInstructor(p, { includeExecutives }));
+    let unitStaff = personnel.filter(p => normaliseReallocationUnit(p.unit) === normalisedUnit && isAssignableTraineeInstructor(p, { includeExecutives }));
+    const usedFallbackStaffPool = unitStaff.length === 0;
+    if (usedFallbackStaffPool) {
+      unitStaff = personnel.filter(p => isAssignableTraineeInstructor(p, { includeExecutives }));
+    }
     const unitDiag = diagnostics.units[unit] = {
       activeTrainees: unitAllTrainees.length,
       targetTrainees: unitTrainees.length,
       assignableStaff: unitStaff.length,
+      usedFallbackStaffPool,
       skippedExecutiveStaff: (personnel || []).filter(p => p.unit === unit && p.isExecutive && !includeExecutives).map(p => p.name),
       skippedNonInstructorStaff: (personnel || []).filter(p => p.unit === unit && !p.isExecutive && !isAssignableTraineeInstructor(p, { includeExecutives })).map(p => p.name),
       primaryBefore: {},
@@ -3158,6 +3203,8 @@ app.get('/api/trainee-reallocation/preview', async (req, res) => {
         unit: true,
         role: true,
         isActive: true,
+        qualifications: true,
+        category: true,
         isExecutive: true,
         isQFI: true,
         isCFI: true,
@@ -3220,6 +3267,8 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
         unit: true,
         role: true,
         isActive: true,
+        qualifications: true,
+        category: true,
         isExecutive: true,
         isQFI: true,
         isCFI: true,
