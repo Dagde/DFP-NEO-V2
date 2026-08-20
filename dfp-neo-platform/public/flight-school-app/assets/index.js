@@ -3316,6 +3316,8 @@ const getAdaptiveContextMenuPosition = ({
   clickY,
   menuWidth,
   menuHeight,
+  viewportLeft = 0,
+  viewportTop = 0,
   viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024,
   viewportHeight = typeof window !== "undefined" ? window.innerHeight : 768,
   margin = 8,
@@ -3325,19 +3327,21 @@ const getAdaptiveContextMenuPosition = ({
   const safeY = Number.isFinite(clickY) ? clickY : margin;
   const safeWidth = Math.max(1, menuWidth);
   const safeHeight = Math.max(1, menuHeight);
-  const maxLeft = Math.max(margin, viewportWidth - safeWidth - margin);
-  const maxTop = Math.max(margin, viewportHeight - safeHeight - margin);
-  const fitsRight = safeX + anchorGap + safeWidth <= viewportWidth - margin;
-  const fitsLeft = safeX - anchorGap - safeWidth >= margin;
-  const fitsBelow = safeY + anchorGap + safeHeight <= viewportHeight - margin;
-  const fitsAbove = safeY - anchorGap - safeHeight >= margin;
+  const minLeft = viewportLeft + margin;
+  const minTop = viewportTop + margin;
+  const maxLeft = Math.max(minLeft, viewportLeft + viewportWidth - safeWidth - margin);
+  const maxTop = Math.max(minTop, viewportTop + viewportHeight - safeHeight - margin);
+  const fitsRight = safeX + anchorGap + safeWidth <= viewportLeft + viewportWidth - margin;
+  const fitsLeft = safeX - anchorGap - safeWidth >= minLeft;
+  const fitsBelow = safeY + anchorGap + safeHeight <= viewportTop + viewportHeight - margin;
+  const fitsAbove = safeY - anchorGap - safeHeight >= minTop;
   const horizontal = fitsRight || !fitsLeft ? "right" : "left";
   const vertical = fitsBelow || !fitsAbove ? "bottom" : "top";
   const rawLeft = horizontal === "right" ? safeX + anchorGap : safeX - safeWidth - anchorGap;
   const rawTop = vertical === "bottom" ? safeY + anchorGap : safeY - safeHeight - anchorGap;
   return {
-    left: Math.max(margin, Math.min(rawLeft, maxLeft)),
-    top: Math.max(margin, Math.min(rawTop, maxTop)),
+    left: Math.max(minLeft, Math.min(rawLeft, maxLeft)),
+    top: Math.max(minTop, Math.min(rawTop, maxTop)),
     placement: `${vertical}-${horizontal}`
   };
 };
@@ -17017,6 +17021,8 @@ const ScheduleView = ({
   const [isFlightLineAvailableDropActive, setIsFlightLineAvailableDropActive] = reactExports.useState(false);
   const [isFlightLineUnavailableDropActive, setIsFlightLineUnavailableDropActive] = reactExports.useState(false);
   const [flightLineAircraftContextMenu, setFlightLineAircraftContextMenu] = reactExports.useState(null);
+  const flightLineAircraftContextMenuRef = reactExports.useRef(null);
+  const [flightLineAircraftContextMenuSize, setFlightLineAircraftContextMenuSize] = reactExports.useState({ width: 278, height: 198 });
   reactExports.useEffect(() => {
     if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
   }, [isNeoAssistPanelOpen]);
@@ -17334,6 +17340,19 @@ const ScheduleView = ({
   const closeFlightLineAircraftContextMenu = reactExports.useCallback(() => {
     setFlightLineAircraftContextMenu(null);
   }, []);
+  reactExports.useEffect(() => {
+    if (!flightLineAircraftContextMenu) return;
+    const measureMenu = () => {
+      const rect = flightLineAircraftContextMenuRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setFlightLineAircraftContextMenuSize({
+        width: Math.ceil(rect.width),
+        height: Math.ceil(rect.height)
+      });
+    };
+    measureMenu();
+    window.requestAnimationFrame(measureMenu);
+  }, [flightLineAircraftContextMenu]);
   const setFlightLineAircraftUnavailableReason = reactExports.useCallback((aircraftNumber, reason) => {
     const cleanNumber2 = String(aircraftNumber || "").trim();
     const cleanReason = String(reason || "").trim() || getFlightLineUnavailableReason(cleanNumber2);
@@ -18742,20 +18761,29 @@ const ScheduleView = ({
       }
     ),
     flightLineAircraftContextMenu ? (() => {
-      const menuWidth = 238;
-      const menuHeight = flightLineAircraftContextMenu.isUnavailable ? 190 : 92;
+      const menuWidth = flightLineAircraftContextMenuSize.width || 278;
+      const menuHeight = flightLineAircraftContextMenuSize.height || (flightLineAircraftContextMenu.isUnavailable ? 214 : 146);
+      const viewportLeft = resourceSlideoutFrame?.left ?? 0;
+      const viewportTop = resourceSlideoutFrame?.top ?? 0;
+      const viewportWidth = resourceSlideoutFrame?.width ?? (typeof window !== "undefined" ? window.innerWidth : 1024);
+      const viewportHeight = resourceSlideoutFrame?.height ?? (typeof window !== "undefined" ? window.innerHeight : 768);
       const menuPosition = getAdaptiveContextMenuPosition({
         clickX: flightLineAircraftContextMenu.x,
         clickY: flightLineAircraftContextMenu.y,
         menuWidth,
         menuHeight,
+        viewportLeft,
+        viewportTop,
+        viewportWidth,
+        viewportHeight,
         margin: 12,
         anchorGap: 8
       });
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
-          className: "fixed z-[90] w-[238px] overflow-hidden rounded-md border border-slate-600/80 bg-slate-950 shadow-2xl shadow-black/50",
+          ref: flightLineAircraftContextMenuRef,
+          className: "fixed z-[1200] w-[278px] overflow-visible rounded-md border border-slate-600/80 bg-slate-950 shadow-2xl shadow-black/50",
           style: { left: menuPosition.left, top: menuPosition.top, transformOrigin: menuPosition.placement.replace("-", " ") },
           onPointerDown: (event) => event.stopPropagation(),
           onContextMenu: (event) => event.preventDefault(),
@@ -18764,9 +18792,31 @@ const ScheduleView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[11px] font-black uppercase tracking-[0.16em] text-slate-500", children: "Aircraft" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-sm font-black text-white", children: flightLineAircraftContextMenu.tailNumber })
             ] }),
-            flightLineAircraftContextMenu.isUnavailable ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 px-3 py-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-[0.14em] text-rose-200", children: "Unavailable" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 px-3 py-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500", children: "Status" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    className: "w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-black text-slate-100 outline-none focus:border-cyan-400",
+                    value: flightLineAircraftContextMenu.isUnavailable ? "unavailable" : "serviceable",
+                    onChange: (event) => {
+                      if (event.target.value === "unavailable") {
+                        moveFlightLineAircraftToUnavailable(flightLineAircraftContextMenu.aircraftNumber);
+                      } else {
+                        moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
+                      }
+                      closeFlightLineAircraftContextMenu();
+                    },
+                    onKeyDown: stopEditableKeyPropagation,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "serviceable", children: "Aircraft Serviceable" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "unavailable", children: "Unavailable" })
+                    ]
+                  }
+                )
+              ] }),
+              flightLineAircraftContextMenu.isUnavailable ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500", children: "Reason" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "select",
@@ -18781,31 +18831,8 @@ const ScheduleView = ({
                     children: flightLinePoolContext.unavailableReasonOptions.map((reason) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: reason, children: reason }, `flight-line-unavailable-reason-${reason}`))
                   }
                 )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "w-full rounded-md border border-emerald-400/40 bg-emerald-500/15 px-3 py-2 text-left text-xs font-black text-emerald-200 hover:bg-emerald-500/25",
-                  onClick: () => {
-                    moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
-                    closeFlightLineAircraftContextMenu();
-                  },
-                  children: "Aircraft Serviceable"
-                }
-              )
-            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                className: "block w-full px-3 py-3 text-left text-xs font-black text-emerald-200 hover:bg-emerald-500/15",
-                onClick: () => {
-                  moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
-                  closeFlightLineAircraftContextMenu();
-                },
-                children: "Aircraft Serviceable"
-              }
-            )
+              ] }) : null
+            ] })
           ]
         }
       );

@@ -7355,6 +7355,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         x: number;
         y: number;
     } | null>(null);
+    const flightLineAircraftContextMenuRef = useRef<HTMLDivElement>(null);
+    const [flightLineAircraftContextMenuSize, setFlightLineAircraftContextMenuSize] = useState({ width: 278, height: 198 });
     useEffect(() => {
         if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
     }, [isNeoAssistPanelOpen]);
@@ -7706,6 +7708,19 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const closeFlightLineAircraftContextMenu = useCallback(() => {
         setFlightLineAircraftContextMenu(null);
     }, []);
+    useEffect(() => {
+        if (!flightLineAircraftContextMenu) return;
+        const measureMenu = () => {
+            const rect = flightLineAircraftContextMenuRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            setFlightLineAircraftContextMenuSize({
+                width: Math.ceil(rect.width),
+                height: Math.ceil(rect.height),
+            });
+        };
+        measureMenu();
+        window.requestAnimationFrame(measureMenu);
+    }, [flightLineAircraftContextMenu]);
     const setFlightLineAircraftUnavailableReason = useCallback((aircraftNumber: string, reason: string) => {
         const cleanNumber = String(aircraftNumber || '').trim();
         const cleanReason = String(reason || '').trim() || getFlightLineUnavailableReason(cleanNumber);
@@ -9273,19 +9288,28 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 </div>
             )}
             {flightLineAircraftContextMenu ? (() => {
-                const menuWidth = 238;
-                const menuHeight = flightLineAircraftContextMenu.isUnavailable ? 190 : 92;
+                const menuWidth = flightLineAircraftContextMenuSize.width || 278;
+                const menuHeight = flightLineAircraftContextMenuSize.height || (flightLineAircraftContextMenu.isUnavailable ? 214 : 146);
+                const viewportLeft = resourceSlideoutFrame?.left ?? 0;
+                const viewportTop = resourceSlideoutFrame?.top ?? 0;
+                const viewportWidth = resourceSlideoutFrame?.width ?? (typeof window !== 'undefined' ? window.innerWidth : 1024);
+                const viewportHeight = resourceSlideoutFrame?.height ?? (typeof window !== 'undefined' ? window.innerHeight : 768);
                 const menuPosition = getAdaptiveContextMenuPosition({
                     clickX: flightLineAircraftContextMenu.x,
                     clickY: flightLineAircraftContextMenu.y,
                     menuWidth,
                     menuHeight,
+                    viewportLeft,
+                    viewportTop,
+                    viewportWidth,
+                    viewportHeight,
                     margin: 12,
                     anchorGap: 8,
                 });
                 return (
                     <div
-                        className="fixed z-[90] w-[238px] overflow-hidden rounded-md border border-slate-600/80 bg-slate-950 shadow-2xl shadow-black/50"
+                        ref={flightLineAircraftContextMenuRef}
+                        className="fixed z-[1200] w-[278px] overflow-visible rounded-md border border-slate-600/80 bg-slate-950 shadow-2xl shadow-black/50"
                         style={{ left: menuPosition.left, top: menuPosition.top, transformOrigin: menuPosition.placement.replace('-', ' ') }}
                         onPointerDown={(event) => event.stopPropagation()}
                         onContextMenu={(event) => event.preventDefault()}
@@ -9294,9 +9318,27 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             <div className="truncate text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Aircraft</div>
                             <div className="truncate text-sm font-black text-white">{flightLineAircraftContextMenu.tailNumber}</div>
                         </div>
-                        {flightLineAircraftContextMenu.isUnavailable ? (
-                            <div className="space-y-2 px-3 py-3">
-                                <div className="text-xs font-black uppercase tracking-[0.14em] text-rose-200">Unavailable</div>
+                        <div className="space-y-3 px-3 py-3">
+                            <label className="block">
+                                <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Status</span>
+                                <select
+                                    className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-black text-slate-100 outline-none focus:border-cyan-400"
+                                    value={flightLineAircraftContextMenu.isUnavailable ? 'unavailable' : 'serviceable'}
+                                    onChange={(event) => {
+                                        if (event.target.value === 'unavailable') {
+                                            moveFlightLineAircraftToUnavailable(flightLineAircraftContextMenu.aircraftNumber);
+                                        } else {
+                                            moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
+                                        }
+                                        closeFlightLineAircraftContextMenu();
+                                    }}
+                                    onKeyDown={stopEditableKeyPropagation}
+                                >
+                                    <option value="serviceable">Aircraft Serviceable</option>
+                                    <option value="unavailable">Unavailable</option>
+                                </select>
+                            </label>
+                            {flightLineAircraftContextMenu.isUnavailable ? (
                                 <label className="block">
                                     <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Reason</span>
                                     <select
@@ -9313,29 +9355,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         ))}
                                     </select>
                                 </label>
-                                <button
-                                    type="button"
-                                    className="w-full rounded-md border border-emerald-400/40 bg-emerald-500/15 px-3 py-2 text-left text-xs font-black text-emerald-200 hover:bg-emerald-500/25"
-                                    onClick={() => {
-                                        moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
-                                        closeFlightLineAircraftContextMenu();
-                                    }}
-                                >
-                                    Aircraft Serviceable
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                className="block w-full px-3 py-3 text-left text-xs font-black text-emerald-200 hover:bg-emerald-500/15"
-                                onClick={() => {
-                                    moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
-                                    closeFlightLineAircraftContextMenu();
-                                }}
-                            >
-                                Aircraft Serviceable
-                            </button>
-                        )}
+                            ) : null}
+                        </div>
                     </div>
                 );
             })() : null}
