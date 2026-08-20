@@ -502,6 +502,9 @@ export interface SyllabusItemDetail {
   testEventType?: LmpTestEventType;
   testingOfficerQualificationId?: string | null;
   useTestingOfficerSecondaryCallsign?: boolean;
+  rplGranted?: boolean;
+  rplGrantedAt?: string | null;
+  rplGrantedBy?: string | null;
   notes?: string;
   resourcesHuman: string[];
   crewRequirement?: CrewRequirement;

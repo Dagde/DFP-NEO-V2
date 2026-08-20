@@ -22461,7 +22461,11 @@ const getTestingOfficerQualificationLabel = (item, qualifications) => {
   if (!qualification) return item.testingOfficerQualificationId;
   return `${qualification.name}${qualification.code ? ` (${qualification.code})` : ""}`;
 };
-const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], testingOfficerQualifications = [], instructorLabel: instructorLabel2 = "Instructor", isRemedial = false, isAddedItem = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+const canManageRplForRole = (role) => {
+  const normalisedRole = String(role || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+  return normalisedRole === "ADMIN" || normalisedRole === "SUPER_ADMIN";
+};
+const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], testingOfficerQualifications = [], instructorLabel: instructorLabel2 = "Instructor", isRemedial = false, isAddedItem = false, onDelete, canManageRpl = false, onToggleRpl }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-red-100", children: "Remedial Package Event" }),
@@ -22478,10 +22482,32 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
       }
     )
   ] }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-between gap-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
-  ] }) }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "label",
+      {
+        className: `mt-1 inline-flex shrink-0 items-center gap-2 rounded border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide ${item.rplGranted ? "border-emerald-500/45 bg-emerald-950/25 text-emerald-200" : "border-gray-700 bg-gray-950/50 text-gray-400"} ${canManageRpl ? "cursor-pointer hover:border-sky-500/50 hover:text-gray-100" : "cursor-not-allowed opacity-60"}`,
+        title: canManageRpl ? "Recognition of Prior Learning" : "Only Admin users can grant RPL",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: item.rplGranted === true,
+              disabled: !canManageRpl || !onToggleRpl,
+              onChange: (event) => onToggleRpl?.(item, event.target.checked),
+              className: "h-3.5 w-3.5 rounded border-gray-600 bg-gray-900 text-emerald-500 focus:ring-emerald-500 disabled:cursor-not-allowed"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "RPL" })
+        ]
+      }
+    )
+  ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Core Details" }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
@@ -22888,7 +22914,9 @@ const TraineeLmpView = ({
   trainingReportDisplayName = "Training Report",
   instructorLabel: instructorLabel2 = "Instructor",
   staffQualificationCatalogue: staffQualificationCatalogue2,
-  operationalModel = "flight_school"
+  operationalModel = "flight_school",
+  currentUserRole = "",
+  currentUserName = ""
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -22957,6 +22985,35 @@ const TraineeLmpView = ({
     if (!selectedItem) return null;
     return traineeLmp.find((item) => selectedItem.id && item.id === selectedItem.id || selectedItem.code && item.code === selectedItem.code) || selectedItem;
   }, [selectedItem, traineeLmp]);
+  const canManageRpl = canManageRplForRole(currentUserRole);
+  const handleToggleRpl = async (item, checked) => {
+    if (!canManageRpl) {
+      onAccessDenied?.("grant RPL");
+      return;
+    }
+    if (!onUpdateLmpItem) return;
+    const originalItem = selectedRawItem || item;
+    if (checked && item.rplGranted !== true) {
+      const confirmed = await showDarkConfirm(
+        `Grant Recognition of Prior Learning (RPL) for ${trainee.rank} ${trainee.name} on ${item.code}?
+
+This records RPL against this Individual LMP event.`,
+        "Confirm RPL Granted",
+        "warning"
+      );
+      if (!confirmed) return;
+    }
+    const updatedItem = {
+      ...item,
+      rplGranted: checked,
+      rplGrantedAt: checked ? item.rplGrantedAt || (/* @__PURE__ */ new Date()).toISOString() : null,
+      rplGrantedBy: checked ? currentUserName || "Admin" : null
+    };
+    const updated = await onUpdateLmpItem(trainee, originalItem, updatedItem);
+    if (updated !== false) {
+      setSelectedItem(updatedItem);
+    }
+  };
   const tabClass = (tab) => `px-4 py-2 text-sm font-semibold rounded-t-md transition-colors ${activeTab === tab ? "bg-gray-900 text-sky-400 border-t border-l border-r border-gray-700" : "bg-gray-800 text-gray-400 hover:text-gray-200 border border-transparent"}`;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -23112,6 +23169,10 @@ const TraineeLmpView = ({
               instructorLabel: instructorLabel2,
               isRemedial: isRemedialLmpItem(selectedDisplayItem),
               isAddedItem: isAddedLmpItem(selectedDisplayItem, masterLmpKeys),
+              canManageRpl,
+              onToggleRpl: (item, checked) => {
+                void handleToggleRpl(item, checked);
+              },
               onDelete: isRemedialLmpItem(selectedDisplayItem) && onDeleteRemedialItem ? async (item) => {
                 const deleted = await onDeleteRemedialItem(trainee, item);
                 if (deleted) setSelectedItem(null);
@@ -27480,7 +27541,9 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     trainingReportStatusFieldLabel: activeTrainingReportTemplate.modules.overallAssessment.fields.result || "Mission Status",
                     instructorLabel: activeReportAssessorDisplayLabel,
                     staffQualificationCatalogue: staffQualificationCatalogue2,
-                    operationalModel
+                    operationalModel,
+                    currentUserRole,
+                    currentUserName
                   }
                 ) });
               })(),

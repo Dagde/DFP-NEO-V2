@@ -33,6 +33,7 @@ import {
     type StaffQualificationCatalogue,
     type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
+import { showDarkConfirm } from './DarkMessageModal';
 
 interface TraineeLmpViewProps {
   trainee: Trainee;
@@ -59,6 +60,8 @@ interface TraineeLmpViewProps {
   instructorLabel?: string;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   operationalModel?: string;
+  currentUserRole?: string;
+  currentUserName?: string;
 }
 
 export interface InsertLmpEventRequest {
@@ -863,6 +866,11 @@ const getTestingOfficerQualificationLabel = (
     return `${qualification.name}${qualification.code ? ` (${qualification.code})` : ''}`;
 };
 
+const canManageRplForRole = (role?: string): boolean => {
+    const normalisedRole = String(role || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+    return normalisedRole === 'ADMIN' || normalisedRole === 'SUPER_ADMIN';
+};
+
 const DetailView: React.FC<{
     item: SyllabusItemDetail;
     score: Score | undefined;
@@ -873,7 +881,9 @@ const DetailView: React.FC<{
     isRemedial?: boolean;
     isAddedItem?: boolean;
     onDelete?: (item: SyllabusItemDetail) => void;
-}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], testingOfficerQualifications = [], instructorLabel = 'Instructor', isRemedial = false, isAddedItem = false, onDelete }) => (
+    canManageRpl?: boolean;
+    onToggleRpl?: (item: SyllabusItemDetail, checked: boolean) => void;
+}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], testingOfficerQualifications = [], instructorLabel = 'Instructor', isRemedial = false, isAddedItem = false, onDelete, canManageRpl = false, onToggleRpl }) => (
     <div className="space-y-6">
         {isRemedial && (
             <div className="flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3">
@@ -900,6 +910,23 @@ const DetailView: React.FC<{
                 <h2 className="text-3xl font-bold text-white">{item.code}</h2>
                 <p className="text-lg text-gray-400 mt-1">{item.eventDescription}</p>
             </div>
+            <label
+                className={`mt-1 inline-flex shrink-0 items-center gap-2 rounded border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide ${
+                    item.rplGranted
+                        ? 'border-emerald-500/45 bg-emerald-950/25 text-emerald-200'
+                        : 'border-gray-700 bg-gray-950/50 text-gray-400'
+                } ${canManageRpl ? 'cursor-pointer hover:border-sky-500/50 hover:text-gray-100' : 'cursor-not-allowed opacity-60'}`}
+                title={canManageRpl ? 'Recognition of Prior Learning' : 'Only Admin users can grant RPL'}
+            >
+                <input
+                    type="checkbox"
+                    checked={item.rplGranted === true}
+                    disabled={!canManageRpl || !onToggleRpl}
+                    onChange={(event) => onToggleRpl?.(item, event.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-gray-600 bg-gray-900 text-emerald-500 focus:ring-emerald-500 disabled:cursor-not-allowed"
+                />
+                <span>RPL</span>
+            </label>
         </div>
         
         <fieldset className="p-4 border border-gray-700 rounded-lg">
@@ -1388,6 +1415,8 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     instructorLabel = 'Instructor',
     staffQualificationCatalogue,
     operationalModel = 'flight_school',
+    currentUserRole = '',
+    currentUserName = '',
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -1487,6 +1516,34 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
             (selectedItem.code && item.code === selectedItem.code)
         )) || selectedItem;
     }, [selectedItem, traineeLmp]);
+    const canManageRpl = canManageRplForRole(currentUserRole);
+
+    const handleToggleRpl = async (item: SyllabusItemDetail, checked: boolean) => {
+        if (!canManageRpl) {
+            onAccessDenied?.('grant RPL');
+            return;
+        }
+        if (!onUpdateLmpItem) return;
+        const originalItem = selectedRawItem || item;
+        if (checked && item.rplGranted !== true) {
+            const confirmed = await showDarkConfirm(
+                `Grant Recognition of Prior Learning (RPL) for ${trainee.rank} ${trainee.name} on ${item.code}?\n\nThis records RPL against this Individual LMP event.`,
+                'Confirm RPL Granted',
+                'warning',
+            );
+            if (!confirmed) return;
+        }
+        const updatedItem: SyllabusItemDetail = {
+            ...item,
+            rplGranted: checked,
+            rplGrantedAt: checked ? (item.rplGrantedAt || new Date().toISOString()) : null,
+            rplGrantedBy: checked ? (currentUserName || 'Admin') : null,
+        };
+        const updated = await onUpdateLmpItem(trainee, originalItem, updatedItem);
+        if (updated !== false) {
+            setSelectedItem(updatedItem);
+        }
+    };
 
     // Tab button style helper
     const tabClass = (tab: 'neo' | 'academic') =>
@@ -1682,6 +1739,8 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                         instructorLabel={instructorLabel}
                                         isRemedial={isRemedialLmpItem(selectedDisplayItem)}
                                         isAddedItem={isAddedLmpItem(selectedDisplayItem, masterLmpKeys)}
+                                        canManageRpl={canManageRpl}
+                                        onToggleRpl={(item, checked) => { void handleToggleRpl(item, checked); }}
                                         onDelete={isRemedialLmpItem(selectedDisplayItem) && onDeleteRemedialItem
                                             ? async (item) => {
                                                 const deleted = await onDeleteRemedialItem(trainee, item);

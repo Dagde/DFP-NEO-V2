@@ -2696,6 +2696,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             instructorLabel={activeReportAssessorDisplayLabel}
                             staffQualificationCatalogue={staffQualificationCatalogue}
                             operationalModel={operationalModel}
+                            currentUserRole={currentUserRole}
+                            currentUserName={currentUserName}
                           />
                         </div>
                       );
