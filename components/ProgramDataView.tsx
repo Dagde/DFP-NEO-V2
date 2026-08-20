@@ -353,6 +353,13 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
             const individualLMP = traineeLMPs.get(trainee.fullName) || [];
             const traineeScores = scores.get(trainee.fullName) || [];
             const completedEventIds = new Set(traineeScores.map(s => s.event));
+            individualLMP.forEach((item: any) => {
+                if (item.completedAt || item.isComplete || item.completed || item.rplGranted) {
+                    completedEventIds.add(item.id);
+                    completedEventIds.add(item.code);
+                    if (item.masterEventId) completedEventIds.add(item.masterEventId);
+                }
+            });
             
             let nextEvt: SyllabusItemDetail | null = null;
             let plusOneEvt: SyllabusItemDetail | null = null;
@@ -376,7 +383,7 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
             if (nextEventIndex !== -1) {
                 for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
                     const item = individualLMP[i];
-                    if (!item.code.includes(' MB')) { // Skip non-schedulable events
+                    if (!item.code.includes(' MB') && !completedEventIds.has(item.id) && !completedEventIds.has(item.code)) { // Skip non-schedulable and completed events
                         plusOneEvt = item;
                         break;
                     }
@@ -493,6 +500,13 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
             const individualLMP = traineeLMPs.get(trainee.fullName) || [];
             const traineeScores = scores.get(trainee.fullName) || [];
             const completedEventIds = new Set(traineeScores.map(s => s.event));
+            individualLMP.forEach((item: any) => {
+                if (item.completedAt || item.isComplete || item.completed || item.rplGranted) {
+                    completedEventIds.add(item.id);
+                    completedEventIds.add(item.code);
+                    if (item.masterEventId) completedEventIds.add(item.masterEventId);
+                }
+            });
             
             for (const item of individualLMP) {
                 if (completedEventIds.has(item.id) || item.code.includes(' MB')) continue;

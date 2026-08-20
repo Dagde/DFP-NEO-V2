@@ -726,7 +726,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             }
             return refs;
         };
-        const isMarkedCompleteInLmp = (item: SyllabusItemDetail): boolean => Boolean((item as any).completedAt);
+        const isMarkedCompleteInLmp = (item: SyllabusItemDetail): boolean => Boolean(
+            (item as any).completedAt ||
+            (item as any).isComplete ||
+            (item as any).completed ||
+            (item as any).rplGranted
+        );
         const activeLmpType = String((trainee as any).lmpType || '');
         const masterCourseProgressItems = reviewUniqueByEventCode(
             syllabusDetails
@@ -1269,6 +1274,13 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
         const traineeScores = scores.get(trainee.fullName) || [];
         const completedEventIds = new Set(traineeScores.map(s => s.event));
+        individualLmp.forEach((item: any) => {
+            if (item.completedAt || item.isComplete || item.completed || item.rplGranted) {
+                completedEventIds.add(item.id);
+                completedEventIds.add(item.code);
+                if (item.masterEventId) completedEventIds.add(item.masterEventId);
+            }
+        });
 
         let nextEvt: SyllabusItemDetail | null = null;
         let subsequentEvt: SyllabusItemDetail | null = null;
@@ -1291,7 +1303,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         if (nextEventIndex !== -1) {
             for (let i = nextEventIndex + 1; i < individualLmp.length; i++) {
                 const item = individualLmp[i];
-                if (!item.code.includes(' MB')) {
+                if (!item.code.includes(' MB') && !completedEventIds.has(item.id) && !completedEventIds.has(item.code)) {
                     subsequentEvt = item;
                     break;
                 }
@@ -1300,7 +1312,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
         if (!nextEvt) {
             const allStandardEvents = individualLmp.filter(item => !item.isRemedial && !item.code.includes(' MB'));
-            if (allStandardEvents.every(item => completedEventIds.has(item.id))) {
+            if (allStandardEvents.every(item => completedEventIds.has(item.id) || completedEventIds.has(item.code))) {
                 reason = 'Syllabus complete.';
             } else {
                 reason = 'Prerequisites incomplete.';

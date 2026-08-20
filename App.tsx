@@ -6939,11 +6939,12 @@ const addLmpCompletionAlias = (completedEventIds: Set<string>, value?: string | 
 };
 
 const isCompletedLmpItem = (item: SyllabusItemDetail, completedEventIds: Set<string>): boolean => {
-    const maybeCompleted = item as SyllabusItemDetail & { isComplete?: boolean; completed?: boolean };
+    const maybeCompleted = item as SyllabusItemDetail & { isComplete?: boolean; completed?: boolean; rplGranted?: boolean };
     return Boolean(
         item.completedAt ||
         maybeCompleted.isComplete ||
         maybeCompleted.completed ||
+        maybeCompleted.rplGranted ||
         completedEventIds.has(normalizeLmpEventId(item.id)) ||
         completedEventIds.has(normalizeLmpEventId(item.code)) ||
         completedEventIds.has(normalizeLmpEventId(item.masterEventId))
@@ -7026,8 +7027,8 @@ const computeNextEventsForTrainee = (
     // Use its completion flags directly so NEO Build does not depend on stale
     // score-map timing or legacy training report tables.
     individualLMP.forEach(item => {
-        const maybeCompleted = item as SyllabusItemDetail & { isComplete?: boolean; completed?: boolean };
-        if (item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed) {
+        const maybeCompleted = item as SyllabusItemDetail & { isComplete?: boolean; completed?: boolean; rplGranted?: boolean };
+        if (item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed || maybeCompleted.rplGranted) {
             addLmpCompletionAlias(completedEventIds, item.id);
             addLmpCompletionAlias(completedEventIds, item.code);
             addLmpCompletionAlias(completedEventIds, item.masterEventId);
@@ -12879,10 +12880,30 @@ function generateDfpInternal(
     const nightFlyingTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
 
     recordProgress({ message: 'Ranking trainees...', percentage: 20 });
+    const getBuildProgressCount = (trainee: Trainee): number => {
+        const completed = new Set<string>();
+        (scores.get(trainee.fullName) || [])
+            .filter(score => !isRemedialEventCode(score.event) && !String(score.event || '').includes('MB'))
+            .forEach(score => {
+                const key = normalizeLmpEventId(score.event);
+                if (key) completed.add(key);
+            });
+        (traineeLMPs.get(trainee.fullName) || [])
+            .filter(item => (
+                !isRemedialEventCode(item.code || item.id) &&
+                !String(item.code || item.id || '').includes('MB') &&
+                (item.completedAt || (item as any).isComplete || (item as any).completed || (item as any).rplGranted)
+            ))
+            .forEach(item => {
+                const key = normalizeLmpEventId(item.code || item.id);
+                if (key) completed.add(key);
+            });
+        return completed.size;
+    };
     const getMedianProgress = (courseName: string): number => {
         const courseTrainees = activeTrainees.filter(t => t.course === courseName);
         if (courseTrainees.length === 0) return 0;
-        const progressCounts = courseTrainees.map(t => (scores.get(t.fullName) || []).filter(s => !isRemedialEventCode(s.event)).length).sort((a,b) => a-b);
+        const progressCounts = courseTrainees.map(getBuildProgressCount).sort((a,b) => a-b);
         const mid = Math.floor(progressCounts.length / 2);
         return progressCounts.length % 2 !== 0 ? progressCounts[mid] : (progressCounts[mid - 1] + progressCounts[mid]) / 2;
     };
@@ -12907,8 +12928,8 @@ function generateDfpInternal(
 
         const medianA = courseMedians.get(a.course) || 0;
         const medianB = courseMedians.get(b.course) || 0;
-        const progressA = (scores.get(a.fullName) || []).filter(s => !isRemedialEventCode(s.event)).length;
-        const progressB = (scores.get(b.fullName) || []).filter(s => !isRemedialEventCode(s.event)).length;
+        const progressA = getBuildProgressCount(a);
+        const progressB = getBuildProgressCount(b);
         const behindA = medianA - progressA;
         const behindB = medianB - progressB;
         if (behindA !== behindB) return behindB - behindA;
@@ -35659,7 +35680,7 @@ const App: React.FC = () => {
 
         const excludedCompletedSet = new Set(excludedCompletedEvents.filter(Boolean));
         const completedFromLmp = lmp
-            .filter(item => item.completedAt)
+            .filter(item => item.completedAt || (item as any).rplGranted)
             .map(item => item.id || item.code)
             .filter((eventId): eventId is string => Boolean(eventId) && !excludedCompletedSet.has(eventId));
         const completedFromScores = (scores.get(trainee.fullName) || [])
@@ -36905,7 +36926,8 @@ const App: React.FC = () => {
         const nextEventIndex = originalLmp.findIndex((item, index) =>
             index > sourceIndex &&
             item.type === sourceItem.type &&
-            !item.completedAt
+            !item.completedAt &&
+            !(item as any).rplGranted
         );
         if (nextEventIndex === -1) {
             pushDfpDataDiag('report-lmp:extend-next:no-next-event', {
@@ -37116,7 +37138,8 @@ const App: React.FC = () => {
             : originalLmp.findIndex((item, index) =>
                 index > sourceIndex &&
                 item.type === sourceItem.type &&
-                !item.completedAt
+                !item.completedAt &&
+                !(item as any).rplGranted
             );
         pushDfpDataDiag('report-notes:forward:target-selection', {
             assessmentId: assessment.id,
@@ -37651,7 +37674,7 @@ const App: React.FC = () => {
             const individualLMP = traineeLMPs.get(t.fullName);
             if (individualLMP) {
                 const completedIds = (individualLMP as any[])
-                    .filter((item: any) => item.completedAt || item.isComplete)
+                    .filter((item: any) => item.completedAt || item.isComplete || item.rplGranted)
                     .map((item: any) => (item.id || item.code || '').replace('*', ''));
                 if (completedIds.length > 0) {
                     lmpCompletedIdsMap[t.fullName] = completedIds;
@@ -42571,7 +42594,7 @@ const App: React.FC = () => {
                 const individualLMP = traineeLMPs.get(t.fullName);
                 if (individualLMP) {
                     const completedIds = (individualLMP as any[])
-                        .filter((item: any) => item.completedAt || item.isComplete)
+                        .filter((item: any) => item.completedAt || item.isComplete || item.rplGranted)
                         .map((item: any) => (item.id || item.code || '').replace('*', ''));
                     if (completedIds.length > 0) {
                         lmpCompletedIdsMap[t.fullName] = completedIds;

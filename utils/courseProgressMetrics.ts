@@ -62,8 +62,38 @@ const isCompletedTrainingReport = (assessment: TrainingReportAssessment) => {
     return assessment.isCompleted !== false && typeof assessment.overallGrade === 'number';
 };
 
+const getLmpCompletionDate = (item: SyllabusItemDetail) => {
+    const completedAt = String((item as any).completedAt || (item as any).rplGrantedAt || '').trim();
+    if (!completedAt && !(item as any).rplGranted) return null;
+    const date = completedAt ? new Date(completedAt) : new Date();
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const mergeLmpCompletedEventDates = (
+    completed: Map<string, Date>,
+    items: SyllabusItemDetail[],
+    validEventCodes: Set<string>,
+    eventIdToCode: Map<string, string>,
+) => {
+    items.forEach(item => {
+        if (!((item as any).completedAt || (item as any).isComplete || (item as any).completed || (item as any).rplGranted)) return;
+        const rawEventCode = getEventCode(item);
+        const eventCode = eventIdToCode.get(rawEventCode) || rawEventCode;
+        if (!validEventCodes.has(eventCode)) return;
+
+        const date = getLmpCompletionDate(item);
+        if (!date) return;
+
+        const existingDate = completed.get(eventCode);
+        if (!existingDate || date > existingDate) {
+            completed.set(eventCode, date);
+        }
+    });
+};
+
 const getCompletedEventDates = (
     trainee: Trainee,
+    individualLMP: SyllabusItemDetail[],
     validEventCodes: Set<string>,
     eventIdToCode: Map<string, string>,
     pt051Assessments: Map<string, TrainingReportAssessment>
@@ -87,6 +117,8 @@ const getCompletedEventDates = (
             completed.set(eventCode, date);
         }
     });
+
+    mergeLmpCompletedEventDates(completed, individualLMP, validEventCodes, eventIdToCode);
 
     return completed;
 };
@@ -146,7 +178,7 @@ export const calculateCourseProgressMetric = (
             traineeEventIdToCode.set(item.code, eventCode);
         });
 
-        const completedEventDates = getCompletedEventDates(trainee, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
+        const completedEventDates = getCompletedEventDates(trainee, individualLMP, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
         const completedCount = completedEventDates.size;
         let nextEvent = 'Finished';
 
@@ -215,7 +247,7 @@ export const calculateCourseProgressMetric = (
                 traineeEventIdToCode.set(item.id, eventCode);
                 traineeEventIdToCode.set(item.code, eventCode);
             });
-            const completedEventDates = getCompletedEventDates(metric.trainee, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
+            const completedEventDates = getCompletedEventDates(metric.trainee, individualLMP, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
             const count = Array.from(completedEventDates.values()).filter(date => date <= weekEnd).length;
             return { name: metric.trainee.fullName || metric.trainee.name, count };
         });

@@ -246,15 +246,25 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         const completedByCourse = new Map(activeCourses.map(course => [course.name, 0]));
         activeTrainees.forEach(trainee => {
             const traineeName = trainee.fullName || trainee.name;
-            const completedEvents = (scores.get(traineeName) || [])
-                .filter(score => !score.event.includes('MB') && !isRemedialEventCode(score.event)).length;
+            const completedEventCodes = new Set<string>();
+            (scores.get(traineeName) || [])
+                .filter(score => !score.event.includes('MB') && !isRemedialEventCode(score.event))
+                .forEach(score => completedEventCodes.add(String(score.event || '').trim().toUpperCase()));
+            (traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || [])
+                .filter(item => (
+                    !String(item.code || item.id || '').includes('MB') &&
+                    !isRemedialEventCode(item.code || item.id) &&
+                    (item.completedAt || (item as any).isComplete || (item as any).completed || item.rplGranted)
+                ))
+                .forEach(item => completedEventCodes.add(String(item.code || item.id || '').trim().toUpperCase()));
+            const completedEvents = completedEventCodes.size;
             completedByCourse.set(trainee.course, (completedByCourse.get(trainee.course) || 0) + completedEvents);
         });
 
         return activeCourses
             .slice()
             .sort((a, b) => (completedByCourse.get(b.name) || 0) - (completedByCourse.get(a.name) || 0) || a.name.localeCompare(b.name))[0]?.name || '';
-    }, [activeCourses, activeTrainees, scores]);
+    }, [activeCourses, activeTrainees, scores, traineeLMPs]);
 
     useEffect(() => {
         if (!scoreCourse && defaultCourseByProgress) {
@@ -386,6 +396,19 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         return details;
     }, [traineeLMPs]);
 
+    const getTraineeRplEventCodes = (trainee: Trainee): Set<string> => {
+        const codes = new Set<string>();
+        const lmp = traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || [];
+        lmp.forEach(item => {
+            if (item.rplGranted !== true) return;
+            [getValidEventCode(item), item.code, item.id, item.masterEventId]
+                .map(value => String(value || '').trim().toUpperCase())
+                .filter(Boolean)
+                .forEach(code => codes.add(code));
+        });
+        return codes;
+    };
+
     const courseScoreEventTypeLabels = useMemo<Record<CourseScoreEventTypeKey, string>>(() => ({
         flight: 'Flight',
         simulator: resourceDisplayNames.ftd || 'FTD',
@@ -480,6 +503,11 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         pt051ScoreRecords.forEach(record => {
             if (traineeNames.has(record.traineeName)) eventSet.add(record.event);
         });
+        scoreCourseTrainees.forEach(trainee => {
+            getTraineeRplEventCodes(trainee).forEach(eventCode => {
+                if (eventCode && !isUuidLike(eventCode)) eventSet.add(eventCode);
+            });
+        });
 
         return Array.from(eventSet).sort((a, b) => {
             const aOrder = eventOrder.get(a) ?? Number.MAX_SAFE_INTEGER;
@@ -487,7 +515,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             if (aOrder !== bOrder) return aOrder - bOrder;
             return a.localeCompare(b);
         });
-    }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder]);
+    }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder, traineeLMPs]);
 
     const courseScoreEventTypeOptions = useMemo(() => {
         const typeCounts = new Map<CourseScoreEventTypeKey, number>();
@@ -615,10 +643,12 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             .map(trainee => {
                 const traineeName = trainee.fullName || trainee.name;
                 const scoredRecords = pt051ScoreRecords.filter(record => record.traineeName === traineeName);
+                const rplEventCodes = getTraineeRplEventCodes(trainee);
                 const selectedEvents = activeAward.includeAllScoredEvents
                     ? selectedAwardEvents
                     : new Set(Array.from(criteriaWeights.keys()).filter(eventCode => selectedAwardEvents.has(eventCode)));
                 const includedEventScores = Array.from(selectedEvents)
+                    .filter(eventCode => !rplEventCodes.has(eventCode))
                     .map(eventCode => {
                         const eventRecords = scoredRecords.filter(record => record.event.toUpperCase() === eventCode);
                         const score = getAwardScoreForEvent(eventRecords);
@@ -644,7 +674,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             })
             .filter(row => row.scoredCount >= activeAward.minimumScoredEvents)
             .sort((a, b) => b.rankingScore - a.rankingScore || (a.trainee.fullName || a.trainee.name).localeCompare(b.trainee.fullName || b.trainee.name));
-    }, [activeTrainees, activeAward, pt051ScoreRecords, filteredAwardEventOptions, activeAwardScoreMethod]);
+    }, [activeTrainees, activeAward, pt051ScoreRecords, filteredAwardEventOptions, activeAwardScoreMethod, traineeLMPs]);
 
     const updateActiveAward = (updates: Partial<CourseAward>) => {
         if (!activeAward) return;
@@ -924,9 +954,13 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const scoreMatrixRows = useMemo(() => {
         return scoreCourseTrainees.map(trainee => ({
             traineeName: getDisplayName(trainee.fullName || trainee.name),
-            scores: scoredEvents.map(eventCode => getLatestScoreForEvent(trainee, eventCode)?.score ?? ''),
+            scores: scoredEvents.map(eventCode => {
+                const score = getLatestScoreForEvent(trainee, eventCode);
+                if (score) return score.score;
+                return getTraineeRplEventCodes(trainee).has(eventCode.toUpperCase()) ? 'RPL' : '';
+            }),
         }));
-    }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses]);
+    }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses, traineeLMPs]);
 
     const escapeCsvValue = (value: string | number): string => {
         const raw = String(value);
@@ -1141,9 +1175,10 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                         </td>
                                                         {scoredEvents.map(eventCode => {
                                                             const score = getLatestScoreForEvent(trainee, eventCode);
+                                                            const isRpl = getTraineeRplEventCodes(trainee).has(eventCode.toUpperCase());
                                                             return (
                                                                 <td key={`${trainee.idNumber}-${eventCode}`} className="px-3 py-3 text-center font-mono text-gray-200">
-                                                                    {score ? score.score : ''}
+                                                                    {score ? score.score : isRpl ? <span className="text-[11px] font-bold text-emerald-300">RPL</span> : ''}
                                                                 </td>
                                                             );
                                                         })}

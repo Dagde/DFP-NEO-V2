@@ -22931,8 +22931,10 @@ const TraineeLmpView = ({
   const completedEventIds = reactExports.useMemo(() => {
     const ids = new Set(scores.map((s) => (s.event || "").replace("*", "")));
     traineeLmp.forEach((item) => {
-      if (item.completedAt) {
+      if (item.completedAt || item.rplGranted) {
         ids.add((item.id || item.code || "").replace("*", ""));
+        ids.add((item.code || item.id || "").replace("*", ""));
+        if (item.masterEventId) ids.add(String(item.masterEventId).replace("*", ""));
       }
     });
     if (ids.has("BIF FTD2") && !ids.has("BIF FTD1")) ids.add("BIF FTD1");
@@ -23003,10 +23005,13 @@ This records RPL against this Individual LMP event.`,
       );
       if (!confirmed) return;
     }
+    const grantedAt = checked ? item.rplGrantedAt || (/* @__PURE__ */ new Date()).toISOString() : null;
+    const completedAtWasRplOnly = item.completedAt && item.rplGrantedAt && item.completedAt === item.rplGrantedAt;
     const updatedItem = {
       ...item,
       rplGranted: checked,
-      rplGrantedAt: checked ? item.rplGrantedAt || (/* @__PURE__ */ new Date()).toISOString() : null,
+      completedAt: checked ? item.completedAt || grantedAt : completedAtWasRplOnly ? null : item.completedAt,
+      rplGrantedAt: grantedAt,
       rplGrantedBy: checked ? currentUserName || "Admin" : null
     };
     const updated = await onUpdateLmpItem(trainee, originalItem, updatedItem);
@@ -25817,7 +25822,9 @@ const TraineeProfileFlyout = ({
       }
       return refs;
     };
-    const isMarkedCompleteInLmp = (item) => Boolean(item.completedAt);
+    const isMarkedCompleteInLmp = (item) => Boolean(
+      item.completedAt || item.isComplete || item.completed || item.rplGranted
+    );
     const activeLmpType = String(trainee.lmpType || "");
     const masterCourseProgressItems = reviewUniqueByEventCode(
       syllabusDetails.filter(reviewIsCourseProgressLmpEvent).filter((item) => reviewItemBelongsToLmpType(item, activeLmpType))
@@ -26298,6 +26305,13 @@ const TraineeProfileFlyout = ({
     if (isCreating) return { nextEvent: null, subsequentEvent: null, nextEventReason: "New Trainee" };
     const traineeScores = scores.get(trainee.fullName) || [];
     const completedEventIds = new Set(traineeScores.map((s) => s.event));
+    individualLmp.forEach((item) => {
+      if (item.completedAt || item.isComplete || item.completed || item.rplGranted) {
+        completedEventIds.add(item.id);
+        completedEventIds.add(item.code);
+        if (item.masterEventId) completedEventIds.add(item.masterEventId);
+      }
+    });
     let nextEvt = null;
     let subsequentEvt = null;
     let reason = "";
@@ -26317,7 +26331,7 @@ const TraineeProfileFlyout = ({
     if (nextEventIndex !== -1) {
       for (let i = nextEventIndex + 1; i < individualLmp.length; i++) {
         const item = individualLmp[i];
-        if (!item.code.includes(" MB")) {
+        if (!item.code.includes(" MB") && !completedEventIds.has(item.id) && !completedEventIds.has(item.code)) {
           subsequentEvt = item;
           break;
         }
@@ -26325,7 +26339,7 @@ const TraineeProfileFlyout = ({
     }
     if (!nextEvt) {
       const allStandardEvents = individualLmp.filter((item) => !item.isRemedial && !item.code.includes(" MB"));
-      if (allStandardEvents.every((item) => completedEventIds.has(item.id))) {
+      if (allStandardEvents.every((item) => completedEventIds.has(item.id) || completedEventIds.has(item.code))) {
         reason = "Syllabus complete.";
       } else {
         reason = "Prerequisites incomplete.";
@@ -47452,6 +47466,13 @@ const PeopleTab = ({
       const individualLMP = traineeLMPs.get(trainee.fullName) || [];
       const traineeScores = scores.get(trainee.fullName) || [];
       const completedEventIds = new Set(traineeScores.map((s) => s.event));
+      individualLMP.forEach((item) => {
+        if (item.completedAt || item.isComplete || item.completed || item.rplGranted) {
+          completedEventIds.add(item.id);
+          completedEventIds.add(item.code);
+          if (item.masterEventId) completedEventIds.add(item.masterEventId);
+        }
+      });
       for (const item of individualLMP) {
         if (completedEventIds.has(item.id) || item.code.includes(" MB")) continue;
         const prereqsMet = item.prerequisites.every((p) => completedEventIds.has(p));
@@ -47627,6 +47648,13 @@ const PeopleTab = ({
       const individualLMP = traineeLMPs.get(trainee.fullName) || [];
       const traineeScores = scores.get(trainee.fullName) || [];
       const completedEventIds = new Set(traineeScores.map((s) => s.event));
+      individualLMP.forEach((item) => {
+        if (item.completedAt || item.isComplete || item.completed || item.rplGranted) {
+          completedEventIds.add(item.id);
+          completedEventIds.add(item.code);
+          if (item.masterEventId) completedEventIds.add(item.masterEventId);
+        }
+      });
       let nextEvt = null;
       let plusOneEvt = null;
       let nextEventIndex = -1;
@@ -47645,7 +47673,7 @@ const PeopleTab = ({
       if (nextEventIndex !== -1) {
         for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
           const item = individualLMP[i];
-          if (!item.code.includes(" MB")) {
+          if (!item.code.includes(" MB") && !completedEventIds.has(item.id) && !completedEventIds.has(item.code)) {
             plusOneEvt = item;
             break;
           }
@@ -88395,7 +88423,27 @@ const getAssessmentEventCode = (assessment) => (assessment.flightNumber || asses
 const isCompletedTrainingReport = (assessment) => {
   return assessment.isCompleted !== false && typeof assessment.overallGrade === "number";
 };
-const getCompletedEventDates = (trainee, validEventCodes, eventIdToCode, pt051Assessments) => {
+const getLmpCompletionDate = (item) => {
+  const completedAt = String(item.completedAt || item.rplGrantedAt || "").trim();
+  if (!completedAt && !item.rplGranted) return null;
+  const date = completedAt ? new Date(completedAt) : /* @__PURE__ */ new Date();
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+const mergeLmpCompletedEventDates = (completed, items, validEventCodes, eventIdToCode) => {
+  items.forEach((item) => {
+    if (!(item.completedAt || item.isComplete || item.completed || item.rplGranted)) return;
+    const rawEventCode = getEventCode(item);
+    const eventCode2 = eventIdToCode.get(rawEventCode) || rawEventCode;
+    if (!validEventCodes.has(eventCode2)) return;
+    const date = getLmpCompletionDate(item);
+    if (!date) return;
+    const existingDate = completed.get(eventCode2);
+    if (!existingDate || date > existingDate) {
+      completed.set(eventCode2, date);
+    }
+  });
+};
+const getCompletedEventDates = (trainee, individualLMP, validEventCodes, eventIdToCode, pt051Assessments) => {
   const traineeNames = new Set([trainee.fullName, trainee.name, normaliseName(trainee.fullName), normaliseName(trainee.name)].filter(Boolean));
   const completed = /* @__PURE__ */ new Map();
   pt051Assessments.forEach((assessment) => {
@@ -88411,6 +88459,7 @@ const getCompletedEventDates = (trainee, validEventCodes, eventIdToCode, pt051As
       completed.set(eventCode2, date);
     }
   });
+  mergeLmpCompletedEventDates(completed, individualLMP, validEventCodes, eventIdToCode);
   return completed;
 };
 const getEventAtCount = (events, count) => {
@@ -88453,7 +88502,7 @@ const calculateCourseProgressMetric = (course, allTrainees, traineeLMPs, pt051As
       traineeEventIdToCode.set(item.id, eventCode2);
       traineeEventIdToCode.set(item.code, eventCode2);
     });
-    const completedEventDates = getCompletedEventDates(trainee, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
+    const completedEventDates = getCompletedEventDates(trainee, individualLMP, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
     const completedCount = completedEventDates.size;
     let nextEvent = "Finished";
     if (completedCount < traineeProgressEvents.length) {
@@ -88511,7 +88560,7 @@ const calculateCourseProgressMetric = (course, allTrainees, traineeLMPs, pt051As
         traineeEventIdToCode.set(item.id, eventCode2);
         traineeEventIdToCode.set(item.code, eventCode2);
       });
-      const completedEventDates = getCompletedEventDates(metric.trainee, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
+      const completedEventDates = getCompletedEventDates(metric.trainee, individualLMP, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
       const count = Array.from(completedEventDates.values()).filter((date) => date <= weekEnd).length;
       return { name: metric.trainee.fullName || metric.trainee.name, count };
     });
@@ -89019,11 +89068,14 @@ const CourseProgressView = ({
     const completedByCourse = new Map(activeCourses.map((course) => [course.name, 0]));
     activeTrainees.forEach((trainee) => {
       const traineeName = trainee.fullName || trainee.name;
-      const completedEvents = (scores.get(traineeName) || []).filter((score) => !score.event.includes("MB") && !isRemedialEventCode$1(score.event)).length;
+      const completedEventCodes = /* @__PURE__ */ new Set();
+      (scores.get(traineeName) || []).filter((score) => !score.event.includes("MB") && !isRemedialEventCode$1(score.event)).forEach((score) => completedEventCodes.add(String(score.event || "").trim().toUpperCase()));
+      (traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || []).filter((item) => !String(item.code || item.id || "").includes("MB") && !isRemedialEventCode$1(item.code || item.id) && (item.completedAt || item.isComplete || item.completed || item.rplGranted)).forEach((item) => completedEventCodes.add(String(item.code || item.id || "").trim().toUpperCase()));
+      const completedEvents = completedEventCodes.size;
       completedByCourse.set(trainee.course, (completedByCourse.get(trainee.course) || 0) + completedEvents);
     });
     return activeCourses.slice().sort((a, b) => (completedByCourse.get(b.name) || 0) - (completedByCourse.get(a.name) || 0) || a.name.localeCompare(b.name))[0]?.name || "";
-  }, [activeCourses, activeTrainees, scores]);
+  }, [activeCourses, activeTrainees, scores, traineeLMPs]);
   reactExports.useEffect(() => {
     if (!scoreCourse && defaultCourseByProgress) {
       setScoreCourse(defaultCourseByProgress);
@@ -89123,6 +89175,15 @@ const CourseProgressView = ({
     });
     return details;
   }, [traineeLMPs]);
+  const getTraineeRplEventCodes = (trainee) => {
+    const codes = /* @__PURE__ */ new Set();
+    const lmp = traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || [];
+    lmp.forEach((item) => {
+      if (item.rplGranted !== true) return;
+      [getValidEventCode(item), item.code, item.id, item.masterEventId].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).forEach((code) => codes.add(code));
+    });
+    return codes;
+  };
   const courseScoreEventTypeLabels = reactExports.useMemo(() => ({
     flight: "Flight",
     simulator: resourceDisplayNames.ftd || "FTD",
@@ -89204,13 +89265,18 @@ const CourseProgressView = ({
     pt051ScoreRecords.forEach((record) => {
       if (traineeNames.has(record.traineeName)) eventSet.add(record.event);
     });
+    scoreCourseTrainees.forEach((trainee) => {
+      getTraineeRplEventCodes(trainee).forEach((eventCode2) => {
+        if (eventCode2 && !isUuidLike(eventCode2)) eventSet.add(eventCode2);
+      });
+    });
     return Array.from(eventSet).sort((a, b) => {
       const aOrder = eventOrder.get(a) ?? Number.MAX_SAFE_INTEGER;
       const bOrder = eventOrder.get(b) ?? Number.MAX_SAFE_INTEGER;
       if (aOrder !== bOrder) return aOrder - bOrder;
       return a.localeCompare(b);
     });
-  }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder]);
+  }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder, traineeLMPs]);
   const courseScoreEventTypeOptions = reactExports.useMemo(() => {
     const typeCounts = /* @__PURE__ */ new Map();
     allScoredEvents.forEach((eventCode2) => {
@@ -89294,8 +89360,9 @@ const CourseProgressView = ({
     return selectedTrainees.map((trainee) => {
       const traineeName = trainee.fullName || trainee.name;
       const scoredRecords = pt051ScoreRecords.filter((record) => record.traineeName === traineeName);
+      const rplEventCodes = getTraineeRplEventCodes(trainee);
       const selectedEvents = activeAward.includeAllScoredEvents ? selectedAwardEvents : new Set(Array.from(criteriaWeights.keys()).filter((eventCode2) => selectedAwardEvents.has(eventCode2)));
-      const includedEventScores = Array.from(selectedEvents).map((eventCode2) => {
+      const includedEventScores = Array.from(selectedEvents).filter((eventCode2) => !rplEventCodes.has(eventCode2)).map((eventCode2) => {
         const eventRecords = scoredRecords.filter((record) => record.event.toUpperCase() === eventCode2);
         const score = getAwardScoreForEvent(eventRecords);
         return score === null ? null : { event: eventCode2, score };
@@ -89315,7 +89382,7 @@ const CourseProgressView = ({
         rankingScore: totals.weight > 0 ? totals.weightedScore / totals.weight : 0
       };
     }).filter((row) => row.scoredCount >= activeAward.minimumScoredEvents).sort((a, b) => b.rankingScore - a.rankingScore || (a.trainee.fullName || a.trainee.name).localeCompare(b.trainee.fullName || b.trainee.name));
-  }, [activeTrainees, activeAward, pt051ScoreRecords, filteredAwardEventOptions, activeAwardScoreMethod]);
+  }, [activeTrainees, activeAward, pt051ScoreRecords, filteredAwardEventOptions, activeAwardScoreMethod, traineeLMPs]);
   const updateActiveAward = (updates) => {
     if (!activeAward) return;
     setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, ...updates } : award));
@@ -89519,9 +89586,13 @@ const CourseProgressView = ({
   const scoreMatrixRows = reactExports.useMemo(() => {
     return scoreCourseTrainees.map((trainee) => ({
       traineeName: getDisplayName(trainee.fullName || trainee.name),
-      scores: scoredEvents.map((eventCode2) => getLatestScoreForEvent(trainee, eventCode2)?.score ?? "")
+      scores: scoredEvents.map((eventCode2) => {
+        const score = getLatestScoreForEvent(trainee, eventCode2);
+        if (score) return score.score;
+        return getTraineeRplEventCodes(trainee).has(eventCode2.toUpperCase()) ? "RPL" : "";
+      })
     }));
-  }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses]);
+  }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses, traineeLMPs]);
   const escapeCsvValue = (value) => {
     const raw = String(value);
     return /[",\n]/.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw;
@@ -89735,7 +89806,8 @@ const CourseProgressView = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "sticky left-0 z-10 bg-gray-800 px-4 py-3 text-gray-100 min-w-56", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium", children: getDisplayName(trainee.fullName || trainee.name) }) }),
                       scoredEvents.map((eventCode2) => {
                         const score = getLatestScoreForEvent(trainee, eventCode2);
-                        return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center font-mono text-gray-200", children: score ? score.score : "" }, `${trainee.idNumber}-${eventCode2}`);
+                        const isRpl = getTraineeRplEventCodes(trainee).has(eventCode2.toUpperCase());
+                        return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center font-mono text-gray-200", children: score ? score.score : isRpl ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-bold text-emerald-300", children: "RPL" }) : "" }, `${trainee.idNumber}-${eventCode2}`);
                       })
                     ] }, trainee.idNumber || trainee.fullName)),
                     scoreCourseTrainees.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-8 text-center text-gray-400", colSpan: Math.max(1, scoredEvents.length + 1), children: "No active trainees available for this course." }) })
@@ -100835,7 +100907,7 @@ const addLmpCompletionAlias = (completedEventIds, value) => {
 const isCompletedLmpItem = (item, completedEventIds) => {
   const maybeCompleted = item;
   return Boolean(
-    item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed || completedEventIds.has(normalizeLmpEventId(item.id)) || completedEventIds.has(normalizeLmpEventId(item.code)) || completedEventIds.has(normalizeLmpEventId(item.masterEventId))
+    item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed || maybeCompleted.rplGranted || completedEventIds.has(normalizeLmpEventId(item.id)) || completedEventIds.has(normalizeLmpEventId(item.code)) || completedEventIds.has(normalizeLmpEventId(item.masterEventId))
   );
 };
 const areLmpPrerequisitesMet = (item, completedEventIds) => {
@@ -100877,7 +100949,7 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   traineeScores.forEach((score) => addLmpCompletionAlias(completedEventIds, score.event));
   individualLMP.forEach((item) => {
     const maybeCompleted = item;
-    if (item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed) {
+    if (item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed || maybeCompleted.rplGranted) {
       addLmpCompletionAlias(completedEventIds, item.id);
       addLmpCompletionAlias(completedEventIds, item.code);
       addLmpCompletionAlias(completedEventIds, item.masterEventId);
@@ -105627,10 +105699,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   });
   new Set(nextEventLists.bnf.map((t) => t.fullName));
   recordProgress({ message: "Ranking trainees...", percentage: 20 });
+  const getBuildProgressCount = (trainee) => {
+    const completed = /* @__PURE__ */ new Set();
+    (scores.get(trainee.fullName) || []).filter((score) => !isRemedialEventCode(score.event) && !String(score.event || "").includes("MB")).forEach((score) => {
+      const key = normalizeLmpEventId(score.event);
+      if (key) completed.add(key);
+    });
+    (traineeLMPs.get(trainee.fullName) || []).filter((item) => !isRemedialEventCode(item.code || item.id) && !String(item.code || item.id || "").includes("MB") && (item.completedAt || item.isComplete || item.completed || item.rplGranted)).forEach((item) => {
+      const key = normalizeLmpEventId(item.code || item.id);
+      if (key) completed.add(key);
+    });
+    return completed.size;
+  };
   const getMedianProgress = (courseName) => {
     const courseTrainees = activeTrainees.filter((t) => t.course === courseName);
     if (courseTrainees.length === 0) return 0;
-    const progressCounts = courseTrainees.map((t) => (scores.get(t.fullName) || []).filter((s) => !isRemedialEventCode(s.event)).length).sort((a, b) => a - b);
+    const progressCounts = courseTrainees.map(getBuildProgressCount).sort((a, b) => a - b);
     const mid = Math.floor(progressCounts.length / 2);
     return progressCounts.length % 2 !== 0 ? progressCounts[mid] : (progressCounts[mid - 1] + progressCounts[mid]) / 2;
   };
@@ -105651,8 +105735,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (daysSinceFlightA !== daysSinceFlightB) return daysSinceFlightB - daysSinceFlightA;
     const medianA = courseMedians.get(a.course) || 0;
     const medianB = courseMedians.get(b.course) || 0;
-    const progressA = (scores.get(a.fullName) || []).filter((s) => !isRemedialEventCode(s.event)).length;
-    const progressB = (scores.get(b.fullName) || []).filter((s) => !isRemedialEventCode(s.event)).length;
+    const progressA = getBuildProgressCount(a);
+    const progressB = getBuildProgressCount(b);
     const behindA = medianA - progressA;
     const behindB = medianB - progressB;
     if (behindA !== behindB) return behindB - behindA;
@@ -124493,7 +124577,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       throw new Error(`Cannot save Individual LMP: trainee database record not found for ${trainee.fullName}`);
     }
     const excludedCompletedSet = new Set(excludedCompletedEvents.filter(Boolean));
-    const completedFromLmp = lmp.filter((item) => item.completedAt).map((item) => item.id || item.code).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
+    const completedFromLmp = lmp.filter((item) => item.completedAt || item.rplGranted).map((item) => item.id || item.code).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
     const completedFromScores = (scores.get(trainee.fullName) || []).map((score) => score.event).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
     const completedEventIds = Array.from(/* @__PURE__ */ new Set([...completedFromLmp, ...completedFromScores]));
     const apiBase = getApiBaseUrl();
@@ -125535,7 +125619,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       return;
     }
     const nextEventIndex = originalLmp.findIndex(
-      (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt
+      (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt && !item.rplGranted
     );
     if (nextEventIndex === -1) {
       pushDfpDataDiag("report-lmp:extend-next:no-next-event", {
@@ -125731,7 +125815,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const assessmentKey = assessment.id || assessment.eventId;
     const insertedFollowUpIndex = originalLmp.findIndex((item) => item.trainingReportSourceAssessmentId === assessmentKey || item.trainingReportSourceEventId === assessment.eventId);
     const nextEventIndex = insertedFollowUpIndex >= 0 ? insertedFollowUpIndex : originalLmp.findIndex(
-      (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt
+      (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt && !item.rplGranted
     );
     pushDfpDataDiag("report-notes:forward:target-selection", {
       assessmentId: assessment.id,
@@ -126160,7 +126244,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     traineesData.forEach((t) => {
       const individualLMP = traineeLMPs.get(t.fullName);
       if (individualLMP) {
-        const completedIds = individualLMP.filter((item) => item.completedAt || item.isComplete).map((item) => (item.id || item.code || "").replace("*", ""));
+        const completedIds = individualLMP.filter((item) => item.completedAt || item.isComplete || item.rplGranted).map((item) => (item.id || item.code || "").replace("*", ""));
         if (completedIds.length > 0) {
           lmpCompletedIdsMap[t.fullName] = completedIds;
         }
@@ -130215,7 +130299,7 @@ ${conflictLines.join("\n")}${moreText}`,
       traineesData.forEach((t) => {
         const individualLMP = traineeLMPs.get(t.fullName);
         if (individualLMP) {
-          const completedIds = individualLMP.filter((item) => item.completedAt || item.isComplete).map((item) => (item.id || item.code || "").replace("*", ""));
+          const completedIds = individualLMP.filter((item) => item.completedAt || item.isComplete || item.rplGranted).map((item) => (item.id || item.code || "").replace("*", ""));
           if (completedIds.length > 0) {
             lmpCompletedIdsMap[t.fullName] = completedIds;
           }

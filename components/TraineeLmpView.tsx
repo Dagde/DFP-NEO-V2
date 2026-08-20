@@ -1436,8 +1436,10 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     const completedEventIds = useMemo(() => {
         const ids = new Set(scores.map(s => (s.event || '').replace('*', '')));
         traineeLmp.forEach((item: any) => {
-            if (item.completedAt) {
+            if (item.completedAt || item.rplGranted) {
                 ids.add((item.id || item.code || '').replace('*', ''));
+                ids.add((item.code || item.id || '').replace('*', ''));
+                if (item.masterEventId) ids.add(String(item.masterEventId).replace('*', ''));
             }
         });
         // BIF FTD dependency rules
@@ -1533,10 +1535,15 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
             );
             if (!confirmed) return;
         }
+        const grantedAt = checked ? (item.rplGrantedAt || new Date().toISOString()) : null;
+        const completedAtWasRplOnly = item.completedAt && item.rplGrantedAt && item.completedAt === item.rplGrantedAt;
         const updatedItem: SyllabusItemDetail = {
             ...item,
             rplGranted: checked,
-            rplGrantedAt: checked ? (item.rplGrantedAt || new Date().toISOString()) : null,
+            completedAt: checked
+                ? (item.completedAt || grantedAt)
+                : (completedAtWasRplOnly ? null : item.completedAt),
+            rplGrantedAt: grantedAt,
             rplGrantedBy: checked ? (currentUserName || 'Admin') : null,
         };
         const updated = await onUpdateLmpItem(trainee, originalItem, updatedItem);
