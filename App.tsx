@@ -22904,6 +22904,22 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         let primaryImprovements = 0;
         let secondaryImprovements = 0;
         let skipped = 0;
+        const counters: Record<string, number> = {
+            candidateEvents: 0,
+            alreadyPreferred: 0,
+            missingTraineeRecord: 0,
+            missingPreferredStaffRecord: 0,
+            noPreferredConfigured: 0,
+            notQualifiedForEventType: 0,
+            unitIneligible: 0,
+            dayNightConflict: 0,
+            staticUnavailable: 0,
+            bookingConflict: 0,
+            eventLimitExceeded: 0,
+            noUsablePreferredInstructor: 0,
+            skippedSpecialEvent: 0,
+            skippedStbySoloOrUncrewed: 0,
+        };
 
         if (
             buildOperationalModel !== 'flight_school' ||
@@ -22916,6 +22932,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 before,
                 after: before,
                 changed: 0,
+                counters,
                 durationMs: Math.round(performance.now() - startedAt),
                 samples,
             };
@@ -22957,45 +22974,76 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return flightFtdCount + 1 > eventLimits.instructor.maxFlightFtd || totalCount + 1 > eventLimits.instructor.maxTotal;
         };
 
-        const canUsePreferredInstructor = (
+        const getPreferredInstructorBlockReason = (
             event: Omit<ScheduleEvent, 'date'>,
             trainee: Trainee,
             staff: Instructor
-        ): boolean => {
+        ): string | null => {
             const eventType = String(event.type || '').toLowerCase();
-            if (!getBaseInstructorPoolForEventType(eventType).some(candidate => candidate.name === staff.name)) return false;
-            if (!isInstructorEligibleByUnitForBuild(staff, trainee)) return false;
-            if (!canAssignStaffForScheduledWindow(staff, event.startTime)) return false;
+            if (!getBaseInstructorPoolForEventType(eventType).some(candidate => candidate.name === staff.name)) return 'notQualifiedForEventType';
+            if (!isInstructorEligibleByUnitForBuild(staff, trainee)) return 'unitIneligible';
+            if (!canAssignStaffForScheduledWindow(staff, event.startTime)) return 'dayNightConflict';
             const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
-            if (isPersonStaticallyUnavailable(staff, bookingWindow.start, bookingWindow.end, buildDate, eventType)) return false;
-            if (eventWouldConflictForStaff(event, staff, eventsToOptimise)) return false;
-            if (wouldExceedStaffEventLimits(event, staff, eventsToOptimise)) return false;
-            return true;
+            if (isPersonStaticallyUnavailable(staff, bookingWindow.start, bookingWindow.end, buildDate, eventType)) return 'staticUnavailable';
+            if (eventWouldConflictForStaff(event, staff, eventsToOptimise)) return 'bookingConflict';
+            if (wouldExceedStaffEventLimits(event, staff, eventsToOptimise)) return 'eventLimitExceeded';
+            return null;
         };
 
         eventsToOptimise.forEach(event => {
             if (event.type !== 'flight' && event.type !== 'ftd') return;
-            if (!event.instructor || isStbyResource(event.resourceId) || event.flightType === 'Solo') return;
-            if (event.testEventType || event.currency || event.currencyDraftId || event.forcedInstructorConflict) return;
-            if (isRemedialEventCode(event.flightNumber)) return;
+            if (!event.instructor || isStbyResource(event.resourceId) || event.flightType === 'Solo') {
+                counters.skippedStbySoloOrUncrewed++;
+                return;
+            }
+            if (
+                event.testEventType ||
+                event.currency ||
+                event.currencyDraftId ||
+                event.forcedInstructorConflict ||
+                (event as any).isRemedial === true ||
+                String(event.id || '').startsWith('remedial-') ||
+                String((event as any)._source || '').includes('remedial')
+            ) {
+                counters.skippedSpecialEvent++;
+                return;
+            }
+            counters.candidateEvents++;
 
             const traineeName = event._traineeName || event.student || '';
             const trainee = traineeByName.get(normalizeBuildPersonnelName(traineeName));
-            if (!trainee) return;
+            if (!trainee) {
+                counters.missingTraineeRecord++;
+                return;
+            }
 
             const primaryNames = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
             const secondaryNames = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
-            if (primaryNames.includes(event.instructor) || secondaryNames.includes(event.instructor)) return;
+            if (primaryNames.includes(event.instructor) || secondaryNames.includes(event.instructor)) {
+                counters.alreadyPreferred++;
+                return;
+            }
 
             const preferredCandidates = [
                 ...primaryNames.map(name => ({ name, level: 'primary' as const })),
                 ...secondaryNames.map(name => ({ name, level: 'secondary' as const })),
             ];
+            if (preferredCandidates.length === 0) {
+                counters.noPreferredConfigured++;
+                return;
+            }
+
+            let sawPreferredStaffRecord = false;
 
             for (const preferred of preferredCandidates) {
                 const staff = instructorByName.get(normalizeBuildPersonnelName(preferred.name));
                 if (!staff) continue;
-                if (!canUsePreferredInstructor(event, trainee, staff)) continue;
+                sawPreferredStaffRecord = true;
+                const blockReason = getPreferredInstructorBlockReason(event, trainee, staff);
+                if (blockReason) {
+                    counters[blockReason] = (counters[blockReason] || 0) + 1;
+                    continue;
+                }
 
                 const previousInstructor = event.instructor;
                 const staffDisplayName = getNeoBuildPersonDisplayLabel(staff as NeoBuildIdentityPersonRecord);
@@ -23022,6 +23070,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 return;
             }
 
+            if (!sawPreferredStaffRecord) counters.missingPreferredStaffRecord++;
+            counters.noUsablePreferredInstructor++;
             skipped++;
         });
 
@@ -23034,6 +23084,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             primaryImprovements,
             secondaryImprovements,
             skipped,
+            counters,
             durationMs: Math.round(performance.now() - startedAt),
             samples,
         };
