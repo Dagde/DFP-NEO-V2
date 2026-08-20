@@ -113784,6 +113784,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       eventLimitExceeded: 0,
       noUsablePreferredInstructor: 0,
       skippedSpecialEvent: 0,
+      skippedTestEvent: 0,
+      skippedCurrencyEvent: 0,
+      skippedForcedConflictEvent: 0,
+      skippedRemedialEvent: 0,
       skippedStbySoloOrUncrewed: 0
     };
     if (buildOperationalModel !== "flight_school" || !priorityEnabled || !(softGroups.primary || softGroups.secondary || hardGroups.primary || hardGroups.secondary)) {
@@ -113838,7 +113842,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         counters.skippedStbySoloOrUncrewed++;
         return;
       }
-      if (event.testEventType || event.currency || event.currencyDraftId || event.forcedInstructorConflict || event.isRemedial === true || String(event.id || "").startsWith("remedial-") || String(event._source || "").includes("remedial")) {
+      const eventTestType = normaliseLmpTestEventType(event.testEventType);
+      const isProtectedTestEvent = isLmpTestEvent(eventTestType);
+      const isProtectedCurrencyEvent = Boolean(event.currency || event.currencyDraftId);
+      const isProtectedForcedConflictEvent = Boolean(event.forcedInstructorConflict);
+      const isProtectedRemedialEvent = Boolean(
+        event.isRemedial === true || String(event.id || "").startsWith("remedial-") || String(event._source || "").includes("remedial")
+      );
+      if (isProtectedTestEvent || isProtectedCurrencyEvent || isProtectedForcedConflictEvent || isProtectedRemedialEvent) {
+        if (isProtectedTestEvent) counters.skippedTestEvent++;
+        if (isProtectedCurrencyEvent) counters.skippedCurrencyEvent++;
+        if (isProtectedForcedConflictEvent) counters.skippedForcedConflictEvent++;
+        if (isProtectedRemedialEvent) counters.skippedRemedialEvent++;
         counters.skippedSpecialEvent++;
         return;
       }

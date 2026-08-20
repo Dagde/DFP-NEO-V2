@@ -22918,6 +22918,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             eventLimitExceeded: 0,
             noUsablePreferredInstructor: 0,
             skippedSpecialEvent: 0,
+            skippedTestEvent: 0,
+            skippedCurrencyEvent: 0,
+            skippedForcedConflictEvent: 0,
+            skippedRemedialEvent: 0,
             skippedStbySoloOrUncrewed: 0,
         };
 
@@ -22996,15 +23000,20 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 counters.skippedStbySoloOrUncrewed++;
                 return;
             }
-            if (
-                event.testEventType ||
-                event.currency ||
-                event.currencyDraftId ||
-                event.forcedInstructorConflict ||
+            const eventTestType = normaliseLmpTestEventType((event as any).testEventType);
+            const isProtectedTestEvent = isLmpTestEvent(eventTestType);
+            const isProtectedCurrencyEvent = Boolean(event.currency || event.currencyDraftId);
+            const isProtectedForcedConflictEvent = Boolean(event.forcedInstructorConflict);
+            const isProtectedRemedialEvent = Boolean(
                 (event as any).isRemedial === true ||
                 String(event.id || '').startsWith('remedial-') ||
                 String((event as any)._source || '').includes('remedial')
-            ) {
+            );
+            if (isProtectedTestEvent || isProtectedCurrencyEvent || isProtectedForcedConflictEvent || isProtectedRemedialEvent) {
+                if (isProtectedTestEvent) counters.skippedTestEvent++;
+                if (isProtectedCurrencyEvent) counters.skippedCurrencyEvent++;
+                if (isProtectedForcedConflictEvent) counters.skippedForcedConflictEvent++;
+                if (isProtectedRemedialEvent) counters.skippedRemedialEvent++;
                 counters.skippedSpecialEvent++;
                 return;
             }
