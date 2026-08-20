@@ -24878,17 +24878,6 @@ const App: React.FC = () => {
     } | null>(null);
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
     const [date, setDate] = useState<string>(() => {
-        // Restore last viewed date from localStorage (persists across hard refresh)
-        try {
-            const saved = localStorage.getItem('dfp_last_viewed_date');
-            if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
-                // Only restore if within 7 days of today (avoid stale dates)
-                const savedDate = new Date(saved + 'T00:00:00Z');
-                const today = new Date();
-                const diffDays = (savedDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
-                if (diffDays >= -7 && diffDays <= 7) return saved;
-            }
-        } catch (e) { /* ignore */ }
         return getLocalDateString();
     });
     const [events, setEvents] = useState<ScheduleEvent[]>([]);
@@ -31913,10 +31902,10 @@ const App: React.FC = () => {
         localStorage.setItem('timezoneOffset', timezoneOffset.toString());
     }, [timezoneOffset]);
 
-    // Save last viewed date to localStorage (restores after hard refresh)
+    // Fresh browser loads should open DFP on today; in-app navigation keeps this React state.
     useEffect(() => {
-        try { localStorage.setItem('dfp_last_viewed_date', date); } catch (e) { /* ignore */ }
-    }, [date]);
+        try { localStorage.removeItem('dfp_last_viewed_date'); } catch (e) { /* ignore */ }
+    }, []);
 
     // FTD available count is now managed by user input in PrioritiesView
     // Default initialization is handled in useState declaration
@@ -34096,11 +34085,6 @@ const App: React.FC = () => {
         if (!canAccessView(view)) {
             setShowInfoNotification('Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.');
             return;
-        }
-        const today = getLocalDateString();
-        const isDashboard = view === 'MyDashboard' || view === 'SupervisorDashboard';
-        if (isDashboard && date !== today) {
-            setDate(today);
         }
         if (view === 'MyDashboard' || view === 'SupervisorDashboard') {
             setPreviousView(activeView);

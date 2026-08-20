@@ -116478,16 +116478,6 @@ const App = () => {
   const [requestedSettingsSection, setRequestedSettingsSection] = reactExports.useState(null);
   const [previousView, setPreviousView] = reactExports.useState("Program Schedule");
   const [date, setDate] = reactExports.useState(() => {
-    try {
-      const saved = localStorage.getItem("dfp_last_viewed_date");
-      if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
-        const savedDate = /* @__PURE__ */ new Date(saved + "T00:00:00Z");
-        const today = /* @__PURE__ */ new Date();
-        const diffDays = (savedDate.getTime() - today.getTime()) / (1e3 * 3600 * 24);
-        if (diffDays >= -7 && diffDays <= 7) return saved;
-      }
-    } catch (e) {
-    }
     return getLocalDateString2();
   });
   const [events, setEvents] = reactExports.useState([]);
@@ -122396,10 +122386,10 @@ ${"=".repeat(60)}`);
   }, [timezoneOffset]);
   reactExports.useEffect(() => {
     try {
-      localStorage.setItem("dfp_last_viewed_date", date);
+      localStorage.removeItem("dfp_last_viewed_date");
     } catch (e) {
     }
-  }, [date]);
+  }, []);
   reactExports.useEffect(() => {
     try {
       localStorage.setItem("dfp_build_date", buildDfpDate);
@@ -124038,11 +124028,6 @@ ${"=".repeat(60)}`);
     if (!canAccessView(view2)) {
       setShowInfoNotification("Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.");
       return;
-    }
-    const today = getLocalDateString2();
-    const isDashboard = view2 === "MyDashboard" || view2 === "SupervisorDashboard";
-    if (isDashboard && date !== today) {
-      setDate(today);
     }
     if (view2 === "MyDashboard" || view2 === "SupervisorDashboard") {
       setPreviousView(activeView);
