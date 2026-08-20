@@ -18798,7 +18798,7 @@ const ScheduleView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "select",
                   {
-                    className: "w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-black text-slate-100 outline-none focus:border-cyan-400",
+                    className: `w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-black outline-none focus:border-cyan-400 ${flightLineAircraftContextMenu.isUnavailable ? "text-rose-300" : "text-emerald-300"}`,
                     value: flightLineAircraftContextMenu.isUnavailable ? "unavailable" : "serviceable",
                     onChange: (event) => {
                       if (event.target.value === "unavailable") {
@@ -18810,8 +18810,8 @@ const ScheduleView = ({
                     },
                     onKeyDown: stopEditableKeyPropagation,
                     children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "serviceable", children: "Aircraft Serviceable" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "unavailable", children: "Unavailable" })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { className: "text-emerald-700", value: "serviceable", children: "Aircraft Serviceable" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { className: "text-rose-700", value: "unavailable", children: "Unavailable" })
                     ]
                   }
                 )

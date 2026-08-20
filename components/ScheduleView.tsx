@@ -9322,7 +9322,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             <label className="block">
                                 <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Status</span>
                                 <select
-                                    className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-black text-slate-100 outline-none focus:border-cyan-400"
+                                    className={`w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-black outline-none focus:border-cyan-400 ${
+                                        flightLineAircraftContextMenu.isUnavailable ? 'text-rose-300' : 'text-emerald-300'
+                                    }`}
                                     value={flightLineAircraftContextMenu.isUnavailable ? 'unavailable' : 'serviceable'}
                                     onChange={(event) => {
                                         if (event.target.value === 'unavailable') {
@@ -9334,8 +9336,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                     }}
                                     onKeyDown={stopEditableKeyPropagation}
                                 >
-                                    <option value="serviceable">Aircraft Serviceable</option>
-                                    <option value="unavailable">Unavailable</option>
+                                    <option className="text-emerald-700" value="serviceable">Aircraft Serviceable</option>
+                                    <option className="text-rose-700" value="unavailable">Unavailable</option>
                                 </select>
                             </label>
                             {flightLineAircraftContextMenu.isUnavailable ? (
