@@ -12715,6 +12715,50 @@ function generateDfpInternal(
         }, {})
     );
     neoBuildDiag.activeTrainees.byCourse = countTraineesByCourse(activeTrainees);
+    const describePreferredInstructorValueForDiag = (value: unknown) => {
+        const normalised = normalisePreferredInstructorList(value);
+        return {
+            count: normalised.length,
+            normalised,
+            rawType: Array.isArray(value) ? 'array' : typeof value,
+            rawValue: value ?? null,
+        };
+    };
+    neoBuildDiag.activeTrainees.preferredInstructorCoverageByCourse = activeTrainees.reduce((coverage: Record<string, any>, trainee) => {
+        const courseName = String(trainee.course || 'Unassigned').trim() || 'Unassigned';
+        const primary = normalisePreferredInstructorList(trainee.primaryInstructor);
+        const secondary = normalisePreferredInstructorList(trainee.secondaryInstructor);
+        const record = coverage[courseName] || {
+            total: 0,
+            withPrimary: 0,
+            withSecondary: 0,
+            withPrimaryAndSecondary: 0,
+            withAnyPreferred: 0,
+            withNoPreferred: 0,
+            noPreferredSamples: [],
+        };
+        record.total++;
+        if (primary.length > 0) record.withPrimary++;
+        if (secondary.length > 0) record.withSecondary++;
+        if (primary.length > 0 && secondary.length > 0) record.withPrimaryAndSecondary++;
+        if (primary.length > 0 || secondary.length > 0) {
+            record.withAnyPreferred++;
+        } else {
+            record.withNoPreferred++;
+            if (record.noPreferredSamples.length < 20) {
+                record.noPreferredSamples.push({
+                    trainee: trainee.fullName,
+                    traineeIdNumber: trainee.idNumber ?? null,
+                    unit: trainee.unit || null,
+                    flight: trainee.flight || null,
+                    primaryInstructor: describePreferredInstructorValueForDiag(trainee.primaryInstructor),
+                    secondaryInstructor: describePreferredInstructorValueForDiag(trainee.secondaryInstructor),
+                });
+            }
+        }
+        coverage[courseName] = record;
+        return coverage;
+    }, {} as Record<string, any>);
 
     const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
 
@@ -22932,6 +22976,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const samples: any[] = [];
         const blockedSamples: any[] = [];
         const noPreferredConfiguredSamples: any[] = [];
+        const byCourse: Record<string, any> = {};
         let primaryImprovements = 0;
         let secondaryImprovements = 0;
         let swapImprovements = 0;
@@ -22977,8 +23022,29 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 samples,
                 blockedSamples,
                 noPreferredConfiguredSamples,
+                byCourse,
             };
         }
+
+        const getCourseOptimisationStats = (trainee: Trainee) => {
+            const courseName = String(trainee.course || 'Unassigned').trim() || 'Unassigned';
+            if (!byCourse[courseName]) {
+                byCourse[courseName] = {
+                    candidateEvents: 0,
+                    alreadyPreferred: 0,
+                    noPreferredConfigured: 0,
+                    noUsablePreferredInstructor: 0,
+                    primaryImprovements: 0,
+                    secondaryImprovements: 0,
+                    swapImprovements: 0,
+                    blockedReasons: {},
+                    noPreferredConfiguredSamples: [],
+                    blockedSamples: [],
+                    improvementSamples: [],
+                };
+            }
+            return byCourse[courseName];
+        };
 
         const eventWouldConflictForStaff = (
             event: Omit<ScheduleEvent, 'date'>,
@@ -23116,11 +23182,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 counters.missingTraineeRecord++;
                 return;
             }
+            const courseStats = getCourseOptimisationStats(trainee);
+            courseStats.candidateEvents++;
 
             const primaryNames = normalisePreferredInstructorList(trainee.primaryInstructor);
             const secondaryNames = normalisePreferredInstructorList(trainee.secondaryInstructor);
             if (preferredInstructorListIncludes(primaryNames, event.instructor) || preferredInstructorListIncludes(secondaryNames, event.instructor)) {
                 counters.alreadyPreferred++;
+                courseStats.alreadyPreferred++;
                 return;
             }
 
@@ -23130,15 +23199,26 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             ];
             if (preferredCandidates.length === 0) {
                 counters.noPreferredConfigured++;
+                courseStats.noPreferredConfigured++;
+                const noPreferredSample = {
+                    trainee: trainee.fullName,
+                    traineeIdNumber: trainee.idNumber ?? null,
+                    course: trainee.course || null,
+                    unit: trainee.unit || null,
+                    flight: trainee.flight || null,
+                    event: event.flightNumber,
+                    type: event.type,
+                    startTime: event.startTime,
+                    resourceId: event.resourceId,
+                    currentInstructor: event.instructor,
+                    primaryInstructor: describePreferredInstructorValueForDiag(trainee.primaryInstructor),
+                    secondaryInstructor: describePreferredInstructorValueForDiag(trainee.secondaryInstructor),
+                };
                 if (noPreferredConfiguredSamples.length < 25) {
-                    noPreferredConfiguredSamples.push({
-                        trainee: trainee.fullName,
-                        event: event.flightNumber,
-                        type: event.type,
-                        startTime: event.startTime,
-                        resourceId: event.resourceId,
-                        currentInstructor: event.instructor,
-                    });
+                    noPreferredConfiguredSamples.push(noPreferredSample);
+                }
+                if (courseStats.noPreferredConfiguredSamples.length < 20) {
+                    courseStats.noPreferredConfiguredSamples.push(noPreferredSample);
                 }
                 return;
             }
@@ -23157,6 +23237,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 const blockReason = getPreferredInstructorBlockReason(event, trainee, staff);
                 if (blockReason) {
                     counters[blockReason] = (counters[blockReason] || 0) + 1;
+                    courseStats.blockedReasons[blockReason] = (courseStats.blockedReasons[blockReason] || 0) + 1;
                     preferredBlockDetails.push({ name: preferred.name, level: preferred.level, reason: blockReason });
                     if (blockReason === 'bookingConflict' && currentInstructorRecord) {
                         const conflictingEvents = getConflictingEventsForStaff(event, staff, eventsToOptimise)
@@ -23199,24 +23280,31 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                 if (preferred.level === 'primary') primaryImprovements++;
                                 else secondaryImprovements++;
                                 swapImprovements++;
+                                if (preferred.level === 'primary') courseStats.primaryImprovements++;
+                                else courseStats.secondaryImprovements++;
+                                courseStats.swapImprovements++;
                                 counters.oneHopSwapImprovements++;
+                                const improvementSample = {
+                                    trainee: trainee.fullName,
+                                    course: trainee.course || null,
+                                    event: event.flightNumber,
+                                    type: event.type,
+                                    startTime: event.startTime,
+                                    resourceId: event.resourceId,
+                                    from: originalInstructor,
+                                    to: preferredDisplayName,
+                                    level: preferred.level,
+                                    viaSwap: {
+                                        trainee: conflictingTrainee.fullName,
+                                        course: conflictingTrainee.course || null,
+                                        event: conflictingEvent.flightNumber,
+                                        from: conflictingOriginalInstructor,
+                                        to: replacementDisplayName,
+                                    },
+                                };
+                                if (courseStats.improvementSamples.length < 20) courseStats.improvementSamples.push(improvementSample);
                                 if (samples.length < 25) {
-                                    samples.push({
-                                        trainee: trainee.fullName,
-                                        event: event.flightNumber,
-                                        type: event.type,
-                                        startTime: event.startTime,
-                                        resourceId: event.resourceId,
-                                        from: originalInstructor,
-                                        to: preferredDisplayName,
-                                        level: preferred.level,
-                                        viaSwap: {
-                                            trainee: conflictingTrainee.fullName,
-                                            event: conflictingEvent.flightNumber,
-                                            from: conflictingOriginalInstructor,
-                                            to: replacementDisplayName,
-                                        },
-                                    });
+                                    samples.push(improvementSample);
                                 }
                                 return;
                             }
@@ -23244,33 +23332,49 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
                 if (preferred.level === 'primary') primaryImprovements++;
                 else secondaryImprovements++;
+                if (preferred.level === 'primary') courseStats.primaryImprovements++;
+                else courseStats.secondaryImprovements++;
+                const improvementSample = {
+                    trainee: trainee.fullName,
+                    course: trainee.course || null,
+                    event: event.flightNumber,
+                    type: event.type,
+                    startTime: event.startTime,
+                    resourceId: event.resourceId,
+                    from: previousInstructor,
+                    to: staffDisplayName,
+                    level: preferred.level,
+                };
+                if (courseStats.improvementSamples.length < 20) courseStats.improvementSamples.push(improvementSample);
                 if (samples.length < 25) {
-                    samples.push({
-                        trainee: trainee.fullName,
-                        event: event.flightNumber,
-                        type: event.type,
-                        startTime: event.startTime,
-                        resourceId: event.resourceId,
-                        from: previousInstructor,
-                        to: staffDisplayName,
-                        level: preferred.level,
-                    });
+                    samples.push(improvementSample);
                 }
                 return;
             }
 
             if (!sawPreferredStaffRecord) counters.missingPreferredStaffRecord++;
             counters.noUsablePreferredInstructor++;
+            courseStats.noUsablePreferredInstructor++;
+            const blockedSample = {
+                trainee: trainee.fullName,
+                traineeIdNumber: trainee.idNumber ?? null,
+                course: trainee.course || null,
+                unit: trainee.unit || null,
+                flight: trainee.flight || null,
+                event: event.flightNumber,
+                type: event.type,
+                startTime: event.startTime,
+                resourceId: event.resourceId,
+                currentInstructor: event.instructor,
+                primaryInstructor: describePreferredInstructorValueForDiag(trainee.primaryInstructor),
+                secondaryInstructor: describePreferredInstructorValueForDiag(trainee.secondaryInstructor),
+                preferredCandidates: preferredBlockDetails,
+            };
             if (blockedSamples.length < 25) {
-                blockedSamples.push({
-                    trainee: trainee.fullName,
-                    event: event.flightNumber,
-                    type: event.type,
-                    startTime: event.startTime,
-                    resourceId: event.resourceId,
-                    currentInstructor: event.instructor,
-                    preferredCandidates: preferredBlockDetails,
-                });
+                blockedSamples.push(blockedSample);
+            }
+            if (courseStats.blockedSamples.length < 20) {
+                courseStats.blockedSamples.push(blockedSample);
             }
             skipped++;
         });
@@ -23290,6 +23394,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             samples,
             blockedSamples,
             noPreferredConfiguredSamples,
+            byCourse,
         };
     };
 
