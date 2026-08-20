@@ -85171,6 +85171,13 @@ const sectionGroups = [
       "platform-permission-profiles",
       "user-list",
       "staff-database",
+      "trainee-database"
+    ],
+    searchSections: [
+      "platform-user-access",
+      "platform-permission-profiles",
+      "user-list",
+      "staff-database",
       "trainee-database",
       "trainee-reallocation"
     ]
@@ -85178,10 +85185,10 @@ const sectionGroups = [
   {
     label: "Training & Standards",
     shortLabel: "Training",
-    description: "Scoring rules, currency requirements and continuation training event standards used across the training system.",
+    description: "Scoring rules, training records, trainee instructor allocation, currency requirements and continuation training event standards.",
     accent: "sky",
     defaultSection: "scoring-matrix",
-    sections: ["scoring-matrix", "training-report-template", "sct-events", "currencies"]
+    sections: ["scoring-matrix", "training-report-template", "trainee-reallocation", "sct-events", "currencies"]
   },
   {
     label: "DFP Build Rules",
