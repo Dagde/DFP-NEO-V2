@@ -9580,8 +9580,6 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
     const isEventFinished = nowInHours >= eventEndTime && event.date === getLocalDateStringFromAdjustedTime$1(currentTime);
     if (conflictedPersonnelName === picName || picHasUnavailability && !isEventFinished) {
       picClasses = "font-bold truncate text-red-500";
-    } else if (textColorClass) {
-      picClasses += ` ${textColorClass}`;
     }
     if (conflictedPersonnelName === studentName || studentHasUnavailability && !isEventFinished) {
       studentClasses = "font-bold truncate text-red-500";

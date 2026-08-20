@@ -519,8 +519,6 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
 
       if ((conflictedPersonnelName === picName) || (picHasUnavailability && !isEventFinished)) {
           picClasses = 'font-bold truncate text-red-500';
-      } else if (textColorClass) {
-          picClasses += ` ${textColorClass}`;
       }
 
       if ((conflictedPersonnelName === studentName) || (studentHasUnavailability && !isEventFinished)) {
