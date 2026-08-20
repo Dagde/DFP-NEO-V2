@@ -43850,6 +43850,24 @@ appliedUpdates.forEach(update => {
                     ...t,
                     _dataSource: 'database' as const,
                 }));
+                setSelectedPersonForProfile(prev => {
+                    if (!prev) return prev;
+                    const previousAny = prev as any;
+                    const previousDbId = String(previousAny.id || '').trim();
+                    const previousIdNumber = String(previousAny.idNumber || '').trim();
+                    const previousName = normalisePersonName(previousAny.name || previousAny.fullName || '');
+                    const refreshedTrainee = dbTrainees.find((candidate: any) => {
+                        const candidateDbId = String(candidate.id || '').trim();
+                        const candidateIdNumber = String(candidate.idNumber || '').trim();
+                        const candidateName = normalisePersonName(candidate.name || candidate.fullName || '');
+                        return (
+                            (previousDbId && candidateDbId === previousDbId) ||
+                            (previousIdNumber && candidateIdNumber === previousIdNumber) ||
+                            (previousName && candidateName === previousName)
+                        );
+                    });
+                    return refreshedTrainee ? refreshedTrainee : prev;
+                });
 
                 // Update trainees - replace old database entries and retain mock data only when deliberately enabled.
                 setTraineesData(prev => {

@@ -1079,7 +1079,11 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
 
 SettingsNavigationSidebar.displayName = 'SettingsNavigationSidebar';
 
-const TraineeReallocationSection: React.FC = () => {
+interface TraineeReallocationSectionProps {
+    onDataChanged?: () => void | Promise<void>;
+}
+
+const TraineeReallocationSection: React.FC<TraineeReallocationSectionProps> = ({ onDataChanged }) => {
     const [loading, setLoading] = useState(false);
     const [applying, setApplying] = useState(false);
     const [error, setError] = useState('');
@@ -1122,7 +1126,10 @@ const TraineeReallocationSection: React.FC = () => {
                 throw new Error(data?.error || `Apply failed with HTTP ${response.status}`);
             }
             setPreview(data);
-            setMessage(`Applied ${data?.summary?.updated ?? 0}/${data?.summary?.total ?? 0} trainee allocation update${(data?.summary?.updated ?? 0) === 1 ? '' : 's'}.`);
+            if (onDataChanged) {
+                await onDataChanged();
+            }
+            setMessage(`Applied ${data?.summary?.updated ?? 0}/${data?.summary?.total ?? 0} trainee allocation update${(data?.summary?.updated ?? 0) === 1 ? '' : 's'} and refreshed trainee profiles.`);
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         } finally {
@@ -2261,7 +2268,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         />
                     )}
                     {activeSection === 'trainee-reallocation' && (
-                        <TraineeReallocationSection />
+                        <TraineeReallocationSection onDataChanged={props.onDatabaseDataChanged} />
                     )}
                     {activeSection === 'organisation' && (
                         <OrganisationSettings

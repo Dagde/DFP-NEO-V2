@@ -67,6 +67,30 @@ import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
 
+const normaliseAssignedInstructorDisplayList = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.flatMap(item => normaliseAssignedInstructorDisplayList(item));
+  }
+  if (value === null || value === undefined) return [];
+  if (typeof value !== 'string') return [];
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '[]') return [];
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return normaliseAssignedInstructorDisplayList(parsed);
+      }
+    } catch {
+      // Fall through to legacy delimiter parsing.
+    }
+  }
+  return trimmed
+    .split(/[;|]/)
+    .map(name => name.trim())
+    .filter(Boolean);
+};
+
 interface TraineeProfileFlyoutProps {
   trainee: Trainee;
   traineesData?: Trainee[];
@@ -3013,9 +3037,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                               <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
                               {(() => {
-                                const primaries = Array.isArray(trainee.primaryInstructor)
-                                  ? trainee.primaryInstructor
-                                  : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
+                                const primaries = normaliseAssignedInstructorDisplayList(trainee.primaryInstructor);
                                 return primaries.length > 0 ? (
                                   <div className="flex flex-col gap-1.5">
                                     {primaries.map((name, idx) => (
@@ -3052,9 +3074,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                               <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
                               {(() => {
-                                const secondaries = Array.isArray(trainee.secondaryInstructor)
-                                  ? trainee.secondaryInstructor
-                                  : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
+                                const secondaries = normaliseAssignedInstructorDisplayList(trainee.secondaryInstructor);
                                 return secondaries.length > 0 ? (
                                   <div className="flex flex-col gap-1.5">
                                     {secondaries.map((name, idx) => (

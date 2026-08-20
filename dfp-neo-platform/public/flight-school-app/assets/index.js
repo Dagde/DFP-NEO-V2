@@ -25408,6 +25408,25 @@ const AccountAccessPanel = ({
     error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-red-600/40 bg-red-950/30 px-3 py-2 text-xs text-red-200", children: error })
   ] });
 };
+const normaliseAssignedInstructorDisplayList = (value) => {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => normaliseAssignedInstructorDisplayList(item));
+  }
+  if (value === null || value === void 0) return [];
+  if (typeof value !== "string") return [];
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "[]") return [];
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return normaliseAssignedInstructorDisplayList(parsed);
+      }
+    } catch {
+    }
+  }
+  return trimmed.split(/[;|]/).map((name) => name.trim()).filter(Boolean);
+};
 const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27781,7 +27800,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-2", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }),
                     (() => {
-                      const primaries = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
+                      const primaries = normaliseAssignedInstructorDisplayList(trainee.primaryInstructor);
                       return primaries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1.5", children: primaries.map((name2, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") && isExternalDataAllowed("externalMediaEnabled") ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
                         onOpenInstructorProfile ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27804,7 +27823,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-2", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }),
                     (() => {
-                      const secondaries = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
+                      const secondaries = normaliseAssignedInstructorDisplayList(trainee.secondaryInstructor);
                       return secondaries.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-1.5", children: secondaries.map((name2, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") && isExternalDataAllowed("externalMediaEnabled") ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }),
                         onOpenInstructorProfile ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -85353,7 +85372,7 @@ const SettingsNavigationSidebar = React.memo(({
   ] });
 });
 SettingsNavigationSidebar.displayName = "SettingsNavigationSidebar";
-const TraineeReallocationSection = () => {
+const TraineeReallocationSection = ({ onDataChanged }) => {
   const [loading, setLoading] = reactExports.useState(false);
   const [applying, setApplying] = reactExports.useState(false);
   const [error, setError] = reactExports.useState("");
@@ -85394,7 +85413,10 @@ const TraineeReallocationSection = () => {
         throw new Error(data?.error || `Apply failed with HTTP ${response.status}`);
       }
       setPreview(data);
-      setMessage(`Applied ${data?.summary?.updated ?? 0}/${data?.summary?.total ?? 0} trainee allocation update${(data?.summary?.updated ?? 0) === 1 ? "" : "s"}.`);
+      if (onDataChanged) {
+        await onDataChanged();
+      }
+      setMessage(`Applied ${data?.summary?.updated ?? 0}/${data?.summary?.total ?? 0} trainee allocation update${(data?.summary?.updated ?? 0) === 1 ? "" : "s"} and refreshed trainee profiles.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -86321,7 +86343,7 @@ const SettingsViewWithMenu = (props) => {
             activeUnitCodes: props.activeUnitCodes && props.activeUnitCodes.length > 0 ? props.activeUnitCodes : props.activeUnitCode ? [props.activeUnitCode] : []
           }
         ),
-        activeSection === "trainee-reallocation" && /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeReallocationSection, {}),
+        activeSection === "trainee-reallocation" && /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeReallocationSection, { onDataChanged: props.onDatabaseDataChanged }),
         activeSection === "organisation" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           OrganisationSettings,
           {
@@ -131213,6 +131235,20 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           ...t,
           _dataSource: "database"
         }));
+        setSelectedPersonForProfile((prev) => {
+          if (!prev) return prev;
+          const previousAny = prev;
+          const previousDbId = String(previousAny.id || "").trim();
+          const previousIdNumber = String(previousAny.idNumber || "").trim();
+          const previousName = normalisePersonName(previousAny.name || previousAny.fullName || "");
+          const refreshedTrainee = dbTrainees.find((candidate) => {
+            const candidateDbId = String(candidate.id || "").trim();
+            const candidateIdNumber = String(candidate.idNumber || "").trim();
+            const candidateName = normalisePersonName(candidate.name || candidate.fullName || "");
+            return previousDbId && candidateDbId === previousDbId || previousIdNumber && candidateIdNumber === previousIdNumber || previousName && candidateName === previousName;
+          });
+          return refreshedTrainee ? refreshedTrainee : prev;
+        });
         setTraineesData((prev) => {
           const retainedSessionTrainees = prev.filter((t) => {
             const source = t._dataSource;
