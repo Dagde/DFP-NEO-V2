@@ -14540,6 +14540,7 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
     console.log(`🔄 Applying ${mode} reallocation for ${allResults.length} trainees...`);
     let updated = 0;
     const errors = [];
+    const writeAttempts = [];
 
     for (const result of allResults) {
       try {
@@ -14561,12 +14562,75 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
           `, result.primaryInstructors.join('; '), result.secondaryInstructors.join('; '), result.id);
         }
         updated++;
+        writeAttempts.push({
+          traineeId: result.id,
+          name: result.fullName || result.name,
+          course: result.course || '',
+          unit: result.unit || '',
+          attemptedPrimary: result.primaryInstructors,
+          attemptedSecondary: result.secondaryInstructors,
+          status: 'updated'
+        });
       } catch (err) {
         errors.push({ traineeId: result.id, name: result.name, error: err.message });
+        writeAttempts.push({
+          traineeId: result.id,
+          name: result.fullName || result.name,
+          course: result.course || '',
+          unit: result.unit || '',
+          attemptedPrimary: result.primaryInstructors,
+          attemptedSecondary: result.secondaryInstructors,
+          status: 'error',
+          error: err.message
+        });
       }
     }
 
     console.log(`✅ Reallocation complete: ${updated} updated, ${errors.length} errors`);
+    const readBackRows = allResults.length > 0
+      ? await prisma.trainee.findMany({
+        where: { id: { in: allResults.map(result => result.id) } },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          course: true,
+          unit: true,
+          primaryInstructor: true,
+          secondaryInstructor: true,
+          updatedAt: true
+        }
+      })
+      : [];
+    const readBackById = new Map(readBackRows.map(row => [row.id, row]));
+    const readBack = allResults.map(result => {
+      const row = readBackById.get(result.id);
+      const primaryReadBack = normaliseInstructorListForReallocation(row?.primaryInstructor);
+      const secondaryReadBack = normaliseInstructorListForReallocation(row?.secondaryInstructor);
+      return {
+        traineeId: result.id,
+        name: row?.fullName || row?.name || result.fullName || result.name,
+        course: row?.course || result.course || '',
+        unit: row?.unit || result.unit || '',
+        attemptedPrimary: result.primaryInstructors,
+        attemptedSecondary: result.secondaryInstructors,
+        readBackPrimary: primaryReadBack,
+        readBackSecondary: secondaryReadBack,
+        rawPrimary: row?.primaryInstructor ?? null,
+        rawSecondary: row?.secondaryInstructor ?? null,
+        updatedAt: row?.updatedAt || null,
+        primaryPersisted: primaryReadBack.length > 0,
+        secondaryPersisted: secondaryReadBack.length >= 2
+      };
+    });
+    const readBackSummary = {
+      checked: readBack.length,
+      primaryPersisted: readBack.filter(row => row.primaryPersisted).length,
+      secondaryPersisted: readBack.filter(row => row.secondaryPersisted).length,
+      stillMissingPrimary: readBack.filter(row => !row.primaryPersisted).length,
+      stillMissingTwoSecondary: readBack.filter(row => !row.secondaryPersisted).length
+    };
+    console.log('[TraineeReallocation] readback summary:', JSON.stringify(readBackSummary));
 
     const summary = {
       total: allResults.length,
@@ -14587,7 +14651,16 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
       }
     };
 
-    res.json({ success: true, summary, allocations: allResults, diagnostics: allocationResult.diagnostics, errorDetails: errors });
+    res.json({
+      success: true,
+      summary,
+      allocations: allResults,
+      diagnostics: allocationResult.diagnostics,
+      writeAttempts,
+      readBackSummary,
+      readBack,
+      errorDetails: errors
+    });
   } catch (error) {
     console.error('Error in trainee-reallocation apply:', error);
     res.status(500).json({ success: false, error: error.message });

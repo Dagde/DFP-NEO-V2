@@ -3282,6 +3282,7 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
     const targetResults = allocationResult.targetAllocations;
     let updated = 0;
     const errors = [];
+    const writeAttempts = [];
 
     for (const result of targetResults) {
       try {
@@ -3303,10 +3304,73 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
           `, result.primaryInstructors.join('; '), result.secondaryInstructors.join('; '), result.id);
         }
         updated++;
+        writeAttempts.push({
+          traineeId: result.id,
+          name: result.fullName || result.name,
+          course: result.course || '',
+          unit: result.unit || '',
+          attemptedPrimary: result.primaryInstructors,
+          attemptedSecondary: result.secondaryInstructors,
+          status: 'updated'
+        });
       } catch (error) {
         errors.push({ traineeId: result.id, name: result.name, error: error.message });
+        writeAttempts.push({
+          traineeId: result.id,
+          name: result.fullName || result.name,
+          course: result.course || '',
+          unit: result.unit || '',
+          attemptedPrimary: result.primaryInstructors,
+          attemptedSecondary: result.secondaryInstructors,
+          status: 'error',
+          error: error.message
+        });
       }
     }
+    const readBackRows = targetResults.length > 0
+      ? await db.trainee.findMany({
+        where: { id: { in: targetResults.map(result => result.id) } },
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          course: true,
+          unit: true,
+          primaryInstructor: true,
+          secondaryInstructor: true,
+          updatedAt: true
+        }
+      })
+      : [];
+    const readBackById = new Map(readBackRows.map(row => [row.id, row]));
+    const readBack = targetResults.map(result => {
+      const row = readBackById.get(result.id);
+      const primaryReadBack = normaliseInstructorListForReallocation(row?.primaryInstructor);
+      const secondaryReadBack = normaliseInstructorListForReallocation(row?.secondaryInstructor);
+      return {
+        traineeId: result.id,
+        name: row?.fullName || row?.name || result.fullName || result.name,
+        course: row?.course || result.course || '',
+        unit: row?.unit || result.unit || '',
+        attemptedPrimary: result.primaryInstructors,
+        attemptedSecondary: result.secondaryInstructors,
+        readBackPrimary: primaryReadBack,
+        readBackSecondary: secondaryReadBack,
+        rawPrimary: row?.primaryInstructor ?? null,
+        rawSecondary: row?.secondaryInstructor ?? null,
+        updatedAt: row?.updatedAt || null,
+        primaryPersisted: primaryReadBack.length > 0,
+        secondaryPersisted: secondaryReadBack.length >= 2
+      };
+    });
+    const readBackSummary = {
+      checked: readBack.length,
+      primaryPersisted: readBack.filter(row => row.primaryPersisted).length,
+      secondaryPersisted: readBack.filter(row => row.secondaryPersisted).length,
+      stillMissingPrimary: readBack.filter(row => !row.primaryPersisted).length,
+      stillMissingTwoSecondary: readBack.filter(row => !row.secondaryPersisted).length
+    };
+    console.log('[TraineeReallocation] readback summary:', JSON.stringify(readBackSummary));
 
     res.json({
       success: true,
@@ -3330,6 +3394,9 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
       },
       allocations: targetResults,
       diagnostics: allocationResult.diagnostics,
+      writeAttempts,
+      readBackSummary,
+      readBack,
       errorDetails: errors
     });
   } catch (error) {

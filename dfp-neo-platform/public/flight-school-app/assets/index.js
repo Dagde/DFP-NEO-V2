@@ -85402,6 +85402,8 @@ const TraineeReallocationSection = () => {
   }, {});
   const diagnosticUnits = preview?.diagnostics?.units && typeof preview.diagnostics.units === "object" ? Object.entries(preview.diagnostics.units) : [];
   const errorDetails = Array.isArray(preview?.errorDetails) ? preview.errorDetails : [];
+  const readBackRows = Array.isArray(preview?.readBack) ? preview.readBack : [];
+  const readBackSummary = preview?.readBackSummary;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -85449,6 +85451,28 @@ const TraineeReallocationSection = () => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Without Primary" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: preview.summary.primary?.with0 ?? 0 })
+      ] })
+    ] }),
+    readBackSummary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Readback Checked" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: readBackSummary.checked ?? 0 })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Primary Persisted" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: readBackSummary.primaryPersisted ?? 0 })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Two Secondary Persisted" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: readBackSummary.secondaryPersisted ?? 0 })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Still Missing" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-2xl font-bold text-white", children: [
+          readBackSummary.stillMissingPrimary ?? 0,
+          "/",
+          readBackSummary.stillMissingTwoSecondary ?? 0
+        ] })
       ] })
     ] }),
     allocations.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
@@ -85503,6 +85527,41 @@ const TraineeReallocationSection = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: allocation.primaryInstructors?.join(", ") || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: allocation.secondaryInstructors?.join(", ") || "-" })
         ] }, allocation.id)) })
+      ] }) })
+    ] }),
+    readBackRows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Database Readback" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-96 overflow-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 bg-gray-900 text-xs uppercase tracking-wide text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Trainee" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Attempted" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Read Back" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Status" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 text-gray-100", children: readBackRows.slice(0, 80).map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: row.name }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-4 py-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              "P: ",
+              row.attemptedPrimary?.join(", ") || "-"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              "S: ",
+              row.attemptedSecondary?.join(", ") || "-"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-4 py-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              "P: ",
+              row.readBackPrimary?.join(", ") || "-"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              "S: ",
+              row.readBackSecondary?.join(", ") || "-"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: row.primaryPersisted && row.secondaryPersisted ? "Persisted" : "Still missing" })
+        ] }, row.traineeId)) })
       ] }) })
     ] }),
     errorDetails.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 px-4 py-3 text-sm text-red-100", children: errorDetails.slice(0, 10).map((detail) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [

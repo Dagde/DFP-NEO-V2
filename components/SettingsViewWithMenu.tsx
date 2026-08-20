@@ -1135,6 +1135,8 @@ const TraineeReallocationSection: React.FC = () => {
         ? Object.entries(preview.diagnostics.units)
         : [];
     const errorDetails = Array.isArray(preview?.errorDetails) ? preview.errorDetails : [];
+    const readBackRows = Array.isArray(preview?.readBack) ? preview.readBack : [];
+    const readBackSummary = preview?.readBackSummary;
 
     return (
         <div className="space-y-4">
@@ -1191,6 +1193,27 @@ const TraineeReallocationSection: React.FC = () => {
                     <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
                         <div className="text-xs uppercase tracking-wide text-gray-400">Without Primary</div>
                         <div className="mt-2 text-2xl font-bold text-white">{preview.summary.primary?.with0 ?? 0}</div>
+                    </div>
+                </div>
+            )}
+
+            {readBackSummary && (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+                        <div className="text-xs uppercase tracking-wide text-gray-400">Readback Checked</div>
+                        <div className="mt-2 text-2xl font-bold text-white">{readBackSummary.checked ?? 0}</div>
+                    </div>
+                    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+                        <div className="text-xs uppercase tracking-wide text-gray-400">Primary Persisted</div>
+                        <div className="mt-2 text-2xl font-bold text-white">{readBackSummary.primaryPersisted ?? 0}</div>
+                    </div>
+                    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+                        <div className="text-xs uppercase tracking-wide text-gray-400">Two Secondary Persisted</div>
+                        <div className="mt-2 text-2xl font-bold text-white">{readBackSummary.secondaryPersisted ?? 0}</div>
+                    </div>
+                    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+                        <div className="text-xs uppercase tracking-wide text-gray-400">Still Missing</div>
+                        <div className="mt-2 text-2xl font-bold text-white">{readBackSummary.stillMissingPrimary ?? 0}/{readBackSummary.stillMissingTwoSecondary ?? 0}</div>
                     </div>
                 </div>
             )}
@@ -1263,6 +1286,42 @@ const TraineeReallocationSection: React.FC = () => {
                                         <td className="px-4 py-2">{allocation.course || '-'}</td>
                                         <td className="px-4 py-2">{allocation.primaryInstructors?.join(', ') || '-'}</td>
                                         <td className="px-4 py-2">{allocation.secondaryInstructors?.join(', ') || '-'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {readBackRows.length > 0 && (
+                <div className="rounded-lg border border-gray-700 bg-gray-800">
+                    <div className="border-b border-gray-700 px-4 py-3">
+                        <h3 className="text-sm font-semibold text-white">Database Readback</h3>
+                    </div>
+                    <div className="max-h-96 overflow-auto">
+                        <table className="min-w-full text-left text-sm">
+                            <thead className="sticky top-0 bg-gray-900 text-xs uppercase tracking-wide text-gray-400">
+                                <tr>
+                                    <th className="px-4 py-2">Trainee</th>
+                                    <th className="px-4 py-2">Attempted</th>
+                                    <th className="px-4 py-2">Read Back</th>
+                                    <th className="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-700 text-gray-100">
+                                {readBackRows.slice(0, 80).map((row: any) => (
+                                    <tr key={row.traineeId}>
+                                        <td className="px-4 py-2">{row.name}</td>
+                                        <td className="px-4 py-2">
+                                            <div>P: {row.attemptedPrimary?.join(', ') || '-'}</div>
+                                            <div>S: {row.attemptedSecondary?.join(', ') || '-'}</div>
+                                        </td>
+                                        <td className="px-4 py-2">
+                                            <div>P: {row.readBackPrimary?.join(', ') || '-'}</div>
+                                            <div>S: {row.readBackSecondary?.join(', ') || '-'}</div>
+                                        </td>
+                                        <td className="px-4 py-2">{row.primaryPersisted && row.secondaryPersisted ? 'Persisted' : 'Still missing'}</td>
                                     </tr>
                                 ))}
                             </tbody>
