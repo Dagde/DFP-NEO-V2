@@ -156,6 +156,24 @@ type SettingsVisibilityFilter = Exclude<SettingsVisibilityMode, 'all'>;
 const DFP_RESOURCE_ROW_KEYS = ['aircraft', 'ftd', 'cpt', 'standby', 'ground', 'dutySupervisor', 'towerDutyInstructor'] as const;
 type DfpResourceRowKey = typeof DFP_RESOURCE_ROW_KEYS[number];
 type DfpResourceRowsSnapshot = Record<DfpResourceRowKey, number>;
+const DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS = [
+  'Maintenance',
+  'Unserviceable',
+  'Scheduled servicing',
+  'Awaiting parts',
+  'Fuel unavailable',
+  'Configuration change',
+];
+
+const normaliseFlightLineUnavailableReasons = (value: unknown): string[] => {
+  const rawValues = Array.isArray(value)
+    ? value
+    : String(value || '').split(/\r?\n|,/);
+  const reasons = Array.from(new Set(rawValues
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean)));
+  return reasons.length > 0 ? reasons : DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS;
+};
 
 type SettingsVisibilityPolicy = {
   enabled: boolean;
@@ -10137,6 +10155,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 : configAircraftTypes.map((aircraft) => aircraft.code)
               ).filter(Boolean);
               const displayedResourcePoolAircraftTypeCode = pool.aircraftTypeCode || '';
+              const aircraftUnavailableReasonText = normaliseFlightLineUnavailableReasons(pool.settings?.flightLineUnavailableReasonOptions).join('\n');
               return (
                 <div
                   key={pool.id || `platform-resource-pool-${index}`}
@@ -10287,6 +10306,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           Prefixes are off. Aircraft numbers will be entered as plain numbers.
                         </div>
                       )}
+                      <div className="mt-3">
+                        <DraftTextAreaField
+                          label="Aircraft Unavailable Reasons"
+                          value={aircraftUnavailableReasonText}
+                          disabled={!canEditResourcePools}
+                          onCommit={(value) => updateResourcePoolSettings(index, {
+                            flightLineUnavailableReasonOptions: normaliseFlightLineUnavailableReasons(value),
+                          })}
+                          info="Reasons shown in the maintenance slideout right-click menu for aircraft in the Unavailable section. Enter one reason per line."
+                          className="block"
+                          fieldSizingClassName="min-h-[92px]"
+                        />
+                      </div>
                     </div>
 
                     <div className={resourceSectionPanelClass}>

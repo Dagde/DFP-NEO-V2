@@ -157,6 +157,25 @@ const TOTAL_HOURS = END_HOUR - START_HOUR;
 const AIRFRAME_COLUMN_WIDTH = 108; // Header cell width (date selector)
 const RESOURCE_COLUMN_WIDTH = 105; // Resource row header width.
 const TIME_HEADER_HEIGHT = 40;
+const DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS = [
+    'Maintenance',
+    'Unserviceable',
+    'Scheduled servicing',
+    'Awaiting parts',
+    'Fuel unavailable',
+    'Configuration change',
+];
+
+const normaliseFlightLineUnavailableReasons = (value: unknown): string[] => {
+    const rawValues = Array.isArray(value)
+        ? value
+        : String(value || '')
+            .split(/\r?\n|,/);
+    const reasons = Array.from(new Set(rawValues
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean)));
+    return reasons.length > 0 ? reasons : DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS;
+};
 
 const isOverlapping = (f1: ScheduleEvent, f2: ScheduleEvent): boolean => {
     if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
@@ -7307,6 +7326,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [flightLineScheduleDropPreview, setFlightLineScheduleDropPreview] = useState<{ aircraftNumber: string; eventId: string } | null>(null);
     const [isFlightLineAvailableDropActive, setIsFlightLineAvailableDropActive] = useState(false);
     const [isFlightLineUnavailableDropActive, setIsFlightLineUnavailableDropActive] = useState(false);
+    const [flightLineAircraftContextMenu, setFlightLineAircraftContextMenu] = useState<{
+        aircraftNumber: string;
+        tailNumber: string;
+        isUnavailable: boolean;
+        x: number;
+        y: number;
+    } | null>(null);
     useEffect(() => {
         if (isNeoAssistPanelOpen) setShowResourceUnderlayPanel(false);
     }, [isNeoAssistPanelOpen]);
@@ -7358,6 +7384,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const unavailableNumbers = sortedAircraftNumbers(Array.from(new Set((Array.isArray(settings.flightLineUnavailableAircraftNumbers)
             ? settings.flightLineUnavailableAircraftNumbers.map((value: any) => String(value ?? '').trim())
             : []).filter((value: string) => value && numberSet.has(value)))));
+        const rawReasonMap = settings.flightLineUnavailableAircraftReasons && typeof settings.flightLineUnavailableAircraftReasons === 'object'
+            ? settings.flightLineUnavailableAircraftReasons
+            : {};
+        const unavailableReasons = Object.fromEntries(Object.entries(rawReasonMap)
+            .map(([number, reason]) => [String(number || '').trim(), String(reason || '').trim()])
+            .filter(([number, reason]) => number && reason && numberSet.has(number))) as Record<string, string>;
         const unavailableNumberSet = new Set(unavailableNumbers);
         const availableNumbers = numbers.filter((number) => !unavailableNumberSet.has(number));
         return {
@@ -7367,6 +7399,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             numbers,
             availableNumbers,
             unavailableNumbers,
+            unavailableReasons,
+            unavailableReasonOptions: normaliseFlightLineUnavailableReasons(settings.flightLineUnavailableReasonOptions),
         };
     }, [airframeCount, locationCode, platformConfig, unitCode]);
     const sortFlightLineAircraftNumbers = useCallback((values: string[]) => (
@@ -7381,6 +7415,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         () => new Set(flightLineEffectiveUnavailableNumbers),
         [flightLineEffectiveUnavailableNumbers],
     );
+    const getFlightLineUnavailableReason = useCallback((aircraftNumber: string): string => {
+        const savedReason = flightLinePoolContext.unavailableReasons[aircraftNumber];
+        return savedReason || flightLinePoolContext.unavailableReasonOptions[0] || DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS[0];
+    }, [flightLinePoolContext.unavailableReasonOptions, flightLinePoolContext.unavailableReasons]);
     const flightLineAircraftAssignmentStorageKey = useMemo(
         () => `dfp-flight-line-aircraft-event-assignments:${date}:${locationCode}:${unitCode}`,
         [date, locationCode, unitCode],
@@ -7496,10 +7534,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         setIsFlightLineAvailableDropActive(false);
         setIsFlightLineUnavailableDropActive(false);
     }, []);
-    const saveFlightLineUnavailableAircraftNumbers = useCallback((nextUnavailableNumbers: string[]) => {
+    const saveFlightLineUnavailableAircraftNumbers = useCallback((nextUnavailableNumbers: string[], reasonUpdates: Record<string, string | null> = {}) => {
         if (!canEditFlightLineAvailability || isReadOnly) return;
         const validNumbers = new Set(flightLinePoolContext.numbers);
         const cleanNumbers = sortFlightLineAircraftNumbers(Array.from(new Set(nextUnavailableNumbers.map((number) => String(number ?? '').trim()).filter((number) => number && validNumbers.has(number)))));
+        const unavailableSet = new Set(cleanNumbers);
         setFlightLineLocalUnavailableNumbers(cleanNumbers);
         if (!onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
         onUpdatePlatformConfig((current: any) => ({
@@ -7507,17 +7546,24 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             resourcePools: (current?.resourcePools || []).map((pool: any, poolIndex: number) => {
                 if (poolIndex !== flightLinePoolContext.poolIndex) return pool;
                 const settings = pool?.settings || {};
+                const nextReasons = Object.fromEntries(Object.entries({
+                    ...(settings.flightLineUnavailableAircraftReasons || {}),
+                    ...reasonUpdates,
+                })
+                    .map(([number, reason]) => [String(number || '').trim(), reason === null ? '' : String(reason || '').trim()])
+                    .filter(([number, reason]) => number && reason && unavailableSet.has(number))) as Record<string, string>;
                 return {
                     ...pool,
                     settings: {
                         ...settings,
                         flightLineUnavailableAircraftNumbers: cleanNumbers,
+                        flightLineUnavailableAircraftReasons: nextReasons,
                     },
                 };
             }),
         }));
     }, [canEditFlightLineAvailability, flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, isReadOnly, onUpdatePlatformConfig, sortFlightLineAircraftNumbers]);
-    const moveFlightLineAircraftToUnavailable = useCallback((aircraftNumber: string) => {
+    const moveFlightLineAircraftToUnavailable = useCallback((aircraftNumber: string, reason?: string) => {
         if (!canEditFlightLineAvailability || isReadOnly) {
             clearFlightLineDragState();
             return;
@@ -7530,8 +7576,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         clearFlightLineAssignmentState(assignedEventIds);
         clearFlightLineDragState();
         if (!cleanNumber || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
-        saveFlightLineUnavailableAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber]);
-    }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
+        saveFlightLineUnavailableAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber], {
+            [cleanNumber]: String(reason || getFlightLineUnavailableReason(cleanNumber)).trim(),
+        });
+    }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, getFlightLineUnavailableReason, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
     const moveFlightLineAircraftToAvailable = useCallback((aircraftNumber: string, sourceEventId = '') => {
         if (!canEditFlightLineAvailability || isReadOnly) {
             clearFlightLineDragState();
@@ -7545,8 +7593,47 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         clearFlightLineAssignmentState(assignedEventIds);
         clearFlightLineDragState();
         if (!cleanNumber || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
-        saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber));
+        saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber), { [cleanNumber]: null });
     }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
+    const openFlightLineAircraftContextMenu = useCallback((
+        event: React.MouseEvent,
+        aircraftNumber: string,
+        tailNumber: string,
+        isUnavailable: boolean
+    ) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!canEditFlightLineAvailability || isReadOnly) return;
+        setFlightLineAircraftContextMenu({
+            aircraftNumber,
+            tailNumber,
+            isUnavailable,
+            x: Math.min(event.clientX, Math.max(12, window.innerWidth - 250)),
+            y: Math.min(event.clientY, Math.max(12, window.innerHeight - 180)),
+        });
+    }, [canEditFlightLineAvailability, isReadOnly]);
+    const closeFlightLineAircraftContextMenu = useCallback(() => {
+        setFlightLineAircraftContextMenu(null);
+    }, []);
+    const setFlightLineAircraftUnavailableReason = useCallback((aircraftNumber: string, reason: string) => {
+        const cleanNumber = String(aircraftNumber || '').trim();
+        const cleanReason = String(reason || '').trim() || getFlightLineUnavailableReason(cleanNumber);
+        if (!cleanNumber) return;
+        moveFlightLineAircraftToUnavailable(cleanNumber, cleanReason);
+    }, [getFlightLineUnavailableReason, moveFlightLineAircraftToUnavailable]);
+    useEffect(() => {
+        if (!flightLineAircraftContextMenu) return;
+        const handlePointerDown = () => closeFlightLineAircraftContextMenu();
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') closeFlightLineAircraftContextMenu();
+        };
+        window.addEventListener('pointerdown', handlePointerDown);
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('pointerdown', handlePointerDown);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [closeFlightLineAircraftContextMenu, flightLineAircraftContextMenu]);
     const assignFlightLineAircraftToEvent = useCallback((aircraftNumber: string, eventId: string, sourceEventId = '') => {
         if (!canEditTileAircraftNumber || isReadOnly) {
             clearFlightLineDragState();
@@ -9009,6 +9096,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                                     event.dataTransfer.setData('text/plain', number);
                                                                 }}
                                                                 onDragEnd={clearFlightLineDragState}
+                                                                onContextMenu={(event) => openFlightLineAircraftContextMenu(event, number, tailNumber, false)}
                                                                 className={`absolute inset-0 flex flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${(canEditTileAircraftNumber || canEditFlightLineAvailability) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'} ${isDragging ? 'border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]' : 'border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]'}`}
                                                                 title={tailNumber}
                                                             >
@@ -9050,6 +9138,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                             <div className="flex flex-wrap gap-2">
                                                 {flightLineEffectiveUnavailableNumbers.map((number) => {
                                                     const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(' ');
+                                                    const unavailableReason = getFlightLineUnavailableReason(number);
                                                     return (
                                                         <div
                                                             key={`flight-line-unavailable-aircraft-tile-${number}`}
@@ -9068,8 +9157,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                                 event.dataTransfer.setData('text/plain', number);
                                                             }}
                                                             onDragEnd={clearFlightLineDragState}
+                                                            onContextMenu={(event) => openFlightLineAircraftContextMenu(event, number, tailNumber, true)}
                                                             className={`flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${canEditFlightLineAvailability && !isReadOnly ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'} ${flightLineDraggedAircraftNumber === number ? 'border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]' : 'border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]'}`}
-                                                            title={tailNumber}
+                                                            title={`${tailNumber} unavailable: ${unavailableReason}`}
                                                         >
                                                             {flightLinePoolContext.prefix ? (
                                                                 <span className="mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85">{flightLinePoolContext.prefix}</span>
@@ -9091,6 +9181,61 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     </aside>
                 </div>
             )}
+            {flightLineAircraftContextMenu ? (
+                <div
+                    className="fixed z-[90] w-[238px] overflow-hidden rounded-md border border-slate-600/80 bg-slate-950 shadow-2xl shadow-black/50"
+                    style={{ left: flightLineAircraftContextMenu.x, top: flightLineAircraftContextMenu.y }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onContextMenu={(event) => event.preventDefault()}
+                >
+                    <div className="border-b border-slate-700/80 px-3 py-2">
+                        <div className="truncate text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Aircraft</div>
+                        <div className="truncate text-sm font-black text-white">{flightLineAircraftContextMenu.tailNumber}</div>
+                    </div>
+                    {flightLineAircraftContextMenu.isUnavailable ? (
+                        <div className="space-y-2 px-3 py-3">
+                            <div className="text-xs font-black uppercase tracking-[0.14em] text-rose-200">Unavailable</div>
+                            <label className="block">
+                                <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Reason</span>
+                                <select
+                                    className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-semibold text-slate-100 outline-none focus:border-cyan-400"
+                                    value={getFlightLineUnavailableReason(flightLineAircraftContextMenu.aircraftNumber)}
+                                    onChange={(event) => {
+                                        setFlightLineAircraftUnavailableReason(flightLineAircraftContextMenu.aircraftNumber, event.target.value);
+                                        closeFlightLineAircraftContextMenu();
+                                    }}
+                                    onKeyDown={stopEditableKeyPropagation}
+                                >
+                                    {flightLinePoolContext.unavailableReasonOptions.map((reason) => (
+                                        <option key={`flight-line-unavailable-reason-${reason}`} value={reason}>{reason}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <button
+                                type="button"
+                                className="w-full rounded-md border border-emerald-400/40 bg-emerald-500/15 px-3 py-2 text-left text-xs font-black text-emerald-200 hover:bg-emerald-500/25"
+                                onClick={() => {
+                                    moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
+                                    closeFlightLineAircraftContextMenu();
+                                }}
+                            >
+                                Aircraft Serviceable
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            className="block w-full px-3 py-3 text-left text-xs font-black text-emerald-200 hover:bg-emerald-500/15"
+                            onClick={() => {
+                                moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
+                                closeFlightLineAircraftContextMenu();
+                            }}
+                        >
+                            Aircraft Serviceable
+                        </button>
+                    )}
+                </div>
+            ) : null}
             <div 
                 style={{
                     width: `${AIRFRAME_COLUMN_WIDTH + (TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel)}px`,
