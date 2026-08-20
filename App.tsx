@@ -8248,13 +8248,13 @@ function generateDfpInternal(
 
         // Staff sharing ON — primary/secondary from ANY shared unit are eligible when priority is on
         if (priorityEnabled) {
-            const primaryArr = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
-            const secondaryArr = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
-            if (softGroups.primary && primaryArr.includes(instructor.name)) return true;
-            if (softGroups.secondary && secondaryArr.includes(instructor.name)) return true;
+            const primaryArr = normalisePreferredInstructorList(trainee.primaryInstructor);
+            const secondaryArr = normalisePreferredInstructorList(trainee.secondaryInstructor);
+            if (softGroups.primary && preferredInstructorListIncludes(primaryArr, instructor.name)) return true;
+            if (softGroups.secondary && preferredInstructorListIncludes(secondaryArr, instructor.name)) return true;
             // Hard mode groups also grant eligibility
-            if (hardGroups.primary && primaryArr.includes(instructor.name)) return true;
-            if (hardGroups.secondary && secondaryArr.includes(instructor.name)) return true;
+            if (hardGroups.primary && preferredInstructorListIncludes(primaryArr, instructor.name)) return true;
+            if (hardGroups.secondary && preferredInstructorListIncludes(secondaryArr, instructor.name)) return true;
         }
 
         // Staff sharing ON — standard group check. Multiple staff-sharing arrangements
@@ -8350,6 +8350,35 @@ function generateDfpInternal(
             .trim()
             .replace(/^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i, '')
             .toLowerCase();
+
+    const normalisePreferredInstructorList = (value: unknown): string[] => {
+        if (Array.isArray(value)) {
+            return value.flatMap(item => normalisePreferredInstructorList(item));
+        }
+        if (value === null || value === undefined) return [];
+        if (typeof value !== 'string') return [];
+        const trimmed = value.trim();
+        if (!trimmed || trimmed === '[]') return [];
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) return normalisePreferredInstructorList(parsed);
+            } catch {
+                // Fall through to delimiter parsing for malformed legacy strings.
+            }
+        }
+        return trimmed
+            .split(/[;|]/)
+            .map(name => name.trim())
+            .filter(Boolean);
+    };
+
+    const preferredInstructorListIncludes = (preferredNames: unknown, instructorName?: string): boolean => {
+        const instructorKey = normalizeBuildPersonnelName(instructorName);
+        if (!instructorKey) return false;
+        return normalisePreferredInstructorList(preferredNames)
+            .some(preferredName => normalizeBuildPersonnelName(preferredName) === instructorKey);
+    };
 
     const eventIncludesPerson = (
         event: Omit<ScheduleEvent, 'date'> | ScheduleEvent,
@@ -15078,14 +15107,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 // ── Priority ordering: Primary → Secondary → Same-flight → Other same-unit → Other ──
                 // "Same-flight" means same base unit and same flight/section identifier.
                 // All buckets sorted by workload ascending so least-loaded instructor is tried first.
-                const primaryNames   = Array.isArray(traineeForCheck.primaryInstructor) ? traineeForCheck.primaryInstructor : traineeForCheck.primaryInstructor ? [traineeForCheck.primaryInstructor] : [];
-                const secondaryNames = Array.isArray(traineeForCheck.secondaryInstructor) ? traineeForCheck.secondaryInstructor : traineeForCheck.secondaryInstructor ? [traineeForCheck.secondaryInstructor] : [];
+                const primaryNames   = normalisePreferredInstructorList(traineeForCheck.primaryInstructor);
+                const secondaryNames = normalisePreferredInstructorList(traineeForCheck.secondaryInstructor);
                 const traineeFull    = fullUnit(traineeForCheck.unit || '');
                 const traineeBase    = normalizeUnit(traineeForCheck.unit || '');
                 const traineeFlight  = (traineeForCheck.flight || '').trim();
 
-                const isPrimary    = (i: Instructor) => primaryNames.includes(i.name);
-                const isSecondary  = (i: Instructor) => secondaryNames.includes(i.name);
+                const isPrimary    = (i: Instructor) => preferredInstructorListIncludes(primaryNames, i.name);
+                const isSecondary  = (i: Instructor) => preferredInstructorListIncludes(secondaryNames, i.name);
                 // Same-flight: instructor and trainee share the same base unit AND the same flight letter
                 const isSameFlight = (i: Instructor) => {
                     const instrFlight = (i.flight || '').trim();
@@ -15558,11 +15587,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             if (anyHardGroup && (type === 'flight' || type === 'ftd') && !isNightPass && !primaryPreferOnly) {
                 const traineeFlight  = (trainee.flight || '').trim();
                 const traineeBase    = normalizeUnit(trainee.unit || '');
-                const traineePrimaryArr   = Array.isArray(trainee.primaryInstructor)   ? trainee.primaryInstructor   : trainee.primaryInstructor   ? [trainee.primaryInstructor]   : [];
-                const traineeSecondaryArr = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
+                const traineePrimaryArr   = normalisePreferredInstructorList(trainee.primaryInstructor);
+                const traineeSecondaryArr = normalisePreferredInstructorList(trainee.secondaryInstructor);
                 const instructorInHardGroup =
-                    (hardGroups.primary    && traineePrimaryArr.includes(instructor.name)) ||
-                    (hardGroups.secondary  && traineeSecondaryArr.includes(instructor.name)) ||
+                    (hardGroups.primary    && preferredInstructorListIncludes(traineePrimaryArr, instructor.name)) ||
+                    (hardGroups.secondary  && preferredInstructorListIncludes(traineeSecondaryArr, instructor.name)) ||
                     (hardGroups.sameFlight && ((): boolean => {
                         const instrFlight = (instructor.flight || '').trim();
                         const instrBase   = normalizeUnit(instructor.unit || '');
@@ -22876,10 +22905,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             if (!trainee) return;
             const traineeKey = getBuildTraineeKey(trainee);
 
-            const primaryNames = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
-            const secondaryNames = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
-            if (primaryNames.includes(event.instructor)) traineesWithPrimary.add(traineeKey);
-            else if (secondaryNames.includes(event.instructor)) traineesWithSecondary.add(traineeKey);
+            const primaryNames = normalisePreferredInstructorList(trainee.primaryInstructor);
+            const secondaryNames = normalisePreferredInstructorList(trainee.secondaryInstructor);
+            if (preferredInstructorListIncludes(primaryNames, event.instructor)) traineesWithPrimary.add(traineeKey);
+            else if (preferredInstructorListIncludes(secondaryNames, event.instructor)) traineesWithSecondary.add(traineeKey);
             else traineesWithOther.add(traineeKey);
         });
 
@@ -23088,9 +23117,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 return;
             }
 
-            const primaryNames = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
-            const secondaryNames = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
-            if (primaryNames.includes(event.instructor) || secondaryNames.includes(event.instructor)) {
+            const primaryNames = normalisePreferredInstructorList(trainee.primaryInstructor);
+            const secondaryNames = normalisePreferredInstructorList(trainee.secondaryInstructor);
+            if (preferredInstructorListIncludes(primaryNames, event.instructor) || preferredInstructorListIncludes(secondaryNames, event.instructor)) {
                 counters.alreadyPreferred++;
                 return;
             }
@@ -41854,20 +41883,16 @@ const App: React.FC = () => {
             if (activeInstructors.length === 0) return null;
 
             // Prefer primary instructor from trainee record
-            const primaryNames = trainee.primaryInstructor
-                ? (Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : [trainee.primaryInstructor])
-                : [];
+            const primaryNames = normalisePreferredInstructorList(trainee.primaryInstructor);
             for (const pName of primaryNames) {
-                const found = activeInstructors.find((ip: Instructor) => ip.name === pName);
+                const found = activeInstructors.find((ip: Instructor) => personnelNamesMatch(ip.name, pName));
                 if (found) return found.name;
             }
 
             // Then try secondary instructor
-            const secondaryNames = trainee.secondaryInstructor
-                ? (Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : [trainee.secondaryInstructor])
-                : [];
+            const secondaryNames = normalisePreferredInstructorList(trainee.secondaryInstructor);
             for (const sName of secondaryNames) {
-                const found = activeInstructors.find((ip: Instructor) => ip.name === sName);
+                const found = activeInstructors.find((ip: Instructor) => personnelNamesMatch(ip.name, sName));
                 if (found) return found.name;
             }
 
