@@ -113767,8 +113767,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const traineeByName = new Map(trainees.map((trainee) => [normalizeBuildPersonnelName(trainee.fullName), trainee]));
     const instructorByName = new Map(instructors.map((instructor) => [normalizeBuildPersonnelName(instructor.name), instructor]));
     const samples = [];
+    const blockedSamples = [];
+    const noPreferredConfiguredSamples = [];
     let primaryImprovements = 0;
     let secondaryImprovements = 0;
+    let swapImprovements = 0;
     let skipped = 0;
     const counters = {
       candidateEvents: 0,
@@ -113783,6 +113786,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       bookingConflict: 0,
       eventLimitExceeded: 0,
       noUsablePreferredInstructor: 0,
+      oneHopSwapAttempts: 0,
+      oneHopSwapImprovements: 0,
+      oneHopSwapRejectedNoMetricGain: 0,
+      oneHopSwapRejectedUnsafe: 0,
       skippedSpecialEvent: 0,
       skippedTestEvent: 0,
       skippedCurrencyEvent: 0,
@@ -113799,21 +113806,32 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         changed: 0,
         counters,
         durationMs: Math.round(performance.now() - startedAt),
-        samples
+        samples,
+        blockedSamples,
+        noPreferredConfiguredSamples
       };
     }
-    const eventWouldConflictForStaff = (event, staff, allEvents) => {
+    const eventWouldConflictForStaff = (event, staff, allEvents, ignoreEventIds = /* @__PURE__ */ new Set([String(event.id || "")])) => {
       const proposedWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
       return allEvents.some((existing) => {
+        if (ignoreEventIds.has(String(existing.id || "")) || existing.isCancelled) return false;
+        if (!getPersonnel(existing).some((name) => personnelNamesMatch(name, staff.name))) return false;
+        const existingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
+        return proposedWindow.start < existingWindow.end && proposedWindow.end > existingWindow.start;
+      });
+    };
+    const getConflictingEventsForStaff = (event, staff, allEvents) => {
+      const proposedWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
+      return allEvents.filter((existing) => {
         if (existing.id === event.id || existing.isCancelled) return false;
         if (!getPersonnel(existing).some((name) => personnelNamesMatch(name, staff.name))) return false;
         const existingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
         return proposedWindow.start < existingWindow.end && proposedWindow.end > existingWindow.start;
       });
     };
-    const wouldExceedStaffEventLimits = (event, staff, allEvents) => {
+    const wouldExceedStaffEventLimits = (event, staff, allEvents, ignoreEventIds = /* @__PURE__ */ new Set([String(event.id || "")])) => {
       const staffEvents = allEvents.filter(
-        (existing) => existing.id !== event.id && !existing.isCancelled && !isStbyResource(existing.resourceId) && getPersonnel(existing).some((name) => personnelNamesMatch(name, staff.name))
+        (existing) => !ignoreEventIds.has(String(existing.id || "")) && !existing.isCancelled && !isStbyResource(existing.resourceId) && getPersonnel(existing).some((name) => personnelNamesMatch(name, staff.name))
       );
       const flightFtdCount = staffEvents.filter((existing) => existing.type === "flight" || existing.type === "ftd").length;
       const totalCount = staffEvents.length;
@@ -113825,16 +113843,32 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return flightFtdCount + 1 > eventLimits.instructor.maxFlightFtd || totalCount + 1 > eventLimits.instructor.maxTotal;
     };
-    const getPreferredInstructorBlockReason = (event, trainee, staff) => {
+    const getPreferredInstructorBlockReason = (event, trainee, staff, ignoreEventIds = /* @__PURE__ */ new Set([String(event.id || "")])) => {
       const eventType = String(event.type || "").toLowerCase();
       if (!getBaseInstructorPoolForEventType(eventType).some((candidate) => candidate.name === staff.name)) return "notQualifiedForEventType";
       if (!isInstructorEligibleByUnitForBuild(staff, trainee)) return "unitIneligible";
       if (!canAssignStaffForScheduledWindow(staff, event.startTime)) return "dayNightConflict";
       const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
       if (isPersonStaticallyUnavailable(staff, bookingWindow.start, bookingWindow.end, buildDate, eventType)) return "staticUnavailable";
-      if (eventWouldConflictForStaff(event, staff, eventsToOptimise)) return "bookingConflict";
-      if (wouldExceedStaffEventLimits(event, staff, eventsToOptimise)) return "eventLimitExceeded";
+      if (eventWouldConflictForStaff(event, staff, eventsToOptimise, ignoreEventIds)) return "bookingConflict";
+      if (wouldExceedStaffEventLimits(event, staff, eventsToOptimise, ignoreEventIds)) return "eventLimitExceeded";
       return null;
+    };
+    const setEventInstructor = (event, staff) => {
+      const staffDisplayName = getNeoBuildPersonDisplayLabel(staff);
+      Object.assign(event, {
+        instructor: staffDisplayName,
+        pilot: staffDisplayName,
+        ...makeNeoBuildStaffIdentityPayload(staff, instructors)
+      });
+      return staffDisplayName;
+    };
+    const preferredMetricImproved = (previous, next) => next.primary >= previous.primary && next.secondary >= previous.secondary && next.other <= previous.other && (next.primary > previous.primary || next.secondary > previous.secondary);
+    const isSwappableInstructionalEvent = (event) => {
+      if (event.type !== "flight" && event.type !== "ftd") return false;
+      if (!event.instructor || isStbyResource(event.resourceId) || event.flightType === "Solo") return false;
+      const eventTestType = normaliseLmpTestEventType(event.testEventType);
+      return !isLmpTestEvent(eventTestType) && !event.currency && !event.currencyDraftId && !event.forcedInstructorConflict && event.isRemedial !== true && !String(event.id || "").startsWith("remedial-") && !String(event._source || "").includes("remedial");
     };
     eventsToOptimise.forEach((event) => {
       if (event.type !== "flight" && event.type !== "ftd") return;
@@ -113876,25 +113910,109 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ];
       if (preferredCandidates.length === 0) {
         counters.noPreferredConfigured++;
+        if (noPreferredConfiguredSamples.length < 25) {
+          noPreferredConfiguredSamples.push({
+            trainee: trainee.fullName,
+            event: event.flightNumber,
+            type: event.type,
+            startTime: event.startTime,
+            resourceId: event.resourceId,
+            currentInstructor: event.instructor
+          });
+        }
         return;
       }
       let sawPreferredStaffRecord = false;
+      const preferredBlockDetails = [];
+      const currentInstructorRecord = instructorByName.get(normalizeBuildPersonnelName(event.instructor || ""));
       for (const preferred of preferredCandidates) {
         const staff = instructorByName.get(normalizeBuildPersonnelName(preferred.name));
-        if (!staff) continue;
+        if (!staff) {
+          preferredBlockDetails.push({ name: preferred.name, level: preferred.level, reason: "missingPreferredStaffRecord" });
+          continue;
+        }
         sawPreferredStaffRecord = true;
         const blockReason = getPreferredInstructorBlockReason(event, trainee, staff);
         if (blockReason) {
           counters[blockReason] = (counters[blockReason] || 0) + 1;
+          preferredBlockDetails.push({ name: preferred.name, level: preferred.level, reason: blockReason });
+          if (blockReason === "bookingConflict" && currentInstructorRecord) {
+            const conflictingEvents = getConflictingEventsForStaff(event, staff, eventsToOptimise).filter((conflictingEvent) => isSwappableInstructionalEvent(conflictingEvent));
+            for (const conflictingEvent of conflictingEvents) {
+              counters.oneHopSwapAttempts++;
+              const conflictingTraineeName = conflictingEvent._traineeName || conflictingEvent.student || "";
+              const conflictingTrainee = traineeByName.get(normalizeBuildPersonnelName(conflictingTraineeName));
+              if (!conflictingTrainee) {
+                counters.oneHopSwapRejectedUnsafe++;
+                continue;
+              }
+              const ignoredIds = /* @__PURE__ */ new Set([String(event.id || ""), String(conflictingEvent.id || "")]);
+              const replacementBlockReason = getPreferredInstructorBlockReason(
+                conflictingEvent,
+                conflictingTrainee,
+                currentInstructorRecord,
+                ignoredIds
+              );
+              if (replacementBlockReason) {
+                counters.oneHopSwapRejectedUnsafe++;
+                continue;
+              }
+              const previousMetric = countPreferredInstructorPairings(eventsToOptimise);
+              const originalInstructor = event.instructor;
+              const originalPilot = event.pilot;
+              const originalPersonnelRefs = event.personnelRefs;
+              const originalStaffIdentityRefs = event.staffIdentityRefs;
+              const conflictingOriginalInstructor = conflictingEvent.instructor;
+              const conflictingOriginalPilot = conflictingEvent.pilot;
+              const conflictingOriginalPersonnelRefs = conflictingEvent.personnelRefs;
+              const conflictingOriginalStaffIdentityRefs = conflictingEvent.staffIdentityRefs;
+              const preferredDisplayName = setEventInstructor(event, staff);
+              const replacementDisplayName = setEventInstructor(conflictingEvent, currentInstructorRecord);
+              const nextMetric = countPreferredInstructorPairings(eventsToOptimise);
+              if (preferredMetricImproved(previousMetric, nextMetric)) {
+                if (preferred.level === "primary") primaryImprovements++;
+                else secondaryImprovements++;
+                swapImprovements++;
+                counters.oneHopSwapImprovements++;
+                if (samples.length < 25) {
+                  samples.push({
+                    trainee: trainee.fullName,
+                    event: event.flightNumber,
+                    type: event.type,
+                    startTime: event.startTime,
+                    resourceId: event.resourceId,
+                    from: originalInstructor,
+                    to: preferredDisplayName,
+                    level: preferred.level,
+                    viaSwap: {
+                      trainee: conflictingTrainee.fullName,
+                      event: conflictingEvent.flightNumber,
+                      from: conflictingOriginalInstructor,
+                      to: replacementDisplayName
+                    }
+                  });
+                }
+                return;
+              }
+              Object.assign(event, {
+                instructor: originalInstructor,
+                pilot: originalPilot,
+                personnelRefs: originalPersonnelRefs,
+                staffIdentityRefs: originalStaffIdentityRefs
+              });
+              Object.assign(conflictingEvent, {
+                instructor: conflictingOriginalInstructor,
+                pilot: conflictingOriginalPilot,
+                personnelRefs: conflictingOriginalPersonnelRefs,
+                staffIdentityRefs: conflictingOriginalStaffIdentityRefs
+              });
+              counters.oneHopSwapRejectedNoMetricGain++;
+            }
+          }
           continue;
         }
         const previousInstructor = event.instructor;
-        const staffDisplayName = getNeoBuildPersonDisplayLabel(staff);
-        Object.assign(event, {
-          instructor: staffDisplayName,
-          pilot: staffDisplayName,
-          ...makeNeoBuildStaffIdentityPayload(staff, instructors)
-        });
+        const staffDisplayName = setEventInstructor(event, staff);
         if (preferred.level === "primary") primaryImprovements++;
         else secondaryImprovements++;
         if (samples.length < 25) {
@@ -113913,6 +114031,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       if (!sawPreferredStaffRecord) counters.missingPreferredStaffRecord++;
       counters.noUsablePreferredInstructor++;
+      if (blockedSamples.length < 25) {
+        blockedSamples.push({
+          trainee: trainee.fullName,
+          event: event.flightNumber,
+          type: event.type,
+          startTime: event.startTime,
+          resourceId: event.resourceId,
+          currentInstructor: event.instructor,
+          preferredCandidates: preferredBlockDetails
+        });
+      }
       skipped++;
     });
     const after = countPreferredInstructorPairings(eventsToOptimise);
@@ -113923,10 +114052,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       changed: primaryImprovements + secondaryImprovements,
       primaryImprovements,
       secondaryImprovements,
+      swapImprovements,
       skipped,
       counters,
       durationMs: Math.round(performance.now() - startedAt),
-      samples
+      samples,
+      blockedSamples,
+      noPreferredConfiguredSamples
     };
   };
   const preferredInstructorOptimisation = optimiseFlightSchoolPreferredInstructorPairings(finalCrewSafeEvents);

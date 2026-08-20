@@ -22901,8 +22901,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const traineeByName = new Map(trainees.map(trainee => [normalizeBuildPersonnelName(trainee.fullName), trainee]));
         const instructorByName = new Map(instructors.map(instructor => [normalizeBuildPersonnelName(instructor.name), instructor]));
         const samples: any[] = [];
+        const blockedSamples: any[] = [];
+        const noPreferredConfiguredSamples: any[] = [];
         let primaryImprovements = 0;
         let secondaryImprovements = 0;
+        let swapImprovements = 0;
         let skipped = 0;
         const counters: Record<string, number> = {
             candidateEvents: 0,
@@ -22917,6 +22920,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             bookingConflict: 0,
             eventLimitExceeded: 0,
             noUsablePreferredInstructor: 0,
+            oneHopSwapAttempts: 0,
+            oneHopSwapImprovements: 0,
+            oneHopSwapRejectedNoMetricGain: 0,
+            oneHopSwapRejectedUnsafe: 0,
             skippedSpecialEvent: 0,
             skippedTestEvent: 0,
             skippedCurrencyEvent: 0,
@@ -22939,30 +22946,48 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 counters,
                 durationMs: Math.round(performance.now() - startedAt),
                 samples,
+                blockedSamples,
+                noPreferredConfiguredSamples,
             };
         }
 
         const eventWouldConflictForStaff = (
             event: Omit<ScheduleEvent, 'date'>,
             staff: Instructor,
-            allEvents: Array<Omit<ScheduleEvent, 'date'>>
+            allEvents: Array<Omit<ScheduleEvent, 'date'>>,
+            ignoreEventIds: Set<string> = new Set([String(event.id || '')])
         ): boolean => {
             const proposedWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
             return allEvents.some(existing => {
-                if (existing.id === event.id || existing.isCancelled) return false;
+                if (ignoreEventIds.has(String(existing.id || '')) || existing.isCancelled) return false;
                 if (!getPersonnel(existing).some(name => personnelNamesMatch(name, staff.name))) return false;
                 const existingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
                 return proposedWindow.start < existingWindow.end && proposedWindow.end > existingWindow.start;
             });
         };
 
-        const wouldExceedStaffEventLimits = (
+        const getConflictingEventsForStaff = (
             event: Omit<ScheduleEvent, 'date'>,
             staff: Instructor,
             allEvents: Array<Omit<ScheduleEvent, 'date'>>
+        ): Array<Omit<ScheduleEvent, 'date'> & { _traineeName?: string }> => {
+            const proposedWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
+            return allEvents.filter(existing => {
+                if (existing.id === event.id || existing.isCancelled) return false;
+                if (!getPersonnel(existing).some(name => personnelNamesMatch(name, staff.name))) return false;
+                const existingWindow = getEventBookingWindowForAlgo(existing, syllabusDetails);
+                return proposedWindow.start < existingWindow.end && proposedWindow.end > existingWindow.start;
+            }) as Array<Omit<ScheduleEvent, 'date'> & { _traineeName?: string }>;
+        };
+
+        const wouldExceedStaffEventLimits = (
+            event: Omit<ScheduleEvent, 'date'>,
+            staff: Instructor,
+            allEvents: Array<Omit<ScheduleEvent, 'date'>>,
+            ignoreEventIds: Set<string> = new Set([String(event.id || '')])
         ): boolean => {
             const staffEvents = allEvents.filter(existing =>
-                existing.id !== event.id &&
+                !ignoreEventIds.has(String(existing.id || '')) &&
                 !existing.isCancelled &&
                 !isStbyResource(existing.resourceId) &&
                 getPersonnel(existing).some(name => personnelNamesMatch(name, staff.name))
@@ -22981,7 +23006,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const getPreferredInstructorBlockReason = (
             event: Omit<ScheduleEvent, 'date'>,
             trainee: Trainee,
-            staff: Instructor
+            staff: Instructor,
+            ignoreEventIds: Set<string> = new Set([String(event.id || '')])
         ): string | null => {
             const eventType = String(event.type || '').toLowerCase();
             if (!getBaseInstructorPoolForEventType(eventType).some(candidate => candidate.name === staff.name)) return 'notQualifiedForEventType';
@@ -22989,9 +23015,45 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             if (!canAssignStaffForScheduledWindow(staff, event.startTime)) return 'dayNightConflict';
             const bookingWindow = getEventBookingWindowForAlgo(event, syllabusDetails);
             if (isPersonStaticallyUnavailable(staff, bookingWindow.start, bookingWindow.end, buildDate, eventType)) return 'staticUnavailable';
-            if (eventWouldConflictForStaff(event, staff, eventsToOptimise)) return 'bookingConflict';
-            if (wouldExceedStaffEventLimits(event, staff, eventsToOptimise)) return 'eventLimitExceeded';
+            if (eventWouldConflictForStaff(event, staff, eventsToOptimise, ignoreEventIds)) return 'bookingConflict';
+            if (wouldExceedStaffEventLimits(event, staff, eventsToOptimise, ignoreEventIds)) return 'eventLimitExceeded';
             return null;
+        };
+
+        const setEventInstructor = (
+            event: Omit<ScheduleEvent, 'date'>,
+            staff: Instructor,
+        ) => {
+            const staffDisplayName = getNeoBuildPersonDisplayLabel(staff as NeoBuildIdentityPersonRecord);
+            Object.assign(event, {
+                instructor: staffDisplayName,
+                pilot: staffDisplayName,
+                ...makeNeoBuildStaffIdentityPayload(staff, instructors),
+            });
+            return staffDisplayName;
+        };
+
+        const preferredMetricImproved = (
+            previous: { primary: number; secondary: number; other: number },
+            next: { primary: number; secondary: number; other: number }
+        ): boolean => (
+            next.primary >= previous.primary &&
+            next.secondary >= previous.secondary &&
+            next.other <= previous.other &&
+            (next.primary > previous.primary || next.secondary > previous.secondary)
+        );
+
+        const isSwappableInstructionalEvent = (event: Omit<ScheduleEvent, 'date'>): boolean => {
+            if (event.type !== 'flight' && event.type !== 'ftd') return false;
+            if (!event.instructor || isStbyResource(event.resourceId) || event.flightType === 'Solo') return false;
+            const eventTestType = normaliseLmpTestEventType((event as any).testEventType);
+            return !isLmpTestEvent(eventTestType) &&
+                !event.currency &&
+                !(event as any).currencyDraftId &&
+                !(event as any).forcedInstructorConflict &&
+                (event as any).isRemedial !== true &&
+                !String(event.id || '').startsWith('remedial-') &&
+                !String((event as any)._source || '').includes('remedial');
         };
 
         eventsToOptimise.forEach(event => {
@@ -23039,28 +23101,117 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             ];
             if (preferredCandidates.length === 0) {
                 counters.noPreferredConfigured++;
+                if (noPreferredConfiguredSamples.length < 25) {
+                    noPreferredConfiguredSamples.push({
+                        trainee: trainee.fullName,
+                        event: event.flightNumber,
+                        type: event.type,
+                        startTime: event.startTime,
+                        resourceId: event.resourceId,
+                        currentInstructor: event.instructor,
+                    });
+                }
                 return;
             }
 
             let sawPreferredStaffRecord = false;
+            const preferredBlockDetails: any[] = [];
+            const currentInstructorRecord = instructorByName.get(normalizeBuildPersonnelName(event.instructor || ''));
 
             for (const preferred of preferredCandidates) {
                 const staff = instructorByName.get(normalizeBuildPersonnelName(preferred.name));
-                if (!staff) continue;
+                if (!staff) {
+                    preferredBlockDetails.push({ name: preferred.name, level: preferred.level, reason: 'missingPreferredStaffRecord' });
+                    continue;
+                }
                 sawPreferredStaffRecord = true;
                 const blockReason = getPreferredInstructorBlockReason(event, trainee, staff);
                 if (blockReason) {
                     counters[blockReason] = (counters[blockReason] || 0) + 1;
+                    preferredBlockDetails.push({ name: preferred.name, level: preferred.level, reason: blockReason });
+                    if (blockReason === 'bookingConflict' && currentInstructorRecord) {
+                        const conflictingEvents = getConflictingEventsForStaff(event, staff, eventsToOptimise)
+                            .filter(conflictingEvent => isSwappableInstructionalEvent(conflictingEvent));
+                        for (const conflictingEvent of conflictingEvents) {
+                            counters.oneHopSwapAttempts++;
+                            const conflictingTraineeName = conflictingEvent._traineeName || conflictingEvent.student || '';
+                            const conflictingTrainee = traineeByName.get(normalizeBuildPersonnelName(conflictingTraineeName));
+                            if (!conflictingTrainee) {
+                                counters.oneHopSwapRejectedUnsafe++;
+                                continue;
+                            }
+                            const ignoredIds = new Set([String(event.id || ''), String(conflictingEvent.id || '')]);
+                            const replacementBlockReason = getPreferredInstructorBlockReason(
+                                conflictingEvent,
+                                conflictingTrainee,
+                                currentInstructorRecord,
+                                ignoredIds
+                            );
+                            if (replacementBlockReason) {
+                                counters.oneHopSwapRejectedUnsafe++;
+                                continue;
+                            }
+
+                            const previousMetric = countPreferredInstructorPairings(eventsToOptimise);
+                            const originalInstructor = event.instructor;
+                            const originalPilot = event.pilot;
+                            const originalPersonnelRefs = (event as any).personnelRefs;
+                            const originalStaffIdentityRefs = (event as any).staffIdentityRefs;
+                            const conflictingOriginalInstructor = conflictingEvent.instructor;
+                            const conflictingOriginalPilot = conflictingEvent.pilot;
+                            const conflictingOriginalPersonnelRefs = (conflictingEvent as any).personnelRefs;
+                            const conflictingOriginalStaffIdentityRefs = (conflictingEvent as any).staffIdentityRefs;
+
+                            const preferredDisplayName = setEventInstructor(event, staff);
+                            const replacementDisplayName = setEventInstructor(conflictingEvent, currentInstructorRecord);
+                            const nextMetric = countPreferredInstructorPairings(eventsToOptimise);
+
+                            if (preferredMetricImproved(previousMetric, nextMetric)) {
+                                if (preferred.level === 'primary') primaryImprovements++;
+                                else secondaryImprovements++;
+                                swapImprovements++;
+                                counters.oneHopSwapImprovements++;
+                                if (samples.length < 25) {
+                                    samples.push({
+                                        trainee: trainee.fullName,
+                                        event: event.flightNumber,
+                                        type: event.type,
+                                        startTime: event.startTime,
+                                        resourceId: event.resourceId,
+                                        from: originalInstructor,
+                                        to: preferredDisplayName,
+                                        level: preferred.level,
+                                        viaSwap: {
+                                            trainee: conflictingTrainee.fullName,
+                                            event: conflictingEvent.flightNumber,
+                                            from: conflictingOriginalInstructor,
+                                            to: replacementDisplayName,
+                                        },
+                                    });
+                                }
+                                return;
+                            }
+
+                            Object.assign(event, {
+                                instructor: originalInstructor,
+                                pilot: originalPilot,
+                                personnelRefs: originalPersonnelRefs,
+                                staffIdentityRefs: originalStaffIdentityRefs,
+                            });
+                            Object.assign(conflictingEvent, {
+                                instructor: conflictingOriginalInstructor,
+                                pilot: conflictingOriginalPilot,
+                                personnelRefs: conflictingOriginalPersonnelRefs,
+                                staffIdentityRefs: conflictingOriginalStaffIdentityRefs,
+                            });
+                            counters.oneHopSwapRejectedNoMetricGain++;
+                        }
+                    }
                     continue;
                 }
 
                 const previousInstructor = event.instructor;
-                const staffDisplayName = getNeoBuildPersonDisplayLabel(staff as NeoBuildIdentityPersonRecord);
-                Object.assign(event, {
-                    instructor: staffDisplayName,
-                    pilot: staffDisplayName,
-                    ...makeNeoBuildStaffIdentityPayload(staff, instructors),
-                });
+                const staffDisplayName = setEventInstructor(event, staff);
 
                 if (preferred.level === 'primary') primaryImprovements++;
                 else secondaryImprovements++;
@@ -23081,6 +23232,17 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
             if (!sawPreferredStaffRecord) counters.missingPreferredStaffRecord++;
             counters.noUsablePreferredInstructor++;
+            if (blockedSamples.length < 25) {
+                blockedSamples.push({
+                    trainee: trainee.fullName,
+                    event: event.flightNumber,
+                    type: event.type,
+                    startTime: event.startTime,
+                    resourceId: event.resourceId,
+                    currentInstructor: event.instructor,
+                    preferredCandidates: preferredBlockDetails,
+                });
+            }
             skipped++;
         });
 
@@ -23092,10 +23254,13 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             changed: primaryImprovements + secondaryImprovements,
             primaryImprovements,
             secondaryImprovements,
+            swapImprovements,
             skipped,
             counters,
             durationMs: Math.round(performance.now() - startedAt),
             samples,
+            blockedSamples,
+            noPreferredConfiguredSamples,
         };
     };
 
