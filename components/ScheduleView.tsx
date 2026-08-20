@@ -31,6 +31,7 @@ import { getResourceCategory as getConfiguredResourceCategory } from '../utils/r
 import { getEffectiveDispatchStaggerMinutes, type DispatchStaggerSettings } from '../utils/dispatchStagger';
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from '../utils/dispatchRate';
 import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, recordDfpDragMoveDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
+import { getAdaptiveContextMenuPosition } from '../utils/contextMenuPosition';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
 import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
 import {
@@ -7698,8 +7699,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             aircraftNumber,
             tailNumber,
             isUnavailable,
-            x: Math.min(event.clientX, Math.max(12, window.innerWidth - 250)),
-            y: Math.min(event.clientY, Math.max(12, window.innerHeight - 180)),
+            x: event.clientX,
+            y: event.clientY,
         });
     }, [canEditFlightLineAvailability, isReadOnly]);
     const closeFlightLineAircraftContextMenu = useCallback(() => {
@@ -9271,39 +9272,62 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     </aside>
                 </div>
             )}
-            {flightLineAircraftContextMenu ? (
-                <div
-                    className="fixed z-[90] w-[238px] overflow-hidden rounded-md border border-slate-600/80 bg-slate-950 shadow-2xl shadow-black/50"
-                    style={{ left: flightLineAircraftContextMenu.x, top: flightLineAircraftContextMenu.y }}
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onContextMenu={(event) => event.preventDefault()}
-                >
-                    <div className="border-b border-slate-700/80 px-3 py-2">
-                        <div className="truncate text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Aircraft</div>
-                        <div className="truncate text-sm font-black text-white">{flightLineAircraftContextMenu.tailNumber}</div>
-                    </div>
-                    {flightLineAircraftContextMenu.isUnavailable ? (
-                        <div className="space-y-2 px-3 py-3">
-                            <div className="text-xs font-black uppercase tracking-[0.14em] text-rose-200">Unavailable</div>
-                            <label className="block">
-                                <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Reason</span>
-                                <select
-                                    className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-semibold text-slate-100 outline-none focus:border-cyan-400"
-                                    value={getFlightLineUnavailableReason(flightLineAircraftContextMenu.aircraftNumber)}
-                                    onChange={(event) => {
-                                        setFlightLineAircraftUnavailableReason(flightLineAircraftContextMenu.aircraftNumber, event.target.value);
+            {flightLineAircraftContextMenu ? (() => {
+                const menuWidth = 238;
+                const menuHeight = flightLineAircraftContextMenu.isUnavailable ? 190 : 92;
+                const menuPosition = getAdaptiveContextMenuPosition({
+                    clickX: flightLineAircraftContextMenu.x,
+                    clickY: flightLineAircraftContextMenu.y,
+                    menuWidth,
+                    menuHeight,
+                    margin: 12,
+                    anchorGap: 8,
+                });
+                return (
+                    <div
+                        className="fixed z-[90] w-[238px] overflow-hidden rounded-md border border-slate-600/80 bg-slate-950 shadow-2xl shadow-black/50"
+                        style={{ left: menuPosition.left, top: menuPosition.top, transformOrigin: menuPosition.placement.replace('-', ' ') }}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onContextMenu={(event) => event.preventDefault()}
+                    >
+                        <div className="border-b border-slate-700/80 px-3 py-2">
+                            <div className="truncate text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Aircraft</div>
+                            <div className="truncate text-sm font-black text-white">{flightLineAircraftContextMenu.tailNumber}</div>
+                        </div>
+                        {flightLineAircraftContextMenu.isUnavailable ? (
+                            <div className="space-y-2 px-3 py-3">
+                                <div className="text-xs font-black uppercase tracking-[0.14em] text-rose-200">Unavailable</div>
+                                <label className="block">
+                                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Reason</span>
+                                    <select
+                                        className="w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-semibold text-slate-100 outline-none focus:border-cyan-400"
+                                        value={getFlightLineUnavailableReason(flightLineAircraftContextMenu.aircraftNumber)}
+                                        onChange={(event) => {
+                                            setFlightLineAircraftUnavailableReason(flightLineAircraftContextMenu.aircraftNumber, event.target.value);
+                                            closeFlightLineAircraftContextMenu();
+                                        }}
+                                        onKeyDown={stopEditableKeyPropagation}
+                                    >
+                                        {flightLinePoolContext.unavailableReasonOptions.map((reason) => (
+                                            <option key={`flight-line-unavailable-reason-${reason}`} value={reason}>{reason}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <button
+                                    type="button"
+                                    className="w-full rounded-md border border-emerald-400/40 bg-emerald-500/15 px-3 py-2 text-left text-xs font-black text-emerald-200 hover:bg-emerald-500/25"
+                                    onClick={() => {
+                                        moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
                                         closeFlightLineAircraftContextMenu();
                                     }}
-                                    onKeyDown={stopEditableKeyPropagation}
                                 >
-                                    {flightLinePoolContext.unavailableReasonOptions.map((reason) => (
-                                        <option key={`flight-line-unavailable-reason-${reason}`} value={reason}>{reason}</option>
-                                    ))}
-                                </select>
-                            </label>
+                                    Aircraft Serviceable
+                                </button>
+                            </div>
+                        ) : (
                             <button
                                 type="button"
-                                className="w-full rounded-md border border-emerald-400/40 bg-emerald-500/15 px-3 py-2 text-left text-xs font-black text-emerald-200 hover:bg-emerald-500/25"
+                                className="block w-full px-3 py-3 text-left text-xs font-black text-emerald-200 hover:bg-emerald-500/15"
                                 onClick={() => {
                                     moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
                                     closeFlightLineAircraftContextMenu();
@@ -9311,21 +9335,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             >
                                 Aircraft Serviceable
                             </button>
-                        </div>
-                    ) : (
-                        <button
-                            type="button"
-                            className="block w-full px-3 py-3 text-left text-xs font-black text-emerald-200 hover:bg-emerald-500/15"
-                            onClick={() => {
-                                moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
-                                closeFlightLineAircraftContextMenu();
-                            }}
-                        >
-                            Aircraft Serviceable
-                        </button>
-                    )}
-                </div>
-            ) : null}
+                        )}
+                    </div>
+                );
+            })() : null}
             <div 
                 style={{
                     width: `${AIRFRAME_COLUMN_WIDTH + (TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel)}px`,

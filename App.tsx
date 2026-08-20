@@ -11,6 +11,7 @@ import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSetting
 import { initialiseLiveChangeBus, LIVE_CHANGE_EVENT } from './utils/liveChangeBus';
 import { isEditableElement } from './utils/editableKeyEvents';
 import { getDfpDragDiagnosticReport } from './utils/dfpDragDiagnostics';
+import { getAdaptiveContextMenuPosition } from './utils/contextMenuPosition';
 import {
     buildPlatformDataScopeQuery,
     getPlatformDataScopeForLocation,
@@ -24516,14 +24517,20 @@ const DfpContextMenu: React.FC<{
 
     const estimatedWidth = 250;
     const estimatedHeight = Math.min(360, 58 + (menu.items.length * 42));
-    const left = Math.min(menu.x, Math.max(8, window.innerWidth - estimatedWidth - 8));
-    const top = Math.min(menu.y, Math.max(8, window.innerHeight - estimatedHeight - 8));
+    const { left, top, placement } = getAdaptiveContextMenuPosition({
+        clickX: menu.x,
+        clickY: menu.y,
+        menuWidth: estimatedWidth,
+        menuHeight: estimatedHeight,
+        margin: 8,
+        anchorGap: 8,
+    });
 
     return (
         <div
             data-dfp-context-menu="true"
             className="fixed z-[900] min-w-[230px] max-w-[280px] overflow-hidden rounded-md border border-gray-300 bg-gray-100 text-gray-900 shadow-2xl shadow-black/30"
-            style={{ left, top }}
+            style={{ left, top, transformOrigin: placement.replace('-', ' ') }}
             role="menu"
             aria-label="DFP NEO context menu"
             onMouseDown={(event) => event.stopPropagation()}
