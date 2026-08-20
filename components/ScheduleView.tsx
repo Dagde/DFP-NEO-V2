@@ -134,7 +134,9 @@ interface ScheduleViewProps {
   onToggleFlightLinePanel?: () => void;
   canEditFlightLineInventory?: boolean;
   canEditFlightLineAvailability?: boolean;
+  canEditFlightLineAvailabilityLink?: boolean;
   canEditTileAircraftNumber?: boolean;
+  onLinkedAvailabilityChange?: (count: number) => void;
   onInitialSetupWizardActiveChange?: (active: boolean) => void;
   formationCallsigns?: FormationCallsign[];
   buildRuleSettings?: {
@@ -7328,7 +7330,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     onToggleFlightLinePanel,
     canEditFlightLineInventory = true,
     canEditFlightLineAvailability = true,
+    canEditFlightLineAvailabilityLink = false,
     canEditTileAircraftNumber = true,
+    onLinkedAvailabilityChange,
     onInitialSetupWizardActiveChange,
     formationCallsigns = [],
     buildRuleSettings,
@@ -7425,6 +7429,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             unavailableNumbers,
             unavailableReasons,
             unavailableReasonOptions: normaliseFlightLineUnavailableReasons(settings.flightLineUnavailableReasonOptions),
+            linkAircraftAvailability: settings.flightLineLinkAircraftAvailability === true,
         };
     }, [airframeCount, locationCode, platformConfig, unitCode]);
     const sortFlightLineAircraftNumbers = useCallback((values: string[]) => (
@@ -7439,6 +7444,34 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         () => new Set(flightLineEffectiveUnavailableNumbers),
         [flightLineEffectiveUnavailableNumbers],
     );
+    const flightLineLinkedAvailabilityCount = Math.max(
+        0,
+        flightLinePoolContext.numbers.length - flightLineEffectiveUnavailableNumbers.length,
+    );
+    const flightLineAvailabilityCheckOk = flightLineLinkedAvailabilityCount === flightLinePoolContext.availableNumbers.length;
+    useEffect(() => {
+        if (!flightLinePoolContext.linkAircraftAvailability) return;
+        onLinkedAvailabilityChange?.(flightLineLinkedAvailabilityCount);
+    }, [flightLineLinkedAvailabilityCount, flightLinePoolContext.linkAircraftAvailability, onLinkedAvailabilityChange]);
+    const setFlightLineLinkAircraftAvailability = useCallback((linked: boolean) => {
+        if (!canEditFlightLineAvailabilityLink || isReadOnly) return;
+        if (!onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
+        onUpdatePlatformConfig((current: any) => ({
+            ...current,
+            resourcePools: (current?.resourcePools || []).map((pool: any, poolIndex: number) => {
+                if (poolIndex !== flightLinePoolContext.poolIndex) return pool;
+                const settings = pool?.settings || {};
+                return {
+                    ...pool,
+                    settings: {
+                        ...settings,
+                        flightLineLinkAircraftAvailability: linked,
+                    },
+                };
+            }),
+        }));
+        if (linked) onLinkedAvailabilityChange?.(flightLineLinkedAvailabilityCount);
+    }, [canEditFlightLineAvailabilityLink, flightLineLinkedAvailabilityCount, flightLinePoolContext.poolIndex, isReadOnly, onLinkedAvailabilityChange, onUpdatePlatformConfig]);
     const getFlightLineUnavailableReason = useCallback((aircraftNumber: string): string => {
         const savedReason = flightLinePoolContext.unavailableReasons[aircraftNumber];
         return savedReason || flightLinePoolContext.unavailableReasonOptions[0] || DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS[0];
@@ -9141,7 +9174,40 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 </div>
                                 <div className="flex min-w-0 flex-1 items-stretch">
                                     <div className="min-w-0 flex-1">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Aircraft Tiles</p>
+                                        <div className="flex items-start justify-between gap-3">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Aircraft Tiles</p>
+                                            <div className="flex flex-wrap items-center justify-end gap-2 text-[10px]">
+                                                <span
+                                                    className={`rounded border px-1.5 py-0.5 font-bold ${
+                                                        flightLineAvailabilityCheckOk
+                                                            ? 'border-slate-700/80 text-slate-500'
+                                                            : 'border-amber-400/50 bg-amber-500/10 text-amber-200'
+                                                    }`}
+                                                    title="Inventory minus unavailable should equal the visible aircraft tiles and linked availability count."
+                                                >
+                                                    {flightLineLinkedAvailabilityCount} available
+                                                </span>
+                                                <label
+                                                    className={`flex items-center gap-1.5 rounded border px-2 py-1 ${
+                                                        canEditFlightLineAvailabilityLink && !isReadOnly
+                                                            ? 'cursor-pointer border-slate-700/80 bg-slate-950/45 text-slate-300 hover:border-cyan-400/50 hover:text-cyan-100'
+                                                            : 'cursor-not-allowed border-slate-800 bg-slate-950/30 text-slate-600'
+                                                    }`}
+                                                    title={canEditFlightLineAvailabilityLink && !isReadOnly
+                                                        ? 'When linked, the solid aircraft availability line follows aircraft tiles minus unavailable aircraft.'
+                                                        : 'Permission required to change linked aircraft availability'}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={flightLinePoolContext.linkAircraftAvailability}
+                                                        disabled={!canEditFlightLineAvailabilityLink || isReadOnly}
+                                                        onChange={(event) => setFlightLineLinkAircraftAvailability(event.target.checked)}
+                                                        className="h-3 w-3 accent-cyan-400"
+                                                    />
+                                                    <span className="font-semibold">Link Aircraft Availability</span>
+                                                </label>
+                                            </div>
+                                        </div>
                                         <div
                                             className={`mt-3 flex min-h-[88px] flex-wrap gap-2 rounded-md border px-2 py-2 pb-1 transition-all duration-300 ease-out ${isFlightLineAvailableDropActive ? 'border-cyan-300/70 bg-cyan-500/10' : 'border-transparent bg-transparent'}`}
                                             onDragOver={(event) => {
@@ -9533,6 +9599,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             onUserChange={isReadOnly ? undefined : onUserAvailabilityChange}
                             showLiveAvailabilityLine={showLiveAvailabilityLine}
                             isReadOnly={isReadOnly}
+                            linkedAvailabilityCount={flightLinePoolContext.linkAircraftAvailability ? flightLineLinkedAvailabilityCount : null}
+                            isLinkedAvailability={flightLinePoolContext.linkAircraftAvailability}
                         />
                     )}
                     

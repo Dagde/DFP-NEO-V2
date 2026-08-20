@@ -2070,6 +2070,7 @@ const PLATFORM_PERMISSION_CATALOG = [
       ["dfp.flightLine.view", "Open Flight Line"],
       ["dfp.flightLine.inventory.edit", "Edit aircraft inventory"],
       ["dfp.flightLine.availability.edit", "Edit aircraft availability status"],
+      ["dfp.flightLine.availabilityLink.edit", "Link aircraft availability to flight-line tiles"],
       ["dfp.aircraftNumber.edit", "Edit aircraft number on flight tiles"],
       ["dfp.validation", "Run validation checks"],
       ["dfp.publish", "Publish DFP"],
@@ -2151,13 +2152,13 @@ const DEFAULT_PLATFORM_PERMISSION_PROFILES = [
     id: "scheduler",
     name: "Scheduler",
     description: "Scheduling and build management access.",
-    permissions: ["dfp.view", "dfp.editTiles", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.aircraftNumber.edit", "dfp.validation", "neo.run", "neo.priorities", "neo.intelligence", "neo.override", "reporting.view"]
+    permissions: ["dfp.view", "dfp.editTiles", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.flightLine.availabilityLink.edit", "dfp.aircraftNumber.edit", "dfp.validation", "neo.run", "neo.priorities", "neo.intelligence", "neo.override", "reporting.view"]
   },
   {
     id: "maintenance",
     name: "Maintenance",
     description: "Aircraft inventory, aircraft availability and flight-line tail assignment access without general tile editing.",
-    permissions: ["dfp.view", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.aircraftNumber.edit"]
+    permissions: ["dfp.view", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.flightLine.availabilityLink.edit", "dfp.aircraftNumber.edit"]
   },
   {
     id: "unit-admin",
@@ -10370,12 +10371,15 @@ const AircraftAvailabilityOverlay = ({
   locationCode,
   unitCode,
   showLiveAvailabilityLine,
-  isReadOnly = false
+  isReadOnly = false,
+  linkedAvailabilityCount = null,
+  isLinkedAvailability = false
 }) => {
   const [currentAvailable, setCurrentAvailable] = reactExports.useState(initialAvailability);
   const [snapshots, setSnapshots] = reactExports.useState([]);
   const [hoverInfo, setHoverInfo] = reactExports.useState(null);
   const overlayRef = reactExports.useRef(null);
+  const effectiveAvailable = isLinkedAvailability && typeof linkedAvailabilityCount === "number" ? Math.max(0, Math.min(totalAircraft, linkedAvailabilityCount)) : currentAvailable;
   const onAvailabilityChangeRef = reactExports.useRef(onAvailabilityChange);
   reactExports.useEffect(() => {
     onAvailabilityChangeRef.current = onAvailabilityChange;
@@ -10556,8 +10560,12 @@ const AircraftAvailabilityOverlay = ({
   reactExports.useEffect(() => {
     currentDateRef.current = currentDate;
   }, [currentDate]);
+  reactExports.useEffect(() => {
+    if (!isLinkedAvailability || typeof linkedAvailabilityCount !== "number") return;
+    setCurrentAvailable(Math.max(0, Math.min(totalAircraft, linkedAvailabilityCount)));
+  }, [isLinkedAvailability, linkedAvailabilityCount, totalAircraft]);
   const handleLineMouseDown = async (e) => {
-    if (isReadOnly) return;
+    if (isReadOnly || isLinkedAvailability) return;
     const freezeRaw = localStorage.getItem("systemFreezeState");
     if (freezeRaw) {
       const freeze = JSON.parse(freezeRaw);
@@ -10646,7 +10654,7 @@ const AircraftAvailabilityOverlay = ({
     const t = setInterval(() => setTick((n) => n + 1), 6e4);
     return () => clearInterval(t);
   }, []);
-  const displayY = isDragging ? dragY : getYPosition(currentAvailable);
+  const displayY = isDragging ? dragY : getYPosition(effectiveAvailable);
   const endOfDayX = getEndOfDayX();
   const now = /* @__PURE__ */ new Date();
   const currentTimeX = getXPosition(now);
@@ -10759,9 +10767,9 @@ const AircraftAvailabilityOverlay = ({
               y2: displayY,
               stroke: "transparent",
               strokeWidth: "20",
-              style: { pointerEvents: "auto", cursor: "ns-resize" },
-              onMouseMove: (event) => updateHoverInfo(event, currentAvailable),
-              onMouseEnter: (event) => updateHoverInfo(event, currentAvailable),
+              style: { pointerEvents: "auto", cursor: isLinkedAvailability ? "default" : "ns-resize" },
+              onMouseMove: (event) => updateHoverInfo(event, effectiveAvailable),
+              onMouseEnter: (event) => updateHoverInfo(event, effectiveAvailable),
               onMouseLeave: () => setHoverInfo(null),
               onMouseDown: handleLineMouseDown
             }
@@ -16997,7 +17005,9 @@ const ScheduleView = ({
   onToggleFlightLinePanel,
   canEditFlightLineInventory = true,
   canEditFlightLineAvailability = true,
+  canEditFlightLineAvailabilityLink = false,
   canEditTileAircraftNumber = true,
+  onLinkedAvailabilityChange,
   onInitialSetupWizardActiveChange,
   formationCallsigns = [],
   buildRuleSettings,
@@ -17073,7 +17083,8 @@ const ScheduleView = ({
       availableNumbers,
       unavailableNumbers,
       unavailableReasons,
-      unavailableReasonOptions: normaliseFlightLineUnavailableReasons$1(settings.flightLineUnavailableReasonOptions)
+      unavailableReasonOptions: normaliseFlightLineUnavailableReasons$1(settings.flightLineUnavailableReasonOptions),
+      linkAircraftAvailability: settings.flightLineLinkAircraftAvailability === true
     };
   }, [airframeCount, locationCode, platformConfig, unitCode]);
   const sortFlightLineAircraftNumbers = reactExports.useCallback((values) => [...values].sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })), []);
@@ -17086,6 +17097,34 @@ const ScheduleView = ({
     () => new Set(flightLineEffectiveUnavailableNumbers),
     [flightLineEffectiveUnavailableNumbers]
   );
+  const flightLineLinkedAvailabilityCount = Math.max(
+    0,
+    flightLinePoolContext.numbers.length - flightLineEffectiveUnavailableNumbers.length
+  );
+  const flightLineAvailabilityCheckOk = flightLineLinkedAvailabilityCount === flightLinePoolContext.availableNumbers.length;
+  reactExports.useEffect(() => {
+    if (!flightLinePoolContext.linkAircraftAvailability) return;
+    onLinkedAvailabilityChange?.(flightLineLinkedAvailabilityCount);
+  }, [flightLineLinkedAvailabilityCount, flightLinePoolContext.linkAircraftAvailability, onLinkedAvailabilityChange]);
+  const setFlightLineLinkAircraftAvailability = reactExports.useCallback((linked) => {
+    if (!canEditFlightLineAvailabilityLink || isReadOnly) return;
+    if (!onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
+    onUpdatePlatformConfig((current) => ({
+      ...current,
+      resourcePools: (current?.resourcePools || []).map((pool, poolIndex) => {
+        if (poolIndex !== flightLinePoolContext.poolIndex) return pool;
+        const settings = pool?.settings || {};
+        return {
+          ...pool,
+          settings: {
+            ...settings,
+            flightLineLinkAircraftAvailability: linked
+          }
+        };
+      })
+    }));
+    if (linked) onLinkedAvailabilityChange?.(flightLineLinkedAvailabilityCount);
+  }, [canEditFlightLineAvailabilityLink, flightLineLinkedAvailabilityCount, flightLinePoolContext.poolIndex, isReadOnly, onLinkedAvailabilityChange, onUpdatePlatformConfig]);
   const getFlightLineUnavailableReason = reactExports.useCallback((aircraftNumber) => {
     const savedReason = flightLinePoolContext.unavailableReasons[aircraftNumber];
     return savedReason || flightLinePoolContext.unavailableReasonOptions[0] || DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS$1[0];
@@ -18612,7 +18651,42 @@ const ScheduleView = ({
                   ] }, `flight-line-aircraft-inventory-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700/80 bg-slate-950/60 px-2 py-2 text-[10px] font-semibold text-slate-500", children: "No aircraft rows configured." }) }) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-0 flex-1 items-stretch", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Aircraft Tiles" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Aircraft Tiles" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-end gap-2 text-[10px]", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "span",
+                        {
+                          className: `rounded border px-1.5 py-0.5 font-bold ${flightLineAvailabilityCheckOk ? "border-slate-700/80 text-slate-500" : "border-amber-400/50 bg-amber-500/10 text-amber-200"}`,
+                          title: "Inventory minus unavailable should equal the visible aircraft tiles and linked availability count.",
+                          children: [
+                            flightLineLinkedAvailabilityCount,
+                            " available"
+                          ]
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "label",
+                        {
+                          className: `flex items-center gap-1.5 rounded border px-2 py-1 ${canEditFlightLineAvailabilityLink && !isReadOnly ? "cursor-pointer border-slate-700/80 bg-slate-950/45 text-slate-300 hover:border-cyan-400/50 hover:text-cyan-100" : "cursor-not-allowed border-slate-800 bg-slate-950/30 text-slate-600"}`,
+                          title: canEditFlightLineAvailabilityLink && !isReadOnly ? "When linked, the solid aircraft availability line follows aircraft tiles minus unavailable aircraft." : "Permission required to change linked aircraft availability",
+                          children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "input",
+                              {
+                                type: "checkbox",
+                                checked: flightLinePoolContext.linkAircraftAvailability,
+                                disabled: !canEditFlightLineAvailabilityLink || isReadOnly,
+                                onChange: (event) => setFlightLineLinkAircraftAvailability(event.target.checked),
+                                className: "h-3 w-3 accent-cyan-400"
+                              }
+                            ),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Link Aircraft Availability" })
+                          ]
+                        }
+                      )
+                    ] })
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "div",
                     {
@@ -18997,7 +19071,9 @@ const ScheduleView = ({
                     onAvailabilityChange,
                     onUserChange: isReadOnly ? void 0 : onUserAvailabilityChange,
                     showLiveAvailabilityLine,
-                    isReadOnly
+                    isReadOnly,
+                    linkedAvailabilityCount: flightLinePoolContext.linkAircraftAvailability ? flightLineLinkedAvailabilityCount : null,
+                    isLinkedAvailability: flightLinePoolContext.linkAircraftAvailability
                   }
                 ),
                 renderEvents(),
@@ -121114,6 +121190,9 @@ const App = () => {
     if (solarClassification === "Day" || solarClassification === "Night") return solarClassification;
     return startTime >= commenceNightFlying && startTime < ceaseNightFlying ? "Night" : "Day";
   }, [ceaseNightFlying, commenceNightFlying, date, getSunTimesForDate, selectedDfpSunTimes]);
+  const handleLinkedAircraftAvailabilityChange = reactExports.useCallback((count) => {
+    setAvailableAircraftCount((current) => current === count ? current : count);
+  }, []);
   const handleUpdateNeoAvailableAircraftCount = reactExports.useCallback((value) => {
     setNeoAvailableAircraftCount((previous) => {
       const next = typeof value === "function" ? value(previous) : value;
@@ -123967,9 +124046,10 @@ ${"=".repeat(60)}`);
     setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
   }, []);
   const canEditDfpTiles = canUsePlatformPermission("dfp.editTiles");
-  const canOpenFlightLine = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.view") || canUsePlatformPermission("dfp.flightLine.inventory.edit") || canUsePlatformPermission("dfp.flightLine.availability.edit") || canUsePlatformPermission("dfp.aircraftNumber.edit");
+  const canOpenFlightLine = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.view") || canUsePlatformPermission("dfp.flightLine.inventory.edit") || canUsePlatformPermission("dfp.flightLine.availability.edit") || canUsePlatformPermission("dfp.flightLine.availabilityLink.edit") || canUsePlatformPermission("dfp.aircraftNumber.edit");
   const canEditFlightLineInventory = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.inventory.edit");
   const canEditFlightLineAvailability = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.availability.edit");
+  const canEditFlightLineAvailabilityLink = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.availabilityLink.edit");
   const canEditTileAircraftNumber = canEditDfpTiles || canUsePlatformPermission("dfp.aircraftNumber.edit");
   const canRunValidation = canUsePlatformPermission("dfp.validation");
   const canPublishDfp = canUsePlatformPermission("dfp.publish");
@@ -135122,7 +135202,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             },
             canEditFlightLineInventory: canEditFlightLineInventory && !isViewingPastDfp,
             canEditFlightLineAvailability: canEditFlightLineAvailability && !isViewingPastDfp,
+            canEditFlightLineAvailabilityLink: canEditFlightLineAvailabilityLink && !isViewingPastDfp,
             canEditTileAircraftNumber: canEditTileAircraftNumber && !isViewingPastDfp,
+            onLinkedAvailabilityChange: handleLinkedAircraftAvailabilityChange,
             onInitialSetupWizardActiveChange: setIsInitialSetupWizardActive,
             formationCallsigns,
             buildRuleSettings: {

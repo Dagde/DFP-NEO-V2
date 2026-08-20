@@ -30418,6 +30418,9 @@ const App: React.FC = () => {
             );
         }
     };
+    const handleLinkedAircraftAvailabilityChange = useCallback((count: number) => {
+        setAvailableAircraftCount(current => current === count ? current : count);
+    }, []);
     const handleUpdateNeoAvailableAircraftCount = useCallback((value: React.SetStateAction<number>) => {
         setNeoAvailableAircraftCount(previous => {
             const next = typeof value === 'function' ? (value as (current: number) => number)(previous) : value;
@@ -34002,9 +34005,10 @@ const App: React.FC = () => {
     }, []);
 
     const canEditDfpTiles = canUsePlatformPermission('dfp.editTiles');
-    const canOpenFlightLine = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.view') || canUsePlatformPermission('dfp.flightLine.inventory.edit') || canUsePlatformPermission('dfp.flightLine.availability.edit') || canUsePlatformPermission('dfp.aircraftNumber.edit');
+    const canOpenFlightLine = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.view') || canUsePlatformPermission('dfp.flightLine.inventory.edit') || canUsePlatformPermission('dfp.flightLine.availability.edit') || canUsePlatformPermission('dfp.flightLine.availabilityLink.edit') || canUsePlatformPermission('dfp.aircraftNumber.edit');
     const canEditFlightLineInventory = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.inventory.edit');
     const canEditFlightLineAvailability = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.availability.edit');
+    const canEditFlightLineAvailabilityLink = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.availabilityLink.edit');
     const canEditTileAircraftNumber = canEditDfpTiles || canUsePlatformPermission('dfp.aircraftNumber.edit');
     const canRunValidation = canUsePlatformPermission('dfp.validation');
     const canPublishDfp = canUsePlatformPermission('dfp.publish');
@@ -47557,7 +47561,9 @@ appliedUpdates.forEach(update => {
                            }}
                            canEditFlightLineInventory={canEditFlightLineInventory && !isViewingPastDfp}
                            canEditFlightLineAvailability={canEditFlightLineAvailability && !isViewingPastDfp}
+                           canEditFlightLineAvailabilityLink={canEditFlightLineAvailabilityLink && !isViewingPastDfp}
                            canEditTileAircraftNumber={canEditTileAircraftNumber && !isViewingPastDfp}
+                           onLinkedAvailabilityChange={handleLinkedAircraftAvailabilityChange}
                            onInitialSetupWizardActiveChange={setIsInitialSetupWizardActive}
                            formationCallsigns={formationCallsigns}
                            buildRuleSettings={{

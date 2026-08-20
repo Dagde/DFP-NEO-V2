@@ -29,6 +29,8 @@ interface AircraftAvailabilityOverlayProps {
     // should render only the dotted trace.
     showLiveAvailabilityLine?: boolean;
     isReadOnly?: boolean;
+    linkedAvailabilityCount?: number | null;
+    isLinkedAvailability?: boolean;
 }
 
 const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = ({
@@ -49,11 +51,16 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     unitCode,
     showLiveAvailabilityLine,
     isReadOnly = false,
+    linkedAvailabilityCount = null,
+    isLinkedAvailability = false,
 }) => {
     const [currentAvailable, setCurrentAvailable] = useState<number>(initialAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
     const [hoverInfo, setHoverInfo] = useState<{ x: number; y: number; available: number; label: string } | null>(null);
     const overlayRef = useRef<SVGSVGElement>(null);
+    const effectiveAvailable = isLinkedAvailability && typeof linkedAvailabilityCount === 'number'
+        ? Math.max(0, Math.min(totalAircraft, linkedAvailabilityCount))
+        : currentAvailable;
 
     // Stable ref for onAvailabilityChange
     const onAvailabilityChangeRef = useRef(onAvailabilityChange);
@@ -272,9 +279,13 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     useEffect(() => { totalAircraftRef.current = totalAircraft; }, [totalAircraft]);
     useEffect(() => { initialAvailabilityRef.current = initialAvailability; }, [initialAvailability]);
     useEffect(() => { currentDateRef.current = currentDate; }, [currentDate]);
+    useEffect(() => {
+        if (!isLinkedAvailability || typeof linkedAvailabilityCount !== 'number') return;
+        setCurrentAvailable(Math.max(0, Math.min(totalAircraft, linkedAvailabilityCount)));
+    }, [isLinkedAvailability, linkedAvailabilityCount, totalAircraft]);
 
     const handleLineMouseDown = async (e: React.MouseEvent) => {
-        if (isReadOnly) return;
+        if (isReadOnly || isLinkedAvailability) return;
         const freezeRaw = localStorage.getItem('systemFreezeState');
         if (freezeRaw) {
             const freeze = JSON.parse(freezeRaw);
@@ -371,7 +382,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     }, []);
 
     // ── Render ──────────────────────────────────────────────────────────────────
-    const displayY = isDragging ? dragY : getYPosition(currentAvailable);
+    const displayY = isDragging ? dragY : getYPosition(effectiveAvailable);
     const endOfDayX = getEndOfDayX();
     const now = new Date();
     const currentTimeX = getXPosition(now);
@@ -468,9 +479,9 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                         x1={solidStartX} y1={displayY}
                         x2={endOfDayX}   y2={displayY}
                         stroke="transparent" strokeWidth="20"
-                        style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
-                        onMouseMove={(event) => updateHoverInfo(event, currentAvailable)}
-                        onMouseEnter={(event) => updateHoverInfo(event, currentAvailable)}
+                        style={{ pointerEvents: 'auto', cursor: isLinkedAvailability ? 'default' : 'ns-resize' }}
+                        onMouseMove={(event) => updateHoverInfo(event, effectiveAvailable)}
+                        onMouseEnter={(event) => updateHoverInfo(event, effectiveAvailable)}
                         onMouseLeave={() => setHoverInfo(null)}
                         onMouseDown={handleLineMouseDown}
                     />
