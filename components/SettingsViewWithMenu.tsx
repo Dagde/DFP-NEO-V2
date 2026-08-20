@@ -1074,14 +1074,15 @@ SettingsNavigationSidebar.displayName = 'SettingsNavigationSidebar';
 
 const TraineeReallocationSection: React.FC = () => {
     const [loading, setLoading] = useState(false);
+    const [applying, setApplying] = useState(false);
     const [error, setError] = useState('');
     const [preview, setPreview] = useState<any>(null);
 
-    const loadPreview = async () => {
+    const loadPreview = async (mode: 'all' | 'missingOnly' = 'missingOnly') => {
         setLoading(true);
         setError('');
         try {
-            const response = await fetch('/api/trainee-reallocation/preview', { credentials: 'include' });
+            const response = await fetch(`/api/trainee-reallocation/preview?mode=${mode}`, { credentials: 'include' });
             const data = await response.json().catch(() => ({}));
             if (!response.ok || data?.success === false) {
                 throw new Error(data?.error || `Preview failed with HTTP ${response.status}`);
@@ -1095,7 +1096,31 @@ const TraineeReallocationSection: React.FC = () => {
         }
     };
 
-    const allocations = Array.isArray(preview?.allocations) ? preview.allocations : [];
+    const applyMissingOnly = async () => {
+        setApplying(true);
+        setError('');
+        try {
+            const response = await fetch('/api/trainee-reallocation/apply', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: 'missingOnly' }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data?.success === false) {
+                throw new Error(data?.error || `Apply failed with HTTP ${response.status}`);
+            }
+            setPreview(data);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        } finally {
+            setApplying(false);
+        }
+    };
+
+    const allocations = Array.isArray(preview?.targetAllocations)
+        ? preview.targetAllocations
+        : Array.isArray(preview?.allocations) ? preview.allocations.filter((allocation: any) => !allocation?.untouched) : [];
     const unitCounts = allocations.reduce((acc: Record<string, number>, allocation: any) => {
         const unit = String(allocation?.unit || 'Unassigned').trim() || 'Unassigned';
         acc[unit] = (acc[unit] || 0) + 1;
@@ -1109,14 +1134,24 @@ const TraineeReallocationSection: React.FC = () => {
                     <h2 className="text-xl font-bold text-white">Trainee Reallocation</h2>
                     <p className="mt-1 text-sm text-gray-400">Preview primary and secondary instructor allocation from configured trainee and staff records.</p>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => void loadPreview()}
-                    disabled={loading}
-                    className="rounded-md border border-violet-500/40 bg-violet-500/20 px-4 py-2 text-sm font-semibold text-violet-100 hover:bg-violet-500/30 disabled:cursor-wait disabled:opacity-60"
-                >
-                    {loading ? 'Loading...' : 'Preview'}
-                </button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                        type="button"
+                        onClick={() => void loadPreview('missingOnly')}
+                        disabled={loading || applying}
+                        className="rounded-md border border-violet-500/40 bg-violet-500/20 px-4 py-2 text-sm font-semibold text-violet-100 hover:bg-violet-500/30 disabled:cursor-wait disabled:opacity-60"
+                    >
+                        {loading ? 'Loading...' : 'Preview Missing'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => void applyMissingOnly()}
+                        disabled={loading || applying}
+                        className="rounded-md border border-emerald-500/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/30 disabled:cursor-wait disabled:opacity-60"
+                    >
+                        {applying ? 'Applying...' : 'Apply Missing'}
+                    </button>
+                </div>
             </div>
 
             {error && (
@@ -1128,8 +1163,8 @@ const TraineeReallocationSection: React.FC = () => {
             {preview?.summary && (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                     <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
-                        <div className="text-xs uppercase tracking-wide text-gray-400">Trainees</div>
-                        <div className="mt-2 text-2xl font-bold text-white">{preview.summary.total ?? 0}</div>
+                        <div className="text-xs uppercase tracking-wide text-gray-400">Target Trainees</div>
+                        <div className="mt-2 text-2xl font-bold text-white">{preview.summary.target ?? preview.summary.total ?? 0}</div>
                     </div>
                     <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
                         <div className="text-xs uppercase tracking-wide text-gray-400">With Primary</div>
@@ -1149,7 +1184,7 @@ const TraineeReallocationSection: React.FC = () => {
             {allocations.length > 0 && (
                 <div className="rounded-lg border border-gray-700 bg-gray-800">
                     <div className="border-b border-gray-700 px-4 py-3">
-                        <h3 className="text-sm font-semibold text-white">Units Included</h3>
+                        <h3 className="text-sm font-semibold text-white">Target Units</h3>
                     </div>
                     <div className="grid grid-cols-1 gap-2 p-4 md:grid-cols-3 lg:grid-cols-4">
                         {Object.entries(unitCounts).map(([unit, count]) => (

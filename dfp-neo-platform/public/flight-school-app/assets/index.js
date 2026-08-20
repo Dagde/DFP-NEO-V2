@@ -85348,13 +85348,14 @@ const SettingsNavigationSidebar = React.memo(({
 SettingsNavigationSidebar.displayName = "SettingsNavigationSidebar";
 const TraineeReallocationSection = () => {
   const [loading, setLoading] = reactExports.useState(false);
+  const [applying, setApplying] = reactExports.useState(false);
   const [error, setError] = reactExports.useState("");
   const [preview, setPreview] = reactExports.useState(null);
-  const loadPreview = async () => {
+  const loadPreview = async (mode = "missingOnly") => {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/trainee-reallocation/preview", { credentials: "include" });
+      const response = await fetch(`/api/trainee-reallocation/preview?mode=${mode}`, { credentials: "include" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data?.success === false) {
         throw new Error(data?.error || `Preview failed with HTTP ${response.status}`);
@@ -85367,7 +85368,28 @@ const TraineeReallocationSection = () => {
       setLoading(false);
     }
   };
-  const allocations = Array.isArray(preview?.allocations) ? preview.allocations : [];
+  const applyMissingOnly = async () => {
+    setApplying(true);
+    setError("");
+    try {
+      const response = await fetch("/api/trainee-reallocation/apply", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "missingOnly" })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.error || `Apply failed with HTTP ${response.status}`);
+      }
+      setPreview(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setApplying(false);
+    }
+  };
+  const allocations = Array.isArray(preview?.targetAllocations) ? preview.targetAllocations : Array.isArray(preview?.allocations) ? preview.allocations.filter((allocation) => !allocation?.untouched) : [];
   const unitCounts = allocations.reduce((acc, allocation) => {
     const unit = String(allocation?.unit || "Unassigned").trim() || "Unassigned";
     acc[unit] = (acc[unit] || 0) + 1;
@@ -85379,22 +85401,34 @@ const TraineeReallocationSection = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Trainee Reallocation" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: "Preview primary and secondary instructor allocation from configured trainee and staff records." })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: () => void loadPreview(),
-          disabled: loading,
-          className: "rounded-md border border-violet-500/40 bg-violet-500/20 px-4 py-2 text-sm font-semibold text-violet-100 hover:bg-violet-500/30 disabled:cursor-wait disabled:opacity-60",
-          children: loading ? "Loading..." : "Preview"
-        }
-      )
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-end gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => void loadPreview("missingOnly"),
+            disabled: loading || applying,
+            className: "rounded-md border border-violet-500/40 bg-violet-500/20 px-4 py-2 text-sm font-semibold text-violet-100 hover:bg-violet-500/30 disabled:cursor-wait disabled:opacity-60",
+            children: loading ? "Loading..." : "Preview Missing"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => void applyMissingOnly(),
+            disabled: loading || applying,
+            className: "rounded-md border border-emerald-500/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/30 disabled:cursor-wait disabled:opacity-60",
+            children: applying ? "Applying..." : "Apply Missing"
+          }
+        )
+      ] })
     ] }),
     error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-100", children: error }),
     preview?.summary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Trainees" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: preview.summary.total ?? 0 })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Target Trainees" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: preview.summary.target ?? preview.summary.total ?? 0 })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "With Primary" }),
@@ -85410,7 +85444,7 @@ const TraineeReallocationSection = () => {
       ] })
     ] }),
     allocations.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Units Included" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Target Units" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 p-4 md:grid-cols-3 lg:grid-cols-4", children: Object.entries(unitCounts).map(([unit, count]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900 px-3 py-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-gray-100", children: unit }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400", children: [
