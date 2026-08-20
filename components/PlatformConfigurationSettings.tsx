@@ -175,6 +175,14 @@ const normaliseFlightLineUnavailableReasons = (value: unknown): string[] => {
   return reasons.length > 0 ? reasons : DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS;
 };
 
+const getNextFlightLineUnavailableReasonLabel = (existingReasons: string[]): string => {
+  const existing = new Set(existingReasons.map((reason) => reason.trim().toLowerCase()).filter(Boolean));
+  if (!existing.has('new reason')) return 'New reason';
+  let nextIndex = 2;
+  while (existing.has(`new reason ${nextIndex}`)) nextIndex += 1;
+  return `New reason ${nextIndex}`;
+};
+
 type SettingsVisibilityPolicy = {
   enabled: boolean;
   filters: SettingsVisibilityFilter[];
@@ -10155,7 +10163,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 : configAircraftTypes.map((aircraft) => aircraft.code)
               ).filter(Boolean);
               const displayedResourcePoolAircraftTypeCode = pool.aircraftTypeCode || '';
-              const aircraftUnavailableReasonText = normaliseFlightLineUnavailableReasons(pool.settings?.flightLineUnavailableReasonOptions).join('\n');
+              const aircraftUnavailableReasons = normaliseFlightLineUnavailableReasons(pool.settings?.flightLineUnavailableReasonOptions);
               return (
                 <div
                   key={pool.id || `platform-resource-pool-${index}`}
@@ -10307,17 +10315,58 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       )}
                       <div className="mt-3">
-                        <DraftTextAreaField
-                          label="Aircraft Unavailable Reasons"
-                          value={aircraftUnavailableReasonText}
-                          disabled={!canEditResourcePools}
-                          onCommit={(value) => updateResourcePoolSettings(index, {
-                            flightLineUnavailableReasonOptions: normaliseFlightLineUnavailableReasons(value),
-                          })}
-                          info="Reasons shown in the maintenance slideout right-click menu for aircraft in the Unavailable section. Enter one reason per line."
-                          className="block"
-                          fieldSizingClassName="min-h-[92px]"
-                        />
+                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                          <FieldLabel
+                            label="Aircraft Unavailable Reasons"
+                            info="Reasons shown in the maintenance slideout right-click menu for aircraft in the Unavailable section."
+                          />
+                          <button
+                            type="button"
+                            disabled={!canEditResourcePools}
+                            onClick={() => updateResourcePoolSettings(index, {
+                              flightLineUnavailableReasonOptions: [
+                                ...aircraftUnavailableReasons,
+                                getNextFlightLineUnavailableReasonLabel(aircraftUnavailableReasons),
+                              ],
+                            })}
+                            className="h-8 w-8 rounded-md border border-emerald-400/50 bg-emerald-500/15 text-base font-black leading-none text-emerald-100 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                            title="Add aircraft unavailable reason"
+                            aria-label="Add aircraft unavailable reason"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="grid gap-2">
+                          {aircraftUnavailableReasons.map((reason, reasonIndex) => (
+                            <div key={`aircraft-unavailable-reason-${index}-${reasonIndex}`} className="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                              <DraftTextInput
+                                value={reason}
+                                disabled={!canEditResourcePools}
+                                placeholder="Unavailable reason"
+                                className={fieldClass}
+                                onCommit={(value) => {
+                                  const nextReasons = [...aircraftUnavailableReasons];
+                                  nextReasons[reasonIndex] = value.trim() || reason;
+                                  updateResourcePoolSettings(index, {
+                                    flightLineUnavailableReasonOptions: normaliseFlightLineUnavailableReasons(nextReasons),
+                                  });
+                                }}
+                              />
+                              <button
+                                type="button"
+                                disabled={!canEditResourcePools || aircraftUnavailableReasons.length <= 1}
+                                onClick={() => updateResourcePoolSettings(index, {
+                                  flightLineUnavailableReasonOptions: normaliseFlightLineUnavailableReasons(aircraftUnavailableReasons.filter((_, removeIndex) => removeIndex !== reasonIndex)),
+                                })}
+                                className="h-[38px] w-8 rounded-md border border-rose-400/45 bg-rose-500/10 text-base font-black leading-none text-rose-100 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                title="Delete aircraft unavailable reason"
+                                aria-label={`Delete aircraft unavailable reason ${reasonIndex + 1}`}
+                              >
+                                -
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
 

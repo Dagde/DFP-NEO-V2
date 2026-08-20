@@ -72187,6 +72187,13 @@ const normaliseFlightLineUnavailableReasons = (value) => {
   const reasons = Array.from(new Set(rawValues.map((entry) => String(entry || "").trim()).filter(Boolean)));
   return reasons.length > 0 ? reasons : DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS;
 };
+const getNextFlightLineUnavailableReasonLabel = (existingReasons) => {
+  const existing = new Set(existingReasons.map((reason) => reason.trim().toLowerCase()).filter(Boolean));
+  if (!existing.has("new reason")) return "New reason";
+  let nextIndex = 2;
+  while (existing.has(`new reason ${nextIndex}`)) nextIndex += 1;
+  return `New reason ${nextIndex}`;
+};
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
 const emptyConfig = {
@@ -80420,7 +80427,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
           const aircraftTypeOptions = (visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code)).filter(Boolean);
           const displayedResourcePoolAircraftTypeCode = pool.aircraftTypeCode || "";
-          const aircraftUnavailableReasonText = normaliseFlightLineUnavailableReasons(pool.settings?.flightLineUnavailableReasonOptions).join("\n");
+          const aircraftUnavailableReasons = normaliseFlightLineUnavailableReasons(pool.settings?.flightLineUnavailableReasonOptions);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
@@ -80569,20 +80576,66 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         )
                       ] }, `aircraft-number-prefix-${prefixIndex}`)) })
                     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400", children: "Prefixes are off. Aircraft numbers will be entered as plain numbers." }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      DraftTextAreaField,
-                      {
-                        label: "Aircraft Unavailable Reasons",
-                        value: aircraftUnavailableReasonText,
-                        disabled: !canEditResourcePools,
-                        onCommit: (value) => updateResourcePoolSettings(index, {
-                          flightLineUnavailableReasonOptions: normaliseFlightLineUnavailableReasons(value)
-                        }),
-                        info: "Reasons shown in the maintenance slideout right-click menu for aircraft in the Unavailable section. Enter one reason per line.",
-                        className: "block",
-                        fieldSizingClassName: "min-h-[92px]"
-                      }
-                    ) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-center justify-between gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          FieldLabel,
+                          {
+                            label: "Aircraft Unavailable Reasons",
+                            info: "Reasons shown in the maintenance slideout right-click menu for aircraft in the Unavailable section."
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            disabled: !canEditResourcePools,
+                            onClick: () => updateResourcePoolSettings(index, {
+                              flightLineUnavailableReasonOptions: [
+                                ...aircraftUnavailableReasons,
+                                getNextFlightLineUnavailableReasonLabel(aircraftUnavailableReasons)
+                              ]
+                            }),
+                            className: "h-8 w-8 rounded-md border border-emerald-400/50 bg-emerald-500/15 text-base font-black leading-none text-emerald-100 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50",
+                            title: "Add aircraft unavailable reason",
+                            "aria-label": "Add aircraft unavailable reason",
+                            children: "+"
+                          }
+                        )
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2", children: aircraftUnavailableReasons.map((reason, reasonIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto]", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          DraftTextInput,
+                          {
+                            value: reason,
+                            disabled: !canEditResourcePools,
+                            placeholder: "Unavailable reason",
+                            className: fieldClass,
+                            onCommit: (value) => {
+                              const nextReasons = [...aircraftUnavailableReasons];
+                              nextReasons[reasonIndex] = value.trim() || reason;
+                              updateResourcePoolSettings(index, {
+                                flightLineUnavailableReasonOptions: normaliseFlightLineUnavailableReasons(nextReasons)
+                              });
+                            }
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            disabled: !canEditResourcePools || aircraftUnavailableReasons.length <= 1,
+                            onClick: () => updateResourcePoolSettings(index, {
+                              flightLineUnavailableReasonOptions: normaliseFlightLineUnavailableReasons(aircraftUnavailableReasons.filter((_, removeIndex) => removeIndex !== reasonIndex))
+                            }),
+                            className: "h-[38px] w-8 rounded-md border border-rose-400/45 bg-rose-500/10 text-base font-black leading-none text-rose-100 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+                            title: "Delete aircraft unavailable reason",
+                            "aria-label": `Delete aircraft unavailable reason ${reasonIndex + 1}`,
+                            children: "-"
+                          }
+                        )
+                      ] }, `aircraft-unavailable-reason-${index}-${reasonIndex}`)) })
+                    ] })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
