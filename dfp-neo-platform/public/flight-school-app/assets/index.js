@@ -10974,6 +10974,25 @@ const normaliseFlightLineUnavailableReasons$1 = (value) => {
   const reasons = Array.from(new Set(rawValues.map((entry) => String(entry || "").trim()).filter(Boolean)));
   return reasons.length > 0 ? reasons : DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS$1;
 };
+const makeFlightLineMaintenanceTimestamp = (date) => {
+  const now = /* @__PURE__ */ new Date();
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || "").trim());
+  if (!match) return now;
+  return new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds(),
+    now.getMilliseconds()
+  );
+};
+const formatFlightLineMaintenanceWindowTime = (value) => {
+  const match = /^(\d{1,2}):?(\d{2})$/.exec(String(value || "").trim());
+  if (!match) return null;
+  return `${match[1].padStart(2, "0")}${match[2]}`;
+};
 const isOverlapping$2 = (f1, f2) => {
   if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
   const f1_end = f1.startTime + f1.duration;
@@ -17037,6 +17056,50 @@ const ScheduleView = ({
     const savedReason = flightLinePoolContext.unavailableReasons[aircraftNumber];
     return savedReason || flightLinePoolContext.unavailableReasonOptions[0] || DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS$1[0];
   }, [flightLinePoolContext.unavailableReasonOptions, flightLinePoolContext.unavailableReasons]);
+  const postFlightLineMaintenanceEvent = reactExports.useCallback((payload) => {
+    if (!apiBase || !date) return;
+    const aircraftNumber = String(payload.aircraftNumber || "").trim();
+    if (!aircraftNumber) return;
+    const totalAircraftCount = flightLinePoolContext.numbers.length || airframeCount;
+    if (!totalAircraftCount) return;
+    const unavailableNumbers = sortFlightLineAircraftNumbers(payload.nextUnavailableNumbers);
+    const availableCount = Math.max(0, totalAircraftCount - unavailableNumbers.length);
+    const timestamp = makeFlightLineMaintenanceTimestamp(date);
+    const reason = String(payload.reason || "").trim();
+    const tailNumber = [flightLinePoolContext.prefix, aircraftNumber].filter(Boolean).join(" ");
+    const notes = JSON.stringify({
+      source: "flight_line_maintenance",
+      action: payload.action,
+      aircraftNumber,
+      tailNumber,
+      reason: reason || null,
+      locationCode,
+      unitCode,
+      unavailableNumbers,
+      availableCount,
+      totalAircraft: totalAircraftCount
+    });
+    fetch(`${apiBase}/aircraft-availability-events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        timestamp: timestamp.toISOString(),
+        date,
+        availableCount,
+        totalAircraft: totalAircraftCount,
+        changeType: payload.action === "serviceable" ? "maintenance_serviceable" : payload.action === "reason_update" ? "maintenance_reason_update" : "maintenance_unavailable",
+        recordedBy: null,
+        locationCode,
+        unitCode,
+        notes,
+        flyingWindowStart: formatFlightLineMaintenanceWindowTime(dayFlyingStart),
+        flyingWindowEnd: formatFlightLineMaintenanceWindowTime(dayFlyingEnd)
+      })
+    }).catch((error) => {
+      console.warn("[Flight Line] Failed to record maintenance unserviceability event:", error);
+    });
+  }, [airframeCount, apiBase, date, dayFlyingEnd, dayFlyingStart, flightLinePoolContext.numbers.length, flightLinePoolContext.prefix, locationCode, sortFlightLineAircraftNumbers, unitCode]);
   const flightLineAircraftAssignmentStorageKey = reactExports.useMemo(
     () => `dfp-flight-line-aircraft-event-assignments:${date}:${locationCode}:${unitCode}`,
     [date, locationCode, unitCode]
@@ -17187,10 +17250,19 @@ const ScheduleView = ({
     clearFlightLineAssignmentState(assignedEventIds);
     clearFlightLineDragState();
     if (!cleanNumber2 || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
-    saveFlightLineUnavailableAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber2], {
-      [cleanNumber2]: String(reason || getFlightLineUnavailableReason(cleanNumber2)).trim()
+    const cleanReason = String(reason || getFlightLineUnavailableReason(cleanNumber2)).trim();
+    const wasAlreadyUnavailable = flightLineEffectiveUnavailableNumbers.includes(cleanNumber2);
+    const nextUnavailableNumbers = sortFlightLineAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber2]);
+    saveFlightLineUnavailableAircraftNumbers(nextUnavailableNumbers, {
+      [cleanNumber2]: cleanReason
     });
-  }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, getFlightLineUnavailableReason, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
+    postFlightLineMaintenanceEvent({
+      action: wasAlreadyUnavailable ? "reason_update" : "unavailable",
+      aircraftNumber: cleanNumber2,
+      reason: cleanReason,
+      nextUnavailableNumbers
+    });
+  }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, getFlightLineUnavailableReason, isReadOnly, onUpdateEvent, postFlightLineMaintenanceEvent, saveFlightLineUnavailableAircraftNumbers, sortFlightLineAircraftNumbers]);
   const moveFlightLineAircraftToAvailable = reactExports.useCallback((aircraftNumber, sourceEventId = "") => {
     if (!canEditFlightLineAvailability || isReadOnly) {
       clearFlightLineDragState();
@@ -17204,8 +17276,19 @@ const ScheduleView = ({
     clearFlightLineAssignmentState(assignedEventIds);
     clearFlightLineDragState();
     if (!cleanNumber2 || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
-    saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber2), { [cleanNumber2]: null });
-  }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
+    const wasUnavailable = flightLineEffectiveUnavailableNumbers.includes(cleanNumber2);
+    const serviceableReason = getFlightLineUnavailableReason(cleanNumber2);
+    const nextUnavailableNumbers = flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber2);
+    saveFlightLineUnavailableAircraftNumbers(nextUnavailableNumbers, { [cleanNumber2]: null });
+    if (wasUnavailable) {
+      postFlightLineMaintenanceEvent({
+        action: "serviceable",
+        aircraftNumber: cleanNumber2,
+        reason: serviceableReason,
+        nextUnavailableNumbers
+      });
+    }
+  }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, getFlightLineUnavailableReason, isReadOnly, onUpdateEvent, postFlightLineMaintenanceEvent, saveFlightLineUnavailableAircraftNumbers]);
   const openFlightLineAircraftContextMenu = reactExports.useCallback((event, aircraftNumber, tailNumber, isUnavailable) => {
     event.preventDefault();
     event.stopPropagation();
@@ -42029,7 +42112,7 @@ function ArrowTopRightOnSquareIcon({
     d: "M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
   }));
 }
-const ForwardRef$a = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
+const ForwardRef$b = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
 function ChartBarIcon({
   title,
   titleId,
@@ -42053,7 +42136,7 @@ function ChartBarIcon({
     d: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
   }));
 }
-const ForwardRef$9 = /* @__PURE__ */ reactExports.forwardRef(ChartBarIcon);
+const ForwardRef$a = /* @__PURE__ */ reactExports.forwardRef(ChartBarIcon);
 function ClockIcon({
   title,
   titleId,
@@ -42077,7 +42160,7 @@ function ClockIcon({
     d: "M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
   }));
 }
-const ForwardRef$8 = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
+const ForwardRef$9 = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
 function ComputerDesktopIcon({
   title,
   titleId,
@@ -42101,7 +42184,7 @@ function ComputerDesktopIcon({
     d: "M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25"
   }));
 }
-const ForwardRef$7 = /* @__PURE__ */ reactExports.forwardRef(ComputerDesktopIcon);
+const ForwardRef$8 = /* @__PURE__ */ reactExports.forwardRef(ComputerDesktopIcon);
 function ExclamationTriangleIcon({
   title,
   titleId,
@@ -42125,7 +42208,7 @@ function ExclamationTriangleIcon({
     d: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
   }));
 }
-const ForwardRef$6 = /* @__PURE__ */ reactExports.forwardRef(ExclamationTriangleIcon);
+const ForwardRef$7 = /* @__PURE__ */ reactExports.forwardRef(ExclamationTriangleIcon);
 function MagnifyingGlassIcon({
   title,
   titleId,
@@ -42149,7 +42232,7 @@ function MagnifyingGlassIcon({
     d: "m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
   }));
 }
-const ForwardRef$5 = /* @__PURE__ */ reactExports.forwardRef(MagnifyingGlassIcon);
+const ForwardRef$6 = /* @__PURE__ */ reactExports.forwardRef(MagnifyingGlassIcon);
 function PaperAirplaneIcon({
   title,
   titleId,
@@ -42173,7 +42256,7 @@ function PaperAirplaneIcon({
     d: "M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
   }));
 }
-const ForwardRef$4 = /* @__PURE__ */ reactExports.forwardRef(PaperAirplaneIcon);
+const ForwardRef$5 = /* @__PURE__ */ reactExports.forwardRef(PaperAirplaneIcon);
 function PencilIcon({
   title,
   titleId,
@@ -42197,7 +42280,7 @@ function PencilIcon({
     d: "m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
   }));
 }
-const ForwardRef$3 = /* @__PURE__ */ reactExports.forwardRef(PencilIcon);
+const ForwardRef$4 = /* @__PURE__ */ reactExports.forwardRef(PencilIcon);
 function Squares2X2Icon({
   title,
   titleId,
@@ -42221,7 +42304,7 @@ function Squares2X2Icon({
     d: "M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"
   }));
 }
-const ForwardRef$2 = /* @__PURE__ */ reactExports.forwardRef(Squares2X2Icon);
+const ForwardRef$3 = /* @__PURE__ */ reactExports.forwardRef(Squares2X2Icon);
 function TrashIcon({
   title,
   titleId,
@@ -42245,7 +42328,7 @@ function TrashIcon({
     d: "m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
   }));
 }
-const ForwardRef$1 = /* @__PURE__ */ reactExports.forwardRef(TrashIcon);
+const ForwardRef$2 = /* @__PURE__ */ reactExports.forwardRef(TrashIcon);
 function UserGroupIcon({
   title,
   titleId,
@@ -42269,7 +42352,31 @@ function UserGroupIcon({
     d: "M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
   }));
 }
-const ForwardRef = /* @__PURE__ */ reactExports.forwardRef(UserGroupIcon);
+const ForwardRef$1 = /* @__PURE__ */ reactExports.forwardRef(UserGroupIcon);
+function WrenchScrewdriverIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z"
+  }));
+}
+const ForwardRef = /* @__PURE__ */ reactExports.forwardRef(WrenchScrewdriverIcon);
 const FIXED_CREW_PRIORITY_STEP = 5;
 const FIXED_CREW_PRIORITY_TOTAL_STEPS = 100 / FIXED_CREW_PRIORITY_STEP;
 const FIXED_CREW_PRIORITY_MIN_PERCENT = 0;
@@ -42738,7 +42845,7 @@ const TaskingRequestTable = ({
                 onRemoveTaskingRequest(request.id);
               },
               className: "inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100 focus:outline-none focus:ring-2 focus:ring-red-400/60",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-4 w-4" })
             }
           )
         ] }),
@@ -42967,7 +43074,7 @@ const TaskingRequestTable = ({
                       title: "Delete directed task",
                       className: "inline-flex h-8 items-center justify-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-2 text-xs font-semibold text-red-200 hover:border-red-400/60 hover:bg-red-500/20",
                       children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-4 w-4" }),
                         "Delete"
                       ]
                     }
@@ -45583,7 +45690,7 @@ const PrioritiesView = ({
               deletePriorityEvent();
             },
             className: "inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-4 w-4" })
           }
         ) })
       ] }, event.id);
@@ -46805,7 +46912,7 @@ const PrioritiesView = ({
                         onClick: () => setCurrencyDraftEvents((prev) => prev.filter((event) => event.id !== draft.id)),
                         className: "rounded-md border border-red-500/30 p-1.5 text-red-300 hover:bg-red-500/10",
                         "aria-label": "Remove currency event",
-                        children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-4 w-4" })
+                        children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { className: "h-4 w-4" })
                       }
                     )
                   ] })
@@ -47232,7 +47339,7 @@ const PrioritiesViewWithMenu = (props) => {
               className: "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-rose-400/35 bg-rose-500/10 text-rose-200 transition hover:border-rose-300 hover:bg-rose-500/20",
               "aria-label": "Remove deployment",
               title: "Remove deployment",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-4 w-4" })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { className: "h-4 w-4" })
             }
           )
         ] }, group.key);
@@ -52406,6 +52513,156 @@ const fetchBliMetrics = async (startDate, endDate, signal, requestContext) => {
   const availabilityData = await availabilityResponse.json();
   return mergeAvailabilityHistory(metrics, availabilityData.records || availabilityData.history || []);
 };
+const emptyAircraftUnserviceabilitySummary = (startDate, endDate) => ({
+  startDate,
+  endDate,
+  totalEvents: 0,
+  serviceableReturns: 0,
+  affectedAircraft: 0,
+  totalHours: 0,
+  activeAtEnd: 0,
+  topReason: null,
+  reasonRows: [],
+  aircraftRows: []
+});
+const parseMaintenanceNotes = (notes) => {
+  if (!notes) return null;
+  try {
+    const parsed = JSON.parse(String(notes));
+    return parsed && parsed.source === "flight_line_maintenance" ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+const parseAircraftUnserviceabilityEvent = (raw) => {
+  const notes = parseMaintenanceNotes(raw?.notes);
+  const changeType = String(raw?.changeType || "");
+  if (!notes && !changeType.startsWith("maintenance_")) return null;
+  const action = String(notes?.action || changeType.replace(/^maintenance_/, "") || "").trim();
+  const normalizedAction = action === "serviceable" ? "serviceable" : action === "reason_update" ? "reason_update" : action === "unavailable" ? "unavailable" : "";
+  if (!normalizedAction) return null;
+  const timestamp = raw?.timestamp ? new Date(raw.timestamp) : null;
+  if (!timestamp || Number.isNaN(timestamp.getTime())) return null;
+  const aircraftNumber = String(notes?.aircraftNumber || "").trim();
+  const tailNumber = String(notes?.tailNumber || aircraftNumber || "Unknown aircraft").trim();
+  return {
+    id: String(raw?.id || `${timestamp.toISOString()}-${tailNumber}-${normalizedAction}`),
+    date: normalizeAvailabilityDate(raw?.date || timestamp.toISOString()),
+    timestamp: timestamp.toISOString(),
+    action: normalizedAction,
+    aircraftNumber: aircraftNumber || tailNumber,
+    tailNumber,
+    reason: String(notes?.reason || "Unspecified").trim() || "Unspecified",
+    locationCode: normalizeUnitCode(notes?.locationCode),
+    unitCode: normalizeUnitCode(notes?.unitCode)
+  };
+};
+const aircraftUnserviceabilityMatchesContext = (event, requestContext) => {
+  const locationFilter = normalizeUnitCode(requestContext?.locationCode);
+  if (locationFilter && event.locationCode && normalizeUnitCode(event.locationCode) !== locationFilter) return false;
+  const unitFilter = normalizeUnitCode(requestContext?.eventUnitCode || requestContext?.availabilityUnitCode);
+  if (!unitFilter || !event.unitCode) return true;
+  const unitMembers = unitFilter.split("+").map(normalizeUnitCode).filter(Boolean);
+  return unitMembers.length === 0 || unitMembers.includes(normalizeUnitCode(event.unitCode));
+};
+const fetchAircraftUnserviceabilityEvents = async (startDate, endDate, signal, requestContext) => {
+  const params = new URLSearchParams({ startDate, endDate });
+  const response = await fetch(`/api/aircraft-availability-events?${params.toString()}`, { credentials: "include", signal });
+  if (!response.ok) throw new Error(await response.text());
+  const data = await response.json();
+  return (Array.isArray(data.events) ? data.events : []).map(parseAircraftUnserviceabilityEvent).filter((event) => Boolean(event)).filter((event) => aircraftUnserviceabilityMatchesContext(event, requestContext)).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+};
+const summariseAircraftUnserviceability = (events, startDate, endDate) => {
+  if (events.length === 0) return emptyAircraftUnserviceabilitySummary(startDate, endDate);
+  const rangeEnd = addUtcDays(parseIsoDate(endDate), 1);
+  const activeByAircraft = /* @__PURE__ */ new Map();
+  const periods = [];
+  const closePeriod = (aircraftKey, end, activeAtEnd = false) => {
+    const active = activeByAircraft.get(aircraftKey);
+    if (!active) return;
+    const start = new Date(active.timestamp);
+    if (end > start) {
+      periods.push({
+        aircraftNumber: active.aircraftNumber,
+        tailNumber: active.tailNumber,
+        reason: active.reason,
+        start,
+        end,
+        latestDate: active.date,
+        activeAtEnd
+      });
+    }
+    activeByAircraft.delete(aircraftKey);
+  };
+  events.forEach((event) => {
+    const aircraftKey = event.aircraftNumber || event.tailNumber;
+    const eventTime = new Date(event.timestamp);
+    if (event.action === "serviceable") {
+      closePeriod(aircraftKey, eventTime);
+      return;
+    }
+    if (event.action === "reason_update") {
+      closePeriod(aircraftKey, eventTime);
+    }
+    activeByAircraft.set(aircraftKey, event);
+  });
+  activeByAircraft.forEach((_, aircraftKey) => closePeriod(aircraftKey, rangeEnd, true));
+  const reasonMap = /* @__PURE__ */ new Map();
+  const aircraftMap = /* @__PURE__ */ new Map();
+  periods.forEach((period) => {
+    const hours = Math.max(0, (period.end.getTime() - period.start.getTime()) / 36e5);
+    const reason = period.reason || "Unspecified";
+    const reasonRow = reasonMap.get(reason) || { frequency: 0, aircraft: /* @__PURE__ */ new Set(), totalHours: 0, longestHours: 0, latestDate: "" };
+    reasonRow.frequency += 1;
+    reasonRow.aircraft.add(period.aircraftNumber);
+    reasonRow.totalHours += hours;
+    reasonRow.longestHours = Math.max(reasonRow.longestHours, hours);
+    reasonRow.latestDate = !reasonRow.latestDate || period.latestDate > reasonRow.latestDate ? period.latestDate : reasonRow.latestDate;
+    reasonMap.set(reason, reasonRow);
+    const aircraftRow = aircraftMap.get(period.aircraftNumber) || { tailNumber: period.tailNumber, frequency: 0, totalHours: 0, reasons: /* @__PURE__ */ new Map(), latestReason: reason, latestDate: "", activeAtEnd: false };
+    aircraftRow.frequency += 1;
+    aircraftRow.totalHours += hours;
+    aircraftRow.reasons.set(reason, (aircraftRow.reasons.get(reason) || 0) + 1);
+    aircraftRow.latestReason = !aircraftRow.latestDate || period.latestDate >= aircraftRow.latestDate ? reason : aircraftRow.latestReason;
+    aircraftRow.latestDate = !aircraftRow.latestDate || period.latestDate > aircraftRow.latestDate ? period.latestDate : aircraftRow.latestDate;
+    aircraftRow.activeAtEnd = aircraftRow.activeAtEnd || period.activeAtEnd;
+    aircraftMap.set(period.aircraftNumber, aircraftRow);
+  });
+  const reasonRows = [...reasonMap.entries()].map(([reason, row]) => ({
+    reason,
+    frequency: row.frequency,
+    affectedAircraft: row.aircraft.size,
+    totalHours: row.totalHours,
+    averageHours: row.frequency > 0 ? row.totalHours / row.frequency : 0,
+    longestHours: row.longestHours,
+    latestDate: row.latestDate
+  })).sort((a, b) => b.frequency - a.frequency || b.totalHours - a.totalHours || a.reason.localeCompare(b.reason));
+  const aircraftRows = [...aircraftMap.entries()].map(([aircraftNumber, row]) => {
+    const topReason = [...row.reasons.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || "Unspecified";
+    return {
+      aircraftNumber,
+      tailNumber: row.tailNumber,
+      frequency: row.frequency,
+      totalHours: row.totalHours,
+      topReason,
+      latestReason: row.latestReason,
+      latestDate: row.latestDate,
+      activeAtEnd: row.activeAtEnd
+    };
+  }).sort((a, b) => b.totalHours - a.totalHours || b.frequency - a.frequency || a.tailNumber.localeCompare(b.tailNumber, void 0, { numeric: true }));
+  return {
+    startDate,
+    endDate,
+    totalEvents: events.filter((event) => event.action !== "serviceable").length,
+    serviceableReturns: events.filter((event) => event.action === "serviceable").length,
+    affectedAircraft: new Set(events.map((event) => event.aircraftNumber).filter(Boolean)).size,
+    totalHours: periods.reduce((sum, period) => sum + Math.max(0, (period.end.getTime() - period.start.getTime()) / 36e5), 0),
+    activeAtEnd: aircraftRows.filter((row) => row.activeAtEnd).length,
+    topReason: reasonRows[0] || null,
+    reasonRows,
+    aircraftRows
+  };
+};
 const fetchCourseMovements = async (signal, requestContext) => {
   const params = new URLSearchParams();
   if (requestContext?.eventUnitCode) params.set("unit", requestContext.eventUnitCode);
@@ -52756,7 +53013,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "availability",
       title: "Aircraft availability",
       subtitle: "Daily average aircraft available from AC History records, with the selected DFP day filled from live aircraft availability when history is not saved yet.",
-      icon: ForwardRef$4,
+      icon: ForwardRef$5,
       color: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
       unit: " ac",
       series: availabilityPoints,
@@ -52767,7 +53024,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "flight",
       title: "Flight events per day",
       subtitle: "Scheduled flying events counted from published DFP snapshots.",
-      icon: ForwardRef$9,
+      icon: ForwardRef$a,
       color: "border-blue-400/40 bg-blue-400/10 text-blue-200",
       series: flightPoints,
       summary: compactNumber(valueSum(flightPoints)),
@@ -52777,7 +53034,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "flightHours",
       title: "Flight hours per day",
       subtitle: "Total scheduled flying hours from published DFP snapshots.",
-      icon: ForwardRef$8,
+      icon: ForwardRef$9,
       color: "border-sky-400/40 bg-sky-400/10 text-sky-200",
       unit: "h",
       series: flightHourPoints,
@@ -52788,7 +53045,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "simulator",
       title: "Simulator events per day",
       subtitle: "FTD and simulator events counted by published DFP day.",
-      icon: ForwardRef$7,
+      icon: ForwardRef$8,
       color: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
       series: simPoints,
       summary: compactNumber(valueSum(simPoints)),
@@ -52798,7 +53055,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "simulatorHours",
       title: "Simulator hours per day",
       subtitle: "Total scheduled FTD and simulator hours by published DFP day.",
-      icon: ForwardRef$8,
+      icon: ForwardRef$9,
       color: "border-teal-400/40 bg-teal-400/10 text-teal-200",
       unit: "h",
       series: simHourPoints,
@@ -52809,7 +53066,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "total",
       title: "Total events per day",
       subtitle: "All scheduled events in the selected operational timeline.",
-      icon: ForwardRef$2,
+      icon: ForwardRef$3,
       color: "border-amber-400/40 bg-amber-400/10 text-amber-200",
       series: totalPoints,
       summary: compactNumber(valueSum(totalPoints)),
@@ -52819,7 +53076,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "cancellations",
       title: "Cancellation codes",
       subtitle: "Cancellation codes grouped by event category.",
-      icon: ForwardRef$6,
+      icon: ForwardRef$7,
       color: "border-rose-400/40 bg-rose-400/10 text-rose-200",
       series: makeSeries(dates, {}),
       summary: compactNumber(cancellationTotal),
@@ -52829,7 +53086,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "staffFlight",
       title: "Staff flight events",
       subtitle: selectedStaff ? `${selectedStaff} flight events per day.` : "Open to select staff and inspect flying load.",
-      icon: ForwardRef,
+      icon: ForwardRef$1,
       color: "border-sky-400/40 bg-sky-400/10 text-sky-200",
       series: staffFlightPoints,
       summary: compactNumber(valueSum(staffFlightPoints)),
@@ -52839,7 +53096,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "staffSimulator",
       title: "Staff simulator events",
       subtitle: selectedStaff ? `${selectedStaff} simulator events per day.` : "Open to select staff and inspect simulator load.",
-      icon: ForwardRef$7,
+      icon: ForwardRef$8,
       color: "border-violet-400/40 bg-violet-400/10 text-violet-200",
       series: staffSimPoints,
       summary: compactNumber(valueSum(staffSimPoints)),
@@ -52849,7 +53106,7 @@ const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable,
       key: "staffTotal",
       title: "Staff total events",
       subtitle: selectedStaff ? `${selectedStaff} all scheduled events per day.` : "Open to select staff and inspect total load.",
-      icon: ForwardRef$8,
+      icon: ForwardRef$9,
       color: "border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200",
       series: staffTotalPoints,
       summary: compactNumber(valueSum(staffTotalPoints)),
@@ -53142,6 +53399,189 @@ const CancellationPreview = ({ categories }) => {
     categories.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-slate-500", children: "No cancellation data in range" })
   ] });
 };
+const AircraftUnserviceabilityPreview = ({ summary }) => {
+  const maxFrequency = Math.max(1, ...summary.reasonRows.map((row) => row.frequency));
+  if (summary.reasonRows.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-slate-500", children: "No maintenance unserviceability data in range" });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: summary.reasonRows.slice(0, 4).map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-24 truncate text-[10px] text-slate-400", title: row.reason, children: row.reason }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-2 flex-1 rounded-full bg-slate-950", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-2 rounded-full bg-orange-300", style: { width: `${Math.max(5, row.frequency / maxFrequency * 100)}%` } }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-7 text-right text-[10px] text-slate-300", children: row.frequency })
+  ] }, row.reason)) });
+};
+const AircraftUnserviceabilityTile = ({ summary, loading, onOpen }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+  "button",
+  {
+    onClick: onOpen,
+    className: "group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400",
+    children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-orange-300/40 bg-orange-300/10 text-orange-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef, { className: "h-8 w-8 opacity-75" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Aircraft unserviceability" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 min-h-[34px] text-xs leading-5 text-slate-400", children: "Maintenance reasons, frequency and downtime periods from the flight-line unavailable aircraft log." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-2xl font-bold tracking-normal text-white", children: loading ? "Loading" : compactNumber(summary.totalEvents) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-slate-500", children: summary.topReason ? `${summary.topReason.reason} leading reason` : "no leading reason" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AircraftUnserviceabilityPreview, { summary }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 text-[11px] uppercase tracking-[0.18em] text-slate-500", children: [
+        compactNumber(summary.affectedAircraft),
+        " aircraft · ",
+        compactNumber(summary.totalHours, 1),
+        "h unavailable"
+      ] })
+    ]
+  }
+);
+const AircraftUnserviceabilityModal = ({ date, periodSettings, initialSummary, requestContext, onClose }) => {
+  const [timeline, setTimeline] = reactExports.useState("7d");
+  const [summary, setSummary] = reactExports.useState(initialSummary);
+  const [loading, setLoading] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState(null);
+  const range = reactExports.useMemo(() => getTimelineRange(date, timeline, periodSettings), [date, periodSettings, timeline]);
+  const dateRangeLabel = reactExports.useMemo(() => formatDateRange(range.startDate, range.endDate), [range.endDate, range.startDate]);
+  const maxReasonHours = Math.max(1, ...summary.reasonRows.map((row) => row.totalHours));
+  reactExports.useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    fetchAircraftUnserviceabilityEvents(range.startDate, range.endDate, controller.signal, requestContext).then((rows) => setSummary(summariseAircraftUnserviceability(rows, range.startDate, range.endDate))).catch((fetchError) => {
+      if (fetchError.name === "AbortError") return;
+      console.error("Failed to load BLI aircraft unserviceability:", fetchError);
+      setError("Aircraft unserviceability history could not be loaded.");
+      setSummary(emptyAircraftUnserviceabilitySummary(range.startDate, range.endDate));
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
+    });
+    return () => controller.abort();
+  }, [range.endDate, range.startDate, requestContext.availabilityUnitCode, requestContext.eventUnitCode, requestContext.locationCode]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8", onMouseDown: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      className: "max-h-[88vh] w-full max-w-6xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl",
+      onMouseDown: (event) => event.stopPropagation(),
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5 flex flex-wrap items-start justify-between gap-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Aircraft unserviceability" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-sm text-slate-400", children: "Maintenance problems by reason, frequency and period. Data comes from aircraft marked unavailable in the maintenance slideout." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end justify-end gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Timeline" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: timeline,
+                  onChange: (event) => setTimeline(event.target.value),
+                  className: "h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
+                  children: TIMELINE_OPTIONS.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: onClose,
+                className: "h-10 rounded-md border border-slate-700 px-3 text-sm font-semibold text-slate-300 hover:border-cyan-400 hover:text-white",
+                children: "Close"
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-500", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: loading ? "Loading unserviceability..." : dateRangeLabel }),
+          error && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300", children: error })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Unserviceability events", value: compactNumber(summary.totalEvents), accent: "text-orange-200" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Affected aircraft", value: compactNumber(summary.affectedAircraft) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Unavailable time", value: `${compactNumber(summary.totalHours, 1)}h`, accent: "text-amber-200" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Still open at period end", value: compactNumber(summary.activeAtEnd), accent: summary.activeAtEnd > 0 ? "text-rose-200" : "text-emerald-200" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Leading reason", value: summary.topReason?.reason || "None", subtext: summary.topReason ? `${summary.topReason.frequency} event${summary.topReason.frequency === 1 ? "" : "s"}` : "No data" })
+        ] }),
+        summary.reasonRows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-8 text-center text-sm text-slate-400", children: "No aircraft have been marked unavailable with a maintenance reason in this timeline." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Problem types" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-slate-400", children: "Frequency shows how often each reason was selected. Hours show the cumulative unavailable period." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: summary.reasonRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-start justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-white", children: row.reason }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-slate-500", children: [
+                    compactNumber(row.affectedAircraft),
+                    " aircraft affected · latest ",
+                    row.latestDate ? dateLabel$1(row.latestDate) : "N/A"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-base font-bold text-orange-200", children: compactNumber(row.frequency) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] uppercase tracking-[0.14em] text-slate-500", children: "frequency" })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-2 rounded-full bg-slate-950", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-2 rounded-full bg-orange-300", style: { width: `${Math.max(4, row.totalHours / maxReasonHours * 100)}%` } }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid grid-cols-3 gap-2 text-xs", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-slate-400", children: [
+                  "Total ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-amber-200", children: [
+                    compactNumber(row.totalHours, 1),
+                    "h"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-slate-400", children: [
+                  "Average ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-slate-200", children: [
+                    compactNumber(row.averageHours, 1),
+                    "h"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-slate-400", children: [
+                  "Longest ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-slate-200", children: [
+                    compactNumber(row.longestHours, 1),
+                    "h"
+                  ] })
+                ] })
+              ] })
+            ] }, row.reason)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold uppercase tracking-[0.18em] text-slate-400", children: "Worst aircraft" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-500", children: "Ranked by unavailable hours in the selected period." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-2", children: summary.aircraftRows.slice(0, 8).map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate text-sm font-bold text-white", children: [
+                    index + 1,
+                    ". ",
+                    row.tailNumber
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-xs text-slate-500", title: row.latestReason, children: row.latestReason })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-amber-200", children: [
+                    compactNumber(row.totalHours, 1),
+                    "h"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] text-slate-500", children: [
+                    compactNumber(row.frequency),
+                    " event",
+                    row.frequency === 1 ? "" : "s"
+                  ] })
+                ] })
+              ] }),
+              row.activeAtEnd && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300", children: "Still unavailable" })
+            ] }, row.aircraftNumber)) })
+          ] })
+        ] })
+      ]
+    }
+  ) });
+};
 const MetricTile = ({ metric, onOpen, cancellationCategories }) => {
   const Icon = metric.icon;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -53152,7 +53592,7 @@ const MetricTile = ({ metric, onOpen, cancellationCategories }) => {
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex h-14 w-14 items-center justify-center rounded-lg border ${metric.color}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Icon, { className: "h-8 w-8" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: metric.title }),
@@ -53267,8 +53707,8 @@ const CourseOutcomeTile = ({ data, onOpen }) => {
       className: "group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-violet-400/40 bg-violet-400/10 text-violet-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$9, { className: "h-8 w-8 opacity-60" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-violet-400/40 bg-violet-400/10 text-violet-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-8 w-8 opacity-60" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Course status comparison" }),
@@ -53437,8 +53877,8 @@ const CoursePassRateTile = ({ data, selectedLmp, date, onOpen }) => {
       className: "group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$9, { className: "h-8 w-8 opacity-60" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-8 w-8 opacity-60" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Unit pass rates" }),
@@ -53750,9 +54190,13 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
   const [courseMovementError, setCourseMovementError] = reactExports.useState(null);
   const [coursePassRates, setCoursePassRates] = reactExports.useState({ lmpOptions: [], rows: [] });
   const [coursePassRateError, setCoursePassRateError] = reactExports.useState(null);
+  const [aircraftUnserviceability, setAircraftUnserviceability] = reactExports.useState(() => emptyAircraftUnserviceabilitySummary(date, date));
+  const [aircraftUnserviceabilityLoading, setAircraftUnserviceabilityLoading] = reactExports.useState(false);
+  const [aircraftUnserviceabilityError, setAircraftUnserviceabilityError] = reactExports.useState(null);
   const [openMetric, setOpenMetric] = reactExports.useState(null);
   const [courseOutcomeOpen, setCourseOutcomeOpen] = reactExports.useState(false);
   const [coursePassRateOpen, setCoursePassRateOpen] = reactExports.useState(false);
+  const [aircraftUnserviceabilityOpen, setAircraftUnserviceabilityOpen] = reactExports.useState(false);
   const [selectedCourseOutcomeCourse, setSelectedCourseOutcomeCourse] = reactExports.useState("");
   const [selectedPassRateLmp, setSelectedPassRateLmp] = reactExports.useState("");
   const [periodSettings, setPeriodSettings] = reactExports.useState(() => loadBliPeriodSettings());
@@ -53876,6 +54320,20 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
     });
     return () => controller.abort();
   }, [requestContext.eventUnitCode, requestContext.locationCode]);
+  reactExports.useEffect(() => {
+    const controller = new AbortController();
+    setAircraftUnserviceabilityLoading(true);
+    setAircraftUnserviceabilityError(null);
+    fetchAircraftUnserviceabilityEvents(previewRange.startDate, previewRange.endDate, controller.signal, requestContext).then((rows) => setAircraftUnserviceability(summariseAircraftUnserviceability(rows, previewRange.startDate, previewRange.endDate))).catch((fetchError) => {
+      if (fetchError.name === "AbortError") return;
+      console.error("Failed to load BLI aircraft unserviceability preview:", fetchError);
+      setAircraftUnserviceabilityError("Aircraft unserviceability history could not be loaded.");
+      setAircraftUnserviceability(emptyAircraftUnserviceabilitySummary(previewRange.startDate, previewRange.endDate));
+    }).finally(() => {
+      if (!controller.signal.aborted) setAircraftUnserviceabilityLoading(false);
+    });
+    return () => controller.abort();
+  }, [previewRange.endDate, previewRange.startDate, requestContext.availabilityUnitCode, requestContext.eventUnitCode, requestContext.locationCode]);
   const staffGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     sortedStaff2.forEach((staff) => {
@@ -53956,6 +54414,16 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
         onClose: () => setCoursePassRateOpen(false)
       }
     ),
+    aircraftUnserviceabilityOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AircraftUnserviceabilityModal,
+      {
+        date,
+        periodSettings,
+        initialSummary: aircraftUnserviceability,
+        requestContext,
+        onClose: () => setAircraftUnserviceabilityOpen(false)
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-col items-end gap-2 lg:absolute lg:right-3 lg:top-3 lg:mb-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -54032,10 +54500,19 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
           date,
           onOpen: () => setCoursePassRateOpen(true)
         }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        AircraftUnserviceabilityTile,
+        {
+          summary: aircraftUnserviceability,
+          loading: aircraftUnserviceabilityLoading,
+          onOpen: () => setAircraftUnserviceabilityOpen(true)
+        }
       )
     ] }),
     courseMovementError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-300", children: courseMovementError }),
-    coursePassRateError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-300", children: coursePassRateError })
+    coursePassRateError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-300", children: coursePassRateError }),
+    aircraftUnserviceabilityError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-300", children: aircraftUnserviceabilityError })
   ] });
 };
 const numberLabel = (value, digits = 0) => value.toLocaleString("en-GB", { maximumFractionDigits: digits, minimumFractionDigits: digits });
@@ -69701,7 +70178,7 @@ const UserListSection = ({
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$5, { className: "absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$6, { className: "absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "input",
         {
@@ -69752,7 +70229,7 @@ const UserListSection = ({
                   },
                   className: "text-sky-400 hover:text-sky-300 mr-3",
                   title: "Edit profile",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$3, { className: "h-5 w-5" })
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$4, { className: "h-5 w-5" })
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -69764,7 +70241,7 @@ const UserListSection = ({
                   },
                   className: "text-red-400 hover:text-red-300",
                   title: "Delete User Account",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-5 w-5" })
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { className: "h-5 w-5" })
                 }
               )
             ] })
@@ -79091,7 +79568,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       disabled: !canEditSection("platform-master-lmp-access"),
                       title: `Delete ${entry.name || entry.code || "Master LMP"}`,
                       className: "flex min-h-[38px] w-full items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45",
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-4 w-4" })
                     }
                   )
                 ] })
@@ -79181,7 +79658,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       title: `Delete ${rule.lmpCode || "Master LMP"} access rule`,
                       "aria-label": `Delete ${rule.lmpCode || "Master LMP"} access rule`,
                       className: "flex min-h-[38px] w-[42px] items-center justify-center rounded bg-transparent text-sm font-bold text-red-200 transition hover:bg-red-900/35 disabled:cursor-not-allowed disabled:opacity-45",
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { "aria-hidden": "true", className: "h-4 w-4" })
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-4 w-4" })
                     }
                   )
                 ] })

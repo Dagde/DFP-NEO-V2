@@ -177,6 +177,27 @@ const normaliseFlightLineUnavailableReasons = (value: unknown): string[] => {
     return reasons.length > 0 ? reasons : DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS;
 };
 
+const makeFlightLineMaintenanceTimestamp = (date: string): Date => {
+    const now = new Date();
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || '').trim());
+    if (!match) return now;
+    return new Date(
+        Number(match[1]),
+        Number(match[2]) - 1,
+        Number(match[3]),
+        now.getHours(),
+        now.getMinutes(),
+        now.getSeconds(),
+        now.getMilliseconds(),
+    );
+};
+
+const formatFlightLineMaintenanceWindowTime = (value?: string): string | null => {
+    const match = /^(\d{1,2}):?(\d{2})$/.exec(String(value || '').trim());
+    if (!match) return null;
+    return `${match[1].padStart(2, '0')}${match[2]}`;
+};
+
 const isOverlapping = (f1: ScheduleEvent, f2: ScheduleEvent): boolean => {
     if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
     const f1_end = f1.startTime + f1.duration;
@@ -7419,6 +7440,55 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const savedReason = flightLinePoolContext.unavailableReasons[aircraftNumber];
         return savedReason || flightLinePoolContext.unavailableReasonOptions[0] || DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS[0];
     }, [flightLinePoolContext.unavailableReasonOptions, flightLinePoolContext.unavailableReasons]);
+    const postFlightLineMaintenanceEvent = useCallback((payload: {
+        action: 'unavailable' | 'serviceable' | 'reason_update';
+        aircraftNumber: string;
+        reason?: string;
+        nextUnavailableNumbers: string[];
+    }) => {
+        if (!apiBase || !date) return;
+        const aircraftNumber = String(payload.aircraftNumber || '').trim();
+        if (!aircraftNumber) return;
+        const totalAircraftCount = flightLinePoolContext.numbers.length || airframeCount;
+        if (!totalAircraftCount) return;
+        const unavailableNumbers = sortFlightLineAircraftNumbers(payload.nextUnavailableNumbers);
+        const availableCount = Math.max(0, totalAircraftCount - unavailableNumbers.length);
+        const timestamp = makeFlightLineMaintenanceTimestamp(date);
+        const reason = String(payload.reason || '').trim();
+        const tailNumber = [flightLinePoolContext.prefix, aircraftNumber].filter(Boolean).join(' ');
+        const notes = JSON.stringify({
+            source: 'flight_line_maintenance',
+            action: payload.action,
+            aircraftNumber,
+            tailNumber,
+            reason: reason || null,
+            locationCode,
+            unitCode,
+            unavailableNumbers,
+            availableCount,
+            totalAircraft: totalAircraftCount,
+        });
+        fetch(`${apiBase}/aircraft-availability-events`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                timestamp: timestamp.toISOString(),
+                date,
+                availableCount,
+                totalAircraft: totalAircraftCount,
+                changeType: payload.action === 'serviceable' ? 'maintenance_serviceable' : payload.action === 'reason_update' ? 'maintenance_reason_update' : 'maintenance_unavailable',
+                recordedBy: null,
+                locationCode,
+                unitCode,
+                notes,
+                flyingWindowStart: formatFlightLineMaintenanceWindowTime(dayFlyingStart),
+                flyingWindowEnd: formatFlightLineMaintenanceWindowTime(dayFlyingEnd),
+            }),
+        }).catch((error) => {
+            console.warn('[Flight Line] Failed to record maintenance unserviceability event:', error);
+        });
+    }, [airframeCount, apiBase, date, dayFlyingEnd, dayFlyingStart, flightLinePoolContext.numbers.length, flightLinePoolContext.prefix, locationCode, sortFlightLineAircraftNumbers, unitCode]);
     const flightLineAircraftAssignmentStorageKey = useMemo(
         () => `dfp-flight-line-aircraft-event-assignments:${date}:${locationCode}:${unitCode}`,
         [date, locationCode, unitCode],
@@ -7576,10 +7646,19 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         clearFlightLineAssignmentState(assignedEventIds);
         clearFlightLineDragState();
         if (!cleanNumber || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
-        saveFlightLineUnavailableAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber], {
-            [cleanNumber]: String(reason || getFlightLineUnavailableReason(cleanNumber)).trim(),
+        const cleanReason = String(reason || getFlightLineUnavailableReason(cleanNumber)).trim();
+        const wasAlreadyUnavailable = flightLineEffectiveUnavailableNumbers.includes(cleanNumber);
+        const nextUnavailableNumbers = sortFlightLineAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber]);
+        saveFlightLineUnavailableAircraftNumbers(nextUnavailableNumbers, {
+            [cleanNumber]: cleanReason,
         });
-    }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, getFlightLineUnavailableReason, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
+        postFlightLineMaintenanceEvent({
+            action: wasAlreadyUnavailable ? 'reason_update' : 'unavailable',
+            aircraftNumber: cleanNumber,
+            reason: cleanReason,
+            nextUnavailableNumbers,
+        });
+    }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, getFlightLineUnavailableReason, isReadOnly, onUpdateEvent, postFlightLineMaintenanceEvent, saveFlightLineUnavailableAircraftNumbers, sortFlightLineAircraftNumbers]);
     const moveFlightLineAircraftToAvailable = useCallback((aircraftNumber: string, sourceEventId = '') => {
         if (!canEditFlightLineAvailability || isReadOnly) {
             clearFlightLineDragState();
@@ -7593,8 +7672,19 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         clearFlightLineAssignmentState(assignedEventIds);
         clearFlightLineDragState();
         if (!cleanNumber || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
-        saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber), { [cleanNumber]: null });
-    }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
+        const wasUnavailable = flightLineEffectiveUnavailableNumbers.includes(cleanNumber);
+        const serviceableReason = getFlightLineUnavailableReason(cleanNumber);
+        const nextUnavailableNumbers = flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber);
+        saveFlightLineUnavailableAircraftNumbers(nextUnavailableNumbers, { [cleanNumber]: null });
+        if (wasUnavailable) {
+            postFlightLineMaintenanceEvent({
+                action: 'serviceable',
+                aircraftNumber: cleanNumber,
+                reason: serviceableReason,
+                nextUnavailableNumbers,
+            });
+        }
+    }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, getFlightLineUnavailableReason, isReadOnly, onUpdateEvent, postFlightLineMaintenanceEvent, saveFlightLineUnavailableAircraftNumbers]);
     const openFlightLineAircraftContextMenu = useCallback((
         event: React.MouseEvent,
         aircraftNumber: string,

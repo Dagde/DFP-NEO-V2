@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const BOUNDARY_TYPES = ['window_start', 'window_end', 'startup', 'reset', 'shutdown'];
+    const BOUNDARY_TYPES = ['window_start', 'window_end', 'startup', 'reset', 'shutdown', 'maintenance_unavailable', 'maintenance_serviceable', 'maintenance_reason_update'];
     const isBoundary = BOUNDARY_TYPES.includes(changeType);
 
     console.log(`[AV-EVENTS] 🔍 Checking for duplicates (isBoundary: ${isBoundary})...`);

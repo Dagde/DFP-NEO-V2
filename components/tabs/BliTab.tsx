@@ -8,6 +8,7 @@ import {
   PaperAirplaneIcon,
   Squares2X2Icon,
   UserGroupIcon,
+  WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline';
 import { showDarkAlert, showDarkPrompt } from '../DarkMessageModal';
 import type { CancellationCode, Instructor, ScheduleEvent, SyllabusItemDetail, Trainee } from '../../types';
@@ -86,6 +87,52 @@ interface BliMetricsResponse {
   availabilitySeries: AvailabilityMetrics[];
   cancellationsByCategory: CancellationCategory[];
   staffSeries: Record<string, DailyEventMetrics[]>;
+}
+
+interface AircraftUnserviceabilityEvent {
+  id: string;
+  date: string;
+  timestamp: string;
+  action: 'unavailable' | 'serviceable' | 'reason_update';
+  aircraftNumber: string;
+  tailNumber: string;
+  reason: string;
+  locationCode?: string;
+  unitCode?: string;
+}
+
+interface AircraftUnserviceabilityReasonSummary {
+  reason: string;
+  frequency: number;
+  affectedAircraft: number;
+  totalHours: number;
+  averageHours: number;
+  longestHours: number;
+  latestDate: string;
+}
+
+interface AircraftUnserviceabilityAircraftSummary {
+  aircraftNumber: string;
+  tailNumber: string;
+  frequency: number;
+  totalHours: number;
+  topReason: string;
+  latestReason: string;
+  latestDate: string;
+  activeAtEnd: boolean;
+}
+
+interface AircraftUnserviceabilitySummary {
+  startDate: string;
+  endDate: string;
+  totalEvents: number;
+  serviceableReturns: number;
+  affectedAircraft: number;
+  totalHours: number;
+  activeAtEnd: number;
+  topReason: AircraftUnserviceabilityReasonSummary | null;
+  reasonRows: AircraftUnserviceabilityReasonSummary[];
+  aircraftRows: AircraftUnserviceabilityAircraftSummary[];
 }
 
 interface BliTabProps {
@@ -524,6 +571,190 @@ const fetchBliMetrics = async (
   if (!availabilityResponse || !availabilityResponse.ok) return metrics;
   const availabilityData = await availabilityResponse.json();
   return mergeAvailabilityHistory(metrics, availabilityData.records || availabilityData.history || []);
+};
+
+const emptyAircraftUnserviceabilitySummary = (startDate: string, endDate: string): AircraftUnserviceabilitySummary => ({
+  startDate,
+  endDate,
+  totalEvents: 0,
+  serviceableReturns: 0,
+  affectedAircraft: 0,
+  totalHours: 0,
+  activeAtEnd: 0,
+  topReason: null,
+  reasonRows: [],
+  aircraftRows: [],
+});
+
+const parseMaintenanceNotes = (notes: unknown): any | null => {
+  if (!notes) return null;
+  try {
+    const parsed = JSON.parse(String(notes));
+    return parsed && parsed.source === 'flight_line_maintenance' ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const parseAircraftUnserviceabilityEvent = (raw: any): AircraftUnserviceabilityEvent | null => {
+  const notes = parseMaintenanceNotes(raw?.notes);
+  const changeType = String(raw?.changeType || '');
+  if (!notes && !changeType.startsWith('maintenance_')) return null;
+  const action = String(notes?.action || changeType.replace(/^maintenance_/, '') || '').trim();
+  const normalizedAction = action === 'serviceable'
+    ? 'serviceable'
+    : action === 'reason_update'
+      ? 'reason_update'
+      : action === 'unavailable'
+        ? 'unavailable'
+        : '';
+  if (!normalizedAction) return null;
+  const timestamp = raw?.timestamp ? new Date(raw.timestamp) : null;
+  if (!timestamp || Number.isNaN(timestamp.getTime())) return null;
+  const aircraftNumber = String(notes?.aircraftNumber || '').trim();
+  const tailNumber = String(notes?.tailNumber || aircraftNumber || 'Unknown aircraft').trim();
+  return {
+    id: String(raw?.id || `${timestamp.toISOString()}-${tailNumber}-${normalizedAction}`),
+    date: normalizeAvailabilityDate(raw?.date || timestamp.toISOString()),
+    timestamp: timestamp.toISOString(),
+    action: normalizedAction,
+    aircraftNumber: aircraftNumber || tailNumber,
+    tailNumber,
+    reason: String(notes?.reason || 'Unspecified').trim() || 'Unspecified',
+    locationCode: normalizeUnitCode(notes?.locationCode),
+    unitCode: normalizeUnitCode(notes?.unitCode),
+  };
+};
+
+const aircraftUnserviceabilityMatchesContext = (
+  event: AircraftUnserviceabilityEvent,
+  requestContext?: BliRequestContext,
+): boolean => {
+  const locationFilter = normalizeUnitCode(requestContext?.locationCode);
+  if (locationFilter && event.locationCode && normalizeUnitCode(event.locationCode) !== locationFilter) return false;
+  const unitFilter = normalizeUnitCode(requestContext?.eventUnitCode || requestContext?.availabilityUnitCode);
+  if (!unitFilter || !event.unitCode) return true;
+  const unitMembers = unitFilter.split('+').map(normalizeUnitCode).filter(Boolean);
+  return unitMembers.length === 0 || unitMembers.includes(normalizeUnitCode(event.unitCode));
+};
+
+const fetchAircraftUnserviceabilityEvents = async (
+  startDate: string,
+  endDate: string,
+  signal: AbortSignal,
+  requestContext?: BliRequestContext,
+): Promise<AircraftUnserviceabilityEvent[]> => {
+  const params = new URLSearchParams({ startDate, endDate });
+  const response = await fetch(`/api/aircraft-availability-events?${params.toString()}`, { credentials: 'include', signal });
+  if (!response.ok) throw new Error(await response.text());
+  const data = await response.json();
+  return (Array.isArray(data.events) ? data.events : [])
+    .map(parseAircraftUnserviceabilityEvent)
+    .filter((event): event is AircraftUnserviceabilityEvent => Boolean(event))
+    .filter(event => aircraftUnserviceabilityMatchesContext(event, requestContext))
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+};
+
+const summariseAircraftUnserviceability = (
+  events: AircraftUnserviceabilityEvent[],
+  startDate: string,
+  endDate: string,
+): AircraftUnserviceabilitySummary => {
+  if (events.length === 0) return emptyAircraftUnserviceabilitySummary(startDate, endDate);
+  const rangeEnd = addUtcDays(parseIsoDate(endDate), 1);
+  const activeByAircraft = new Map<string, AircraftUnserviceabilityEvent>();
+  const periods: Array<{ aircraftNumber: string; tailNumber: string; reason: string; start: Date; end: Date; latestDate: string; activeAtEnd: boolean }> = [];
+  const closePeriod = (aircraftKey: string, end: Date, activeAtEnd = false) => {
+    const active = activeByAircraft.get(aircraftKey);
+    if (!active) return;
+    const start = new Date(active.timestamp);
+    if (end > start) {
+      periods.push({
+        aircraftNumber: active.aircraftNumber,
+        tailNumber: active.tailNumber,
+        reason: active.reason,
+        start,
+        end,
+        latestDate: active.date,
+        activeAtEnd,
+      });
+    }
+    activeByAircraft.delete(aircraftKey);
+  };
+
+  events.forEach(event => {
+    const aircraftKey = event.aircraftNumber || event.tailNumber;
+    const eventTime = new Date(event.timestamp);
+    if (event.action === 'serviceable') {
+      closePeriod(aircraftKey, eventTime);
+      return;
+    }
+    if (event.action === 'reason_update') {
+      closePeriod(aircraftKey, eventTime);
+    }
+    activeByAircraft.set(aircraftKey, event);
+  });
+  activeByAircraft.forEach((_, aircraftKey) => closePeriod(aircraftKey, rangeEnd, true));
+
+  const reasonMap = new Map<string, { frequency: number; aircraft: Set<string>; totalHours: number; longestHours: number; latestDate: string }>();
+  const aircraftMap = new Map<string, { tailNumber: string; frequency: number; totalHours: number; reasons: Map<string, number>; latestReason: string; latestDate: string; activeAtEnd: boolean }>();
+  periods.forEach(period => {
+    const hours = Math.max(0, (period.end.getTime() - period.start.getTime()) / 36e5);
+    const reason = period.reason || 'Unspecified';
+    const reasonRow = reasonMap.get(reason) || { frequency: 0, aircraft: new Set<string>(), totalHours: 0, longestHours: 0, latestDate: '' };
+    reasonRow.frequency += 1;
+    reasonRow.aircraft.add(period.aircraftNumber);
+    reasonRow.totalHours += hours;
+    reasonRow.longestHours = Math.max(reasonRow.longestHours, hours);
+    reasonRow.latestDate = !reasonRow.latestDate || period.latestDate > reasonRow.latestDate ? period.latestDate : reasonRow.latestDate;
+    reasonMap.set(reason, reasonRow);
+
+    const aircraftRow = aircraftMap.get(period.aircraftNumber) || { tailNumber: period.tailNumber, frequency: 0, totalHours: 0, reasons: new Map<string, number>(), latestReason: reason, latestDate: '', activeAtEnd: false };
+    aircraftRow.frequency += 1;
+    aircraftRow.totalHours += hours;
+    aircraftRow.reasons.set(reason, (aircraftRow.reasons.get(reason) || 0) + 1);
+    aircraftRow.latestReason = !aircraftRow.latestDate || period.latestDate >= aircraftRow.latestDate ? reason : aircraftRow.latestReason;
+    aircraftRow.latestDate = !aircraftRow.latestDate || period.latestDate > aircraftRow.latestDate ? period.latestDate : aircraftRow.latestDate;
+    aircraftRow.activeAtEnd = aircraftRow.activeAtEnd || period.activeAtEnd;
+    aircraftMap.set(period.aircraftNumber, aircraftRow);
+  });
+
+  const reasonRows = [...reasonMap.entries()].map(([reason, row]) => ({
+    reason,
+    frequency: row.frequency,
+    affectedAircraft: row.aircraft.size,
+    totalHours: row.totalHours,
+    averageHours: row.frequency > 0 ? row.totalHours / row.frequency : 0,
+    longestHours: row.longestHours,
+    latestDate: row.latestDate,
+  })).sort((a, b) => b.frequency - a.frequency || b.totalHours - a.totalHours || a.reason.localeCompare(b.reason));
+
+  const aircraftRows = [...aircraftMap.entries()].map(([aircraftNumber, row]) => {
+    const topReason = [...row.reasons.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || 'Unspecified';
+    return {
+      aircraftNumber,
+      tailNumber: row.tailNumber,
+      frequency: row.frequency,
+      totalHours: row.totalHours,
+      topReason,
+      latestReason: row.latestReason,
+      latestDate: row.latestDate,
+      activeAtEnd: row.activeAtEnd,
+    };
+  }).sort((a, b) => b.totalHours - a.totalHours || b.frequency - a.frequency || a.tailNumber.localeCompare(b.tailNumber, undefined, { numeric: true }));
+
+  return {
+    startDate,
+    endDate,
+    totalEvents: events.filter(event => event.action !== 'serviceable').length,
+    serviceableReturns: events.filter(event => event.action === 'serviceable').length,
+    affectedAircraft: new Set(events.map(event => event.aircraftNumber).filter(Boolean)).size,
+    totalHours: periods.reduce((sum, period) => sum + Math.max(0, (period.end.getTime() - period.start.getTime()) / 36e5), 0),
+    activeAtEnd: aircraftRows.filter(row => row.activeAtEnd).length,
+    topReason: reasonRows[0] || null,
+    reasonRows,
+    aircraftRows,
+  };
 };
 
 const fetchCourseMovements = async (
@@ -1406,6 +1637,207 @@ const CancellationPreview: React.FC<{ categories: CancellationCategory[] }> = ({
   );
 };
 
+const AircraftUnserviceabilityPreview: React.FC<{ summary: AircraftUnserviceabilitySummary }> = ({ summary }) => {
+  const maxFrequency = Math.max(1, ...summary.reasonRows.map(row => row.frequency));
+  if (summary.reasonRows.length === 0) return <div className="text-xs text-slate-500">No maintenance unserviceability data in range</div>;
+  return (
+    <div className="space-y-2">
+      {summary.reasonRows.slice(0, 4).map(row => (
+        <div key={row.reason} className="flex items-center gap-2">
+          <span className="w-24 truncate text-[10px] text-slate-400" title={row.reason}>{row.reason}</span>
+          <div className="h-2 flex-1 rounded-full bg-slate-950">
+            <div className="h-2 rounded-full bg-orange-300" style={{ width: `${Math.max(5, (row.frequency / maxFrequency) * 100)}%` }} />
+          </div>
+          <span className="w-7 text-right text-[10px] text-slate-300">{row.frequency}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const AircraftUnserviceabilityTile: React.FC<{
+  summary: AircraftUnserviceabilitySummary;
+  loading: boolean;
+  onOpen: () => void;
+}> = ({ summary, loading, onOpen }) => (
+  <button
+    onClick={onOpen}
+    className="group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+  >
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-orange-300/40 bg-orange-300/10 text-orange-200">
+        <WrenchScrewdriverIcon className="h-8 w-8 opacity-75" />
+      </div>
+      <ArrowTopRightOnSquareIcon className="h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" />
+    </div>
+    <div className="mt-4">
+      <h3 className="text-base font-semibold text-white">Aircraft unserviceability</h3>
+      <p className="mt-1 min-h-[34px] text-xs leading-5 text-slate-400">
+        Maintenance reasons, frequency and downtime periods from the flight-line unavailable aircraft log.
+      </p>
+    </div>
+    <div className="mt-3 text-2xl font-bold tracking-normal text-white">
+      {loading ? 'Loading' : compactNumber(summary.totalEvents)}
+    </div>
+    <div className="text-xs text-slate-500">
+      {summary.topReason ? `${summary.topReason.reason} leading reason` : 'no leading reason'}
+    </div>
+    <div className="mt-4 flex-1">
+      <AircraftUnserviceabilityPreview summary={summary} />
+    </div>
+    <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-slate-500">
+      {compactNumber(summary.affectedAircraft)} aircraft · {compactNumber(summary.totalHours, 1)}h unavailable
+    </p>
+  </button>
+);
+
+const AircraftUnserviceabilityModal: React.FC<{
+  date: string;
+  periodSettings: BliPeriodSettings;
+  initialSummary: AircraftUnserviceabilitySummary;
+  requestContext: BliRequestContext;
+  onClose: () => void;
+}> = ({ date, periodSettings, initialSummary, requestContext, onClose }) => {
+  const [timeline, setTimeline] = useState<TimelineKey>('7d');
+  const [summary, setSummary] = useState<AircraftUnserviceabilitySummary>(initialSummary);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const range = useMemo(() => getTimelineRange(date, timeline, periodSettings), [date, periodSettings, timeline]);
+  const dateRangeLabel = useMemo(() => formatDateRange(range.startDate, range.endDate), [range.endDate, range.startDate]);
+  const maxReasonHours = Math.max(1, ...summary.reasonRows.map(row => row.totalHours));
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    fetchAircraftUnserviceabilityEvents(range.startDate, range.endDate, controller.signal, requestContext)
+      .then(rows => setSummary(summariseAircraftUnserviceability(rows, range.startDate, range.endDate)))
+      .catch(fetchError => {
+        if (fetchError.name === 'AbortError') return;
+        console.error('Failed to load BLI aircraft unserviceability:', fetchError);
+        setError('Aircraft unserviceability history could not be loaded.');
+        setSummary(emptyAircraftUnserviceabilitySummary(range.startDate, range.endDate));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [range.endDate, range.startDate, requestContext.availabilityUnitCode, requestContext.eventUnitCode, requestContext.locationCode]);
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8" onMouseDown={onClose}>
+      <div
+        className="max-h-[88vh] w-full max-w-6xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl"
+        onMouseDown={event => event.stopPropagation()}
+      >
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">BLI</p>
+            <h2 className="mt-1 text-2xl font-bold text-white">Aircraft unserviceability</h2>
+            <p className="mt-1 max-w-3xl text-sm text-slate-400">
+              Maintenance problems by reason, frequency and period. Data comes from aircraft marked unavailable in the maintenance slideout.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-end justify-end gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Timeline</span>
+              <select
+                value={timeline}
+                onChange={event => setTimeline(event.target.value as TimelineKey)}
+                className="h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
+              >
+                {TIMELINE_OPTIONS.map(option => (
+                  <option key={option.key} value={option.key}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              onClick={onClose}
+              className="h-10 rounded-md border border-slate-700 px-3 text-sm font-semibold text-slate-300 hover:border-cyan-400 hover:text-white"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+          <span>{loading ? 'Loading unserviceability...' : dateRangeLabel}</span>
+          {error && <span className="text-amber-300">{error}</span>}
+        </div>
+
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <StatRow label="Unserviceability events" value={compactNumber(summary.totalEvents)} accent="text-orange-200" />
+          <StatRow label="Affected aircraft" value={compactNumber(summary.affectedAircraft)} />
+          <StatRow label="Unavailable time" value={`${compactNumber(summary.totalHours, 1)}h`} accent="text-amber-200" />
+          <StatRow label="Still open at period end" value={compactNumber(summary.activeAtEnd)} accent={summary.activeAtEnd > 0 ? 'text-rose-200' : 'text-emerald-200'} />
+          <StatRow label="Leading reason" value={summary.topReason?.reason || 'None'} subtext={summary.topReason ? `${summary.topReason.frequency} event${summary.topReason.frequency === 1 ? '' : 's'}` : 'No data'} />
+        </div>
+
+        {summary.reasonRows.length === 0 ? (
+          <div className="rounded-lg border border-slate-700 bg-slate-950/45 p-8 text-center text-sm text-slate-400">
+            No aircraft have been marked unavailable with a maintenance reason in this timeline.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-white">Problem types</h3>
+                <p className="text-sm text-slate-400">Frequency shows how often each reason was selected. Hours show the cumulative unavailable period.</p>
+              </div>
+              <div className="space-y-3">
+                {summary.reasonRows.map(row => (
+                  <div key={row.reason} className="rounded-md border border-slate-700/80 bg-slate-900/75 p-3">
+                    <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-bold text-white">{row.reason}</div>
+                        <div className="text-xs text-slate-500">{compactNumber(row.affectedAircraft)} aircraft affected · latest {row.latestDate ? dateLabel(row.latestDate) : 'N/A'}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-base font-bold text-orange-200">{compactNumber(row.frequency)}</div>
+                        <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500">frequency</div>
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-950">
+                      <div className="h-2 rounded-full bg-orange-300" style={{ width: `${Math.max(4, (row.totalHours / maxReasonHours) * 100)}%` }} />
+                    </div>
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                      <span className="text-slate-400">Total <span className="font-semibold text-amber-200">{compactNumber(row.totalHours, 1)}h</span></span>
+                      <span className="text-slate-400">Average <span className="font-semibold text-slate-200">{compactNumber(row.averageHours, 1)}h</span></span>
+                      <span className="text-slate-400">Longest <span className="font-semibold text-slate-200">{compactNumber(row.longestHours, 1)}h</span></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <aside className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Worst aircraft</h3>
+              <p className="mt-1 text-xs text-slate-500">Ranked by unavailable hours in the selected period.</p>
+              <div className="mt-4 space-y-2">
+                {summary.aircraftRows.slice(0, 8).map((row, index) => (
+                  <div key={row.aircraftNumber} className="rounded-md border border-slate-700/80 bg-slate-900/75 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-bold text-white">{index + 1}. {row.tailNumber}</div>
+                        <div className="truncate text-xs text-slate-500" title={row.latestReason}>{row.latestReason}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-amber-200">{compactNumber(row.totalHours, 1)}h</div>
+                        <div className="text-[10px] text-slate-500">{compactNumber(row.frequency)} event{row.frequency === 1 ? '' : 's'}</div>
+                      </div>
+                    </div>
+                    {row.activeAtEnd && <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300">Still unavailable</div>}
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const MetricTile: React.FC<{
   metric: MetricDefinition;
   onOpen: (metric: MetricDefinition) => void;
@@ -2143,9 +2575,13 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
   const [courseMovementError, setCourseMovementError] = useState<string | null>(null);
   const [coursePassRates, setCoursePassRates] = useState<CoursePassRateData>({ lmpOptions: [], rows: [] });
   const [coursePassRateError, setCoursePassRateError] = useState<string | null>(null);
+  const [aircraftUnserviceability, setAircraftUnserviceability] = useState<AircraftUnserviceabilitySummary>(() => emptyAircraftUnserviceabilitySummary(date, date));
+  const [aircraftUnserviceabilityLoading, setAircraftUnserviceabilityLoading] = useState(false);
+  const [aircraftUnserviceabilityError, setAircraftUnserviceabilityError] = useState<string | null>(null);
   const [openMetric, setOpenMetric] = useState<MetricDefinition | null>(null);
   const [courseOutcomeOpen, setCourseOutcomeOpen] = useState(false);
   const [coursePassRateOpen, setCoursePassRateOpen] = useState(false);
+  const [aircraftUnserviceabilityOpen, setAircraftUnserviceabilityOpen] = useState(false);
   const [selectedCourseOutcomeCourse, setSelectedCourseOutcomeCourse] = useState('');
   const [selectedPassRateLmp, setSelectedPassRateLmp] = useState('');
   const [periodSettings, setPeriodSettings] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
@@ -2292,6 +2728,24 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
     return () => controller.abort();
   }, [requestContext.eventUnitCode, requestContext.locationCode]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setAircraftUnserviceabilityLoading(true);
+    setAircraftUnserviceabilityError(null);
+    fetchAircraftUnserviceabilityEvents(previewRange.startDate, previewRange.endDate, controller.signal, requestContext)
+      .then(rows => setAircraftUnserviceability(summariseAircraftUnserviceability(rows, previewRange.startDate, previewRange.endDate)))
+      .catch(fetchError => {
+        if (fetchError.name === 'AbortError') return;
+        console.error('Failed to load BLI aircraft unserviceability preview:', fetchError);
+        setAircraftUnserviceabilityError('Aircraft unserviceability history could not be loaded.');
+        setAircraftUnserviceability(emptyAircraftUnserviceabilitySummary(previewRange.startDate, previewRange.endDate));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setAircraftUnserviceabilityLoading(false);
+      });
+    return () => controller.abort();
+  }, [previewRange.endDate, previewRange.startDate, requestContext.availabilityUnitCode, requestContext.eventUnitCode, requestContext.locationCode]);
+
   const staffGroups = useMemo(() => {
     const groups = new Map<string, Instructor[]>();
     sortedStaff.forEach(staff => {
@@ -2381,6 +2835,15 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
           onClose={() => setCoursePassRateOpen(false)}
         />
       )}
+      {aircraftUnserviceabilityOpen && (
+        <AircraftUnserviceabilityModal
+          date={date}
+          periodSettings={periodSettings}
+          initialSummary={aircraftUnserviceability}
+          requestContext={requestContext}
+          onClose={() => setAircraftUnserviceabilityOpen(false)}
+        />
+      )}
 
       <div className="relative rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4">
         <div className="mb-3 flex flex-col items-end gap-2 lg:absolute lg:right-3 lg:top-3 lg:mb-0">
@@ -2452,9 +2915,15 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
           date={date}
           onOpen={() => setCoursePassRateOpen(true)}
         />
+        <AircraftUnserviceabilityTile
+          summary={aircraftUnserviceability}
+          loading={aircraftUnserviceabilityLoading}
+          onOpen={() => setAircraftUnserviceabilityOpen(true)}
+        />
       </div>
       {courseMovementError && <p className="text-xs text-amber-300">{courseMovementError}</p>}
       {coursePassRateError && <p className="text-xs text-amber-300">{coursePassRateError}</p>}
+      {aircraftUnserviceabilityError && <p className="text-xs text-amber-300">{aircraftUnserviceabilityError}</p>}
     </div>
   );
 };
