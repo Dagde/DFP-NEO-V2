@@ -70,6 +70,7 @@ import {
     saveSuppressedTrainingReportEventIds,
 } from './utils/trainingReportCompatibility';
 import {
+    forfeitTrainingReportFollowUpForRpl,
     normaliseTrainingReportExtendedTiming,
     replaceTrainingReportNextEventExtension,
 } from './utils/trainingReportExtensions';
@@ -6476,7 +6477,7 @@ const mergeIndividualLmpWithMaster = (
     const mergedMaster = stampedMaster.map((masterItem, index) => {
         const existingItem = existingByMasterId.get(getMasterEventId(masterItem));
         const completedAt = (existingItem as any)?.completedAt ?? (masterItem as any).completedAt ?? null;
-        return {
+        const mergedItem = {
             ...masterItem,
             ...getIndividualLmpMasterOverrides(existingItem, masterItem),
             id: masterItem.id,
@@ -6488,6 +6489,9 @@ const mergeIndividualLmpWithMaster = (
             orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKey(index),
             placementNeedsReview: false,
         } as SyllabusItemDetail;
+        return (existingItem as any)?.rplGranted === true
+            ? forfeitTrainingReportFollowUpForRpl(mergedItem as SyllabusItemDetail & Record<string, any>)
+            : mergedItem;
     });
 
     const masterIndexById = new Map<string, number>();
@@ -37001,12 +37005,43 @@ const App: React.FC = () => {
             return;
         }
 
+        const rplForfeitIndex = originalLmp.findIndex((item, index) =>
+            index > sourceIndex &&
+            item.type === sourceItem.type &&
+            (item as any).rplGranted
+        );
         const nextEventIndex = originalLmp.findIndex((item, index) =>
             index > sourceIndex &&
             item.type === sourceItem.type &&
             !item.completedAt &&
             !(item as any).rplGranted
         );
+        if (rplForfeitIndex >= 0 && (nextEventIndex < 0 || rplForfeitIndex < nextEventIndex)) {
+            const rplItem = originalLmp[rplForfeitIndex] as SyllabusItemDetail & Record<string, any>;
+            const cleanedRplItem = forfeitTrainingReportFollowUpForRpl(rplItem);
+            const changedByForfeit = JSON.stringify(cleanedRplItem) !== JSON.stringify(rplItem);
+            pushDfpDataDiag('report-lmp:extend-next:forfeited-rpl-target', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                sourceCode: sourceItem.code,
+                sourceIndex,
+                rplEventCode: rplItem.code,
+                rplEventIndex: rplForfeitIndex,
+                requestedExtension: assessment.dpcoFollowUp?.extraHours || null,
+                removedExtensionKeys: Object.keys((rplItem.trainingReportNextEventExtensions || {}) as Record<string, any>),
+                removedForwardedKeys: Object.keys((rplItem.trainingReportForwardedNotes || {}) as Record<string, any>),
+            });
+            if (changedByForfeit) {
+                const updatedLmp = originalLmp.map((item, index) => index === rplForfeitIndex ? cleanedRplItem : item);
+                const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+                setTraineeLMPs(prev => {
+                    const updated = new Map(prev);
+                    updated.set(trainee.fullName, persistedLmp);
+                    return updated;
+                });
+            }
+            return;
+        }
         if (nextEventIndex === -1) {
             pushDfpDataDiag('report-lmp:extend-next:no-next-event', {
                 assessmentId: assessment.id,
@@ -37211,6 +37246,11 @@ const App: React.FC = () => {
             (item as any).trainingReportSourceAssessmentId === assessmentKey ||
             (item as any).trainingReportSourceEventId === assessment.eventId
         ));
+        const rplForfeitIndex = originalLmp.findIndex((item, index) =>
+            index > sourceIndex &&
+            item.type === sourceItem.type &&
+            (item as any).rplGranted
+        );
         const nextEventIndex = insertedFollowUpIndex >= 0
             ? insertedFollowUpIndex
             : originalLmp.findIndex((item, index) =>
@@ -37219,6 +37259,31 @@ const App: React.FC = () => {
                 !item.completedAt &&
                 !(item as any).rplGranted
             );
+        if (insertedFollowUpIndex < 0 && rplForfeitIndex >= 0 && (nextEventIndex < 0 || rplForfeitIndex < nextEventIndex)) {
+            const rplItem = originalLmp[rplForfeitIndex] as SyllabusItemDetail & Record<string, any>;
+            const cleanedRplItem = forfeitTrainingReportFollowUpForRpl(rplItem);
+            const changedByForfeit = JSON.stringify(cleanedRplItem) !== JSON.stringify(rplItem);
+            pushDfpDataDiag('report-notes:forward:forfeited-rpl-target', {
+                assessmentId: assessment.id,
+                traineeFullName: trainee.fullName,
+                sourceCode: sourceItem.code,
+                sourceIndex,
+                rplEventCode: rplItem.code,
+                rplEventIndex: rplForfeitIndex,
+                removedExtensionKeys: Object.keys((rplItem.trainingReportNextEventExtensions || {}) as Record<string, any>),
+                removedForwardedKeys: Object.keys((rplItem.trainingReportForwardedNotes || {}) as Record<string, any>),
+            });
+            if (changedByForfeit) {
+                const updatedLmp = originalLmp.map((item, index) => index === rplForfeitIndex ? cleanedRplItem : item);
+                const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+                setTraineeLMPs(prev => {
+                    const updated = new Map(prev);
+                    updated.set(trainee.fullName, persistedLmp);
+                    return updated;
+                });
+            }
+            return;
+        }
         pushDfpDataDiag('report-notes:forward:target-selection', {
             assessmentId: assessment.id,
             traineeFullName: trainee.fullName,
@@ -40600,17 +40665,51 @@ const App: React.FC = () => {
 
                 const requestedExtensionInfo = getAssessmentRequestedExtension(assessment);
                 const requestedTargetCode = String(requestedExtensionInfo?.targetCode || '').trim().toUpperCase();
-                const targetIndex = requestedTargetCode
+                const targetCodeMatches = (item: SyllabusItemDetail): boolean => (
+                    String(item.code || item.id || item.masterEventId || '').trim().toUpperCase() === requestedTargetCode
+                );
+                const rplForfeitIndex = requestedTargetCode
                     ? lmp.findIndex((item, index) =>
                         index > sourceIndex &&
                         item.type === sourceItem.type &&
-                        String(item.code || item.id || '').trim().toUpperCase() === requestedTargetCode
+                        targetCodeMatches(item) &&
+                        (item as any).rplGranted === true
                     )
                     : lmp.findIndex((item, index) =>
                         index > sourceIndex &&
                         item.type === sourceItem.type &&
-                        !(item as any).completedAt
+                        (item as any).rplGranted === true
                     );
+                const targetIndex = requestedTargetCode
+                    ? lmp.findIndex((item, index) =>
+                        index > sourceIndex &&
+                        item.type === sourceItem.type &&
+                        targetCodeMatches(item)
+                    )
+                    : lmp.findIndex((item, index) =>
+                        index > sourceIndex &&
+                        item.type === sourceItem.type &&
+                        !(item as any).completedAt &&
+                        !(item as any).rplGranted
+                    );
+                if (rplForfeitIndex >= 0 && (requestedTargetCode || targetIndex < 0 || rplForfeitIndex < targetIndex)) {
+                    const rplItem = lmp[rplForfeitIndex] as SyllabusItemDetail & Record<string, any>;
+                    const cleanedRplItem = forfeitTrainingReportFollowUpForRpl(rplItem);
+                    const changedByForfeit = JSON.stringify(cleanedRplItem) !== JSON.stringify(rplItem);
+                    updates.push({
+                        assessmentId: assessment.id || assessment.eventId,
+                        sourceCode: sourceItem.code,
+                        targetCode: rplItem.code,
+                        outcome: 'follow-up-forfeited-rpl-target',
+                        requestedExtensionSource: requestedExtensionInfo?.source || null,
+                        requestedTargetCode: requestedTargetCode || null,
+                        removedExtensionKeys: Object.keys((rplItem.trainingReportNextEventExtensions || {}) as Record<string, any>),
+                        removedForwardedKeys: Object.keys((rplItem.trainingReportForwardedNotes || {}) as Record<string, any>),
+                    });
+                    if (!changedByForfeit) return { lmp, changed: false, updates };
+                    const updatedLmp = lmp.map((item, index) => index === rplForfeitIndex ? cleanedRplItem : item);
+                    return { lmp: updatedLmp, changed: true, updates };
+                }
                 if (targetIndex < 0) {
                     updates.push({
                         assessmentId: assessment.id || assessment.eventId,

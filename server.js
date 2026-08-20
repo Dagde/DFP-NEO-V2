@@ -5885,6 +5885,11 @@ const normaliseTrainingReportHoursForSync = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
+const resolveTotalTrainingReportExtensionHoursForSync = (extensionLedger) => (
+  roundTrainingReportHoursForSync(Object.values(extensionLedger || {})
+    .map(normaliseTrainingReportHoursForSync)
+    .reduce((total, hours) => total + hours, 0))
+);
 const resolveCurrentTrainingReportExtensionHoursForSync = (extensionLedger, lastExtensionKey) => {
   const entries = Object.entries(extensionLedger || {})
     .map(([key, value]) => [String(key || '').trim(), normaliseTrainingReportHoursForSync(value)])
@@ -5920,6 +5925,31 @@ const normaliseTrainingReportExtendedTimingForSync = (existingItem, masterItem) 
     flightOrSimHours: roundTrainingReportHoursForSync(masterFlightOrSimHours + extensionHours),
     duration: roundTrainingReportHoursForSync(masterDuration + extensionHours),
     totalEventHours: roundTrainingReportHoursForSync(masterTotalEventHours + extensionHours),
+  };
+};
+
+const forfeitTrainingReportFollowUpForRplForSync = (item) => {
+  const extensionHours = resolveTotalTrainingReportExtensionHoursForSync(item?.trainingReportNextEventExtensions);
+  const removeExtensionHours = (value) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return value;
+    return roundTrainingReportHoursForSync(Math.max(0, parsed - extensionHours));
+  };
+  const baseNotes = typeof item?.trainingReportBaseNotes === 'string'
+    ? item.trainingReportBaseNotes
+    : item?.notes;
+  return {
+    ...item,
+    flightOrSimHours: extensionHours > 0 ? removeExtensionHours(item.flightOrSimHours) : item.flightOrSimHours,
+    duration: extensionHours > 0 ? removeExtensionHours(item.duration) : item.duration,
+    totalEventHours: extensionHours > 0 ? removeExtensionHours(item.totalEventHours) : item.totalEventHours,
+    notes: typeof baseNotes === 'string' ? baseNotes : item?.notes,
+    trainingReportNextEventExtensions: undefined,
+    trainingReportExtensionAssessmentIds: undefined,
+    trainingReportLastExtendedByAssessmentId: undefined,
+    trainingReportForwardedNotes: undefined,
+    trainingReportLastForwardedNotesAssessmentId: undefined,
+    trainingReportBaseNotes: undefined,
   };
 };
 
@@ -6220,7 +6250,7 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
   const mergedMaster = stampedMaster.map((masterItem, index) => {
     const existingItem = existingByMasterId.get(getLmpMasterEventId(masterItem));
     const completedAt = getLmpCompletionTimestampForSync(masterItem, scoreMap) || getLmpRplTimestampForSync(existingItem);
-    return {
+    const mergedItem = {
       ...masterItem,
       ...getIndividualLmpMasterOverridesForSync(existingItem, masterItem),
       id: masterItem.id,
@@ -6234,6 +6264,9 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
       orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKeyForSync(index),
       placementNeedsReview: false,
     };
+    return existingItem?.rplGranted === true
+      ? forfeitTrainingReportFollowUpForRplForSync(mergedItem)
+      : mergedItem;
   });
 
   const masterIndexById = new Map();

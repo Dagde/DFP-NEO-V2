@@ -33,6 +33,7 @@ import {
     type StaffQualificationCatalogue,
     type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
+import { forfeitTrainingReportFollowUpForRpl } from '../utils/trainingReportExtensions';
 import { showDarkConfirm } from './DarkMessageModal';
 
 interface TraineeLmpViewProps {
@@ -1537,7 +1538,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
         }
         const grantedAt = checked ? (item.rplGrantedAt || new Date().toISOString()) : null;
         const completedAtWasRplOnly = item.completedAt && item.rplGrantedAt && item.completedAt === item.rplGrantedAt;
-        const updatedItem: SyllabusItemDetail = {
+        const baseUpdatedItem: SyllabusItemDetail = {
             ...item,
             rplGranted: checked,
             completedAt: checked
@@ -1546,6 +1547,9 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
             rplGrantedAt: grantedAt,
             rplGrantedBy: checked ? (currentUserName || 'Admin') : null,
         };
+        const updatedItem = checked
+            ? forfeitTrainingReportFollowUpForRpl(baseUpdatedItem as SyllabusItemDetail & Record<string, any>)
+            : baseUpdatedItem;
         const updated = await onUpdateLmpItem(trainee, originalItem, updatedItem);
         if (updated !== false) {
             setSelectedItem(updatedItem);

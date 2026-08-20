@@ -5040,6 +5040,7 @@ const resolveCurrentTrainingReportExtensionHours = (extensionLedger, lastExtensi
   const preferredEntry = preferredKey ? entries.find(([key]) => key === preferredKey) : null;
   return roundHours(preferredEntry?.[1] ?? entries[entries.length - 1][1]);
 };
+const resolveTotalTrainingReportExtensionHours = (extensionLedger) => roundHours(Object.values(extensionLedger || {}).map(normaliseHours).reduce((total, hours) => total + hours, 0));
 const hasTrainingReportExtensionMetadata = (item) => Boolean(item?.trainingReportLastExtendedByAssessmentId) || Array.isArray(item?.trainingReportExtensionAssessmentIds) && item.trainingReportExtensionAssessmentIds.length > 0 || Object.keys(item?.trainingReportNextEventExtensions || {}).length > 0;
 const timingBase = (value, fallback) => {
   const parsed = Number(value);
@@ -5098,6 +5099,28 @@ const replaceTrainingReportNextEventExtension = ({
     appliedDelta: roundHours(nextDuration - normaliseHours(duration)),
     replacedExtensionKeys,
     changed
+  };
+};
+const forfeitTrainingReportFollowUpForRpl = (item) => {
+  const extensionHours = resolveTotalTrainingReportExtensionHours(item.trainingReportNextEventExtensions);
+  const removeExtensionHours = (value) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return value;
+    return roundHours(Math.max(0, parsed - extensionHours));
+  };
+  const baseNotes = typeof item.trainingReportBaseNotes === "string" ? item.trainingReportBaseNotes : item.notes;
+  return {
+    ...item,
+    flightOrSimHours: extensionHours > 0 ? removeExtensionHours(item.flightOrSimHours) : item.flightOrSimHours,
+    duration: extensionHours > 0 ? removeExtensionHours(item.duration) : item.duration,
+    totalEventHours: extensionHours > 0 ? removeExtensionHours(item.totalEventHours) : item.totalEventHours,
+    notes: typeof baseNotes === "string" ? baseNotes : item.notes,
+    trainingReportNextEventExtensions: void 0,
+    trainingReportExtensionAssessmentIds: void 0,
+    trainingReportLastExtendedByAssessmentId: void 0,
+    trainingReportForwardedNotes: void 0,
+    trainingReportLastForwardedNotesAssessmentId: void 0,
+    trainingReportBaseNotes: void 0
   };
 };
 const DEFAULT_SCT_TERMINOLOGY$1 = {
@@ -23007,13 +23030,14 @@ This records RPL against this Individual LMP event.`,
     }
     const grantedAt = checked ? item.rplGrantedAt || (/* @__PURE__ */ new Date()).toISOString() : null;
     const completedAtWasRplOnly = item.completedAt && item.rplGrantedAt && item.completedAt === item.rplGrantedAt;
-    const updatedItem = {
+    const baseUpdatedItem = {
       ...item,
       rplGranted: checked,
       completedAt: checked ? item.completedAt || grantedAt : completedAtWasRplOnly ? null : item.completedAt,
       rplGrantedAt: grantedAt,
       rplGrantedBy: checked ? currentUserName || "Admin" : null
     };
+    const updatedItem = checked ? forfeitTrainingReportFollowUpForRpl(baseUpdatedItem) : baseUpdatedItem;
     const updated = await onUpdateLmpItem(trainee, originalItem, updatedItem);
     if (updated !== false) {
       setSelectedItem(updatedItem);
@@ -100692,7 +100716,7 @@ const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
   const mergedMaster = stampedMaster.map((masterItem, index) => {
     const existingItem = existingByMasterId.get(getMasterEventId(masterItem));
     const completedAt = existingItem?.completedAt ?? masterItem.completedAt ?? null;
-    return {
+    const mergedItem = {
       ...masterItem,
       ...getIndividualLmpMasterOverrides(existingItem, masterItem),
       id: masterItem.id,
@@ -100704,6 +100728,7 @@ const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
       orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKey(index),
       placementNeedsReview: false
     };
+    return existingItem?.rplGranted === true ? forfeitTrainingReportFollowUpForRpl(mergedItem) : mergedItem;
   });
   const masterIndexById = /* @__PURE__ */ new Map();
   mergedMaster.forEach((item, index) => {
@@ -125682,9 +125707,38 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
       return;
     }
+    const rplForfeitIndex = originalLmp.findIndex(
+      (item, index) => index > sourceIndex && item.type === sourceItem.type && item.rplGranted
+    );
     const nextEventIndex = originalLmp.findIndex(
       (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt && !item.rplGranted
     );
+    if (rplForfeitIndex >= 0 && (nextEventIndex < 0 || rplForfeitIndex < nextEventIndex)) {
+      const rplItem = originalLmp[rplForfeitIndex];
+      const cleanedRplItem = forfeitTrainingReportFollowUpForRpl(rplItem);
+      const changedByForfeit = JSON.stringify(cleanedRplItem) !== JSON.stringify(rplItem);
+      pushDfpDataDiag("report-lmp:extend-next:forfeited-rpl-target", {
+        assessmentId: assessment.id,
+        traineeFullName: trainee.fullName,
+        sourceCode: sourceItem.code,
+        sourceIndex,
+        rplEventCode: rplItem.code,
+        rplEventIndex: rplForfeitIndex,
+        requestedExtension: assessment.dpcoFollowUp?.extraHours || null,
+        removedExtensionKeys: Object.keys(rplItem.trainingReportNextEventExtensions || {}),
+        removedForwardedKeys: Object.keys(rplItem.trainingReportForwardedNotes || {})
+      });
+      if (changedByForfeit) {
+        const updatedLmp2 = originalLmp.map((item, index) => index === rplForfeitIndex ? cleanedRplItem : item);
+        const persistedLmp2 = await persistTraineeLmp(trainee, updatedLmp2);
+        setTraineeLMPs((prev) => {
+          const updated = new Map(prev);
+          updated.set(trainee.fullName, persistedLmp2);
+          return updated;
+        });
+      }
+      return;
+    }
     if (nextEventIndex === -1) {
       pushDfpDataDiag("report-lmp:extend-next:no-next-event", {
         assessmentId: assessment.id,
@@ -125878,9 +125932,37 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const assessmentKey = assessment.id || assessment.eventId;
     const insertedFollowUpIndex = originalLmp.findIndex((item) => item.trainingReportSourceAssessmentId === assessmentKey || item.trainingReportSourceEventId === assessment.eventId);
+    const rplForfeitIndex = originalLmp.findIndex(
+      (item, index) => index > sourceIndex && item.type === sourceItem.type && item.rplGranted
+    );
     const nextEventIndex = insertedFollowUpIndex >= 0 ? insertedFollowUpIndex : originalLmp.findIndex(
       (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt && !item.rplGranted
     );
+    if (insertedFollowUpIndex < 0 && rplForfeitIndex >= 0 && (nextEventIndex < 0 || rplForfeitIndex < nextEventIndex)) {
+      const rplItem = originalLmp[rplForfeitIndex];
+      const cleanedRplItem = forfeitTrainingReportFollowUpForRpl(rplItem);
+      const changedByForfeit = JSON.stringify(cleanedRplItem) !== JSON.stringify(rplItem);
+      pushDfpDataDiag("report-notes:forward:forfeited-rpl-target", {
+        assessmentId: assessment.id,
+        traineeFullName: trainee.fullName,
+        sourceCode: sourceItem.code,
+        sourceIndex,
+        rplEventCode: rplItem.code,
+        rplEventIndex: rplForfeitIndex,
+        removedExtensionKeys: Object.keys(rplItem.trainingReportNextEventExtensions || {}),
+        removedForwardedKeys: Object.keys(rplItem.trainingReportForwardedNotes || {})
+      });
+      if (changedByForfeit) {
+        const updatedLmp2 = originalLmp.map((item, index) => index === rplForfeitIndex ? cleanedRplItem : item);
+        const persistedLmp = await persistTraineeLmp(trainee, updatedLmp2);
+        setTraineeLMPs((prev) => {
+          const updated = new Map(prev);
+          updated.set(trainee.fullName, persistedLmp);
+          return updated;
+        });
+      }
+      return;
+    }
     pushDfpDataDiag("report-notes:forward:target-selection", {
       assessmentId: assessment.id,
       traineeFullName: trainee.fullName,
@@ -128615,11 +128697,35 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         }
         const requestedExtensionInfo = getAssessmentRequestedExtension(assessment);
         const requestedTargetCode = String(requestedExtensionInfo?.targetCode || "").trim().toUpperCase();
-        const targetIndex = requestedTargetCode ? lmp.findIndex(
-          (item, index) => index > sourceIndex && item.type === sourceItem.type && String(item.code || item.id || "").trim().toUpperCase() === requestedTargetCode
+        const targetCodeMatches = (item) => String(item.code || item.id || item.masterEventId || "").trim().toUpperCase() === requestedTargetCode;
+        const rplForfeitIndex = requestedTargetCode ? lmp.findIndex(
+          (item, index) => index > sourceIndex && item.type === sourceItem.type && targetCodeMatches(item) && item.rplGranted === true
         ) : lmp.findIndex(
-          (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt
+          (item, index) => index > sourceIndex && item.type === sourceItem.type && item.rplGranted === true
         );
+        const targetIndex = requestedTargetCode ? lmp.findIndex(
+          (item, index) => index > sourceIndex && item.type === sourceItem.type && targetCodeMatches(item)
+        ) : lmp.findIndex(
+          (item, index) => index > sourceIndex && item.type === sourceItem.type && !item.completedAt && !item.rplGranted
+        );
+        if (rplForfeitIndex >= 0 && (requestedTargetCode || targetIndex < 0 || rplForfeitIndex < targetIndex)) {
+          const rplItem = lmp[rplForfeitIndex];
+          const cleanedRplItem = forfeitTrainingReportFollowUpForRpl(rplItem);
+          const changedByForfeit = JSON.stringify(cleanedRplItem) !== JSON.stringify(rplItem);
+          updates.push({
+            assessmentId: assessment.id || assessment.eventId,
+            sourceCode: sourceItem.code,
+            targetCode: rplItem.code,
+            outcome: "follow-up-forfeited-rpl-target",
+            requestedExtensionSource: requestedExtensionInfo?.source || null,
+            requestedTargetCode: requestedTargetCode || null,
+            removedExtensionKeys: Object.keys(rplItem.trainingReportNextEventExtensions || {}),
+            removedForwardedKeys: Object.keys(rplItem.trainingReportForwardedNotes || {})
+          });
+          if (!changedByForfeit) return { lmp, changed: false, updates };
+          const updatedLmp2 = lmp.map((item, index) => index === rplForfeitIndex ? cleanedRplItem : item);
+          return { lmp: updatedLmp2, changed: true, updates };
+        }
         if (targetIndex < 0) {
           updates.push({
             assessmentId: assessment.id || assessment.eventId,

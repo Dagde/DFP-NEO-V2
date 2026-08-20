@@ -30,6 +30,14 @@ export const resolveCurrentTrainingReportExtensionHours = (
   return roundHours(preferredEntry?.[1] ?? entries[entries.length - 1][1]);
 };
 
+export const resolveTotalTrainingReportExtensionHours = (
+  extensionLedger?: Record<string, unknown> | null,
+): number => (
+  roundHours(Object.values(extensionLedger || {})
+    .map(normaliseHours)
+    .reduce((total, hours) => total + hours, 0))
+);
+
 const hasTrainingReportExtensionMetadata = (item?: Record<string, any> | null): boolean => (
   Boolean(item?.trainingReportLastExtendedByAssessmentId) ||
   (Array.isArray(item?.trainingReportExtensionAssessmentIds) && item.trainingReportExtensionAssessmentIds.length > 0) ||
@@ -105,5 +113,31 @@ export const replaceTrainingReportNextEventExtension = ({
     appliedDelta: roundHours(nextDuration - normaliseHours(duration)),
     replacedExtensionKeys,
     changed,
+  };
+};
+
+export const forfeitTrainingReportFollowUpForRpl = <T extends Record<string, any>>(item: T): T => {
+  const extensionHours = resolveTotalTrainingReportExtensionHours(item.trainingReportNextEventExtensions);
+  const removeExtensionHours = (value: unknown) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return value;
+    return roundHours(Math.max(0, parsed - extensionHours));
+  };
+  const baseNotes = typeof item.trainingReportBaseNotes === 'string'
+    ? item.trainingReportBaseNotes
+    : item.notes;
+
+  return {
+    ...item,
+    flightOrSimHours: extensionHours > 0 ? removeExtensionHours(item.flightOrSimHours) : item.flightOrSimHours,
+    duration: extensionHours > 0 ? removeExtensionHours(item.duration) : item.duration,
+    totalEventHours: extensionHours > 0 ? removeExtensionHours(item.totalEventHours) : item.totalEventHours,
+    notes: typeof baseNotes === 'string' ? baseNotes : item.notes,
+    trainingReportNextEventExtensions: undefined,
+    trainingReportExtensionAssessmentIds: undefined,
+    trainingReportLastExtendedByAssessmentId: undefined,
+    trainingReportForwardedNotes: undefined,
+    trainingReportLastForwardedNotesAssessmentId: undefined,
+    trainingReportBaseNotes: undefined,
   };
 };
