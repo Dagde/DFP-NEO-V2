@@ -14095,6 +14095,27 @@ async function ensureInstructorArrayColumns(db) {
   }
 }
 
+async function getTraineeInstructorColumnModes(db) {
+  const modes = { primaryInstructor: 'array', secondaryInstructor: 'array' };
+  try {
+    const rows = await db.$queryRawUnsafe(`
+      SELECT a.attname AS column_name, pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type
+      FROM pg_catalog.pg_attribute a
+      JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+      WHERE c.relname = 'Trainee'
+        AND a.attname IN ('primaryInstructor', 'secondaryInstructor')
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+    `);
+    rows.forEach(row => {
+      modes[row.column_name] = String(row.data_type || '').includes('[]') ? 'array' : 'text';
+    });
+  } catch (error) {
+    console.warn('[TraineeReallocation] Could not detect instructor column modes:', error.message);
+  }
+  return modes;
+}
+
 // ============================================================
 // TRAINEE REALLOCATION ENDPOINT
 // ============================================================
@@ -14465,6 +14486,7 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
 
     const allocationResult = buildReallocation(trainees, personnel, { mode, includeExecutives, minSecondaryPerTrainee: 2 });
     const allResults = allocationResult.targetAllocations;
+    const columnModes = await getTraineeInstructorColumnModes(prisma);
 
     console.log(`🔄 Applying ${mode} reallocation for ${allResults.length} trainees...`);
     let updated = 0;
@@ -14472,13 +14494,23 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
 
     for (const result of allResults) {
       try {
-        await prisma.$executeRawUnsafe(`
-          UPDATE "Trainee"
-          SET "primaryInstructor" = $1::TEXT[],
-              "secondaryInstructor" = $2::TEXT[],
-              "updatedAt" = NOW()
-          WHERE id = $3::text
-        `, result.primaryInstructors, result.secondaryInstructors, result.id);
+        if (columnModes.primaryInstructor === 'array' && columnModes.secondaryInstructor === 'array') {
+          await prisma.$executeRawUnsafe(`
+            UPDATE "Trainee"
+            SET "primaryInstructor" = $1::TEXT[],
+                "secondaryInstructor" = $2::TEXT[],
+                "updatedAt" = NOW()
+            WHERE id = $3::text
+          `, result.primaryInstructors, result.secondaryInstructors, result.id);
+        } else {
+          await prisma.$executeRawUnsafe(`
+            UPDATE "Trainee"
+            SET "primaryInstructor" = $1::TEXT,
+                "secondaryInstructor" = $2::TEXT,
+                "updatedAt" = NOW()
+            WHERE id = $3::text
+          `, result.primaryInstructors.join('; '), result.secondaryInstructors.join('; '), result.id);
+        }
         updated++;
       } catch (err) {
         errors.push({ traineeId: result.id, name: result.name, error: err.message });
@@ -14493,6 +14525,7 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
       errors: errors.length,
       mode,
       includeExecutives,
+      columnModes,
       primary: {
         with1: allResults.filter(r => r.primaryInstructors.length === 1).length,
         with0: allResults.filter(r => r.primaryInstructors.length === 0).length,

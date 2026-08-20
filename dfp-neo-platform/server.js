@@ -2884,6 +2884,411 @@ app.patch('/api/trainees/:id', async (req, res) => {
   }
 });
 
+// ── TRAINEE REALLOCATION ─────────────────────────────────────────────────────
+function normaliseInstructorListForReallocation(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap(item => normaliseInstructorListForReallocation(item));
+  }
+  if (value === null || value === undefined) return [];
+  if (typeof value !== 'string') return [];
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '[]') return [];
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return normaliseInstructorListForReallocation(parsed);
+    } catch {
+      // Fall through for legacy malformed strings.
+    }
+  }
+  return trimmed.split(/[;|]/).map(name => name.trim()).filter(Boolean);
+}
+
+function isAssignableTraineeInstructor(person, options = {}) {
+  if (!person || person.isActive === false) return false;
+  if (person.isExecutive && !options.includeExecutives) return false;
+  const role = String(person.role || '').toUpperCase();
+  return Boolean(
+    person.isQFI ||
+    person.isCFI ||
+    person.isOFI ||
+    person.isIRE ||
+    person.isTestingOfficer ||
+    role.includes('QFI') ||
+    role.includes('IP') ||
+    role.includes('INSTRUCTOR')
+  );
+}
+
+async function getTraineeInstructorColumnModes(db) {
+  const modes = { primaryInstructor: 'text', secondaryInstructor: 'text' };
+  try {
+    const rows = await db.$queryRawUnsafe(`
+      SELECT a.attname AS column_name, pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type
+      FROM pg_catalog.pg_attribute a
+      JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+      WHERE c.relname = 'Trainee'
+        AND a.attname IN ('primaryInstructor', 'secondaryInstructor')
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+    `);
+    rows.forEach(row => {
+      modes[row.column_name] = String(row.data_type || '').includes('[]') ? 'array' : 'text';
+    });
+  } catch (error) {
+    console.warn('[TraineeReallocation] Could not detect instructor column modes:', error.message);
+  }
+  return modes;
+}
+
+function buildReallocation(trainees, personnel, options = {}) {
+  const mode = options.mode === 'missingOnly' ? 'missingOnly' : 'all';
+  const minSecondaryPerTrainee = Number.isFinite(Number(options.minSecondaryPerTrainee))
+    ? Math.max(0, Number(options.minSecondaryPerTrainee))
+    : 2;
+  const includeExecutives = options.includeExecutives === true;
+  const units = Array.from(new Set((trainees || [])
+    .map(t => String(t.unit || '').trim())
+    .filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b));
+  const allResults = [];
+  const untouched = [];
+  const diagnostics = {
+    mode,
+    minSecondaryPerTrainee,
+    includeExecutives,
+    skippedExecutives: (personnel || []).filter(p => p.isExecutive && !includeExecutives).map(p => ({
+      id: p.id,
+      name: p.name,
+      unit: p.unit || null,
+      role: p.role || null
+    })),
+    units: {}
+  };
+  const primaryLoad = {};
+  const secondaryLoad = {};
+  if (mode === 'missingOnly') {
+    (trainees || []).forEach(trainee => {
+      normaliseInstructorListForReallocation(trainee.primaryInstructor).forEach(name => {
+        primaryLoad[name] = (primaryLoad[name] || 0) + 1;
+      });
+      normaliseInstructorListForReallocation(trainee.secondaryInstructor).forEach(name => {
+        secondaryLoad[name] = (secondaryLoad[name] || 0) + 1;
+      });
+    });
+  }
+
+  const seededRandom = (seed) => {
+    let s = seed;
+    return () => {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      return (s >>> 0) / 0xffffffff;
+    };
+  };
+
+  for (const unit of units) {
+    const unitAllTrainees = trainees.filter(t => t.unit === unit);
+    const unitTrainees = mode === 'missingOnly'
+      ? unitAllTrainees.filter(t => (
+        normaliseInstructorListForReallocation(t.primaryInstructor).length === 0 ||
+        normaliseInstructorListForReallocation(t.secondaryInstructor).length < minSecondaryPerTrainee
+      ))
+      : unitAllTrainees;
+    const unitStaff = personnel.filter(p => p.unit === unit && isAssignableTraineeInstructor(p, { includeExecutives }));
+    const unitDiag = diagnostics.units[unit] = {
+      activeTrainees: unitAllTrainees.length,
+      targetTrainees: unitTrainees.length,
+      assignableStaff: unitStaff.length,
+      skippedExecutiveStaff: (personnel || []).filter(p => p.unit === unit && p.isExecutive && !includeExecutives).map(p => p.name),
+      skippedNonInstructorStaff: (personnel || []).filter(p => p.unit === unit && !p.isExecutive && !isAssignableTraineeInstructor(p, { includeExecutives })).map(p => p.name),
+      primaryBefore: {},
+      secondaryBefore: {},
+      primaryAfter: {},
+      secondaryAfter: {},
+      warnings: []
+    };
+    unitStaff.forEach(staff => {
+      unitDiag.primaryBefore[staff.name] = primaryLoad[staff.name] || 0;
+      unitDiag.secondaryBefore[staff.name] = secondaryLoad[staff.name] || 0;
+    });
+    if (mode === 'missingOnly') {
+      unitAllTrainees
+        .filter(t => !unitTrainees.some(target => target.id === t.id))
+        .forEach(trainee => {
+          untouched.push({
+            id: trainee.id,
+            name: trainee.name,
+            fullName: trainee.fullName || trainee.name,
+            course: trainee.course || '',
+            unit: trainee.unit,
+            primaryInstructors: normaliseInstructorListForReallocation(trainee.primaryInstructor),
+            secondaryInstructors: normaliseInstructorListForReallocation(trainee.secondaryInstructor),
+            untouched: true
+          });
+        });
+    }
+    if (unitTrainees.length === 0) {
+      unitStaff.forEach(staff => {
+        unitDiag.primaryAfter[staff.name] = primaryLoad[staff.name] || 0;
+        unitDiag.secondaryAfter[staff.name] = secondaryLoad[staff.name] || 0;
+      });
+      continue;
+    }
+    if (unitStaff.length === 0) {
+      unitTrainees.forEach(trainee => {
+        allResults.push({
+          id: trainee.id,
+          name: trainee.name,
+          fullName: trainee.fullName || trainee.name,
+          course: trainee.course || '',
+          unit: trainee.unit,
+          primaryInstructors: [],
+          secondaryInstructors: [],
+          warning: 'NO_ASSIGNABLE_UNIT_INSTRUCTORS',
+          untouched: false
+        });
+      });
+      unitDiag.warnings.push('NO_ASSIGNABLE_UNIT_INSTRUCTORS');
+      continue;
+    }
+
+    const randFn = seededRandom(42);
+    const shuffle = (arr) => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(randFn() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    const shuffledTrainees = shuffle(unitTrainees);
+    const shuffledStaff = shuffle(unitStaff);
+    const primaryMap = {};
+    shuffledTrainees.forEach(t => {
+      const existing = normaliseInstructorListForReallocation(t.primaryInstructor);
+      primaryMap[t.id] = mode === 'missingOnly' && existing.length > 0 ? existing[0] : null;
+    });
+    for (const trainee of shuffledTrainees) {
+      if (primaryMap[trainee.id]) continue;
+      const eligible = shuffledStaff.slice().sort((a, b) => {
+        const diff = (primaryLoad[a.name] || 0) - (primaryLoad[b.name] || 0);
+        return diff !== 0 ? diff : shuffledStaff.indexOf(a) - shuffledStaff.indexOf(b);
+      });
+      if (eligible.length > 0) {
+        primaryMap[trainee.id] = eligible[0].name;
+        primaryLoad[eligible[0].name] = (primaryLoad[eligible[0].name] || 0) + 1;
+      }
+    }
+    const secondaryMap = {};
+    shuffledTrainees.forEach(t => {
+      secondaryMap[t.id] = mode === 'missingOnly'
+        ? normaliseInstructorListForReallocation(t.secondaryInstructor).slice(0, minSecondaryPerTrainee)
+        : [];
+    });
+    const pickSecondary = (excludeSet) => {
+      const candidates = shuffledStaff
+        .filter(s => !excludeSet.has(s.name))
+        .sort((a, b) => {
+          const loadDiff = (secondaryLoad[a.name] || 0) - (secondaryLoad[b.name] || 0);
+          if (loadDiff !== 0) return loadDiff;
+          return shuffledStaff.indexOf(a) - shuffledStaff.indexOf(b);
+        });
+      return candidates.length > 0 ? candidates[0] : null;
+    };
+    for (const trainee of shuffledTrainees) {
+      while (secondaryMap[trainee.id].length < minSecondaryPerTrainee) {
+        const primaryName = primaryMap[trainee.id];
+        const alreadyAssigned = new Set(secondaryMap[trainee.id]);
+        let pick = pickSecondary(new Set([...alreadyAssigned, primaryName].filter(Boolean)));
+        if (!pick) pick = pickSecondary(alreadyAssigned);
+        if (!pick) {
+          unitDiag.warnings.push(`NO_SECONDARY_AVAILABLE:${trainee.name}`);
+          break;
+        }
+        secondaryMap[trainee.id].push(pick.name);
+        secondaryLoad[pick.name] = (secondaryLoad[pick.name] || 0) + 1;
+      }
+    }
+    unitStaff.forEach(staff => {
+      unitDiag.primaryAfter[staff.name] = primaryLoad[staff.name] || 0;
+      unitDiag.secondaryAfter[staff.name] = secondaryLoad[staff.name] || 0;
+    });
+    for (const trainee of shuffledTrainees) {
+      allResults.push({
+        id: trainee.id,
+        name: trainee.name,
+        fullName: trainee.fullName || trainee.name,
+        course: trainee.course || '',
+        unit: trainee.unit,
+        primaryInstructors: primaryMap[trainee.id] ? [primaryMap[trainee.id]] : [],
+        secondaryInstructors: secondaryMap[trainee.id],
+        untouched: false
+      });
+    }
+  }
+
+  return {
+    allocations: mode === 'missingOnly' ? [...untouched, ...allResults] : allResults,
+    targetAllocations: allResults,
+    diagnostics
+  };
+}
+
+app.get('/api/trainee-reallocation/preview', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const mode = req.query.mode === 'missingOnly' ? 'missingOnly' : 'all';
+    const includeExecutives = req.query.includeExecutives === 'true';
+    const trainees = await db.trainee.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        course: true,
+        unit: true,
+        primaryInstructor: true,
+        secondaryInstructor: true
+      }
+    });
+    const personnel = await db.personnel.findMany({
+      select: {
+        id: true,
+        name: true,
+        unit: true,
+        role: true,
+        isActive: true,
+        isExecutive: true,
+        isQFI: true,
+        isCFI: true,
+        isOFI: true,
+        isIRE: true,
+        isTestingOfficer: true
+      }
+    });
+    const allocationResult = buildReallocation(trainees, personnel, { mode, includeExecutives, minSecondaryPerTrainee: 2 });
+    const targetResults = allocationResult.targetAllocations;
+    res.json({
+      success: true,
+      summary: {
+        total: allocationResult.allocations.length,
+        target: targetResults.length,
+        mode,
+        includeExecutives,
+        primary: {
+          with1: targetResults.filter(r => r.primaryInstructors.length === 1).length,
+          with0: targetResults.filter(r => r.primaryInstructors.length === 0).length,
+        },
+        secondary: {
+          with3: targetResults.filter(r => r.secondaryInstructors.length === 3).length,
+          with2: targetResults.filter(r => r.secondaryInstructors.length === 2).length,
+          with1: targetResults.filter(r => r.secondaryInstructors.length === 1).length,
+          with0: targetResults.filter(r => r.secondaryInstructors.length === 0).length,
+        }
+      },
+      allocations: allocationResult.allocations,
+      targetAllocations: targetResults,
+      diagnostics: allocationResult.diagnostics
+    });
+  } catch (error) {
+    console.error('Error in trainee-reallocation preview:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/trainee-reallocation/apply', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const mode = req.body?.mode === 'missingOnly' ? 'missingOnly' : 'all';
+    const includeExecutives = req.body?.includeExecutives === true;
+    const trainees = await db.trainee.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        course: true,
+        unit: true,
+        primaryInstructor: true,
+        secondaryInstructor: true
+      }
+    });
+    const personnel = await db.personnel.findMany({
+      select: {
+        id: true,
+        name: true,
+        unit: true,
+        role: true,
+        isActive: true,
+        isExecutive: true,
+        isQFI: true,
+        isCFI: true,
+        isOFI: true,
+        isIRE: true,
+        isTestingOfficer: true
+      }
+    });
+    const columnModes = await getTraineeInstructorColumnModes(db);
+    const allocationResult = buildReallocation(trainees, personnel, { mode, includeExecutives, minSecondaryPerTrainee: 2 });
+    const targetResults = allocationResult.targetAllocations;
+    let updated = 0;
+    const errors = [];
+
+    for (const result of targetResults) {
+      try {
+        if (columnModes.primaryInstructor === 'array' && columnModes.secondaryInstructor === 'array') {
+          await db.$executeRawUnsafe(`
+            UPDATE "Trainee"
+            SET "primaryInstructor" = $1::TEXT[],
+                "secondaryInstructor" = $2::TEXT[],
+                "updatedAt" = NOW()
+            WHERE id = $3::text
+          `, result.primaryInstructors, result.secondaryInstructors, result.id);
+        } else {
+          await db.$executeRawUnsafe(`
+            UPDATE "Trainee"
+            SET "primaryInstructor" = $1::TEXT,
+                "secondaryInstructor" = $2::TEXT,
+                "updatedAt" = NOW()
+            WHERE id = $3::text
+          `, result.primaryInstructors.join('; '), result.secondaryInstructors.join('; '), result.id);
+        }
+        updated++;
+      } catch (error) {
+        errors.push({ traineeId: result.id, name: result.name, error: error.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      summary: {
+        total: targetResults.length,
+        updated,
+        errors: errors.length,
+        mode,
+        includeExecutives,
+        columnModes,
+        primary: {
+          with1: targetResults.filter(r => r.primaryInstructors.length === 1).length,
+          with0: targetResults.filter(r => r.primaryInstructors.length === 0).length,
+        },
+        secondary: {
+          with3: targetResults.filter(r => r.secondaryInstructors.length === 3).length,
+          with2: targetResults.filter(r => r.secondaryInstructors.length === 2).length,
+          with1: targetResults.filter(r => r.secondaryInstructors.length === 1).length,
+          with0: targetResults.filter(r => r.secondaryInstructors.length === 0).length,
+        }
+      },
+      allocations: targetResults,
+      diagnostics: allocationResult.diagnostics,
+      errorDetails: errors
+    });
+  } catch (error) {
+    console.error('Error in trainee-reallocation apply:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ── DELETE /api/trainees/:id ──────────────────────────────────────────────────
 app.delete('/api/trainees/:id', async (req, res) => {
   try {
