@@ -100670,6 +100670,15 @@ const getIndividualLmpMasterOverrides = (item, masterItem) => {
     ...normaliseTrainingReportExtendedTiming(item, masterItem)
   };
 };
+const getIndividualLmpRplFields = (item, completedAt) => {
+  if (item?.rplGranted !== true) return {};
+  const rplGrantedAt = item.rplGrantedAt || completedAt || (/* @__PURE__ */ new Date()).toISOString();
+  return {
+    rplGranted: true,
+    rplGrantedAt,
+    rplGrantedBy: item.rplGrantedBy || null
+  };
+};
 const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
   const stampedMaster = stampMasterLmpItems(masterLMP);
   if (!existingLmp || existingLmp.length === 0) return stampedMaster;
@@ -100682,13 +100691,15 @@ const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
   });
   const mergedMaster = stampedMaster.map((masterItem, index) => {
     const existingItem = existingByMasterId.get(getMasterEventId(masterItem));
+    const completedAt = existingItem?.completedAt ?? masterItem.completedAt ?? null;
     return {
       ...masterItem,
       ...getIndividualLmpMasterOverrides(existingItem, masterItem),
       id: masterItem.id,
       masterEventId: getMasterEventId(masterItem),
       lmpSource: "master",
-      completedAt: existingItem?.completedAt ?? masterItem.completedAt ?? null,
+      completedAt,
+      ...getIndividualLmpRplFields(existingItem, completedAt),
       userLockedPosition: existingItem?.userLockedPosition,
       orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKey(index),
       placementNeedsReview: false
@@ -102157,6 +102168,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   getGeneratedEventsForPersonForBuild = getGeneratedEventsForPerson;
   rebuildGeneratedEventIndexes();
   const buildContinuationShortLabel = getSctTerminology(config.platformConfig, buildActiveUnitCode).shortLabel;
+  const rplCompletionKeysByTrainee = /* @__PURE__ */ new Map();
+  traineeLMPs.forEach((lmp, traineeFullName) => {
+    lmp.forEach((item) => {
+      if (item?.rplGranted !== true) return;
+      const keys = [item.id, item.code, item.masterEventId].map((value) => normalizeLmpEventId(value)).filter(Boolean);
+      if (keys.length === 0) return;
+      if (!rplCompletionKeysByTrainee.has(traineeFullName)) {
+        rplCompletionKeysByTrainee.set(traineeFullName, /* @__PURE__ */ new Set());
+      }
+      const keySet = rplCompletionKeysByTrainee.get(traineeFullName);
+      keys.forEach((key) => keySet.add(key));
+    });
+  });
   const neoBuildDiag = {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
     buildDate,
@@ -102448,6 +102472,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       finalEvents: [],
       conclusions: []
     },
+    rplCompletionDiagnostics: {
+      purpose: "Tracks Recognition of Prior Learning completions loaded into NEO Build and flags if an RPL-completed event is scheduled again.",
+      loaded: [],
+      loadedCount: 0,
+      scheduledConflicts: [],
+      conclusions: []
+    },
     reportFollowUps: config.reportFollowUps || {
       purpose: "Tracks training report follow-up changes applied to Individual LMPs before Flight School NEO Build sequencing starts.",
       fetchedAssessments: 0,
@@ -102574,6 +102605,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
   };
+  traineeLMPs.forEach((lmp, traineeFullName) => {
+    lmp.forEach((item) => {
+      if (item?.rplGranted !== true || neoBuildDiag.rplCompletionDiagnostics.loaded.length >= 80) return;
+      neoBuildDiag.rplCompletionDiagnostics.loaded.push({
+        traineeFullName,
+        code: item.code || null,
+        id: item.id || null,
+        masterEventId: item.masterEventId || null,
+        rplGrantedAt: item.rplGrantedAt || null,
+        rplGrantedBy: item.rplGrantedBy || null,
+        completedAt: item.completedAt || null,
+        keys: [item.id, item.code, item.masterEventId].map((value) => normalizeLmpEventId(value)).filter(Boolean)
+      });
+    });
+  });
+  neoBuildDiag.rplCompletionDiagnostics.loadedCount = Array.from(rplCompletionKeysByTrainee.values()).reduce((total, keySet) => total + keySet.size, 0);
   saveNeoBuildDiag("build-start");
   const createNeoBuildAttemptTimingBucket = () => ({
     attempts: 0,
@@ -115086,6 +115133,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     preFlightNoteLength: String(event.preFlightNotes || "").trim().length,
     forwardedKeys: Object.keys(event.trainingReportForwardedNotes || {})
   }));
+  neoBuildDiag.rplCompletionDiagnostics.scheduledConflicts = sortedEvents.map((event) => {
+    const traineeName = String(event._traineeName || event.student || event.pilot || "").trim();
+    const eventKey = normalizeLmpEventId(event.flightNumber || event.eventCode);
+    const rplKeys = traineeName ? rplCompletionKeysByTrainee.get(traineeName) : null;
+    if (!traineeName || !eventKey || !rplKeys?.has(eventKey)) return null;
+    return {
+      traineeFullName: traineeName,
+      eventCode: event.flightNumber || event.eventCode || null,
+      eventId: event.id || null,
+      type: event.type || null,
+      startTime: event.startTime ?? null,
+      resourceId: event.resourceId || null,
+      instructor: event.instructor || null,
+      source: event._source || null
+    };
+  }).filter(Boolean).slice(0, 80);
+  neoBuildDiag.rplCompletionDiagnostics.conclusions = neoBuildDiag.rplCompletionDiagnostics.scheduledConflicts.length > 0 ? ["At least one event marked RPL-complete was still generated. Check loaded keys against the scheduled eventCode/eventId for identifier mismatch."] : ["No generated event matched the RPL-completed keys loaded for NEO Build."];
   neoBuildDiag.individualLmpDurationDiagnostics.conclusions = [
     "If lookups show no matching Individual LMP item, the scheduler is receiving a base syllabus row instead of the trainee LMP row or the event identifiers do not match.",
     "If lookups show individualFlightOrSimHours is correct but placements/finalEvents show duration 1.0, the duration is being overwritten after resolution.",
@@ -124577,7 +124641,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       throw new Error(`Cannot save Individual LMP: trainee database record not found for ${trainee.fullName}`);
     }
     const excludedCompletedSet = new Set(excludedCompletedEvents.filter(Boolean));
-    const completedFromLmp = lmp.filter((item) => item.completedAt || item.rplGranted).map((item) => item.id || item.code).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
+    const completedFromLmp = lmp.filter((item) => item.completedAt || item.rplGranted).flatMap((item) => [item.id, item.code, item.masterEventId]).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
     const completedFromScores = (scores.get(trainee.fullName) || []).map((score) => score.event).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
     const completedEventIds = Array.from(/* @__PURE__ */ new Set([...completedFromLmp, ...completedFromScores]));
     const apiBase = getApiBaseUrl();

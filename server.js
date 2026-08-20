@@ -5754,6 +5754,9 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
         completedAt: item.completedAt,
         isComplete: item.isComplete,
         completed: item.completed,
+        rplGranted: item.rplGranted === true,
+        rplGrantedAt: item.rplGrantedAt || null,
+        rplGrantedBy: item.rplGrantedBy || null,
         trainingReportNextEventExtensions: item.trainingReportNextEventExtensions,
         trainingReportExtensionAssessmentIds: item.trainingReportExtensionAssessmentIds,
         trainingReportLastExtendedByAssessmentId: item.trainingReportLastExtendedByAssessmentId,
@@ -6090,6 +6093,29 @@ const getLmpCompletionTimestampForSync = (item, scoreMap) => {
   return null;
 };
 
+const getLmpRplTimestampForSync = (item) => {
+  if (item?.rplGranted !== true) return null;
+  return item?.rplGrantedAt || item?.completedAt || new Date().toISOString();
+};
+
+const addRplCompletionToScoreMapForSync = (scoreMap, item) => {
+  const rplTimestamp = getLmpRplTimestampForSync(item);
+  if (!rplTimestamp) return;
+  getLmpCompletionKeysForSync(item).forEach(key => {
+    if (key && !scoreMap[key]) scoreMap[key] = rplTimestamp;
+  });
+};
+
+const getLmpRplFieldsForSync = (item, completedAt) => {
+  if (item?.rplGranted !== true) return {};
+  const rplGrantedAt = item.rplGrantedAt || completedAt || new Date().toISOString();
+  return {
+    rplGranted: true,
+    rplGrantedAt,
+    rplGrantedBy: item.rplGrantedBy || null,
+  };
+};
+
 const getLmpCanonicalCompletionKeyForSync = (item) =>
   normalizeLmpCompletionKeyForSync(item?.code) ||
   normalizeLmpCompletionKeyForSync(item?.masterEventId) ||
@@ -6193,7 +6219,7 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
 
   const mergedMaster = stampedMaster.map((masterItem, index) => {
     const existingItem = existingByMasterId.get(getLmpMasterEventId(masterItem));
-    const completedAt = getLmpCompletionTimestampForSync(masterItem, scoreMap);
+    const completedAt = getLmpCompletionTimestampForSync(masterItem, scoreMap) || getLmpRplTimestampForSync(existingItem);
     return {
       ...masterItem,
       ...getIndividualLmpMasterOverridesForSync(existingItem, masterItem),
@@ -6203,6 +6229,7 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
       completedAt,
       isComplete: Boolean(completedAt),
       completed: Boolean(completedAt),
+      ...getLmpRplFieldsForSync(existingItem, completedAt),
       userLockedPosition: existingItem?.userLockedPosition,
       orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKeyForSync(index),
       placementNeedsReview: false,
@@ -6385,6 +6412,8 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       // Build set of completed event IDs from the authoritative training report table.
       // Do not merge legacy Score rows: they are retained for compatibility
       // views, but using them here can falsely complete an entire LMP.
+      const existing = trainee.individualLMP;
+      const existingEvents = Array.isArray(existing?.events) ? existing.events : [];
       const scoreMap = {};
       const performanceRows = performanceByTraineeId.get(trainee.id) || [];
       performanceRows.forEach(row => {
@@ -6394,6 +6423,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
           scoreMap[normalizedEvent] = row.date ? new Date(row.date).toISOString() : new Date().toISOString();
         }
       });
+      existingEvents.forEach(item => addRplCompletionToScoreMapForSync(scoreMap, item));
 
       let completedEventIds = Object.keys(scoreMap);
 
@@ -6413,8 +6443,6 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       }
 
       // Check what was previously marked
-      const existing = trainee.individualLMP;
-      const existingEvents = Array.isArray(existing?.events) ? existing.events : [];
       const overlayEvents = existing ? (overlaysByTraineeId.get(trainee.id) || []) : [];
       const existingMasterEvents = existingEvents.filter(item => !isLmpOverlayItemForSync(item));
       const lmpEvents = mergeIndividualLmpWithMasterForSync([...existingMasterEvents, ...overlayEvents], masterSyllabus, scoreMap);
