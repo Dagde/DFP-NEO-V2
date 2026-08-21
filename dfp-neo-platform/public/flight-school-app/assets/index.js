@@ -40394,7 +40394,7 @@ const MyDashboard = ({
       ] })
     ] });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-900 overflow-y-auto p-6 space-y-6", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full min-h-0 w-full overflow-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-[760px] flex-col space-y-6 p-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "My Dashboard" }),
@@ -40777,7 +40777,7 @@ const MyDashboard = ({
         `${staff.unit || "unit"}-${staff.idNumber}-${staff.name}`
       )) })
     ] }) })
-  ] });
+  ] }) });
 };
 const formatDateForDisplay$1 = (dateStr) => {
   if (!dateStr) return "";

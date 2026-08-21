@@ -876,7 +876,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     };
 
     return (
-        <div className="flex flex-col bg-gray-900 overflow-y-auto p-6 space-y-6">
+        <div className="h-full min-h-0 w-full overflow-auto bg-gray-900">
+            <div className="flex min-w-[760px] flex-col space-y-6 p-6">
             <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                     <h1 className="text-3xl font-bold text-white">My Dashboard</h1>
@@ -1301,6 +1302,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 };
