@@ -24505,6 +24505,13 @@ type DfpContextMenuState = {
     items: DfpContextMenuItem[];
 };
 
+type PreFlightNotesEditorState = {
+    event: ScheduleEvent;
+    trainee?: Trainee;
+    temporaryNotes: string;
+    enduringNotes: string;
+};
+
 const getContextDatasetValue = (element: HTMLElement | null, key: string): string => (
     element?.dataset?.[key] || ''
 );
@@ -24571,6 +24578,14 @@ const DfpContextMenu: React.FC<{
     );
 };
 
+const getTraineeEnduringPreFlightNotes = (trainee?: Trainee | null): string => {
+    if (!trainee) return '';
+    const preferences = trainee.preferences && typeof trainee.preferences === 'object' && !Array.isArray(trainee.preferences)
+        ? trainee.preferences as Record<string, any>
+        : {};
+    return String(trainee.preFlightNotesEnduring || preferences.preFlightNotesEnduring || '').trim();
+};
+
 
 const App: React.FC = () => {
        // Default zoom level (fixed at 1 since zoom functionality was removed)
@@ -24578,6 +24593,7 @@ const App: React.FC = () => {
     const setupTestProfile = getSetupTestProfile();
     const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = useState(false);
     const [dfpContextMenu, setDfpContextMenu] = useState<DfpContextMenuState | null>(null);
+    const [preFlightNotesEditor, setPreFlightNotesEditor] = useState<PreFlightNotesEditorState | null>(null);
 
     // Theme
     const { theme } = useTheme();
@@ -32022,10 +32038,44 @@ const App: React.FC = () => {
         };
     }, [authSessionToken, date, isAuthenticated]);
 
+    const findTraineeForScheduleEvent = useCallback((event: ScheduleEvent | null | undefined): Trainee | undefined => {
+        if (!event) return undefined;
+        const traineeRefs = (event.personnelRefs || []).filter(ref => ref.personType === 'trainee');
+        for (const ref of traineeRefs) {
+            const matchedByRef = allTraineesData.find(trainee => (
+                (ref.id && String((trainee as any).id || '') === String(ref.id)) ||
+                (ref.idNumber && String(trainee.idNumber || '') === String(ref.idNumber))
+            ));
+            if (matchedByRef) return matchedByRef;
+        }
+
+        const candidateNames = [
+            (event as any)._traineeName,
+            event.student,
+            event.pilot,
+            event.crew,
+        ].map(value => String(value || '').split(' – ')[0].split(' - ')[0].trim()).filter(Boolean);
+        for (const candidateName of candidateNames) {
+            const matchedByName = allTraineesData.find(trainee => (
+                personnelNamesMatch(trainee.fullName, candidateName) ||
+                personnelNamesMatch(trainee.name, candidateName)
+            ));
+            if (matchedByName) return matchedByName;
+        }
+
+        const candidateIds = [
+            (event as any).studentId,
+            (event as any).traineeId,
+            (event as any).pilotId,
+        ].map(value => Number(value)).filter(value => Number.isFinite(value) && value > 0);
+        return allTraineesData.find(trainee => candidateIds.includes(Number(trainee.idNumber)));
+    }, [allTraineesData]);
+
     const decorateEventWithForwardedPreFlightNotes = useCallback((event: ScheduleEvent): ScheduleEvent => {
         const tileEligible = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt';
-        if (!tileEligible || traineeLMPs.size === 0) return event;
+        if (!tileEligible) return event;
         const eventCodeForDiag = String(event.flightNumber || event.eventCode || event.id || '').trim().toUpperCase();
+        const enduringNotes = getTraineeEnduringPreFlightNotes(findTraineeForScheduleEvent(event));
 
         const notesByKey = new Map<string, string>();
         const addNotes = (notes: unknown) => {
@@ -32035,6 +32085,7 @@ const App: React.FC = () => {
         };
 
         addNotes(event.preFlightNotes);
+        addNotes(enduringNotes);
         Object.values((event.trainingReportForwardedNotes || {}) as Record<string, any>)
             .forEach((entry: any) => addNotes(entry?.notes));
 
@@ -32187,7 +32238,7 @@ const App: React.FC = () => {
                 ? extensionLedger
                 : (event as any).trainingReportNextEventExtensions,
         };
-    }, [traineeLMPs, traineesData]);
+    }, [findTraineeForScheduleEvent, traineeLMPs, traineesData]);
 
     const eventsForDateWithPreFlightNotes = useMemo(() => (
         eventsForDate.map(decorateEventWithForwardedPreFlightNotes)
@@ -35688,7 +35739,10 @@ const App: React.FC = () => {
                     phoneNumber: data.phoneNumber,
                     email: data.email,
                     permissions: data.permissions || [],
-                    preferences: data.preferences || {},
+                    preferences: {
+                        ...(data.preferences || {}),
+                        preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(data),
+                    },
                     unavailability: data.unavailability || [],
                 };
 
@@ -35720,7 +35774,10 @@ const App: React.FC = () => {
                         phoneNumber: data.phoneNumber,
                         email: data.email,
                         permissions: data.permissions || [],
-                        preferences: data.preferences || {},
+                        preferences: {
+                            ...(data.preferences || {}),
+                            preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(data),
+                        },
                         unavailability: data.unavailability || [],
                     })
                 });
@@ -35734,6 +35791,7 @@ const App: React.FC = () => {
                     logRoutineAppDebug('📝 [APP] Response data:', responseData);
                     const savedTrainee = {
                         ...(responseData?.trainee || data),
+                        preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(responseData?.trainee || data),
                         _dataSource: 'database' as const,
                     };
                     const savedDbId = String((savedTrainee as any).id || dbId || '').trim();
@@ -35758,6 +35816,51 @@ const App: React.FC = () => {
             setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
         }
     }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig]);
+
+    const openPreFlightNotesEditor = useCallback((candidate: ScheduleEvent) => {
+        const latestEvent = (
+            eventsForDate.find(event => event.id === candidate.id) ||
+            nextDayBuildEvents.find(event => event.id === candidate.id) ||
+            publishedSchedules[candidate.date || date]?.find(event => event.id === candidate.id) ||
+            candidate
+        );
+        const trainee = findTraineeForScheduleEvent(latestEvent);
+        setPreFlightNotesEditor({
+            event: latestEvent,
+            trainee,
+            temporaryNotes: stripGeneratedTrainingReportFollowUpLines(latestEvent.preFlightNotes),
+            enduringNotes: getTraineeEnduringPreFlightNotes(trainee),
+        });
+    }, [date, eventsForDate, findTraineeForScheduleEvent, nextDayBuildEvents, publishedSchedules]);
+
+    const handleSavePreFlightNotes = useCallback(async () => {
+        if (!preFlightNotesEditor) return;
+        const temporaryNotes = preFlightNotesEditor.temporaryNotes.trim();
+        const enduringNotes = preFlightNotesEditor.enduringNotes.trim();
+        const updatedEvent: ScheduleEvent = {
+            ...preFlightNotesEditor.event,
+            preFlightNotes: temporaryNotes || undefined,
+        };
+        await handleSaveEvents([updatedEvent], false);
+
+        if (preFlightNotesEditor.trainee) {
+            const trainee = preFlightNotesEditor.trainee;
+            const existingPreferences = trainee.preferences && typeof trainee.preferences === 'object' && !Array.isArray(trainee.preferences)
+                ? trainee.preferences
+                : {};
+            await handleUpdateTrainee({
+                ...trainee,
+                preFlightNotesEnduring: enduringNotes,
+                preferences: {
+                    ...existingPreferences,
+                    preFlightNotesEnduring: enduringNotes,
+                },
+            });
+        }
+
+        logAudit('Program Schedule', 'Edit', `Updated pre-flight notes for ${updatedEvent.flightNumber || 'event'}`, `Temporary: ${temporaryNotes ? 'set' : 'blank'}; Enduring: ${enduringNotes ? 'set' : 'blank'}`);
+        setPreFlightNotesEditor(null);
+    }, [handleSaveEvents, handleUpdateTrainee, preFlightNotesEditor]);
 
     const buildRemedialPackageLmp = (
         originalTraineeLMP: SyllabusItemDetail[],
@@ -47374,6 +47477,7 @@ appliedUpdates.forEach(update => {
             } else {
                 menuItems.push(
                     { label: 'EDIT', detail: canEditActiveDfp ? 'Open Flight Details edit mode.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: () => openContextEventInDetails(selectedEvent, true) },
+                    { label: 'Pre-flight Notes', detail: 'Temporary event note and trainee enduring note.', disabled: !canEditActiveDfp, onSelect: () => openPreFlightNotesEditor(selectedEvent) },
                     { label: 'Flight Authorisation', detail: flightAuthorisationRequired ? 'Open Flight Authorisation.' : 'Disabled in Business Rules.', disabled: !flightAuthorisationRequired, onSelect: () => openContextAuth(selectedEvent) },
                     { label: 'Post Flight Times', onSelect: () => openContextPostFlight(selectedEvent) },
                     { label: configuredTrainingReportDisplayName, detail: 'Open the report for this event.', disabled: !activeUnitHasTrainees || !findContextTrainee(selectedEvent), onSelect: () => openContextTrainingReport(selectedEvent) },
@@ -47542,6 +47646,7 @@ appliedUpdates.forEach(update => {
         denyPlatformAction,
         eventSegmentsForDate,
         eventsForDate,
+        openPreFlightNotesEditor,
         flightAuthorisationRequired,
         formatContextMenuTime,
         getContextMenuEvent,
@@ -51398,6 +51503,7 @@ appliedUpdates.forEach(update => {
                         handleNavigation('PostFlight');
                         setSelectedEvent(null);
                     }}
+                    onOpenPreFlightNotes={openPreFlightNotesEditor}
                     onScoresCreated={(newScores) => {
                         logRoutineAppDebug('App.tsx: onScoresCreated called with:', newScores);
                         // Add the new scores to the existing scores map
@@ -51521,6 +51627,73 @@ appliedUpdates.forEach(update => {
                     unitCallsignSettings={activeUnitCallsignSettings}
                     sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                 />
+            )}
+
+            {preFlightNotesEditor && (
+                <div className="fixed inset-0 z-[950] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setPreFlightNotesEditor(null)}>
+                    <div className="w-full max-w-2xl rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                        <div className="border-b border-gray-700 bg-gray-800/80 px-5 py-4">
+                            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-300">Pre-flight Notes</div>
+                            <h2 className="mt-1 text-xl font-bold text-white">
+                                {preFlightNotesEditor.event.flightNumber || 'Event'}{preFlightNotesEditor.trainee ? ` - ${preFlightNotesEditor.trainee.name}` : ''}
+                            </h2>
+                            <p className="mt-1 text-xs font-semibold text-gray-400">
+                                {preFlightNotesEditor.event.resourceId || 'No resource'} | {formatContextMenuTime(preFlightNotesEditor.event.startTime)}-{formatContextMenuTime(preFlightNotesEditor.event.startTime + preFlightNotesEditor.event.duration)}
+                            </p>
+                        </div>
+                        <div className="space-y-4 p-5">
+                            <label className="block">
+                                <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-amber-300">Temporary</span>
+                                <textarea
+                                    value={preFlightNotesEditor.temporaryNotes}
+                                    onChange={(event) => setPreFlightNotesEditor(current => current ? { ...current, temporaryNotes: event.target.value } : current)}
+                                    className="h-32 w-full resize-y rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-amber-400"
+                                    placeholder="Event-only note..."
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-sky-300">Enduring</span>
+                                <textarea
+                                    value={preFlightNotesEditor.enduringNotes}
+                                    onChange={(event) => setPreFlightNotesEditor(current => current ? { ...current, enduringNotes: event.target.value } : current)}
+                                    className="h-32 w-full resize-y rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-sky-400"
+                                    placeholder="Trainee profile note..."
+                                    disabled={!preFlightNotesEditor.trainee}
+                                />
+                            </label>
+                            {!preFlightNotesEditor.trainee && (
+                                <div className="rounded-md border border-amber-500/40 bg-amber-950/30 px-3 py-2 text-xs font-semibold text-amber-100">
+                                    No trainee profile was matched to this event. Only the temporary event note can be saved.
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-2 border-t border-gray-700 bg-gray-800/60 px-5 py-4">
+                            <button
+                                type="button"
+                                onClick={() => setPreFlightNotesEditor(null)}
+                                className="rounded-md border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-700"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPreFlightNotesEditor(current => current ? { ...current, temporaryNotes: '', enduringNotes: '' } : current);
+                                }}
+                                className="rounded-md border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-700"
+                            >
+                                Clear
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { void handleSavePreFlightNotes(); }}
+                                className="rounded-md bg-sky-600 px-5 py-2 text-sm font-bold text-white hover:bg-sky-500"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {conflict && <ConflictModal conflict={conflict} onResolve={() => {}} onCancel={() => setConflict(null)} resourceDisplayNames={resourceDisplayNames} instructorLabel={instructorLabel} />}

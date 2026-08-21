@@ -550,6 +550,7 @@ export interface Trainee {
   email?: string;
   primaryInstructor?: string | string[];
   secondaryInstructor?: string | string[];
+  preFlightNotesEnduring?: string;
   lmpType?: string;
   academicLmpType?: string; // Academic LMP tab assignment
   

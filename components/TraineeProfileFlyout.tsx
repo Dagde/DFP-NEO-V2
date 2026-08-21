@@ -91,6 +91,23 @@ const normaliseAssignedInstructorDisplayList = (value: unknown): string[] => {
     .filter(Boolean);
 };
 
+const getTraineeEnduringPreFlightNotes = (trainee?: Trainee | null): string => {
+  if (!trainee) return '';
+  const preferences = trainee.preferences && typeof trainee.preferences === 'object' && !Array.isArray(trainee.preferences)
+    ? trainee.preferences as Record<string, any>
+    : {};
+  return String(trainee.preFlightNotesEnduring || preferences.preFlightNotesEnduring || '').trim();
+};
+
+const stripGeneratedPreFlightFollowUpLines = (value: unknown): string => (
+  String(value || '')
+    .split(/\r?\n/)
+    .flatMap(line => /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim()) ? [] : [line])
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+);
+
 interface TraineeProfileFlyoutProps {
   trainee: Trainee;
   traineesData?: Trainee[];
@@ -1180,6 +1197,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
     const [crew, setCrew] = useState(trainee.crew || 'N/A');
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);
+    const [enduringPreFlightNotes, setEnduringPreFlightNotes] = useState(getTraineeEnduringPreFlightNotes(trainee));
+    const [isSavingPreFlightNotes, setIsSavingPreFlightNotes] = useState(false);
     const roleOptions = useMemo(() => {
         const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
         const options = getCrewPositionOptions(
@@ -1346,6 +1365,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setPhotoError(null);
         setPhotoLoadFailed(false);
         setPermissions(trainee.permissions || []);
+        setEnduringPreFlightNotes(getTraineeEnduringPreFlightNotes(trainee));
         setAssignedQualifications(normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue));
         setPriorExperience(trainee.priorExperience || initialExperience);
     };
@@ -1380,6 +1400,110 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const traineeHasEventsToday = useMemo(() => {
         return events.some(e => e.student === trainee.fullName || e.pilot === trainee.fullName);
     }, [events, trainee.fullName]);
+
+    const temporaryPreFlightNoteEvents = useMemo(() => {
+        const traineeId = String(trainee.idNumber || '').trim();
+        const traineeNames = [trainee.fullName, trainee.name]
+            .map(value => normalisePersonName(value || ''))
+            .filter(Boolean);
+        return events
+            .filter(event => {
+                const traineeRefs = (event.personnelRefs || []).filter(ref => ref.personType === 'trainee');
+                if (traineeId && traineeRefs.some(ref => String(ref.idNumber || '') === traineeId)) return true;
+                const eventNames = [event.student, event.pilot, event.crew, (event as any)._traineeName]
+                    .map(value => normalisePersonName(String(value || '').split(' – ')[0].split(' - ')[0].trim()))
+                    .filter(Boolean);
+                return eventNames.some(eventName => traineeNames.includes(eventName));
+            })
+            .map(event => ({
+                event,
+                notes: stripGeneratedPreFlightFollowUpLines(event.preFlightNotes),
+            }))
+            .filter(entry => entry.notes)
+            .sort((a, b) => String(a.event.date || '').localeCompare(String(b.event.date || '')) || a.event.startTime - b.event.startTime);
+    }, [events, trainee.fullName, trainee.idNumber, trainee.name]);
+
+    const handleSaveEnduringPreFlightNotes = async () => {
+        const cleanNotes = enduringPreFlightNotes.trim();
+        const existingPreferences = trainee.preferences && typeof trainee.preferences === 'object' && !Array.isArray(trainee.preferences)
+            ? trainee.preferences
+            : {};
+        const updatedTrainee: Trainee = {
+            ...trainee,
+            preFlightNotesEnduring: cleanNotes,
+            preferences: {
+                ...existingPreferences,
+                preFlightNotesEnduring: cleanNotes,
+            },
+        };
+        setIsSavingPreFlightNotes(true);
+        try {
+            await Promise.resolve(onUpdateTrainee(updatedTrainee));
+            setEnduringPreFlightNotes(cleanNotes);
+            await showDarkAlert('Pre-flight notes saved.', 'Saved', 'success');
+        } catch (error) {
+            console.error('Failed to save enduring pre-flight notes:', error);
+            await showDarkAlert('The enduring pre-flight notes could not be saved. Please try again.', 'Save Failed', 'error');
+        } finally {
+            setIsSavingPreFlightNotes(false);
+        }
+    };
+
+    const renderPreFlightNotesSection = () => {
+        const formatEventTime = (value: number): string => {
+            const hours = Math.floor(Number(value) || 0);
+            const minutes = Math.round(((Number(value) || 0) % 1) * 60);
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        };
+        return (
+            <div className={card3d + " p-3"} style={{ ...card3dStyle, background: 'linear-gradient(180deg, #1e2d42 0%, #192538 100%)' }}>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                        <h4 className="text-sm font-semibold text-white">Pre-flight Notes</h4>
+                        <p className="text-[11px] text-gray-400">Temporary event notes and enduring trainee notes.</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => { void handleSaveEnduringPreFlightNotes(); }}
+                        disabled={isSavingPreFlightNotes}
+                        className="rounded border border-sky-500/50 bg-sky-900/40 px-3 py-1.5 text-xs font-bold text-sky-100 hover:bg-sky-800/60 disabled:cursor-wait disabled:opacity-60"
+                    >
+                        {isSavingPreFlightNotes ? 'Saving...' : 'Save Notes'}
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    <div className="rounded-md border border-amber-500/30 bg-amber-950/10 p-3">
+                        <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-amber-300">Temporary</div>
+                        {temporaryPreFlightNoteEvents.length > 0 ? (
+                            <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
+                                {temporaryPreFlightNoteEvents.map(({ event, notes }) => (
+                                    <div key={event.id} className="rounded border border-gray-700 bg-gray-950/60 p-2">
+                                        <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                                            {event.flightNumber || 'Event'} | {event.date || 'No date'} | {formatEventTime(event.startTime)}
+                                        </div>
+                                        <div className="mt-1 whitespace-pre-wrap text-xs text-gray-100">{notes}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded border border-gray-700 bg-gray-950/50 px-3 py-4 text-center text-xs font-semibold text-gray-500">
+                                None
+                            </div>
+                        )}
+                    </div>
+                    <label className="block rounded-md border border-sky-500/30 bg-sky-950/10 p-3">
+                        <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-sky-300">Enduring</span>
+                        <textarea
+                            value={enduringPreFlightNotes}
+                            onChange={(event) => setEnduringPreFlightNotes(event.target.value)}
+                            className="h-40 w-full resize-y rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-xs text-white outline-none focus:border-sky-400"
+                            placeholder="No enduring notes"
+                        />
+                    </label>
+                </div>
+            </div>
+        );
+    };
 
     const handlePauseToggle = () => {
         if (!isPaused && traineeHasEventsToday) {
@@ -1552,11 +1676,13 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             traineeCallsign,
             secondaryCallsign,
             crew,
+            preFlightNotesEnduring: enduringPreFlightNotes.trim(),
             photoUrl: pendingPhotoRemoved ? null : (pendingPhotoDataUrl || photoUrl || null),
             permissions,
             preferences: {
                 ...(trainee.preferences && typeof trainee.preferences === 'object' ? trainee.preferences : {}),
                 qualifications: assignedQualifications,
+                preFlightNotesEnduring: enduringPreFlightNotes.trim(),
             },
             priorExperience
         };
@@ -2870,6 +2996,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </div>
                           </div>
 
+                          {renderPreFlightNotesSection()}
+
                           <AccountAccessPanel
                             personType="trainee"
                             personId={(trainee as any).id || trainee.idNumber}
@@ -3030,6 +3158,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       )}
 
                     </div>
+
+                      {activeTab !== 'lmp' && activeTab !== 'pt051' && !isCreating && (
+                        <div className={`${isEditing ? 'hidden' : ''}`}>
+                          {renderPreFlightNotesSection()}
+                        </div>
+                      )}
 
                       {activeTab !== 'lmp' && activeTab !== 'pt051' && !isEditing && !isCreating && (
                         <AccountAccessPanel

@@ -124,6 +124,7 @@ export async function PATCH(
     if ('currencyStatus'   in body) updateData.currencyStatus   = body.currencyStatus;
     if ('unavailability'   in body) updateData.unavailability   = body.unavailability;
     if ('permissions'      in body) updateData.permissions      = body.permissions;
+    if ('preferences'      in body) updateData.preferences      = body.preferences;
     if ('idNumber' in updateData) {
       if (!isUsablePersonnelIdNumber(updateData.idNumber)) {
         return NextResponse.json({ error: 'Personnel ID is required' }, { status: 400 });

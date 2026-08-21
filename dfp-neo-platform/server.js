@@ -2865,7 +2865,7 @@ app.patch('/api/trainees/:id', async (req, res) => {
       'location', 'service', 'seatConfig', 'isPaused', 'traineeCallsign',
       'primaryInstructor', 'secondaryInstructor', 'phoneNumber', 'email',
       'currencyStatus', 'priorExperience', 'unavailability', 'isActive',
-      'lastEventDate', 'lastFlightDate',
+      'lastEventDate', 'lastFlightDate', 'preferences',
     ];
 
     for (const field of allowedFields) {

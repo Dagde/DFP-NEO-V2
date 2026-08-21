@@ -25938,6 +25938,12 @@ const normaliseAssignedInstructorDisplayList = (value) => {
   }
   return trimmed.split(/[;|]/).map((name) => name.trim()).filter(Boolean);
 };
+const getTraineeEnduringPreFlightNotes$1 = (trainee) => {
+  if (!trainee) return "";
+  const preferences = trainee.preferences && typeof trainee.preferences === "object" && !Array.isArray(trainee.preferences) ? trainee.preferences : {};
+  return String(trainee.preFlightNotesEnduring || preferences.preFlightNotesEnduring || "").trim();
+};
+const stripGeneratedPreFlightFollowUpLines = (value) => String(value || "").split(/\r?\n/).flatMap((line) => /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim()) ? [] : [line]).join("\n").replace(/\n{3,}/g, "\n\n").trim();
 const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -26674,6 +26680,8 @@ const TraineeProfileFlyout = ({
   const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
   const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
   const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
+  const [enduringPreFlightNotes, setEnduringPreFlightNotes] = reactExports.useState(getTraineeEnduringPreFlightNotes$1(trainee));
+  const [isSavingPreFlightNotes, setIsSavingPreFlightNotes] = reactExports.useState(false);
   const roleOptions = reactExports.useMemo(() => {
     const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
     const options = getCrewPositionOptions(
@@ -26815,6 +26823,7 @@ const TraineeProfileFlyout = ({
     setPhotoError(null);
     setPhotoLoadFailed(false);
     setPermissions(trainee.permissions || []);
+    setEnduringPreFlightNotes(getTraineeEnduringPreFlightNotes$1(trainee));
     setAssignedQualifications(normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue));
     setPriorExperience(trainee.priorExperience || initialExperience$1);
   };
@@ -26845,6 +26854,96 @@ const TraineeProfileFlyout = ({
   const traineeHasEventsToday = reactExports.useMemo(() => {
     return events.some((e) => e.student === trainee.fullName || e.pilot === trainee.fullName);
   }, [events, trainee.fullName]);
+  const temporaryPreFlightNoteEvents = reactExports.useMemo(() => {
+    const traineeId = String(trainee.idNumber || "").trim();
+    const traineeNames = [trainee.fullName, trainee.name].map((value) => normalisePersonName(value || "")).filter(Boolean);
+    return events.filter((event) => {
+      const traineeRefs = (event.personnelRefs || []).filter((ref) => ref.personType === "trainee");
+      if (traineeId && traineeRefs.some((ref) => String(ref.idNumber || "") === traineeId)) return true;
+      const eventNames = [event.student, event.pilot, event.crew, event._traineeName].map((value) => normalisePersonName(String(value || "").split(" – ")[0].split(" - ")[0].trim())).filter(Boolean);
+      return eventNames.some((eventName) => traineeNames.includes(eventName));
+    }).map((event) => ({
+      event,
+      notes: stripGeneratedPreFlightFollowUpLines(event.preFlightNotes)
+    })).filter((entry) => entry.notes).sort((a, b) => String(a.event.date || "").localeCompare(String(b.event.date || "")) || a.event.startTime - b.event.startTime);
+  }, [events, trainee.fullName, trainee.idNumber, trainee.name]);
+  const handleSaveEnduringPreFlightNotes = async () => {
+    const cleanNotes = enduringPreFlightNotes.trim();
+    const existingPreferences = trainee.preferences && typeof trainee.preferences === "object" && !Array.isArray(trainee.preferences) ? trainee.preferences : {};
+    const updatedTrainee = {
+      ...trainee,
+      preFlightNotesEnduring: cleanNotes,
+      preferences: {
+        ...existingPreferences,
+        preFlightNotesEnduring: cleanNotes
+      }
+    };
+    setIsSavingPreFlightNotes(true);
+    try {
+      await Promise.resolve(onUpdateTrainee(updatedTrainee));
+      setEnduringPreFlightNotes(cleanNotes);
+      await showDarkAlert("Pre-flight notes saved.", "Saved", "success");
+    } catch (error) {
+      console.error("Failed to save enduring pre-flight notes:", error);
+      await showDarkAlert("The enduring pre-flight notes could not be saved. Please try again.", "Save Failed", "error");
+    } finally {
+      setIsSavingPreFlightNotes(false);
+    }
+  };
+  const renderPreFlightNotesSection = () => {
+    const formatEventTime2 = (value) => {
+      const hours = Math.floor(Number(value) || 0);
+      const minutes = Math.round((Number(value) || 0) % 1 * 60);
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    };
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "Pre-flight Notes" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-gray-400", children: "Temporary event notes and enduring trainee notes." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => {
+              void handleSaveEnduringPreFlightNotes();
+            },
+            disabled: isSavingPreFlightNotes,
+            className: "rounded border border-sky-500/50 bg-sky-900/40 px-3 py-1.5 text-xs font-bold text-sky-100 hover:bg-sky-800/60 disabled:cursor-wait disabled:opacity-60",
+            children: isSavingPreFlightNotes ? "Saving..." : "Save Notes"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 lg:grid-cols-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-amber-500/30 bg-amber-950/10 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-amber-300", children: "Temporary" }),
+          temporaryPreFlightNoteEvents.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-40 space-y-2 overflow-y-auto pr-1", children: temporaryPreFlightNoteEvents.map(({ event, notes }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/60 p-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[10px] font-bold uppercase tracking-wide text-gray-400", children: [
+              event.flightNumber || "Event",
+              " | ",
+              event.date || "No date",
+              " | ",
+              formatEventTime2(event.startTime)
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 whitespace-pre-wrap text-xs text-gray-100", children: notes })
+          ] }, event.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/50 px-3 py-4 text-center text-xs font-semibold text-gray-500", children: "None" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block rounded-md border border-sky-500/30 bg-sky-950/10 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-sky-300", children: "Enduring" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "textarea",
+            {
+              value: enduringPreFlightNotes,
+              onChange: (event) => setEnduringPreFlightNotes(event.target.value),
+              className: "h-40 w-full resize-y rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-xs text-white outline-none focus:border-sky-400",
+              placeholder: "No enduring notes"
+            }
+          )
+        ] })
+      ] })
+    ] });
+  };
   const handlePauseToggle = () => {
     if (!isPaused && traineeHasEventsToday) {
       setShowScheduleWarning(true);
@@ -26962,11 +27061,13 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
       traineeCallsign,
       secondaryCallsign,
       crew,
+      preFlightNotesEnduring: enduringPreFlightNotes.trim(),
       photoUrl: pendingPhotoRemoved ? null : pendingPhotoDataUrl || photoUrl || null,
       permissions,
       preferences: {
         ...trainee.preferences && typeof trainee.preferences === "object" ? trainee.preferences : {},
-        qualifications: assignedQualifications
+        qualifications: assignedQualifications,
+        preFlightNotesEnduring: enduringPreFlightNotes.trim()
       },
       priorExperience
     };
@@ -28129,6 +28230,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) }) })
                     ] })
                   ] }),
+                  renderPreFlightNotesSection(),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     AccountAccessPanel,
                     {
@@ -28306,6 +28408,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   ] })
                 )
               ] }),
+              activeTab !== "lmp" && activeTab !== "pt051" && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${isEditing ? "hidden" : ""}`, children: renderPreFlightNotesSection() }),
               activeTab !== "lmp" && activeTab !== "pt051" && !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 AccountAccessPanel,
                 {
@@ -31536,7 +31639,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [isEditing, setIsEditing] = reactExports.useState(isReadOnly ? false : isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
@@ -33236,6 +33339,9 @@ ${swapNote}` : swapNote
   const handlePostFlightClick = () => {
     onOpenPostFlight(event);
   };
+  const handlePreFlightNotesClick = () => {
+    onOpenPreFlightNotes?.(event);
+  };
   const handleCompleteClick = () => {
     if (event.flightNumber.includes("MB") || event.flightNumber.includes(" MB")) {
       setShowMassBriefComplete(true);
@@ -34391,6 +34497,18 @@ ${swapNote}` : swapNote
                 }
               )
             ] }),
+            onOpenPreFlightNotes && (event.type === "flight" || event.type === "ftd" || event.type === "cpt") && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: handlePreFlightNotesClick,
+                className: "w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
+                  "Pre-flight",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Notes"
+                ] })
+              }
+            ),
             (traineeObject && event.type === "ground" || (event.flightNumber.includes("MB") || event.flightNumber.includes(" MB"))) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -96351,7 +96469,13 @@ async function fetchInstructors() {
 async function fetchTrainees() {
   const result = await fetchAPI("/trainees");
   if (result.success && result.data?.trainees) {
-    return result.data.trainees;
+    return result.data.trainees.map((t) => {
+      const preferences = t.preferences && typeof t.preferences === "object" && !Array.isArray(t.preferences) ? t.preferences : {};
+      return {
+        ...t,
+        preFlightNotesEnduring: t.preFlightNotesEnduring || preferences.preFlightNotesEnduring || ""
+      };
+    });
   }
   return [];
 }
@@ -116430,11 +116554,17 @@ const DfpContextMenu = ({ menu, onClose }) => {
     }
   );
 };
+const getTraineeEnduringPreFlightNotes = (trainee) => {
+  if (!trainee) return "";
+  const preferences = trainee.preferences && typeof trainee.preferences === "object" && !Array.isArray(trainee.preferences) ? trainee.preferences : {};
+  return String(trainee.preFlightNotesEnduring || preferences.preFlightNotesEnduring || "").trim();
+};
 const App = () => {
   const zoomLevel = 1;
   const setupTestProfile = getSetupTestProfile();
   const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = reactExports.useState(false);
   const [dfpContextMenu, setDfpContextMenu] = reactExports.useState(null);
+  const [preFlightNotesEditor, setPreFlightNotesEditor] = reactExports.useState(null);
   const { theme } = useTheme();
   const { checkAndWarn, freezeState } = useSystemFreeze$1();
   const freezeStateRef = React.useRef(freezeState);
@@ -122647,10 +122777,35 @@ ${"=".repeat(60)}`);
       cancelled = true;
     };
   }, [authSessionToken, date, isAuthenticated]);
+  const findTraineeForScheduleEvent = reactExports.useCallback((event) => {
+    if (!event) return void 0;
+    const traineeRefs = (event.personnelRefs || []).filter((ref) => ref.personType === "trainee");
+    for (const ref of traineeRefs) {
+      const matchedByRef = allTraineesData.find((trainee) => ref.id && String(trainee.id || "") === String(ref.id) || ref.idNumber && String(trainee.idNumber || "") === String(ref.idNumber));
+      if (matchedByRef) return matchedByRef;
+    }
+    const candidateNames = [
+      event._traineeName,
+      event.student,
+      event.pilot,
+      event.crew
+    ].map((value) => String(value || "").split(" – ")[0].split(" - ")[0].trim()).filter(Boolean);
+    for (const candidateName of candidateNames) {
+      const matchedByName = allTraineesData.find((trainee) => personnelNamesMatch(trainee.fullName, candidateName) || personnelNamesMatch(trainee.name, candidateName));
+      if (matchedByName) return matchedByName;
+    }
+    const candidateIds = [
+      event.studentId,
+      event.traineeId,
+      event.pilotId
+    ].map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0);
+    return allTraineesData.find((trainee) => candidateIds.includes(Number(trainee.idNumber)));
+  }, [allTraineesData]);
   const decorateEventWithForwardedPreFlightNotes = reactExports.useCallback((event) => {
     const tileEligible = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
-    if (!tileEligible || traineeLMPs.size === 0) return event;
+    if (!tileEligible) return event;
     const eventCodeForDiag = String(event.flightNumber || event.eventCode || event.id || "").trim().toUpperCase();
+    const enduringNotes = getTraineeEnduringPreFlightNotes(findTraineeForScheduleEvent(event));
     const notesByKey = /* @__PURE__ */ new Map();
     const addNotes = (notes) => {
       const cleanNotes = stripGeneratedTrainingReportFollowUpLines(notes);
@@ -122658,6 +122813,7 @@ ${"=".repeat(60)}`);
       notesByKey.set(cleanNotes, cleanNotes);
     };
     addNotes(event.preFlightNotes);
+    addNotes(enduringNotes);
     Object.values(event.trainingReportForwardedNotes || {}).forEach((entry) => addNotes(entry?.notes));
     const eventRefs = /* @__PURE__ */ new Set();
     const addRef = (value) => {
@@ -122775,7 +122931,7 @@ ${"=".repeat(60)}`);
       trainingReportForwardedNotes: Object.keys(forwardedNotes).length > 0 ? forwardedNotes : event.trainingReportForwardedNotes,
       trainingReportNextEventExtensions: Object.keys(extensionLedger).length > 0 ? extensionLedger : event.trainingReportNextEventExtensions
     };
-  }, [traineeLMPs, traineesData]);
+  }, [findTraineeForScheduleEvent, traineeLMPs, traineesData]);
   const eventsForDateWithPreFlightNotes = reactExports.useMemo(() => eventsForDate.map(decorateEventWithForwardedPreFlightNotes), [decorateEventWithForwardedPreFlightNotes, eventsForDate]);
   const eventsForStaffTraineeSchedule = reactExports.useMemo(() => {
     return eventsForDateWithPreFlightNotes.filter((e) => !e.resourceId.startsWith("STBY"));
@@ -125493,7 +125649,10 @@ ${error instanceof Error ? error.message : String(error)}`,
           phoneNumber: data.phoneNumber,
           email: data.email,
           permissions: data.permissions || [],
-          preferences: data.preferences || {},
+          preferences: {
+            ...data.preferences || {},
+            preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(data)
+          },
           unavailability: data.unavailability || []
         };
         logRoutineAppDebug("📝 [APP] PATCH body to send:", patchBody);
@@ -125523,7 +125682,10 @@ ${error instanceof Error ? error.message : String(error)}`,
             phoneNumber: data.phoneNumber,
             email: data.email,
             permissions: data.permissions || [],
-            preferences: data.preferences || {},
+            preferences: {
+              ...data.preferences || {},
+              preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(data)
+            },
             unavailability: data.unavailability || []
           })
         });
@@ -125535,6 +125697,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           logRoutineAppDebug("📝 [APP] Response data:", responseData);
           const savedTrainee = {
             ...responseData?.trainee || data,
+            preFlightNotesEnduring: getTraineeEnduringPreFlightNotes(responseData?.trainee || data),
             _dataSource: "database"
           };
           const savedDbId = String(savedTrainee.id || dbId || "").trim();
@@ -125555,6 +125718,40 @@ ${error instanceof Error ? error.message : String(error)}`,
       setTraineesData((prev) => prev.map((t) => t.idNumber === data.idNumber ? data : t));
     }
   }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig]);
+  const openPreFlightNotesEditor = reactExports.useCallback((candidate) => {
+    const latestEvent = eventsForDate.find((event) => event.id === candidate.id) || nextDayBuildEvents.find((event) => event.id === candidate.id) || publishedSchedules[candidate.date || date]?.find((event) => event.id === candidate.id) || candidate;
+    const trainee = findTraineeForScheduleEvent(latestEvent);
+    setPreFlightNotesEditor({
+      event: latestEvent,
+      trainee,
+      temporaryNotes: stripGeneratedTrainingReportFollowUpLines(latestEvent.preFlightNotes),
+      enduringNotes: getTraineeEnduringPreFlightNotes(trainee)
+    });
+  }, [date, eventsForDate, findTraineeForScheduleEvent, nextDayBuildEvents, publishedSchedules]);
+  const handleSavePreFlightNotes = reactExports.useCallback(async () => {
+    if (!preFlightNotesEditor) return;
+    const temporaryNotes = preFlightNotesEditor.temporaryNotes.trim();
+    const enduringNotes = preFlightNotesEditor.enduringNotes.trim();
+    const updatedEvent = {
+      ...preFlightNotesEditor.event,
+      preFlightNotes: temporaryNotes || void 0
+    };
+    await handleSaveEvents([updatedEvent], false);
+    if (preFlightNotesEditor.trainee) {
+      const trainee = preFlightNotesEditor.trainee;
+      const existingPreferences = trainee.preferences && typeof trainee.preferences === "object" && !Array.isArray(trainee.preferences) ? trainee.preferences : {};
+      await handleUpdateTrainee({
+        ...trainee,
+        preFlightNotesEnduring: enduringNotes,
+        preferences: {
+          ...existingPreferences,
+          preFlightNotesEnduring: enduringNotes
+        }
+      });
+    }
+    logAudit("Program Schedule", "Edit", `Updated pre-flight notes for ${updatedEvent.flightNumber || "event"}`, `Temporary: ${temporaryNotes ? "set" : "blank"}; Enduring: ${enduringNotes ? "set" : "blank"}`);
+    setPreFlightNotesEditor(null);
+  }, [handleSaveEvents, handleUpdateTrainee, preFlightNotesEditor]);
   const buildRemedialPackageLmp = (originalTraineeLMP, eventToRemediate, newEvents) => {
     let lastNewEventId = eventToRemediate.id;
     const remedialPackageItems = [];
@@ -135085,6 +135282,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       } else {
         menuItems.push(
           { label: "EDIT", detail: canEditActiveDfp ? "Open Flight Details edit mode." : "Tile editing is not available for this DFP.", disabled: !canEditActiveDfp, onSelect: () => openContextEventInDetails(selectedEvent2, true) },
+          { label: "Pre-flight Notes", detail: "Temporary event note and trainee enduring note.", disabled: !canEditActiveDfp, onSelect: () => openPreFlightNotesEditor(selectedEvent2) },
           { label: "Flight Authorisation", detail: flightAuthorisationRequired ? "Open Flight Authorisation." : "Disabled in Business Rules.", disabled: !flightAuthorisationRequired, onSelect: () => openContextAuth(selectedEvent2) },
           { label: "Post Flight Times", onSelect: () => openContextPostFlight(selectedEvent2) },
           { label: configuredTrainingReportDisplayName, detail: "Open the report for this event.", disabled: !activeUnitHasTrainees || !findContextTrainee(selectedEvent2), onSelect: () => openContextTrainingReport(selectedEvent2) },
@@ -135246,6 +135444,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     denyPlatformAction,
     eventSegmentsForDate,
     eventsForDate,
+    openPreFlightNotesEditor,
     flightAuthorisationRequired,
     formatContextMenuTime,
     getContextMenuEvent,
@@ -138818,6 +139017,7 @@ Do you want to replace the existing entry?`,
             handleNavigation("PostFlight");
             setSelectedEvent(null);
           },
+          onOpenPreFlightNotes: openPreFlightNotesEditor,
           onScoresCreated: (newScores) => {
             logRoutineAppDebug("App.tsx: onScoresCreated called with:", newScores);
             const updatedScores = new Map(scores);
@@ -138923,6 +139123,83 @@ Do you want to replace the existing entry?`,
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),
+      preFlightNotesEditor && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[950] flex items-center justify-center bg-black/70 backdrop-blur-sm", onClick: () => setPreFlightNotesEditor(null), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-2xl rounded-lg border border-sky-700/50 bg-gray-900 shadow-2xl", onClick: (event) => event.stopPropagation(), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 bg-gray-800/80 px-5 py-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-sky-300", children: "Pre-flight Notes" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "mt-1 text-xl font-bold text-white", children: [
+            preFlightNotesEditor.event.flightNumber || "Event",
+            preFlightNotesEditor.trainee ? ` - ${preFlightNotesEditor.trainee.name}` : ""
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs font-semibold text-gray-400", children: [
+            preFlightNotesEditor.event.resourceId || "No resource",
+            " | ",
+            formatContextMenuTime(preFlightNotesEditor.event.startTime),
+            "-",
+            formatContextMenuTime(preFlightNotesEditor.event.startTime + preFlightNotesEditor.event.duration)
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-xs font-bold uppercase tracking-wide text-amber-300", children: "Temporary" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                value: preFlightNotesEditor.temporaryNotes,
+                onChange: (event) => setPreFlightNotesEditor((current) => current ? { ...current, temporaryNotes: event.target.value } : current),
+                className: "h-32 w-full resize-y rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-amber-400",
+                placeholder: "Event-only note..."
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-xs font-bold uppercase tracking-wide text-sky-300", children: "Enduring" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                value: preFlightNotesEditor.enduringNotes,
+                onChange: (event) => setPreFlightNotesEditor((current) => current ? { ...current, enduringNotes: event.target.value } : current),
+                className: "h-32 w-full resize-y rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-sky-400",
+                placeholder: "Trainee profile note...",
+                disabled: !preFlightNotesEditor.trainee
+              }
+            )
+          ] }),
+          !preFlightNotesEditor.trainee && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-amber-500/40 bg-amber-950/30 px-3 py-2 text-xs font-semibold text-amber-100", children: "No trainee profile was matched to this event. Only the temporary event note can be saved." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 bg-gray-800/60 px-5 py-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setPreFlightNotesEditor(null),
+              className: "rounded-md border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-700",
+              children: "Cancel"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                setPreFlightNotesEditor((current) => current ? { ...current, temporaryNotes: "", enduringNotes: "" } : current);
+              },
+              className: "rounded-md border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-700",
+              children: "Clear"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                void handleSavePreFlightNotes();
+              },
+              className: "rounded-md bg-sky-600 px-5 py-2 text-sm font-bold text-white hover:bg-sky-500",
+              children: "Save"
+            }
+          )
+        ] })
+      ] }) }),
       conflict && /* @__PURE__ */ jsxRuntimeExports.jsx(ConflictModal, { conflict, onResolve: () => {
       }, onCancel: () => setConflict(null), resourceDisplayNames, instructorLabel: instructorLabel2 }),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxRuntimeExports.jsx(

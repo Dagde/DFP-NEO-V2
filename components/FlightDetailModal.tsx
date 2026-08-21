@@ -465,6 +465,7 @@ interface EventDetailModalProps {
   onOpenAuth: (event: ScheduleEvent) => void;
   flightAuthorisationRequired?: boolean;
   onOpenPostFlight: (event: ScheduleEvent) => void;
+  onOpenPreFlightNotes?: (event: ScheduleEvent) => void;
   isConflict: boolean;
   onNeoClick: (event: ScheduleEvent) => void;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
@@ -658,7 +659,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = 'Training Report', onOpenTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = 'Training Report', onOpenTrainingReport, onOpenAuth, flightAuthorisationRequired = true, onOpenPostFlight, onOpenPreFlightNotes, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
     
 
     const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
@@ -2985,6 +2986,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         onOpenPostFlight(event);
     };
 
+    const handlePreFlightNotesClick = () => {
+        onOpenPreFlightNotes?.(event);
+    };
+
     const handleCompleteClick = () => {
         // Check if this is a Mass Brief event
         if (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB')) {
@@ -4281,6 +4286,14 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 <span className="text-center leading-tight">Auth</span>
                                             </button>
                                         </div>
+                                    )}
+                                    {onOpenPreFlightNotes && (event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt') && (
+                                        <button
+                                            onClick={handlePreFlightNotesClick}
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                        >
+                                            <span className="text-center leading-tight">Pre-flight<br/>Notes</span>
+                                        </button>
                                     )}
                                     {/* Complete button - always frozen when system is frozen */}
                                     {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (

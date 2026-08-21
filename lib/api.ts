@@ -69,7 +69,15 @@ export async function fetchInstructors(): Promise<any[]> {
 export async function fetchTrainees(): Promise<any[]> {
   const result = await fetchAPI<{ trainees: any[] }>('/trainees');
   if (result.success && result.data?.trainees) {
-    return result.data.trainees;
+    return result.data.trainees.map((t: any) => {
+      const preferences = t.preferences && typeof t.preferences === 'object' && !Array.isArray(t.preferences)
+        ? t.preferences
+        : {};
+      return {
+        ...t,
+        preFlightNotesEnduring: t.preFlightNotesEnduring || preferences.preFlightNotesEnduring || '',
+      };
+    });
   }
   return [];
 }
