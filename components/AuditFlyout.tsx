@@ -1,6 +1,6 @@
 // Audit Flyout Window Component
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { getAuditLogs } from '../utils/auditLogger';
 import { AuditLog } from '../types/audit';
@@ -18,6 +18,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [sortField, setSortField] = useState<'timestamp' | 'user' | 'action'>('timestamp');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [expandedDateKey, setExpandedDateKey] = useState<string | null>(null);
 
   const getApiBase = (): string => getAppApiBase();
 
@@ -101,7 +102,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     }
   };
 
-  const sortedLogs = [...logs].sort((a, b) => {
+  const sortedLogs = useMemo(() => [...logs].sort((a, b) => {
     let comparison = 0;
     
     if (sortField === 'timestamp') {
@@ -113,7 +114,62 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     }
     
     return sortDirection === 'asc' ? comparison : -comparison;
-  });
+  }), [logs, sortDirection, sortField]);
+
+  const getDateKey = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayDateKey = getDateKey(new Date());
+
+  const formatDateHeading = (dateKey: string): string => {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    const label = date.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+      year: '2-digit',
+    });
+    return dateKey === todayDateKey ? `Today - ${label}` : label;
+  };
+
+  const actionClassName = (action: AuditLog['action']): string => (
+    action === 'View' ? 'bg-blue-900/50 text-blue-300' :
+    action === 'Edit' ? 'bg-yellow-900/50 text-yellow-300' :
+    action === 'Add' ? 'bg-green-900/50 text-green-300' :
+    action === 'Delete' ? 'bg-red-900/50 text-red-300' :
+    action === 'Archive' ? 'bg-purple-900/50 text-purple-300' :
+    action === 'Restore' ? 'bg-cyan-900/50 text-cyan-300' :
+    'bg-gray-900/50 text-gray-300'
+  );
+
+  const groupedLogs = useMemo(() => {
+    const groups = new Map<string, AuditLog[]>();
+    sortedLogs.forEach(log => {
+      const key = getDateKey(log.timestamp);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(log);
+    });
+    return Array.from(groups.entries())
+      .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+      .map(([dateKey, entries]) => ({ dateKey, entries }));
+  }, [sortedLogs]);
+
+  useEffect(() => {
+    if (logs.length === 0) {
+      setExpandedDateKey(null);
+      return;
+    }
+    if (logs.some(log => getDateKey(log.timestamp) === todayDateKey)) {
+      setExpandedDateKey(todayDateKey);
+    } else {
+      setExpandedDateKey(null);
+    }
+  }, [logs.length, todayDateKey]);
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
@@ -247,84 +303,86 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
               <p className="text-sm mt-2">Activity on this page will be recorded here</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-700 sticky top-0">
-                  <tr>
-                    <th 
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600"
-                      onClick={() => handleSort('timestamp')}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-gray-700 bg-gray-900/60 px-3 py-2">
+                <div className="text-xs font-medium uppercase tracking-wider text-gray-400">Sort Open Date By</div>
+                <div className="flex gap-2">
+                  {(['timestamp', 'user', 'action'] as const).map(field => (
+                    <button
+                      key={field}
+                      onClick={() => handleSort(field)}
+                      className={`rounded-md border px-3 py-1.5 text-xs font-semibold capitalize ${
+                        sortField === field
+                          ? 'border-sky-500 bg-sky-900/40 text-sky-200'
+                          : 'border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      }`}
                     >
-                      <div className="flex items-center">
-                        Date/Time
-                        {sortField === 'timestamp' && (
-                          <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600"
-                      onClick={() => handleSort('user')}
-                    >
-                      <div className="flex items-center">
-                        User
-                        {sortField === 'user' && (
-                          <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-600"
-                      onClick={() => handleSort('action')}
-                    >
-                      <div className="flex items-center">
-                        Action
-                        {sortField === 'action' && (
-                          <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                        )}
-                      </div>
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Changes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-gray-800 divide-y divide-gray-700">
-                  {sortedLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-700/50">
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-300">
-                        <div>{log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
-                        <div className="text-xs text-gray-500">{log.timestamp.toLocaleTimeString()}</div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-300">
-                        {log.user}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded ${
-                          log.action === 'View' ? 'bg-blue-900/50 text-blue-300' :
-                          log.action === 'Edit' ? 'bg-yellow-900/50 text-yellow-300' :
-                          log.action === 'Add' ? 'bg-green-900/50 text-green-300' :
-                          log.action === 'Delete' ? 'bg-red-900/50 text-red-300' :
-                          log.action === 'Archive' ? 'bg-purple-900/50 text-purple-300' :
-                          log.action === 'Restore' ? 'bg-cyan-900/50 text-cyan-300' :
-                          'bg-gray-900/50 text-gray-300'
-                        }`}>
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-300">
-                        {log.description}
-                      </td>
-                      <td className="px-4 py-3 text-gray-400 text-sm">
-                        {log.changes || '-'}
-                      </td>
-                    </tr>
+                      {field === 'timestamp' ? 'Time' : field}
+                      {sortField === field && <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                    </button>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
+
+              {groupedLogs.map(group => {
+                const isExpanded = expandedDateKey === group.dateKey;
+                return (
+                  <div key={group.dateKey} className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900/30">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedDateKey(isExpanded ? null : group.dateKey)}
+                      className={`flex w-full items-center justify-between px-4 py-3 text-left transition ${
+                        isExpanded ? 'bg-gray-700 text-white' : 'bg-gray-800 text-gray-200 hover:bg-gray-700/70'
+                      }`}
+                    >
+                      <div>
+                        <div className="text-sm font-bold">{formatDateHeading(group.dateKey)}</div>
+                        <div className="text-xs text-gray-400">{group.entries.length} recorded activit{group.entries.length === 1 ? 'y' : 'ies'}</div>
+                      </div>
+                      <div className="text-xl leading-none text-gray-300">{isExpanded ? '−' : '+'}</div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-800">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Time</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">User</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Action</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Description</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Changes</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-700 bg-gray-800/70">
+                            {group.entries.map((log) => (
+                              <tr key={log.id} className="hover:bg-gray-700/50">
+                                <td className="whitespace-nowrap px-4 py-3 text-gray-300">
+                                  {log.timestamp.toLocaleTimeString()}
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3 text-gray-300">
+                                  {log.user}
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3">
+                                  <span className={`rounded px-2 py-1 text-xs font-medium ${actionClassName(log.action)}`}>
+                                    {log.action}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-gray-300">
+                                  {log.description}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-400">
+                                  {log.changes || '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
