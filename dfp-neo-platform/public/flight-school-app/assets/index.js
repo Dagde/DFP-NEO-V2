@@ -30236,7 +30236,10 @@ const CourseRosterView = ({
   };
   const getNumericOverallGrade = (grade) => {
     if (typeof grade === "number" && Number.isFinite(grade)) return grade;
-    const parsed = Number(String(grade || "").trim());
+    if (grade === null || grade === void 0) return null;
+    const cleanedGrade = String(grade).trim();
+    if (!cleanedGrade || cleanedGrade.toLowerCase() === "no grade") return null;
+    const parsed = Number(cleanedGrade);
     return Number.isFinite(parsed) ? parsed : null;
   };
   const getLatestTrainingReportStatus = (trainee) => {
