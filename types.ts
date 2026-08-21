@@ -284,6 +284,9 @@ export interface AirCombatTrainingReport {
   dncoFollowUp?: {
     requestExtraFlight?: boolean;
   };
+  isRplAssessment?: boolean;
+  rplGrantedAt?: string | null;
+  rplGrantedBy?: string | null;
   passNotesToNextEvent?: boolean;
   assessedElementScores?: Array<{
     element: string;
@@ -596,6 +599,9 @@ export interface Pt051Assessment {
   dncoFollowUp?: {
     requestExtraFlight?: boolean;
   };
+  isRplAssessment?: boolean;
+  rplGrantedAt?: string | null;
+  rplGrantedBy?: string | null;
   passNotesToNextEvent?: boolean;
   trainingReportNotes?: string;
   overallComments?: string;

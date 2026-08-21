@@ -17546,6 +17546,9 @@ function mapRowToAssessment(row) {
     dcoResult:           row.dcoResult || '',
     dpcoFollowUp:        followUpMeta.dpcoFollowUp || undefined,
     dncoFollowUp:        followUpMeta.dncoFollowUp || undefined,
+    isRplAssessment:     followUpMeta.isRplAssessment === true,
+    rplGrantedAt:        followUpMeta.rplGrantedAt || undefined,
+    rplGrantedBy:        followUpMeta.rplGrantedBy || undefined,
     passNotesToNextEvent: followUpMeta.passNotesToNextEvent === true,
     trainingReportNotes: followUpMeta.trainingReportNotes || undefined,
     overallComments:     overallComments,
@@ -17582,7 +17585,7 @@ function mapAssessmentToRow(data) {
       grade:   s.grade != null ? String(s.grade) : null,
       comment: s.comment || ''
     }));
-  if (data.dpcoFollowUp || data.dncoFollowUp || data.passNotesToNextEvent || data.trainingReportNotes) {
+  if (data.dpcoFollowUp || data.dncoFollowUp || data.passNotesToNextEvent || data.trainingReportNotes || data.isRplAssessment || data.rplGrantedAt || data.rplGrantedBy) {
     elementScores.push({
       element: '__pt051FollowUp',
       grade: null,
@@ -17590,6 +17593,9 @@ function mapAssessmentToRow(data) {
       metadata: {
         dpcoFollowUp: data.dpcoFollowUp || null,
         dncoFollowUp: data.dncoFollowUp || null,
+        isRplAssessment: data.isRplAssessment === true,
+        rplGrantedAt: data.rplGrantedAt || null,
+        rplGrantedBy: data.rplGrantedBy || null,
         passNotesToNextEvent: data.passNotesToNextEvent === true,
         trainingReportNotes: data.trainingReportNotes || null,
       },

@@ -23390,13 +23390,13 @@ This records RPL against this Individual LMP event.`,
       if (!confirmed) return;
     }
     const grantedAt = checked ? item.rplGrantedAt || (/* @__PURE__ */ new Date()).toISOString() : null;
-    const completedAtWasRplOnly = item.completedAt && item.rplGrantedAt && item.completedAt === item.rplGrantedAt;
     const baseUpdatedItem = {
       ...item,
       rplGranted: checked,
-      completedAt: checked ? item.completedAt || grantedAt : completedAtWasRplOnly ? null : item.completedAt,
+      completedAt: checked ? item.completedAt || grantedAt : null,
       rplGrantedAt: grantedAt,
-      rplGrantedBy: checked ? currentUserName || "Admin" : null
+      rplGrantedBy: checked ? currentUserName || "Admin" : null,
+      ...!checked ? { isComplete: false, completed: false } : {}
     };
     const updatedItem = checked ? forfeitTrainingReportFollowUpForRpl(baseUpdatedItem) : baseUpdatedItem;
     const updated = await onUpdateLmpItem(trainee, originalItem, updatedItem);
@@ -124543,6 +124543,131 @@ ${"=".repeat(60)}`);
       trainingReportNextEventExtensions: item.trainingReportNextEventExtensions
     };
   };
+  const getLmpItemRefs = (item) => new Set([
+    item?.id,
+    item?.code,
+    item?.masterEventId
+  ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean));
+  const isLmpItemCompletedForRplGuard = (item, traineeFullName) => {
+    if (item.completedAt || item.isComplete || item.completed || item.rplGranted) return true;
+    const itemRefs = getLmpItemRefs(item);
+    const traineeScores = scores.get(traineeFullName) || [];
+    return traineeScores.some((score) => itemRefs.has(String(score.event || "").trim().toUpperCase()));
+  };
+  const getRplUndoDependentCompletions = (trainee, sourceItem, lmp) => {
+    const hasPrerequisites = lmp.some((item) => [
+      ...item.prerequisites || [],
+      ...item.prerequisitesGround || [],
+      ...item.prerequisitesFlying || []
+    ].some(Boolean));
+    if (!hasPrerequisites) return [];
+    const sourceRefs = getLmpItemRefs(sourceItem);
+    const dependencyCache = /* @__PURE__ */ new Map();
+    const itemByRef = /* @__PURE__ */ new Map();
+    lmp.forEach((item) => {
+      getLmpItemRefs(item).forEach((ref) => itemByRef.set(ref, item));
+    });
+    const itemKey = (item) => String(item.id || item.code || "").trim().toUpperCase();
+    const dependsOnSource = (item, seen = /* @__PURE__ */ new Set()) => {
+      const key = itemKey(item);
+      if (dependencyCache.has(key)) return dependencyCache.get(key) === true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      const prereqRefs = [
+        ...item.prerequisites || [],
+        ...item.prerequisitesGround || [],
+        ...item.prerequisitesFlying || []
+      ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+      if (prereqRefs.some((ref) => sourceRefs.has(ref))) {
+        dependencyCache.set(key, true);
+        return true;
+      }
+      const result = prereqRefs.some((ref) => {
+        const prereqItem = itemByRef.get(ref);
+        return prereqItem ? dependsOnSource(prereqItem, new Set(seen)) : false;
+      });
+      dependencyCache.set(key, result);
+      return result;
+    };
+    return lmp.filter((item) => {
+      if ((item.id || item.code) === (sourceItem.id || sourceItem.code)) return false;
+      return isLmpItemCompletedForRplGuard(item, trainee.fullName) && dependsOnSource(item);
+    });
+  };
+  const removeRplTrainingReportForItem = async (trainee, item) => {
+    const eventForAssessment = buildPt051EventFromLmpItem(trainee, item);
+    const eventId = eventForAssessment.id;
+    const assessmentKey = `pt051-${eventId}-${trainee.fullName}`;
+    const existingAssessment = pt051Assessments.get(assessmentKey) || Array.from(pt051Assessments.values()).find((assessment) => assessment.traineeFullName === trainee.fullName && String(assessment.flightNumber || "").trim().toUpperCase() === String(item.code || "").trim().toUpperCase() && (assessment.isRplAssessment === true || assessment.eventId === eventId));
+    if (existingAssessment && existingAssessment.isRplAssessment !== true) {
+      return;
+    }
+    const apiBase = getApiBaseUrl();
+    const response = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(eventId)}`, { method: "DELETE" });
+    if (!response.ok && response.status !== 404) {
+      const errorText = await response.text().catch(() => "");
+      throw new Error(errorText || `Failed to remove RPL ${configuredTrainingReportDisplayName} (${response.status})`);
+    }
+    suppressDeletedPt051Report([
+      eventId,
+      existingAssessment?.id || "",
+      assessmentKey
+    ].filter(Boolean));
+    setPt051Assessments((prev) => {
+      const updated = new Map(prev);
+      updated.delete(assessmentKey);
+      Array.from(updated.entries()).forEach(([key, assessment]) => {
+        if (assessment.traineeFullName === trainee.fullName && (assessment.isRplAssessment === true || assessment.eventId === eventId) && String(assessment.flightNumber || "").trim().toUpperCase() === String(item.code || "").trim().toUpperCase()) {
+          updated.delete(key);
+        }
+      });
+      return updated;
+    });
+    setLoadedPt051Keys((prev) => {
+      const updated = new Set(prev);
+      updated.delete(`${eventId}-${trainee.fullName}`);
+      return updated;
+    });
+  };
+  const upsertRplTrainingReportForItem = async (trainee, item) => {
+    const eventForAssessment = buildPt051EventFromLmpItem(trainee, item);
+    const eventId = eventForAssessment.id;
+    const grantedAt = item.rplGrantedAt || (/* @__PURE__ */ new Date()).toISOString();
+    const reportDate = /^\d{4}-\d{2}-\d{2}/.test(grantedAt) ? grantedAt.slice(0, 10) : getLocalDateString2();
+    const assessment = {
+      id: `pt051-${eventId}-${trainee.fullName}`,
+      traineeFullName: trainee.fullName,
+      eventId,
+      flightNumber: item.code,
+      date: reportDate,
+      instructorName: item.rplGrantedBy || currentUserName || "Admin",
+      overallGrade: null,
+      overallResult: "P",
+      dcoResult: "DCO",
+      overallComments: `Recognition of Prior Learning granted by ${item.rplGrantedBy || currentUserName || "Admin"} on ${grantedAt}.`,
+      trainingReportNotes: `RPL granted. No numeric assessment scores recorded.`,
+      startTime: eventForAssessment.startTime,
+      duration: eventForAssessment.duration,
+      endTime: eventForAssessment.startTime + eventForAssessment.duration,
+      isCompleted: true,
+      isRplAssessment: true,
+      rplGrantedAt: grantedAt,
+      rplGrantedBy: item.rplGrantedBy || currentUserName || "Admin",
+      scores: ALL_ELEMENTS.map((element) => ({ element, grade: null, comment: "" })),
+      groundSchoolAssessment: { isAssessment: false, result: void 0 }
+    };
+    await persistPt051AssessmentRecord(assessment);
+    setPt051Assessments((prev) => {
+      const updated = new Map(prev);
+      updated.set(`pt051-${eventId}-${trainee.fullName}`, assessment);
+      return updated;
+    });
+    setLoadedPt051Keys((prev) => {
+      const updated = new Set(prev);
+      updated.add(`${eventId}-${trainee.fullName}`);
+      return updated;
+    });
+  };
   const handleGeneratePt051FromLmpItem = async (trainee, item) => {
     const reportDisplayName = trainingReportTemplate.displayName || trainingReportTemplate.genericName || "Training Report";
     if (!canViewTraineePt051(trainee)) {
@@ -125927,28 +126052,77 @@ ${error instanceof Error ? error.message : String(error)}`,
       await showDarkAlert2(`Could not update ${originalItem.code}: another Individual LMP event already uses ${updatedItem.code}.`, "Individual LMP Save Failed", "error");
       return false;
     }
+    const isGrantingRpl = originalItem.rplGranted !== true && updatedItem.rplGranted === true;
+    const isRemovingRpl = originalItem.rplGranted === true && updatedItem.rplGranted !== true;
+    let normalizedUpdatedItem = updatedItem;
+    if (isRemovingRpl) {
+      const dependentCompletions = getRplUndoDependentCompletions(trainee, originalItem, originalTraineeLMP);
+      if (dependentCompletions.length > 0) {
+        const dependencyList = dependentCompletions.slice(0, 8).map((item) => item.code || item.id).join(", ");
+        await showDarkAlert2(
+          `RPL cannot be removed from ${originalItem.code} because later prerequisite-dependent events have already been completed.
+
+Completed dependent events: ${dependencyList}${dependentCompletions.length > 8 ? `, +${dependentCompletions.length - 8} more` : ""}.
+
+Remove or amend those downstream completions before undoing this RPL.`,
+          "RPL Cannot Be Removed",
+          "warning"
+        );
+        return false;
+      }
+      normalizedUpdatedItem = {
+        ...updatedItem,
+        completedAt: null,
+        rplGranted: false,
+        rplGrantedAt: null,
+        rplGrantedBy: null,
+        isComplete: false,
+        completed: false
+      };
+    }
     const updatedLmp = originalTraineeLMP.map((item) => {
       const matchesOriginal = (item.id || item.code) === originalId || (item.code || item.id) === originalCode;
-      if (matchesOriginal) return updatedItem;
+      if (matchesOriginal) return normalizedUpdatedItem;
       return {
         ...item,
         prerequisites: (item.prerequisites || []).map(
-          (prerequisite) => prerequisite === originalCode ? updatedItem.code : prerequisite === originalId ? updatedItem.id || updatedItem.code : prerequisite
+          (prerequisite) => prerequisite === originalCode ? normalizedUpdatedItem.code : prerequisite === originalId ? normalizedUpdatedItem.id || normalizedUpdatedItem.code : prerequisite
         ),
         prerequisitesGround: (item.prerequisitesGround || []).map(
-          (prerequisite) => prerequisite === originalCode ? updatedItem.code : prerequisite === originalId ? updatedItem.id || updatedItem.code : prerequisite
+          (prerequisite) => prerequisite === originalCode ? normalizedUpdatedItem.code : prerequisite === originalId ? normalizedUpdatedItem.id || normalizedUpdatedItem.code : prerequisite
         ),
         prerequisitesFlying: (item.prerequisitesFlying || []).map(
-          (prerequisite) => prerequisite === originalCode ? updatedItem.code : prerequisite === originalId ? updatedItem.id || updatedItem.code : prerequisite
+          (prerequisite) => prerequisite === originalCode ? normalizedUpdatedItem.code : prerequisite === originalId ? normalizedUpdatedItem.id || normalizedUpdatedItem.code : prerequisite
         )
       };
     });
-    if (!updatedLmp.some((item) => (item.id || item.code) === (updatedItem.id || updatedItem.code))) {
+    if (!updatedLmp.some((item) => (item.id || item.code) === (normalizedUpdatedItem.id || normalizedUpdatedItem.code))) {
       await showDarkAlert2(`Could not update ${originalItem.code}: selected event was not found in the Individual LMP.`, "Individual LMP Save Failed", "error");
       return false;
     }
     try {
       const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      const persistedUpdatedItem = persistedLmp.find((item) => (item.id || item.code) === (normalizedUpdatedItem.id || normalizedUpdatedItem.code) || String(item.code || "").trim().toUpperCase() === String(normalizedUpdatedItem.code || "").trim().toUpperCase()) || normalizedUpdatedItem;
+      try {
+        if (isGrantingRpl) {
+          await upsertRplTrainingReportForItem(trainee, persistedUpdatedItem);
+        }
+        if (isRemovingRpl) {
+          await removeRplTrainingReportForItem(trainee, originalItem);
+        }
+      } catch (sideEffectError) {
+        try {
+          const restoredLmp = await persistTraineeLmp(trainee, originalTraineeLMP);
+          setTraineeLMPs((prevLMPs) => {
+            const newLMPs = new Map(prevLMPs);
+            newLMPs.set(trainee.fullName, restoredLmp);
+            return newLMPs;
+          });
+        } catch (rollbackError) {
+          console.error("[Individual LMP] Failed to rollback RPL update after report side-effect failure:", rollbackError);
+        }
+        throw sideEffectError;
+      }
       setTraineeLMPs((prevLMPs) => {
         const newLMPs = new Map(prevLMPs);
         newLMPs.set(trainee.fullName, persistedLmp);
@@ -125960,20 +126134,24 @@ ${error instanceof Error ? error.message : String(error)}`,
         `Edited event ${originalItem.code} in ${trainee.fullName}'s Individual LMP`,
         [
           `Original Event: ${originalItem.code}`,
-          `Updated Event: ${updatedItem.code}`,
-          `Type: ${updatedItem.type}`,
-          `Day/Night: ${updatedItem.dayNight}`,
-          `Duration: ${updatedItem.duration}`,
-          `Resource Number: ${updatedItem.resourceNumber ?? 0}`,
+          `Updated Event: ${normalizedUpdatedItem.code}`,
+          `Type: ${normalizedUpdatedItem.type}`,
+          `Day/Night: ${normalizedUpdatedItem.dayNight}`,
+          `Duration: ${normalizedUpdatedItem.duration}`,
+          `Resource Number: ${normalizedUpdatedItem.resourceNumber ?? 0}`,
+          isGrantingRpl ? "RPL: Granted and training report generated" : null,
+          isRemovingRpl ? "RPL: Removed, completion reset, training report removed" : null,
           `Trainee: ${trainee.rank ? `${trainee.rank} ` : ""}${trainee.name}`
-        ].join("; ")
+        ].filter(Boolean).join("; ")
       );
-      setSuccessMessage(`Updated ${updatedItem.code} in Individual LMP.`);
+      setSuccessMessage(
+        isGrantingRpl ? `RPL granted for ${normalizedUpdatedItem.code}; ${configuredTrainingReportDisplayName} added to performance history.` : isRemovingRpl ? `RPL removed for ${normalizedUpdatedItem.code}; event reset to incomplete.` : `Updated ${normalizedUpdatedItem.code} in Individual LMP.`
+      );
       return true;
     } catch (error) {
       console.error("[Individual LMP] Failed to update event:", error);
       await showDarkAlert2(
-        `The event was not saved to the database, so it has not been updated.
+        `The event was not fully saved, so the RPL change has not been applied.
 
 ${error instanceof Error ? error.message : String(error)}`,
         "Individual LMP Save Failed",

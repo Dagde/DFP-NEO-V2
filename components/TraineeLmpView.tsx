@@ -1537,15 +1537,15 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
             if (!confirmed) return;
         }
         const grantedAt = checked ? (item.rplGrantedAt || new Date().toISOString()) : null;
-        const completedAtWasRplOnly = item.completedAt && item.rplGrantedAt && item.completedAt === item.rplGrantedAt;
         const baseUpdatedItem: SyllabusItemDetail = {
             ...item,
             rplGranted: checked,
             completedAt: checked
                 ? (item.completedAt || grantedAt)
-                : (completedAtWasRplOnly ? null : item.completedAt),
+                : null,
             rplGrantedAt: grantedAt,
             rplGrantedBy: checked ? (currentUserName || 'Admin') : null,
+            ...(!checked ? { isComplete: false, completed: false } : {}),
         };
         const updatedItem = checked
             ? forfeitTrainingReportFollowUpForRpl(baseUpdatedItem as SyllabusItemDetail & Record<string, any>)
