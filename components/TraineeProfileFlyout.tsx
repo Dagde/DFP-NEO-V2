@@ -108,6 +108,34 @@ const stripGeneratedPreFlightFollowUpLines = (value: unknown): string => (
     .trim()
 );
 
+const formatTrainingReportExtensionHoursForPreFlightNotes = (value: unknown): string => {
+  const hours = Number(value);
+  if (!Number.isFinite(hours) || hours <= 0) return '';
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, '');
+};
+
+const getTrainingReportExtensionPreFlightNote = (event: ScheduleEvent | null | undefined): string => {
+  if (!event) return '';
+  const extensionEntries = Object.values(((event as any).trainingReportNextEventExtensions || {}) as Record<string, number>)
+    .map(formatTrainingReportExtensionHoursForPreFlightNotes)
+    .filter(Boolean);
+  if (extensionEntries.length === 0) return '';
+
+  const eventCode = String(event.flightNumber || (event as any).eventCode || 'this event').trim() || 'this event';
+  const currentHours = extensionEntries[extensionEntries.length - 1];
+  return `${currentHours} hrs added to ${eventCode}.`;
+};
+
+const getTemporaryPreFlightNotesForProfile = (event: ScheduleEvent | null | undefined): string => (
+  [
+    getTrainingReportExtensionPreFlightNote(event),
+    stripGeneratedPreFlightFollowUpLines(event?.preFlightNotes),
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+    .trim()
+);
+
 interface TraineeProfileFlyoutProps {
   trainee: Trainee;
   traineesData?: Trainee[];
@@ -1417,7 +1445,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             })
             .map(event => ({
                 event,
-                notes: stripGeneratedPreFlightFollowUpLines(event.preFlightNotes),
+                notes: getTemporaryPreFlightNotesForProfile(event),
             }))
             .filter(entry => entry.notes)
             .sort((a, b) => String(a.event.date || '').localeCompare(String(b.event.date || '')) || a.event.startTime - b.event.startTime);

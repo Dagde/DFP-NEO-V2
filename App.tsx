@@ -204,6 +204,34 @@ const stripGeneratedTrainingReportFollowUpLines = (value: unknown): string => (
         .trim()
 );
 
+const formatTrainingReportExtensionHoursForPreFlightNotes = (value: unknown): string => {
+    const hours = Number(value);
+    if (!Number.isFinite(hours) || hours <= 0) return '';
+    return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, '');
+};
+
+const getTrainingReportExtensionPreFlightNote = (event: ScheduleEvent | null | undefined): string => {
+    if (!event) return '';
+    const extensionEntries = Object.values(((event as any).trainingReportNextEventExtensions || {}) as Record<string, number>)
+        .map(formatTrainingReportExtensionHoursForPreFlightNotes)
+        .filter(Boolean);
+    if (extensionEntries.length === 0) return '';
+
+    const eventCode = String(event.flightNumber || (event as any).eventCode || 'this event').trim() || 'this event';
+    const currentHours = extensionEntries[extensionEntries.length - 1];
+    return `${currentHours} hrs added to ${eventCode}.`;
+};
+
+const getEditableTemporaryPreFlightNotes = (event: ScheduleEvent | null | undefined): string => (
+    [
+        getTrainingReportExtensionPreFlightNote(event),
+        stripGeneratedTrainingReportFollowUpLines(event?.preFlightNotes),
+    ]
+        .filter(Boolean)
+        .join('\n\n')
+        .trim()
+);
+
 const getDefaultHasTraineesForUnit = (_unitCode: unknown): boolean => false;
 
 const normaliseDfpTimezoneKey = (value: unknown): string => String(value || '').trim().toUpperCase();
@@ -35828,7 +35856,7 @@ const App: React.FC = () => {
         setPreFlightNotesEditor({
             event: latestEvent,
             trainee,
-            temporaryNotes: stripGeneratedTrainingReportFollowUpLines(latestEvent.preFlightNotes),
+            temporaryNotes: getEditableTemporaryPreFlightNotes(latestEvent),
             enduringNotes: getTraineeEnduringPreFlightNotes(trainee),
         });
     }, [date, eventsForDate, findTraineeForScheduleEvent, nextDayBuildEvents, publishedSchedules]);
@@ -38695,7 +38723,7 @@ const App: React.FC = () => {
 
     const handleSavePreFlightNotes = useCallback(async () => {
         if (!preFlightNotesEditor) return;
-        const temporaryNotes = preFlightNotesEditor.temporaryNotes.trim();
+        const temporaryNotes = stripGeneratedTrainingReportFollowUpLines(preFlightNotesEditor.temporaryNotes).trim();
         const enduringNotes = preFlightNotesEditor.enduringNotes.trim();
         const updatedEvent: ScheduleEvent = {
             ...preFlightNotesEditor.event,

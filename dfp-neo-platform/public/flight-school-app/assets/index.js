@@ -25944,6 +25944,23 @@ const getTraineeEnduringPreFlightNotes$1 = (trainee) => {
   return String(trainee.preFlightNotesEnduring || preferences.preFlightNotesEnduring || "").trim();
 };
 const stripGeneratedPreFlightFollowUpLines = (value) => String(value || "").split(/\r?\n/).flatMap((line) => /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(line.trim()) ? [] : [line]).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+const formatTrainingReportExtensionHoursForPreFlightNotes$1 = (value) => {
+  const hours = Number(value);
+  if (!Number.isFinite(hours) || hours <= 0) return "";
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, "");
+};
+const getTrainingReportExtensionPreFlightNote$1 = (event) => {
+  if (!event) return "";
+  const extensionEntries = Object.values(event.trainingReportNextEventExtensions || {}).map(formatTrainingReportExtensionHoursForPreFlightNotes$1).filter(Boolean);
+  if (extensionEntries.length === 0) return "";
+  const eventCode2 = String(event.flightNumber || event.eventCode || "this event").trim() || "this event";
+  const currentHours = extensionEntries[extensionEntries.length - 1];
+  return `${currentHours} hrs added to ${eventCode2}.`;
+};
+const getTemporaryPreFlightNotesForProfile = (event) => [
+  getTrainingReportExtensionPreFlightNote$1(event),
+  stripGeneratedPreFlightFollowUpLines(event?.preFlightNotes)
+].filter(Boolean).join("\n\n").trim();
 const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -26864,7 +26881,7 @@ const TraineeProfileFlyout = ({
       return eventNames.some((eventName) => traineeNames.includes(eventName));
     }).map((event) => ({
       event,
-      notes: stripGeneratedPreFlightFollowUpLines(event.preFlightNotes)
+      notes: getTemporaryPreFlightNotesForProfile(event)
     })).filter((entry) => entry.notes).sort((a, b) => String(a.event.date || "").localeCompare(String(b.event.date || "")) || a.event.startTime - b.event.startTime);
   }, [events, trainee.fullName, trainee.idNumber, trainee.name]);
   const handleSaveEnduringPreFlightNotes = async () => {
@@ -96711,6 +96728,23 @@ const stripGeneratedTrainingReportFollowUpLines = (value) => String(value || "")
   const trimmedLine = line.trim();
   return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
 }).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+const formatTrainingReportExtensionHoursForPreFlightNotes = (value) => {
+  const hours = Number(value);
+  if (!Number.isFinite(hours) || hours <= 0) return "";
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, "");
+};
+const getTrainingReportExtensionPreFlightNote = (event) => {
+  if (!event) return "";
+  const extensionEntries = Object.values(event.trainingReportNextEventExtensions || {}).map(formatTrainingReportExtensionHoursForPreFlightNotes).filter(Boolean);
+  if (extensionEntries.length === 0) return "";
+  const eventCode2 = String(event.flightNumber || event.eventCode || "this event").trim() || "this event";
+  const currentHours = extensionEntries[extensionEntries.length - 1];
+  return `${currentHours} hrs added to ${eventCode2}.`;
+};
+const getEditableTemporaryPreFlightNotes = (event) => [
+  getTrainingReportExtensionPreFlightNote(event),
+  stripGeneratedTrainingReportFollowUpLines(event?.preFlightNotes)
+].filter(Boolean).join("\n\n").trim();
 const getDefaultHasTraineesForUnit = (_unitCode) => false;
 const normaliseDfpTimezoneKey = (value) => String(value || "").trim().toUpperCase();
 const getDfpOffsetHoursForTimezone = (timeZone, at = /* @__PURE__ */ new Date()) => {
@@ -125724,7 +125758,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     setPreFlightNotesEditor({
       event: latestEvent,
       trainee,
-      temporaryNotes: stripGeneratedTrainingReportFollowUpLines(latestEvent.preFlightNotes),
+      temporaryNotes: getEditableTemporaryPreFlightNotes(latestEvent),
       enduringNotes: getTraineeEnduringPreFlightNotes(trainee)
     });
   }, [date, eventsForDate, findTraineeForScheduleEvent, nextDayBuildEvents, publishedSchedules]);
@@ -128112,7 +128146,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
   };
   const handleSavePreFlightNotes = reactExports.useCallback(async () => {
     if (!preFlightNotesEditor) return;
-    const temporaryNotes = preFlightNotesEditor.temporaryNotes.trim();
+    const temporaryNotes = stripGeneratedTrainingReportFollowUpLines(preFlightNotesEditor.temporaryNotes).trim();
     const enduringNotes = preFlightNotesEditor.enduringNotes.trim();
     const updatedEvent = {
       ...preFlightNotesEditor.event,
