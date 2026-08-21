@@ -11033,8 +11033,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-permission-profiles" className={getSectionClass('platform-permission-profiles')}>
         <SectionHeader
-          title="Permission Profiles"
-          subtitle="Build reusable permission profiles. Profiles define what a user can do; access scopes define where they can do it."
+          title="Master Permission Profiles"
+          subtitle="This is the single master list of role and exception profiles. User and group assignment panels reuse this same list."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-permission-profiles')}
@@ -11059,7 +11059,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="space-y-2">
             {permissionProfiles.length === 0 && (
               <div className="rounded border border-dashed border-gray-700 bg-gray-950/70 px-4 py-5 text-sm text-gray-400">
-                No permission profiles configured.
+                No master permission profiles configured.
               </div>
             )}
             {permissionProfiles.map((profile) => (
@@ -12778,9 +12778,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-3">
-              <h5 className="text-sm font-bold text-white">Assigned Role Profiles and Exceptions</h5>
+              <h5 className="text-sm font-bold text-white">Assign Master Profiles to This User</h5>
               <p className="mt-1 text-xs text-gray-400">
-                Tick the user's normal role profile, then tick any exception profiles that grant extra page, tab or button access outside that role. The same selections apply across this user's active access scopes.
+                Tick the user's normal role profile, then tick any exception profiles that grant extra page, tab or button access outside that role. These options come from the Master Permission Profiles list.
               </p>
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -12821,9 +12821,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-cyan-500/25 bg-gray-900 p-4">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h5 className="text-sm font-bold text-white">Group Permission Assignment</h5>
+                <h5 className="text-sm font-bold text-white">Assign Master Profiles to Multiple People</h5>
                 <p className="mt-1 text-xs text-gray-400">
-                  Select multiple people, choose their role profile and any exception profiles, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit.
+                  Select multiple people, choose their role profile and any exception profiles from the master list, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit.
                 </p>
               </div>
               <button
@@ -12888,7 +12888,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
               <div className="flex h-full min-h-[34rem] flex-col rounded border border-gray-700 bg-gray-950/70 p-3">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className={labelClass}>Permission Profiles</span>
+                  <span className={labelClass}>Master Profiles</span>
                   <span className="ml-auto rounded bg-gray-800 px-2 py-1 text-[11px] font-semibold text-gray-200">
                     {bulkAccessProfileIds.length} selected
                   </span>
