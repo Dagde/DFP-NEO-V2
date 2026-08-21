@@ -2063,50 +2063,132 @@ const getUnitOperationalModel = (unit) => normaliseOperationalModel(unit?.operat
 const getOperationalModelLabel = (value) => operationalModelLabels.get(normaliseOperationalModel(value)) || operationalModelLabels.get(DEFAULT_OPERATIONAL_MODEL);
 const PLATFORM_PERMISSION_CATALOG = [
   {
-    group: "Daily Flying Program",
+    group: "DFP Page & Tiles",
     items: [
       ["dfp.view", "View DFP"],
-      ["dfp.editTiles", "Add, edit and delete tiles"],
+      ["dfp.tiles.nonAcademic.addRemoveMove", "Add, remove and move non-academic event tiles"],
+      ["dfp.tiles.academic.addRemoveMove", "Add, remove and move academic event tiles"],
+      ["dfp.tiles.nonAcademic.details.edit", "Edit non-academic event details"],
+      ["dfp.tiles.academic.details.edit", "Edit academic event details"],
+      ["dfp.editTiles", "Legacy: add, edit and delete DFP tiles"],
+      ["dfp.rightClickMenu.use", "Use permitted DFP tile right-click menu items"],
+      ["dfp.audit.view", "Open DFP Audit Log"],
+      ["dfp.multiSelect.use", "Use Multi Select"],
+      ["dfp.validation", "Run validation checks"],
+      ["dfp.dispatchRate.view", "Open Dispatch Rate"],
+      ["dfp.pauseFlightOps.use", "Pause Flight Ops"],
+      ["dfp.addGroundTile.use", "Add Ground Tile"],
+      ["dfp.addFlightTile.use", "Add Flight Tile"],
+      ["dfp.neoTile.use", "Use NEO Tile / Quick Tile"],
+      ["dfp.publish", "Publish DFP"],
+      ["dfp.history", "View historical DFP records"]
+    ]
+  },
+  {
+    group: "Flight Line & Maintenance",
+    items: [
       ["dfp.flightLine.view", "Open Flight Line"],
       ["dfp.flightLine.inventory.edit", "Edit aircraft inventory"],
       ["dfp.flightLine.availability.edit", "Edit aircraft availability status"],
       ["dfp.flightLine.availabilityLink.edit", "Link aircraft availability to flight-line tiles"],
       ["dfp.aircraftNumber.edit", "Edit aircraft number on flight tiles"],
-      ["dfp.validation", "Run validation checks"],
-      ["dfp.publish", "Publish DFP"],
-      ["dfp.history", "View historical DFP records"]
+      ["maintenance.slideout.view", "View Maintenance slideout"],
+      ["maintenance.slideout.edit", "Edit Maintenance slideout"]
     ]
   },
   {
     group: "NEO Build",
     items: [
       ["neo.run", "Run NEO Build"],
+      ["neo.programSchedule.view", "Open NEO Build Program Schedule"],
+      ["neo.staffSchedule.view", "Open NEO Build Staff Schedule"],
+      ["neo.traineeSchedule.view", "Open NEO Build Trainee Schedule"],
+      ["neo.publish.view", "Open NEO Build Publish controls"],
       ["neo.priorities", "Edit build priorities"],
       ["neo.intelligence", "View build intelligence"],
+      ["neo.intelligence.people.view", "View Build Intelligence - People"],
+      ["neo.intelligence.courseMetrics.view", "View Build Intelligence - Course Metrics"],
+      ["neo.intelligence.buildAnalytics.view", "View Build Intelligence - Build Analytics"],
+      ["neo.intelligence.acHistory.view", "View Build Intelligence - AC History"],
+      ["neo.intelligence.managerialAnalytics.view", "View Build Intelligence - Managerial Analytics"],
+      ["neo.intelligence.bli.view", "View Build Intelligence - BLI"],
       ["neo.override", "Override build results"]
     ]
   },
   {
-    group: "Staff",
+    group: "Staff Pages",
     items: [
       ["staff.view", "View staff roster"],
       ["staff.edit", "Edit staff details"],
+      ["staff.profile.view", "View staff profile"],
+      ["staff.profile.edit", "Edit staff profile"],
+      ["staff.profile.unavailable.use", "Use staff Unavailable button"],
+      ["staff.profile.currency.use", "Use staff Currency button"],
+      ["staff.profile.logbook.use", "Use staff Logbook button"],
+      ["staff.profile.sctRequest.use", "Request staff currency / continuation training"],
+      ["staff.profile.trainingReport.use", "Use staff Training Report button"],
+      ["staff.profile.trainingProgress.use", "Use staff Training Progress button"],
+      ["staff.schedule.view", "View Staff Schedule"],
+      ["staff.schedule.edit", "Edit Staff Schedule DFP tiles"],
       ["staff.currency.view", "View staff currencies"],
       ["staff.currency.edit", "Edit staff currencies"]
     ]
   },
   {
-    group: "Trainees",
+    group: "Trainee Pages",
     items: [
       ["trainee.roster.view", "View trainee roster"],
       ["trainee.profile.own", "If trainee, view own profile"],
       ["trainee.profile.others", "View other trainees' profiles"],
+      ["trainee.profile.edit", "Edit trainee profile"],
+      ["trainee.profile.unavailable.use", "Use trainee Unavailable button"],
+      ["trainee.profile.currency.use", "Use trainee Currency button"],
+      ["trainee.profile.trainingReport.use", "Use trainee Training Report button"],
+      ["trainee.profile.lmp.use", "Use View Individual LMP button"],
+      ["trainee.profile.review.use", "Use Trainee Review button"],
+      ["trainee.profile.logbook.use", "Use trainee Logbook button"],
+      ["trainee.schedule.view", "View Trainee Schedule"],
+      ["trainee.schedule.edit", "Edit Trainee Schedule DFP tiles"],
       ["trainee.pt051.own", "If trainee, view own training reports"],
       ["trainee.pt051.others", "View other trainees' training reports"],
       ["trainee.pt051.edit", "Edit training reports"],
       ["trainee.lmp.own", "If trainee, view own Individual LMP"],
       ["trainee.lmp.others", "View other trainees' Individual LMPs"],
       ["trainee.remedial.add", "Add remedial package"]
+    ]
+  },
+  {
+    group: "LMP, Course Progress & Training Records",
+    items: [
+      ["lmp.eventDetails.view", "View LMP / Event Details"],
+      ["lmp.eventDetails.edit", "Edit LMP / Event Details"],
+      ["lmp.audit.view", "Open LMP Audit"],
+      ["lmp.manage.use", "Manage LMPs"],
+      ["lmp.event.add", "Add LMP event"],
+      ["lmp.upload.use", "Upload LMP data"],
+      ["courseProgress.view", "View Course Progress"],
+      ["courseProgress.edit", "Edit Course Progress"],
+      ["courseProgress.riskSettings.edit", "Edit Course Progress risk settings"],
+      ["courseProgress.audit.view", "Open Course Progress Audit"],
+      ["trainingRecords.courseManagement.view", "View Training Records - Course Management"],
+      ["trainingRecords.courseManagement.edit", "Edit Training Records - Course Management"],
+      ["trainingRecords.archivedCourses.view", "View Archived Courses"],
+      ["trainingRecords.course.add", "Add course"],
+      ["trainingRecords.audit.view", "Open Training Records Audit"],
+      ["trainingRecords.export.view", "Open Training Records export"]
+    ]
+  },
+  {
+    group: "Priorities",
+    items: [
+      ["priorities.flyingWindow.view", "View Priorities - Flying Window and Capacities"],
+      ["priorities.flyingWindow.edit", "Edit Priorities - Flying Window and Capacities"],
+      ["priorities.instructorRules.view", "View Priorities - Instructor Rules"],
+      ["priorities.instructorRules.edit", "Edit Priorities - Instructor Rules"],
+      ["priorities.courseDemand.view", "View Priorities - Course Demand"],
+      ["priorities.courseDemand.edit", "Edit Priorities - Course Demand"],
+      ["priorities.directedTasks.view", "View Priorities - Directed Tasks"],
+      ["priorities.directedTasks.edit", "Edit Priorities - Directed Tasks"]
     ]
   },
   {
@@ -2117,9 +2199,22 @@ const PLATFORM_PERMISSION_CATALOG = [
     ]
   },
   {
+    group: "Operational Slideouts & Windows",
+    items: [
+      ["neoAssist.slideout.view", "View NEO Assist slideout"],
+      ["neoAssist.slideout.edit", "Edit NEO Assist slideout"],
+      ["setupWizard.open", "Open Initial Setup Wizard"],
+      ["dutyPilot.flyout.open", "Open Duty Pilot flyout"],
+      ["myHome.flyout.open", "Open My Home flyout"],
+      ["unitLocationSelector.open", "Open Unit / Location selection window"],
+      ["unitLocationSelector.homeUnitCurrentDateOnly", "Restrict to home unit / current date only"]
+    ]
+  },
+  {
     group: "Settings & Administration",
     items: [
       ["settings.view", "View settings"],
+      ["settings.edit", "Edit settings"],
       ["settings.schedulingRules.edit", "Edit scheduling rules"],
       ["settings.userAccess.edit", "Edit user permissions"],
       ["settings.platform.edit", "Edit platform configuration"],
@@ -2134,43 +2229,50 @@ const DEFAULT_PLATFORM_PERMISSION_PROFILES = [
     id: "trainee",
     name: "Trainee",
     description: "Own-profile training access with restricted access to other trainee performance records.",
-    permissions: ["dfp.view", "trainee.roster.view", "trainee.profile.own", "trainee.pt051.own", "trainee.lmp.own"]
+    permissions: ["dfp.view", "trainee.roster.view", "trainee.profile.own", "trainee.pt051.own", "trainee.lmp.own"],
+    settings: { profileType: "role" }
   },
   {
     id: "instructor",
     name: "Instructor-Qualified",
     description: "Instructor-qualified access to DFP, staff roster, trainee profiles, training reports and LMP records.",
-    permissions: ["dfp.view", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others"]
+    permissions: ["dfp.view", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others"],
+    settings: { profileType: "role" }
   },
   {
     id: "flying-supervisor",
     name: "Flying Supervisor",
     description: "Supervisor access for daily flying control, validation, publishing and trainee oversight.",
-    permissions: ["dfp.view", "dfp.editTiles", "dfp.validation", "dfp.publish", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others", "trainee.remedial.add", "reporting.view"]
+    permissions: ["dfp.view", "dfp.editTiles", "dfp.validation", "dfp.publish", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others", "trainee.remedial.add", "reporting.view"],
+    settings: { profileType: "role" }
   },
   {
     id: "scheduler",
     name: "Scheduler",
     description: "Scheduling and build management access.",
-    permissions: ["dfp.view", "dfp.editTiles", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.flightLine.availabilityLink.edit", "dfp.aircraftNumber.edit", "dfp.validation", "neo.run", "neo.priorities", "neo.intelligence", "neo.override", "reporting.view"]
+    permissions: ["dfp.view", "dfp.editTiles", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.flightLine.availabilityLink.edit", "dfp.aircraftNumber.edit", "dfp.validation", "neo.run", "neo.priorities", "neo.intelligence", "neo.override", "reporting.view"],
+    settings: { profileType: "role" }
   },
   {
     id: "maintenance",
     name: "Maintenance",
     description: "Aircraft inventory, aircraft availability and flight-line tail assignment access without general tile editing.",
-    permissions: ["dfp.view", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.flightLine.availabilityLink.edit", "dfp.aircraftNumber.edit"]
+    permissions: ["dfp.view", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.flightLine.availabilityLink.edit", "dfp.aircraftNumber.edit"],
+    settings: { profileType: "role" }
   },
   {
     id: "unit-admin",
     name: "Unit Admin",
     description: "Administration of users, settings and records within assigned access scopes.",
-    permissions: ALL_PLATFORM_PERMISSION_IDS.filter((id) => id !== "settings.superAdmin")
+    permissions: ALL_PLATFORM_PERMISSION_IDS.filter((id) => id !== "settings.superAdmin"),
+    settings: { profileType: "role" }
   },
   {
     id: "super-admin",
     name: "Super Admin",
     description: "Unrestricted platform administration. Use sparingly.",
-    permissions: ALL_PLATFORM_PERMISSION_IDS
+    permissions: ALL_PLATFORM_PERMISSION_IDS,
+    settings: { profileType: "role" }
   }
 ];
 const emptyPlatformConfig = {
@@ -2417,7 +2519,8 @@ const getPlatformPermissionProfiles = (config) => {
       id,
       name: String(profile?.name || id).trim(),
       description: String(profile?.description || "").trim(),
-      permissions
+      permissions,
+      settings: parseSettingsObject(profile?.settings)
     };
   }).filter((profile) => Boolean(profile)) : [];
   return Array.isArray(profileConfig) ? normalisedProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
@@ -8796,6 +8899,12 @@ const Header = ({
   onToggleDepartureDensityOverlay,
   dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
   canEditDfpTiles = true,
+  canUseMultiSelect = canEditDfpTiles,
+  canUseDispatchRate = canEditDfpTiles,
+  canUsePauseFlightOps = canEditDfpTiles,
+  canAddGroundTile = canEditDfpTiles,
+  canAddFlightTile = canEditDfpTiles,
+  canUseNeoTile = true,
   canOpenFlightLine = true,
   canRunValidation = true,
   canRunNeoBuild = true,
@@ -8985,9 +9094,14 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => setIsMultiSelectMode(!isMultiSelectMode),
-            className: `${headerButtonClass} ${isMultiSelectMode ? "active" : ""}`,
-            title: "Toggle multi-select mode",
+            onClick: () => {
+              if (!canUseMultiSelect) return;
+              setIsMultiSelectMode(!isMultiSelectMode);
+            },
+            disabled: !isFixedCrewModel && !canUseMultiSelect,
+            "aria-disabled": !canUseMultiSelect,
+            className: `${headerButtonClass} ${isMultiSelectMode ? "active" : ""} ${!canUseMultiSelect ? unavailableActionClass : ""}`,
+            title: canUseMultiSelect ? "Toggle multi-select mode" : "Access denied: Multi Select permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Multi Select" })
           }
         ),
@@ -9022,9 +9136,14 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: onToggleDepartureDensityOverlay,
-            className: `${headerButtonClass} ${showDepartureDensityOverlay ? "active" : ""}`,
-            title: `Dispatch Rate - Shows flight starts in a ${normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes)}-minute window`,
+            onClick: () => {
+              if (!canUseDispatchRate) return;
+              onToggleDepartureDensityOverlay();
+            },
+            disabled: !isFixedCrewModel && !canUseDispatchRate,
+            "aria-disabled": !canUseDispatchRate,
+            className: `${headerButtonClass} ${showDepartureDensityOverlay ? "active" : ""} ${!canUseDispatchRate ? unavailableActionClass : ""}`,
+            title: canUseDispatchRate ? `Dispatch Rate - Shows flight starts in a ${normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes)}-minute window` : "Access denied: Dispatch Rate permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
               "Dispatch",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -9054,13 +9173,13 @@ const Header = ({
           "button",
           {
             onClick: () => {
-              if (!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild) return;
+              if (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild) return;
               onPauseFlightOps();
             },
-            disabled: !isFixedCrewModel && (!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild),
-            "aria-disabled": !onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild,
-            className: `${headerButtonClass} ${!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild ? unavailableActionClass : ""}`,
-            title: onPauseFlightOps && canEditDfpTiles && canRunNeoBuild ? "Pause Flight Ops" : "Access denied: DFP edit and NEO Build permissions required",
+            disabled: !isFixedCrewModel && (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild),
+            "aria-disabled": !onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild,
+            className: `${headerButtonClass} ${!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild ? unavailableActionClass : ""}`,
+            title: onPauseFlightOps && canUsePauseFlightOps && canRunNeoBuild ? "Pause Flight Ops" : "Access denied: Pause Flight Ops and NEO Build permissions required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
               "Pause",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -9072,13 +9191,13 @@ const Header = ({
           "button",
           {
             onClick: () => {
-              if (!canEditDfpTiles) return;
+              if (!canAddGroundTile) return;
               onAddGroundEvent();
             },
-            disabled: !isFixedCrewModel && !canEditDfpTiles,
-            "aria-disabled": !canEditDfpTiles,
-            className: `${headerButtonClass} ${!canEditDfpTiles ? unavailableActionClass : ""}`,
-            title: canEditDfpTiles ? "Add Ground Tile" : "Access denied: DFP tile edit permission required",
+            disabled: !isFixedCrewModel && !canAddGroundTile,
+            "aria-disabled": !canAddGroundTile,
+            className: `${headerButtonClass} ${!canAddGroundTile ? unavailableActionClass : ""}`,
+            title: canAddGroundTile ? "Add Ground Tile" : "Access denied: Add Ground Tile permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
               "Add Ground",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -9090,13 +9209,13 @@ const Header = ({
           "button",
           {
             onClick: () => {
-              if (!canEditDfpTiles) return;
+              if (!canAddFlightTile) return;
               onAddTile();
             },
-            disabled: !isFixedCrewModel && !canEditDfpTiles,
-            "aria-disabled": !canEditDfpTiles,
-            className: `${headerButtonClass} ${!canEditDfpTiles ? unavailableActionClass : ""}`,
-            title: canEditDfpTiles ? "Add Flight Tile" : "Access denied: DFP tile edit permission required",
+            disabled: !isFixedCrewModel && !canAddFlightTile,
+            "aria-disabled": !canAddFlightTile,
+            className: `${headerButtonClass} ${!canAddFlightTile ? unavailableActionClass : ""}`,
+            title: canAddFlightTile ? "Add Flight Tile" : "Access denied: Add Flight Tile permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
               "Add Flight",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -9109,17 +9228,17 @@ const Header = ({
           {
             onClick: () => {
               if (isFixedCrewModel) {
-                if (!canEditDfpTiles || !onQuickTile) return;
+                if (!canUseNeoTile || !onQuickTile) return;
                 onQuickTile();
                 return;
               }
-              if (!canRunNeoBuild) return;
+              if (!canUseNeoTile || !canRunNeoBuild) return;
               onToggleOracleMode();
             },
-            disabled: !isFixedCrewModel && !canRunNeoBuild,
-            "aria-disabled": isFixedCrewModel ? !canEditDfpTiles : !canRunNeoBuild,
-            className: `relative ${headerButtonClass} ${isOracleMode && !isFixedCrewModel ? "active" : ""} ${isFixedCrewModel ? !canEditDfpTiles ? unavailableActionClass : "" : !canRunNeoBuild ? unavailableActionClass : ""}`,
-            title: isFixedCrewModel ? canEditDfpTiles ? "Quick Tile" : "Access denied: DFP tile edit permission required" : canRunNeoBuild ? "NEO - Tile" : "Access denied: NEO Build permission required",
+            disabled: !isFixedCrewModel && (!canUseNeoTile || !canRunNeoBuild),
+            "aria-disabled": isFixedCrewModel ? !canUseNeoTile : !canUseNeoTile || !canRunNeoBuild,
+            className: `relative ${headerButtonClass} ${isOracleMode && !isFixedCrewModel ? "active" : ""} ${isFixedCrewModel ? !canUseNeoTile ? unavailableActionClass : "" : !canUseNeoTile || !canRunNeoBuild ? unavailableActionClass : ""}`,
+            title: isFixedCrewModel ? canUseNeoTile ? "Quick Tile" : "Access denied: NEO Tile permission required" : canUseNeoTile && canRunNeoBuild ? "NEO - Tile" : "Access denied: NEO Tile permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-center leading-tight ${isOracleMode && !isFixedCrewModel ? "animate-pulse-neo-text" : ""}`, style: { color: isFixedCrewModel ? "#000000" : "#fb923c" }, children: isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
               "Quick",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -77385,15 +77504,38 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     () => permissionProfiles.find((profile) => profile.id === selectedProfileId) || permissionProfiles[0],
     [permissionProfiles, selectedProfileId]
   );
-  const addPermissionProfile = () => {
+  const getPermissionProfileType = (profile) => String(profile?.settings?.profileType || "").trim().toLowerCase() === "exception" ? "exception" : "role";
+  const updatePermissionProfileType = (profileId, profileType) => {
+    const profile = permissionProfiles.find((candidate) => candidate.id === profileId);
+    updatePermissionProfile(profileId, {
+      settings: {
+        ...profile?.settings || {},
+        profileType
+      }
+    });
+  };
+  const selectedPermissionProfileCoverage = reactExports.useMemo(() => {
+    if (!selectedPermissionProfile) return [];
+    const selectedIds = new Set(selectedPermissionProfile.permissions);
+    return PERMISSION_CATALOG.map((group) => {
+      const selectedCount = group.items.filter(([permissionId]) => selectedIds.has(permissionId)).length;
+      return {
+        group: group.group,
+        selectedCount,
+        totalCount: group.items.length
+      };
+    });
+  }, [selectedPermissionProfile]);
+  const addPermissionProfile = (profileType = "role") => {
     const id = `profile-${Date.now()}`;
     updatePermissionProfiles([
       ...permissionProfiles,
       {
         id,
-        name: "New Permission Profile",
-        description: "Describe what this profile allows.",
-        permissions: ["dfp.view"]
+        name: profileType === "exception" ? "New Exception Access" : "New Permission Profile",
+        description: profileType === "exception" ? "Additional access granted to selected users outside their normal role." : "Describe what this role profile allows.",
+        permissions: profileType === "exception" ? [] : ["dfp.view"],
+        settings: { profileType }
       }
     ]);
     setSelectedProfileId(id);
@@ -82117,10 +82259,15 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 ] })
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addPermissionProfile, disabled: !canEditSection("platform-permission-profiles"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addPermissionProfile("role"), disabled: !canEditSection("platform-permission-profiles"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
               "Add",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Profile"
+              "Role"
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addPermissionProfile("exception"), disabled: !canEditSection("platform-permission-profiles"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+              "Add",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Exception"
             ] }) })
           ] }) : null
         }
@@ -82135,7 +82282,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               onClick: () => setSelectedProfileId(profile.id),
               className: `w-full rounded border px-4 py-3 text-left ${selectedPermissionProfile?.id === profile.id ? "border-cyan-400 bg-cyan-500/20" : "border-gray-700 bg-gray-900 hover:bg-gray-950"}`,
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-white", children: profile.name }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 flex-1 text-sm font-bold text-white", children: profile.name }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getPermissionProfileType(profile) === "exception" ? "bg-amber-500/20 text-amber-200" : "bg-cyan-500/20 text-cyan-200"}`, children: getPermissionProfileType(profile) })
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
                   profile.permissions.length,
                   " permissions"
@@ -82146,9 +82296,52 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           ))
         ] }),
         selectedPermissionProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_1fr_180px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Profile Name", value: selectedPermissionProfile.name, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Description", value: selectedPermissionProfile.description, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Description", value: selectedPermissionProfile.description, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Profile Type" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  className: fieldClass,
+                  value: getPermissionProfileType(selectedPermissionProfile),
+                  disabled: !canEditSection("platform-permission-profiles"),
+                  onChange: (event) => updatePermissionProfileType(selectedPermissionProfile.id, event.target.value === "exception" ? "exception" : "role"),
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "role", children: "Role" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "exception", children: "Exception" })
+                  ]
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-50", children: "Permission Coverage" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "Role profiles should describe normal duties. Exception profiles grant extra access to selected users without changing their base role." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-950 px-3 py-2 text-xs font-bold text-cyan-100", children: [
+                selectedPermissionProfile.permissions.length,
+                " selected"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3", children: selectedPermissionProfileCoverage.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/20 bg-gray-950/70 px-3 py-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-white", children: item.group }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 h-1.5 overflow-hidden rounded bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: "h-full rounded bg-cyan-400",
+                  style: { width: `${item.totalCount > 0 ? item.selectedCount / item.totalCount * 100 : 0}%` }
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] text-gray-400", children: [
+                item.selectedCount,
+                " / ",
+                item.totalCount
+              ] })
+            ] }, item.group)) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 grid gap-4 lg:grid-cols-2", children: PERMISSION_CATALOG.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: group.group }),
@@ -83755,11 +83948,12 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assigned Permission Profiles" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Tick each profile this user should receive. The same profiles apply across this user's active access scopes." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assigned Role Profiles and Exceptions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Tick the user's normal role profile, then tick any exception profiles that grant extra page, tab or button access outside that role. The same selections apply across this user's active access scopes." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: permissionProfiles.map((profile) => {
             const checked = selectedUserProfileIds.includes(profile.id);
+            const profileType = getPermissionProfileType(profile);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-950 p-3 text-sm text-gray-200", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
@@ -83775,7 +83969,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold text-white", children: profile.name }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2 font-semibold text-white", children: [
+                  profile.name,
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${profileType === "exception" ? "bg-amber-500/20 text-amber-200" : "bg-cyan-500/20 text-cyan-200"}`, children: profileType })
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-400", children: profile.description })
               ] })
             ] }, profile.id);
@@ -83785,7 +83982,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Group Permission Assignment" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Select multiple people, choose the permission profiles, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Select multiple people, choose their role profile and any exception profiles, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -83853,7 +84050,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold", children: profile.name }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2 font-semibold", children: [
+                    profile.name,
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${getPermissionProfileType(profile) === "exception" ? "bg-amber-500/20 text-amber-200" : "bg-cyan-500/20 text-cyan-200"}`, children: getPermissionProfileType(profile) })
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: profile.description })
                 ] })
               ] }, `bulk-${profile.id}`)) })
@@ -124369,7 +124569,17 @@ ${"=".repeat(60)}`);
   const denyPlatformAction = reactExports.useCallback((actionLabel) => {
     setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
   }, []);
-  const canEditDfpTiles = canUsePlatformPermission("dfp.editTiles");
+  const canMoveNonAcademicDfpTiles = canUsePlatformPermission("dfp.tiles.nonAcademic.addRemoveMove");
+  const canMoveAcademicDfpTiles = canUsePlatformPermission("dfp.tiles.academic.addRemoveMove");
+  const canEditNonAcademicDfpTileDetails = canUsePlatformPermission("dfp.tiles.nonAcademic.details.edit");
+  const canEditAcademicDfpTileDetails = canUsePlatformPermission("dfp.tiles.academic.details.edit");
+  const canEditDfpTiles = canUsePlatformPermission("dfp.editTiles") || canMoveNonAcademicDfpTiles || canMoveAcademicDfpTiles || canEditNonAcademicDfpTileDetails || canEditAcademicDfpTileDetails;
+  const canAddFlightTile = canUsePlatformPermission("dfp.addFlightTile.use") || canUsePlatformPermission("dfp.editTiles") || canMoveNonAcademicDfpTiles;
+  const canAddGroundTile = canUsePlatformPermission("dfp.addGroundTile.use") || canUsePlatformPermission("dfp.editTiles") || canMoveAcademicDfpTiles;
+  const canUseMultiSelect = canUsePlatformPermission("dfp.multiSelect.use") || canEditDfpTiles;
+  const canUseDispatchRate = canUsePlatformPermission("dfp.dispatchRate.view") || canEditDfpTiles;
+  const canUsePauseFlightOps = canUsePlatformPermission("dfp.pauseFlightOps.use") || canEditDfpTiles;
+  const canUseNeoTileAssist = canUsePlatformPermission("dfp.neoTile.use") || canUsePlatformPermission("neo.run");
   const canOpenFlightLine = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.view") || canUsePlatformPermission("dfp.flightLine.inventory.edit") || canUsePlatformPermission("dfp.flightLine.availability.edit") || canUsePlatformPermission("dfp.flightLine.availabilityLink.edit") || canUsePlatformPermission("dfp.aircraftNumber.edit");
   const canEditFlightLineInventory = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.inventory.edit");
   const canEditFlightLineAvailability = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.availability.edit");
@@ -135252,6 +135462,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     const secondaryPerson = getContextDatasetValue(contextElement, "dfpSecondaryPerson");
     const selectedEvent2 = getContextMenuEvent(eventId);
     const canEditActiveDfp = canEditDfpTiles && !isViewingPastDfp;
+    const canAddFlightOnActiveDfp = canAddFlightTile && !isViewingPastDfp;
+    const canAddGroundOnActiveDfp = canAddGroundTile && !isViewingPastDfp;
+    const canUseDispatchRateOnActiveDfp = canUseDispatchRate;
+    const canUseMultiSelectOnActiveDfp = canUseMultiSelect;
+    const canPauseFlightOpsOnActiveDfp = canUsePauseFlightOps && !isViewingPastDfp && canRunNeoBuildForActiveModel;
     const canUseValidation = canRunValidation;
     const menuItems = [];
     let title = "DFP Workspace";
@@ -135386,7 +135601,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             const trainee = findContextTrainee(selectedEvent2);
             if (trainee) openTraineeProfileTab(trainee, "lmp");
           } },
-          { label: "NEO", detail: "Show conflict resolution.", onSelect: () => handleNeoClick(selectedEvent2) },
+          { label: "NEO", detail: "Show conflict resolution.", disabled: !canUseNeoTileAssist, onSelect: () => handleNeoClick(selectedEvent2) },
           { label: "Send Alert", detail: "Open the event alert panel.", onSelect: () => openContextEventInDetails(selectedEvent2) },
           { label: "Delete", detail: "Open the event so Delete can be confirmed.", danger: true, onSelect: () => openContextEventInDetails(selectedEvent2) }
         );
@@ -135442,17 +135657,17 @@ ${error instanceof Error ? error.message : String(error)}`,
         ...isNeoBuildScheduleView ? [{ label: "Go to DFP", onSelect: openTodayDfpFromContextMenu }] : [],
         { label: "Staff Schedule", onSelect: openStaffScheduleFromContextMenu },
         ...activeUnitHasTrainees ? [{ label: "Trainee Schedule", onSelect: openTraineeScheduleFromContextMenu }] : [],
-        { label: "Add Flight Tile", detail: canEditActiveDfp ? "Create a new flight event." : "Tile editing is not available for this DFP.", disabled: !canEditActiveDfp, onSelect: () => {
+        { label: "Add Flight Tile", detail: canAddFlightOnActiveDfp ? "Create a new flight event." : "Add Flight Tile is not available for this profile or DFP.", disabled: !canAddFlightOnActiveDfp, onSelect: () => {
           setIsAddingTile(true);
           handleOpenModal(null, { type: "flight", oracleContext: isNeoBuildScheduleView ? "nextDayBuild" : null });
         } },
-        { label: "Add Ground Tile", detail: canEditActiveDfp ? "Create a new ground event." : "Tile editing is not available for this DFP.", disabled: !canEditActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
+        { label: "Add Ground Tile", detail: canAddGroundOnActiveDfp ? "Create a new ground event." : "Add Ground Tile is not available for this profile or DFP.", disabled: !canAddGroundOnActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
         { label: showValidation ? "Validation Check OFF" : "Validation Check ON", disabled: !canUseValidation, onSelect: () => setShowValidation(!showValidation) },
-        { label: showDepartureDensityOverlay ? "Dispatch Rate OFF" : "Dispatch Rate ON", onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
+        { label: showDepartureDensityOverlay ? "Dispatch Rate OFF" : "Dispatch Rate ON", disabled: !canUseDispatchRateOnActiveDfp, onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
         { label: isMagnifierEnabled ? "Magnifier OFF" : "Magnifier ON", onSelect: () => setIsMagnifierEnabled(!isMagnifierEnabled) },
-        { label: isMultiSelectMode ? "Multi Select OFF" : "Multi Select ON", onSelect: () => handleSetIsMultiSelectMode(!isMultiSelectMode) },
+        { label: isMultiSelectMode ? "Multi Select OFF" : "Multi Select ON", disabled: !canUseMultiSelectOnActiveDfp, onSelect: () => handleSetIsMultiSelectMode(!isMultiSelectMode) },
         ...isNeoBuildScheduleView ? [] : [
-          { label: "Pause Flight Ops", disabled: !canEditActiveDfp || !canRunNeoBuildForActiveModel, onSelect: openPauseFlightOpsFromContextMenu },
+          { label: "Pause Flight Ops", disabled: !canPauseFlightOpsOnActiveDfp, onSelect: openPauseFlightOpsFromContextMenu },
           { label: "Directed Tasks", onSelect: () => handleNavigation("Priorities") },
           { label: "Emergency", onSelect: () => handleNavigateToSettingsSection({ sectionId: "emergency" }) }
         ],
@@ -135528,10 +135743,16 @@ ${error instanceof Error ? error.message : String(error)}`,
     allTraineesData,
     buildDfpDate,
     buildResources,
+    canAddFlightTile,
+    canAddGroundTile,
     canEditDfpTiles,
     canOpenFlightLine,
     canRunNeoBuildForActiveModel,
     canRunValidation,
+    canUseDispatchRate,
+    canUseMultiSelect,
+    canUseNeoTileAssist,
+    canUsePauseFlightOps,
     canViewTraineePt051,
     configuredTrainingReportDisplayName,
     contextSettingsSections,
@@ -138573,8 +138794,8 @@ Do you want to replace the existing entry?`,
                 denyPastDfpEdit("add flight tiles");
                 return;
               }
-              if (!canEditDfpTiles) {
-                denyPlatformAction("Add or edit flight tiles is not permitted for your assigned permission profile");
+              if (!canAddFlightTile) {
+                denyPlatformAction("Add Flight Tile is not permitted for your assigned permission profile");
                 return;
               }
               setIsAddingTile(true);
@@ -138585,8 +138806,8 @@ Do you want to replace the existing entry?`,
                 denyPastDfpEdit("add ground tiles");
                 return;
               }
-              if (!canEditDfpTiles) {
-                denyPlatformAction("Add or edit ground tiles is not permitted for your assigned permission profile");
+              if (!canAddGroundTile) {
+                denyPlatformAction("Add Ground Tile is not permitted for your assigned permission profile");
                 return;
               }
               setShowAddGroundEvent(true);
@@ -138607,14 +138828,32 @@ Do you want to replace the existing entry?`,
             isMagnifierEnabled,
             setIsMagnifierEnabled,
             isMultiSelectMode,
-            setIsMultiSelectMode: handleSetIsMultiSelectMode,
+            setIsMultiSelectMode: (enabled) => {
+              if (enabled && !canUseMultiSelect) {
+                denyPlatformAction("Multi Select is not permitted for your assigned permission profile");
+                return;
+              }
+              handleSetIsMultiSelectMode(enabled);
+            },
             isOracleMode,
             onToggleOracleMode: handleToggleOracleMode,
             onQuickTile: handleQuickTile,
             showDepartureDensityOverlay,
-            onToggleDepartureDensityOverlay: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay),
+            onToggleDepartureDensityOverlay: () => {
+              if (!canUseDispatchRate) {
+                denyPlatformAction("Dispatch Rate is not permitted for your assigned permission profile");
+                return;
+              }
+              setShowDepartureDensityOverlay(!showDepartureDensityOverlay);
+            },
             dispatchRateWindowMinutes,
             canEditDfpTiles: canEditDfpTiles && !isViewingPastDfp,
+            canUseMultiSelect,
+            canUseDispatchRate,
+            canUsePauseFlightOps: canUsePauseFlightOps && !isViewingPastDfp,
+            canAddGroundTile: canAddGroundTile && !isViewingPastDfp,
+            canAddFlightTile: canAddFlightTile && !isViewingPastDfp,
+            canUseNeoTile: canUseNeoTileAssist,
             canOpenFlightLine,
             canRunValidation,
             canRunNeoBuild: canRunNeoBuildForActiveModel,
@@ -138625,8 +138864,8 @@ Do you want to replace the existing entry?`,
                 denyPastDfpEdit("pause flight operations");
                 return;
               }
-              if (!canEditDfpTiles || !canRunNeoBuildForActiveModel) {
-                denyPlatformAction(`Pause Flight Ops requires DFP tile edit permission and a NEO-capable operational model`);
+              if (!canUsePauseFlightOps || !canRunNeoBuildForActiveModel) {
+                denyPlatformAction(`Pause Flight Ops requires permission and a NEO-capable operational model`);
                 return;
               }
               const pauseDate = date;

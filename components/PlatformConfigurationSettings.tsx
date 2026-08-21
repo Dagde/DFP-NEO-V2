@@ -5711,15 +5711,45 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     [permissionProfiles, selectedProfileId],
   );
 
-  const addPermissionProfile = () => {
+  const getPermissionProfileType = (profile?: PermissionProfile | null): 'role' | 'exception' => (
+    String(profile?.settings?.profileType || '').trim().toLowerCase() === 'exception' ? 'exception' : 'role'
+  );
+
+  const updatePermissionProfileType = (profileId: string, profileType: 'role' | 'exception') => {
+    const profile = permissionProfiles.find((candidate) => candidate.id === profileId);
+    updatePermissionProfile(profileId, {
+      settings: {
+        ...(profile?.settings || {}),
+        profileType,
+      },
+    });
+  };
+
+  const selectedPermissionProfileCoverage = useMemo(() => {
+    if (!selectedPermissionProfile) return [];
+    const selectedIds = new Set(selectedPermissionProfile.permissions);
+    return PERMISSION_CATALOG.map((group) => {
+      const selectedCount = group.items.filter(([permissionId]) => selectedIds.has(permissionId)).length;
+      return {
+        group: group.group,
+        selectedCount,
+        totalCount: group.items.length,
+      };
+    });
+  }, [selectedPermissionProfile]);
+
+  const addPermissionProfile = (profileType: 'role' | 'exception' = 'role') => {
     const id = `profile-${Date.now()}`;
     updatePermissionProfiles([
       ...permissionProfiles,
       {
         id,
-        name: 'New Permission Profile',
-        description: 'Describe what this profile allows.',
-        permissions: ['dfp.view'],
+        name: profileType === 'exception' ? 'New Exception Access' : 'New Permission Profile',
+        description: profileType === 'exception'
+          ? 'Additional access granted to selected users outside their normal role.'
+          : 'Describe what this role profile allows.',
+        permissions: profileType === 'exception' ? [] : ['dfp.view'],
+        settings: { profileType },
       },
     ]);
     setSelectedProfileId(id);
@@ -11016,8 +11046,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               >
                 <span className="text-[9px] leading-tight">Delete<br />Profile</span>
               </button>
-              <button type="button" onClick={addPermissionProfile} disabled={!canEditSection('platform-permission-profiles')} className={platformActionButtonClass}>
-                <span className="text-[9px] leading-tight">Add<br />Profile</span>
+              <button type="button" onClick={() => addPermissionProfile('role')} disabled={!canEditSection('platform-permission-profiles')} className={platformActionButtonClass}>
+                <span className="text-[9px] leading-tight">Add<br />Role</span>
+              </button>
+              <button type="button" onClick={() => addPermissionProfile('exception')} disabled={!canEditSection('platform-permission-profiles')} className={platformActionButtonClass}>
+                <span className="text-[9px] leading-tight">Add<br />Exception</span>
               </button>
             </div>
           ) : null}
@@ -11036,16 +11069,64 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 onClick={() => setSelectedProfileId(profile.id)}
                 className={`w-full rounded border px-4 py-3 text-left ${selectedPermissionProfile?.id === profile.id ? 'border-cyan-400 bg-cyan-500/20' : 'border-gray-700 bg-gray-900 hover:bg-gray-950'}`}
               >
-                <div className="text-sm font-bold text-white">{profile.name}</div>
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1 text-sm font-bold text-white">{profile.name}</div>
+                  <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                    getPermissionProfileType(profile) === 'exception'
+                      ? 'bg-amber-500/20 text-amber-200'
+                      : 'bg-cyan-500/20 text-cyan-200'
+                  }`}>
+                    {getPermissionProfileType(profile)}
+                  </span>
+                </div>
                 <div className="mt-1 text-xs text-gray-400">{profile.permissions.length} permissions</div>
               </button>
             ))}
           </div>
           {selectedPermissionProfile && (
             <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-[1fr_1fr_180px]">
                 <DraftField label="Profile Name" value={selectedPermissionProfile.name} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value })} />
                 <DraftField label="Description" value={selectedPermissionProfile.description} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value })} />
+                <div>
+                  <span className={labelClass}>Profile Type</span>
+                  <select
+                    className={fieldClass}
+                    value={getPermissionProfileType(selectedPermissionProfile)}
+                    disabled={!canEditSection('platform-permission-profiles')}
+                    onChange={(event) => updatePermissionProfileType(selectedPermissionProfile.id, event.target.value === 'exception' ? 'exception' : 'role')}
+                  >
+                    <option value="role">Role</option>
+                    <option value="exception">Exception</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-4 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h5 className="text-sm font-bold text-cyan-50">Permission Coverage</h5>
+                    <p className="mt-1 text-xs text-cyan-100/70">
+                      Role profiles should describe normal duties. Exception profiles grant extra access to selected users without changing their base role.
+                    </p>
+                  </div>
+                  <div className="rounded bg-gray-950 px-3 py-2 text-xs font-bold text-cyan-100">
+                    {selectedPermissionProfile.permissions.length} selected
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {selectedPermissionProfileCoverage.map((item) => (
+                    <div key={item.group} className="rounded border border-cyan-500/20 bg-gray-950/70 px-3 py-2">
+                      <div className="text-xs font-semibold text-white">{item.group}</div>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded bg-gray-800">
+                        <div
+                          className="h-full rounded bg-cyan-400"
+                          style={{ width: `${item.totalCount > 0 ? (item.selectedCount / item.totalCount) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <div className="mt-1 text-[11px] text-gray-400">{item.selectedCount} / {item.totalCount}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 {PERMISSION_CATALOG.map((group) => (
@@ -12697,12 +12778,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-3">
-              <h5 className="text-sm font-bold text-white">Assigned Permission Profiles</h5>
-              <p className="mt-1 text-xs text-gray-400">Tick each profile this user should receive. The same profiles apply across this user's active access scopes.</p>
+              <h5 className="text-sm font-bold text-white">Assigned Role Profiles and Exceptions</h5>
+              <p className="mt-1 text-xs text-gray-400">
+                Tick the user's normal role profile, then tick any exception profiles that grant extra page, tab or button access outside that role. The same selections apply across this user's active access scopes.
+              </p>
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {permissionProfiles.map((profile) => {
                 const checked = selectedUserProfileIds.includes(profile.id);
+                const profileType = getPermissionProfileType(profile);
                 return (
                   <label key={profile.id} className="flex items-start gap-2 rounded border border-gray-700 bg-gray-950 p-3 text-sm text-gray-200">
                     <input
@@ -12718,7 +12802,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       }}
                     />
                     <span>
-                      <span className="block font-semibold text-white">{profile.name}</span>
+                      <span className="flex items-center gap-2 font-semibold text-white">
+                        {profile.name}
+                        <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                          profileType === 'exception' ? 'bg-amber-500/20 text-amber-200' : 'bg-cyan-500/20 text-cyan-200'
+                        }`}>
+                          {profileType}
+                        </span>
+                      </span>
                       <span className="mt-1 block text-xs text-gray-400">{profile.description}</span>
                     </span>
                   </label>
@@ -12732,7 +12823,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div>
                 <h5 className="text-sm font-bold text-white">Group Permission Assignment</h5>
                 <p className="mt-1 text-xs text-gray-400">
-                  Select multiple people, choose the permission profiles, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit.
+                  Select multiple people, choose their role profile and any exception profiles, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit.
                 </p>
               </div>
               <button
@@ -12813,7 +12904,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         onChange={(event) => toggleBulkAccessProfile(profile.id, event.target.checked)}
                       />
                       <span>
-                        <span className="block font-semibold">{profile.name}</span>
+                        <span className="flex items-center gap-2 font-semibold">
+                          {profile.name}
+                          <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                            getPermissionProfileType(profile) === 'exception' ? 'bg-amber-500/20 text-amber-200' : 'bg-cyan-500/20 text-cyan-200'
+                          }`}>
+                            {getPermissionProfileType(profile)}
+                          </span>
+                        </span>
                         <span className="block text-xs text-gray-500">{profile.description}</span>
                       </span>
                     </label>

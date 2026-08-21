@@ -34100,7 +34100,21 @@ const App: React.FC = () => {
         setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
     }, []);
 
-    const canEditDfpTiles = canUsePlatformPermission('dfp.editTiles');
+    const canMoveNonAcademicDfpTiles = canUsePlatformPermission('dfp.tiles.nonAcademic.addRemoveMove');
+    const canMoveAcademicDfpTiles = canUsePlatformPermission('dfp.tiles.academic.addRemoveMove');
+    const canEditNonAcademicDfpTileDetails = canUsePlatformPermission('dfp.tiles.nonAcademic.details.edit');
+    const canEditAcademicDfpTileDetails = canUsePlatformPermission('dfp.tiles.academic.details.edit');
+    const canEditDfpTiles = canUsePlatformPermission('dfp.editTiles')
+        || canMoveNonAcademicDfpTiles
+        || canMoveAcademicDfpTiles
+        || canEditNonAcademicDfpTileDetails
+        || canEditAcademicDfpTileDetails;
+    const canAddFlightTile = canUsePlatformPermission('dfp.addFlightTile.use') || canUsePlatformPermission('dfp.editTiles') || canMoveNonAcademicDfpTiles;
+    const canAddGroundTile = canUsePlatformPermission('dfp.addGroundTile.use') || canUsePlatformPermission('dfp.editTiles') || canMoveAcademicDfpTiles;
+    const canUseMultiSelect = canUsePlatformPermission('dfp.multiSelect.use') || canEditDfpTiles;
+    const canUseDispatchRate = canUsePlatformPermission('dfp.dispatchRate.view') || canEditDfpTiles;
+    const canUsePauseFlightOps = canUsePlatformPermission('dfp.pauseFlightOps.use') || canEditDfpTiles;
+    const canUseNeoTileAssist = canUsePlatformPermission('dfp.neoTile.use') || canUsePlatformPermission('neo.run');
     const canOpenFlightLine = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.view') || canUsePlatformPermission('dfp.flightLine.inventory.edit') || canUsePlatformPermission('dfp.flightLine.availability.edit') || canUsePlatformPermission('dfp.flightLine.availabilityLink.edit') || canUsePlatformPermission('dfp.aircraftNumber.edit');
     const canEditFlightLineInventory = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.inventory.edit');
     const canEditFlightLineAvailability = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.availability.edit');
@@ -47383,6 +47397,11 @@ appliedUpdates.forEach(update => {
         const secondaryPerson = getContextDatasetValue(contextElement, 'dfpSecondaryPerson');
         const selectedEvent = getContextMenuEvent(eventId);
         const canEditActiveDfp = canEditDfpTiles && !isViewingPastDfp;
+        const canAddFlightOnActiveDfp = canAddFlightTile && !isViewingPastDfp;
+        const canAddGroundOnActiveDfp = canAddGroundTile && !isViewingPastDfp;
+        const canUseDispatchRateOnActiveDfp = canUseDispatchRate;
+        const canUseMultiSelectOnActiveDfp = canUseMultiSelect;
+        const canPauseFlightOpsOnActiveDfp = canUsePauseFlightOps && !isViewingPastDfp && canRunNeoBuildForActiveModel;
         const canUseValidation = canRunValidation;
         const menuItems: DfpContextMenuItem[] = [];
         let title = 'DFP Workspace';
@@ -47538,7 +47557,7 @@ appliedUpdates.forEach(update => {
                         const trainee = findContextTrainee(selectedEvent);
                         if (trainee) openTraineeProfileTab(trainee, 'lmp');
                     }},
-                    { label: 'NEO', detail: 'Show conflict resolution.', onSelect: () => handleNeoClick(selectedEvent) },
+                    { label: 'NEO', detail: 'Show conflict resolution.', disabled: !canUseNeoTileAssist, onSelect: () => handleNeoClick(selectedEvent) },
                     { label: 'Send Alert', detail: 'Open the event alert panel.', onSelect: () => openContextEventInDetails(selectedEvent) },
                     { label: 'Delete', detail: 'Open the event so Delete can be confirmed.', danger: true, onSelect: () => openContextEventInDetails(selectedEvent) }
                 );
@@ -47600,17 +47619,17 @@ appliedUpdates.forEach(update => {
                 ...(isNeoBuildScheduleView ? [{ label: 'Go to DFP', onSelect: openTodayDfpFromContextMenu } as DfpContextMenuItem] : []),
                 { label: 'Staff Schedule', onSelect: openStaffScheduleFromContextMenu },
                 ...(activeUnitHasTrainees ? [{ label: 'Trainee Schedule', onSelect: openTraineeScheduleFromContextMenu } as DfpContextMenuItem] : []),
-                { label: 'Add Flight Tile', detail: canEditActiveDfp ? 'Create a new flight event.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: () => {
+                { label: 'Add Flight Tile', detail: canAddFlightOnActiveDfp ? 'Create a new flight event.' : 'Add Flight Tile is not available for this profile or DFP.', disabled: !canAddFlightOnActiveDfp, onSelect: () => {
                     setIsAddingTile(true);
                     handleOpenModal(null, { type: 'flight', oracleContext: isNeoBuildScheduleView ? 'nextDayBuild' : null });
                 }},
-                { label: 'Add Ground Tile', detail: canEditActiveDfp ? 'Create a new ground event.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
+                { label: 'Add Ground Tile', detail: canAddGroundOnActiveDfp ? 'Create a new ground event.' : 'Add Ground Tile is not available for this profile or DFP.', disabled: !canAddGroundOnActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
                 { label: showValidation ? 'Validation Check OFF' : 'Validation Check ON', disabled: !canUseValidation, onSelect: () => setShowValidation(!showValidation) },
-                { label: showDepartureDensityOverlay ? 'Dispatch Rate OFF' : 'Dispatch Rate ON', onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
+                { label: showDepartureDensityOverlay ? 'Dispatch Rate OFF' : 'Dispatch Rate ON', disabled: !canUseDispatchRateOnActiveDfp, onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
                 { label: isMagnifierEnabled ? 'Magnifier OFF' : 'Magnifier ON', onSelect: () => setIsMagnifierEnabled(!isMagnifierEnabled) },
-                { label: isMultiSelectMode ? 'Multi Select OFF' : 'Multi Select ON', onSelect: () => handleSetIsMultiSelectMode(!isMultiSelectMode) },
+                { label: isMultiSelectMode ? 'Multi Select OFF' : 'Multi Select ON', disabled: !canUseMultiSelectOnActiveDfp, onSelect: () => handleSetIsMultiSelectMode(!isMultiSelectMode) },
                 ...(isNeoBuildScheduleView ? [] : [
-                    { label: 'Pause Flight Ops', disabled: !canEditActiveDfp || !canRunNeoBuildForActiveModel, onSelect: openPauseFlightOpsFromContextMenu },
+                    { label: 'Pause Flight Ops', disabled: !canPauseFlightOpsOnActiveDfp, onSelect: openPauseFlightOpsFromContextMenu },
                     { label: 'Directed Tasks', onSelect: () => handleNavigation('Priorities') },
                     { label: 'Emergency', onSelect: () => handleNavigateToSettingsSection({ sectionId: 'emergency' }) },
                 ] as DfpContextMenuItem[]),
@@ -47687,10 +47706,16 @@ appliedUpdates.forEach(update => {
         allTraineesData,
         buildDfpDate,
         buildResources,
+        canAddFlightTile,
+        canAddGroundTile,
         canEditDfpTiles,
         canOpenFlightLine,
         canRunNeoBuildForActiveModel,
         canRunValidation,
+        canUseDispatchRate,
+        canUseMultiSelect,
+        canUseNeoTileAssist,
+        canUsePauseFlightOps,
         canViewTraineePt051,
         configuredTrainingReportDisplayName,
         contextSettingsSections,
@@ -51016,8 +51041,8 @@ appliedUpdates.forEach(update => {
                             denyPastDfpEdit('add flight tiles');
                             return;
                         }
-                        if (!canEditDfpTiles) {
-                            denyPlatformAction('Add or edit flight tiles is not permitted for your assigned permission profile');
+                        if (!canAddFlightTile) {
+                            denyPlatformAction('Add Flight Tile is not permitted for your assigned permission profile');
                             return;
                         }
                         // Debug alert removed - Add Tile functionality working correctly
@@ -51029,8 +51054,8 @@ appliedUpdates.forEach(update => {
                             denyPastDfpEdit('add ground tiles');
                             return;
                         }
-                        if (!canEditDfpTiles) {
-                            denyPlatformAction('Add or edit ground tiles is not permitted for your assigned permission profile');
+                        if (!canAddGroundTile) {
+                            denyPlatformAction('Add Ground Tile is not permitted for your assigned permission profile');
                             return;
                         }
                         setShowAddGroundEvent(true);
@@ -51051,14 +51076,32 @@ appliedUpdates.forEach(update => {
                     isMagnifierEnabled={isMagnifierEnabled}
                     setIsMagnifierEnabled={setIsMagnifierEnabled}
                     isMultiSelectMode={isMultiSelectMode}
-                    setIsMultiSelectMode={handleSetIsMultiSelectMode}
+                    setIsMultiSelectMode={(enabled) => {
+                        if (enabled && !canUseMultiSelect) {
+                            denyPlatformAction('Multi Select is not permitted for your assigned permission profile');
+                            return;
+                        }
+                        handleSetIsMultiSelectMode(enabled);
+                    }}
                     isOracleMode={isOracleMode}
                     onToggleOracleMode={handleToggleOracleMode}
                     onQuickTile={handleQuickTile}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
-                    onToggleDepartureDensityOverlay={() => setShowDepartureDensityOverlay(!showDepartureDensityOverlay)}
+                    onToggleDepartureDensityOverlay={() => {
+                        if (!canUseDispatchRate) {
+                            denyPlatformAction('Dispatch Rate is not permitted for your assigned permission profile');
+                            return;
+                        }
+                        setShowDepartureDensityOverlay(!showDepartureDensityOverlay);
+                    }}
                     dispatchRateWindowMinutes={dispatchRateWindowMinutes}
                     canEditDfpTiles={canEditDfpTiles && !isViewingPastDfp}
+                    canUseMultiSelect={canUseMultiSelect}
+                    canUseDispatchRate={canUseDispatchRate}
+                    canUsePauseFlightOps={canUsePauseFlightOps && !isViewingPastDfp}
+                    canAddGroundTile={canAddGroundTile && !isViewingPastDfp}
+                    canAddFlightTile={canAddFlightTile && !isViewingPastDfp}
+                    canUseNeoTile={canUseNeoTileAssist}
                     canOpenFlightLine={canOpenFlightLine}
                     canRunValidation={canRunValidation}
                     canRunNeoBuild={canRunNeoBuildForActiveModel}
@@ -51070,8 +51113,8 @@ appliedUpdates.forEach(update => {
                                denyPastDfpEdit('pause flight operations');
                                return;
                            }
-                           if (!canEditDfpTiles || !canRunNeoBuildForActiveModel) {
-                               denyPlatformAction(`Pause Flight Ops requires DFP tile edit permission and a NEO-capable operational model`);
+                           if (!canUsePauseFlightOps || !canRunNeoBuildForActiveModel) {
+                               denyPlatformAction(`Pause Flight Ops requires permission and a NEO-capable operational model`);
                                return;
                            }
                            // Pause Flight Ops: navigate to NEO Build for the active DFP date,

@@ -35,6 +35,12 @@ interface HeaderProps {
     onToggleDepartureDensityOverlay: () => void;
     dispatchRateWindowMinutes?: number;
     canEditDfpTiles?: boolean;
+    canUseMultiSelect?: boolean;
+    canUseDispatchRate?: boolean;
+    canUsePauseFlightOps?: boolean;
+    canAddGroundTile?: boolean;
+    canAddFlightTile?: boolean;
+    canUseNeoTile?: boolean;
     canOpenFlightLine?: boolean;
     canRunValidation?: boolean;
     canRunNeoBuild?: boolean;
@@ -88,6 +94,12 @@ const Header: React.FC<HeaderProps> = ({
     onToggleDepartureDensityOverlay,
     dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
     canEditDfpTiles = true,
+    canUseMultiSelect = canEditDfpTiles,
+    canUseDispatchRate = canEditDfpTiles,
+    canUsePauseFlightOps = canEditDfpTiles,
+    canAddGroundTile = canEditDfpTiles,
+    canAddFlightTile = canEditDfpTiles,
+    canUseNeoTile = true,
     canOpenFlightLine = true,
     canRunValidation = true,
     canRunNeoBuild = true,
@@ -315,9 +327,14 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 2. Multi Select Button */}
                         <button
-                          onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
-                          className={`${headerButtonClass} ${isMultiSelectMode ? 'active' : ''}`}
-                          title="Toggle multi-select mode"
+                          onClick={() => {
+                              if (!canUseMultiSelect) return;
+                              setIsMultiSelectMode(!isMultiSelectMode);
+                          }}
+                          disabled={!isFixedCrewModel && !canUseMultiSelect}
+                          aria-disabled={!canUseMultiSelect}
+                          className={`${headerButtonClass} ${isMultiSelectMode ? 'active' : ''} ${!canUseMultiSelect ? unavailableActionClass : ''}`}
+                          title={canUseMultiSelect ? 'Toggle multi-select mode' : 'Access denied: Multi Select permission required'}
                         >
                             <span className="text-center leading-tight">Multi Select</span>
                         </button>
@@ -348,9 +365,14 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 5. Dispatch Rate Button */}
                         <button
-                          onClick={onToggleDepartureDensityOverlay}
-                          className={`${headerButtonClass} ${showDepartureDensityOverlay ? 'active' : ''}`}
-                          title={`Dispatch Rate - Shows flight starts in a ${normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes)}-minute window`}
+                          onClick={() => {
+                              if (!canUseDispatchRate) return;
+                              onToggleDepartureDensityOverlay();
+                          }}
+                          disabled={!isFixedCrewModel && !canUseDispatchRate}
+                          aria-disabled={!canUseDispatchRate}
+                          className={`${headerButtonClass} ${showDepartureDensityOverlay ? 'active' : ''} ${!canUseDispatchRate ? unavailableActionClass : ''}`}
+                          title={canUseDispatchRate ? `Dispatch Rate - Shows flight starts in a ${normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes)}-minute window` : 'Access denied: Dispatch Rate permission required'}
                         >
                             <span className="text-center leading-tight">Dispatch<br/>Rate</span>
                         </button>
@@ -375,13 +397,13 @@ const Header: React.FC<HeaderProps> = ({
                         {(isFixedCrewModel || onPauseFlightOps) && (
                             <button
                                 onClick={() => {
-                                    if (!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild) return;
+                                    if (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild) return;
                                     onPauseFlightOps();
                                 }}
-                                disabled={!isFixedCrewModel && (!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild)}
-                                aria-disabled={!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild}
-                                className={`${headerButtonClass} ${(!onPauseFlightOps || !canEditDfpTiles || !canRunNeoBuild) ? unavailableActionClass : ''}`}
-                                title={(onPauseFlightOps && canEditDfpTiles && canRunNeoBuild) ? 'Pause Flight Ops' : 'Access denied: DFP edit and NEO Build permissions required'}
+                                disabled={!isFixedCrewModel && (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild)}
+                                aria-disabled={!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild}
+                                className={`${headerButtonClass} ${(!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild) ? unavailableActionClass : ''}`}
+                                title={(onPauseFlightOps && canUsePauseFlightOps && canRunNeoBuild) ? 'Pause Flight Ops' : 'Access denied: Pause Flight Ops and NEO Build permissions required'}
                             >
                                 <span className="text-center leading-tight">Pause<br/>Flight Ops</span>
                             </button>
@@ -390,13 +412,13 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 8. Add Ground Tile Button */}
                         <button 
                             onClick={() => {
-                                if (!canEditDfpTiles) return;
+                                if (!canAddGroundTile) return;
                                 onAddGroundEvent();
                             }}
-                            disabled={!isFixedCrewModel && !canEditDfpTiles}
-                            aria-disabled={!canEditDfpTiles}
-                            className={`${headerButtonClass} ${!canEditDfpTiles ? unavailableActionClass : ''}`}
-                            title={canEditDfpTiles ? 'Add Ground Tile' : 'Access denied: DFP tile edit permission required'}
+                            disabled={!isFixedCrewModel && !canAddGroundTile}
+                            aria-disabled={!canAddGroundTile}
+                            className={`${headerButtonClass} ${!canAddGroundTile ? unavailableActionClass : ''}`}
+                            title={canAddGroundTile ? 'Add Ground Tile' : 'Access denied: Add Ground Tile permission required'}
                         >
                             <span className="text-center leading-tight">Add Ground<br/>Tile</span>
                         </button>
@@ -404,13 +426,13 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 8. Add Flight Tile Button */}
                         <button 
                             onClick={() => {
-                                if (!canEditDfpTiles) return;
+                                if (!canAddFlightTile) return;
                                 onAddTile();
                             }}
-                            disabled={!isFixedCrewModel && !canEditDfpTiles}
-                            aria-disabled={!canEditDfpTiles}
-                            className={`${headerButtonClass} ${!canEditDfpTiles ? unavailableActionClass : ''}`}
-                            title={canEditDfpTiles ? 'Add Flight Tile' : 'Access denied: DFP tile edit permission required'}
+                            disabled={!isFixedCrewModel && !canAddFlightTile}
+                            aria-disabled={!canAddFlightTile}
+                            className={`${headerButtonClass} ${!canAddFlightTile ? unavailableActionClass : ''}`}
+                            title={canAddFlightTile ? 'Add Flight Tile' : 'Access denied: Add Flight Tile permission required'}
                         >
                             <span className="text-center leading-tight">Add Flight<br/>Tile</span>
                         </button>
@@ -419,17 +441,17 @@ const Header: React.FC<HeaderProps> = ({
                         <button
                             onClick={() => {
                                 if (isFixedCrewModel) {
-                                    if (!canEditDfpTiles || !onQuickTile) return;
+                                    if (!canUseNeoTile || !onQuickTile) return;
                                     onQuickTile();
                                     return;
                                 }
-                                if (!canRunNeoBuild) return;
+                                if (!canUseNeoTile || !canRunNeoBuild) return;
                                 onToggleOracleMode();
                             }}
-                            disabled={!isFixedCrewModel && !canRunNeoBuild}
-                            aria-disabled={isFixedCrewModel ? !canEditDfpTiles : !canRunNeoBuild}
-                            className={`relative ${headerButtonClass} ${isOracleMode && !isFixedCrewModel ? 'active' : ''} ${isFixedCrewModel ? (!canEditDfpTiles ? unavailableActionClass : '') : (!canRunNeoBuild ? unavailableActionClass : '')}`}
-                            title={isFixedCrewModel ? (canEditDfpTiles ? 'Quick Tile' : 'Access denied: DFP tile edit permission required') : canRunNeoBuild ? 'NEO - Tile' : 'Access denied: NEO Build permission required'}
+                            disabled={!isFixedCrewModel && (!canUseNeoTile || !canRunNeoBuild)}
+                            aria-disabled={isFixedCrewModel ? !canUseNeoTile : (!canUseNeoTile || !canRunNeoBuild)}
+                            className={`relative ${headerButtonClass} ${isOracleMode && !isFixedCrewModel ? 'active' : ''} ${isFixedCrewModel ? (!canUseNeoTile ? unavailableActionClass : '') : ((!canUseNeoTile || !canRunNeoBuild) ? unavailableActionClass : '')}`}
+                            title={isFixedCrewModel ? (canUseNeoTile ? 'Quick Tile' : 'Access denied: NEO Tile permission required') : (canUseNeoTile && canRunNeoBuild) ? 'NEO - Tile' : 'Access denied: NEO Tile permission required'}
                         >
                             <span className={`text-center leading-tight ${isOracleMode && !isFixedCrewModel ? 'animate-pulse-neo-text' : ''}`} style={{ color: isFixedCrewModel ? '#000000' : '#fb923c' }}>
                                 {isFixedCrewModel ? <>Quick<br />Tile</> : 'NEO - Tile'}
