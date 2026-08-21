@@ -116539,21 +116539,24 @@ const getContextDatasetValue = (element, key) => element?.dataset?.[key] || "";
 const DfpContextMenu = ({ menu, onClose }) => {
   if (!menu) return null;
   const estimatedWidth = 250;
-  const estimatedHeight = Math.min(360, 58 + menu.items.length * 42);
+  const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 768;
+  const viewportMargin = 8;
+  const maxMenuHeight = Math.max(180, viewportHeight - viewportMargin * 2);
+  const estimatedHeight = Math.min(maxMenuHeight, 58 + menu.items.length * 48);
   const { left, top, placement } = getAdaptiveContextMenuPosition({
     clickX: menu.x,
     clickY: menu.y,
     menuWidth: estimatedWidth,
     menuHeight: estimatedHeight,
-    margin: 8,
+    margin: viewportMargin,
     anchorGap: 8
   });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
       "data-dfp-context-menu": "true",
-      className: "fixed z-[900] min-w-[230px] max-w-[280px] overflow-hidden rounded-md border border-gray-300 bg-gray-100 text-gray-900 shadow-2xl shadow-black/30",
-      style: { left, top, transformOrigin: placement.replace("-", " ") },
+      className: "fixed z-[900] flex min-w-[230px] max-w-[280px] flex-col overflow-hidden rounded-md border border-gray-300 bg-gray-100 text-gray-900 shadow-2xl shadow-black/30",
+      style: { left, top, maxHeight: maxMenuHeight, transformOrigin: placement.replace("-", " ") },
       role: "menu",
       "aria-label": "DFP NEO context menu",
       onMouseDown: (event) => event.stopPropagation(),
@@ -116565,7 +116568,7 @@ const DfpContextMenu = ({ menu, onClose }) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-sm font-bold text-gray-950", children: menu.title }),
           menu.subtitle && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-[11px] font-semibold text-gray-600", children: menu.subtitle })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "py-1", children: menu.items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 overflow-y-auto py-1", children: menu.items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
             type: "button",
