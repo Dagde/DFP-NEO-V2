@@ -35833,35 +35833,6 @@ const App: React.FC = () => {
         });
     }, [date, eventsForDate, findTraineeForScheduleEvent, nextDayBuildEvents, publishedSchedules]);
 
-    const handleSavePreFlightNotes = useCallback(async () => {
-        if (!preFlightNotesEditor) return;
-        const temporaryNotes = preFlightNotesEditor.temporaryNotes.trim();
-        const enduringNotes = preFlightNotesEditor.enduringNotes.trim();
-        const updatedEvent: ScheduleEvent = {
-            ...preFlightNotesEditor.event,
-            preFlightNotes: temporaryNotes || undefined,
-        };
-        await handleSaveEvents([updatedEvent], false);
-
-        if (preFlightNotesEditor.trainee) {
-            const trainee = preFlightNotesEditor.trainee;
-            const existingPreferences = trainee.preferences && typeof trainee.preferences === 'object' && !Array.isArray(trainee.preferences)
-                ? trainee.preferences
-                : {};
-            await handleUpdateTrainee({
-                ...trainee,
-                preFlightNotesEnduring: enduringNotes,
-                preferences: {
-                    ...existingPreferences,
-                    preFlightNotesEnduring: enduringNotes,
-                },
-            });
-        }
-
-        logAudit('Program Schedule', 'Edit', `Updated pre-flight notes for ${updatedEvent.flightNumber || 'event'}`, `Temporary: ${temporaryNotes ? 'set' : 'blank'}; Enduring: ${enduringNotes ? 'set' : 'blank'}`);
-        setPreFlightNotesEditor(null);
-    }, [handleSaveEvents, handleUpdateTrainee, preFlightNotesEditor]);
-
     const buildRemedialPackageLmp = (
         originalTraineeLMP: SyllabusItemDetail[],
         eventToRemediate: SyllabusItemDetail,
@@ -38721,6 +38692,35 @@ const App: React.FC = () => {
 
         logScheduleDebug('🔵 ========== handleSaveEvents END ==========');
     };
+
+    const handleSavePreFlightNotes = useCallback(async () => {
+        if (!preFlightNotesEditor) return;
+        const temporaryNotes = preFlightNotesEditor.temporaryNotes.trim();
+        const enduringNotes = preFlightNotesEditor.enduringNotes.trim();
+        const updatedEvent: ScheduleEvent = {
+            ...preFlightNotesEditor.event,
+            preFlightNotes: temporaryNotes || undefined,
+        };
+        await handleSaveEvents([updatedEvent], false);
+
+        if (preFlightNotesEditor.trainee) {
+            const trainee = preFlightNotesEditor.trainee;
+            const existingPreferences = trainee.preferences && typeof trainee.preferences === 'object' && !Array.isArray(trainee.preferences)
+                ? trainee.preferences
+                : {};
+            await handleUpdateTrainee({
+                ...trainee,
+                preFlightNotesEnduring: enduringNotes,
+                preferences: {
+                    ...existingPreferences,
+                    preFlightNotesEnduring: enduringNotes,
+                },
+            });
+        }
+
+        logAudit('Program Schedule', 'Edit', `Updated pre-flight notes for ${updatedEvent.flightNumber || 'event'}`, `Temporary: ${temporaryNotes ? 'set' : 'blank'}; Enduring: ${enduringNotes ? 'set' : 'blank'}`);
+        setPreFlightNotesEditor(null);
+    }, [handleSaveEvents, handleUpdateTrainee, preFlightNotesEditor]);
 
     const handleCancelEvent = async (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
         // System freeze check - read directly from localStorage to avoid stale closure
