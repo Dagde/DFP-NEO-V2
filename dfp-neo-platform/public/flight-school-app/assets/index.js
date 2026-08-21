@@ -41049,7 +41049,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
     (t) => t.unavailability?.some((u) => u.reason && !u.reason.includes("TMUF") && !u.reason.includes("Medical") && u.reason !== "Leave")
   ).length;
   const totalTrainees = traineesData.length;
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6 max-w-7xl mx-auto w-full", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full min-h-0 w-full overflow-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto flex min-w-[760px] max-w-7xl flex-col space-y-6 p-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "Supervisor Dashboard" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400", children: "Overview of personnel and program status for today." })

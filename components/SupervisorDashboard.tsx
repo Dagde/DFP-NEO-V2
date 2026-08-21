@@ -60,8 +60,8 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
     const totalTrainees = traineesData.length;
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-900 overflow-y-auto">
-            <div className="p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <div className="h-full min-h-0 w-full overflow-auto bg-gray-900">
+            <div className="mx-auto flex min-w-[760px] max-w-7xl flex-col space-y-6 p-6">
                 <header>
                     <h1 className="text-3xl font-bold text-white">Supervisor Dashboard</h1>
                     <p className="text-lg text-gray-400">Overview of personnel and program status for today.</p>
