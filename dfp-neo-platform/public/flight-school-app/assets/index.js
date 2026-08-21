@@ -17127,8 +17127,8 @@ const ScheduleView = ({
   }, [canEditFlightLineAvailabilityLink, flightLineLinkedAvailabilityCount, flightLinePoolContext.poolIndex, isReadOnly, onLinkedAvailabilityChange, onUpdatePlatformConfig]);
   const getFlightLineUnavailableReason = reactExports.useCallback((aircraftNumber) => {
     const savedReason = flightLinePoolContext.unavailableReasons[aircraftNumber];
-    return savedReason || flightLinePoolContext.unavailableReasonOptions[0] || DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS$1[0];
-  }, [flightLinePoolContext.unavailableReasonOptions, flightLinePoolContext.unavailableReasons]);
+    return String(savedReason || "").trim();
+  }, [flightLinePoolContext.unavailableReasons]);
   const postFlightLineMaintenanceEvent = reactExports.useCallback((payload) => {
     if (!apiBase || !date) return;
     const aircraftNumber = String(payload.aircraftNumber || "").trim();
@@ -17323,12 +17323,10 @@ const ScheduleView = ({
     clearFlightLineAssignmentState(assignedEventIds);
     clearFlightLineDragState();
     if (!cleanNumber2 || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
-    const cleanReason = String(reason || getFlightLineUnavailableReason(cleanNumber2)).trim();
+    const cleanReason = String(reason ?? getFlightLineUnavailableReason(cleanNumber2)).trim();
     const wasAlreadyUnavailable = flightLineEffectiveUnavailableNumbers.includes(cleanNumber2);
     const nextUnavailableNumbers = sortFlightLineAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber2]);
-    saveFlightLineUnavailableAircraftNumbers(nextUnavailableNumbers, {
-      [cleanNumber2]: cleanReason
-    });
+    saveFlightLineUnavailableAircraftNumbers(nextUnavailableNumbers, cleanReason ? { [cleanNumber2]: cleanReason } : {});
     postFlightLineMaintenanceEvent({
       action: wasAlreadyUnavailable ? "reason_update" : "unavailable",
       aircraftNumber: cleanNumber2,
@@ -17392,10 +17390,20 @@ const ScheduleView = ({
   }, [flightLineAircraftContextMenu]);
   const setFlightLineAircraftUnavailableReason = reactExports.useCallback((aircraftNumber, reason) => {
     const cleanNumber2 = String(aircraftNumber || "").trim();
-    const cleanReason = String(reason || "").trim() || getFlightLineUnavailableReason(cleanNumber2);
+    const cleanReason = String(reason || "").trim();
     if (!cleanNumber2) return;
+    if (!cleanReason) {
+      saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers, { [cleanNumber2]: null });
+      postFlightLineMaintenanceEvent({
+        action: "reason_update",
+        aircraftNumber: cleanNumber2,
+        reason: "",
+        nextUnavailableNumbers: flightLineEffectiveUnavailableNumbers
+      });
+      return;
+    }
     moveFlightLineAircraftToUnavailable(cleanNumber2, cleanReason);
-  }, [getFlightLineUnavailableReason, moveFlightLineAircraftToUnavailable]);
+  }, [flightLineEffectiveUnavailableNumbers, moveFlightLineAircraftToUnavailable, postFlightLineMaintenanceEvent, saveFlightLineUnavailableAircraftNumbers]);
   reactExports.useEffect(() => {
     if (!flightLineAircraftContextMenu) return;
     const handlePointerDown = () => closeFlightLineAircraftContextMenu();
@@ -18814,7 +18822,7 @@ const ScheduleView = ({
                             onDragEnd: clearFlightLineDragState,
                             onContextMenu: (event) => openFlightLineAircraftContextMenu(event, number, tailNumber, true),
                             className: `flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${canEditFlightLineAvailability && !isReadOnly ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed opacity-60"} ${flightLineDraggedAircraftNumber === number ? "border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]" : "border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"}`,
-                            title: `${tailNumber} unavailable: ${unavailableReason}`,
+                            title: unavailableReason ? `${tailNumber} unavailable: ${unavailableReason}` : `${tailNumber} unavailable: reason not allocated`,
                             children: [
                               flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85", children: flightLinePoolContext.prefix }) : null,
                               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-full truncate text-[12px] font-black leading-none text-white", children: number })
@@ -18890,7 +18898,7 @@ const ScheduleView = ({
               ] }),
               flightLineAircraftContextMenu.isUnavailable ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500", children: "Reason" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "select",
                   {
                     className: "w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-semibold text-slate-100 outline-none focus:border-cyan-400",
@@ -18900,7 +18908,10 @@ const ScheduleView = ({
                       closeFlightLineAircraftContextMenu();
                     },
                     onKeyDown: stopEditableKeyPropagation,
-                    children: flightLinePoolContext.unavailableReasonOptions.map((reason) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: reason, children: reason }, `flight-line-unavailable-reason-${reason}`))
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Reason not allocated" }),
+                      flightLinePoolContext.unavailableReasonOptions.map((reason) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: reason, children: reason }, `flight-line-unavailable-reason-${reason}`))
+                    ]
                   }
                 )
               ] }) : null

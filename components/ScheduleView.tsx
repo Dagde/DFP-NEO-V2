@@ -7474,8 +7474,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [canEditFlightLineAvailabilityLink, flightLineLinkedAvailabilityCount, flightLinePoolContext.poolIndex, isReadOnly, onLinkedAvailabilityChange, onUpdatePlatformConfig]);
     const getFlightLineUnavailableReason = useCallback((aircraftNumber: string): string => {
         const savedReason = flightLinePoolContext.unavailableReasons[aircraftNumber];
-        return savedReason || flightLinePoolContext.unavailableReasonOptions[0] || DEFAULT_FLIGHT_LINE_UNAVAILABLE_REASONS[0];
-    }, [flightLinePoolContext.unavailableReasonOptions, flightLinePoolContext.unavailableReasons]);
+        return String(savedReason || '').trim();
+    }, [flightLinePoolContext.unavailableReasons]);
     const postFlightLineMaintenanceEvent = useCallback((payload: {
         action: 'unavailable' | 'serviceable' | 'reason_update';
         aircraftNumber: string;
@@ -7682,12 +7682,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         clearFlightLineAssignmentState(assignedEventIds);
         clearFlightLineDragState();
         if (!cleanNumber || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
-        const cleanReason = String(reason || getFlightLineUnavailableReason(cleanNumber)).trim();
+        const cleanReason = String(reason ?? getFlightLineUnavailableReason(cleanNumber)).trim();
         const wasAlreadyUnavailable = flightLineEffectiveUnavailableNumbers.includes(cleanNumber);
         const nextUnavailableNumbers = sortFlightLineAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber]);
-        saveFlightLineUnavailableAircraftNumbers(nextUnavailableNumbers, {
-            [cleanNumber]: cleanReason,
-        });
+        saveFlightLineUnavailableAircraftNumbers(nextUnavailableNumbers, cleanReason ? { [cleanNumber]: cleanReason } : {});
         postFlightLineMaintenanceEvent({
             action: wasAlreadyUnavailable ? 'reason_update' : 'unavailable',
             aircraftNumber: cleanNumber,
@@ -7756,10 +7754,20 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [flightLineAircraftContextMenu]);
     const setFlightLineAircraftUnavailableReason = useCallback((aircraftNumber: string, reason: string) => {
         const cleanNumber = String(aircraftNumber || '').trim();
-        const cleanReason = String(reason || '').trim() || getFlightLineUnavailableReason(cleanNumber);
+        const cleanReason = String(reason || '').trim();
         if (!cleanNumber) return;
+        if (!cleanReason) {
+            saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers, { [cleanNumber]: null });
+            postFlightLineMaintenanceEvent({
+                action: 'reason_update',
+                aircraftNumber: cleanNumber,
+                reason: '',
+                nextUnavailableNumbers: flightLineEffectiveUnavailableNumbers,
+            });
+            return;
+        }
         moveFlightLineAircraftToUnavailable(cleanNumber, cleanReason);
-    }, [getFlightLineUnavailableReason, moveFlightLineAircraftToUnavailable]);
+    }, [flightLineEffectiveUnavailableNumbers, moveFlightLineAircraftToUnavailable, postFlightLineMaintenanceEvent, saveFlightLineUnavailableAircraftNumbers]);
     useEffect(() => {
         if (!flightLineAircraftContextMenu) return;
         const handlePointerDown = () => closeFlightLineAircraftContextMenu();
@@ -9331,7 +9339,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                             onDragEnd={clearFlightLineDragState}
                                                             onContextMenu={(event) => openFlightLineAircraftContextMenu(event, number, tailNumber, true)}
                                                             className={`flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${canEditFlightLineAvailability && !isReadOnly ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'} ${flightLineDraggedAircraftNumber === number ? 'border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]' : 'border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]'}`}
-                                                            title={`${tailNumber} unavailable: ${unavailableReason}`}
+                                                            title={unavailableReason ? `${tailNumber} unavailable: ${unavailableReason}` : `${tailNumber} unavailable: reason not allocated`}
                                                         >
                                                             {flightLinePoolContext.prefix ? (
                                                                 <span className="mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85">{flightLinePoolContext.prefix}</span>
@@ -9418,6 +9426,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         }}
                                         onKeyDown={stopEditableKeyPropagation}
                                     >
+                                        <option value="">Reason not allocated</option>
                                         {flightLinePoolContext.unavailableReasonOptions.map((reason) => (
                                             <option key={`flight-line-unavailable-reason-${reason}`} value={reason}>{reason}</option>
                                         ))}
