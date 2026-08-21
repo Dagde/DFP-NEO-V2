@@ -307,7 +307,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'platform-deployment-readiness': 'Deployment Readiness',
     'platform-operational-runbook': 'Operational Runbook',
     'platform-licensing': 'Licensing & Deployment',
-    'platform-permission-profiles': 'Permission Profiles',
+    'platform-permission-profiles': 'Master Permission Profiles',
     'platform-rank-terminology': 'Rank, Terminology & Labels',
     'platform-user-access': 'User Access Scopes',
     'platform-scheduling-rule-sets': 'Scheduling Rule Sets',
@@ -511,7 +511,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-deployment-readiness': 'SaaS, on-premise, offline and hybrid readiness checks',
   'platform-operational-runbook': 'Support, backup, restore, update and accreditation records',
   'platform-licensing': 'Licence model, entitlements and validation status',
-  'platform-permission-profiles': 'Reusable permission profiles for user roles',
+  'platform-permission-profiles': 'Single master list of role and exception permission profiles',
   'platform-rank-terminology': 'Rank ordering and local instructor terminology',
   'platform-user-access': 'Control where each user can work',
   'platform-scheduling-rule-sets': 'Scheduling rules for selected units, aircraft and operating areas',
@@ -655,7 +655,7 @@ const sectionSearchKeywords: Partial<Record<SettingsMenuSection, string[]>> = {
     'customer smtp', 'test email', 'activation expiry',
   ],
   'platform-permission-profiles': [
-    'permission profiles', 'permissions', 'permission', 'roles', 'access role', 'admin rights',
+    'master permission profiles', 'permission profiles', 'permissions', 'permission', 'roles', 'access role', 'admin rights',
     'scheduler rights', 'viewer', 'profile',
   ],
   'platform-rank-terminology': [

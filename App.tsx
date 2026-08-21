@@ -47370,7 +47370,7 @@ appliedUpdates.forEach(update => {
         { label: 'Crew Composition', sectionId: 'crew-composition' },
         { label: 'Directed Task Lists', sectionId: 'platform-task-profiles' },
         { label: 'User List', sectionId: 'user-list' },
-        { label: 'Permission Profiles', sectionId: 'platform-permission-profiles' },
+        { label: 'Master Permission Profiles', sectionId: 'platform-permission-profiles' },
         { label: 'Rank, Terminology & Labels', sectionId: 'platform-rank-terminology' },
         { label: 'Email & Account Activation', sectionId: 'email-activation' },
         { label: 'Emergency', sectionId: 'emergency' },
