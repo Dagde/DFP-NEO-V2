@@ -43019,13 +43019,21 @@ const App: React.FC = () => {
             [`${school}:${buildDfpDate}`]: JSON.parse(JSON.stringify(newEventsForDate))
         }));
 
-           // Log the publish action to audit trail
-           logAudit(
-               "Next Day Build",
-               "Edit",
-               `Published schedule for ${buildDfpDate}`,
-               `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter(e => e.type === "flight").length}, ${resourceDisplayNames.ftd}: ${newEventsForDate.filter(e => e.type === "ftd").length}, Ground: ${newEventsForDate.filter(e => e.type === "ground").length}`
-           );
+        const publishDisplayName = authUser
+            ? formatAuthLoginName(authUser)
+            : (signedInDisplayName || currentUserName || 'Unknown User');
+        const publishRank = String(sessionUser?.militaryRank || currentUser?.rank || '').trim();
+        const publishedBy = publishRank && !publishDisplayName.startsWith(`${publishRank} `)
+            ? `${publishRank} ${publishDisplayName}`
+            : publishDisplayName;
+
+        // Log the publish action on the DFP audit page so the Program Schedule audit records who published it.
+        logAudit(
+            'Program Schedule',
+            'Edit',
+            `DFP published for ${buildDfpDate}`,
+            `Published by: ${publishedBy}; Total events: ${newEventsForDate.length}; Flight: ${newEventsForDate.filter(e => e.type === 'flight').length}; ${resourceDisplayNames.ftd}: ${newEventsForDate.filter(e => e.type === 'ftd').length}; Ground: ${newEventsForDate.filter(e => e.type === 'ground').length}`
+        );
 
         // ── SAVE DAILY SNAPSHOT TO DATABASE ──────────────────────────────────
         // Guard: skip if any event is seed data

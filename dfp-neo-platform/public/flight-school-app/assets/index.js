@@ -131698,11 +131698,14 @@ ${conflictLines.join("\n")}${moreText}`,
       ...prev,
       [`${school}:${buildDfpDate}`]: JSON.parse(JSON.stringify(newEventsForDate))
     }));
+    const publishDisplayName = authUser ? formatAuthLoginName(authUser) : signedInDisplayName || currentUserName || "Unknown User";
+    const publishRank = String(sessionUser?.militaryRank || currentUser2?.rank || "").trim();
+    const publishedBy = publishRank && !publishDisplayName.startsWith(`${publishRank} `) ? `${publishRank} ${publishDisplayName}` : publishDisplayName;
     logAudit(
-      "Next Day Build",
+      "Program Schedule",
       "Edit",
-      `Published schedule for ${buildDfpDate}`,
-      `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter((e) => e.type === "flight").length}, ${resourceDisplayNames.ftd}: ${newEventsForDate.filter((e) => e.type === "ftd").length}, Ground: ${newEventsForDate.filter((e) => e.type === "ground").length}`
+      `DFP published for ${buildDfpDate}`,
+      `Published by: ${publishedBy}; Total events: ${newEventsForDate.length}; Flight: ${newEventsForDate.filter((e) => e.type === "flight").length}; ${resourceDisplayNames.ftd}: ${newEventsForDate.filter((e) => e.type === "ftd").length}; Ground: ${newEventsForDate.filter((e) => e.type === "ground").length}`
     );
     const hasSeedData = newEventsForDate.some((e) => e.isHistoricalSeed === true);
     if (!hasSeedData && newEventsForDate.length > 0) {
