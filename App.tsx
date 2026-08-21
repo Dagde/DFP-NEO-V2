@@ -24927,6 +24927,8 @@ const App: React.FC = () => {
     const [date, setDate] = useState<string>(() => {
         return getLocalDateString();
     });
+    const initialDfpDateRef = useRef(date);
+    const hasSyncedInitialDfpDateWithEffectiveTimezoneRef = useRef(false);
     const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
     const [isEditingDefault, setIsEditingDefault] = useState(false);
@@ -30404,9 +30406,9 @@ const App: React.FC = () => {
     const aircraftConfigLabelsByResource = useMemo(() => {
         const snapshotKey = getDailySnapshotKey(date);
         const dateConfigState = aircraftConfigStateByDate[snapshotKey];
-        const isFutureBuildDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date > getLocalDateString();
+        const isFutureBuildDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date > getEffectiveDfpDateString();
         return buildAircraftConfigLabelsByResource(isFutureBuildDate ? currentAircraftConfigState : (dateConfigState || currentAircraftConfigState));
-    }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date, timezoneOffset]);
+    }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date, getEffectiveDfpDateString]);
     const nextDayBuildAircraftConfigLabelsByResource = useMemo(() => (
         buildAircraftConfigLabelsByResource(currentAircraftConfigState)
     ), [buildAircraftConfigLabelsByResource, currentAircraftConfigState]);
@@ -31956,6 +31958,17 @@ const App: React.FC = () => {
     useEffect(() => {
         try { localStorage.removeItem('dfp_last_viewed_date'); } catch (e) { /* ignore */ }
     }, []);
+
+    useEffect(() => {
+        if (hasSyncedInitialDfpDateWithEffectiveTimezoneRef.current) return;
+        if (!platformConfigLoaded || !settingsLoaded) return;
+
+        hasSyncedInitialDfpDateWithEffectiveTimezoneRef.current = true;
+        const effectiveToday = getEffectiveDfpDateString();
+        setDate((previousDate) => (
+            previousDate === initialDfpDateRef.current ? effectiveToday : previousDate
+        ));
+    }, [getEffectiveDfpDateString, platformConfigLoaded, settingsLoaded]);
 
     // FTD available count is now managed by user input in PrioritiesView
     // Default initialization is handled in useState declaration
@@ -33541,13 +33554,14 @@ const App: React.FC = () => {
     }, [detectConflictsForEvent, getPersonnel, enforceDayNightSeparation, date]);
 
     const getCurrentDecimalHour = (): number => {
-        const now = new Date();
-        return now.getHours() + (now.getMinutes() / 60) + (now.getSeconds() / 3600);
+        const offsetMs = effectiveDfpTimezoneOffset * 60 * 60 * 1000;
+        const now = new Date(Date.now() + offsetMs);
+        return now.getUTCHours() + (now.getUTCMinutes() / 60) + (now.getUTCSeconds() / 3600);
     };
 
     const isEventStartedOrFinished = (event: ScheduleEvent): { blocked: boolean; reason?: string } => {
         const eventDate = String(event.date || '').trim();
-        const today = getLocalDateString();
+        const today = getEffectiveDfpDateString();
         if (eventDate && eventDate < today) {
             return { blocked: true, reason: 'it is on a past DFP' };
         }
@@ -40606,7 +40620,7 @@ const App: React.FC = () => {
         // No need to open external tab
 
         // Use robust string comparison to avoid timezone issues between Local and UTC dates
-        const todayStr = getLocalDateString();
+        const todayStr = getEffectiveDfpDateString();
         logNeoBuildUiDebug('🚀 [NEO-Build] todayStr:', todayStr);
         logNeoBuildUiDebug('🚀 [NEO-Build] Date comparison:', buildDfpDate, '<=', todayStr, '=', buildDfpDate <= todayStr);
 
@@ -47222,7 +47236,7 @@ appliedUpdates.forEach(update => {
     }, [date, eventSegmentsForDate, publishedSchedules]);
 
     const hasChangeBarNotification = useCallback((candidateEvent: ScheduleEvent | null): boolean => {
-        if (!candidateEvent || date !== getLocalDateString()) return false;
+        if (!candidateEvent || date !== getEffectiveDfpDateString()) return false;
         const baselineEvents = baselineSchedules[activeBaselineKey];
         if (!Array.isArray(baselineEvents)) return false;
         const baselineEvent = baselineEvents.find((baseline) => baseline.id === candidateEvent.id);
@@ -47237,7 +47251,7 @@ appliedUpdates.forEach(update => {
             candidateEvent.pilot !== baselineEvent.pilot ||
             (candidateEvent.area || '') !== (baselineEvent.area || '')
         );
-    }, [activeBaselineKey, baselineSchedules, date]);
+    }, [activeBaselineKey, baselineSchedules, date, getEffectiveDfpDateString]);
 
     const handleRemoveChangeBarNotification = useCallback((candidateEvents: ScheduleEvent | ScheduleEvent[]) => {
         if (isPastDfpDate(date)) {
@@ -47282,9 +47296,9 @@ appliedUpdates.forEach(update => {
     }, []);
 
     const openTodayDfpFromContextMenu = useCallback(() => {
-        setDate(getLocalDateString());
+        setDate(getEffectiveDfpDateString());
         handleNavigation('Program Schedule');
-    }, [handleNavigation]);
+    }, [getEffectiveDfpDateString, handleNavigation]);
 
     const openStaffScheduleFromContextMenu = useCallback(() => {
         handleNavigation(['NextDayBuild', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView) ? 'NextDayInstructorSchedule' : 'InstructorSchedule');

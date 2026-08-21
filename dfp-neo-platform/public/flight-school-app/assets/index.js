@@ -17753,10 +17753,8 @@ const ScheduleView = ({
     });
   }, [date]);
   const showLiveAvailabilityLine = reactExports.useMemo(() => {
-    const browserToday = /* @__PURE__ */ new Date();
-    const browserTodayStr = `${browserToday.getFullYear()}-${String(browserToday.getMonth() + 1).padStart(2, "0")}-${String(browserToday.getDate()).padStart(2, "0")}`;
     const appTodayStr = `${currentTime.getUTCFullYear()}-${String(currentTime.getUTCMonth() + 1).padStart(2, "0")}-${String(currentTime.getUTCDate()).padStart(2, "0")}`;
-    return date === browserTodayStr && date === appTodayStr;
+    return date === appTodayStr;
   }, [date, currentTime]);
   reactExports.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -116798,6 +116796,8 @@ const App = () => {
   const [date, setDate] = reactExports.useState(() => {
     return getLocalDateString2();
   });
+  const initialDfpDateRef = reactExports.useRef(date);
+  const hasSyncedInitialDfpDateWithEffectiveTimezoneRef = reactExports.useRef(false);
   const [events, setEvents] = reactExports.useState([]);
   const [selectedEvent, setSelectedEvent] = reactExports.useState(null);
   const [isEditingDefault, setIsEditingDefault] = reactExports.useState(false);
@@ -121394,9 +121394,9 @@ const App = () => {
   const aircraftConfigLabelsByResource = reactExports.useMemo(() => {
     const snapshotKey = getDailySnapshotKey(date);
     const dateConfigState = aircraftConfigStateByDate[snapshotKey];
-    const isFutureBuildDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date > getLocalDateString2();
+    const isFutureBuildDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date > getEffectiveDfpDateString();
     return buildAircraftConfigLabelsByResource(isFutureBuildDate ? currentAircraftConfigState : dateConfigState || currentAircraftConfigState);
-  }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date, timezoneOffset]);
+  }, [aircraftConfigStateByDate, buildAircraftConfigLabelsByResource, currentAircraftConfigState, date, getEffectiveDfpDateString]);
   const nextDayBuildAircraftConfigLabelsByResource = reactExports.useMemo(() => buildAircraftConfigLabelsByResource(currentAircraftConfigState), [buildAircraftConfigLabelsByResource, currentAircraftConfigState]);
   const [flyingStartTime, setFlyingStartTime] = reactExports.useState(8);
   const [flyingEndTime, setFlyingEndTime] = reactExports.useState(17);
@@ -122712,6 +122712,13 @@ ${"=".repeat(60)}`);
     }
   }, []);
   reactExports.useEffect(() => {
+    if (hasSyncedInitialDfpDateWithEffectiveTimezoneRef.current) return;
+    if (!platformConfigLoaded || !settingsLoaded) return;
+    hasSyncedInitialDfpDateWithEffectiveTimezoneRef.current = true;
+    const effectiveToday = getEffectiveDfpDateString();
+    setDate((previousDate) => previousDate === initialDfpDateRef.current ? effectiveToday : previousDate);
+  }, [getEffectiveDfpDateString, platformConfigLoaded, settingsLoaded]);
+  reactExports.useEffect(() => {
     try {
       localStorage.setItem("dfp_build_date", buildDfpDate);
     } catch (e) {
@@ -123911,12 +123918,13 @@ ${"=".repeat(60)}`);
     return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
   }, [detectConflictsForEvent, getPersonnel, enforceDayNightSeparation, date]);
   const getCurrentDecimalHour = () => {
-    const now = /* @__PURE__ */ new Date();
-    return now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+    const offsetMs = effectiveDfpTimezoneOffset * 60 * 60 * 1e3;
+    const now = new Date(Date.now() + offsetMs);
+    return now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
   };
   const isEventStartedOrFinished = (event) => {
     const eventDate = String(event.date || "").trim();
-    const today = getLocalDateString2();
+    const today = getEffectiveDfpDateString();
     if (eventDate && eventDate < today) {
       return { blocked: true, reason: "it is on a past DFP" };
     }
@@ -129685,7 +129693,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     }
     logNeoBuildUiDebug("🚀 [NEO-Build] handleBuildDfp called");
     logNeoBuildUiDebug("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
-    const todayStr = getLocalDateString2();
+    const todayStr = getEffectiveDfpDateString();
     logNeoBuildUiDebug("🚀 [NEO-Build] todayStr:", todayStr);
     logNeoBuildUiDebug("🚀 [NEO-Build] Date comparison:", buildDfpDate, "<=", todayStr, "=", buildDfpDate <= todayStr);
     if (buildDfpDate <= todayStr) {
@@ -135077,14 +135085,14 @@ ${error instanceof Error ? error.message : String(error)}`,
     return (eventSegmentsForDate || []).find((event) => event.id === eventId) || (publishedSchedules[date] || []).find((event) => event.id === eventId) || null;
   }, [date, eventSegmentsForDate, publishedSchedules]);
   const hasChangeBarNotification = reactExports.useCallback((candidateEvent) => {
-    if (!candidateEvent || date !== getLocalDateString2()) return false;
+    if (!candidateEvent || date !== getEffectiveDfpDateString()) return false;
     const baselineEvents = baselineSchedules[activeBaselineKey];
     if (!Array.isArray(baselineEvents)) return false;
     const baselineEvent = baselineEvents.find((baseline) => baseline.id === candidateEvent.id);
     if (!baselineEvent) return true;
     const epsilon = 1e-3;
     return Math.abs(candidateEvent.startTime - baselineEvent.startTime) > epsilon || Math.abs(candidateEvent.duration - baselineEvent.duration) > epsilon || candidateEvent.resourceId !== baselineEvent.resourceId || candidateEvent.instructor !== baselineEvent.instructor || candidateEvent.student !== baselineEvent.student || candidateEvent.pilot !== baselineEvent.pilot || (candidateEvent.area || "") !== (baselineEvent.area || "");
-  }, [activeBaselineKey, baselineSchedules, date]);
+  }, [activeBaselineKey, baselineSchedules, date, getEffectiveDfpDateString]);
   const handleRemoveChangeBarNotification = reactExports.useCallback((candidateEvents) => {
     if (isPastDfpDate(date)) {
       denyPastDfpEdit("remove change bar notifications");
@@ -135121,9 +135129,9 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
   }, []);
   const openTodayDfpFromContextMenu = reactExports.useCallback(() => {
-    setDate(getLocalDateString2());
+    setDate(getEffectiveDfpDateString());
     handleNavigation("Program Schedule");
-  }, [handleNavigation]);
+  }, [getEffectiveDfpDateString, handleNavigation]);
   const openStaffScheduleFromContextMenu = reactExports.useCallback(() => {
     handleNavigation(["NextDayBuild", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView) ? "NextDayInstructorSchedule" : "InstructorSchedule");
   }, [activeView, handleNavigation]);

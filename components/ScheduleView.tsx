@@ -8170,14 +8170,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [date]);
 
     const showLiveAvailabilityLine = useMemo(() => {
-        const browserToday = new Date();
-        const browserTodayStr = `${browserToday.getFullYear()}-${String(browserToday.getMonth() + 1).padStart(2, '0')}-${String(browserToday.getDate()).padStart(2, '0')}`;
-
         // currentTime is already adjusted to the selected app timezone; use UTC
         // getters to extract the intended app-local day from that adjusted value.
         const appTodayStr = `${currentTime.getUTCFullYear()}-${String(currentTime.getUTCMonth() + 1).padStart(2, '0')}-${String(currentTime.getUTCDate()).padStart(2, '0')}`;
 
-        return date === browserTodayStr && date === appTodayStr;
+        return date === appTodayStr;
     }, [date, currentTime]);
 
     useEffect(() => {
