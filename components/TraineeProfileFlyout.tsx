@@ -2675,6 +2675,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             pt051Assessments={pt051Assessments || new Map()}
                             events={events}
                             lmpScores={scores.get(trainee.fullName) || []}
+                            traineeLmp={currentIndividualLMP || []}
                             syllabusDetails={syllabusDetails}
                             registerDirtyCheck={registerDirtyCheck}
                             phraseBank={activeTrainingReportPhraseBank}

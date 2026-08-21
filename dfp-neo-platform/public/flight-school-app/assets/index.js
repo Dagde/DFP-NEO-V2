@@ -23834,6 +23834,17 @@ const formatTrainingReportDisplayDate = (dateString) => {
   const year = String(date.getUTCFullYear()).slice(-2);
   return `${day} ${month} ${year}`;
 };
+const formatRplGrantedTimestamp = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = date.toLocaleString("en-GB", { month: "short" });
+  const year = String(date.getFullYear()).slice(-2);
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${day} ${month} ${year} ${hours}:${minutes}`;
+};
 const stripGeneratedFollowUpNotes$1 = (value, generatedPrefix = "") => {
   const lines = String(value || "").split("\n");
   const cleanedPrefix = generatedPrefix.trim();
@@ -24051,7 +24062,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel: instructorLabel2 = "Instructor", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false, courseCommanderLabel = "Cse Commander" }) => {
+const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, traineeLmp = [], syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel: instructorLabel2 = "Instructor", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false, courseCommanderLabel = "Cse Commander" }) => {
   const reportTemplate = reactExports.useMemo(() => {
     const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
     const terminologyName = String(trainingReportTerminology?.name || "").trim();
@@ -24172,6 +24183,45 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
     }
     return event;
   });
+  const rplGrantedItem = reactExports.useMemo(() => {
+    const refs = [
+      event.id,
+      event.eventCode,
+      event.flightNumber,
+      currentEvent?.id,
+      currentEvent?.eventCode,
+      currentEvent?.flightNumber,
+      initialAssessment?.eventId,
+      initialAssessment?.flightNumber
+    ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+    if (refs.length === 0) return null;
+    const refSet = new Set(refs);
+    return traineeLmp.find((item) => {
+      if (item.rplGranted !== true) return false;
+      const itemRefs = [
+        item.id,
+        item.code,
+        item.masterEventId
+      ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+      return itemRefs.some((ref) => refSet.has(ref));
+    }) || null;
+  }, [
+    currentEvent?.eventCode,
+    currentEvent?.flightNumber,
+    currentEvent?.id,
+    event.eventCode,
+    event.flightNumber,
+    event.id,
+    initialAssessment?.eventId,
+    initialAssessment?.flightNumber,
+    traineeLmp
+  ]);
+  const rplIssuedNote = reactExports.useMemo(() => {
+    if (!rplGrantedItem) return "";
+    const issuedBy = String(rplGrantedItem.rplGrantedBy || "").trim() || "Unknown issuer";
+    const issuedAt = formatRplGrantedTimestamp(rplGrantedItem.rplGrantedAt);
+    return issuedAt ? `Issued by ${issuedBy} on ${issuedAt}` : `Issued by ${issuedBy}`;
+  }, [rplGrantedItem]);
   const syllabusEvent = reactExports.useMemo(() => {
     const eventCodes = [
       event.eventCode,
@@ -24732,6 +24782,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
       addSectionTitle(printReportTemplate.modules.overallAssessment.title || "Overall Assessment");
       addKeyValueRows([
         [printOverallFields.result, completionLabel],
+        ...rplGrantedItem ? [["RPL", rplIssuedNote || "Granted"]] : [],
         [printOverallFields.overallGrade, overallGrade ? formatGradeOption(overallGrade) : "None"],
         [printOverallFields.overallResult, overallResultLabel],
         [printOverallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : "Not assessed"]
@@ -25074,20 +25125,29 @@ This action cannot be undone.`;
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.result }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-2", children: missionStatusOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "radio",
-                        name: "dco-result",
-                        value: option.code,
-                        checked: dcoResult === option.code,
-                        onChange: (e) => setDcoResult(e.target.value),
-                        className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
-                  ] }, option.code)) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-2", children: [
+                    missionStatusOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer hover:bg-gray-700/30 p-1 rounded", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "dco-result",
+                          value: option.code,
+                          checked: dcoResult === option.code,
+                          onChange: (e) => setDcoResult(e.target.value),
+                          className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: option.label })
+                    ] }, option.code)),
+                    rplGrantedItem && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-2 rounded border border-emerald-500/40 bg-emerald-950/20 p-1.5", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-emerald-400 bg-emerald-500/20 text-[10px] font-black text-emerald-200", children: "✓" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-emerald-100", children: "RPL" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-medium text-emerald-200/80", children: rplIssuedNote })
+                      ] })
+                    ] })
+                  ] })
                 ] }),
                 dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: [
@@ -27910,6 +27970,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     pt051Assessments: pt051Assessments || /* @__PURE__ */ new Map(),
                     events,
                     lmpScores: scores.get(trainee.fullName) || [],
+                    traineeLmp: currentIndividualLMP || [],
                     syllabusDetails,
                     registerDirtyCheck,
                     phraseBank: activeTrainingReportPhraseBank,

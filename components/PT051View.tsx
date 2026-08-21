@@ -32,6 +32,7 @@ interface TrainingReportViewProps {
     pt051Assessments: Map<string, TrainingReportAssessment>;
     events: ScheduleEvent[];
     lmpScores: Score[];
+    traineeLmp?: SyllabusItemDetail[];
     syllabusDetails: SyllabusItemDetail[];
     registerDirtyCheck: (isDirty: () => boolean, onSave: () => void, onDiscard: () => void) => void;
     phraseBank: PhraseBank;
@@ -245,6 +246,18 @@ const formatTrainingReportDisplayDate = (dateString?: string): string => {
     const month = date.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
     const year = String(date.getUTCFullYear()).slice(-2);
     return `${day} ${month} ${year}`;
+};
+
+const formatRplGrantedTimestamp = (value?: string | null): string => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = date.toLocaleString('en-GB', { month: 'short' });
+    const year = String(date.getFullYear()).slice(-2);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day} ${month} ${year} ${hours}:${minutes}`;
 };
 
 const stripGeneratedFollowUpNotes = (value: string, generatedPrefix = ''): string => {
@@ -545,7 +558,7 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
     );
 };
 
-const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'Instructor', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '', formatResourceLabel, embeddedInProfile = false, courseCommanderLabel = 'Cse Commander' }) => {
+const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, traineeLmp = [], syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'Instructor', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '', formatResourceLabel, embeddedInProfile = false, courseCommanderLabel = 'Cse Commander' }) => {
     const reportTemplate = useMemo(() => {
         const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
         const terminologyName = String(trainingReportTerminology?.name || '').trim();
@@ -689,6 +702,49 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         }
         return event;
     });
+    const rplGrantedItem = useMemo(() => {
+        const refs = [
+            event.id,
+            event.eventCode,
+            event.flightNumber,
+            currentEvent?.id,
+            currentEvent?.eventCode,
+            currentEvent?.flightNumber,
+            initialAssessment?.eventId,
+            initialAssessment?.flightNumber,
+        ]
+            .map(value => String(value || '').trim().toUpperCase())
+            .filter(Boolean);
+        if (refs.length === 0) return null;
+        const refSet = new Set(refs);
+        return traineeLmp.find(item => {
+            if (item.rplGranted !== true) return false;
+            const itemRefs = [
+                item.id,
+                item.code,
+                item.masterEventId,
+            ]
+                .map(value => String(value || '').trim().toUpperCase())
+                .filter(Boolean);
+            return itemRefs.some(ref => refSet.has(ref));
+        }) || null;
+    }, [
+        currentEvent?.eventCode,
+        currentEvent?.flightNumber,
+        currentEvent?.id,
+        event.eventCode,
+        event.flightNumber,
+        event.id,
+        initialAssessment?.eventId,
+        initialAssessment?.flightNumber,
+        traineeLmp,
+    ]);
+    const rplIssuedNote = useMemo(() => {
+        if (!rplGrantedItem) return '';
+        const issuedBy = String(rplGrantedItem.rplGrantedBy || '').trim() || 'Unknown issuer';
+        const issuedAt = formatRplGrantedTimestamp(rplGrantedItem.rplGrantedAt);
+        return issuedAt ? `Issued by ${issuedBy} on ${issuedAt}` : `Issued by ${issuedBy}`;
+    }, [rplGrantedItem]);
     const syllabusEvent = useMemo(() => {
         const eventCodes = [
             event.eventCode,
@@ -1370,6 +1426,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             addSectionTitle(printReportTemplate.modules.overallAssessment.title || 'Overall Assessment');
             addKeyValueRows([
                 [printOverallFields.result, completionLabel],
+                ...(rplGrantedItem ? [['RPL', rplIssuedNote || 'Granted'] as [string, string]] : []),
                 [printOverallFields.overallGrade, overallGrade ? formatGradeOption(overallGrade) : 'None'],
                 [printOverallFields.overallResult, overallResultLabel],
                 [printOverallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : 'Not assessed'],
@@ -1743,6 +1800,15 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                                 <span className="text-white font-medium">{option.label}</span>
                                             </label>
                                         ))}
+                                        {rplGrantedItem && (
+                                            <div className="flex items-start gap-2 rounded border border-emerald-500/40 bg-emerald-950/20 p-1.5">
+                                                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-emerald-400 bg-emerald-500/20 text-[10px] font-black text-emerald-200">✓</span>
+                                                <div className="min-w-0">
+                                                    <div className="text-sm font-semibold text-emerald-100">RPL</div>
+                                                    <div className="text-xs font-medium text-emerald-200/80">{rplIssuedNote}</div>
+                                                </div>
+                                            </div>
+                                        )}
                                         </div>
                                     </div>
                                     {dcoResult === 'DPCO' && (
