@@ -77543,16 +77543,27 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
   const deleteSelectedPermissionProfile = async () => {
     if (!selectedPermissionProfile) return;
     const profileLabel = selectedPermissionProfile.name || selectedPermissionProfile.id;
+    const profileId = selectedPermissionProfile.id;
     const confirmed = await showDarkConfirm(
       `Delete permission profile "${profileLabel}"?
 
-This removes the reusable permission profile from Settings. Users assigned only this profile may lose those permissions after you save.`,
+This removes it from the master list and from every user assignment that currently uses it. Users assigned only this profile may lose those permissions after you save.`,
       "Delete Permission Profile?",
       "warning"
     );
     if (!confirmed) return;
-    const nextProfiles = permissionProfiles.filter((profile) => profile.id !== selectedPermissionProfile.id);
+    const nextProfiles = permissionProfiles.filter((profile) => profile.id !== profileId);
     updatePermissionProfiles(nextProfiles);
+    setConfig((prev) => ({
+      ...prev,
+      userAccess: (Array.isArray(prev.userAccess) ? prev.userAccess : []).map((access) => ({
+        ...access,
+        settings: {
+          ...access.settings || {},
+          permissionProfileIds: Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds.filter((id) => String(id || "").trim() !== profileId) : []
+        }
+      }))
+    }));
     setSelectedProfileId(nextProfiles[0]?.id || "");
   };
   const displayUserName = (user) => {
@@ -82274,6 +82285,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 xl:grid-cols-[340px,1fr]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-950/25 px-4 py-3 text-xs text-cyan-50", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold uppercase tracking-wide text-cyan-200", children: "Single Master List" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-cyan-100/80", children: "These profiles control app access only. Staff and trainee profile roles remain operational data for scheduling, training and display. User and group assignment panels always use this same master list." })
+          ] }),
           permissionProfiles.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950/70 px-4 py-5 text-sm text-gray-400", children: "No master permission profiles configured." }),
           permissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
@@ -83949,7 +83964,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assign Master Profiles to This User" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Tick the user's normal role profile, then tick any exception profiles that grant extra page, tab or button access outside that role. These options come from the Master Permission Profiles list." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Tick the user's normal role profile, then tick any exception profiles that grant extra page, tab or button access outside that role. These options come from the Master Permission Profiles list." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "Changes made in Master Permission Profiles appear here automatically because this is not a separate role list." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: permissionProfiles.map((profile) => {
             const checked = selectedUserProfileIds.includes(profile.id);
@@ -83982,7 +83998,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assign Master Profiles to Multiple People" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Select multiple people, choose their role profile and any exception profiles from the master list, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Select multiple people, choose their role profile and any exception profiles from the master list, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "Additions and deletions in the master list are reflected in this list automatically." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
