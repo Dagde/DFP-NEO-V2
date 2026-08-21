@@ -3294,127 +3294,6 @@ const handleEditableTextBeforeInput = (event, onChange, maxLength) => {
   event.stopPropagation();
   insertEditableTextAtCursor(event.currentTarget, " ", onChange, maxLength);
 };
-const REPORT_KEY = "__dfpDragDiagnostics";
-const STORAGE_KEY = "dfp_drag_diagnostics_report";
-const SAMPLE_LIMIT = 80;
-const nowMs = () => typeof performance !== "undefined" ? performance.now() : Date.now();
-const getReport = () => {
-  const existing = typeof window !== "undefined" ? window[REPORT_KEY] : null;
-  if (existing?.reportType === "dfp-drag-diagnostics") return existing;
-  const report = {
-    reportType: "dfp-drag-diagnostics",
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    version: 1,
-    activeSessionId: null,
-    sessions: []
-  };
-  if (typeof window !== "undefined") {
-    window[REPORT_KEY] = report;
-  }
-  return report;
-};
-const persistReport = (report) => {
-  report.generatedAt = (/* @__PURE__ */ new Date()).toISOString();
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(report));
-  } catch {
-  }
-};
-const getSession = (sessionId) => {
-  if (!sessionId) return null;
-  return getReport().sessions.find((session) => session.sessionId === sessionId) || null;
-};
-const pushLimited = (items, item, limit = SAMPLE_LIMIT) => {
-  const next = [...items, item];
-  if (next.length <= limit) return next;
-  return next.slice(next.length - limit);
-};
-const startDfpDragDiagnostic = (details) => {
-  if (typeof window === "undefined") return null;
-  const report = getReport();
-  const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const session = {
-    sessionId,
-    board: details.board,
-    startedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    endedAt: null,
-    eventId: details.eventId,
-    eventType: details.eventType || null,
-    flightNumber: details.flightNumber || null,
-    resourceId: details.resourceId || null,
-    draggedTileCount: details.draggedTileCount,
-    eventCount: details.eventCount,
-    resourceCount: details.resourceCount,
-    zoomLevel: details.zoomLevel,
-    moveCount: 0,
-    skippedDuplicateCount: 0,
-    flushCount: 0,
-    totalUpdateCount: 0,
-    maxPointerGapMs: 0,
-    maxTotalMoveMs: 0,
-    maxConflictMs: 0,
-    maxFlushDelayMs: 0,
-    samples: [],
-    flushSamples: []
-  };
-  report.activeSessionId = sessionId;
-  report.sessions = [...report.sessions, session].slice(-20);
-  persistReport(report);
-  return sessionId;
-};
-const recordDfpDragMoveDiagnostic = (sessionId, sample) => {
-  const session = getSession(sessionId);
-  if (!session) return;
-  session.moveCount += 1;
-  if (sample.duplicateSkipped) session.skippedDuplicateCount += 1;
-  session.totalUpdateCount += sample.updateCount;
-  session.maxTotalMoveMs = Math.max(session.maxTotalMoveMs, sample.totalMoveMs);
-  session.maxConflictMs = Math.max(session.maxConflictMs, sample.conflictMs);
-  const previous = session.samples[session.samples.length - 1];
-  const pointerGapMs = previous?.recordedAtMs ? nowMs() - previous.recordedAtMs : 0;
-  session.maxPointerGapMs = Math.max(session.maxPointerGapMs, pointerGapMs);
-  const compactSample = {
-    recordedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    recordedAtMs: nowMs(),
-    xInGrid: Number(sample.xInGrid.toFixed(1)),
-    yInGrid: Number(sample.yInGrid.toFixed(1)),
-    updateCount: sample.updateCount,
-    duplicateSkipped: sample.duplicateSkipped,
-    pointerGapMs: Number(pointerGapMs.toFixed(1)),
-    totalMoveMs: Number(sample.totalMoveMs.toFixed(2)),
-    geometryMs: Number(sample.geometryMs.toFixed(2)),
-    buildUpdatesMs: Number(sample.buildUpdatesMs.toFixed(2)),
-    conflictMs: Number(sample.conflictMs.toFixed(2)),
-    signature: sample.signature.slice(0, 260)
-  };
-  if (session.samples.length < 20 || compactSample.totalMoveMs >= 8 || compactSample.pointerGapMs >= 80) {
-    session.samples = pushLimited(session.samples, compactSample);
-  }
-  persistReport(getReport());
-};
-const recordDfpDragFlushDiagnostic = (sessionId, sample) => {
-  const session = getSession(sessionId);
-  if (!session) return;
-  const flushDelayMs = nowMs() - sample.queuedAtMs;
-  session.flushCount += 1;
-  session.maxFlushDelayMs = Math.max(session.maxFlushDelayMs, flushDelayMs);
-  session.flushSamples = pushLimited(session.flushSamples, {
-    flushedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    updateCount: sample.updateCount,
-    flushDelayMs: Number(flushDelayMs.toFixed(2)),
-    signature: sample.signature.slice(0, 260)
-  }, 40);
-  persistReport(getReport());
-};
-const endDfpDragDiagnostic = (sessionId) => {
-  const report = getReport();
-  const session = getSession(sessionId);
-  if (!session) return;
-  session.endedAt = (/* @__PURE__ */ new Date()).toISOString();
-  if (report.activeSessionId === sessionId) report.activeSessionId = null;
-  persistReport(report);
-};
-const getDfpDragDiagnosticReport = () => getReport();
 const getAdaptiveContextMenuPosition = ({
   clickX,
   clickY,
@@ -8912,7 +8791,6 @@ const Header = ({
   onLogout,
   onShowAdminPanel,
   onShowChangePassword,
-  onStartStaffAvailabilityDiagnose,
   isFlightLinePanelOpen = false,
   onToggleFlightLinePanel
 }) => {
@@ -9300,20 +9178,6 @@ const Header = ({
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" }) }),
                   "Change Password"
-                ]
-              }
-            ),
-            onStartStaffAvailabilityDiagnose && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: () => {
-                  setShowUserMenu(false);
-                  onStartStaffAvailabilityDiagnose();
-                },
-                className: "w-full px-3 py-2 text-left text-xs text-cyan-200 hover:bg-cyan-900/20 flex items-center gap-2",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 17v-6m4 6V7m4 10v-4M5 19h14M5 5h14" }) }),
-                  "Diagnose"
                 ]
               }
             ),
@@ -11102,6 +10966,126 @@ const VisualAdjustGuide = ({
       ]
     }
   );
+};
+const REPORT_KEY = "__dfpDragDiagnostics";
+const STORAGE_KEY = "dfp_drag_diagnostics_report";
+const SAMPLE_LIMIT = 80;
+const nowMs = () => typeof performance !== "undefined" ? performance.now() : Date.now();
+const getReport = () => {
+  const existing = typeof window !== "undefined" ? window[REPORT_KEY] : null;
+  if (existing?.reportType === "dfp-drag-diagnostics") return existing;
+  const report = {
+    reportType: "dfp-drag-diagnostics",
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    version: 1,
+    activeSessionId: null,
+    sessions: []
+  };
+  if (typeof window !== "undefined") {
+    window[REPORT_KEY] = report;
+  }
+  return report;
+};
+const persistReport = (report) => {
+  report.generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(report));
+  } catch {
+  }
+};
+const getSession = (sessionId) => {
+  if (!sessionId) return null;
+  return getReport().sessions.find((session) => session.sessionId === sessionId) || null;
+};
+const pushLimited = (items, item, limit = SAMPLE_LIMIT) => {
+  const next = [...items, item];
+  if (next.length <= limit) return next;
+  return next.slice(next.length - limit);
+};
+const startDfpDragDiagnostic = (details) => {
+  if (typeof window === "undefined") return null;
+  const report = getReport();
+  const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const session = {
+    sessionId,
+    board: details.board,
+    startedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    endedAt: null,
+    eventId: details.eventId,
+    eventType: details.eventType || null,
+    flightNumber: details.flightNumber || null,
+    resourceId: details.resourceId || null,
+    draggedTileCount: details.draggedTileCount,
+    eventCount: details.eventCount,
+    resourceCount: details.resourceCount,
+    zoomLevel: details.zoomLevel,
+    moveCount: 0,
+    skippedDuplicateCount: 0,
+    flushCount: 0,
+    totalUpdateCount: 0,
+    maxPointerGapMs: 0,
+    maxTotalMoveMs: 0,
+    maxConflictMs: 0,
+    maxFlushDelayMs: 0,
+    samples: [],
+    flushSamples: []
+  };
+  report.activeSessionId = sessionId;
+  report.sessions = [...report.sessions, session].slice(-20);
+  persistReport(report);
+  return sessionId;
+};
+const recordDfpDragMoveDiagnostic = (sessionId, sample) => {
+  const session = getSession(sessionId);
+  if (!session) return;
+  session.moveCount += 1;
+  if (sample.duplicateSkipped) session.skippedDuplicateCount += 1;
+  session.totalUpdateCount += sample.updateCount;
+  session.maxTotalMoveMs = Math.max(session.maxTotalMoveMs, sample.totalMoveMs);
+  session.maxConflictMs = Math.max(session.maxConflictMs, sample.conflictMs);
+  const previous = session.samples[session.samples.length - 1];
+  const pointerGapMs = previous?.recordedAtMs ? nowMs() - previous.recordedAtMs : 0;
+  session.maxPointerGapMs = Math.max(session.maxPointerGapMs, pointerGapMs);
+  const compactSample = {
+    recordedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    recordedAtMs: nowMs(),
+    xInGrid: Number(sample.xInGrid.toFixed(1)),
+    yInGrid: Number(sample.yInGrid.toFixed(1)),
+    updateCount: sample.updateCount,
+    duplicateSkipped: sample.duplicateSkipped,
+    pointerGapMs: Number(pointerGapMs.toFixed(1)),
+    totalMoveMs: Number(sample.totalMoveMs.toFixed(2)),
+    geometryMs: Number(sample.geometryMs.toFixed(2)),
+    buildUpdatesMs: Number(sample.buildUpdatesMs.toFixed(2)),
+    conflictMs: Number(sample.conflictMs.toFixed(2)),
+    signature: sample.signature.slice(0, 260)
+  };
+  if (session.samples.length < 20 || compactSample.totalMoveMs >= 8 || compactSample.pointerGapMs >= 80) {
+    session.samples = pushLimited(session.samples, compactSample);
+  }
+  persistReport(getReport());
+};
+const recordDfpDragFlushDiagnostic = (sessionId, sample) => {
+  const session = getSession(sessionId);
+  if (!session) return;
+  const flushDelayMs = nowMs() - sample.queuedAtMs;
+  session.flushCount += 1;
+  session.maxFlushDelayMs = Math.max(session.maxFlushDelayMs, flushDelayMs);
+  session.flushSamples = pushLimited(session.flushSamples, {
+    flushedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    updateCount: sample.updateCount,
+    flushDelayMs: Number(flushDelayMs.toFixed(2)),
+    signature: sample.signature.slice(0, 260)
+  }, 40);
+  persistReport(getReport());
+};
+const endDfpDragDiagnostic = (sessionId) => {
+  const report = getReport();
+  const session = getSession(sessionId);
+  if (!session) return;
+  session.endedAt = (/* @__PURE__ */ new Date()).toISOString();
+  if (report.activeSessionId === sessionId) report.activeSessionId = null;
+  persistReport(report);
 };
 const escapeOrganisationTemplateHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 const downloadOrganisationStructureTemplateFile = (fileName = "DFP_NEO_Organisation_Structure_Template.xls") => {
@@ -15995,7 +15979,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     if (itemsForCommit.length === 0) {
       if (uploadResult?.status === "valid") {
         importWizardTemplateRows(initialSetupTemplates.find((template) => template.id === "courses"), uploadResult);
-        setSaveMessage("The uploaded LMP was valid, but no importable event rows were available to commit. Check the LMP diagnostics for parsed row details.");
+        setSaveMessage("The uploaded LMP was valid, but no importable event rows were available to commit. Review the parsed LMP rows before trying again.");
         pushWizardLmpDiag("commit:blocked-valid-upload-no-items", {
           reason: "Validated upload existed, but neither React-staged items nor synchronous fallback parsing produced commit rows.",
           uploadHeaders: uploadResult.headers || [],
@@ -25870,17 +25854,6 @@ const readErrorMessage = async (response, fallback) => {
     return fallback;
   }
 };
-const downloadJsonFile$1 = (filename, payload) => {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
 const AccountAccessPanel = ({
   personType,
   personId,
@@ -25977,27 +25950,6 @@ const AccountAccessPanel = ({
       setWorking(false);
     }
   };
-  const handleDownloadDiagnostics = async () => {
-    setWorking(true);
-    setMessage("");
-    setError("");
-    try {
-      const params = new URLSearchParams({ personType, personId: lookupId });
-      const response = await fetch(`/api/admin/direct-person-account-diagnostics?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${sessionToken}` }
-      });
-      if (!response.ok) throw new Error(await readErrorMessage(response, "Failed to download account diagnostics"));
-      const data = await response.json();
-      const safeName = String(name || data?.person?.name || "person").replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "person";
-      const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-      downloadJsonFile$1(`dfp-account-activation-diagnostics_${safeName}_${timestamp}.json`, data);
-      setMessage("Account activation diagnostics downloaded.");
-    } catch (err) {
-      setError(err?.message || "Failed to download account diagnostics");
-    } finally {
-      setWorking(false);
-    }
-  };
   const user = payload?.user || null;
   const activationStatus = String(user?.activationStatus || "NONE").toUpperCase();
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-sky-700/40 bg-sky-950/20 p-3 space-y-3", children: [
@@ -26066,16 +26018,6 @@ const AccountAccessPanel = ({
             disabled: working || loading,
             className: "rounded border border-gray-600 bg-gray-800/60 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700/70 disabled:cursor-not-allowed disabled:opacity-50",
             children: "Refresh"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: handleDownloadDiagnostics,
-            disabled: working || loading,
-            className: "rounded border border-amber-500/50 bg-amber-900/30 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-800/50 disabled:cursor-not-allowed disabled:opacity-50",
-            children: "Download Account Diagnostics"
           }
         )
       ] })
@@ -29540,7 +29482,6 @@ const CourseSelectionFlyout = ({
   onConfirm,
   onClose,
   updateType,
-  onDownloadDiagnostics,
   uploadPreview
 }) => {
   const [selectedCourse, setSelectedCourse] = reactExports.useState("");
@@ -29644,15 +29585,6 @@ const CourseSelectionFlyout = ({
       hasNoValidRows && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-red-700 bg-red-950/30 p-3 text-xs text-red-200", children: "No valid trainee rows were found. Each uploaded trainee must have a Personnel ID and name before the course can be updated." })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex flex-wrap justify-end gap-3", children: [
-      onDownloadDiagnostics && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: onDownloadDiagnostics,
-          className: "px-4 py-2 bg-gray-700 text-sky-300 rounded-md hover:bg-gray-600 transition-colors text-sm font-semibold",
-          children: "Diag"
-        }
-      ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
@@ -29741,18 +29673,6 @@ const UpdateSummaryFlyout = ({ summary, onClose }) => {
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "OK" }) })
   ] }) });
-};
-const normaliseDiagnosticToken = (value) => String(value || "").trim().toUpperCase();
-const downloadJsonFile = (filename, payload) => {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 };
 const getValueFromRow$1 = (row, possibleKeys) => {
   for (const key of possibleKeys) {
@@ -29937,83 +29857,6 @@ const TraineeBulkUploadFlyout = ({
     return Array.from(courseNames).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
   }, [activeCourses, coursesFromFile]);
   const canIssueAccountActivations = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_"));
-  const handleDownloadCoursePickerDiagnostics = () => {
-    const allowedCourseSet = new Set(allowedCourses.map(normaliseDiagnosticToken).filter(Boolean));
-    const activeCourseSet = new Set(activeCourses.map(normaliseDiagnosticToken).filter(Boolean));
-    const fileCourseSet = new Set(coursesFromFile.map(normaliseDiagnosticToken).filter(Boolean));
-    const selectableCourseSet = new Set(selectableCourses.map(normaliseDiagnosticToken).filter(Boolean));
-    const scopedCourseColorSet = new Set(Object.keys(courseColors).map(normaliseDiagnosticToken).filter(Boolean));
-    const rawCourseNames = courses.map((course) => String(course?.name || course?.code || course?.number || "").trim()).filter(Boolean);
-    const rawCourseSet = new Set(rawCourseNames.map(normaliseDiagnosticToken));
-    const rawCourseRecords = courses.map((course) => {
-      const displayName = String(course?.name || course?.code || course?.number || "").trim();
-      const normalisedName = normaliseDiagnosticToken(displayName);
-      return {
-        displayName,
-        normalisedName,
-        name: course?.name || "",
-        code: course?.code || "",
-        number: course?.number || "",
-        unit: course?.unit || "",
-        location: course?.location || "",
-        status: course?.status || "",
-        lmpType: course?.lmpType || "",
-        academicLmpType: course?.academicLmpType || "",
-        inAllowedCourses: allowedCourseSet.has(normalisedName),
-        inActiveCoursesAfterMerge: activeCourseSet.has(normalisedName),
-        inSelectableCourses: selectableCourseSet.has(normalisedName),
-        inclusionSource: [
-          allowedCourseSet.has(normalisedName) ? "allowedCourses" : "",
-          rawCourseSet.has(normalisedName) ? "coursesProp" : "",
-          fileCourseSet.has(normalisedName) ? "uploadedFile" : ""
-        ].filter(Boolean)
-      };
-    });
-    const selectableDetails = selectableCourses.map((course) => {
-      const normalisedName = normaliseDiagnosticToken(course);
-      const matchingRecords = rawCourseRecords.filter((record) => record.normalisedName === normalisedName);
-      return {
-        course,
-        normalisedName,
-        fromAllowedCourses: allowedCourseSet.has(normalisedName),
-        fromScopedCourseColors: scopedCourseColorSet.has(normalisedName),
-        fromCoursesProp: rawCourseSet.has(normalisedName),
-        fromUploadedFileFallback: fileCourseSet.has(normalisedName) && activeCourseSet.size === 0,
-        matchingCourseRecords: matchingRecords,
-        likelyReasonVisible: allowedCourseSet.has(normalisedName) ? "Included because CourseRosterView allowedCourses includes it." : scopedCourseColorSet.has(normalisedName) ? "Included because scoped courseColors contains it for the current unit/combined unit." : rawCourseSet.has(normalisedName) ? "Present in the full courses prop, but should not be visible unless allowedCourses or scoped courseColors also includes it." : fileCourseSet.has(normalisedName) ? "Included from the uploaded file because no active app courses were available." : "Included from an unknown course source."
-      };
-    });
-    const payload = {
-      diagnostic: "trainee-bulk-upload-course-picker",
-      version: "CCH 8.152",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      updateType,
-      file: file ? { name: file.name, size: file.size, type: file.type || "" } : null,
-      counts: {
-        allowedCourses: allowedCourses.length,
-        rawCourseRecords: courses.length,
-        rawCourseNames: rawCourseNames.length,
-        coursesFromUploadedFile: coursesFromFile.length,
-        activeCoursesAfterMerge: activeCourses.length,
-        selectableCourses: selectableCourses.length,
-        selectableCoursesNotInRosterAllowedCourses: selectableDetails.filter((course) => !course.fromAllowedCourses).length,
-        selectableCoursesFromScopedCourseColorsOnly: selectableDetails.filter((course) => !course.fromAllowedCourses && course.fromScopedCourseColors).length,
-        selectableCoursesFromFullCoursesPropOnly: selectableDetails.filter((course) => !course.fromAllowedCourses && !course.fromScopedCourseColors && course.fromCoursesProp).length
-      },
-      arrays: {
-        allowedCourses,
-        rawCourseNames,
-        coursesFromUploadedFile: coursesFromFile,
-        activeCoursesAfterMerge: activeCourses,
-        selectableCourses,
-        courseColorKeys: Object.keys(courseColors).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }))
-      },
-      selectableDetails,
-      rawCourseRecords
-    };
-    const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    downloadJsonFile(`dfp-trainee-upload-course-picker-diagnostics_${timestamp}.json`, payload);
-  };
   const handleFile = (selectedFile) => {
     if (!selectedFile) return;
     setRows([]);
@@ -30282,7 +30125,6 @@ const TraineeBulkUploadFlyout = ({
         updateType,
         onConfirm: processRows,
         onClose: () => setShowCourseSelection(false),
-        onDownloadDiagnostics: handleDownloadCoursePickerDiagnostics,
         uploadPreview
       }
     ),
@@ -40013,17 +39855,6 @@ const getDashboardEventFinishTime = (event) => {
   finish.setMinutes(Math.round((start + duration) * 60));
   return finish;
 };
-const downloadDashboardJsonFile = (filename, payload) => {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
 const getDashboardTrainingReportSuppressionIds = (report) => {
   const traineeName = String(report.traineeFullName || "").trim();
   return [
@@ -40540,134 +40371,6 @@ const MyDashboard = ({
       return !staffReportCodeDates.has(codeDate);
     });
   }, [incompletePt051s, visibleTrainingReportsToComplete]);
-  const downloadReportCompletionDiagnostics = () => {
-    const fullUserName = toDashboardSurnameFirstName(userName);
-    const fullUserKey = normaliseDashboardContactName(fullUserName);
-    const suppressedEventIds = new Set(suppressedPt051EventIds.map((value) => String(value || "").trim()).filter(Boolean));
-    const assessmentRows = Array.from(pt051Assessments.entries()).map(([mapKey, assessment]) => {
-      const candidateIds = [
-        assessment.eventId,
-        assessment.id,
-        `dashboard-due-${assessment.eventId}-${normaliseDashboardContactName(assessment.traineeFullName)}`,
-        `pt051-${assessment.eventId}-${assessment.traineeFullName}`,
-        mapKey
-      ].map((value) => String(value || "").trim()).filter(Boolean);
-      return {
-        source: "pt051Assessments",
-        mapKey,
-        id: assessment.id,
-        eventId: assessment.eventId,
-        flightNumber: assessment.flightNumber,
-        traineeFullName: assessment.traineeFullName,
-        instructorName: assessment.instructorName,
-        date: assessment.date,
-        isCompleted: assessment.isCompleted === true,
-        instructorMatchesCurrentUser: normaliseDashboardContactName(assessment.instructorName) === fullUserKey,
-        candidateIds,
-        suppressedMatches: candidateIds.filter((candidateId) => suppressedEventIds.has(candidateId)),
-        visibleInReportsToComplete: visiblePt051ReportsToComplete.some((item) => item.id === assessment.id || item.eventId === assessment.eventId)
-      };
-    });
-    const scheduleRows = events.filter((event) => !isDashboardStandbyEvent(event)).map((event) => {
-      const detail = findDashboardSyllabusDetail(event, syllabusDetails);
-      const traineeName = String(event.student || event.traineeFullName || "").trim();
-      const derivedAssessmentId = `dashboard-due-${event.id}-${normaliseDashboardContactName(traineeName)}`;
-      const candidateIds = [
-        event.id,
-        derivedAssessmentId,
-        `pt051-${event.id}-${traineeName}`
-      ].map((value) => String(value || "").trim()).filter(Boolean);
-      const finishTime = getDashboardEventFinishTime(event);
-      return {
-        source: "scheduledEventDerivedDueReport",
-        eventId: event.id,
-        flightNumber: getDashboardEventCode(event),
-        type: event.type,
-        resourceId: event.resourceId,
-        date: event.date,
-        startTime: event.startTime,
-        duration: event.duration,
-        finishIso: finishTime?.toISOString() || null,
-        finishHasPassed: finishTime ? finishTime.getTime() <= Date.now() : false,
-        traineeName,
-        instructor: event.instructor,
-        pilot: event.pilot,
-        fixedCrewPic: event.fixedCrewPic,
-        detailCode: detail?.code || null,
-        detailType: detail?.type || null,
-        detailAssessmentRequired: detail?.assessmentRequired === true,
-        eventAssessmentRequired: event.assessmentRequired === true,
-        isGroundOrProcedural: isDashboardGroundOrProceduralEvent(event, detail),
-        assignedInstructorMatchesCurrentUser: normaliseDashboardContactName(event.instructor || event.pilot || event.fixedCrewPic) === fullUserKey,
-        candidateIds,
-        suppressedMatches: candidateIds.filter((candidateId) => suppressedEventIds.has(candidateId)),
-        visibleInReportsToComplete: incompletePt051s.some((item) => item.id === derivedAssessmentId || item.eventId === event.id)
-      };
-    });
-    const staffQueueRows = trainingReportsToComplete.map((entry) => {
-      const candidateIds = getDashboardTrainingReportSuppressionIds(entry.report);
-      return {
-        source: "trainingReportsToComplete",
-        report: {
-          id: entry.report.id,
-          eventId: entry.report.eventId,
-          eventCode: entry.report.eventCode,
-          callsign: entry.report.callsign,
-          date: entry.report.date,
-          status: entry.report.status,
-          dashboardAcknowledgedAt: entry.report.dashboardAcknowledgedAt || null,
-          dashboardAssigneeName: entry.report.dashboardAssigneeName || null,
-          instructorName: entry.report.instructorName || null,
-          staffName: entry.report.staffName || null,
-          traineeFullName: entry.report.traineeFullName || null,
-          unitCode: entry.report.unitCode || null,
-          locationCode: entry.report.locationCode || null
-        },
-        staff: {
-          id: entry.staff.id || null,
-          idNumber: entry.staff.idNumber,
-          name: entry.staff.name,
-          rank: entry.staff.rank,
-          unit: entry.staff.unit
-        },
-        candidateIds,
-        suppressedMatches: candidateIds.filter((candidateId) => suppressedEventIds.has(candidateId)),
-        visibleInReportsToComplete: visibleTrainingReportsToComplete.some((visibleEntry) => visibleEntry.report.id === entry.report.id)
-      };
-    });
-    const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    downloadDashboardJsonFile(`dfp-dashboard-report-render-diagnostics_${timestamp}.json`, {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      currentUser: {
-        userName,
-        userRank,
-        fullUserName,
-        fullUserKey
-      },
-      counts: {
-        visiblePt051Reports: visiblePt051ReportsToComplete.length,
-        rawPt051Reports: incompletePt051s.length,
-        visibleStaffTrainingReports: visibleTrainingReportsToComplete.length,
-        rawStaffTrainingReports: trainingReportsToComplete.length,
-        pt051AssessmentMapEntries: pt051Assessments.size,
-        scheduledEventsForDashboard: events.length,
-        suppressedIds: suppressedPt051EventIds.length
-      },
-      suppressedPt051EventIds,
-      visiblePt051Reports: visiblePt051ReportsToComplete.map((item) => ({
-        id: item.id,
-        eventId: item.eventId,
-        flightNumber: item.flightNumber,
-        traineeFullName: item.traineeFullName,
-        instructorName: item.instructorName,
-        date: item.date,
-        isCompleted: item.isCompleted === true
-      })),
-      visibleStaffTrainingReports: staffQueueRows,
-      pt051AssessmentRows: assessmentRows,
-      scheduledEventDerivedRows: scheduleRows
-    });
-  };
   const EventRow = ({ event }) => {
     const isStby = isDashboardStandbyEvent(event);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
@@ -40981,18 +40684,7 @@ const MyDashboard = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-amber-400", children: "Reports to be completed" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: downloadReportCompletionDiagnostics,
-              className: "rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-200 hover:bg-amber-500/20",
-              children: "Diag"
-            }
-          )
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4 text-amber-400", children: "Reports to be completed" }),
         visiblePt051ReportsToComplete.length > 0 || visibleTrainingReportsToComplete.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-2", children: [
           visiblePt051ReportsToComplete.map((assessment) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -50969,7 +50661,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
           key: "highVarianceThreshold",
           label: "High Variance Threshold",
           desc: "Grade standard deviation above which an event is flagged as high-variance (inconsistent trainee performance).",
-          usedBy: "Event consistency and variance diagnostics",
+          usedBy: "Event consistency and variance analysis",
           min: 0.3,
           max: 2.5,
           step: 0.1
@@ -86843,10 +86535,7 @@ const TraineeReallocationSection = ({ onDataChanged }) => {
     acc[unit] = (acc[unit] || 0) + 1;
     return acc;
   }, {});
-  const diagnosticUnits = preview?.diagnostics?.units && typeof preview.diagnostics.units === "object" ? Object.entries(preview.diagnostics.units) : [];
   const errorDetails = Array.isArray(preview?.errorDetails) ? preview.errorDetails : [];
-  const readBackRows = Array.isArray(preview?.readBack) ? preview.readBack : [];
-  const readBackSummary = preview?.readBackSummary;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -86896,28 +86585,6 @@ const TraineeReallocationSection = ({ onDataChanged }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: preview.summary.primary?.with0 ?? 0 })
       ] })
     ] }),
-    readBackSummary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Readback Checked" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: readBackSummary.checked ?? 0 })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Primary Persisted" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: readBackSummary.primaryPersisted ?? 0 })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Two Secondary Persisted" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: readBackSummary.secondaryPersisted ?? 0 })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Still Missing" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-2xl font-bold text-white", children: [
-          readBackSummary.stillMissingPrimary ?? 0,
-          "/",
-          readBackSummary.stillMissingTwoSecondary ?? 0
-        ] })
-      ] })
-    ] }),
     allocations.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Target Units" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 p-4 md:grid-cols-3 lg:grid-cols-4", children: Object.entries(unitCounts).map(([unit, count]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900 px-3 py-2", children: [
@@ -86926,32 +86593,6 @@ const TraineeReallocationSection = ({ onDataChanged }) => {
           count,
           " trainee",
           count === 1 ? "" : "s"
-        ] })
-      ] }, unit)) })
-    ] }),
-    diagnosticUnits.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Allocation Diagnostics" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-gray-700", children: diagnosticUnits.map(([unit, diag]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 px-4 py-3 text-sm text-gray-200 md:grid-cols-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-white", children: unit }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400", children: [
-            diag?.targetTrainees ?? 0,
-            " target / ",
-            diag?.activeTrainees ?? 0,
-            " active"
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Assignable Staff" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: diag?.assignableStaff ?? 0 })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Fallback Pool" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: diag?.usedFallbackStaffPool ? "Used" : "No" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Warnings" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: Array.isArray(diag?.warnings) && diag.warnings.length ? diag.warnings.join(", ") : "None" })
         ] })
       ] }, unit)) })
     ] }),
@@ -86970,41 +86611,6 @@ const TraineeReallocationSection = ({ onDataChanged }) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: allocation.primaryInstructors?.join(", ") || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: allocation.secondaryInstructors?.join(", ") || "-" })
         ] }, allocation.id)) })
-      ] }) })
-    ] }),
-    readBackRows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Database Readback" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-96 overflow-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 bg-gray-900 text-xs uppercase tracking-wide text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Trainee" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Attempted" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Read Back" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Status" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 text-gray-100", children: readBackRows.slice(0, 80).map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: row.name }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-4 py-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              "P: ",
-              row.attemptedPrimary?.join(", ") || "-"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              "S: ",
-              row.attemptedSecondary?.join(", ") || "-"
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-4 py-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              "P: ",
-              row.readBackPrimary?.join(", ") || "-"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              "S: ",
-              row.readBackSecondary?.join(", ") || "-"
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-2", children: row.primaryPersisted && row.secondaryPersisted ? "Persisted" : "Still missing" })
-        ] }, row.traineeId)) })
       ] }) })
     ] }),
     errorDetails.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 px-4 py-3 text-sm text-red-100", children: errorDetails.slice(0, 10).map((detail) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -97091,18 +96697,6 @@ const formatFixedCrewDisplayGroup = (crew) => {
   const crewLabel = parts.slice(1).join("::").trim();
   return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
 };
-const getDiagnosticTimestamp = (timestamp) => (timestamp || (/* @__PURE__ */ new Date()).toISOString()).replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
-const downloadJsonDiagnosticFile = (filename, report) => {
-  if (typeof document === "undefined" || typeof URL === "undefined") return false;
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-  return true;
-};
 const clampFloatingDashboardFrame = (frame, minWidth, minHeight) => {
   if (typeof window === "undefined") return frame;
   const margin = 8;
@@ -97356,60 +96950,6 @@ const getUiLagTargetDescriptor = (target) => {
     dataSettingsGroup: element.getAttribute("data-settings-group"),
     dataSettingsSection: element.getAttribute("data-settings-section")
   };
-};
-const buildNeoBuildDiagnosticExport = () => {
-  if (typeof window === "undefined") return null;
-  const inMemoryReport = window.__lastNeoBuildDiagnosticReport;
-  const raw = window.localStorage?.getItem("neo_build_diag_report");
-  if (!inMemoryReport && !raw) return null;
-  const report = inMemoryReport ? JSON.parse(JSON.stringify(inMemoryReport)) : JSON.parse(raw);
-  try {
-    const timingRaw = window.localStorage?.getItem("neo_build_timing_report");
-    const runtimeRaw = window.localStorage?.getItem("neo_build_runtime_error_report");
-    const dfpDataRaw = window.localStorage?.getItem("neo_dfp_data_diag");
-    const staffScheduleRaw = window.localStorage?.getItem("neo_staff_schedule_render_diag");
-    if (timingRaw) report.timingReport = JSON.parse(timingRaw);
-    if (runtimeRaw) report.runtimeErrorReport = JSON.parse(runtimeRaw);
-    if (dfpDataRaw) report.dfpDisplayTrace = JSON.parse(dfpDataRaw);
-    if (staffScheduleRaw) report.staffScheduleRenderTrace = JSON.parse(staffScheduleRaw);
-  } catch (error) {
-    console.warn("[NEO-BUILD-DIAG] Failed to merge timing/runtime diagnostic context:", error);
-  }
-  return {
-    report,
-    filename: `neo-build-diag-${getDiagnosticTimestamp(report.timestamp)}.json`
-  };
-};
-const downloadNeoBuildDiagnosticReport = (source = "manual") => {
-  const diagnosticExport = buildNeoBuildDiagnosticExport();
-  if (!diagnosticExport) {
-    console.error("No NEO Build diagnostic report found. Run a build first.");
-    return null;
-  }
-  if (!downloadJsonDiagnosticFile(diagnosticExport.filename, diagnosticExport.report)) {
-    console.error("[NEO-BUILD-DIAG] Browser download API is unavailable.");
-    return null;
-  }
-  return diagnosticExport.filename;
-};
-const downloadNeoTaskProvenanceReport = (source = "manual") => {
-  const diagnosticExport = buildNeoBuildDiagnosticExport();
-  const taskProvenance = diagnosticExport?.report?.taskProvenance;
-  if (!taskProvenance) {
-    console.error("No NEO task provenance report found. Run a build first.");
-    return null;
-  }
-  const filename = `neo-task-provenance-${getDiagnosticTimestamp(diagnosticExport.report.timestamp)}.json`;
-  if (!downloadJsonDiagnosticFile(filename, {
-    timestamp: diagnosticExport.report.timestamp,
-    buildDate: diagnosticExport.report.buildDate,
-    stage: diagnosticExport.report.stage,
-    taskProvenance
-  })) {
-    console.error("[NEO-TASK-PROVENANCE] Browser download API is unavailable.");
-    return null;
-  }
-  return filename;
 };
 const ASSIST_PRIORITY_STEP = 5;
 const ASSIST_PRIORITY_TOTAL_STEPS = 100 / ASSIST_PRIORITY_STEP;
@@ -100862,7 +100402,7 @@ const DfpSidePanelTimeline = ({
             })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[9px] text-slate-500", children: "Priority list uses the latest NEO Build ordering when diagnostic priority data is available." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[9px] text-slate-500", children: "Priority list uses the latest NEO Build ordering when priority data is available." })
       ] });
     }
     if (activeAssistSection === "course" || activeAssistSection === "packages") {
@@ -102635,72 +102175,10 @@ function _diagFinalizeInstructors() {
       _instructorDiag.summary.instructorNotFound
     );
     console.log("[INSTR-DIAG] Zero instructor breakdown:", JSON.stringify(_instructorDiag.summary.zeroInstructorCases));
-    console.log("[INSTR-DIAG] To download: open console and type __downloadBuildDiagnostic()");
   } catch (e) {
     console.warn("[INSTR-DIAG] Failed to save to localStorage:", e);
   }
 }
-window.__downloadBuildDiagnostic = () => {
-  const raw = localStorage.getItem("instructor_diag_report");
-  if (!raw) {
-    console.error("No diagnostic report found. Run a build first.");
-    return;
-  }
-  const report = JSON.parse(raw);
-  const filename = `instructor-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
-  downloadJsonDiagnosticFile(filename, report);
-  console.log("[INSTR-DIAG] Download triggered:", filename);
-};
-window.__downloadFlightDiag = () => {
-  const raw = localStorage.getItem("flight_diag_report");
-  if (!raw) {
-    console.error("No flight diag report. Run a build first.");
-    return;
-  }
-  const report = JSON.parse(raw);
-  const filename = `flight-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
-  downloadJsonDiagnosticFile(filename, report);
-  console.log("[FLIGHT-DIAG] Downloaded flight-diag JSON:", filename);
-};
-window.__downloadBuildConflictDiagnostic = () => {
-  const raw = localStorage.getItem("build_conflict_diag_report");
-  if (!raw) {
-    console.error("No build conflict diagnostic report found. Run a build first.");
-    return;
-  }
-  const report = JSON.parse(raw);
-  const filename = `build-conflict-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
-  downloadJsonDiagnosticFile(filename, report);
-  console.log("[BUILD-CONFLICT-DIAG] Download triggered:", filename);
-};
-window.__downloadNeoBuildDiagnostic = () => {
-  downloadNeoBuildDiagnosticReport("devtools-helper");
-};
-window.__downloadNeoTaskProvenance = () => {
-  downloadNeoTaskProvenanceReport("devtools-helper");
-};
-window.__downloadNeoBuildTiming = () => {
-  const raw = localStorage.getItem("neo_build_timing_report");
-  if (!raw) {
-    console.error("No NEO Build timing report found. Run a build first.");
-    return;
-  }
-  const report = JSON.parse(raw);
-  const filename = `neo-build-timing-${getDiagnosticTimestamp(report.timestamp)}.json`;
-  downloadJsonDiagnosticFile(filename, report);
-  console.log("[NEO-BUILD-TIMING] Download triggered:", filename);
-};
-window.__downloadFlightSchoolPriorityDiag = () => {
-  const raw = localStorage.getItem("flight_school_priority_diag_report");
-  if (!raw) {
-    console.error("No Flight School priority diagnostic report found. Run a Flight School build first.");
-    return;
-  }
-  const report = JSON.parse(raw);
-  const filename = `flight-school-priority-diag-${getDiagnosticTimestamp(report.summary?.updatedAt || (/* @__PURE__ */ new Date()).toISOString())}.json`;
-  downloadJsonDiagnosticFile(filename, report);
-  console.log("[FLIGHT-SCHOOL-PRIORITY-DIAG] Download triggered:", filename);
-};
 function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const ftdResourceLabel = buildResourceDisplayNames.ftd;
@@ -116298,8 +115776,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         totalConflicts: conflicts.length,
         totalInvalidWindows: invalidWindows.length,
         summaryByType: report.summaryByType,
-        summaryByGeneratedType: report.summaryByGeneratedType,
-        download: "Run __downloadBuildConflictDiagnostic() in DevTools"
+        summaryByGeneratedType: report.summaryByGeneratedType
       });
       console.table(conflicts.slice(0, 25).map((conflict) => ({
         conflictType: conflict.conflictType,
@@ -116739,8 +116216,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       activeTrainees: neoBuildDiag.activeTrainees,
       nextEventLists: neoBuildDiag.nextEventLists,
       finalCleanup: neoBuildDiag.finalCleanup,
-      scheduleListSummary,
-      download: "Run __downloadNeoBuildDiagnostic() in DevTools or use the downloaded NEO Build diagnostic file."
+      scheduleListSummary
     });
     try {
       localStorage.setItem("neo_build_zero_tile_trace", JSON.stringify(neoBuildDiag.zeroTileInvestigation));
@@ -116751,16 +116227,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   saveCurrencyPriorityDiagnostics("final");
   saveNeoBuildDiag("final");
   if (sortedEvents.length === 0 || windowNormalisationWarnings.length > 0 || normalisedFlyingWindowExclusions.length > 0) {
-    console.info("[NEO-Build][ScheduleDiagnostics] Report saved for download.", {
+    console.info("[NEO-Build][ScheduleDiagnostics] Internal schedule trace recorded.", {
       buildDate,
       final: neoBuildDiag.final,
       finalCleanup: neoBuildDiag.finalCleanup,
       windowWarnings: windowNormalisationWarnings,
-      flyingWindowExclusions: normalisedFlyingWindowExclusions.length,
-      download: "Use the Air Combat diagnostics download button or run __downloadNeoBuildDiagnostic() in DevTools."
+      flyingWindowExclusions: normalisedFlyingWindowExclusions.length
     });
   }
-  buildDebugLog('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report" for JSON download.', {
+  buildDebugLog('[NEO-BUILD-DIAG] Build trace saved to localStorage key "neo_build_diag_report".', {
     activeTrainees: neoBuildDiag.activeTrainees,
     nextEventLists: neoBuildDiag.nextEventLists,
     final: neoBuildDiag.final
@@ -118492,14 +117967,6 @@ const App = () => {
       console.warn("[DASHBOARD-REPORT-DIAG] Could not persist diagnostic entry:", error, entry);
     }
   }
-  function readDashboardReportDiagEntries() {
-    try {
-      const stored = JSON.parse(localStorage.getItem("neo_dashboard_report_diag") || "[]");
-      return Array.isArray(stored) ? stored : [];
-    } catch {
-      return [];
-    }
-  }
   function summariseTrainingReportLmpItems(lmp) {
     const items = Array.isArray(lmp) ? lmp : [];
     const reportItems = items.filter(
@@ -118533,549 +118000,6 @@ const App = () => {
       return localStorage.getItem("neo_dfp_render_diag") === "true";
     } catch {
       return false;
-    }
-  }
-  function readDfpDataDiagEntries() {
-    try {
-      const stored = JSON.parse(localStorage.getItem("neo_dfp_data_diag") || "[]");
-      return Array.isArray(stored) ? stored : [];
-    } catch {
-      return [];
-    }
-  }
-  function readStaffScheduleRenderDiagEntries() {
-    try {
-      const stored = JSON.parse(localStorage.getItem("neo_staff_schedule_render_diag") || "[]");
-      return Array.isArray(stored) ? stored : [];
-    } catch {
-      return [];
-    }
-  }
-  function buildDfpDataDiagReport() {
-    const entries = readDfpDataDiagEntries();
-    const staffScheduleRenderTrace = readStaffScheduleRenderDiagEntries();
-    const enrichedEntries = entries.map((entry, index) => {
-      const previous = index > 0 ? entries[index - 1] : null;
-      const entryPerfMs = typeof entry?.perfMs === "number" ? entry.perfMs : null;
-      const previousPerfMs = typeof previous?.perfMs === "number" ? previous.perfMs : null;
-      return {
-        index,
-        sincePreviousMs: entryPerfMs !== null && previousPerfMs !== null ? entryPerfMs - previousPerfMs : null,
-        ...entry
-      };
-    });
-    const slowestGaps = enrichedEntries.filter((entry) => typeof entry.sincePreviousMs === "number").sort((left, right) => (right.sincePreviousMs || 0) - (left.sincePreviousMs || 0)).slice(0, 20).map((entry) => ({
-      index: entry.index,
-      stage: entry.stage,
-      sincePreviousMs: entry.sincePreviousMs,
-      perfMs: entry.perfMs,
-      ts: entry.ts,
-      date: entry.date,
-      school: entry.school,
-      unit: entry.unit,
-      details: entry.details
-    }));
-    const stages = enrichedEntries.reduce((acc, entry) => {
-      const stage = String(entry.stage || "unknown");
-      acc[stage] = (acc[stage] || 0) + 1;
-      return acc;
-    }, {});
-    return {
-      reportType: "DFP-NEO startup/load diagnostics",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      activeContext: {
-        date,
-        school,
-        unit: activeUnitCode,
-        activeView,
-        setupTestProfile: setupTestProfile || null,
-        isInitialSetupWizardActive,
-        isAuthenticated
-      },
-      summary: {
-        entryCount: enrichedEntries.length,
-        firstEntry: enrichedEntries[0] || null,
-        lastEntry: enrichedEntries[enrichedEntries.length - 1] || null,
-        slowestGaps,
-        stages,
-        staffScheduleRenderTraceCount: staffScheduleRenderTrace.length,
-        latestStaffScheduleStackedGroups: staffScheduleRenderTrace.at(-1)?.stackedGroups || []
-      },
-      entries: enrichedEntries,
-      staffScheduleRenderTrace
-    };
-  }
-  function downloadDfpDataDiagReport() {
-    const report = buildDfpDataDiagReport();
-    const generatedStamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    const contextStamp = [school, activeUnitCode, date].map((value) => String(value || "").replace(/[^a-z0-9-]+/gi, "-")).filter(Boolean).join("_");
-    const filename = `dfp-neo-load-diagnostics_${contextStamp || "app"}_${generatedStamp}.json`;
-    try {
-      const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("[DFP-DIAG] Could not download diagnostic report:", error, report);
-    }
-  }
-  function buildDfpTileNameDiagnosticReport() {
-    const activeEvents = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
-    const contextPeople = [
-      ...instructorsData.map((person) => ({ ...person, personType: "staff" })),
-      ...traineesData.map((person) => ({ ...person, personType: "trainee" }))
-    ];
-    const staffPeople = contextPeople.filter((person) => person.personType === "staff");
-    const traineePeople = contextPeople.filter((person) => person.personType === "trainee");
-    const staffResolver = buildCompactPersonNameResolver(staffPeople);
-    const traineeResolver = buildCompactPersonNameResolver(traineePeople);
-    const mixedResolver = buildCompactPersonNameResolver(contextPeople);
-    const cleanNameKey = (value) => normalisePersonName(String(value || "").split(" – ")[0].split(" - ")[0].replace(/\s*·\s*\d{1,3}(?=\s*(?:\(|$))/g, "").replace(/\s+\((?:N|F\/S|F\/L|R\/S)\)$/i, "").trim());
-    const compactSuffixPattern = /\s·\s*\d{1,3}(?=\s*(?:\(|$))/;
-    const serialisePerson = (person) => {
-      if (!person) return null;
-      return {
-        id: person.id ?? null,
-        idNumber: person.idNumber ?? null,
-        name: person.name ?? null,
-        fullName: person.fullName ?? null,
-        displayName: getPersonDisplayName(person),
-        rank: person.rank ?? null,
-        role: person.role ?? null,
-        course: person.course ?? null,
-        unit: person.unit ?? null,
-        personType: person.personType ?? null
-      };
-    };
-    const buildExactDuplicateGroups = (people) => Array.from(people.reduce((groups, person) => {
-      const displayName = getPersonDisplayName(person);
-      const key = cleanNameKey(displayName);
-      if (!key) return groups;
-      const current = groups.get(key) || [];
-      groups.set(key, [...current, person]);
-      return groups;
-    }, /* @__PURE__ */ new Map()).entries()).filter(([, people2]) => people2.length > 1).map(([key, people2]) => ({
-      key,
-      count: people2.length,
-      people: people2.map(serialisePerson)
-    }));
-    const exactDuplicateGroups = buildExactDuplicateGroups(contextPeople);
-    const exactStaffDuplicateGroups = buildExactDuplicateGroups(staffPeople);
-    const exactTraineeDuplicateGroups = buildExactDuplicateGroups(traineePeople);
-    const surnameGroups = Array.from(contextPeople.reduce((groups, person) => {
-      const displayName = getPersonDisplayName(person);
-      const surname = String(displayName || "").split(",")[0]?.trim() || String(displayName || "").trim().split(/\s+/).filter(Boolean).at(-1) || "";
-      const key = normalisePersonName(surname);
-      if (!key) return groups;
-      const current = groups.get(key) || [];
-      groups.set(key, [...current, person]);
-      return groups;
-    }, /* @__PURE__ */ new Map()).entries()).filter(([, people]) => people.length > 1).map(([key, people]) => ({
-      key,
-      count: people.length,
-      people: people.map(serialisePerson)
-    }));
-    const explainValue = (role, value) => {
-      if (value === void 0 || value === null || value === "") return null;
-      const resolver = role.endsWith(":staff") || ["instructor", "pilot", "fixedCrewPic"].includes(role) ? staffResolver : role.endsWith(":trainee") || role === "student" || role === "_traineeName" || role.startsWith("attendees[") ? traineeResolver : mixedResolver;
-      const resolverScope = resolver === staffResolver ? "staff" : resolver === traineeResolver ? "trainee" : "mixed";
-      const explanation = resolver.explainCompact(value);
-      return {
-        role,
-        resolverScope,
-        rawValue: value,
-        rawHasVisualSuffix: compactSuffixPattern.test(String(value || "")),
-        outputHasVisualSuffix: compactSuffixPattern.test(explanation.output),
-        explanation: {
-          ...explanation,
-          matchedPerson: serialisePerson(explanation.matchedPerson),
-          duplicateMatches: explanation.duplicateMatches.map(serialisePerson)
-        },
-        assessment: explanation.decision === "exact-duplicate" ? "Suffix is justified by an exact first-name and surname duplicate in the active context." : compactSuffixPattern.test(String(value || "")) ? "Raw event text already contains a suffix, but the active context does not justify a suffix for this value." : "No suffix required for this value."
-      };
-    };
-    const collectEventRoles = (event) => {
-      const roles = [
-        explainValue("instructor", event.instructor),
-        explainValue("pilot", event.pilot),
-        explainValue("student", event.student),
-        explainValue("crew", event.crew),
-        explainValue("_traineeName", event._traineeName),
-        explainValue("fixedCrewPic", event.fixedCrewPic)
-      ].filter(Boolean);
-      if (Array.isArray(event.attendees)) {
-        event.attendees.forEach((name, index) => {
-          const explained = explainValue(`attendees[${index}]`, name);
-          if (explained) roles.push(explained);
-        });
-      }
-      if (Array.isArray(event.crewSelectionOrder)) {
-        event.crewSelectionOrder.forEach((name, index) => {
-          const explained = explainValue(`crewSelectionOrder[${index}]`, name);
-          if (explained) roles.push(explained);
-        });
-      }
-      if (Array.isArray(event.personnelRefs)) {
-        event.personnelRefs.forEach((person, index) => {
-          const displayName = getPersonDisplayName(person || {}) || person?.name || person?.fullName;
-          const refType = person?.personType === "staff" ? "staff" : person?.personType === "trainee" ? "trainee" : person?.role || "mixed";
-          const explained = explainValue(`personnelRefs[${index}]:${refType}`, displayName);
-          if (explained) {
-            roles.push({
-              ...explained,
-              personnelRef: serialisePerson(person)
-            });
-          }
-        });
-      }
-      return roles;
-    };
-    const events2 = activeEvents.map((event) => {
-      const roleAnalyses = collectEventRoles(event);
-      return {
-        id: event.id,
-        date: event.date,
-        type: event.type,
-        resourceId: event.resourceId,
-        startTime: event.startTime,
-        duration: event.duration,
-        flightNumber: event.flightNumber,
-        eventCode: event.eventCode ?? null,
-        rawNames: {
-          instructor: event.instructor ?? null,
-          pilot: event.pilot ?? null,
-          student: event.student ?? null,
-          crew: event.crew ?? null,
-          traineeName: event._traineeName ?? null,
-          attendees: event.attendees ?? null,
-          crewSelectionOrder: event.crewSelectionOrder ?? null
-        },
-        personnelRefs: Array.isArray(event.personnelRefs) ? event.personnelRefs.map(serialisePerson) : [],
-        roleAnalyses,
-        suffixAnalyses: roleAnalyses.filter((role) => role.rawHasVisualSuffix || role.outputHasVisualSuffix)
-      };
-    });
-    const suspiciousSuffixes = events2.flatMap((event) => event.suffixAnalyses.filter((role) => role.rawHasVisualSuffix && role.explanation?.decision !== "exact-duplicate").map((role) => ({
-      eventId: event.id,
-      flightNumber: event.flightNumber,
-      startTime: event.startTime,
-      resourceId: event.resourceId,
-      role: role.role,
-      rawValue: role.rawValue,
-      formatterOutput: role.explanation?.output,
-      decision: role.explanation?.decision,
-      assessment: role.assessment
-    })));
-    const justifiedSuffixes = events2.flatMap((event) => event.suffixAnalyses.filter((role) => role.explanation?.decision === "exact-duplicate").map((role) => ({
-      eventId: event.id,
-      flightNumber: event.flightNumber,
-      startTime: event.startTime,
-      resourceId: event.resourceId,
-      role: role.role,
-      rawValue: role.rawValue,
-      formatterOutput: role.explanation?.output,
-      matchedPerson: role.explanation?.matchedPerson,
-      duplicateMatches: role.explanation?.duplicateMatches
-    })));
-    return {
-      reportType: "DFP tile name display diagnostics",
-      diagnosticVersion: "CCH 8.138",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      rule: "Compact DFP tile suffixes should only appear when active personnel in the selected or combined unit have the same surname and first name.",
-      activeContext: {
-        date,
-        school,
-        activeUnitCode,
-        activeContextUnitCodes,
-        activeOperationalModel,
-        activeView,
-        eventCount: activeEvents.length,
-        staffCount: instructorsData.length,
-        traineeCount: traineesData.length
-      },
-      summary: {
-        exactDuplicateGroupCount: exactDuplicateGroups.length,
-        surnameGroupCount: surnameGroups.length,
-        eventCount: events2.length,
-        eventsWithSuffixAnalyses: events2.filter((event) => event.suffixAnalyses.length > 0).length,
-        exactStaffDuplicateGroupCount: exactStaffDuplicateGroups.length,
-        exactTraineeDuplicateGroupCount: exactTraineeDuplicateGroups.length,
-        suspiciousSuffixCount: suspiciousSuffixes.length,
-        justifiedSuffixCount: justifiedSuffixes.length,
-        suspiciousSuffixes,
-        justifiedSuffixes
-      },
-      exactDuplicateGroups,
-      exactStaffDuplicateGroups,
-      exactTraineeDuplicateGroups,
-      surnameGroups,
-      events: events2
-    };
-  }
-  function downloadDfpTileNameDiagnosticReport() {
-    const report = buildDfpTileNameDiagnosticReport();
-    const generatedStamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    const contextStamp = [school, activeUnitCode, date].map((value) => String(value || "").replace(/[^a-z0-9-]+/gi, "-")).filter(Boolean).join("_");
-    const filename = `dfp-tile-name-diagnostics_${contextStamp || "app"}_${generatedStamp}.json`;
-    if (!downloadJsonDiagnosticFile(filename, report)) {
-      console.error("[DFP-NAME-DIAG] Could not download tile name diagnostic report:", report);
-    }
-  }
-  function buildDashboardReportDiagnosticReport() {
-    const postFlightAssessmentDraftTrace = readDashboardReportDiagEntries();
-    const normaliseName2 = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
-    const normaliseCode2 = (value) => String(value || "").trim().toUpperCase();
-    const sessionDashboardUserName = signedInDisplayName || currentUserName;
-    const sessionDashboardNameKeys = [
-      sessionDashboardUserName,
-      authUser ? formatAuthLoginName(authUser) : "",
-      authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : "",
-      authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : "",
-      currentUserName
-    ].map(normaliseName2).filter(Boolean);
-    const sessionDashboardIdKeys = [
-      sessionUser?.userId,
-      authUser?.userId,
-      authUser?.id
-    ].map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
-    const dashboardStaff = allInstructorsData.find((staff) => {
-      const staffName = normaliseName2(staff.name);
-      const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
-      return sessionDashboardNameKeys.includes(staffName) || staffId && sessionDashboardIdKeys.includes(staffId);
-    });
-    const dashboardUserName = sessionDashboardUserName || dashboardStaff?.name || currentUserName;
-    const dashboardNameKeys = Array.from(new Set([
-      ...sessionDashboardNameKeys,
-      normaliseName2(dashboardUserName),
-      normaliseName2(dashboardStaff?.name)
-    ].filter(Boolean)));
-    const activeEvents = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
-    const dashboardActiveUnitCodes = (activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+")).map(normaliseCode2).filter(Boolean);
-    const dashboardActiveUnitSet = new Set(dashboardActiveUnitCodes);
-    const dashboardActiveLocationSet = new Set([
-      ...getDailySnapshotLocationAliases(school),
-      activeLocationSolarProfile.code,
-      school
-    ].map(normaliseCode2).filter(Boolean));
-    const reportContextDecision = (report, staff) => {
-      const reportUnitCodes = String(report?.unitCode || "").split("+").map(normaliseCode2).filter(Boolean);
-      const staffUnitCode = normaliseCode2(staff.unit);
-      const reportLocationCode = normaliseCode2(report?.locationCode);
-      const unitAccepted = dashboardActiveUnitSet.size === 0 ? true : reportUnitCodes.length > 0 ? reportUnitCodes.some((unitCode) => dashboardActiveUnitSet.has(unitCode)) : !!staffUnitCode && dashboardActiveUnitSet.has(staffUnitCode);
-      const locationAccepted = !reportLocationCode || dashboardActiveLocationSet.size === 0 || dashboardActiveLocationSet.has(reportLocationCode);
-      return {
-        accepted: unitAccepted && locationAccepted,
-        unitAccepted,
-        locationAccepted,
-        reportUnitCodes,
-        staffUnitCode,
-        reportLocationCode,
-        dashboardActiveUnitCodes,
-        dashboardActiveLocationCodes: Array.from(dashboardActiveLocationSet)
-      };
-    };
-    const reportUserDecision = (report, staff) => {
-      const explicitAssignee = normaliseName2(report?.dashboardAssigneeName);
-      const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
-      const nameCandidates = [
-        report?.dashboardAssigneeName,
-        report?.staffName,
-        staff.name,
-        report?.instructorName
-      ].map(normaliseName2).filter(Boolean);
-      const accepted = explicitAssignee ? dashboardNameKeys.includes(explicitAssignee) : nameCandidates.some((name) => dashboardNameKeys.includes(name)) || staffId && sessionDashboardIdKeys.includes(staffId);
-      return {
-        accepted,
-        explicitAssignee: report?.dashboardAssigneeName || null,
-        nameCandidates,
-        dashboardNameKeys,
-        staffId,
-        sessionDashboardIdKeys
-      };
-    };
-    const serialiseStaff = (staff) => ({
-      id: staff.id ?? null,
-      idNumber: staff.idNumber ?? null,
-      name: staff.name ?? null,
-      rank: staff.rank ?? null,
-      unit: staff.unit ?? null,
-      callsign: staff.callsign ?? null
-    });
-    const serialiseEvent = (event) => ({
-      id: event.id,
-      date: event.date,
-      type: event.type,
-      flightNumber: event.flightNumber,
-      eventCode: event.eventCode ?? null,
-      eventCategory: event.eventCategory ?? null,
-      startTime: event.startTime,
-      duration: event.duration,
-      resourceId: event.resourceId,
-      instructor: event.instructor ?? null,
-      pilot: event.pilot ?? null,
-      student: event.student ?? null,
-      crew: event.crew ?? null,
-      fixedCrewPic: event.fixedCrewPic ?? null,
-      unit: event.unit ?? null,
-      unitCode: event.unitCode ?? null,
-      personnelRefs: Array.isArray(event.personnelRefs) ? event.personnelRefs : []
-    });
-    const reportEvaluations = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).map((report) => {
-      const contextDecision = reportContextDecision(report, staff);
-      const userDecision = reportUserDecision(report, staff);
-      const accepted = report.status !== "Complete" && !report.dashboardAcknowledgedAt && contextDecision.accepted && userDecision.accepted;
-      return {
-        accepted,
-        rejectReasons: [
-          report.status === "Complete" ? "status-complete" : "",
-          report.dashboardAcknowledgedAt ? "dashboard-acknowledged" : "",
-          !contextDecision.accepted ? "context-filter" : "",
-          !userDecision.accepted ? "user-filter" : ""
-        ].filter(Boolean),
-        staff: serialiseStaff(staff),
-        report: {
-          id: report.id,
-          reportName: report.reportName,
-          status: report.status,
-          dashboardAcknowledgedAt: report.dashboardAcknowledgedAt || null,
-          dashboardAssigneeName: report.dashboardAssigneeName || null,
-          staffIdNumber: report.staffIdNumber || null,
-          staffName: report.staffName || null,
-          instructorName: report.instructorName || null,
-          eventId: report.eventId || null,
-          eventCode: report.eventCode || null,
-          date: report.date || null,
-          callsign: report.callsign || null,
-          unitCode: report.unitCode || null,
-          locationCode: report.locationCode || null,
-          trainingCode: report.trainingCode || null,
-          trainingTitle: report.trainingTitle || null,
-          dcoResult: report.dcoResult || null
-        },
-        contextDecision,
-        userDecision
-      };
-    }));
-    const assessmentRequiredItems = syllabusDetails.filter((item) => item.assessmentRequired === true || ["BGF5", "BPC+IPC", "FIC"].includes(normaliseCode2(item.code || item.module || item.lmpType))).map((item) => ({
-      id: item.id,
-      code: item.code,
-      type: item.type,
-      lmpType: item.lmpType,
-      module: item.module,
-      phase: item.phase,
-      courses: item.courses || [],
-      isActive: item.isActive,
-      assessmentRequired: item.assessmentRequired
-    }));
-    const bfgOrBgfEvents = activeEvents.filter((event) => normaliseCode2(event.flightNumber || event.eventCode).includes("BGF5") || normaliseCode2(event.flightNumber || event.eventCode).includes("BGF"));
-    const eventCompletionEvaluations = eventCompletionsForDate.map((completion) => {
-      const matchedEvent = activeEvents.find((event) => event.id === completion.scheduleEventId || normaliseCode2(event.flightNumber || event.eventCode) === normaliseCode2(completion.eventCode) && String(event.date || "") === String(completion.eventDate || "") && Math.abs(Number(event.startTime || 0) - Number(completion.startTime || 0)) < 0.01);
-      return {
-        completion: {
-          id: completion.id || null,
-          scheduleEventId: completion.scheduleEventId || null,
-          eventCode: completion.eventCode || null,
-          eventDate: completion.eventDate || null,
-          startTime: completion.startTime ?? null,
-          duration: completion.duration ?? null,
-          traineeFullName: completion.traineeFullName || null,
-          instructorName: completion.instructorName || null,
-          dcoResult: completion.dcoResult || null,
-          createdAt: completion.createdAt || null,
-          updatedAt: completion.updatedAt || null
-        },
-        matchedEvent: matchedEvent ? serialiseEvent(matchedEvent) : null,
-        matchedSyllabus: matchedEvent ? syllabusDetails.filter((item) => item.isActive !== false && normaliseCode2(item.code) === normaliseCode2(matchedEvent.flightNumber || matchedEvent.eventCode)).map((item) => ({
-          id: item.id,
-          code: item.code,
-          type: item.type,
-          lmpType: item.lmpType,
-          module: item.module,
-          phase: item.phase,
-          courses: item.courses || [],
-          isActive: item.isActive,
-          assessmentRequired: item.assessmentRequired
-        })) : []
-      };
-    });
-    const matchingBgf5Syllabus = syllabusDetails.filter((item) => normaliseCode2(item.code) === "BGF5").map((item) => ({
-      id: item.id,
-      code: item.code,
-      type: item.type,
-      lmpType: item.lmpType,
-      module: item.module,
-      phase: item.phase,
-      courses: item.courses || [],
-      isActive: item.isActive,
-      assessmentRequired: item.assessmentRequired
-    }));
-    return {
-      reportType: "DFP My Home reports-to-complete diagnostics",
-      diagnosticVersion: "CCH 8.180",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      activeContext: {
-        date,
-        school,
-        activeUnitCode,
-        activeContextUnitCodes,
-        activeOperationalModel,
-        activeView,
-        signedInDisplayName,
-        currentUserName,
-        sessionDashboardUserName,
-        dashboardUserName,
-        dashboardStaff: dashboardStaff ? serialiseStaff(dashboardStaff) : null,
-        dashboardNameKeys,
-        sessionDashboardIdKeys
-      },
-      summary: {
-        activeEventCount: activeEvents.length,
-        bgfEventCount: bfgOrBgfEvents.length,
-        bgf5EventCount: bfgOrBgfEvents.filter((event) => normaliseCode2(event.flightNumber || event.eventCode) === "BGF5").length,
-        bgf5SyllabusMatches: matchingBgf5Syllabus.length,
-        assessmentRequiredItemCount: assessmentRequiredItems.length,
-        totalTrainingReportDrafts: reportEvaluations.length,
-        acceptedTrainingReportDrafts: reportEvaluations.filter((item) => item.accepted).length,
-        bgf5TrainingReportDrafts: reportEvaluations.filter((item) => normaliseCode2(item.report.eventCode) === "BGF5").length,
-        acceptedBgf5TrainingReportDrafts: reportEvaluations.filter((item) => item.accepted && normaliseCode2(item.report.eventCode) === "BGF5").length,
-        eventCompletionsForDateCount: eventCompletionsForDate.length,
-        dcoEventCompletionsForDateCount: eventCompletionsForDate.filter((completion) => completion.dcoResult === "DCO").length,
-        bgf5EventCompletionsForDateCount: eventCompletionsForDate.filter((completion) => normaliseCode2(completion.eventCode) === "BGF5").length,
-        postFlightAssessmentDraftTraceCount: postFlightAssessmentDraftTrace.length,
-        latestPostFlightAssessmentDraftTrace: postFlightAssessmentDraftTrace.slice(-12),
-        bgf5RejectReasons: reportEvaluations.filter((item) => normaliseCode2(item.report.eventCode) === "BGF5").map((item) => ({
-          reportId: item.report.id,
-          staffName: item.staff.name,
-          accepted: item.accepted,
-          rejectReasons: item.rejectReasons
-        }))
-      },
-      bgfEvents: bfgOrBgfEvents.map(serialiseEvent),
-      matchingBgf5Syllabus,
-      assessmentRequiredItems,
-      eventCompletionEvaluations,
-      reportEvaluations,
-      postFlightAssessmentDraftTrace
-    };
-  }
-  function downloadDashboardReportDiagnosticReport() {
-    const report = buildDashboardReportDiagnosticReport();
-    const generatedStamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    const contextStamp = [school, activeUnitCode, date].map((value) => String(value || "").replace(/[^a-z0-9-]+/gi, "-")).filter(Boolean).join("_");
-    const filename = `dfp-dashboard-report-diagnostics_${contextStamp || "app"}_${generatedStamp}.json`;
-    if (!downloadJsonDiagnosticFile(filename, report)) {
-      console.error("[DFP-DASHBOARD-REPORT-DIAG] Could not download dashboard report diagnostic report:", report);
     }
   }
   reactExports.useEffect(() => {
@@ -121489,7 +120413,7 @@ const App = () => {
     }).filter((entry) => entry.matchesDate);
     return matches.length ? matches[matches.length - 1] : null;
   }, []);
-  const buildDfpResourceRowsDiagnosticReport = reactExports.useCallback(() => {
+  reactExports.useCallback(() => {
     let lastSaveTrace = null;
     let lastSaveAttemptTrace = null;
     try {
@@ -121611,14 +120535,6 @@ const App = () => {
     resourceRowTargetDate,
     school
   ]);
-  const downloadDfpResourceRowsDiagnosticReport = reactExports.useCallback(() => {
-    const report = buildDfpResourceRowsDiagnosticReport();
-    const contextStamp = [school, activeUnitCode, date].map((value) => String(value || "").replace(/[^a-z0-9-]+/gi, "-")).filter(Boolean).join("_");
-    const filename = `dfp-resource-rows-diag_${contextStamp || "app"}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
-    if (!downloadJsonDiagnosticFile(filename, report)) {
-      console.error("[DFP-RESOURCE-ROWS-DIAG] Could not download diagnostic report:", report);
-    }
-  }, [activeUnitCode, buildDfpResourceRowsDiagnosticReport, date, school]);
   const currentAircraftConfigState = reactExports.useMemo(() => ({
     availableAircraftCount: Math.max(0, Math.floor(Number(neoAvailableAircraftCount) || 0)),
     aircraftConfigCapacities: neoAircraftConfigCapacities,
@@ -123468,7 +122384,7 @@ ${"=".repeat(60)}`);
       return time >= bookingWindow.start && time < bookingWindow.end;
     });
   }, [getDiagnosticEventBookingWindow, getDiagnosticEventPersonnel, normaliseDiagnosticPersonName, parseDiagnosticTime, staffAvailabilityDiagnosticDate, staffAvailabilityDiagnosticEvents]);
-  const staffAvailabilityRoleRows = reactExports.useMemo(() => {
+  reactExports.useMemo(() => {
     const diagnosticTime = staffAvailabilityPointer.time;
     const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
     const rows = /* @__PURE__ */ new Map();
@@ -123527,11 +122443,11 @@ ${"=".repeat(60)}`);
       const raw = window.localStorage?.getItem("neo_build_diag_report");
       return raw ? JSON.parse(raw) : null;
     } catch (error) {
-      console.warn("[Staff Diagnose] Failed to read NEO Build diagnostic report:", error);
+      console.warn("[StaffAvailability] Failed to read NEO Build trace:", error);
       return null;
     }
   }, []);
-  const staffAvailabilityTrainingRemaining = reactExports.useMemo(() => {
+  reactExports.useMemo(() => {
     const showTrainingRemaining = isStaffAvailabilityDiagnoseBuildContext || activeView === "Program Schedule";
     if (!showTrainingRemaining) return null;
     const diagnosticTime = staffAvailabilityPointer.time;
@@ -123591,7 +122507,7 @@ ${"=".repeat(60)}`);
     normaliseDiagnosticPriorityText,
     staffAvailabilityPointer.time
   ]);
-  const staffAvailabilityPanelPosition = reactExports.useMemo(() => {
+  reactExports.useMemo(() => {
     if (typeof window === "undefined") return { left: 24, top: 96 };
     const width = 250;
     const height = 280;
@@ -130035,22 +128951,6 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       autoSave: localStorage.getItem("neo_build_live_diag") === "true"
     });
     markNeoBuildTiming(timingReport, "runBuildAlgorithm:start");
-    let neoBuildDiagnosticDownloaded = false;
-    const downloadNeoBuildDiagnosticAfterRun = (source) => {
-      if (neoBuildDiagnosticDownloaded) return;
-      markNeoBuildTiming(timingReport, `diagnostic-export:${source}:start`);
-      saveNeoBuildTimingReport(timingReport);
-      const filename = downloadNeoBuildDiagnosticReport(source);
-      if (filename) {
-        neoBuildDiagnosticDownloaded = true;
-        markNeoBuildTiming(timingReport, `diagnostic-export:${source}:downloaded`, { filename });
-        saveNeoBuildTimingReport(timingReport);
-        setShowInfoNotification(`${activeOperationalModelLabel} NEO Build diagnostic downloaded: ${filename}`);
-      } else {
-        markNeoBuildTiming(timingReport, `diagnostic-export:${source}:unavailable`);
-        saveNeoBuildTimingReport(timingReport);
-      }
-    };
     setIsBuildingDfp(true);
     pushDfpDataDiag("build:start-visible-draft-state", {
       buildDate: buildDfpDate,
@@ -131038,7 +129938,6 @@ ${conflictLines.join("\n")}${moreText}`,
           setUnavailabilityNotifications(notifications);
         }
         markNeoBuildTiming(timingReport, "notifications:complete", { notifications: notifications.length });
-        downloadNeoBuildDiagnosticAfterRun("build-complete");
       } catch (error) {
         const runtimeErrorReport = {
           timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -131137,7 +130036,6 @@ ${conflictLines.join("\n")}${moreText}`,
         console.error("🚀 [NEO-Build] DFP Build Failed:", error);
         console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : "No stack trace");
         setDfpBuildProgress({ message: "Error during build!", percentage: 100 });
-        downloadNeoBuildDiagnosticAfterRun("build-error");
       } finally {
         markNeoBuildTiming(timingReport, "navigation:setTimeout-queued", { delayMs: NEO_BUILD_NAVIGATION_DELAY_MS });
         setTimeout(() => {
@@ -133415,63 +132313,6 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     animationFrameId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(animationFrameId);
   }, [pushUiLagSample]);
-  const downloadUiLagDiagnosticReport = reactExports.useCallback(() => {
-    const clickSamples = uiLagClickSamplesRef.current.map((sample) => ({ ...sample }));
-    const longTaskSamples = uiLagLongTaskSamplesRef.current.map((sample) => ({ ...sample }));
-    const frameDelaySamples = uiLagFrameDelaySamplesRef.current.map((sample) => ({ ...sample }));
-    const dragDiagnostics = getDfpDragDiagnosticReport();
-    const dragSessions = (dragDiagnostics.sessions || []).map((session) => ({ ...session }));
-    const worstDragSessions = [...dragSessions].sort((a, b) => Math.max(b.maxTotalMoveMs || 0, b.maxFlushDelayMs || 0, b.maxPointerGapMs || 0) - Math.max(a.maxTotalMoveMs || 0, a.maxFlushDelayMs || 0, a.maxPointerGapMs || 0)).slice(0, 12);
-    const slowClicks = clickSamples.filter((sample) => (sample.secondFrameDelayMs ?? sample.firstFrameDelayMs ?? 0) >= 120).sort((a, b) => (b.secondFrameDelayMs ?? b.firstFrameDelayMs ?? 0) - (a.secondFrameDelayMs ?? a.firstFrameDelayMs ?? 0));
-    const settingsClicks = clickSamples.filter((sample) => sample.target.dataUiLagRole?.startsWith("settings-") || /settings|platform|people|permissions|training|threshold|business|configuration/i.test(`${sample.target.text} ${sample.target.title || ""}`));
-    const report = {
-      reportType: "dfp-ui-lag-diagnostics",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      url: typeof window !== "undefined" ? window.location.href : null,
-      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-      activeContext: { ...latestUiLagContextRef.current },
-      thresholds: {
-        slowClickFrameMs: 120,
-        frameDelayMs: 80,
-        browserLongTaskMs: 50
-      },
-      summary: {
-        clickCount: clickSamples.length,
-        slowClickCount: slowClicks.length,
-        longTaskCount: longTaskSamples.length,
-        frameDelayCount: frameDelaySamples.length,
-        settingsClickCount: settingsClicks.length,
-        dragSessionCount: dragSessions.length,
-        worstClicks: slowClicks.slice(0, 20),
-        worstLongTasks: [...longTaskSamples].sort((a, b) => b.durationMs - a.durationMs).slice(0, 20),
-        worstFrameDelays: [...frameDelaySamples].sort((a, b) => b.frameGapMs - a.frameGapMs).slice(0, 20),
-        worstDragSessions
-      },
-      settingsClicks,
-      clickSamples,
-      longTaskSamples,
-      frameDelaySamples,
-      dragDiagnostics: {
-        ...dragDiagnostics,
-        sessions: dragSessions
-      }
-    };
-    const unit = String(activeUnitCode || "unit").replace(/[^a-z0-9-]+/gi, "-");
-    const filename = `dfp-ui-lag-diagnostics_${unit}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
-    downloadJsonDiagnosticFile(filename, report);
-  }, [activeUnitCode]);
-  reactExports.useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.__downloadDfpDragDiagnostic = () => {
-      const report = getDfpDragDiagnosticReport();
-      const unit = String(latestUiLagContextRef.current.activeUnitCode || "unit").replace(/[^a-z0-9-]+/gi, "-");
-      const filename = `dfp-drag-diagnostics_${unit}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
-      downloadJsonDiagnosticFile(filename, report);
-    };
-    return () => {
-      delete window.__downloadDfpDragDiagnostic;
-    };
-  }, []);
   reactExports.useEffect(() => {
     try {
       window.localStorage.setItem("dfp_live_sync_enabled", liveSyncEnabled ? "true" : "false");
@@ -138918,56 +137759,7 @@ Do you want to replace the existing entry?`,
               }
               setShowDfpSidePanel(false);
               setShowFlightLinePanel((value) => !value);
-            },
-            onStartStaffAvailabilityDiagnose: () => {
-              setStaffAvailabilityPointer((pointer) => ({
-                ...pointer,
-                x: pointer.x || Math.round(window.innerWidth / 2),
-                y: pointer.y || Math.round(window.innerHeight / 2),
-                time: null,
-                inScheduleGrid: false
-              }));
-              setIsStaffAvailabilityDiagnoseActive(true);
             }
-          }
-        ),
-        isStaffAvailabilityDiagnoseActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: "fixed z-[250] w-[250px] rounded-lg border border-cyan-400/45 bg-slate-950/95 p-3 text-xs text-slate-200 shadow-2xl backdrop-blur-md pointer-events-none",
-            style: { left: staffAvailabilityPanelPosition.left, top: staffAvailabilityPanelPosition.top },
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-3 border-b border-slate-700/80 pb-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-300", children: "Staff Diagnose" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 font-mono text-sm font-bold text-white", children: staffAvailabilityPointer.inScheduleGrid && staffAvailabilityPointer.time !== null ? formatDecimalHourToString(staffAvailabilityPointer.time) : "Move over DFP" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400", children: "Esc" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-                staffAvailabilityRoleRows.length > 0 ? staffAvailabilityRoleRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto_auto] items-baseline gap-2 rounded border border-slate-800/80 bg-slate-900/65 px-2 py-1.5", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", title: row.label, children: row.label }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-emerald-300", title: "Available", children: row.available }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-red-300", title: "Unavailable", children: row.unavailable })
-                ] }, row.label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-slate-400", children: "No staff roles found for this unit." }),
-                staffAvailabilityTrainingRemaining && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 rounded border border-violet-400/35 bg-violet-950/30 px-2 py-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 flex items-center justify-between gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-bold uppercase tracking-[0.14em] text-violet-200", children: "Priority Remaining" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-sm font-bold text-white", children: staffAvailabilityTrainingRemaining.total })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-1 text-[11px]", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-slate-950/45 px-1.5 py-1", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-slate-400", children: "Course" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono font-bold text-sky-300", children: staffAvailabilityTrainingRemaining.course })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-slate-950/45 px-1.5 py-1", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-slate-400", children: "Package" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono font-bold text-emerald-300", children: staffAvailabilityTrainingRemaining.trainingPackage })
-                    ] })
-                  ] })
-                ] })
-              ] })
-            ]
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -140108,56 +138900,6 @@ Do you want to replace the existing entry?`,
           className: "rounded border border-gray-600/50 px-1.5 py-0.5 text-gray-300 transition-colors hover:border-gray-500 hover:text-white disabled:cursor-wait disabled:opacity-60",
           title: "Manually refresh mobile unavailability and alert responses",
           children: isManualSyncing ? "Syncing" : "Sync Now"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: downloadDfpDataDiagReport,
-          className: "rounded border border-cyan-500/30 px-1.5 py-0.5 text-cyan-200 transition-colors hover:border-cyan-400/60 hover:text-cyan-100",
-          title: "Download startup/load and staff schedule render diagnostic JSON report",
-          children: "Diag"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: downloadDfpResourceRowsDiagnosticReport,
-          className: "rounded border border-amber-500/30 px-1.5 py-0.5 text-amber-200 transition-colors hover:border-amber-400/60 hover:text-amber-100",
-          title: "Download DFP resource row diagnostic JSON report",
-          children: "Rows"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: downloadDfpTileNameDiagnosticReport,
-          className: "rounded border border-lime-500/30 px-1.5 py-0.5 text-lime-200 transition-colors hover:border-lime-400/60 hover:text-lime-100",
-          title: "Download DFP tile name display diagnostic JSON report",
-          children: "Names"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: downloadDashboardReportDiagnosticReport,
-          className: "rounded border border-rose-500/30 px-1.5 py-0.5 text-rose-200 transition-colors hover:border-rose-400/60 hover:text-rose-100",
-          title: "Download My Home reports-to-complete diagnostic JSON report",
-          children: "Reports"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: downloadUiLagDiagnosticReport,
-          className: "rounded border border-violet-500/30 px-1.5 py-0.5 text-violet-200 transition-colors hover:border-violet-400/60 hover:text-violet-100",
-          title: "Download UI lag, click-to-paint, long task, and frame delay diagnostic JSON report",
-          children: "Lag"
         }
       )
     ] })

@@ -214,18 +214,6 @@ const getDashboardEventFinishTime = (event: ScheduleEvent): Date | null => {
     return finish;
 };
 
-const downloadDashboardJsonFile = (filename: string, payload: unknown): void => {
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-};
-
 const getDashboardTrainingReportSuppressionIds = (report: AirCombatTrainingReport): string[] => {
     const traineeName = String(report.traineeFullName || '').trim();
     return [
@@ -857,137 +845,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         });
     }, [incompletePt051s, visibleTrainingReportsToComplete]);
 
-    const downloadReportCompletionDiagnostics = () => {
-        const fullUserName = toDashboardSurnameFirstName(userName);
-        const fullUserKey = normaliseDashboardContactName(fullUserName);
-        const suppressedEventIds = new Set(suppressedPt051EventIds.map(value => String(value || '').trim()).filter(Boolean));
-        const assessmentRows = Array.from(pt051Assessments.entries()).map(([mapKey, assessment]) => {
-            const candidateIds = [
-                assessment.eventId,
-                assessment.id,
-                `dashboard-due-${assessment.eventId}-${normaliseDashboardContactName(assessment.traineeFullName)}`,
-                `pt051-${assessment.eventId}-${assessment.traineeFullName}`,
-                mapKey,
-            ].map(value => String(value || '').trim()).filter(Boolean);
-            return {
-                source: 'pt051Assessments',
-                mapKey,
-                id: assessment.id,
-                eventId: assessment.eventId,
-                flightNumber: assessment.flightNumber,
-                traineeFullName: assessment.traineeFullName,
-                instructorName: assessment.instructorName,
-                date: assessment.date,
-                isCompleted: assessment.isCompleted === true,
-                instructorMatchesCurrentUser: normaliseDashboardContactName(assessment.instructorName) === fullUserKey,
-                candidateIds,
-                suppressedMatches: candidateIds.filter(candidateId => suppressedEventIds.has(candidateId)),
-                visibleInReportsToComplete: visiblePt051ReportsToComplete.some(item => item.id === assessment.id || item.eventId === assessment.eventId),
-            };
-        });
-        const scheduleRows = events
-            .filter(event => !isDashboardStandbyEvent(event))
-            .map(event => {
-                const detail = findDashboardSyllabusDetail(event, syllabusDetails);
-                const traineeName = String(event.student || (event as any).traineeFullName || '').trim();
-                const derivedAssessmentId = `dashboard-due-${event.id}-${normaliseDashboardContactName(traineeName)}`;
-                const candidateIds = [
-                    event.id,
-                    derivedAssessmentId,
-                    `pt051-${event.id}-${traineeName}`,
-                ].map(value => String(value || '').trim()).filter(Boolean);
-                const finishTime = getDashboardEventFinishTime(event);
-                return {
-                    source: 'scheduledEventDerivedDueReport',
-                    eventId: event.id,
-                    flightNumber: getDashboardEventCode(event),
-                    type: event.type,
-                    resourceId: event.resourceId,
-                    date: event.date,
-                    startTime: event.startTime,
-                    duration: event.duration,
-                    finishIso: finishTime?.toISOString() || null,
-                    finishHasPassed: finishTime ? finishTime.getTime() <= Date.now() : false,
-                    traineeName,
-                    instructor: event.instructor,
-                    pilot: event.pilot,
-                    fixedCrewPic: event.fixedCrewPic,
-                    detailCode: detail?.code || null,
-                    detailType: detail?.type || null,
-                    detailAssessmentRequired: detail?.assessmentRequired === true,
-                    eventAssessmentRequired: (event as any).assessmentRequired === true,
-                    isGroundOrProcedural: isDashboardGroundOrProceduralEvent(event, detail),
-                    assignedInstructorMatchesCurrentUser: normaliseDashboardContactName(event.instructor || event.pilot || event.fixedCrewPic) === fullUserKey,
-                    candidateIds,
-                    suppressedMatches: candidateIds.filter(candidateId => suppressedEventIds.has(candidateId)),
-                    visibleInReportsToComplete: incompletePt051s.some(item => item.id === derivedAssessmentId || item.eventId === event.id),
-                };
-            });
-        const staffQueueRows = trainingReportsToComplete.map(entry => {
-            const candidateIds = getDashboardTrainingReportSuppressionIds(entry.report);
-            return {
-                source: 'trainingReportsToComplete',
-                report: {
-                    id: entry.report.id,
-                    eventId: entry.report.eventId,
-                    eventCode: entry.report.eventCode,
-                    callsign: entry.report.callsign,
-                    date: entry.report.date,
-                    status: entry.report.status,
-                    dashboardAcknowledgedAt: entry.report.dashboardAcknowledgedAt || null,
-                    dashboardAssigneeName: entry.report.dashboardAssigneeName || null,
-                    instructorName: entry.report.instructorName || null,
-                    staffName: (entry.report as any).staffName || null,
-                    traineeFullName: (entry.report as any).traineeFullName || null,
-                    unitCode: entry.report.unitCode || null,
-                    locationCode: entry.report.locationCode || null,
-                },
-                staff: {
-                    id: (entry.staff as any).id || null,
-                    idNumber: entry.staff.idNumber,
-                    name: entry.staff.name,
-                    rank: entry.staff.rank,
-                    unit: entry.staff.unit,
-                },
-                candidateIds,
-                suppressedMatches: candidateIds.filter(candidateId => suppressedEventIds.has(candidateId)),
-                visibleInReportsToComplete: visibleTrainingReportsToComplete.some(visibleEntry => visibleEntry.report.id === entry.report.id),
-            };
-        });
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        downloadDashboardJsonFile(`dfp-dashboard-report-render-diagnostics_${timestamp}.json`, {
-            generatedAt: new Date().toISOString(),
-            currentUser: {
-                userName,
-                userRank,
-                fullUserName,
-                fullUserKey,
-            },
-            counts: {
-                visiblePt051Reports: visiblePt051ReportsToComplete.length,
-                rawPt051Reports: incompletePt051s.length,
-                visibleStaffTrainingReports: visibleTrainingReportsToComplete.length,
-                rawStaffTrainingReports: trainingReportsToComplete.length,
-                pt051AssessmentMapEntries: pt051Assessments.size,
-                scheduledEventsForDashboard: events.length,
-                suppressedIds: suppressedPt051EventIds.length,
-            },
-            suppressedPt051EventIds,
-            visiblePt051Reports: visiblePt051ReportsToComplete.map(item => ({
-                id: item.id,
-                eventId: item.eventId,
-                flightNumber: item.flightNumber,
-                traineeFullName: item.traineeFullName,
-                instructorName: item.instructorName,
-                date: item.date,
-                isCompleted: item.isCompleted === true,
-            })),
-            visibleStaffTrainingReports: staffQueueRows,
-            pt051AssessmentRows: assessmentRows,
-            scheduledEventDerivedRows: scheduleRows,
-        });
-    };
-
     const EventRow: React.FC<{event: ScheduleEvent}> = ({event}) => {
         const isStby = isDashboardStandbyEvent(event);
         return (
@@ -1339,16 +1196,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
 
                 {/* Reports to be completed */}
                 <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-                    <div className="mb-4 flex items-center justify-between gap-3">
-                        <h2 className="text-xl font-semibold text-amber-400">Reports to be completed</h2>
-                        <button
-                            type="button"
-                            onClick={downloadReportCompletionDiagnostics}
-                            className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-200 hover:bg-amber-500/20"
-                        >
-                            Diag
-                        </button>
-                    </div>
+                    <h2 className="text-xl font-semibold mb-4 text-amber-400">Reports to be completed</h2>
                     {visiblePt051ReportsToComplete.length > 0 || visibleTrainingReportsToComplete.length > 0 ? (
                         <ul className="space-y-2">
                             {visiblePt051ReportsToComplete.map(assessment => (

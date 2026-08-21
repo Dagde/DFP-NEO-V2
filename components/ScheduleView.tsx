@@ -6139,7 +6139,7 @@ const InitialSetupWizard: React.FC<{
         if (itemsForCommit.length === 0) {
             if (uploadResult?.status === 'valid') {
                 importWizardTemplateRows(initialSetupTemplates.find((template) => template.id === 'courses')!, uploadResult);
-                setSaveMessage('The uploaded LMP was valid, but no importable event rows were available to commit. Check the LMP diagnostics for parsed row details.');
+                setSaveMessage('The uploaded LMP was valid, but no importable event rows were available to commit. Review the parsed LMP rows before trying again.');
                 pushWizardLmpDiag('commit:blocked-valid-upload-no-items', {
                     reason: 'Validated upload existed, but neither React-staged items nor synchronous fallback parsing produced commit rows.',
                     uploadHeaders: uploadResult.headers || [],

@@ -10,7 +10,6 @@ import { setCurrentUser, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
 import { initialiseLiveChangeBus, LIVE_CHANGE_EVENT } from './utils/liveChangeBus';
 import { isEditableElement } from './utils/editableKeyEvents';
-import { getDfpDragDiagnosticReport } from './utils/dfpDragDiagnostics';
 import { getAdaptiveContextMenuPosition } from './utils/contextMenuPosition';
 import {
     buildPlatformDataScopeQuery,
@@ -320,21 +319,6 @@ const formatFixedCrewDisplayGroup = (crew?: string | null): string => {
     const unit = parts[0].trim();
     const crewLabel = parts.slice(1).join('::').trim();
     return unit && crewLabel ? `CREW ${crewLabel}/${unit}` : `CREW ${cleaned}`;
-};
-
-const getDiagnosticTimestamp = (timestamp?: string): string =>
-    (timestamp || new Date().toISOString()).replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
-
-const downloadJsonDiagnosticFile = (filename: string, report: any): boolean => {
-    if (typeof document === 'undefined' || typeof URL === 'undefined') return false;
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-    return true;
 };
 
 type UiLagTargetDescriptor = {
@@ -684,68 +668,6 @@ const getUiLagTargetDescriptor = (target: EventTarget | null): UiLagTargetDescri
     };
 };
 
-const buildNeoBuildDiagnosticExport = (): { report: any; filename: string } | null => {
-    if (typeof window === 'undefined') return null;
-    const inMemoryReport = (window as any).__lastNeoBuildDiagnosticReport;
-    const raw = window.localStorage?.getItem('neo_build_diag_report');
-    if (!inMemoryReport && !raw) return null;
-
-    const report = inMemoryReport ? JSON.parse(JSON.stringify(inMemoryReport)) : JSON.parse(raw as string);
-    try {
-        const timingRaw = window.localStorage?.getItem('neo_build_timing_report');
-        const runtimeRaw = window.localStorage?.getItem('neo_build_runtime_error_report');
-        const dfpDataRaw = window.localStorage?.getItem('neo_dfp_data_diag');
-        const staffScheduleRaw = window.localStorage?.getItem('neo_staff_schedule_render_diag');
-        if (timingRaw) report.timingReport = JSON.parse(timingRaw);
-        if (runtimeRaw) report.runtimeErrorReport = JSON.parse(runtimeRaw);
-        if (dfpDataRaw) report.dfpDisplayTrace = JSON.parse(dfpDataRaw);
-        if (staffScheduleRaw) report.staffScheduleRenderTrace = JSON.parse(staffScheduleRaw);
-    } catch (error) {
-        console.warn('[NEO-BUILD-DIAG] Failed to merge timing/runtime diagnostic context:', error);
-    }
-
-    return {
-        report,
-        filename: `neo-build-diag-${getDiagnosticTimestamp(report.timestamp)}.json`,
-    };
-};
-
-const downloadNeoBuildDiagnosticReport = (source: string = 'manual'): string | null => {
-    const diagnosticExport = buildNeoBuildDiagnosticExport();
-    if (!diagnosticExport) {
-        console.error('No NEO Build diagnostic report found. Run a build first.');
-        return null;
-    }
-
-    if (!downloadJsonDiagnosticFile(diagnosticExport.filename, diagnosticExport.report)) {
-        console.error('[NEO-BUILD-DIAG] Browser download API is unavailable.');
-        return null;
-    }
-
-    return diagnosticExport.filename;
-};
-
-const downloadNeoTaskProvenanceReport = (source: string = 'manual'): string | null => {
-    const diagnosticExport = buildNeoBuildDiagnosticExport();
-    const taskProvenance = diagnosticExport?.report?.taskProvenance;
-    if (!taskProvenance) {
-        console.error('No NEO task provenance report found. Run a build first.');
-        return null;
-    }
-
-    const filename = `neo-task-provenance-${getDiagnosticTimestamp(diagnosticExport.report.timestamp)}.json`;
-    if (!downloadJsonDiagnosticFile(filename, {
-        timestamp: diagnosticExport.report.timestamp,
-        buildDate: diagnosticExport.report.buildDate,
-        stage: diagnosticExport.report.stage,
-        taskProvenance,
-    })) {
-        console.error('[NEO-TASK-PROVENANCE] Browser download API is unavailable.');
-        return null;
-    }
-
-    return filename;
-};
 import DarkMessageModal from './components/DarkMessageModal';
 import SystemFreezeBanner from './components/SystemFreezeBanner';
 import DataLoadingMonitor from './components/DataLoadingMonitor';
@@ -4889,7 +4811,7 @@ const DfpSidePanelTimeline: React.FC<{
                         </div>
                     </div>
                     <span className="block text-[9px] text-slate-500">
-                        Priority list uses the latest NEO Build ordering when diagnostic priority data is available.
+                        Priority list uses the latest NEO Build ordering when priority data is available.
                     </span>
                 </div>
             );
@@ -7522,9 +7444,8 @@ function analyzeBuildResults(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// INSTRUCTOR ALLOCATION DIAGNOSTIC SYSTEM
+// INSTRUCTOR ALLOCATION TRACE SYSTEM
 // Pure localStorage-based. No React state. No UI props.
-// Run a build → open DevTools console → type: __downloadBuildDiagnostic()
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface InstructorDiagTraineeEntry {
@@ -7628,66 +7549,10 @@ function _diagFinalizeInstructors() {
             'Found:', _instructorDiag.summary.instructorFound,
             'NOT found:', _instructorDiag.summary.instructorNotFound);
         console.log('[INSTR-DIAG] Zero instructor breakdown:', JSON.stringify(_instructorDiag.summary.zeroInstructorCases));
-        console.log('[INSTR-DIAG] To download: open console and type __downloadBuildDiagnostic()');
     } catch (e) {
         console.warn('[INSTR-DIAG] Failed to save to localStorage:', e);
     }
 }
-
-// Global download helper — callable from browser DevTools console
-(window as any).__downloadBuildDiagnostic = () => {
-    const raw = localStorage.getItem('instructor_diag_report');
-    if (!raw) { console.error('No diagnostic report found. Run a build first.'); return; }
-    const report = JSON.parse(raw);
-    const filename = `instructor-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
-    downloadJsonDiagnosticFile(filename, report);
-    console.log('[INSTR-DIAG] Download triggered:', filename);
-};
-
-// Flight bottleneck diagnostic download helper
-(window as any).__downloadFlightDiag = () => {
-    const raw = localStorage.getItem("flight_diag_report");
-    if (!raw) { console.error("No flight diag report. Run a build first."); return; }
-    const report = JSON.parse(raw);
-    const filename = `flight-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
-    downloadJsonDiagnosticFile(filename, report);
-    console.log("[FLIGHT-DIAG] Downloaded flight-diag JSON:", filename);
-};
-
-(window as any).__downloadBuildConflictDiagnostic = () => {
-    const raw = localStorage.getItem('build_conflict_diag_report');
-    if (!raw) { console.error('No build conflict diagnostic report found. Run a build first.'); return; }
-    const report = JSON.parse(raw);
-    const filename = `build-conflict-diag-${getDiagnosticTimestamp(report.timestamp)}.json`;
-    downloadJsonDiagnosticFile(filename, report);
-    console.log('[BUILD-CONFLICT-DIAG] Download triggered:', filename);
-};
-
-(window as any).__downloadNeoBuildDiagnostic = () => {
-    downloadNeoBuildDiagnosticReport('devtools-helper');
-};
-
-(window as any).__downloadNeoTaskProvenance = () => {
-    downloadNeoTaskProvenanceReport('devtools-helper');
-};
-
-(window as any).__downloadNeoBuildTiming = () => {
-    const raw = localStorage.getItem('neo_build_timing_report');
-    if (!raw) { console.error('No NEO Build timing report found. Run a build first.'); return; }
-    const report = JSON.parse(raw);
-    const filename = `neo-build-timing-${getDiagnosticTimestamp(report.timestamp)}.json`;
-    downloadJsonDiagnosticFile(filename, report);
-    console.log('[NEO-BUILD-TIMING] Download triggered:', filename);
-};
-
-(window as any).__downloadFlightSchoolPriorityDiag = () => {
-    const raw = localStorage.getItem('flight_school_priority_diag_report');
-    if (!raw) { console.error('No Flight School priority diagnostic report found. Run a Flight School build first.'); return; }
-    const report = JSON.parse(raw);
-    const filename = `flight-school-priority-diag-${getDiagnosticTimestamp(report.summary?.updatedAt || new Date().toISOString())}.json`;
-    downloadJsonDiagnosticFile(filename, report);
-    console.log('[FLIGHT-SCHOOL-PRIORITY-DIAG] Download triggered:', filename);
-};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // END INSTRUCTOR ALLOCATION DIAGNOSTIC SYSTEM
@@ -23971,7 +23836,6 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 totalInvalidWindows: invalidWindows.length,
                 summaryByType: report.summaryByType,
                 summaryByGeneratedType: report.summaryByGeneratedType,
-                download: 'Run __downloadBuildConflictDiagnostic() in DevTools'
             });
             console.table(conflicts.slice(0, 25).map(conflict => ({
                 conflictType: conflict.conflictType,
@@ -24445,7 +24309,6 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             nextEventLists: neoBuildDiag.nextEventLists,
             finalCleanup: neoBuildDiag.finalCleanup,
             scheduleListSummary,
-            download: 'Run __downloadNeoBuildDiagnostic() in DevTools or use the downloaded NEO Build diagnostic file.',
         });
         try {
             localStorage.setItem('neo_build_zero_tile_trace', JSON.stringify(neoBuildDiag.zeroTileInvestigation));
@@ -24456,16 +24319,15 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     saveCurrencyPriorityDiagnostics('final');
     saveNeoBuildDiag('final');
     if (sortedEvents.length === 0 || windowNormalisationWarnings.length > 0 || normalisedFlyingWindowExclusions.length > 0) {
-        console.info('[NEO-Build][ScheduleDiagnostics] Report saved for download.', {
+        console.info('[NEO-Build][ScheduleDiagnostics] Internal schedule trace recorded.', {
             buildDate,
             final: neoBuildDiag.final,
             finalCleanup: neoBuildDiag.finalCleanup,
             windowWarnings: windowNormalisationWarnings,
             flyingWindowExclusions: normalisedFlyingWindowExclusions.length,
-            download: 'Use the Air Combat diagnostics download button or run __downloadNeoBuildDiagnostic() in DevTools.',
         });
     }
-    buildDebugLog('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report" for JSON download.', {
+    buildDebugLog('[NEO-BUILD-DIAG] Build trace saved to localStorage key "neo_build_diag_report".', {
         activeTrainees: neoBuildDiag.activeTrainees,
         nextEventLists: neoBuildDiag.nextEventLists,
         final: neoBuildDiag.final,
@@ -26814,26 +26676,6 @@ const App: React.FC = () => {
         };
     }
 
-    function downloadDfpDataDiagReport(): void {
-        const report = buildDfpDataDiagReport();
-        const generatedStamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const contextStamp = [school, activeUnitCode, date].map(value => String(value || '').replace(/[^a-z0-9-]+/gi, '-')).filter(Boolean).join('_');
-        const filename = `dfp-neo-load-diagnostics_${contextStamp || 'app'}_${generatedStamp}.json`;
-        try {
-            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error('[DFP-DIAG] Could not download diagnostic report:', error, report);
-        }
-    }
-
     function buildDfpTileNameDiagnosticReport(): Record<string, any> {
         const activeEvents: ScheduleEvent[] = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
         const contextPeople: PersonIdentityRecord[] = [
@@ -27061,16 +26903,6 @@ const App: React.FC = () => {
             surnameGroups,
             events,
         };
-    }
-
-    function downloadDfpTileNameDiagnosticReport(): void {
-        const report = buildDfpTileNameDiagnosticReport();
-        const generatedStamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const contextStamp = [school, activeUnitCode, date].map(value => String(value || '').replace(/[^a-z0-9-]+/gi, '-')).filter(Boolean).join('_');
-        const filename = `dfp-tile-name-diagnostics_${contextStamp || 'app'}_${generatedStamp}.json`;
-        if (!downloadJsonDiagnosticFile(filename, report)) {
-            console.error('[DFP-NAME-DIAG] Could not download tile name diagnostic report:', report);
-        }
     }
 
     function buildDashboardReportDiagnosticReport(): Record<string, any> {
@@ -27353,16 +27185,6 @@ const App: React.FC = () => {
             reportEvaluations,
             postFlightAssessmentDraftTrace,
         };
-    }
-
-    function downloadDashboardReportDiagnosticReport(): void {
-        const report = buildDashboardReportDiagnosticReport();
-        const generatedStamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const contextStamp = [school, activeUnitCode, date].map(value => String(value || '').replace(/[^a-z0-9-]+/gi, '-')).filter(Boolean).join('_');
-        const filename = `dfp-dashboard-report-diagnostics_${contextStamp || 'app'}_${generatedStamp}.json`;
-        if (!downloadJsonDiagnosticFile(filename, report)) {
-            console.error('[DFP-DASHBOARD-REPORT-DIAG] Could not download dashboard report diagnostic report:', report);
-        }
     }
 
     useEffect(() => {
@@ -30348,14 +30170,6 @@ const App: React.FC = () => {
         school,
     ]);
 
-    const downloadDfpResourceRowsDiagnosticReport = useCallback(() => {
-        const report = buildDfpResourceRowsDiagnosticReport();
-        const contextStamp = [school, activeUnitCode, date].map(value => String(value || '').replace(/[^a-z0-9-]+/gi, '-')).filter(Boolean).join('_');
-        const filename = `dfp-resource-rows-diag_${contextStamp || 'app'}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
-        if (!downloadJsonDiagnosticFile(filename, report)) {
-            console.error('[DFP-RESOURCE-ROWS-DIAG] Could not download diagnostic report:', report);
-        }
-    }, [activeUnitCode, buildDfpResourceRowsDiagnosticReport, date, school]);
     const currentAircraftConfigState = useMemo(() => ({
         availableAircraftCount: Math.max(0, Math.floor(Number(neoAvailableAircraftCount) || 0)),
         aircraftConfigCapacities: neoAircraftConfigCapacities,
@@ -32688,7 +32502,7 @@ const App: React.FC = () => {
             const raw = window.localStorage?.getItem('neo_build_diag_report');
             return raw ? JSON.parse(raw) : null;
         } catch (error) {
-            console.warn('[Staff Diagnose] Failed to read NEO Build diagnostic report:', error);
+            console.warn('[StaffAvailability] Failed to read NEO Build trace:', error);
             return null;
         }
     }, []);
@@ -40732,23 +40546,6 @@ const App: React.FC = () => {
             autoSave: localStorage.getItem('neo_build_live_diag') === 'true',
         });
         markNeoBuildTiming(timingReport, 'runBuildAlgorithm:start');
-        let neoBuildDiagnosticDownloaded = false;
-        const downloadNeoBuildDiagnosticAfterRun = (source: string) => {
-            if (neoBuildDiagnosticDownloaded) return;
-            markNeoBuildTiming(timingReport, `diagnostic-export:${source}:start`);
-            saveNeoBuildTimingReport(timingReport);
-            const filename = downloadNeoBuildDiagnosticReport(source);
-            if (filename) {
-                neoBuildDiagnosticDownloaded = true;
-                markNeoBuildTiming(timingReport, `diagnostic-export:${source}:downloaded`, { filename });
-                saveNeoBuildTimingReport(timingReport);
-                setShowInfoNotification(`${activeOperationalModelLabel} NEO Build diagnostic downloaded: ${filename}`);
-            } else {
-                markNeoBuildTiming(timingReport, `diagnostic-export:${source}:unavailable`);
-                saveNeoBuildTimingReport(timingReport);
-            }
-        };
-
         setIsBuildingDfp(true);
         pushDfpDataDiag('build:start-visible-draft-state', {
             buildDate: buildDfpDate,
@@ -41867,7 +41664,6 @@ const App: React.FC = () => {
                     setUnavailabilityNotifications(notifications);
                 }
                 markNeoBuildTiming(timingReport, 'notifications:complete', { notifications: notifications.length });
-                downloadNeoBuildDiagnosticAfterRun('build-complete');
 
             } catch (error) {
                 const runtimeErrorReport = {
@@ -41970,7 +41766,6 @@ const App: React.FC = () => {
                 console.error("🚀 [NEO-Build] DFP Build Failed:", error);
                 console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
                 setDfpBuildProgress({ message: 'Error during build!', percentage: 100 });
-                downloadNeoBuildDiagnosticAfterRun('build-error');
             } finally {
                 markNeoBuildTiming(timingReport, 'navigation:setTimeout-queued', { delayMs: NEO_BUILD_NAVIGATION_DELAY_MS });
                 setTimeout(() => {
@@ -44746,73 +44541,6 @@ appliedUpdates.forEach(update => {
         animationFrameId = window.requestAnimationFrame(tick);
         return () => window.cancelAnimationFrame(animationFrameId);
     }, [pushUiLagSample]);
-
-    const downloadUiLagDiagnosticReport = useCallback(() => {
-        const clickSamples = uiLagClickSamplesRef.current.map(sample => ({ ...sample }));
-        const longTaskSamples = uiLagLongTaskSamplesRef.current.map(sample => ({ ...sample }));
-        const frameDelaySamples = uiLagFrameDelaySamplesRef.current.map(sample => ({ ...sample }));
-        const dragDiagnostics = getDfpDragDiagnosticReport();
-        const dragSessions = (dragDiagnostics.sessions || []).map(session => ({ ...session }));
-        const worstDragSessions = [...dragSessions].sort((a, b) => (
-            Math.max(b.maxTotalMoveMs || 0, b.maxFlushDelayMs || 0, b.maxPointerGapMs || 0)
-            - Math.max(a.maxTotalMoveMs || 0, a.maxFlushDelayMs || 0, a.maxPointerGapMs || 0)
-        )).slice(0, 12);
-        const slowClicks = clickSamples
-            .filter(sample => (sample.secondFrameDelayMs ?? sample.firstFrameDelayMs ?? 0) >= 120)
-            .sort((a, b) => (b.secondFrameDelayMs ?? b.firstFrameDelayMs ?? 0) - (a.secondFrameDelayMs ?? a.firstFrameDelayMs ?? 0));
-        const settingsClicks = clickSamples.filter(sample => (
-            sample.target.dataUiLagRole?.startsWith('settings-')
-            || /settings|platform|people|permissions|training|threshold|business|configuration/i.test(`${sample.target.text} ${sample.target.title || ''}`)
-        ));
-        const report = {
-            reportType: 'dfp-ui-lag-diagnostics',
-            generatedAt: new Date().toISOString(),
-            url: typeof window !== 'undefined' ? window.location.href : null,
-            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-            activeContext: { ...latestUiLagContextRef.current },
-            thresholds: {
-                slowClickFrameMs: 120,
-                frameDelayMs: 80,
-                browserLongTaskMs: 50,
-            },
-            summary: {
-                clickCount: clickSamples.length,
-                slowClickCount: slowClicks.length,
-                longTaskCount: longTaskSamples.length,
-                frameDelayCount: frameDelaySamples.length,
-                settingsClickCount: settingsClicks.length,
-                dragSessionCount: dragSessions.length,
-                worstClicks: slowClicks.slice(0, 20),
-                worstLongTasks: [...longTaskSamples].sort((a, b) => b.durationMs - a.durationMs).slice(0, 20),
-                worstFrameDelays: [...frameDelaySamples].sort((a, b) => b.frameGapMs - a.frameGapMs).slice(0, 20),
-                worstDragSessions,
-            },
-            settingsClicks,
-            clickSamples,
-            longTaskSamples,
-            frameDelaySamples,
-            dragDiagnostics: {
-                ...dragDiagnostics,
-                sessions: dragSessions,
-            },
-        };
-        const unit = String(activeUnitCode || 'unit').replace(/[^a-z0-9-]+/gi, '-');
-        const filename = `dfp-ui-lag-diagnostics_${unit}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
-        downloadJsonDiagnosticFile(filename, report);
-    }, [activeUnitCode]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        (window as any).__downloadDfpDragDiagnostic = () => {
-            const report = getDfpDragDiagnosticReport();
-            const unit = String(latestUiLagContextRef.current.activeUnitCode || 'unit').replace(/[^a-z0-9-]+/gi, '-');
-            const filename = `dfp-drag-diagnostics_${unit}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
-            downloadJsonDiagnosticFile(filename, report);
-        };
-        return () => {
-            delete (window as any).__downloadDfpDragDiagnostic;
-        };
-    }, []);
 
     useEffect(() => {
         try {
@@ -51153,64 +50881,7 @@ appliedUpdates.forEach(update => {
                            setShowDfpSidePanel(false);
                            setShowFlightLinePanel(value => !value);
                        }}
-                       onStartStaffAvailabilityDiagnose={() => {
-                           setStaffAvailabilityPointer(pointer => ({
-                               ...pointer,
-                               x: pointer.x || Math.round(window.innerWidth / 2),
-                               y: pointer.y || Math.round(window.innerHeight / 2),
-                               time: null,
-                               inScheduleGrid: false,
-                           }));
-                           setIsStaffAvailabilityDiagnoseActive(true);
-                       }}
                 />}
-                {isStaffAvailabilityDiagnoseActive && (
-                    <div
-                        className="fixed z-[250] w-[250px] rounded-lg border border-cyan-400/45 bg-slate-950/95 p-3 text-xs text-slate-200 shadow-2xl backdrop-blur-md pointer-events-none"
-                        style={{ left: staffAvailabilityPanelPosition.left, top: staffAvailabilityPanelPosition.top }}
-                    >
-                        <div className="mb-2 flex items-start justify-between gap-3 border-b border-slate-700/80 pb-2">
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-300">Staff Diagnose</p>
-                                <p className="mt-0.5 font-mono text-sm font-bold text-white">
-                                    {staffAvailabilityPointer.inScheduleGrid && staffAvailabilityPointer.time !== null
-                                        ? formatDecimalHourToString(staffAvailabilityPointer.time)
-                                        : 'Move over DFP'}
-                                </p>
-                            </div>
-                            <span className="rounded border border-slate-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400">Esc</span>
-                        </div>
-                        <div className="space-y-1.5">
-                            {staffAvailabilityRoleRows.length > 0 ? staffAvailabilityRoleRows.map(row => (
-                                <div key={row.label} className="grid grid-cols-[1fr_auto_auto] items-baseline gap-2 rounded border border-slate-800/80 bg-slate-900/65 px-2 py-1.5">
-                                    <span className="truncate font-semibold text-slate-100" title={row.label}>{row.label}</span>
-                                    <span className="font-mono font-bold text-emerald-300" title="Available">{row.available}</span>
-                                    <span className="font-mono font-bold text-red-300" title="Unavailable">{row.unavailable}</span>
-                                </div>
-                            )) : (
-                                <p className="rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-slate-400">No staff roles found for this unit.</p>
-                            )}
-                            {staffAvailabilityTrainingRemaining && (
-                                <div className="mt-2 rounded border border-violet-400/35 bg-violet-950/30 px-2 py-2">
-                                    <div className="mb-1 flex items-center justify-between gap-2">
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-200">Priority Remaining</span>
-                                        <span className="font-mono text-sm font-bold text-white">{staffAvailabilityTrainingRemaining.total}</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-1 text-[11px]">
-                                        <div className="rounded bg-slate-950/45 px-1.5 py-1">
-                                            <div className="text-slate-400">Course</div>
-                                            <div className="font-mono font-bold text-sky-300">{staffAvailabilityTrainingRemaining.course}</div>
-                                        </div>
-                                        <div className="rounded bg-slate-950/45 px-1.5 py-1">
-                                            <div className="text-slate-400">Package</div>
-                                            <div className="font-mono font-bold text-emerald-300">{staffAvailabilityTrainingRemaining.trainingPackage}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
                 <div
                     className="relative flex-1 overflow-hidden flex flex-row min-h-0"
                     data-dfp-workspace="true"
@@ -52395,46 +52066,6 @@ appliedUpdates.forEach(update => {
                     title="Manually refresh mobile unavailability and alert responses"
                 >
                     {isManualSyncing ? 'Syncing' : 'Sync Now'}
-                </button>
-                <button
-                    type="button"
-                    onClick={downloadDfpDataDiagReport}
-                    className="rounded border border-cyan-500/30 px-1.5 py-0.5 text-cyan-200 transition-colors hover:border-cyan-400/60 hover:text-cyan-100"
-                    title="Download startup/load and staff schedule render diagnostic JSON report"
-                >
-                    Diag
-                </button>
-                <button
-                    type="button"
-                    onClick={downloadDfpResourceRowsDiagnosticReport}
-                    className="rounded border border-amber-500/30 px-1.5 py-0.5 text-amber-200 transition-colors hover:border-amber-400/60 hover:text-amber-100"
-                    title="Download DFP resource row diagnostic JSON report"
-                >
-                    Rows
-                </button>
-                <button
-                    type="button"
-                    onClick={downloadDfpTileNameDiagnosticReport}
-                    className="rounded border border-lime-500/30 px-1.5 py-0.5 text-lime-200 transition-colors hover:border-lime-400/60 hover:text-lime-100"
-                    title="Download DFP tile name display diagnostic JSON report"
-                >
-                    Names
-                </button>
-                <button
-                    type="button"
-                    onClick={downloadDashboardReportDiagnosticReport}
-                    className="rounded border border-rose-500/30 px-1.5 py-0.5 text-rose-200 transition-colors hover:border-rose-400/60 hover:text-rose-100"
-                    title="Download My Home reports-to-complete diagnostic JSON report"
-                >
-                    Reports
-                </button>
-                <button
-                    type="button"
-                    onClick={downloadUiLagDiagnosticReport}
-                    className="rounded border border-violet-500/30 px-1.5 py-0.5 text-violet-200 transition-colors hover:border-violet-400/60 hover:text-violet-100"
-                    title="Download UI lag, click-to-paint, long task, and frame delay diagnostic JSON report"
-                >
-                    Lag
                 </button>
             </div>
         )}

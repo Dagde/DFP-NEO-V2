@@ -49,7 +49,6 @@ interface HeaderProps {
     onLogout?: () => void;
     onShowAdminPanel?: () => void;
     onShowChangePassword?: () => void;
-    onStartStaffAvailabilityDiagnose?: () => void;
     isFlightLinePanelOpen?: boolean;
     onToggleFlightLinePanel?: () => void;
 }
@@ -107,7 +106,6 @@ const Header: React.FC<HeaderProps> = ({
     onLogout,
     onShowAdminPanel,
     onShowChangePassword,
-    onStartStaffAvailabilityDiagnose,
     isFlightLinePanelOpen = false,
     onToggleFlightLinePanel,
 }) => {
@@ -508,17 +506,6 @@ const Header: React.FC<HeaderProps> = ({
                         </svg>
                         Change Password
                     </button>
-                    {onStartStaffAvailabilityDiagnose && (
-                        <button
-                            onClick={() => { setShowUserMenu(false); onStartStaffAvailabilityDiagnose(); }}
-                            className="w-full px-3 py-2 text-left text-xs text-cyan-200 hover:bg-cyan-900/20 flex items-center gap-2"
-                        >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-6m4 6V7m4 10v-4M5 19h14M5 5h14" />
-                            </svg>
-                            Diagnose
-                        </button>
-                    )}
                     {isSuperAdmin && (
                         <button
                             onClick={() => { setShowUserMenu(false); onShowAdminPanel?.(); }}

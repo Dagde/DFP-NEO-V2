@@ -1299,7 +1299,7 @@ const ThresholdSettingsPanel: React.FC<{
           key: 'highVarianceThreshold',
           label: 'High Variance Threshold',
           desc: 'Grade standard deviation above which an event is flagged as high-variance (inconsistent trainee performance).',
-          usedBy: 'Event consistency and variance diagnostics',
+          usedBy: 'Event consistency and variance analysis',
           min: 0.3, max: 2.5, step: 0.1,
         },
         {
