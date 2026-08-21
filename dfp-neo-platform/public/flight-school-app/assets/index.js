@@ -74226,7 +74226,7 @@ const getConfigurationHealthSettingsLink = (area, title) => {
     return { section: "platform-user-access", label: "User Access" };
   }
   if (area === "Permission Profiles") {
-    return { section: "platform-permission-profiles", label: "Permission Profiles" };
+    return { section: "platform-permission-profiles", label: "Master Permission Profiles" };
   }
   if (area === "Licensing") {
     return { section: "platform-licensing", label: "Licensing & Deployment" };
@@ -74278,12 +74278,12 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
       return "Open Settings → People & Permissions → User Access Scopes, search for the user, then tick at least one configured permission profile that matches their duties.";
     }
     if (lowerTitle.includes("unknown permission profile")) {
-      return "Open Settings → People & Permissions → User Access Scopes and remove the unknown profile, or recreate that profile in Permission Profiles before assigning it.";
+      return "Open Settings → People & Permissions → Master Permission Profiles and recreate the missing profile, or remove the unknown profile from User Access Scopes.";
     }
     return "Open Settings → People & Permissions → User Access Scopes, search for the user, then correct the active access scope so the user, location, unit and feature area match active records.";
   }
   if (area === "Permission Profiles") {
-    return "Open Settings → People & Permissions → Permission Profiles and tick the capabilities this profile should grant, or remove the profile if it is no longer used.";
+    return "Open Settings → People & Permissions → Master Permission Profiles and tick the capabilities this profile should grant, or remove the profile if it is no longer used.";
   }
   if (area === "Licensing") {
     if (lowerTitle.includes("expired")) {
@@ -74640,7 +74640,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     }
     assignedProfiles.forEach((profileId) => {
       if (!profileIds.has(profileId)) {
-        add("WARNING", "User Access", `${userLabel} has unknown permission profile`, `${profileId} is assigned but does not exist in Permission Profiles.`, `access-${userId}-profile-${profileId}`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
+        add("WARNING", "User Access", `${userLabel} has unknown permission profile`, `${profileId} is assigned but does not exist in Master Permission Profiles.`, `access-${userId}-profile-${profileId}`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
       }
     });
   });
@@ -83211,7 +83211,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        !hasRankTerminologyEditPermission ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80", children: "Rank, Terminology & Labels is read-only for your permission profile. Grant “Edit rank and terminology settings” in Permission Profiles before this section can be edited." }) : !rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels." }) : null,
+        !hasRankTerminologyEditPermission ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80", children: "Rank, Terminology & Labels is read-only for your permission profile. Grant “Edit rank and terminology settings” in Master Permission Profiles before this section can be edited." }) : !rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels." }) : null,
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-personnel-terminology", className: "flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-700 bg-gray-950/70 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Personnel Terminology" }),
