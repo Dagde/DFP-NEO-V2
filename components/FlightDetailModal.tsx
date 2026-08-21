@@ -3547,6 +3547,14 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </button>
                                         </div>
                                     )}
+                                    {onOpenPreFlightNotes && (event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt') && (
+                                        <button
+                                            onClick={handlePreFlightNotesClick}
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                        >
+                                            <span className="text-center leading-tight">Pre-flight<br/>Notes</span>
+                                        </button>
+                                    )}
                                     <div className="relative w-[75px]">
                                         {isFrozen && (
                                             <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
@@ -4286,14 +4294,6 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 <span className="text-center leading-tight">Auth</span>
                                             </button>
                                         </div>
-                                    )}
-                                    {onOpenPreFlightNotes && (event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt') && (
-                                        <button
-                                            onClick={handlePreFlightNotesClick}
-                                            className="w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
-                                        >
-                                            <span className="text-center leading-tight">Pre-flight<br/>Notes</span>
-                                        </button>
                                     )}
                                     {/* Complete button - always frozen when system is frozen */}
                                     {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
