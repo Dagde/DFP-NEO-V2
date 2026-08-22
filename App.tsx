@@ -26725,6 +26725,15 @@ const App: React.FC = () => {
         URL.revokeObjectURL(url);
     }
 
+    function downloadSettingsPerformanceTraceReport(): void {
+        const downloadTrace = (window as any).downloadNeoSettingsPerformanceTrace;
+        if (typeof downloadTrace === 'function') {
+            downloadTrace();
+            return;
+        }
+        window.alert('Settings Trace is available after opening Settings.');
+    }
+
     function pushDashboardReportDiag(stage: string, details: Record<string, any> = {}): void {
         const entry = {
             ts: new Date().toISOString(),
@@ -52618,6 +52627,14 @@ appliedUpdates.forEach(update => {
                     title="Download staff roster context trace"
                 >
                     Staff Trace
+                </button>
+                <button
+                    type="button"
+                    onClick={downloadSettingsPerformanceTraceReport}
+                    className="rounded border border-violet-500/40 px-1.5 py-0.5 text-violet-200 transition-colors hover:border-violet-300/70 hover:text-white"
+                    title="Download settings performance trace"
+                >
+                    Settings Trace
                 </button>
             </div>
         )}

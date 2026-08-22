@@ -8179,6 +8179,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     );
   };
 
+  useEffect(() => {
+    (window as any).downloadNeoSettingsPerformanceTrace = downloadSettingsPerformanceTrace;
+    return () => {
+      if ((window as any).downloadNeoSettingsPerformanceTrace === downloadSettingsPerformanceTrace) {
+        delete (window as any).downloadNeoSettingsPerformanceTrace;
+      }
+    };
+  });
+
   const renderPlatformConfigError = () => {
     if (!error) return null;
     const canNavigate = Boolean(errorLink?.target && onNavigateToSettingsSection);
