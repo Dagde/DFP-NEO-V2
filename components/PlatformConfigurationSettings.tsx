@@ -1,4 +1,4 @@
-import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import {
   DEFAULT_PLATFORM_PERMISSION_PROFILES,
@@ -2403,7 +2403,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [bulkAccessPeopleSearch, setBulkAccessPeopleSearch] = useState('');
-  const deferredBulkAccessPeopleSearch = useDeferredValue(bulkAccessPeopleSearch);
   const [bulkAccessUserIds, setBulkAccessUserIds] = useState<string[]>([]);
   const [bulkAccessProfileIds, setBulkAccessProfileIds] = useState<string[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
@@ -6135,7 +6134,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, [activeBulkUnitCodes, instructorsData, personnelDisplaySettings, traineesData, userOptions]);
 
   const visibleBulkAccessUserOptions = useMemo(() => {
-    const queryTokens = buildAccessUserSearchText([deferredBulkAccessPeopleSearch]).split(' ').filter(Boolean);
+    const queryTokens = buildAccessUserSearchText([bulkAccessPeopleSearch]).split(' ').filter(Boolean);
     if (queryTokens.length === 0) return bulkAccessUserOptions;
     return bulkAccessUserOptions.filter((user) => {
       const searchText = user.searchText || buildAccessUserSearchText([
@@ -6151,7 +6150,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ]);
       return queryTokens.every((token) => searchText.includes(token));
     });
-  }, [bulkAccessUserOptions, deferredBulkAccessPeopleSearch]);
+  }, [bulkAccessPeopleSearch, bulkAccessUserOptions]);
 
   const bulkAccessUserGroups = useMemo(() => {
     const groups = new Map<string, Map<string, BulkAccessUserOption[]>>();
@@ -13070,11 +13069,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     {bulkAccessUserIds.length} selected
                   </span>
                 </div>
-                <input
-                  type="search"
+                <DebouncedSearchInput
                   value={bulkAccessPeopleSearch}
-                  onChange={(event) => setBulkAccessPeopleSearch(event.target.value)}
-                  onKeyDown={stopEditableKeyPropagation}
+                  onCommit={setBulkAccessPeopleSearch}
                   placeholder="Search people by name, ID, unit or course..."
                   className="mb-3 w-full rounded border border-cyan-500/30 bg-gray-950 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:border-cyan-300 focus:outline-none"
                 />
@@ -14553,6 +14550,42 @@ const TimeZoneField = ({ label, value, disabled, onChange, info }: { label: stri
   );
 };
 
+const DebouncedSearchInput = ({
+  value,
+  onCommit,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onCommit: (value: string) => void;
+  placeholder: string;
+  className: string;
+}) => {
+  const [draftValue, setDraftValue] = useState(value || '');
+
+  useEffect(() => {
+    setDraftValue(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      onCommit(draftValue);
+    }, 180);
+    return () => window.clearTimeout(timeoutId);
+  }, [draftValue, onCommit]);
+
+  return (
+    <input
+      type="search"
+      value={draftValue}
+      onChange={(event) => setDraftValue(event.target.value)}
+      onKeyDown={stopEditableKeyPropagation}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+};
+
 const UserSearchSelect = ({
   label,
   value,
@@ -14572,8 +14605,17 @@ const UserSearchSelect = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [draftSearch, setDraftSearch] = useState(search || '');
+  const [filterSearch, setFilterSearch] = useState(search || '');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setFilterSearch(draftSearch);
+    }, 120);
+    return () => window.clearTimeout(timeoutId);
+  }, [draftSearch]);
+
   const filteredUsers = useMemo(() => {
-    const query = draftSearch.trim().toLowerCase();
+    const query = filterSearch.trim().toLowerCase();
     return users.filter((user) => {
       if (!query) return true;
       const searchText = user.searchText || [user.name, user.username, user.email, user.personnelId]
@@ -14581,7 +14623,7 @@ const UserSearchSelect = ({
         .join(' ');
       return query.split(/\s+/).filter(Boolean).every((token) => searchText.includes(token));
     }).slice(0, 30);
-  }, [draftSearch, users]);
+  }, [filterSearch, users]);
 
   useEffect(() => {
     if (!isOpen) setDraftSearch(search || '');
@@ -14624,6 +14666,7 @@ const UserSearchSelect = ({
                   onChange(user.id);
                   onSearchChange('');
                   setDraftSearch('');
+                  setFilterSearch('');
                   setIsOpen(false);
                 }}
               >

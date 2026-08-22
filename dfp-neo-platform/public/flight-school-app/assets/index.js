@@ -75031,7 +75031,6 @@ const PlatformConfigurationSettings = ({
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");
   const [userSearch, setUserSearch] = reactExports.useState("");
   const [bulkAccessPeopleSearch, setBulkAccessPeopleSearch] = reactExports.useState("");
-  const deferredBulkAccessPeopleSearch = reactExports.useDeferredValue(bulkAccessPeopleSearch);
   const [bulkAccessUserIds, setBulkAccessUserIds] = reactExports.useState([]);
   const [bulkAccessProfileIds, setBulkAccessProfileIds] = reactExports.useState([]);
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
@@ -78058,7 +78057,7 @@ This removes it from the master list and from every user assignment that current
     return options;
   }, [activeBulkUnitCodes, instructorsData, personnelDisplaySettings, traineesData, userOptions]);
   const visibleBulkAccessUserOptions = reactExports.useMemo(() => {
-    const queryTokens = buildAccessUserSearchText([deferredBulkAccessPeopleSearch]).split(" ").filter(Boolean);
+    const queryTokens = buildAccessUserSearchText([bulkAccessPeopleSearch]).split(" ").filter(Boolean);
     if (queryTokens.length === 0) return bulkAccessUserOptions;
     return bulkAccessUserOptions.filter((user) => {
       const searchText = user.searchText || buildAccessUserSearchText([
@@ -78074,7 +78073,7 @@ This removes it from the master list and from every user assignment that current
       ]);
       return queryTokens.every((token) => searchText.includes(token));
     });
-  }, [bulkAccessUserOptions, deferredBulkAccessPeopleSearch]);
+  }, [bulkAccessPeopleSearch, bulkAccessUserOptions]);
   const bulkAccessUserGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     visibleBulkAccessUserOptions.forEach((user) => {
@@ -84386,12 +84385,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
+                DebouncedSearchInput,
                 {
-                  type: "search",
                   value: bulkAccessPeopleSearch,
-                  onChange: (event) => setBulkAccessPeopleSearch(event.target.value),
-                  onKeyDown: stopEditableKeyPropagation,
+                  onCommit: setBulkAccessPeopleSearch,
                   placeholder: "Search people by name, ID, unit or course...",
                   className: "mb-3 w-full rounded border border-cyan-500/30 bg-gray-950 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:border-cyan-300 focus:outline-none"
                 }
@@ -85593,6 +85590,34 @@ const TrainingReportModulePreview = ({
   ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children })
 ] });
+const DebouncedSearchInput = ({
+  value,
+  onCommit,
+  placeholder,
+  className
+}) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  reactExports.useEffect(() => {
+    setDraftValue(value || "");
+  }, [value]);
+  reactExports.useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      onCommit(draftValue);
+    }, 180);
+    return () => window.clearTimeout(timeoutId);
+  }, [draftValue, onCommit]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      type: "search",
+      value: draftValue,
+      onChange: (event) => setDraftValue(event.target.value),
+      onKeyDown: stopEditableKeyPropagation,
+      placeholder,
+      className
+    }
+  );
+};
 const UserSearchSelect = ({
   label,
   value,
@@ -85604,14 +85629,21 @@ const UserSearchSelect = ({
 }) => {
   const [isOpen, setIsOpen] = reactExports.useState(false);
   const [draftSearch, setDraftSearch] = reactExports.useState(search || "");
+  const [filterSearch, setFilterSearch] = reactExports.useState(search || "");
+  reactExports.useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setFilterSearch(draftSearch);
+    }, 120);
+    return () => window.clearTimeout(timeoutId);
+  }, [draftSearch]);
   const filteredUsers = reactExports.useMemo(() => {
-    const query = draftSearch.trim().toLowerCase();
+    const query = filterSearch.trim().toLowerCase();
     return users.filter((user) => {
       if (!query) return true;
       const searchText = user.searchText || [user.name, user.username, user.email, user.personnelId].map((field) => String(field || "").toLowerCase()).join(" ");
       return query.split(/\s+/).filter(Boolean).every((token) => searchText.includes(token));
     }).slice(0, 30);
-  }, [draftSearch, users]);
+  }, [filterSearch, users]);
   reactExports.useEffect(() => {
     if (!isOpen) setDraftSearch(search || "");
   }, [isOpen, search]);
@@ -85648,6 +85680,7 @@ const UserSearchSelect = ({
           onChange(user.id);
           onSearchChange("");
           setDraftSearch("");
+          setFilterSearch("");
           setIsOpen(false);
         },
         children: [
