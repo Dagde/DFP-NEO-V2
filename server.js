@@ -2311,6 +2311,8 @@ const PLATFORM_FIELD_LABELS = {
     accessLevel: 'Access',
     status: 'Access scope status',
     'settings.permissionProfileIds': 'Permission profiles',
+    'settings.permissionAllowIds': 'Added permission exceptions',
+    'settings.permissionDenyIds': 'Removed permission exceptions',
   },
 };
 
@@ -2388,6 +2390,7 @@ const formatAuditValue = (entityType, field, value) => {
   }
 
   if (field === 'settings.permissionProfileIds') return formatPermissionProfileList(value);
+  if (field === 'settings.permissionAllowIds' || field === 'settings.permissionDenyIds') return formatPermissionList(value);
   if (field?.includes('.permissions.') && typeof value === 'boolean') return value ? 'Allowed' : 'Not allowed';
   if (field?.endsWith('.permissions')) return formatPermissionList(value);
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';

@@ -6372,6 +6372,112 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return Array.from(new Set(ids));
   }, [selectedAccessRows]);
 
+  const selectedUserPermissionAllowIds = useMemo(() => {
+    const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || '').toUpperCase() !== 'INACTIVE');
+    const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
+    return uniqueValues(sourceRows.flatMap(({ access }) => (
+      Array.isArray(access.settings?.permissionAllowIds)
+        ? access.settings.permissionAllowIds.map((id: unknown) => String(id || '').trim()).filter(Boolean)
+        : []
+    )));
+  }, [selectedAccessRows]);
+
+  const selectedUserPermissionDenyIds = useMemo(() => {
+    const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || '').toUpperCase() !== 'INACTIVE');
+    const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
+    return uniqueValues(sourceRows.flatMap(({ access }) => (
+      Array.isArray(access.settings?.permissionDenyIds)
+        ? access.settings.permissionDenyIds.map((id: unknown) => String(id || '').trim()).filter(Boolean)
+        : []
+    )));
+  }, [selectedAccessRows]);
+
+  const selectedBasePermissionIds = useMemo(() => {
+    const selectedProfileSet = new Set(selectedUserProfileIds.map((id) => String(id || '').trim()));
+    return uniqueValues(permissionProfiles
+      .filter((profile) => selectedProfileSet.has(profile.id))
+      .flatMap((profile) => profile.permissions || []));
+  }, [permissionProfiles, selectedUserProfileIds]);
+
+  const selectedEffectivePermissionIds = useMemo(() => {
+    const deniedSet = new Set(selectedUserPermissionDenyIds);
+    return uniqueValues([...selectedBasePermissionIds, ...selectedUserPermissionAllowIds])
+      .filter((permissionId) => !deniedSet.has(permissionId));
+  }, [selectedBasePermissionIds, selectedUserPermissionAllowIds, selectedUserPermissionDenyIds]);
+
+  const selectedUserHasPermissionOverrides = selectedUserPermissionAllowIds.length > 0 || selectedUserPermissionDenyIds.length > 0;
+
+  const setSelectedUserPermissionOverrides = (allowIds: string[], denyIds: string[]) => {
+    const cleanAllowIds = uniqueValues(allowIds);
+    const cleanDenyIds = uniqueValues(denyIds).filter((id) => !cleanAllowIds.includes(id));
+    const selectedUser = selectedAccessUserOption || selectedAccessUser;
+    const selectedUserId = String(selectedAccessUserId || selectedUser?.id || selectedUser?.userId || selectedUser?.username || '').trim();
+    if (!selectedUserId) return;
+    const selectedUsername = String(selectedUser?.username || selectedUserId).trim();
+    const selectedDisplayName = selectedAccessDisplayName && !selectedAccessDisplayName.includes('(missing')
+      ? selectedAccessDisplayName
+      : String(selectedUser?.name || `${selectedUser?.firstName || ''} ${selectedUser?.lastName || ''}`.trim() || selectedUsername || selectedUserId).trim();
+    setConfig((prev) => ({
+      ...prev,
+      userAccess: (() => {
+        const rows = Array.isArray(prev.userAccess) ? prev.userAccess : [];
+        let matched = false;
+        const nextRows = rows.map((access) => {
+          const accessUserId = String(access.userId || '').trim();
+          const accessUsername = String(access.username || '').trim();
+          if (accessUserId !== selectedUserId && accessUsername !== selectedUserId) return access;
+          matched = true;
+          return {
+            ...access,
+            settings: {
+              ...(access.settings || {}),
+              permissionAllowIds: cleanAllowIds,
+              permissionDenyIds: cleanDenyIds,
+            },
+          };
+        });
+        if (matched) return nextRows;
+        const defaultUnitCode = activeBulkUnitCodes[0] || activeUnitCode || '';
+        const defaultLocationCode = String(
+          (Array.isArray(prev.units) ? prev.units : []).find((unit) => (
+            String(unit.code || '').trim().toUpperCase() === String(defaultUnitCode || '').trim().toUpperCase()
+          ))?.locationCode
+          || (Array.isArray(prev.locations) ? prev.locations : [])[0]?.code
+          || ''
+        ).trim();
+        return [
+          ...nextRows,
+          {
+            userId: selectedUserId,
+            username: selectedUsername,
+            displayName: selectedDisplayName || selectedUsername || selectedUserId,
+            organisationCode: (Array.isArray(prev.organisations) ? prev.organisations : [])[0]?.code || 'DEFAULT',
+            locationCode: defaultLocationCode || null,
+            unitCode: defaultUnitCode || null,
+            moduleCode: null,
+            role: 'Viewer',
+            accessLevel: 'Read',
+            status: 'ACTIVE',
+            settings: {
+              permissionProfileIds: selectedUserProfileIds,
+              permissionAllowIds: cleanAllowIds,
+              permissionDenyIds: cleanDenyIds,
+            },
+          },
+        ];
+      })(),
+    }));
+  };
+
+  const toggleSelectedUserPermission = (permissionId: string, checked: boolean) => {
+    const isBasePermission = selectedBasePermissionIds.includes(permissionId);
+    const nextAllowIds = selectedUserPermissionAllowIds.filter((id) => id !== permissionId);
+    const nextDenyIds = selectedUserPermissionDenyIds.filter((id) => id !== permissionId);
+    if (checked && !isBasePermission) nextAllowIds.push(permissionId);
+    if (!checked && isBasePermission) nextDenyIds.push(permissionId);
+    setSelectedUserPermissionOverrides(nextAllowIds, nextDenyIds);
+  };
+
   const setSelectedUserProfileIds = (profileIds: string[]) => {
     const cleanProfileIds = Array.from(new Set(profileIds.filter(Boolean)));
     const selectedUser = selectedAccessUserOption || selectedAccessUser;
@@ -13227,11 +13333,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="mb-3">
               <h5 className="text-sm font-bold text-white">Assign Master Profiles to This User</h5>
               <p className="mt-1 text-xs text-gray-400">
-                Tick the user's normal role profile, then tick any exception profiles that grant extra page, tab or button access outside that role. These options come from the Master Permission Profiles list.
+                Tick the user's normal role profile. The permissions below show that template, then let you add or remove user-specific exceptions without changing the master profile.
               </p>
               <p className="mt-1 text-xs text-cyan-100/70">
                 Changes made in Master Permission Profiles appear here automatically because this is not a separate role list.
               </p>
+              {selectedUserHasPermissionOverrides && (
+                <p className="mt-2 inline-flex rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-100">
+                  Custom exceptions are active for this user.
+                </p>
+              )}
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {permissionProfiles.map((profile) => {
@@ -13265,6 +13376,69 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </label>
                 );
               })}
+            </div>
+            <div className="mt-4 rounded-lg border border-cyan-500/25 bg-cyan-950/20 p-4">
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h6 className="text-sm font-bold text-cyan-50">User-Specific Permission Exceptions</h6>
+                  <p className="mt-1 text-xs text-cyan-100/70">
+                    Checked boxes are this user's effective permissions. Changing a checkbox here saves only this user's exception, not the master template.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserPermissionOverrides([], [])}
+                  disabled={!canEditSection('platform-user-access') || !selectedAccessUserId || !selectedUserHasPermissionOverrides}
+                  className="rounded border border-cyan-500/40 bg-cyan-600/15 px-3 py-2 text-xs font-bold text-cyan-50 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Reset to Template
+                </button>
+              </div>
+              <div className="space-y-3">
+                {PLATFORM_PERMISSION_CATALOG.map((group) => (
+                  <div key={`user-permission-${group.group}`} className="rounded border border-gray-800 bg-gray-950/70 p-3">
+                    <div className="mb-2 text-xs font-extrabold uppercase tracking-wide text-cyan-200">{group.group}</div>
+                    <div className="grid gap-1.5 md:grid-cols-2 xl:grid-cols-3">
+                      {group.items.map(([permissionId, label]) => {
+                        const baseChecked = selectedBasePermissionIds.includes(permissionId);
+                        const explicitlyAllowed = selectedUserPermissionAllowIds.includes(permissionId);
+                        const explicitlyDenied = selectedUserPermissionDenyIds.includes(permissionId);
+                        const checked = selectedEffectivePermissionIds.includes(permissionId);
+                        const exceptionLabel = explicitlyAllowed
+                          ? 'Added exception'
+                          : explicitlyDenied
+                            ? 'Removed exception'
+                            : baseChecked
+                              ? 'From template'
+                              : 'Not included';
+                        return (
+                          <label key={`user-permission-${permissionId}`} className={`flex min-h-[42px] items-start gap-2 rounded border px-2 py-2 text-xs ${
+                            explicitlyAllowed
+                              ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-50'
+                              : explicitlyDenied
+                                ? 'border-amber-400/40 bg-amber-500/10 text-amber-50'
+                                : checked
+                                  ? 'border-cyan-500/25 bg-cyan-500/10 text-cyan-50'
+                                  : 'border-gray-800 bg-gray-950 text-gray-400'
+                          }`}>
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                              checked={checked}
+                              disabled={!canEditSection('platform-user-access') || !selectedAccessUserId || selectedUserProfileIds.length === 0}
+                              onChange={(event) => toggleSelectedUserPermission(permissionId, event.target.checked)}
+                            />
+                            <span className="min-w-0">
+                              <span className="block font-semibold">{label}</span>
+                              <span className="mt-0.5 block text-[10px] uppercase tracking-wide opacity-70">{exceptionLabel}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

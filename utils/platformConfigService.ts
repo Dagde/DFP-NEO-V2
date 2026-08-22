@@ -945,6 +945,22 @@ const getExplicitPermissionProfileIds = (rows: PlatformAccessRow[]): string[] =>
   )),
 );
 
+const getExplicitPermissionAllowIds = (rows: PlatformAccessRow[]): string[] => uniqueValues(
+  rows.flatMap((row) => (
+    Array.isArray(parseSettingsObject(row.settings).permissionAllowIds)
+      ? parseSettingsObject(row.settings).permissionAllowIds.map((id: unknown) => String(id || '').trim()).filter(Boolean)
+      : []
+  )),
+);
+
+const getExplicitPermissionDenyIds = (rows: PlatformAccessRow[]): string[] => uniqueValues(
+  rows.flatMap((row) => (
+    Array.isArray(parseSettingsObject(row.settings).permissionDenyIds)
+      ? parseSettingsObject(row.settings).permissionDenyIds.map((id: unknown) => String(id || '').trim()).filter(Boolean)
+      : []
+  )),
+);
+
 const legacyRoleToProfileId = (role: unknown): string | null => {
   const normalisedRole = normaliseAccessValue(role);
   if (!normalisedRole) return null;
@@ -985,7 +1001,10 @@ const resolvePermissionsForRows = (
     return [];
   });
 
-  const permissions = addImpliedViewPermissions(uniqueValues([...profilePermissions, ...rolePermissions]));
+  const allowPermissions = getExplicitPermissionAllowIds(rows);
+  const deniedPermissionSet = new Set(getExplicitPermissionDenyIds(rows).map(normaliseAccessValue));
+  const permissions = addImpliedViewPermissions(uniqueValues([...profilePermissions, ...rolePermissions, ...allowPermissions]))
+    .filter((permissionId) => !deniedPermissionSet.has(normaliseAccessValue(permissionId)));
   const isSuperAdmin = permissions.includes('settings.superAdmin') || rows.some((row) => normaliseAccessValue(row.role).includes('super admin'));
   const isPlatformAdmin = isSuperAdmin || rows.some((row) => {
     const role = normaliseAccessValue(row.role);

@@ -34180,6 +34180,16 @@ const App: React.FC = () => {
             .filter(Boolean));
     }, [platformAccessContext, platformConfig, normalisePermissionId]);
 
+    const deniedPlatformPermissionOverrides = useMemo(() => (
+        new Set(platformAccessContext.rows
+            .flatMap((row) => {
+                const settings = row.settings as { permissionDenyIds?: unknown } | null | undefined;
+                return Array.isArray(settings?.permissionDenyIds) ? settings.permissionDenyIds : [];
+            })
+            .map((permissionId) => normalisePermissionId(String(permissionId)))
+            .filter(Boolean))
+    ), [platformAccessContext.rows, normalisePermissionId]);
+
     const profilePermissionsImplyRequestedPermission = useCallback((permissionId: string): boolean => {
         const requested = normalisePermissionId(permissionId);
         const hasPrefix = (prefix: string) => Array.from(assignedPlatformProfilePermissions)
@@ -34203,11 +34213,12 @@ const App: React.FC = () => {
     const canUsePlatformPermission = useCallback((permissionId: string): boolean => {
         if (hasAuthenticatedAdminRole) return true;
         if (platformAccessContext.isSuperAdmin) return true;
+        if (deniedPlatformPermissionOverrides.has(normalisePermissionId(permissionId))) return false;
         if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
         if (assignedPlatformProfilePermissions.has(normalisePermissionId('settings.superAdmin'))) return true;
         if (profilePermissionsImplyRequestedPermission(permissionId)) return true;
         return assignedPlatformProfilePermissions.has(normalisePermissionId(permissionId));
-    }, [hasAuthenticatedAdminRole, platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId, profilePermissionsImplyRequestedPermission]);
+    }, [hasAuthenticatedAdminRole, platformAccessContext, deniedPlatformPermissionOverrides, assignedPlatformProfilePermissions, normalisePermissionId, profilePermissionsImplyRequestedPermission]);
 
     const denyPlatformAction = useCallback((actionLabel: string) => {
         setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
