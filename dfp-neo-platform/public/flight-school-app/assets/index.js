@@ -75227,6 +75227,21 @@ const PlatformConfigurationSettings = ({
       totalMs: Number((current.totalMs + duration).toFixed(2))
     };
   };
+  const recordSettingsTraceEvent = (type, event) => {
+    const target = event?.target;
+    const traceEvent = {
+      type,
+      atIso: (/* @__PURE__ */ new Date()).toISOString(),
+      atMs: Number(getTraceNow().toFixed(2)),
+      section: scrollTarget || "all-settings",
+      targetTag: target?.tagName || "",
+      targetText: String(target?.textContent || "").trim().slice(0, 80),
+      targetValueLength: target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ? String(target.value || "").length : void 0
+    };
+    const events = settingsTraceRef.current.events;
+    events.push(traceEvent);
+    if (events.length > 120) events.splice(0, events.length - 120);
+  };
   reactExports.useEffect(() => {
     const now = getTraceNow();
     const previousRenderAt = settingsTraceRef.current.lastRenderAtMs || now;
@@ -78380,8 +78395,11 @@ This removes it from the master list and from every user assignment that current
     return uniqueValues(permissionProfiles.filter((profile) => selectedProfileSet.has(profile.id)).flatMap((profile) => profile.permissions || []));
   }, [permissionProfiles, selectedUserProfileIds]);
   const selectedEffectivePermissionIds = reactExports.useMemo(() => {
+    const traceStartedAt = getTraceNow();
     const deniedSet = new Set(selectedUserPermissionDenyIds);
-    return uniqueValues([...selectedBasePermissionIds, ...selectedUserPermissionAllowIds]).filter((permissionId) => !deniedSet.has(permissionId));
+    const result = uniqueValues([...selectedBasePermissionIds, ...selectedUserPermissionAllowIds]).filter((permissionId) => !deniedSet.has(permissionId));
+    recordSettingsTraceTiming("selectedEffectivePermissionIds", traceStartedAt);
+    return result;
   }, [selectedBasePermissionIds, selectedUserPermissionAllowIds, selectedUserPermissionDenyIds]);
   const selectedBasePermissionIdSet = reactExports.useMemo(() => new Set(selectedBasePermissionIds), [selectedBasePermissionIds]);
   const selectedEffectivePermissionIdSet = reactExports.useMemo(() => new Set(selectedEffectivePermissionIds), [selectedEffectivePermissionIds]);
@@ -79736,12 +79754,22 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
     unitCode: entry.unitCode
   }));
-  const visibleUserAccessRows = configUserAccess.map((access, index) => ({ access, index })).filter(({ access }) => isRecordVisibleForSettingsPolicy({
-    unitCode: access.unitCode,
-    locationCode: access.locationCode,
-    organisationCode: access.organisationCode
-  }));
-  const visibleSelectedAccessRows = visibleUserAccessRows.filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId));
+  const visibleUserAccessRows = reactExports.useMemo(() => {
+    const traceStartedAt = getTraceNow();
+    const result = configUserAccess.map((access, index) => ({ access, index })).filter(({ access }) => isRecordVisibleForSettingsPolicy({
+      unitCode: access.unitCode,
+      locationCode: access.locationCode,
+      organisationCode: access.organisationCode
+    }));
+    recordSettingsTraceTiming("visibleUserAccessRows", traceStartedAt);
+    return result;
+  }, [configUserAccess, settingsVisibilityEnabled, settingsVisibilityPolicy, visibilityLocationCode, visibilityParentOrganisationCode, visibilityUnitSet, visibilityAircraftTypeSet]);
+  const visibleSelectedAccessRows = reactExports.useMemo(() => {
+    const traceStartedAt = getTraceNow();
+    const result = visibleUserAccessRows.filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId));
+    recordSettingsTraceTiming("visibleSelectedAccessRows", traceStartedAt);
+    return result;
+  }, [selectedAccessUserId, visibleUserAccessRows]);
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
     const name = String(pool.name || "").trim() || "Unnamed DFP Resource Rows";
@@ -79899,6 +79927,84 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     if (target?.closest('input, textarea, select, [contenteditable="true"], [data-rank-equivalency-input="true"]')) return;
     stopEditableKeyPropagation(event);
   };
+  const handleSettingsTraceKeyDownCapture = (event) => {
+    recordSettingsTraceEvent("keydown", event);
+    handleSettingsKeyDownCapture(event);
+  };
+  const handleSettingsTracePointerDownCapture = (event) => {
+    recordSettingsTraceEvent("pointerdown", event);
+  };
+  const downloadSettingsPerformanceTrace = () => {
+    const navigationEntry = typeof performance !== "undefined" && typeof performance.getEntriesByType === "function" ? performance.getEntriesByType("navigation")[0] : null;
+    const report = {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      activeContext: {
+        scrollTarget: scrollTarget || null,
+        sectionOnly,
+        visibleSectionTarget,
+        selectedAccessUserId,
+        selectedAccessDisplayName,
+        activeUnitCode,
+        activeUnitCodes,
+        activeCompositeUnitCode,
+        activeOperationalModel,
+        currentUserPermission
+      },
+      counts: {
+        organisations: configOrganisations.length,
+        locations: configLocations.length,
+        units: configUnits.length,
+        aircraftTypes: configAircraftTypes.length,
+        resourcePools: configResourcePools.length,
+        schedulingRuleSets: configSchedulingRuleSets.length,
+        platformUsers: configPlatformUsers.length,
+        userAccessRows: configUserAccess.length,
+        visibleUserAccessRows: visibleUserAccessRows.length,
+        visibleSelectedAccessRows: visibleSelectedAccessRows.length,
+        permissionProfiles: permissionProfiles.length,
+        selectedUserProfiles: selectedUserProfileIds.length,
+        selectedBasePermissions: selectedBasePermissionIds.length,
+        selectedAllowedExceptions: selectedUserPermissionAllowIds.length,
+        selectedDeniedExceptions: selectedUserPermissionDenyIds.length,
+        selectedEffectivePermissions: selectedEffectivePermissionIds.length,
+        instructors: instructorsData.length,
+        trainees: traineesData.length,
+        userOptions: userOptions.length,
+        bulkAccessUserOptions: bulkAccessUserOptions.length,
+        visibleBulkAccessUserOptions: visibleBulkAccessUserOptions.length,
+        renderedBulkAccessUserOptions: renderedBulkAccessUserOptions.length,
+        bulkAccessUserGroups: bulkAccessUserGroups.length,
+        selectedBulkUsers: bulkAccessUserIds.length,
+        selectedBulkProfiles: bulkAccessProfileIds.length
+      },
+      searchState: {
+        topUserSearchLength: userSearch.length,
+        bulkPeopleSearchLength: bulkAccessPeopleSearch.length,
+        hiddenBulkAccessUserCount
+      },
+      renderTrace: {
+        mountedAtIso: settingsTraceRef.current.mountedAtIso,
+        ageMs: Number((getTraceNow() - settingsTraceRef.current.mountedAtMs).toFixed(2)),
+        renderCount: settingsTraceRef.current.renderCount,
+        lastRenderAtMs: Number(settingsTraceRef.current.lastRenderAtMs.toFixed(2)),
+        maxRenderGapMs: settingsTraceRef.current.maxRenderGapMs
+      },
+      timingTrace: settingsTraceRef.current.timings,
+      recentEvents: settingsTraceRef.current.events,
+      browser: {
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+        hardwareConcurrency: typeof navigator !== "undefined" ? navigator.hardwareConcurrency : void 0,
+        deviceMemory: typeof navigator !== "undefined" ? navigator.deviceMemory : void 0,
+        navigation: navigationEntry ? JSON.parse(JSON.stringify(navigationEntry)) : null
+      }
+    };
+    const dateStamp = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    downloadTextFile(
+      `settings-performance-trace-${dateStamp}.json`,
+      JSON.stringify(report, null, 2),
+      "application/json"
+    );
+  };
   const renderPlatformConfigError = () => {
     if (!error) return null;
     const canNavigate = Boolean(errorLink?.target && onNavigateToSettingsSection);
@@ -79923,7 +80029,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     "div",
     {
       className: "relative space-y-8",
-      onKeyDownCapture: handleSettingsKeyDownCapture,
+      onKeyDownCapture: handleSettingsTraceKeyDownCapture,
+      onPointerDownCapture: handleSettingsTracePointerDownCapture,
       children: [
         trainingReportPreviewOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(
           TrainingReportFullPreviewFlyout,
@@ -84625,19 +84732,26 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             {
               title: "User Access Context",
               subtitle: "Search by user name, assign permission profiles, then define where those profiles apply.",
-              action: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                renderSectionEditSaveButton("platform-user-access"),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                  "Add",
+              action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: downloadSettingsPerformanceTrace, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                  "Settings",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "Scope"
-                ] }) })
-              ] }) : null })
+                  "Trace"
+                ] }) }),
+                canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  renderSectionEditSaveButton("platform-user-access"),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                    "Add",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                    "Scope"
+                  ] }) })
+                ] }) : null
+              ] })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-user-access-records", className: "space-y-3 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   UserSearchSelect,
                   {
@@ -84660,7 +84774,16 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Access Scopes" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: visibleSelectedAccessRows.length })
-                ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: downloadSettingsPerformanceTrace,
+                    className: "rounded border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-500/20",
+                    children: "Settings Trace"
+                  }
+                ) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Scope fields define where those profiles apply." })
             ] }),

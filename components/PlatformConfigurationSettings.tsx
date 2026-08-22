@@ -2492,6 +2492,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     };
   };
 
+  const recordSettingsTraceEvent = (type: string, event?: React.SyntheticEvent<HTMLElement>) => {
+    const target = event?.target as HTMLElement | null;
+    const traceEvent = {
+      type,
+      atIso: new Date().toISOString(),
+      atMs: Number(getTraceNow().toFixed(2)),
+      section: scrollTarget || 'all-settings',
+      targetTag: target?.tagName || '',
+      targetText: String(target?.textContent || '').trim().slice(0, 80),
+      targetValueLength: target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ? String(target.value || '').length : undefined,
+    };
+    const events = settingsTraceRef.current.events;
+    events.push(traceEvent);
+    if (events.length > 120) events.splice(0, events.length - 120);
+  };
+
   useEffect(() => {
     const now = getTraceNow();
     const previousRenderAt = settingsTraceRef.current.lastRenderAtMs || now;
@@ -6396,9 +6412,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, [permissionProfiles, selectedUserProfileIds]);
 
   const selectedEffectivePermissionIds = useMemo(() => {
+    const traceStartedAt = getTraceNow();
     const deniedSet = new Set(selectedUserPermissionDenyIds);
-    return uniqueValues([...selectedBasePermissionIds, ...selectedUserPermissionAllowIds])
+    const result = uniqueValues([...selectedBasePermissionIds, ...selectedUserPermissionAllowIds])
       .filter((permissionId) => !deniedSet.has(permissionId));
+    recordSettingsTraceTiming('selectedEffectivePermissionIds', traceStartedAt);
+    return result;
   }, [selectedBasePermissionIds, selectedUserPermissionAllowIds, selectedUserPermissionDenyIds]);
 
   const selectedBasePermissionIdSet = useMemo(() => new Set(selectedBasePermissionIds), [selectedBasePermissionIds]);
@@ -8053,18 +8072,28 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
     unitCode: entry.unitCode,
   }));
-  const visibleUserAccessRows = configUserAccess
-    .map((access, index) => ({ access, index }))
-    .filter(({ access }) => isRecordVisibleForSettingsPolicy({
-      unitCode: access.unitCode,
-      locationCode: access.locationCode,
-      organisationCode: access.organisationCode,
-    }));
-  const visibleSelectedAccessRows = visibleUserAccessRows.filter(({ access }) => (
-    [access.userId, access.username]
-      .map((value) => String(value || '').trim())
-      .some((value) => value === selectedAccessUserId)
-  ));
+  const visibleUserAccessRows = useMemo(() => {
+    const traceStartedAt = getTraceNow();
+    const result = configUserAccess
+      .map((access, index) => ({ access, index }))
+      .filter(({ access }) => isRecordVisibleForSettingsPolicy({
+        unitCode: access.unitCode,
+        locationCode: access.locationCode,
+        organisationCode: access.organisationCode,
+      }));
+    recordSettingsTraceTiming('visibleUserAccessRows', traceStartedAt);
+    return result;
+  }, [configUserAccess, settingsVisibilityEnabled, settingsVisibilityPolicy, visibilityLocationCode, visibilityParentOrganisationCode, visibilityUnitSet, visibilityAircraftTypeSet]);
+  const visibleSelectedAccessRows = useMemo(() => {
+    const traceStartedAt = getTraceNow();
+    const result = visibleUserAccessRows.filter(({ access }) => (
+      [access.userId, access.username]
+        .map((value) => String(value || '').trim())
+        .some((value) => value === selectedAccessUserId)
+    ));
+    recordSettingsTraceTiming('visibleSelectedAccessRows', traceStartedAt);
+    return result;
+  }, [selectedAccessUserId, visibleUserAccessRows]);
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
     const name = String(pool.name || '').trim() || 'Unnamed DFP Resource Rows';
@@ -8270,6 +8299,87 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (target?.closest('input, textarea, select, [contenteditable="true"], [data-rank-equivalency-input="true"]')) return;
     stopEditableKeyPropagation(event);
   };
+  const handleSettingsTraceKeyDownCapture = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    recordSettingsTraceEvent('keydown', event);
+    handleSettingsKeyDownCapture(event);
+  };
+  const handleSettingsTracePointerDownCapture = (event: React.PointerEvent<HTMLDivElement>) => {
+    recordSettingsTraceEvent('pointerdown', event);
+  };
+
+  const downloadSettingsPerformanceTrace = () => {
+    const navigationEntry = typeof performance !== 'undefined' && typeof performance.getEntriesByType === 'function'
+      ? performance.getEntriesByType('navigation')[0]
+      : null;
+    const report = {
+      generatedAt: new Date().toISOString(),
+      activeContext: {
+        scrollTarget: scrollTarget || null,
+        sectionOnly,
+        visibleSectionTarget,
+        selectedAccessUserId,
+        selectedAccessDisplayName,
+        activeUnitCode,
+        activeUnitCodes,
+        activeCompositeUnitCode,
+        activeOperationalModel,
+        currentUserPermission,
+      },
+      counts: {
+        organisations: configOrganisations.length,
+        locations: configLocations.length,
+        units: configUnits.length,
+        aircraftTypes: configAircraftTypes.length,
+        resourcePools: configResourcePools.length,
+        schedulingRuleSets: configSchedulingRuleSets.length,
+        platformUsers: configPlatformUsers.length,
+        userAccessRows: configUserAccess.length,
+        visibleUserAccessRows: visibleUserAccessRows.length,
+        visibleSelectedAccessRows: visibleSelectedAccessRows.length,
+        permissionProfiles: permissionProfiles.length,
+        selectedUserProfiles: selectedUserProfileIds.length,
+        selectedBasePermissions: selectedBasePermissionIds.length,
+        selectedAllowedExceptions: selectedUserPermissionAllowIds.length,
+        selectedDeniedExceptions: selectedUserPermissionDenyIds.length,
+        selectedEffectivePermissions: selectedEffectivePermissionIds.length,
+        instructors: instructorsData.length,
+        trainees: traineesData.length,
+        userOptions: userOptions.length,
+        bulkAccessUserOptions: bulkAccessUserOptions.length,
+        visibleBulkAccessUserOptions: visibleBulkAccessUserOptions.length,
+        renderedBulkAccessUserOptions: renderedBulkAccessUserOptions.length,
+        bulkAccessUserGroups: bulkAccessUserGroups.length,
+        selectedBulkUsers: bulkAccessUserIds.length,
+        selectedBulkProfiles: bulkAccessProfileIds.length,
+      },
+      searchState: {
+        topUserSearchLength: userSearch.length,
+        bulkPeopleSearchLength: bulkAccessPeopleSearch.length,
+        hiddenBulkAccessUserCount,
+      },
+      renderTrace: {
+        mountedAtIso: settingsTraceRef.current.mountedAtIso,
+        ageMs: Number((getTraceNow() - settingsTraceRef.current.mountedAtMs).toFixed(2)),
+        renderCount: settingsTraceRef.current.renderCount,
+        lastRenderAtMs: Number(settingsTraceRef.current.lastRenderAtMs.toFixed(2)),
+        maxRenderGapMs: settingsTraceRef.current.maxRenderGapMs,
+      },
+      timingTrace: settingsTraceRef.current.timings,
+      recentEvents: settingsTraceRef.current.events,
+      browser: {
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        hardwareConcurrency: typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : undefined,
+        deviceMemory: typeof navigator !== 'undefined' ? (navigator as any).deviceMemory : undefined,
+        navigation: navigationEntry ? JSON.parse(JSON.stringify(navigationEntry)) : null,
+      },
+    };
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    downloadTextFile(
+      `settings-performance-trace-${dateStamp}.json`,
+      JSON.stringify(report, null, 2),
+      'application/json',
+    );
+  };
 
   const renderPlatformConfigError = () => {
     if (!error) return null;
@@ -8297,7 +8407,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   return (
     <div
       className="relative space-y-8"
-      onKeyDownCapture={handleSettingsKeyDownCapture}
+      onKeyDownCapture={handleSettingsTraceKeyDownCapture}
+      onPointerDownCapture={handleSettingsTracePointerDownCapture}
     >
       {trainingReportPreviewOpen && (
         <TrainingReportFullPreviewFlyout
@@ -13211,6 +13322,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
           action={(
             <div className="flex flex-wrap justify-end gap-[1px]">
+              <button type="button" onClick={downloadSettingsPerformanceTrace} className={platformActionButtonClass}>
+                <span className="text-[9px] leading-tight">Settings<br />Trace</span>
+              </button>
               {canEdit ? (
                 <>
                   {renderSectionEditSaveButton('platform-user-access')}
@@ -13224,7 +13338,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div id="platform-user-access-records" className="space-y-3 p-4">
           <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
-            <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)]">
+            <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]">
               <UserSearchSelect
                 label="User"
                 value={selectedAccessUserId}
@@ -13248,6 +13362,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100">
                   {visibleSelectedAccessRows.length}
                 </div>
+              </div>
+              <div className="flex flex-col justify-end">
+                <button
+                  type="button"
+                  onClick={downloadSettingsPerformanceTrace}
+                  className="rounded border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-500/20"
+                >
+                  Settings Trace
+                </button>
               </div>
             </div>
             <p className="mt-3 text-xs text-cyan-100/70">
