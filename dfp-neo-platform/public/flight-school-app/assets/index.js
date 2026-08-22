@@ -75227,21 +75227,6 @@ const PlatformConfigurationSettings = ({
       totalMs: Number((current.totalMs + duration).toFixed(2))
     };
   };
-  const recordSettingsTraceEvent = (type, event) => {
-    const target = event?.target;
-    const traceEvent = {
-      type,
-      atIso: (/* @__PURE__ */ new Date()).toISOString(),
-      atMs: Number(getTraceNow().toFixed(2)),
-      section: scrollTarget || "all-settings",
-      targetTag: target?.tagName || "",
-      targetText: String(target?.textContent || "").trim().slice(0, 80),
-      targetValueLength: target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ? String(target.value || "").length : void 0
-    };
-    const events = settingsTraceRef.current.events;
-    events.push(traceEvent);
-    if (events.length > 120) events.splice(0, events.length - 120);
-  };
   reactExports.useEffect(() => {
     const now = getTraceNow();
     const previousRenderAt = settingsTraceRef.current.lastRenderAtMs || now;
@@ -78379,6 +78364,7 @@ This removes it from the master list and from every user assignment that current
     const ids = sourceRows.flatMap(({ access }) => Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds : []);
     return Array.from(new Set(ids));
   }, [selectedAccessRows]);
+  const selectedUserProfileIdSet = reactExports.useMemo(() => new Set(selectedUserProfileIds), [selectedUserProfileIds]);
   const selectedUserPermissionAllowIds = reactExports.useMemo(() => {
     const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || "").toUpperCase() !== "INACTIVE");
     const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
@@ -78397,6 +78383,10 @@ This removes it from the master list and from every user assignment that current
     const deniedSet = new Set(selectedUserPermissionDenyIds);
     return uniqueValues([...selectedBasePermissionIds, ...selectedUserPermissionAllowIds]).filter((permissionId) => !deniedSet.has(permissionId));
   }, [selectedBasePermissionIds, selectedUserPermissionAllowIds, selectedUserPermissionDenyIds]);
+  const selectedBasePermissionIdSet = reactExports.useMemo(() => new Set(selectedBasePermissionIds), [selectedBasePermissionIds]);
+  const selectedEffectivePermissionIdSet = reactExports.useMemo(() => new Set(selectedEffectivePermissionIds), [selectedEffectivePermissionIds]);
+  const selectedUserPermissionAllowIdSet = reactExports.useMemo(() => new Set(selectedUserPermissionAllowIds), [selectedUserPermissionAllowIds]);
+  const selectedUserPermissionDenyIdSet = reactExports.useMemo(() => new Set(selectedUserPermissionDenyIds), [selectedUserPermissionDenyIds]);
   const selectedUserHasPermissionOverrides = selectedUserPermissionAllowIds.length > 0 || selectedUserPermissionDenyIds.length > 0;
   const setSelectedUserPermissionOverrides = (allowIds, denyIds) => {
     const cleanAllowIds = uniqueValues(allowIds);
@@ -78454,7 +78444,7 @@ This removes it from the master list and from every user assignment that current
     }));
   };
   const toggleSelectedUserPermission = (permissionId, checked) => {
-    const isBasePermission = selectedBasePermissionIds.includes(permissionId);
+    const isBasePermission = selectedBasePermissionIdSet.has(permissionId);
     const nextAllowIds = selectedUserPermissionAllowIds.filter((id) => id !== permissionId);
     const nextDenyIds = selectedUserPermissionDenyIds.filter((id) => id !== permissionId);
     if (checked && !isBasePermission) nextAllowIds.push(permissionId);
@@ -79909,77 +79899,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     if (target?.closest('input, textarea, select, [contenteditable="true"], [data-rank-equivalency-input="true"]')) return;
     stopEditableKeyPropagation(event);
   };
-  const handleSettingsTraceKeyDownCapture = (event) => {
-    recordSettingsTraceEvent("keydown", event);
-    handleSettingsKeyDownCapture(event);
-  };
-  const handleSettingsTracePointerDownCapture = (event) => {
-    recordSettingsTraceEvent("pointerdown", event);
-  };
-  const downloadSettingsPerformanceTrace = () => {
-    const navigationEntry = typeof performance !== "undefined" && typeof performance.getEntriesByType === "function" ? performance.getEntriesByType("navigation")[0] : null;
-    const report = {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      activeContext: {
-        scrollTarget: scrollTarget || null,
-        sectionOnly,
-        visibleSectionTarget,
-        selectedAccessUserId,
-        selectedAccessDisplayName,
-        activeUnitCode,
-        activeUnitCodes,
-        activeCompositeUnitCode,
-        activeOperationalModel,
-        currentUserPermission
-      },
-      counts: {
-        organisations: configOrganisations.length,
-        locations: configLocations.length,
-        units: configUnits.length,
-        aircraftTypes: configAircraftTypes.length,
-        resourcePools: configResourcePools.length,
-        schedulingRuleSets: configSchedulingRuleSets.length,
-        platformUsers: configPlatformUsers.length,
-        userAccessRows: configUserAccess.length,
-        permissionProfiles: permissionProfiles.length,
-        instructors: instructorsData.length,
-        trainees: traineesData.length,
-        userOptions: userOptions.length,
-        bulkAccessUserOptions: bulkAccessUserOptions.length,
-        visibleBulkAccessUserOptions: visibleBulkAccessUserOptions.length,
-        renderedBulkAccessUserOptions: renderedBulkAccessUserOptions.length,
-        bulkAccessUserGroups: bulkAccessUserGroups.length,
-        selectedBulkUsers: bulkAccessUserIds.length,
-        selectedBulkProfiles: bulkAccessProfileIds.length
-      },
-      searchState: {
-        topUserSearchLength: userSearch.length,
-        bulkPeopleSearchLength: bulkAccessPeopleSearch.length,
-        hiddenBulkAccessUserCount
-      },
-      renderTrace: {
-        mountedAtIso: settingsTraceRef.current.mountedAtIso,
-        ageMs: Number((getTraceNow() - settingsTraceRef.current.mountedAtMs).toFixed(2)),
-        renderCount: settingsTraceRef.current.renderCount,
-        lastRenderAtMs: Number(settingsTraceRef.current.lastRenderAtMs.toFixed(2)),
-        maxRenderGapMs: settingsTraceRef.current.maxRenderGapMs
-      },
-      timingTrace: settingsTraceRef.current.timings,
-      recentEvents: settingsTraceRef.current.events,
-      browser: {
-        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
-        hardwareConcurrency: typeof navigator !== "undefined" ? navigator.hardwareConcurrency : void 0,
-        deviceMemory: typeof navigator !== "undefined" ? navigator.deviceMemory : void 0,
-        navigation: navigationEntry ? JSON.parse(JSON.stringify(navigationEntry)) : null
-      }
-    };
-    const dateStamp = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    downloadTextFile(
-      `settings-performance-trace-${dateStamp}.json`,
-      JSON.stringify(report, null, 2),
-      "application/json"
-    );
-  };
   const renderPlatformConfigError = () => {
     if (!error) return null;
     const canNavigate = Boolean(errorLink?.target && onNavigateToSettingsSection);
@@ -80004,8 +79923,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     "div",
     {
       className: "relative space-y-8",
-      onKeyDownCapture: handleSettingsTraceKeyDownCapture,
-      onPointerDownCapture: handleSettingsTracePointerDownCapture,
+      onKeyDownCapture: handleSettingsKeyDownCapture,
       children: [
         trainingReportPreviewOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(
           TrainingReportFullPreviewFlyout,
@@ -84707,26 +84625,19 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             {
               title: "User Access Context",
               subtitle: "Search by user name, assign permission profiles, then define where those profiles apply.",
-              action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: downloadSettingsPerformanceTrace, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                  "Settings",
+              action: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                renderSectionEditSaveButton("platform-user-access"),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                  "Add",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "Trace"
-                ] }) }),
-                canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                  renderSectionEditSaveButton("platform-user-access"),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                    "Add",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                    "Scope"
-                  ] }) })
-                ] }) : null
-              ] })
+                  "Scope"
+                ] }) })
+              ] }) : null })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-user-access-records", className: "space-y-3 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   UserSearchSelect,
                   {
@@ -84749,16 +84660,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Access Scopes" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: visibleSelectedAccessRows.length })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: downloadSettingsPerformanceTrace,
-                    className: "rounded border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-500/20",
-                    children: "Settings Trace"
-                  }
-                ) })
+                ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Scope fields define where those profiles apply." })
             ] }),
@@ -84770,7 +84672,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 selectedUserHasPermissionOverrides && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 inline-flex rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-100", children: "Custom exceptions are active for this user." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: permissionProfiles.map((profile) => {
-                const checked = selectedUserProfileIds.includes(profile.id);
+                const checked = selectedUserProfileIdSet.has(profile.id);
                 const profileType = getPermissionProfileType(profile);
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-950 p-3 text-sm text-gray-200", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -84795,7 +84697,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   ] })
                 ] }, profile.id);
               }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-cyan-500/25 bg-cyan-950/20 p-4", children: [
+              selectedAccessUserId ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-cyan-500/25 bg-cyan-950/20 p-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-sm font-bold text-cyan-50", children: "User-Specific Permission Exceptions" }),
@@ -84815,10 +84717,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: PLATFORM_PERMISSION_CATALOG.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-800 bg-gray-950/70 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-extrabold uppercase tracking-wide text-cyan-200", children: group.group }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-1.5 md:grid-cols-2 xl:grid-cols-3", children: group.items.map(([permissionId, label]) => {
-                    const baseChecked = selectedBasePermissionIds.includes(permissionId);
-                    const explicitlyAllowed = selectedUserPermissionAllowIds.includes(permissionId);
-                    const explicitlyDenied = selectedUserPermissionDenyIds.includes(permissionId);
-                    const checked = selectedEffectivePermissionIds.includes(permissionId);
+                    const baseChecked = selectedBasePermissionIdSet.has(permissionId);
+                    const explicitlyAllowed = selectedUserPermissionAllowIdSet.has(permissionId);
+                    const explicitlyDenied = selectedUserPermissionDenyIdSet.has(permissionId);
+                    const checked = selectedEffectivePermissionIdSet.has(permissionId);
                     const exceptionLabel = explicitlyAllowed ? "Added exception" : explicitlyDenied ? "Removed exception" : baseChecked ? "From template" : "Not included";
                     return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex min-h-[42px] items-start gap-2 rounded border px-2 py-2 text-xs ${explicitlyAllowed ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-50" : explicitlyDenied ? "border-amber-400/40 bg-amber-500/10 text-amber-50" : checked ? "border-cyan-500/25 bg-cyan-500/10 text-cyan-50" : "border-gray-800 bg-gray-950 text-gray-400"}`, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -84838,7 +84740,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     ] }, `user-permission-${permissionId}`);
                   }) })
                 ] }, `user-permission-${group.group}`)) })
-              ] })
+              ] }) : null
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-gray-900 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
