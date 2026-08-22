@@ -132773,6 +132773,27 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       ].join(":");
     }).sort().join("|");
   }, []);
+  const getPersonRecordMergeKey = reactExports.useCallback((record) => {
+    const dbId = String(record?.id || "").trim();
+    if (dbId) return `db:${dbId}`;
+    const idNumber = String(record?.idNumber || "").trim();
+    if (idNumber) return `id:${idNumber}`;
+    const name = normalisePersonName(record?.name || record?.fullName || "");
+    return name ? `name:${name}` : "";
+  }, []);
+  const mergePolledDatabasePeople = reactExports.useCallback((previous, polledRecords, includeMockData) => {
+    const polledKeys = new Set(polledRecords.map(getPersonRecordMergeKey).filter(Boolean));
+    const retainedRecords = previous.filter((record) => {
+      const source = record?._dataSource;
+      if (source === "database") {
+        const key = getPersonRecordMergeKey(record);
+        return !key || !polledKeys.has(key);
+      }
+      if (source === "mockdata") return includeMockData;
+      return source === "setup-test";
+    });
+    return [...retainedRecords, ...polledRecords];
+  }, [getPersonRecordMergeKey]);
   const syncUnavailabilityFromDatabase = reactExports.useCallback(async () => {
     if (isSetupTestMode()) return false;
     if (isUserEditing()) return false;
@@ -132792,19 +132813,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         }));
         logRoutineAppDebug("[Poll] Fetched", dbPersonnel.length, "personnel. Unavailability total:", dbPersonnel.reduce((sum, p) => sum + (p.unavailability?.length || 0), 0));
         setInstructorsData((prev) => {
-          const prevDbPersonnel = prev.filter((i) => i._dataSource === "database");
-          const prevHash = buildPersonnelStatusHash(prevDbPersonnel);
-          const newHash = buildPersonnelStatusHash(dbPersonnel);
+          const nextPersonnel = mergePolledDatabasePeople(prev, dbPersonnel, dataSourceSettings.staff === true);
+          const prevHash = buildPersonnelStatusHash(prev);
+          const newHash = buildPersonnelStatusHash(nextPersonnel);
           if (prevHash === newHash) return prev;
           logRoutineAppDebug("[Poll] Personnel availability/status CHANGED - updating state");
           pollChanged = true;
-          const retainedSessionStaff = prev.filter((i) => {
-            const source = i._dataSource;
-            if (source === "database") return false;
-            if (source === "mockdata") return dataSourceSettings.staff === true;
-            return source === "setup-test";
-          });
-          return [...retainedSessionStaff, ...dbPersonnel];
+          return nextPersonnel;
         });
       }
       if (traineesRes.ok) {
@@ -132815,19 +132830,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         }));
         logRoutineAppDebug("[Poll] Fetched", dbTrainees.length, "trainees. Unavailability total:", dbTrainees.reduce((sum, t) => sum + (t.unavailability?.length || 0), 0));
         setTraineesData((prev) => {
-          const prevDbTrainees = prev.filter((t) => t._dataSource === "database");
-          const prevHash = buildPersonnelStatusHash(prevDbTrainees);
-          const newHash = buildPersonnelStatusHash(dbTrainees);
+          const nextTrainees = mergePolledDatabasePeople(prev, dbTrainees, dataSourceSettings.trainee === true);
+          const prevHash = buildPersonnelStatusHash(prev);
+          const newHash = buildPersonnelStatusHash(nextTrainees);
           if (prevHash === newHash) return prev;
           logRoutineAppDebug("[Poll] Trainee availability/status CHANGED - updating state");
           pollChanged = true;
-          const retainedSessionTrainees = prev.filter((t) => {
-            const source = t._dataSource;
-            if (source === "database") return false;
-            if (source === "mockdata") return dataSourceSettings.trainee === true;
-            return source === "setup-test";
-          });
-          return [...retainedSessionTrainees, ...dbTrainees];
+          return nextTrainees;
         });
       }
       const now = /* @__PURE__ */ new Date();
@@ -132839,7 +132848,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       console.error("[Poll] Error during poll:", e);
       return false;
     }
-  }, [buildPersonnelStatusHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing, scopedApiPath]);
+  }, [buildPersonnelStatusHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing, mergePolledDatabasePeople, scopedApiPath]);
   reactExports.useEffect(() => {
     if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
     syncUnavailabilityFromDatabase();

@@ -44782,6 +44782,29 @@ appliedUpdates.forEach(update => {
             .join('|');
     }, []);
 
+    const getPersonRecordMergeKey = useCallback((record: any): string => {
+        const dbId = String(record?.id || '').trim();
+        if (dbId) return `db:${dbId}`;
+        const idNumber = String(record?.idNumber || '').trim();
+        if (idNumber) return `id:${idNumber}`;
+        const name = normalisePersonName(record?.name || record?.fullName || '');
+        return name ? `name:${name}` : '';
+    }, []);
+
+    const mergePolledDatabasePeople = useCallback(<T extends any>(previous: T[], polledRecords: T[], includeMockData: boolean): T[] => {
+        const polledKeys = new Set(polledRecords.map(getPersonRecordMergeKey).filter(Boolean));
+        const retainedRecords = previous.filter((record: any) => {
+            const source = record?._dataSource;
+            if (source === 'database') {
+                const key = getPersonRecordMergeKey(record);
+                return !key || !polledKeys.has(key);
+            }
+            if (source === 'mockdata') return includeMockData;
+            return source === 'setup-test';
+        });
+        return [...retainedRecords, ...polledRecords];
+    }, [getPersonRecordMergeKey]);
+
     const syncUnavailabilityFromDatabase = useCallback(async (): Promise<boolean> => {
         if (isSetupTestMode()) return false;
         if (isUserEditing()) return false;
@@ -44801,19 +44824,13 @@ appliedUpdates.forEach(update => {
                 }));
                 logRoutineAppDebug('[Poll] Fetched', dbPersonnel.length, 'personnel. Unavailability total:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
                 setInstructorsData(prev => {
-                    const prevDbPersonnel = prev.filter(i => (i as any)._dataSource === 'database');
-                    const prevHash = buildPersonnelStatusHash(prevDbPersonnel);
-                    const newHash  = buildPersonnelStatusHash(dbPersonnel);
+                    const nextPersonnel = mergePolledDatabasePeople(prev, dbPersonnel, dataSourceSettings.staff === true);
+                    const prevHash = buildPersonnelStatusHash(prev);
+                    const newHash  = buildPersonnelStatusHash(nextPersonnel);
                     if (prevHash === newHash) return prev;
                     logRoutineAppDebug('[Poll] Personnel availability/status CHANGED - updating state');
                     pollChanged = true;
-                    const retainedSessionStaff = prev.filter(i => {
-                        const source = (i as any)._dataSource;
-                        if (source === 'database') return false;
-                        if (source === 'mockdata') return dataSourceSettings.staff === true;
-                        return source === 'setup-test';
-                    });
-                    return [...retainedSessionStaff, ...dbPersonnel];
+                    return nextPersonnel;
                 });
             }
             if (traineesRes.ok) {
@@ -44824,19 +44841,13 @@ appliedUpdates.forEach(update => {
                 }));
                 logRoutineAppDebug('[Poll] Fetched', dbTrainees.length, 'trainees. Unavailability total:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
                 setTraineesData(prev => {
-                    const prevDbTrainees = prev.filter(t => (t as any)._dataSource === 'database');
-                    const prevHash = buildPersonnelStatusHash(prevDbTrainees);
-                    const newHash  = buildPersonnelStatusHash(dbTrainees);
+                    const nextTrainees = mergePolledDatabasePeople(prev, dbTrainees, dataSourceSettings.trainee === true);
+                    const prevHash = buildPersonnelStatusHash(prev);
+                    const newHash  = buildPersonnelStatusHash(nextTrainees);
                     if (prevHash === newHash) return prev;
                     logRoutineAppDebug('[Poll] Trainee availability/status CHANGED - updating state');
                     pollChanged = true;
-                    const retainedSessionTrainees = prev.filter(t => {
-                        const source = (t as any)._dataSource;
-                        if (source === 'database') return false;
-                        if (source === 'mockdata') return dataSourceSettings.trainee === true;
-                        return source === 'setup-test';
-                    });
-                    return [...retainedSessionTrainees, ...dbTrainees];
+                    return nextTrainees;
                 });
             }
             const now = new Date();
@@ -44848,7 +44859,7 @@ appliedUpdates.forEach(update => {
             console.error('[Poll] Error during poll:', e);
             return false;
         }
-    }, [buildPersonnelStatusHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing, scopedApiPath]);
+    }, [buildPersonnelStatusHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing, mergePolledDatabasePeople, scopedApiPath]);
 
     useEffect(() => {
         if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
