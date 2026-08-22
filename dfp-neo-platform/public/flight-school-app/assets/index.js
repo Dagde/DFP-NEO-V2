@@ -79754,7 +79754,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
     unitCode: entry.unitCode
   }));
-  const visibleUserAccessRows = reactExports.useMemo(() => {
+  const visibleUserAccessRows = (() => {
     const traceStartedAt = getTraceNow();
     const result = configUserAccess.map((access, index) => ({ access, index })).filter(({ access }) => isRecordVisibleForSettingsPolicy({
       unitCode: access.unitCode,
@@ -79763,13 +79763,13 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     }));
     recordSettingsTraceTiming("visibleUserAccessRows", traceStartedAt);
     return result;
-  }, [configUserAccess, settingsVisibilityEnabled, settingsVisibilityPolicy, visibilityLocationCode, visibilityParentOrganisationCode, visibilityUnitSet, visibilityAircraftTypeSet]);
-  const visibleSelectedAccessRows = reactExports.useMemo(() => {
+  })();
+  const visibleSelectedAccessRows = (() => {
     const traceStartedAt = getTraceNow();
     const result = visibleUserAccessRows.filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId));
     recordSettingsTraceTiming("visibleSelectedAccessRows", traceStartedAt);
     return result;
-  }, [selectedAccessUserId, visibleUserAccessRows]);
+  })();
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
     const name = String(pool.name || "").trim() || "Unnamed DFP Resource Rows";

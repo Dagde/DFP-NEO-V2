@@ -8072,7 +8072,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
     unitCode: entry.unitCode,
   }));
-  const visibleUserAccessRows = useMemo(() => {
+  const visibleUserAccessRows = (() => {
     const traceStartedAt = getTraceNow();
     const result = configUserAccess
       .map((access, index) => ({ access, index }))
@@ -8080,11 +8080,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         unitCode: access.unitCode,
         locationCode: access.locationCode,
         organisationCode: access.organisationCode,
-      }));
+    }));
     recordSettingsTraceTiming('visibleUserAccessRows', traceStartedAt);
     return result;
-  }, [configUserAccess, settingsVisibilityEnabled, settingsVisibilityPolicy, visibilityLocationCode, visibilityParentOrganisationCode, visibilityUnitSet, visibilityAircraftTypeSet]);
-  const visibleSelectedAccessRows = useMemo(() => {
+  })();
+  const visibleSelectedAccessRows = (() => {
     const traceStartedAt = getTraceNow();
     const result = visibleUserAccessRows.filter(({ access }) => (
       [access.userId, access.username]
@@ -8093,7 +8093,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     ));
     recordSettingsTraceTiming('visibleSelectedAccessRows', traceStartedAt);
     return result;
-  }, [selectedAccessUserId, visibleUserAccessRows]);
+  })();
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
     const name = String(pool.name || '').trim() || 'Unnamed DFP Resource Rows';
