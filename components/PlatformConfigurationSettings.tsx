@@ -2265,6 +2265,12 @@ const downloadTextFile = (filename: string, content: string, mimeType: string) =
   URL.revokeObjectURL(url);
 };
 
+const getTraceNow = (): number => (
+  typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now()
+);
+
 const TRAINING_REPORT_OVERVIEW_FIELD_INFO: Record<string, string> = {
   event: 'The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as a lesson code, task code or sortie number.',
   training: 'The label for the training stream that owns the event. Depending on the operational model, this may be a course, LMP, package, task stream or assigned training sequence.',
@@ -2464,6 +2470,50 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const standardCrewCompositionRef = useRef<HTMLDivElement | null>(null);
   const resourcePoolExitPromptOpenRef = useRef(false);
   const resourcePoolEditBaselineRef = useRef<PlatformConfig | null>(null);
+  const settingsTraceRef = useRef({
+    mountedAtIso: new Date().toISOString(),
+    mountedAtMs: getTraceNow(),
+    renderCount: 0,
+    lastRenderAtMs: 0,
+    maxRenderGapMs: 0,
+    events: [] as Array<Record<string, any>>,
+    timings: {} as Record<string, { count: number; lastMs: number; maxMs: number; totalMs: number }>,
+  });
+
+  const recordSettingsTraceTiming = (label: string, startedAtMs: number) => {
+    const duration = Math.max(0, getTraceNow() - startedAtMs);
+    const current = settingsTraceRef.current.timings[label] || { count: 0, lastMs: 0, maxMs: 0, totalMs: 0 };
+    settingsTraceRef.current.timings[label] = {
+      count: current.count + 1,
+      lastMs: Number(duration.toFixed(2)),
+      maxMs: Number(Math.max(current.maxMs, duration).toFixed(2)),
+      totalMs: Number((current.totalMs + duration).toFixed(2)),
+    };
+  };
+
+  const recordSettingsTraceEvent = (type: string, event?: React.SyntheticEvent<HTMLElement>) => {
+    const target = event?.target as HTMLElement | null;
+    const traceEvent = {
+      type,
+      atIso: new Date().toISOString(),
+      atMs: Number(getTraceNow().toFixed(2)),
+      section: scrollTarget || 'all-settings',
+      targetTag: target?.tagName || '',
+      targetText: String(target?.textContent || '').trim().slice(0, 80),
+      targetValueLength: target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ? String(target.value || '').length : undefined,
+    };
+    const events = settingsTraceRef.current.events;
+    events.push(traceEvent);
+    if (events.length > 120) events.splice(0, events.length - 120);
+  };
+
+  useEffect(() => {
+    const now = getTraceNow();
+    const previousRenderAt = settingsTraceRef.current.lastRenderAtMs || now;
+    settingsTraceRef.current.renderCount += 1;
+    settingsTraceRef.current.lastRenderAtMs = now;
+    settingsTraceRef.current.maxRenderGapMs = Number(Math.max(settingsTraceRef.current.maxRenderGapMs, now - previousRenderAt).toFixed(2));
+  });
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.('settings.rankTerminology.edit') ?? canEdit;
@@ -5839,6 +5889,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const userOptions = useMemo<PlatformAccessUserOption[]>(
     () => {
+      const traceStartedAt = getTraceNow();
       const withSearchText = (user: Omit<PlatformAccessUserOption, 'searchText'>): PlatformAccessUserOption => ({
         ...user,
         searchText: buildAccessUserSearchText([
@@ -5986,9 +6037,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           });
         });
 
-      return [...platformOptions, ...orphanOptions, ...staffOptions, ...traineeOptions]
+      const result = [...platformOptions, ...orphanOptions, ...staffOptions, ...traineeOptions]
         .filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index)
         .sort((a, b) => a.name.localeCompare(b.name));
+      recordSettingsTraceTiming('userOptions', traceStartedAt);
+      return result;
     },
     [configPlatformUsers, configUserAccess, instructorsData, traineesData],
   );
@@ -6047,6 +6100,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const bulkAccessUserOptions = useMemo<BulkAccessUserOption[]>(() => {
+    const traceStartedAt = getTraceNow();
     const usedUserIds = new Set<string>();
     const isActiveUnitPerson = (unit?: string) => {
       if (activeBulkUnitCodes.length === 0) return true;
@@ -6132,13 +6186,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       });
     });
 
+    recordSettingsTraceTiming('bulkAccessUserOptions', traceStartedAt);
     return options;
   }, [activeBulkUnitCodes, instructorsData, personnelDisplaySettings, traineesData, userOptions]);
 
   const visibleBulkAccessUserOptions = useMemo(() => {
+    const traceStartedAt = getTraceNow();
     const queryTokens = buildAccessUserSearchText([bulkAccessPeopleSearch]).split(' ').filter(Boolean);
-    if (queryTokens.length === 0) return bulkAccessUserOptions;
-    return bulkAccessUserOptions.filter((user) => {
+    if (queryTokens.length === 0) {
+      recordSettingsTraceTiming('visibleBulkAccessUserOptions', traceStartedAt);
+      return bulkAccessUserOptions;
+    }
+    const result = bulkAccessUserOptions.filter((user) => {
       const searchText = user.searchText || buildAccessUserSearchText([
         user.id,
         user.name,
@@ -6152,22 +6211,31 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ]);
       return queryTokens.every((token) => searchText.includes(token));
     });
+    recordSettingsTraceTiming('visibleBulkAccessUserOptions', traceStartedAt);
+    return result;
   }, [bulkAccessPeopleSearch, bulkAccessUserOptions]);
 
   const renderedBulkAccessUserOptions = useMemo(() => {
-    if (visibleBulkAccessUserOptions.length <= BULK_ACCESS_PEOPLE_RENDER_LIMIT) return visibleBulkAccessUserOptions;
+    const traceStartedAt = getTraceNow();
+    if (visibleBulkAccessUserOptions.length <= BULK_ACCESS_PEOPLE_RENDER_LIMIT) {
+      recordSettingsTraceTiming('renderedBulkAccessUserOptions', traceStartedAt);
+      return visibleBulkAccessUserOptions;
+    }
     const selectedIds = new Set(bulkAccessUserIds);
     const selectedVisibleUsers = visibleBulkAccessUserOptions.filter((user) => selectedIds.has(user.id));
     const unselectedVisibleUsers = visibleBulkAccessUserOptions.filter((user) => !selectedIds.has(user.id));
-    return [
+    const result = [
       ...selectedVisibleUsers,
       ...unselectedVisibleUsers.slice(0, Math.max(0, BULK_ACCESS_PEOPLE_RENDER_LIMIT - selectedVisibleUsers.length)),
     ];
+    recordSettingsTraceTiming('renderedBulkAccessUserOptions', traceStartedAt);
+    return result;
   }, [bulkAccessUserIds, visibleBulkAccessUserOptions]);
 
   const hiddenBulkAccessUserCount = Math.max(0, visibleBulkAccessUserOptions.length - renderedBulkAccessUserOptions.length);
 
   const bulkAccessUserGroups = useMemo(() => {
+    const traceStartedAt = getTraceNow();
     const groups = new Map<string, Map<string, BulkAccessUserOption[]>>();
     renderedBulkAccessUserOptions.forEach((user) => {
       const categoryGroups = groups.get(user.category) || new Map<string, BulkAccessUserOption[]>();
@@ -6176,10 +6244,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       categoryGroups.set(user.group, groupUsers);
       groups.set(user.category, categoryGroups);
     });
-    return Array.from(groups.entries()).map(([category, categoryGroups]) => ({
+    const result = Array.from(groups.entries()).map(([category, categoryGroups]) => ({
       category,
       groups: Array.from(categoryGroups.entries()),
     }));
+    recordSettingsTraceTiming('bulkAccessUserGroups', traceStartedAt);
+    return result;
   }, [renderedBulkAccessUserOptions]);
 
   const toggleBulkAccessUser = (userId: string, checked: boolean) => {
@@ -8034,6 +8104,80 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (target?.closest('input, textarea, select, [contenteditable="true"], [data-rank-equivalency-input="true"]')) return;
     stopEditableKeyPropagation(event);
   };
+  const handleSettingsTraceKeyDownCapture = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    recordSettingsTraceEvent('keydown', event);
+    handleSettingsKeyDownCapture(event);
+  };
+  const handleSettingsTracePointerDownCapture = (event: React.PointerEvent<HTMLDivElement>) => {
+    recordSettingsTraceEvent('pointerdown', event);
+  };
+
+  const downloadSettingsPerformanceTrace = () => {
+    const navigationEntry = typeof performance !== 'undefined' && typeof performance.getEntriesByType === 'function'
+      ? performance.getEntriesByType('navigation')[0]
+      : null;
+    const report = {
+      generatedAt: new Date().toISOString(),
+      activeContext: {
+        scrollTarget: scrollTarget || null,
+        sectionOnly,
+        visibleSectionTarget,
+        selectedAccessUserId,
+        selectedAccessDisplayName,
+        activeUnitCode,
+        activeUnitCodes,
+        activeCompositeUnitCode,
+        activeOperationalModel,
+        currentUserPermission,
+      },
+      counts: {
+        organisations: configOrganisations.length,
+        locations: configLocations.length,
+        units: configUnits.length,
+        aircraftTypes: configAircraftTypes.length,
+        resourcePools: configResourcePools.length,
+        schedulingRuleSets: configSchedulingRuleSets.length,
+        platformUsers: configPlatformUsers.length,
+        userAccessRows: configUserAccess.length,
+        permissionProfiles: permissionProfiles.length,
+        instructors: instructorsData.length,
+        trainees: traineesData.length,
+        userOptions: userOptions.length,
+        bulkAccessUserOptions: bulkAccessUserOptions.length,
+        visibleBulkAccessUserOptions: visibleBulkAccessUserOptions.length,
+        renderedBulkAccessUserOptions: renderedBulkAccessUserOptions.length,
+        bulkAccessUserGroups: bulkAccessUserGroups.length,
+        selectedBulkUsers: bulkAccessUserIds.length,
+        selectedBulkProfiles: bulkAccessProfileIds.length,
+      },
+      searchState: {
+        topUserSearchLength: userSearch.length,
+        bulkPeopleSearchLength: bulkAccessPeopleSearch.length,
+        hiddenBulkAccessUserCount,
+      },
+      renderTrace: {
+        mountedAtIso: settingsTraceRef.current.mountedAtIso,
+        ageMs: Number((getTraceNow() - settingsTraceRef.current.mountedAtMs).toFixed(2)),
+        renderCount: settingsTraceRef.current.renderCount,
+        lastRenderAtMs: Number(settingsTraceRef.current.lastRenderAtMs.toFixed(2)),
+        maxRenderGapMs: settingsTraceRef.current.maxRenderGapMs,
+      },
+      timingTrace: settingsTraceRef.current.timings,
+      recentEvents: settingsTraceRef.current.events,
+      browser: {
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        hardwareConcurrency: typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : undefined,
+        deviceMemory: typeof navigator !== 'undefined' ? (navigator as any).deviceMemory : undefined,
+        navigation: navigationEntry ? JSON.parse(JSON.stringify(navigationEntry)) : null,
+      },
+    };
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    downloadTextFile(
+      `settings-performance-trace-${dateStamp}.json`,
+      JSON.stringify(report, null, 2),
+      'application/json',
+    );
+  };
 
   const renderPlatformConfigError = () => {
     if (!error) return null;
@@ -8059,7 +8203,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   return (
-    <div className="relative space-y-8" onKeyDownCapture={handleSettingsKeyDownCapture}>
+    <div
+      className="relative space-y-8"
+      onKeyDownCapture={handleSettingsTraceKeyDownCapture}
+      onPointerDownCapture={handleSettingsTracePointerDownCapture}
+    >
       {trainingReportPreviewOpen && (
         <TrainingReportFullPreviewFlyout
           template={trainingReportTemplate}
@@ -12970,14 +13118,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="User Access Context"
           subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
-          action={canEdit ? (
+          action={(
             <div className="flex flex-wrap justify-end gap-[1px]">
-              {renderSectionEditSaveButton('platform-user-access')}
-              <button type="button" onClick={addUserAccess} disabled={!canEditSection('platform-user-access')} className={platformActionButtonClass}>
-                <span className="text-[9px] leading-tight">Add<br />Scope</span>
+              <button type="button" onClick={downloadSettingsPerformanceTrace} className={platformActionButtonClass}>
+                <span className="text-[9px] leading-tight">Settings<br />Trace</span>
               </button>
+              {canEdit ? (
+                <>
+                  {renderSectionEditSaveButton('platform-user-access')}
+                  <button type="button" onClick={addUserAccess} disabled={!canEditSection('platform-user-access')} className={platformActionButtonClass}>
+                    <span className="text-[9px] leading-tight">Add<br />Scope</span>
+                  </button>
+                </>
+              ) : null}
             </div>
-          ) : null}
+          )}
         />
         <div id="platform-user-access-records" className="space-y-3 p-4">
           <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
