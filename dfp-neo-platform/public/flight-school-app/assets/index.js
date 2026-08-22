@@ -117047,6 +117047,15 @@ const App = () => {
     const profileAliases = directAliases.flatMap(knownDfpLocationAliases);
     return [...new Set([...directAliases, ...profileAliases].map((alias) => alias.toUpperCase()).filter(Boolean))];
   }, [knownDfpLocationAliases]);
+  const getDailySnapshotLocationAliases = React.useCallback((locationCode) => {
+    const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
+    const matchingLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+    return [
+      normalisedLocationCode,
+      ...knownDfpLocationAliases(normalisedLocationCode),
+      ...matchingLocation ? getLocationSelectorAliases(matchingLocation) : []
+    ].map((alias) => String(alias || "").trim().toUpperCase()).filter((alias, index, aliases) => Boolean(alias) && aliases.indexOf(alias) === index);
+  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
   const baseSelectableLocationCodes = reactExports.useMemo(() => {
     const activeLocations = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE");
     const activeUnitLocationCodes = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim()).filter(Boolean);
@@ -119431,15 +119440,6 @@ const App = () => {
     }
     return events2.length;
   }, [activeUnitCode]);
-  const getDailySnapshotLocationAliases = React.useCallback((locationCode) => {
-    const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-    const matchingLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
-    return [
-      normalisedLocationCode,
-      ...knownDfpLocationAliases(normalisedLocationCode),
-      ...matchingLocation ? getLocationSelectorAliases(matchingLocation) : []
-    ].map((alias) => String(alias || "").trim().toUpperCase()).filter((alias, index, aliases) => Boolean(alias) && aliases.indexOf(alias) === index);
-  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
     const loadStartedAt = performance.now();
     const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = "" } = options;
@@ -119526,21 +119526,27 @@ const App = () => {
           });
         }
         try {
-          const knownContextSnapshotKeys = (snapshotKeysByDateRef.current[targetDate] || []).filter((candidateKey) => {
+          const knownDateSnapshotKeys = (snapshotKeysByDateRef.current[targetDate] || []).filter((candidateKey) => {
             const parsedCandidate = parseDailySnapshotKey(candidateKey);
-            if (parsedCandidate.date !== targetDate) return false;
+            return parsedCandidate.date === targetDate;
+          });
+          const knownContextSnapshotKeys = knownDateSnapshotKeys.filter((candidateKey) => {
+            const parsedCandidate = parseDailySnapshotKey(candidateKey);
             const candidateSchool = normaliseDailySnapshotPart(parsedCandidate.school);
             const candidateUnit = normaliseDailySnapshotPart(parsedCandidate.unit);
             const schoolMatches = !candidateSchool || snapshotLocationAliasKeys.includes(candidateSchool);
             const unitMatches = !candidateUnit || candidateUnit === snapshotUnitKey;
             return schoolMatches && unitMatches;
           });
+          const adminFallbackSnapshotKeys = hasRuntimePlatformWideAccess ? knownDateSnapshotKeys.filter((candidateKey) => !knownContextSnapshotKeys.includes(candidateKey)) : [];
+          const adminFallbackSnapshotKeySet = new Set(adminFallbackSnapshotKeys);
           const candidateKeys = [
             exactSnapshotKey,
             ...knownContextSnapshotKeys,
             ...snapshotLocationAliases.map((locationAlias) => getDailySnapshotKey(targetDate, locationAlias, snapshotUnit)),
             ...snapshotLocationAliases.map((locationAlias) => getDailySnapshotKey(targetDate, locationAlias, "")),
-            targetDate
+            targetDate,
+            ...adminFallbackSnapshotKeys
           ].filter((key, index, keys) => Boolean(key) && keys.indexOf(key) === index);
           let res = null;
           let resolvedSnapshotKey = snapshotKey;
@@ -119551,6 +119557,10 @@ const App = () => {
             retryDelayMs: delay,
             candidateCount: candidateKeys.length,
             candidateKeys,
+            knownDateSnapshotKeys,
+            knownContextSnapshotKeys,
+            adminFallbackSnapshotKeys,
+            adminFallbackEnabled: hasRuntimePlatformWideAccess,
             elapsedMs: Math.round(performance.now() - loadStartedAt)
           });
           for (const [candidateIndex, candidateKey] of candidateKeys.entries()) {
@@ -119576,7 +119586,8 @@ const App = () => {
               elapsedMs: Math.round(performance.now() - loadStartedAt),
               status: candidateRes.status,
               ok: candidateRes.ok,
-              contentType: candidateRes.headers.get("content-type") || ""
+              contentType: candidateRes.headers.get("content-type") || "",
+              isAdminFallback: adminFallbackSnapshotKeySet.has(candidateKey)
             });
             res = candidateRes;
             resolvedSnapshotKey = candidateKey;
@@ -119714,13 +119725,48 @@ const App = () => {
             progress: 94
           });
           const applyStartedAt = performance.now();
-          const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, snap2, replace || shouldReplaceCachedEvents, "network");
+          const resolvedKeyParts = parseDailySnapshotKey(resolvedSnapshotKey);
+          const resolvedSchool = resolvedKeyParts.school || snapshotSchool;
+          const resolvedUnit = resolvedKeyParts.unit || snapshotUnit;
+          const isAdminContextFallback = adminFallbackSnapshotKeySet.has(resolvedSnapshotKey);
+          const eventCount = applyDailySnapshot(
+            targetDate,
+            isAdminContextFallback ? resolvedSchool : snapshotSchool,
+            isAdminContextFallback ? resolvedUnit : snapshotUnit,
+            snap2,
+            replace || shouldReplaceCachedEvents,
+            "network"
+          );
           cacheDailySnapshot(snapshotKey, snap2, targetDate);
           loadedSnapshotDates.current.add(snapshotKey);
+          if (isAdminContextFallback && eventCount > 0) {
+            const fallbackPayload = {
+              location: resolvedSchool,
+              unit: resolvedUnit,
+              source: "snapshot-fallback",
+              updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+            };
+            setSchool(resolvedSchool);
+            setActiveUnitCode(resolvedUnit);
+            try {
+              localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(fallbackPayload));
+            } catch {
+            }
+            pushDfpDataDiag("snapshot:admin-context-fallback-applied", {
+              targetDate,
+              previousSchool: snapshotSchool,
+              previousUnit: snapshotUnit,
+              resolvedSnapshotKey,
+              resolvedSchool,
+              resolvedUnit,
+              eventCount
+            });
+          }
           pushDfpDataDiag("snapshot:load-success", {
             targetDate,
             snapshotKey,
             resolvedSnapshotKey,
+            isAdminContextFallback,
             applyDurationMs: Math.round(performance.now() - applyStartedAt),
             durationMs: Math.round(performance.now() - loadStartedAt),
             eventCount
@@ -119765,7 +119811,7 @@ const App = () => {
     } finally {
       loadingSnapshotDates.current.delete(snapshotKey);
     }
-  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
+  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, hasRuntimePlatformWideAccess, school]);
   reactExports.useEffect(() => {
     if (setupTestProfile || isInitialSetupWizardActive) {
       loadingSnapshotDates.current.clear();

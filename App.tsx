@@ -25129,6 +25129,20 @@ const App: React.FC = () => {
         return [...new Set([...directAliases, ...profileAliases].map((alias) => alias.toUpperCase()).filter(Boolean))];
     }, [knownDfpLocationAliases]);
 
+    const getDailySnapshotLocationAliases = React.useCallback((locationCode: string): string[] => {
+        const normalisedLocationCode = String(locationCode || '').trim().toUpperCase();
+        const matchingLocation = (platformConfig?.locations || [])
+            .filter((location: any) => location.status !== 'INACTIVE')
+            .find((location: any) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+        return [
+            normalisedLocationCode,
+            ...knownDfpLocationAliases(normalisedLocationCode),
+            ...(matchingLocation ? getLocationSelectorAliases(matchingLocation) : []),
+        ].map(alias => String(alias || '').trim().toUpperCase()).filter((alias, index, aliases) => (
+            Boolean(alias) && aliases.indexOf(alias) === index
+        ));
+    }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
+
     const baseSelectableLocationCodes = useMemo(() => {
         const activeLocations = (platformConfig?.locations || [])
             .filter((location: any) => location.status !== 'INACTIVE');
@@ -28624,20 +28638,6 @@ const App: React.FC = () => {
         return events.length;
     }, [activeUnitCode]);
 
-    const getDailySnapshotLocationAliases = React.useCallback((locationCode: string): string[] => {
-        const normalisedLocationCode = String(locationCode || '').trim().toUpperCase();
-        const matchingLocation = (platformConfig?.locations || [])
-            .filter((location: any) => location.status !== 'INACTIVE')
-            .find((location: any) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
-        return [
-            normalisedLocationCode,
-            ...knownDfpLocationAliases(normalisedLocationCode),
-            ...(matchingLocation ? getLocationSelectorAliases(matchingLocation) : []),
-        ].map(alias => String(alias || '').trim().toUpperCase()).filter((alias, index, aliases) => (
-            Boolean(alias) && aliases.indexOf(alias) === index
-        ));
-    }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
-
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
     const loadSnapshotForDate = React.useCallback(async (
         targetDate: string,
@@ -28734,21 +28734,29 @@ const App: React.FC = () => {
                 }
 
                 try {
-                    const knownContextSnapshotKeys = (snapshotKeysByDateRef.current[targetDate] || []).filter(candidateKey => {
+                    const knownDateSnapshotKeys = (snapshotKeysByDateRef.current[targetDate] || []).filter(candidateKey => {
                         const parsedCandidate = parseDailySnapshotKey(candidateKey);
-                        if (parsedCandidate.date !== targetDate) return false;
+                        return parsedCandidate.date === targetDate;
+                    });
+                    const knownContextSnapshotKeys = knownDateSnapshotKeys.filter(candidateKey => {
+                        const parsedCandidate = parseDailySnapshotKey(candidateKey);
                         const candidateSchool = normaliseDailySnapshotPart(parsedCandidate.school);
                         const candidateUnit = normaliseDailySnapshotPart(parsedCandidate.unit);
                         const schoolMatches = !candidateSchool || snapshotLocationAliasKeys.includes(candidateSchool);
                         const unitMatches = !candidateUnit || candidateUnit === snapshotUnitKey;
                         return schoolMatches && unitMatches;
                     });
+                    const adminFallbackSnapshotKeys = hasRuntimePlatformWideAccess
+                        ? knownDateSnapshotKeys.filter(candidateKey => !knownContextSnapshotKeys.includes(candidateKey))
+                        : [];
+                    const adminFallbackSnapshotKeySet = new Set(adminFallbackSnapshotKeys);
                     const candidateKeys = [
                         exactSnapshotKey,
                         ...knownContextSnapshotKeys,
                         ...snapshotLocationAliases.map(locationAlias => getDailySnapshotKey(targetDate, locationAlias, snapshotUnit)),
                         ...snapshotLocationAliases.map(locationAlias => getDailySnapshotKey(targetDate, locationAlias, '')),
                         targetDate,
+                        ...adminFallbackSnapshotKeys,
                     ].filter((key, index, keys) => Boolean(key) && keys.indexOf(key) === index);
 
                     let res: Response | null = null;
@@ -28758,10 +28766,14 @@ const App: React.FC = () => {
                         snapshotKey,
                         attempt: attempt + 1,
                         retryDelayMs: delay,
-                        candidateCount: candidateKeys.length,
-                        candidateKeys,
-                        elapsedMs: Math.round(performance.now() - loadStartedAt),
-                    });
+                            candidateCount: candidateKeys.length,
+                            candidateKeys,
+                            knownDateSnapshotKeys,
+                            knownContextSnapshotKeys,
+                            adminFallbackSnapshotKeys,
+                            adminFallbackEnabled: hasRuntimePlatformWideAccess,
+                            elapsedMs: Math.round(performance.now() - loadStartedAt),
+                        });
                     for (const [candidateIndex, candidateKey] of candidateKeys.entries()) {
                         const progress = Math.min(82, 18 + Math.round((candidateIndex / Math.max(candidateKeys.length, 1)) * 56));
                         setDfpSnapshotLoadState({
@@ -28792,6 +28804,7 @@ const App: React.FC = () => {
                             status: candidateRes.status,
                             ok: candidateRes.ok,
                             contentType: candidateRes.headers.get('content-type') || '',
+                            isAdminFallback: adminFallbackSnapshotKeySet.has(candidateKey),
                         });
                         res = candidateRes;
                         resolvedSnapshotKey = candidateKey;
@@ -28934,13 +28947,49 @@ const App: React.FC = () => {
                         progress: 94
                     });
                     const applyStartedAt = performance.now();
-                    const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, snap, replace || shouldReplaceCachedEvents, 'network');
+                    const resolvedKeyParts = parseDailySnapshotKey(resolvedSnapshotKey);
+                    const resolvedSchool = resolvedKeyParts.school || snapshotSchool;
+                    const resolvedUnit = resolvedKeyParts.unit || snapshotUnit;
+                    const isAdminContextFallback = adminFallbackSnapshotKeySet.has(resolvedSnapshotKey);
+                    const eventCount = applyDailySnapshot(
+                        targetDate,
+                        isAdminContextFallback ? resolvedSchool : snapshotSchool,
+                        isAdminContextFallback ? resolvedUnit : snapshotUnit,
+                        snap,
+                        replace || shouldReplaceCachedEvents,
+                        'network'
+                    );
                     cacheDailySnapshot(snapshotKey, snap, targetDate);
                     loadedSnapshotDates.current.add(snapshotKey);
+                    if (isAdminContextFallback && eventCount > 0) {
+                        const fallbackPayload = {
+                            location: resolvedSchool,
+                            unit: resolvedUnit,
+                            source: 'snapshot-fallback',
+                            updatedAt: new Date().toISOString(),
+                        };
+                        setSchool(resolvedSchool);
+                        setActiveUnitCode(resolvedUnit);
+                        try {
+                            localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(fallbackPayload));
+                        } catch {
+                            // Local storage is an optimisation only; the loaded DFP should still render.
+                        }
+                        pushDfpDataDiag('snapshot:admin-context-fallback-applied', {
+                            targetDate,
+                            previousSchool: snapshotSchool,
+                            previousUnit: snapshotUnit,
+                            resolvedSnapshotKey,
+                            resolvedSchool,
+                            resolvedUnit,
+                            eventCount,
+                        });
+                    }
                     pushDfpDataDiag('snapshot:load-success', {
                         targetDate,
                         snapshotKey,
                         resolvedSnapshotKey,
+                        isAdminContextFallback,
                         applyDurationMs: Math.round(performance.now() - applyStartedAt),
                         durationMs: Math.round(performance.now() - loadStartedAt),
                         eventCount,
@@ -28986,7 +29035,7 @@ const App: React.FC = () => {
         } finally {
             loadingSnapshotDates.current.delete(snapshotKey);
         }
-    }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
+    }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, hasRuntimePlatformWideAccess, school]);
 
     useEffect(() => {
         if (setupTestProfile || isInitialSetupWizardActive) {
