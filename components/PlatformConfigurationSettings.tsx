@@ -14377,7 +14377,6 @@ const UserSearchSelect = ({
 
   const updateSearchDraft = (nextSearch: string) => {
     setDraftSearch(nextSearch);
-    onSearchChange(nextSearch);
     setIsOpen(true);
   };
 

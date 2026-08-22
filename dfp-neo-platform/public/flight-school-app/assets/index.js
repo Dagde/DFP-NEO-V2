@@ -85149,7 +85149,6 @@ const UserSearchSelect = ({
   }, [isOpen, search]);
   const updateSearchDraft = (nextSearch) => {
     setDraftSearch(nextSearch);
-    onSearchChange(nextSearch);
     setIsOpen(true);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative block", children: [
