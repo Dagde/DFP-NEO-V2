@@ -118213,14 +118213,20 @@ const App = () => {
   const platformDataScopeQuery = reactExports.useMemo(() => {
     const scope = hasRuntimePlatformWideAccess ? { organisationCodes: [], locationCode: school, unitCodes: [], allUnits: true } : getPlatformDataScopeForLocation(platformAccessContext, school);
     const requestedUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : activeUnitCode ? [activeUnitCode] : [];
+    const normaliseScopeUnit = (value) => String(value || "").trim().toUpperCase();
+    const isEnabledSharedContext = requestedUnitCodes.length > 1 && organisationSettings.fleetSharingEnabled && (organisationSettings.resourceSharingGroups || []).some((group) => {
+      if (group?.enabled === false) return false;
+      const sharedUnits = new Set((group?.selectedUnits || []).map(normaliseScopeUnit).filter(Boolean));
+      return requestedUnitCodes.every((unitCode) => sharedUnits.has(normaliseScopeUnit(unitCode)));
+    });
     const requestedUnitCodeSet = new Set(requestedUnitCodes.map((unitCode) => String(unitCode || "").trim().toUpperCase()));
-    const scopedUnitCodes = requestedUnitCodes.length > 0 ? scope.allUnits || scope.unitCodes.length === 0 ? requestedUnitCodes : scope.unitCodes.filter((unitCode) => requestedUnitCodeSet.has(String(unitCode || "").trim().toUpperCase())) : scope.unitCodes;
+    const scopedUnitCodes = requestedUnitCodes.length > 0 ? isEnabledSharedContext ? requestedUnitCodes : scope.allUnits || scope.unitCodes.length === 0 ? requestedUnitCodes : scope.unitCodes.filter((unitCode) => requestedUnitCodeSet.has(String(unitCode || "").trim().toUpperCase())) : scope.unitCodes;
     return buildPlatformDataScopeQuery({
       ...scope,
       unitCodes: scopedUnitCodes,
       allUnits: requestedUnitCodes.length === 0 && scope.allUnits
     });
-  }, [activeContextUnitCodes, activeUnitCode, hasRuntimePlatformWideAccess, platformAccessContext, school]);
+  }, [activeContextUnitCodes, activeUnitCode, hasRuntimePlatformWideAccess, organisationSettings.fleetSharingEnabled, organisationSettings.resourceSharingGroups, platformAccessContext, school]);
   const scopedApiPath = reactExports.useCallback((path, extraParams) => {
     const params = new URLSearchParams(platformDataScopeQuery);
     Object.entries(extraParams || {}).forEach(([key, value]) => {
