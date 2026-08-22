@@ -819,7 +819,6 @@ const addImpliedViewPermissions = (permissionIds: PlatformPermissionId[]): Platf
     permissions.add('dfp.flightLine.view');
     permissions.add('maintenance.slideout.view');
   }
-  if (hasPrefix('trainee.')) permissions.add('trainee.roster.view');
   if (hasLmpManagementAction) permissions.add('lmp.manage.use');
   if (hasPrefix('courseprogress.')) permissions.add('courseProgress.view');
   if (hasPrefix('trainingrecords.')) permissions.add('trainingRecords.courseManagement.view');
