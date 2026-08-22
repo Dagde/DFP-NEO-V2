@@ -132777,10 +132777,9 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     if (isSetupTestMode()) return false;
     if (isUserEditing()) return false;
     try {
-      const apiBase = getAppApiBase();
       const [personnelRes, traineesRes] = await Promise.all([
-        fetch(`${apiBase}/personnel`, { credentials: "include" }),
-        fetch(`${apiBase}/trainees`, { credentials: "include" })
+        fetch(scopedApiPath("/api/personnel"), { credentials: "include" }),
+        fetch(scopedApiPath("/api/trainees"), { credentials: "include" })
       ]);
       logRoutineAppDebug("[Poll] Personnel response:", personnelRes.status, "Trainees response:", traineesRes.status);
       let pollChanged = false;
@@ -132840,7 +132839,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       console.error("[Poll] Error during poll:", e);
       return false;
     }
-  }, [buildPersonnelStatusHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing]);
+  }, [buildPersonnelStatusHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing, scopedApiPath]);
   reactExports.useEffect(() => {
     if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
     syncUnavailabilityFromDatabase();
