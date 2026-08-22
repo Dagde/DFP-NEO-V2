@@ -24954,6 +24954,21 @@ const App: React.FC = () => {
         }
     }, [activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, settingsLoaded]);
 
+    const previousOperationalContextRef = useRef<{ school: string; activeUnitCode: string } | null>(null);
+    useEffect(() => {
+        const previous = previousOperationalContextRef.current;
+        const next = { school, activeUnitCode };
+        previousOperationalContextRef.current = next;
+        pushContextSelectorDiag('state:operational-context', {
+            previous,
+            next,
+            rawStoredContext: (() => {
+                try { return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY); } catch { return null; }
+            })(),
+            url: typeof window !== 'undefined' ? window.location.href : '',
+        });
+    }, [activeUnitCode, pushContextSelectorDiag, school]);
+
     useEffect(() => {
         pushContextSelectorDiag('restore:init', {
             storageKey: ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY,
@@ -24963,6 +24978,18 @@ const App: React.FC = () => {
             })(),
         });
     }, []);
+
+    useEffect(() => {
+        const handleOperationalContextStorage = (event: StorageEvent) => {
+            if (event.key !== ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY) return;
+            pushContextSelectorDiag('storage:context-changed-by-other-window', {
+                oldValue: event.oldValue,
+                newValue: event.newValue,
+            });
+        };
+        window.addEventListener('storage', handleOperationalContextStorage);
+        return () => window.removeEventListener('storage', handleOperationalContextStorage);
+    }, [pushContextSelectorDiag]);
     const [allInstructorsData, setInstructorsData] = useState<Instructor[]>([]);
 
 
@@ -36541,8 +36568,9 @@ const App: React.FC = () => {
                 location,
                 unit,
             };
+            const previousStoredContext = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
             localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
-            pushContextSelectorDiag('persist:explicit-context-selection', { payload, source });
+            pushContextSelectorDiag('persist:explicit-context-selection', { payload, source, previousStoredContext });
         } catch (error) {
             pushContextSelectorDiag('persist:explicit-context-selection-error', { source, error: String(error) });
         }
@@ -36550,6 +36578,17 @@ const App: React.FC = () => {
 
     const changeSchool = (newSchool: string) => {
         const nextUnit = getDefaultUnitForSchool(newSchool);
+        pushContextSelectorDiag('action:change-school', {
+            from: { school, activeUnitCode },
+            to: { school: newSchool, activeUnitCode: nextUnit },
+            availableUnits: getUnitOptionsForLocation(newSchool).map((unit: any) => ({
+                code: unit.code,
+                disabled: unit.disabled === true,
+                disabledReason: unit.disabledReason || '',
+                isSharedFleetContext: unit.isSharedFleetContext === true,
+                memberUnits: unit.memberUnits || [],
+            })),
+        });
         persistOperationalContextSelection(newSchool, nextUnit, 'changeSchool');
         setSchool(newSchool);
         setActiveUnitCode(nextUnit);
@@ -36565,6 +36604,11 @@ const App: React.FC = () => {
     };
 
     const changeOperationalContext = (newSchool: string, newUnit: string) => {
+        pushContextSelectorDiag('action:change-operational-context', {
+            from: { school, activeUnitCode },
+            to: { school: newSchool, activeUnitCode: newUnit },
+            selectedOption: getUnitOptionsForLocation(newSchool).find((unit: any) => unit.code === newUnit) || null,
+        });
         persistOperationalContextSelection(newSchool, newUnit, 'changeOperationalContext');
         setSchool(newSchool);
         setActiveUnitCode(newUnit);
@@ -50841,6 +50885,133 @@ appliedUpdates.forEach(update => {
        }
     };
 
+    const downloadOperationalContextJsonReport = useCallback(() => {
+        const readJsonArray = (storageKey: string): any[] => {
+            try {
+                const raw = localStorage.getItem(storageKey);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        };
+        const serialiseContextOption = (option: any) => ({
+            location: option.location,
+            units: (option.units || []).map((unit: any) => (typeof unit === 'string'
+                ? { code: unit, disabled: false, disabledReason: '', isSharedFleetContext: false, memberUnits: [] }
+                : {
+                    code: unit.code,
+                    disabled: unit.disabled === true,
+                    disabledReason: unit.disabledReason || '',
+                    isSharedFleetContext: unit.isSharedFleetContext === true,
+                    memberUnits: unit.memberUnits || [],
+                    name: unit.name || '',
+                    model: unit.model || '',
+                })),
+        });
+        const report = {
+            generatedAt: new Date().toISOString(),
+            reportType: 'dfp-operational-context-report',
+            purpose: 'Trace why the DFP locality/unit selector changes or reverts after selection or refresh.',
+            session: {
+                currentUserName,
+                signedInDisplayName,
+                authUser: authUser ? {
+                    id: authUser.id || null,
+                    userId: authUser.userId || null,
+                    username: authUser.username || null,
+                    displayName: authUser.displayName || null,
+                    role: authUser.role || null,
+                } : null,
+                sessionUser,
+                activeView,
+                date,
+                school,
+                activeUnitCode,
+                activeContextUnitCodes,
+                activeOperationalModel,
+                activeOperationalModelLabel,
+                url: typeof window !== 'undefined' ? window.location.href : '',
+                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+            },
+            storedContext: {
+                storageKey: ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY,
+                raw: (() => {
+                    try { return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY); } catch { return null; }
+                })(),
+                parsed: getStoredOperationalContext(),
+            },
+            contextOptions: {
+                baseSelectableLocationCodes,
+                selectableLocationCodes,
+                activeLocationUnitOptions: activeLocationUnitOptions.map((unit: any) => ({
+                    code: unit.code,
+                    disabled: unit.disabled === true,
+                    disabledReason: unit.disabledReason || '',
+                    isSharedFleetContext: unit.isSharedFleetContext === true,
+                    memberUnits: unit.memberUnits || [],
+                    name: unit.name || '',
+                    model: unit.model || '',
+                })),
+                operationalContextOptions: operationalContextOptions.map(serialiseContextOption),
+            },
+            settings: {
+                settingsLoaded,
+                platformConfigLoaded,
+                fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
+                selectedUnits: organisationSettings.selectedUnits,
+                resourceSharingGroups: organisationSettings.resourceSharingGroups,
+                allocationMode: organisationSettings.allocationMode,
+            },
+            access: {
+                hasRuntimePlatformWideAccess,
+                accessibleLocations: platformAccessContext.accessibleLocations,
+                permissionProfileIds: platformAccessContext.permissionProfileIds,
+                rowCount: platformAccessContext.rows.length,
+            },
+            diagnostics: {
+                contextSelector: readJsonArray(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY),
+            },
+        };
+        const safeUser = String(signedInDisplayName || currentUserName || 'user')
+            .replace(/[^a-z0-9]+/gi, '-')
+            .replace(/^-+|-+$/g, '')
+            .toLowerCase() || 'user';
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `dfp-operational-context-report-${safeUser}-${date || 'unknown-date'}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, [
+        activeContextUnitCodes,
+        activeLocationUnitOptions,
+        activeOperationalModel,
+        activeOperationalModelLabel,
+        activeUnitCode,
+        activeView,
+        authUser,
+        baseSelectableLocationCodes,
+        currentUserName,
+        date,
+        hasRuntimePlatformWideAccess,
+        operationalContextOptions,
+        organisationSettings.allocationMode,
+        organisationSettings.fleetSharingEnabled,
+        organisationSettings.resourceSharingGroups,
+        organisationSettings.selectedUnits,
+        platformAccessContext,
+        platformConfigLoaded,
+        school,
+        selectableLocationCodes,
+        sessionUser,
+        settingsLoaded,
+        signedInDisplayName,
+    ]);
+
     return (
     <>
         {setupTestProfile && (
@@ -51020,6 +51191,16 @@ appliedUpdates.forEach(update => {
                     onScrollCapture={closeDfpContextMenu}
                 >
                     <DfpContextMenu menu={dfpContextMenu} onClose={closeDfpContextMenu} />
+                    {activeView === 'Program Schedule' && (
+                        <button
+                            type="button"
+                            onClick={downloadOperationalContextJsonReport}
+                            className="absolute left-44 top-3 z-50 rounded-md border border-amber-300/45 bg-slate-950/88 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100 shadow-xl shadow-black/30 hover:bg-slate-900"
+                            title="Download the DFP locality selector trace"
+                        >
+                            Context Report
+                        </button>
+                    )}
                     <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                         {renderActiveView()}
                     </div>
