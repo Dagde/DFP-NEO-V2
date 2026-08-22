@@ -2527,6 +2527,27 @@ const getPlatformPermissionProfiles = (config) => {
   return Array.isArray(profileConfig) ? normalisedProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
 };
 const uniqueValues$1 = (values) => Array.from(new Set(values));
+const addImpliedViewPermissions = (permissionIds) => {
+  const permissions = new Set(
+    permissionIds.map((permissionId) => String(permissionId || "").trim()).filter(Boolean)
+  );
+  const normalisedPermissions = () => Array.from(permissions).map(normaliseAccessValue);
+  const hasPrefix = (prefix) => normalisedPermissions().some((permissionId) => permissionId.startsWith(prefix));
+  const hasLmpManagementAction = normalisedPermissions().some((permissionId) => permissionId.startsWith("lmp.") && permissionId !== "lmp.eventdetails.view");
+  if (hasPrefix("dfp.")) permissions.add("dfp.view");
+  if (hasPrefix("maintenance.")) {
+    permissions.add("dfp.view");
+    permissions.add("dfp.flightLine.view");
+    permissions.add("maintenance.slideout.view");
+  }
+  if (hasPrefix("staff.")) permissions.add("staff.view");
+  if (hasPrefix("trainee.")) permissions.add("trainee.roster.view");
+  if (hasLmpManagementAction) permissions.add("lmp.manage.use");
+  if (hasPrefix("courseprogress.")) permissions.add("courseProgress.view");
+  if (hasPrefix("trainingrecords.")) permissions.add("trainingRecords.courseManagement.view");
+  if (hasPrefix("settings.")) permissions.add("settings.view");
+  return Array.from(permissions);
+};
 const getExplicitPermissionProfileIds = (rows) => uniqueValues$1(
   rows.flatMap((row) => Array.isArray(parseSettingsObject(row.settings).permissionProfileIds) ? parseSettingsObject(row.settings).permissionProfileIds.map((id) => String(id || "").trim()).filter(Boolean) : [])
 );
@@ -2557,7 +2578,7 @@ const resolvePermissionsForRows = (config, rows) => {
     }
     return [];
   });
-  const permissions = uniqueValues$1([...profilePermissions, ...rolePermissions]);
+  const permissions = addImpliedViewPermissions(uniqueValues$1([...profilePermissions, ...rolePermissions]));
   const isSuperAdmin = permissions.includes("settings.superAdmin") || rows.some((row) => normaliseAccessValue(row.role).includes("super admin"));
   const isPlatformAdmin = isSuperAdmin || rows.some((row) => {
     const role = normaliseAccessValue(row.role);
@@ -123656,13 +123677,29 @@ ${"=".repeat(60)}`);
     ].map((value) => normalisePermissionId(String(value))).filter(Boolean));
     return new Set(getPlatformPermissionProfiles(platformConfig).filter((profile) => profileIds.has(normalisePermissionId(profile.id)) || profileIds.has(normalisePermissionId(profile.name))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
   }, [platformAccessContext, platformConfig, normalisePermissionId]);
+  const profilePermissionsImplyRequestedPermission = reactExports.useCallback((permissionId) => {
+    const requested = normalisePermissionId(permissionId);
+    const hasPrefix = (prefix) => Array.from(assignedPlatformProfilePermissions).some((assignedPermissionId) => assignedPermissionId.startsWith(prefix));
+    if (requested === "dfp.view") return hasPrefix("dfp.") || hasPrefix("maintenance.");
+    if (requested === "dfp.flightline.view") return hasPrefix("dfp.flightline.") || hasPrefix("maintenance.");
+    if (requested === "staff.view") return hasPrefix("staff.");
+    if (requested === "trainee.roster.view") return hasPrefix("trainee.");
+    if (requested === "lmp.manage.use") {
+      return Array.from(assignedPlatformProfilePermissions).some((assignedPermissionId) => assignedPermissionId.startsWith("lmp.") && assignedPermissionId !== "lmp.eventdetails.view");
+    }
+    if (requested === "courseprogress.view") return hasPrefix("courseprogress.");
+    if (requested === "trainingrecords.coursemanagement.view") return hasPrefix("trainingrecords.");
+    if (requested === "settings.view") return hasPrefix("settings.");
+    return false;
+  }, [assignedPlatformProfilePermissions, normalisePermissionId]);
   const canUsePlatformPermission = reactExports.useCallback((permissionId) => {
     if (hasAuthenticatedAdminRole) return true;
     if (platformAccessContext.isSuperAdmin) return true;
     if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
     if (assignedPlatformProfilePermissions.has(normalisePermissionId("settings.superAdmin"))) return true;
+    if (profilePermissionsImplyRequestedPermission(permissionId)) return true;
     return assignedPlatformProfilePermissions.has(normalisePermissionId(permissionId));
-  }, [hasAuthenticatedAdminRole, platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId]);
+  }, [hasAuthenticatedAdminRole, platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId, profilePermissionsImplyRequestedPermission]);
   const denyPlatformAction = reactExports.useCallback((actionLabel) => {
     setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
   }, []);

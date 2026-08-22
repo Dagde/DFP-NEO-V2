@@ -33902,13 +33902,34 @@ const App: React.FC = () => {
             .filter(Boolean));
     }, [platformAccessContext, platformConfig, normalisePermissionId]);
 
+    const profilePermissionsImplyRequestedPermission = useCallback((permissionId: string): boolean => {
+        const requested = normalisePermissionId(permissionId);
+        const hasPrefix = (prefix: string) => Array.from(assignedPlatformProfilePermissions)
+            .some((assignedPermissionId) => assignedPermissionId.startsWith(prefix));
+        if (requested === 'dfp.view') return hasPrefix('dfp.') || hasPrefix('maintenance.');
+        if (requested === 'dfp.flightline.view') return hasPrefix('dfp.flightline.') || hasPrefix('maintenance.');
+        if (requested === 'staff.view') return hasPrefix('staff.');
+        if (requested === 'trainee.roster.view') return hasPrefix('trainee.');
+        if (requested === 'lmp.manage.use') {
+            return Array.from(assignedPlatformProfilePermissions).some((assignedPermissionId) => (
+                assignedPermissionId.startsWith('lmp.')
+                && assignedPermissionId !== 'lmp.eventdetails.view'
+            ));
+        }
+        if (requested === 'courseprogress.view') return hasPrefix('courseprogress.');
+        if (requested === 'trainingrecords.coursemanagement.view') return hasPrefix('trainingrecords.');
+        if (requested === 'settings.view') return hasPrefix('settings.');
+        return false;
+    }, [assignedPlatformProfilePermissions, normalisePermissionId]);
+
     const canUsePlatformPermission = useCallback((permissionId: string): boolean => {
         if (hasAuthenticatedAdminRole) return true;
         if (platformAccessContext.isSuperAdmin) return true;
         if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
         if (assignedPlatformProfilePermissions.has(normalisePermissionId('settings.superAdmin'))) return true;
+        if (profilePermissionsImplyRequestedPermission(permissionId)) return true;
         return assignedPlatformProfilePermissions.has(normalisePermissionId(permissionId));
-    }, [hasAuthenticatedAdminRole, platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId]);
+    }, [hasAuthenticatedAdminRole, platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId, profilePermissionsImplyRequestedPermission]);
 
     const denyPlatformAction = useCallback((actionLabel: string) => {
         setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);

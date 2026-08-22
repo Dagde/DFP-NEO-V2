@@ -775,6 +775,35 @@ export const getPlatformPermissionProfiles = (
 
 const uniqueValues = <T,>(values: T[]): T[] => Array.from(new Set(values));
 
+const addImpliedViewPermissions = (permissionIds: PlatformPermissionId[]): PlatformPermissionId[] => {
+  const permissions = new Set(
+    permissionIds
+      .map((permissionId) => String(permissionId || '').trim())
+      .filter(Boolean),
+  );
+  const normalisedPermissions = () => Array.from(permissions).map(normaliseAccessValue);
+  const hasPrefix = (prefix: string) => normalisedPermissions().some((permissionId) => permissionId.startsWith(prefix));
+  const hasLmpManagementAction = normalisedPermissions().some((permissionId) => (
+    permissionId.startsWith('lmp.')
+    && permissionId !== 'lmp.eventdetails.view'
+  ));
+
+  if (hasPrefix('dfp.')) permissions.add('dfp.view');
+  if (hasPrefix('maintenance.')) {
+    permissions.add('dfp.view');
+    permissions.add('dfp.flightLine.view');
+    permissions.add('maintenance.slideout.view');
+  }
+  if (hasPrefix('staff.')) permissions.add('staff.view');
+  if (hasPrefix('trainee.')) permissions.add('trainee.roster.view');
+  if (hasLmpManagementAction) permissions.add('lmp.manage.use');
+  if (hasPrefix('courseprogress.')) permissions.add('courseProgress.view');
+  if (hasPrefix('trainingrecords.')) permissions.add('trainingRecords.courseManagement.view');
+  if (hasPrefix('settings.')) permissions.add('settings.view');
+
+  return Array.from(permissions);
+};
+
 const getExplicitPermissionProfileIds = (rows: PlatformAccessRow[]): string[] => uniqueValues(
   rows.flatMap((row) => (
     Array.isArray(parseSettingsObject(row.settings).permissionProfileIds)
@@ -823,7 +852,7 @@ const resolvePermissionsForRows = (
     return [];
   });
 
-  const permissions = uniqueValues([...profilePermissions, ...rolePermissions]);
+  const permissions = addImpliedViewPermissions(uniqueValues([...profilePermissions, ...rolePermissions]));
   const isSuperAdmin = permissions.includes('settings.superAdmin') || rows.some((row) => normaliseAccessValue(row.role).includes('super admin'));
   const isPlatformAdmin = isSuperAdmin || rows.some((row) => {
     const role = normaliseAccessValue(row.role);
