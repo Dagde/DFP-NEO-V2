@@ -3173,22 +3173,23 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{trainee.email || 'N/A'}</span></div>
                             </div>
-                            <div className="mt-3 grid grid-cols-2 gap-3">
-                              <div className="bg-gray-700/30 rounded p-2">
-                                <div className="text-[10px] text-gray-400 mb-1 font-semibold">Qualifications</div>
-                                <div className="flex flex-wrap gap-1">
-                                  {assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map(label => (
-                                    <span key={label} className="px-1.5 py-0.5 bg-teal-900/80 text-teal-200 rounded text-[9px]">{label}</span>
-                                  )) : <span className="text-gray-500 text-[10px]">None</span>}
-                                </div>
+                          </div>
+
+                          <div className="flex-shrink-0 w-56 space-y-2">
+                            <div className="bg-gray-700/30 rounded p-2">
+                              <div className="text-[10px] text-gray-400 mb-1 font-semibold">Qualifications</div>
+                              <div className="space-y-1">
+                                {assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map(label => (
+                                  <div key={label} className="rounded border border-teal-500/20 bg-teal-900/80 px-2 py-1 text-teal-200 text-[9px] font-semibold">{label}</div>
+                                )) : <div className="text-gray-500 text-[10px] italic">None</div>}
                               </div>
-                              <div className="bg-gray-700/30 rounded p-2">
-                                <div className="text-[10px] text-gray-400 mb-1 font-semibold">Permissions</div>
-                                <div className="flex flex-wrap gap-1">
-                                  {visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p: string) => (
-                                    <span key={p} className="px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]">{p}</span>
-                                  )) : <span className="text-gray-500 text-[10px]">None</span>}
-                                </div>
+                            </div>
+                            <div className="bg-gray-700/30 rounded p-2">
+                              <div className="text-[10px] text-gray-400 mb-1 font-semibold">Permissions</div>
+                              <div className="space-y-1">
+                                {visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p: string) => (
+                                  <div key={p} className="rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold">{p}</div>
+                                )) : <div className="text-gray-500 text-[10px] italic">None</div>}
                               </div>
                             </div>
                           </div>

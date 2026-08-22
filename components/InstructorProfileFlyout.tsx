@@ -2105,32 +2105,33 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
                         <div className="col-span-3"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
                       </div>
-                      <div className="mt-3 grid grid-cols-2 gap-3">
-                        <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Qualifications</div>
-                          <div className="flex flex-wrap gap-1">
-                            {assignedQualificationLabels.length > 0
-                              ? assignedQualificationLabels.map(label => (
-                                  <span key={label} className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold">
-                                    {label}
-                                  </span>
-                                ))
-                              : <span className="text-gray-500 text-[10px] italic">None</span>
-                            }
-                          </div>
+                    </div>
+
+                    <div className="flex-shrink-0 w-56 space-y-2">
+                      <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Qualifications</div>
+                        <div className="space-y-1">
+                          {assignedQualificationLabels.length > 0
+                            ? assignedQualificationLabels.map(label => (
+                                <div key={label} className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold">
+                                  {label}
+                                </div>
+                              ))
+                            : <div className="text-gray-500 text-[10px] italic">None</div>
+                          }
                         </div>
-                        <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
-                          <div className="flex flex-wrap gap-1">
-                            {assignedPermissionProfileLabels.length > 0
-                              ? assignedPermissionProfileLabels.map(label => (
-                                  <span key={label} className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold">
-                                    {label}
-                                  </span>
-                                ))
-                              : <span className="text-gray-500 text-[10px] italic">None</span>
-                            }
-                          </div>
+                      </div>
+                      <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
+                        <div className="space-y-1">
+                          {assignedPermissionProfileLabels.length > 0
+                            ? assignedPermissionProfileLabels.map(label => (
+                                <div key={label} className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold">
+                                  {label}
+                                </div>
+                              ))
+                            : <div className="text-gray-500 text-[10px] italic">None</div>
+                          }
                         </div>
                       </div>
                     </div>
