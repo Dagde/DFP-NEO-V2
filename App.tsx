@@ -25344,12 +25344,39 @@ const App: React.FC = () => {
         }
         const activeUnitOption = activeLocationUnitOptions.find(unit => unit.code === activeUnitCode);
         if (!activeUnitCode) {
+            const preferredSharedContext = activeLocationUnitOptions.find((unit: any) => (
+                unit?.isSharedFleetContext === true && unit.disabled !== true
+            ));
+            if (preferredSharedContext?.code) {
+                pushContextSelectorDiag('validate:restore-shared-unit-for-location-only-context', {
+                    fromUnit: activeUnitCode,
+                    toUnit: preferredSharedContext.code,
+                    optionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
+                });
+                setActiveUnitCode(preferredSharedContext.code);
+                return;
+            }
             pushContextSelectorDiag('validate:keep-no-unit-selected', {
                 optionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
             });
             return;
         }
         if (!activeUnitOption || activeUnitOption.disabled) {
+            const matchingSharedContext = activeLocationUnitOptions.find((unit: any) => (
+                unit?.isSharedFleetContext === true
+                && unit.disabled !== true
+                && Array.isArray(unit.memberUnits)
+                && unit.memberUnits.map((memberUnit: string) => String(memberUnit || '').trim().toUpperCase()).includes(String(activeUnitCode || '').trim().toUpperCase())
+            ));
+            if (matchingSharedContext?.code) {
+                pushContextSelectorDiag('validate:promote-member-unit-to-shared-context', {
+                    fromUnit: activeUnitCode,
+                    toUnit: matchingSharedContext.code,
+                    optionCodes: activeLocationUnitOptions.map((unit: any) => unit.code),
+                });
+                setActiveUnitCode(matchingSharedContext.code);
+                return;
+            }
             if (String(activeUnitCode || '').includes('+') && !organisationSettings.fleetSharingEnabled) {
                 pushContextSelectorDiag('validate:hold-shared-until-settings', {
                     activeUnitCode,
@@ -36501,11 +36528,29 @@ const App: React.FC = () => {
 
     const getDefaultUnitForSchool = (targetSchool: string): string => {
         const options = getUnitOptionsForLocation(targetSchool);
-        return (options.find(unit => !unit.disabled) || options[0])?.code || '';
+        return (
+            options.find((unit: any) => unit?.isSharedFleetContext === true && unit.disabled !== true)
+            || options.find(unit => !unit.disabled)
+            || options[0]
+        )?.code || '';
+    };
+
+    const persistOperationalContextSelection = (location: string, unit: string, source: string) => {
+        try {
+            const payload = {
+                location,
+                unit,
+            };
+            localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
+            pushContextSelectorDiag('persist:explicit-context-selection', { payload, source });
+        } catch (error) {
+            pushContextSelectorDiag('persist:explicit-context-selection-error', { source, error: String(error) });
+        }
     };
 
     const changeSchool = (newSchool: string) => {
         const nextUnit = getDefaultUnitForSchool(newSchool);
+        persistOperationalContextSelection(newSchool, nextUnit, 'changeSchool');
         setSchool(newSchool);
         setActiveUnitCode(nextUnit);
         setIsLocalityChangeVisible(true);
@@ -36520,6 +36565,7 @@ const App: React.FC = () => {
     };
 
     const changeOperationalContext = (newSchool: string, newUnit: string) => {
+        persistOperationalContextSelection(newSchool, newUnit, 'changeOperationalContext');
         setSchool(newSchool);
         setActiveUnitCode(newUnit);
         setIsLocalityChangeVisible(true);
