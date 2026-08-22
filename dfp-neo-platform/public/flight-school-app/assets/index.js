@@ -9086,6 +9086,7 @@ const Header = ({
   canOpenFlightLine = true,
   canRunValidation = true,
   canRunNeoBuild = true,
+  canOpenAuditLog = true,
   authUser,
   onLogout,
   onShowAdminPanel,
@@ -9096,6 +9097,7 @@ const Header = ({
   const [showAuditFlyout, setShowAuditFlyout] = reactExports.useState(false);
   const [showUserMenu, setShowUserMenu] = reactExports.useState(false);
   const [showContextMenu, setShowContextMenu] = reactExports.useState(false);
+  const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   const [hoveredContextLocation, setHoveredContextLocation] = reactExports.useState(activeLocation);
   const userButtonRef = reactExports.useRef(null);
   const dropdownMenuRef = reactExports.useRef(null);
@@ -9109,6 +9111,9 @@ const Header = ({
   const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}`;
   const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
   const hoveredContext = contextOptions.find((option) => option.location === hoveredContextLocation) || contextOptions[0];
+  const showPermissionNotice = (anchor) => {
+    setPermissionNoticeRect(anchor.getBoundingClientRect());
+  };
   const pushSetupTestHeaderDiag = (stage, details = {}) => {
     if (typeof window === "undefined") return;
     const isSetupTest = new URLSearchParams(window.location.search).has("setupTest");
@@ -9262,20 +9267,29 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => setShowAuditFlyout(true),
-            className: headerButtonClass,
-            title: "View Audit Log",
+            onClick: (event) => {
+              if (!canOpenAuditLog) {
+                showPermissionNotice(event.currentTarget);
+                return;
+              }
+              setShowAuditFlyout(true);
+            },
+            "aria-disabled": !canOpenAuditLog,
+            className: `${headerButtonClass} ${!canOpenAuditLog ? unavailableActionClass : ""}`,
+            title: canOpenAuditLog ? "View Audit Log" : "Access denied: Audit Log permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Audit Log" })
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => {
-              if (!canUseMultiSelect) return;
+            onClick: (event) => {
+              if (!canUseMultiSelect) {
+                showPermissionNotice(event.currentTarget);
+                return;
+              }
               setIsMultiSelectMode(!isMultiSelectMode);
             },
-            disabled: !isFixedCrewModel && !canUseMultiSelect,
             "aria-disabled": !canUseMultiSelect,
             className: `${headerButtonClass} ${isMultiSelectMode ? "active" : ""} ${!canUseMultiSelect ? unavailableActionClass : ""}`,
             title: canUseMultiSelect ? "Toggle multi-select mode" : "Access denied: Multi Select permission required",
@@ -9295,11 +9309,13 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => {
-              if (!canRunValidation) return;
+            onClick: (event) => {
+              if (!canRunValidation) {
+                showPermissionNotice(event.currentTarget);
+                return;
+              }
               setShowValidation(!showValidation);
             },
-            disabled: !isFixedCrewModel && !canRunValidation,
             "aria-disabled": !canRunValidation,
             className: `${headerButtonClass} ${showValidation ? "active" : ""} ${!canRunValidation ? unavailableActionClass : ""}`,
             title: canRunValidation ? "Toggle validation" : "Access denied: validation permission required",
@@ -9313,11 +9329,13 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => {
-              if (!canUseDispatchRate) return;
+            onClick: (event) => {
+              if (!canUseDispatchRate) {
+                showPermissionNotice(event.currentTarget);
+                return;
+              }
               onToggleDepartureDensityOverlay();
             },
-            disabled: !isFixedCrewModel && !canUseDispatchRate,
             "aria-disabled": !canUseDispatchRate,
             className: `${headerButtonClass} ${showDepartureDensityOverlay ? "active" : ""} ${!canUseDispatchRate ? unavailableActionClass : ""}`,
             title: canUseDispatchRate ? `Dispatch Rate - Shows flight starts in a ${normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes)}-minute window` : "Access denied: Dispatch Rate permission required",
@@ -9349,11 +9367,13 @@ const Header = ({
         (isFixedCrewModel || onPauseFlightOps) && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => {
-              if (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild) return;
+            onClick: (event) => {
+              if (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild) {
+                showPermissionNotice(event.currentTarget);
+                return;
+              }
               onPauseFlightOps();
             },
-            disabled: !isFixedCrewModel && (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild),
             "aria-disabled": !onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild,
             className: `${headerButtonClass} ${!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild ? unavailableActionClass : ""}`,
             title: onPauseFlightOps && canUsePauseFlightOps && canRunNeoBuild ? "Pause Flight Ops" : "Access denied: Pause Flight Ops and NEO Build permissions required",
@@ -9367,11 +9387,13 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => {
-              if (!canAddGroundTile) return;
+            onClick: (event) => {
+              if (!canAddGroundTile) {
+                showPermissionNotice(event.currentTarget);
+                return;
+              }
               onAddGroundEvent();
             },
-            disabled: !isFixedCrewModel && !canAddGroundTile,
             "aria-disabled": !canAddGroundTile,
             className: `${headerButtonClass} ${!canAddGroundTile ? unavailableActionClass : ""}`,
             title: canAddGroundTile ? "Add Ground Tile" : "Access denied: Add Ground Tile permission required",
@@ -9385,11 +9407,13 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => {
-              if (!canAddFlightTile) return;
+            onClick: (event) => {
+              if (!canAddFlightTile) {
+                showPermissionNotice(event.currentTarget);
+                return;
+              }
               onAddTile();
             },
-            disabled: !isFixedCrewModel && !canAddFlightTile,
             "aria-disabled": !canAddFlightTile,
             className: `${headerButtonClass} ${!canAddFlightTile ? unavailableActionClass : ""}`,
             title: canAddFlightTile ? "Add Flight Tile" : "Access denied: Add Flight Tile permission required",
@@ -9403,16 +9427,21 @@ const Header = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => {
+            onClick: (event) => {
               if (isFixedCrewModel) {
-                if (!canUseNeoTile || !onQuickTile) return;
+                if (!canUseNeoTile || !onQuickTile) {
+                  showPermissionNotice(event.currentTarget);
+                  return;
+                }
                 onQuickTile();
                 return;
               }
-              if (!canUseNeoTile || !canRunNeoBuild) return;
+              if (!canUseNeoTile || !canRunNeoBuild) {
+                showPermissionNotice(event.currentTarget);
+                return;
+              }
               onToggleOracleMode();
             },
-            disabled: !isFixedCrewModel && (!canUseNeoTile || !canRunNeoBuild),
             "aria-disabled": isFixedCrewModel ? !canUseNeoTile : !canUseNeoTile || !canRunNeoBuild,
             className: `relative ${headerButtonClass} ${isOracleMode && !isFixedCrewModel ? "active" : ""} ${isFixedCrewModel ? !canUseNeoTile ? unavailableActionClass : "" : !canUseNeoTile || !canRunNeoBuild ? unavailableActionClass : ""}`,
             title: isFixedCrewModel ? canUseNeoTile ? "Quick Tile" : "Access denied: NEO Tile permission required" : canUseNeoTile && canRunNeoBuild ? "NEO - Tile" : "Access denied: NEO Tile permission required",
@@ -9427,11 +9456,14 @@ const Header = ({
           "button",
           {
             type: "button",
-            onClick: () => {
-              if (!canOpenFlightLine || !onToggleFlightLinePanel) return;
+            onClick: (event) => {
+              if (!canOpenFlightLine || !onToggleFlightLinePanel) {
+                showPermissionNotice(event.currentTarget);
+                return;
+              }
               onToggleFlightLinePanel();
             },
-            disabled: !canOpenFlightLine || !onToggleFlightLinePanel,
+            "aria-disabled": !canOpenFlightLine || !onToggleFlightLinePanel,
             className: `${headerButtonClass} ${isFlightLinePanelOpen ? "active" : ""} ${!canOpenFlightLine ? unavailableActionClass : ""}`,
             title: canOpenFlightLine ? "Open Flight Line" : "Access denied: Flight Line permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
@@ -9518,6 +9550,13 @@ const Header = ({
       {
         pageName: "Program Schedule",
         onClose: () => setShowAuditFlyout(false)
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PermissionNotice,
+      {
+        anchorRect: permissionNoticeRect,
+        onClose: () => setPermissionNoticeRect(null)
       }
     )
   ] });
@@ -124181,6 +124220,7 @@ ${"=".repeat(60)}`);
   const canEditFlightLineAvailability = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.availability.edit");
   const canEditFlightLineAvailabilityLink = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.availabilityLink.edit");
   const canEditTileAircraftNumber = canEditDfpTiles || canUsePlatformPermission("dfp.aircraftNumber.edit");
+  const canOpenDfpAuditLog = canUsePlatformPermission("dfp.audit.view");
   const canRunValidation = canUsePlatformPermission("dfp.validation");
   const canPublishDfp = canUsePlatformPermission("dfp.publish");
   const canRunNeoBuild = canUsePlatformPermission("neo.run");
@@ -138576,6 +138616,7 @@ Do you want to replace the existing entry?`,
             canOpenFlightLine,
             canRunValidation,
             canRunNeoBuild: canRunNeoBuildForActiveModel,
+            canOpenAuditLog: canOpenDfpAuditLog,
             showAircraftAvailability,
             onToggleAircraftAvailability: activeView === "Program Schedule" ? () => setShowAircraftAvailability(!showAircraftAvailability) : void 0,
             onPauseFlightOps: activeView === "Program Schedule" ? () => {

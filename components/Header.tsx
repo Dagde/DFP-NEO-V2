@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import AuditButton from './AuditButton';
 import AuditFlyout from './AuditFlyout';
+import PermissionNotice from './PermissionNotice';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from '../utils/dispatchRate';
 
@@ -44,6 +45,7 @@ interface HeaderProps {
     canOpenFlightLine?: boolean;
     canRunValidation?: boolean;
     canRunNeoBuild?: boolean;
+    canOpenAuditLog?: boolean;
     // Auth props
     authUser?: { userId: string; displayName: string; role: string; firstName: string | null; lastName: string | null } | null;
     onLogout?: () => void;
@@ -102,6 +104,7 @@ const Header: React.FC<HeaderProps> = ({
     canOpenFlightLine = true,
     canRunValidation = true,
     canRunNeoBuild = true,
+    canOpenAuditLog = true,
     authUser,
     onLogout,
     onShowAdminPanel,
@@ -112,6 +115,7 @@ const Header: React.FC<HeaderProps> = ({
     const [showAuditFlyout, setShowAuditFlyout] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showContextMenu, setShowContextMenu] = useState(false);
+    const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
     const [hoveredContextLocation, setHoveredContextLocation] = useState(activeLocation);
     const userButtonRef = useRef<HTMLDivElement>(null);
     const dropdownMenuRef = useRef<HTMLDivElement>(null);
@@ -125,6 +129,9 @@ const Header: React.FC<HeaderProps> = ({
     const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}`;
     const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
     const hoveredContext = contextOptions.find(option => option.location === hoveredContextLocation) || contextOptions[0];
+    const showPermissionNotice = (anchor: HTMLElement) => {
+        setPermissionNoticeRect(anchor.getBoundingClientRect());
+    };
     const pushSetupTestHeaderDiag = (stage: string, details: Record<string, any> = {}) => {
         if (typeof window === 'undefined') return;
         const isSetupTest = new URLSearchParams(window.location.search).has('setupTest');
@@ -316,20 +323,29 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 1. Audit Log Button */}
                         <button 
-                            onClick={() => setShowAuditFlyout(true)}
-                            className={headerButtonClass}
-                            title="View Audit Log"
+                            onClick={(event) => {
+                                if (!canOpenAuditLog) {
+                                    showPermissionNotice(event.currentTarget);
+                                    return;
+                                }
+                                setShowAuditFlyout(true);
+                            }}
+                            aria-disabled={!canOpenAuditLog}
+                            className={`${headerButtonClass} ${!canOpenAuditLog ? unavailableActionClass : ''}`}
+                            title={canOpenAuditLog ? 'View Audit Log' : 'Access denied: Audit Log permission required'}
                         >
                             <span className="text-center leading-tight">Audit Log</span>
                         </button>
 
                         {/* 2. Multi Select Button */}
                         <button
-                          onClick={() => {
-                              if (!canUseMultiSelect) return;
+                          onClick={(event) => {
+                              if (!canUseMultiSelect) {
+                                  showPermissionNotice(event.currentTarget);
+                                  return;
+                              }
                               setIsMultiSelectMode(!isMultiSelectMode);
                           }}
-                          disabled={!isFixedCrewModel && !canUseMultiSelect}
                           aria-disabled={!canUseMultiSelect}
                           className={`${headerButtonClass} ${isMultiSelectMode ? 'active' : ''} ${!canUseMultiSelect ? unavailableActionClass : ''}`}
                           title={canUseMultiSelect ? 'Toggle multi-select mode' : 'Access denied: Multi Select permission required'}
@@ -349,11 +365,13 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 4. Validation Check Button */}
                         <button
-                          onClick={() => {
-                              if (!canRunValidation) return;
+                          onClick={(event) => {
+                              if (!canRunValidation) {
+                                  showPermissionNotice(event.currentTarget);
+                                  return;
+                              }
                               setShowValidation(!showValidation);
                           }}
-                          disabled={!isFixedCrewModel && !canRunValidation}
                           aria-disabled={!canRunValidation}
                           className={`${headerButtonClass} ${showValidation ? 'active' : ''} ${!canRunValidation ? unavailableActionClass : ''}`}
                           title={canRunValidation ? 'Toggle validation' : 'Access denied: validation permission required'}
@@ -363,11 +381,13 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 5. Dispatch Rate Button */}
                         <button
-                          onClick={() => {
-                              if (!canUseDispatchRate) return;
+                          onClick={(event) => {
+                              if (!canUseDispatchRate) {
+                                  showPermissionNotice(event.currentTarget);
+                                  return;
+                              }
                               onToggleDepartureDensityOverlay();
                           }}
-                          disabled={!isFixedCrewModel && !canUseDispatchRate}
                           aria-disabled={!canUseDispatchRate}
                           className={`${headerButtonClass} ${showDepartureDensityOverlay ? 'active' : ''} ${!canUseDispatchRate ? unavailableActionClass : ''}`}
                           title={canUseDispatchRate ? `Dispatch Rate - Shows flight starts in a ${normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes)}-minute window` : 'Access denied: Dispatch Rate permission required'}
@@ -394,11 +414,13 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 7. Pause Flight Ops Button */}
                         {(isFixedCrewModel || onPauseFlightOps) && (
                             <button
-                                onClick={() => {
-                                    if (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild) return;
+                                onClick={(event) => {
+                                    if (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild) {
+                                        showPermissionNotice(event.currentTarget);
+                                        return;
+                                    }
                                     onPauseFlightOps();
                                 }}
-                                disabled={!isFixedCrewModel && (!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild)}
                                 aria-disabled={!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild}
                                 className={`${headerButtonClass} ${(!onPauseFlightOps || !canUsePauseFlightOps || !canRunNeoBuild) ? unavailableActionClass : ''}`}
                                 title={(onPauseFlightOps && canUsePauseFlightOps && canRunNeoBuild) ? 'Pause Flight Ops' : 'Access denied: Pause Flight Ops and NEO Build permissions required'}
@@ -409,11 +431,13 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 8. Add Ground Tile Button */}
                         <button 
-                            onClick={() => {
-                                if (!canAddGroundTile) return;
+                            onClick={(event) => {
+                                if (!canAddGroundTile) {
+                                    showPermissionNotice(event.currentTarget);
+                                    return;
+                                }
                                 onAddGroundEvent();
                             }}
-                            disabled={!isFixedCrewModel && !canAddGroundTile}
                             aria-disabled={!canAddGroundTile}
                             className={`${headerButtonClass} ${!canAddGroundTile ? unavailableActionClass : ''}`}
                             title={canAddGroundTile ? 'Add Ground Tile' : 'Access denied: Add Ground Tile permission required'}
@@ -423,11 +447,13 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 8. Add Flight Tile Button */}
                         <button 
-                            onClick={() => {
-                                if (!canAddFlightTile) return;
+                            onClick={(event) => {
+                                if (!canAddFlightTile) {
+                                    showPermissionNotice(event.currentTarget);
+                                    return;
+                                }
                                 onAddTile();
                             }}
-                            disabled={!isFixedCrewModel && !canAddFlightTile}
                             aria-disabled={!canAddFlightTile}
                             className={`${headerButtonClass} ${!canAddFlightTile ? unavailableActionClass : ''}`}
                             title={canAddFlightTile ? 'Add Flight Tile' : 'Access denied: Add Flight Tile permission required'}
@@ -437,16 +463,21 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 9. NEO - Tile / Quick Tile Button */}
                         <button
-                            onClick={() => {
+                            onClick={(event) => {
                                 if (isFixedCrewModel) {
-                                    if (!canUseNeoTile || !onQuickTile) return;
+                                    if (!canUseNeoTile || !onQuickTile) {
+                                        showPermissionNotice(event.currentTarget);
+                                        return;
+                                    }
                                     onQuickTile();
                                     return;
                                 }
-                                if (!canUseNeoTile || !canRunNeoBuild) return;
+                                if (!canUseNeoTile || !canRunNeoBuild) {
+                                    showPermissionNotice(event.currentTarget);
+                                    return;
+                                }
                                 onToggleOracleMode();
                             }}
-                            disabled={!isFixedCrewModel && (!canUseNeoTile || !canRunNeoBuild)}
                             aria-disabled={isFixedCrewModel ? !canUseNeoTile : (!canUseNeoTile || !canRunNeoBuild)}
                             className={`relative ${headerButtonClass} ${isOracleMode && !isFixedCrewModel ? 'active' : ''} ${isFixedCrewModel ? (!canUseNeoTile ? unavailableActionClass : '') : ((!canUseNeoTile || !canRunNeoBuild) ? unavailableActionClass : '')}`}
                             title={isFixedCrewModel ? (canUseNeoTile ? 'Quick Tile' : 'Access denied: NEO Tile permission required') : (canUseNeoTile && canRunNeoBuild) ? 'NEO - Tile' : 'Access denied: NEO Tile permission required'}
@@ -459,11 +490,14 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 10. Flight Line Button */}
                         <button
                             type="button"
-                            onClick={() => {
-                                if (!canOpenFlightLine || !onToggleFlightLinePanel) return;
+                            onClick={(event) => {
+                                if (!canOpenFlightLine || !onToggleFlightLinePanel) {
+                                    showPermissionNotice(event.currentTarget);
+                                    return;
+                                }
                                 onToggleFlightLinePanel();
                             }}
-                            disabled={!canOpenFlightLine || !onToggleFlightLinePanel}
+                            aria-disabled={!canOpenFlightLine || !onToggleFlightLinePanel}
                             className={`${headerButtonClass} ${isFlightLinePanelOpen ? 'active' : ''} ${!canOpenFlightLine ? unavailableActionClass : ''}`}
                             title={canOpenFlightLine ? 'Open Flight Line' : 'Access denied: Flight Line permission required'}
                         >
@@ -539,6 +573,10 @@ const Header: React.FC<HeaderProps> = ({
                     onClose={() => setShowAuditFlyout(false)}
                 />
             )}
+            <PermissionNotice
+                anchorRect={permissionNoticeRect}
+                onClose={() => setPermissionNoticeRect(null)}
+            />
         </>
     );
 };

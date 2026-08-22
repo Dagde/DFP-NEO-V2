@@ -34233,6 +34233,7 @@ const App: React.FC = () => {
     const canEditFlightLineAvailability = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.availability.edit');
     const canEditFlightLineAvailabilityLink = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.availabilityLink.edit');
     const canEditTileAircraftNumber = canEditDfpTiles || canUsePlatformPermission('dfp.aircraftNumber.edit');
+    const canOpenDfpAuditLog = canUsePlatformPermission('dfp.audit.view');
     const canRunValidation = canUsePlatformPermission('dfp.validation');
     const canPublishDfp = canUsePlatformPermission('dfp.publish');
     const canRunNeoBuild = canUsePlatformPermission('neo.run');
@@ -51364,6 +51365,7 @@ appliedUpdates.forEach(update => {
                     canOpenFlightLine={canOpenFlightLine}
                     canRunValidation={canRunValidation}
                     canRunNeoBuild={canRunNeoBuildForActiveModel}
+                    canOpenAuditLog={canOpenDfpAuditLog}
 
                        showAircraftAvailability={showAircraftAvailability}
                        onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}
