@@ -118164,6 +118164,72 @@ const App = () => {
       }
     }
   }
+  reactExports.useEffect(() => {
+    const accessRows = platformAccessContext.rows || [];
+    const rowSummary = accessRows.slice(0, 12).map((row) => ({
+      userId: row.userId || null,
+      username: row.username || row.userName || null,
+      displayName: row.displayName || null,
+      locationCode: row.locationCode || null,
+      unitCode: row.unitCode || null,
+      moduleCode: row.moduleCode || null,
+      accessLevel: row.accessLevel || null,
+      role: row.role || null,
+      status: row.status || null,
+      permissionProfileIds: Array.isArray(row?.settings?.permissionProfileIds) ? row.settings.permissionProfileIds : []
+    }));
+    const signedInIdentifiers = [
+      authUser?.id,
+      authUser?.userId,
+      authUser?.username,
+      authUser?.email,
+      authUser?.displayName,
+      authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : "",
+      authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : "",
+      sessionUser?.userId,
+      sessionUser?.username,
+      sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.lastName)}, ${stripCourseDetailsFromLoginName(sessionUser.firstName)}` : "",
+      sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.firstName)} ${stripCourseDetailsFromLoginName(sessionUser.lastName)}` : "",
+      currentUserName
+    ].map((value) => String(value || "").trim()).filter(Boolean);
+    pushDfpDataDiag("access:resolved-context", {
+      signedInIdentifiers,
+      authRole: authUser?.role || null,
+      currentUserName,
+      signedInDisplayName,
+      isAuthenticated,
+      isConfigured: platformAccessContext.isConfigured,
+      isPlatformAdmin: platformAccessContext.isPlatformAdmin,
+      isSuperAdmin: platformAccessContext.isSuperAdmin,
+      rowCount: accessRows.length,
+      rowSummary,
+      accessibleLocations: platformAccessContext.accessibleLocations,
+      permissionProfileIds: platformAccessContext.permissionProfileIds,
+      permissionCount: platformAccessContext.permissions.length,
+      hasDfpView: hasPlatformPermission(platformAccessContext, "dfp.view"),
+      hasDfpModuleAccessForSchool: getDailySnapshotLocationAliases(school).some((locationAlias) => hasPlatformModuleAccess(platformAccessContext, locationAlias, "dfp")),
+      baseSelectableLocationCodes,
+      selectableLocationCodes,
+      school,
+      activeUnitCode,
+      activeContextUnitCodes,
+      platformDataScopeQuery
+    });
+  }, [
+    activeContextUnitCodes,
+    activeUnitCode,
+    authUser,
+    baseSelectableLocationCodes,
+    currentUserName,
+    getDailySnapshotLocationAliases,
+    isAuthenticated,
+    platformAccessContext,
+    platformDataScopeQuery,
+    school,
+    selectableLocationCodes,
+    sessionUser,
+    signedInDisplayName
+  ]);
   function pushDashboardReportDiag(stage, details = {}) {
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -122134,7 +122200,7 @@ ${"=".repeat(60)}`);
   }, [buildDfpDate, date]);
   const eventsForDate = reactExports.useMemo(() => {
     const events2 = publishedSchedules[date] || [];
-    if (shouldRecordDfpRenderDiagnostics()) {
+    if (shouldRecordDfpRenderDiagnostics() || events2.length === 0) {
       pushDfpDataDiag("render:events-for-date", {
         renderedDate: date,
         eventCount: events2.length,
@@ -122142,6 +122208,8 @@ ${"=".repeat(60)}`);
         publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 80),
         snapshotDateCount: snapshotDates.length,
         snapshotDates: snapshotDates.slice(0, 80),
+        activeContextUnitCodes,
+        platformDataScopeQuery,
         sampleEvents: events2.slice(0, 8).map((event) => ({
           id: event.id,
           date: event.date,
@@ -122155,7 +122223,7 @@ ${"=".repeat(60)}`);
       });
     }
     return events2;
-  }, [date, publishedSchedules, snapshotDates]);
+  }, [activeContextUnitCodes, date, platformDataScopeQuery, publishedSchedules, snapshotDates]);
   reactExports.useEffect(() => {
     if (!isAuthenticated || !date) {
       setEventCompletionsForDate([]);
@@ -122803,6 +122871,26 @@ ${"=".repeat(60)}`);
           segmentType
         });
       }
+    }
+    if (segments.length === 0 || shouldRecordDfpRenderDiagnostics()) {
+      pushDfpDataDiag("render:event-segments-output", {
+        renderedDate: date,
+        rawInputCount: allEvents.length,
+        segmentCount: segments.length,
+        todayStart,
+        todayEndTime,
+        activeOperationalModel,
+        activeFixedCrewTileColourMode,
+        sampleInputEvents: allEvents.slice(0, 8).map((event) => ({
+          id: event.id,
+          date: event.date,
+          type: event.type,
+          resourceId: event.resourceId,
+          startTime: event.startTime,
+          duration: event.duration,
+          flightNumber: event.flightNumber
+        }))
+      });
     }
     return segments;
   }, [activeFixedCrewTileColourMode, activeOperationalModel, date, eventsForDateWithPreFlightNotes]);
