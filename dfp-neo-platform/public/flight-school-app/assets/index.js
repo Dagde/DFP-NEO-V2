@@ -8359,7 +8359,11 @@ const PermissionNotice = ({
   onClose
 }) => {
   const noticeRef = reactExports.useRef(null);
+  const onCloseRef = reactExports.useRef(onClose);
   const [position, setPosition] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
   reactExports.useLayoutEffect(() => {
     if (!anchorRect) return;
     const updatePosition = () => {
@@ -8388,16 +8392,19 @@ const PermissionNotice = ({
     };
   }, [anchorRect]);
   reactExports.useEffect(() => {
-    const timer = window.setTimeout(onClose, durationMs);
-    const closeOnNextInteraction = () => onClose();
-    window.addEventListener("pointerdown", closeOnNextInteraction);
-    window.addEventListener("keydown", closeOnNextInteraction);
+    const closeNotice = () => onCloseRef.current();
+    const timer = window.setTimeout(closeNotice, durationMs);
+    const closeOnNextInteraction = () => closeNotice();
+    window.addEventListener("pointerdown", closeOnNextInteraction, true);
+    window.addEventListener("mousedown", closeOnNextInteraction, true);
+    window.addEventListener("keydown", closeOnNextInteraction, true);
     return () => {
       window.clearTimeout(timer);
-      window.removeEventListener("pointerdown", closeOnNextInteraction);
-      window.removeEventListener("keydown", closeOnNextInteraction);
+      window.removeEventListener("pointerdown", closeOnNextInteraction, true);
+      window.removeEventListener("mousedown", closeOnNextInteraction, true);
+      window.removeEventListener("keydown", closeOnNextInteraction, true);
     };
-  }, [durationMs, onClose]);
+  }, [anchorRect, durationMs]);
   if (!anchorRect) return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "div",

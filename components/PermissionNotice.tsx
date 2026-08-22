@@ -17,7 +17,12 @@ const PermissionNotice: React.FC<PermissionNoticeProps> = ({
   onClose,
 }) => {
   const noticeRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useLayoutEffect(() => {
     if (!anchorRect) return;
@@ -55,17 +60,20 @@ const PermissionNotice: React.FC<PermissionNoticeProps> = ({
   }, [anchorRect]);
 
   useEffect(() => {
-    const timer = window.setTimeout(onClose, durationMs);
-    const closeOnNextInteraction = () => onClose();
-    window.addEventListener('pointerdown', closeOnNextInteraction);
-    window.addEventListener('keydown', closeOnNextInteraction);
+    const closeNotice = () => onCloseRef.current();
+    const timer = window.setTimeout(closeNotice, durationMs);
+    const closeOnNextInteraction = () => closeNotice();
+    window.addEventListener('pointerdown', closeOnNextInteraction, true);
+    window.addEventListener('mousedown', closeOnNextInteraction, true);
+    window.addEventListener('keydown', closeOnNextInteraction, true);
 
     return () => {
       window.clearTimeout(timer);
-      window.removeEventListener('pointerdown', closeOnNextInteraction);
-      window.removeEventListener('keydown', closeOnNextInteraction);
+      window.removeEventListener('pointerdown', closeOnNextInteraction, true);
+      window.removeEventListener('mousedown', closeOnNextInteraction, true);
+      window.removeEventListener('keydown', closeOnNextInteraction, true);
     };
-  }, [durationMs, onClose]);
+  }, [anchorRect, durationMs]);
 
   if (!anchorRect) return null;
 
