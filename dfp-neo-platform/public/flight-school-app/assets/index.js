@@ -2395,6 +2395,27 @@ const getLocationCodesForCurrentRuntime = (config, supportedCodes = []) => {
   return configuredCodes.length > 0 ? configuredCodes : supportedCodes;
 };
 const normaliseAccessValue = (value) => String(value || "").trim().toLowerCase();
+const compactAccessValue = (value) => normaliseAccessValue(value).replace(/[^a-z0-9]/g, "");
+const accessIdentityVariants = (...values) => uniqueValues$1(
+  values.flatMap((value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return [];
+    const variants = [raw];
+    const emailLocalPart = raw.includes("@") ? raw.split("@")[0] : "";
+    if (emailLocalPart) {
+      variants.push(emailLocalPart, emailLocalPart.replace(/[._-]+/g, " "));
+    }
+    const commaNameMatch = raw.match(/^([^,]+),\s*(.+)$/);
+    if (commaNameMatch) {
+      variants.push(`${commaNameMatch[2]} ${commaNameMatch[1]}`);
+    }
+    const spacedParts = raw.replace(/[._-]+/g, " ").split(/\s+/).filter(Boolean);
+    if (spacedParts.length === 2 && !raw.includes(",")) {
+      variants.push(`${spacedParts[1]}, ${spacedParts[0]}`);
+    }
+    return variants;
+  }).flatMap((variant) => [normaliseAccessValue(variant), compactAccessValue(variant)]).filter(Boolean)
+);
 const normaliseAccessLevel = (value) => {
   const token = String(value || "").trim().toLowerCase();
   if (token === "manage" || token === "admin" || token === "manage/edit" || token === "edit") return "Manage";
@@ -2609,14 +2630,27 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = []) 
     };
   }
   const identifiers = new Set(
-    userIdentifiers.map(normaliseAccessValue).filter(Boolean)
+    accessIdentityVariants(...userIdentifiers)
   );
   const rows = activeRows.filter((row) => {
-    const rowIdentifiers = [
+    const platformUser = (config.platformUsers || []).find((user) => accessIdentityVariants(user?.id, user?.userId, user?.username, user?.email, user?.displayName).some((identifier) => accessIdentityVariants(row.userId, row.username, row.displayName).includes(identifier)));
+    const rowIdentifiers = accessIdentityVariants(
       row.userId,
       row.username,
-      row.displayName
-    ].map(normaliseAccessValue).filter(Boolean);
+      row.displayName,
+      row.userName,
+      row.email,
+      row.personnelId,
+      row.idNumber,
+      row.staffId,
+      platformUser?.id,
+      platformUser?.userId,
+      platformUser?.username,
+      platformUser?.email,
+      platformUser?.displayName,
+      platformUser?.firstName && platformUser?.lastName ? `${platformUser.lastName}, ${platformUser.firstName}` : "",
+      platformUser?.firstName && platformUser?.lastName ? `${platformUser.firstName} ${platformUser.lastName}` : ""
+    );
     return rowIdentifiers.some((identifier) => identifiers.has(identifier));
   });
   if (rows.length === 0) {
@@ -117993,9 +118027,14 @@ const App = () => {
     authUser?.id,
     authUser?.userId,
     authUser?.username,
+    authUser?.email,
     authUser?.displayName,
+    authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : "",
+    authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : "",
     sessionUser?.userId,
     sessionUser?.username,
+    sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.lastName)}, ${stripCourseDetailsFromLoginName(sessionUser.firstName)}` : "",
+    sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.firstName)} ${stripCourseDetailsFromLoginName(sessionUser.lastName)}` : "",
     currentUserName
   ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
   const hasAuthenticatedAdminRole = ["ADMIN", "SUPER_ADMIN"].includes(String(authUser?.role || "").toUpperCase());

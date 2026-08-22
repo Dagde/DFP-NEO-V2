@@ -571,6 +571,31 @@ export const getLocationCodesForCurrentRuntime = (
 };
 
 const normaliseAccessValue = (value: unknown): string => String(value || '').trim().toLowerCase();
+const compactAccessValue = (value: unknown): string => normaliseAccessValue(value).replace(/[^a-z0-9]/g, '');
+
+const accessIdentityVariants = (...values: unknown[]): string[] => uniqueValues(
+  values
+    .flatMap((value) => {
+      const raw = String(value || '').trim();
+      if (!raw) return [];
+      const variants = [raw];
+      const emailLocalPart = raw.includes('@') ? raw.split('@')[0] : '';
+      if (emailLocalPart) {
+        variants.push(emailLocalPart, emailLocalPart.replace(/[._-]+/g, ' '));
+      }
+      const commaNameMatch = raw.match(/^([^,]+),\s*(.+)$/);
+      if (commaNameMatch) {
+        variants.push(`${commaNameMatch[2]} ${commaNameMatch[1]}`);
+      }
+      const spacedParts = raw.replace(/[._-]+/g, ' ').split(/\s+/).filter(Boolean);
+      if (spacedParts.length === 2 && !raw.includes(',')) {
+        variants.push(`${spacedParts[1]}, ${spacedParts[0]}`);
+      }
+      return variants;
+    })
+    .flatMap((variant) => [normaliseAccessValue(variant), compactAccessValue(variant)])
+    .filter(Boolean),
+);
 
 const normaliseAccessLevel = (value: unknown): MasterLmpAccessLevel => {
   const token = String(value || '').trim().toLowerCase();
@@ -896,17 +921,31 @@ export const getPlatformAccessContext = (
   }
 
   const identifiers = new Set(
-    userIdentifiers
-      .map(normaliseAccessValue)
-      .filter(Boolean),
+    accessIdentityVariants(...userIdentifiers),
   );
 
   const rows = activeRows.filter((row) => {
-    const rowIdentifiers = [
+    const platformUser = (config.platformUsers || []).find((user: any) => (
+      accessIdentityVariants(user?.id, user?.userId, user?.username, user?.email, user?.displayName)
+        .some((identifier) => accessIdentityVariants(row.userId, row.username, row.displayName).includes(identifier))
+    ));
+    const rowIdentifiers = accessIdentityVariants(
       row.userId,
       row.username,
       row.displayName,
-    ].map(normaliseAccessValue).filter(Boolean);
+      (row as any).userName,
+      (row as any).email,
+      (row as any).personnelId,
+      (row as any).idNumber,
+      (row as any).staffId,
+      platformUser?.id,
+      platformUser?.userId,
+      platformUser?.username,
+      platformUser?.email,
+      platformUser?.displayName,
+      platformUser?.firstName && platformUser?.lastName ? `${platformUser.lastName}, ${platformUser.firstName}` : '',
+      platformUser?.firstName && platformUser?.lastName ? `${platformUser.firstName} ${platformUser.lastName}` : '',
+    );
     return rowIdentifiers.some((identifier) => identifiers.has(identifier));
   });
 

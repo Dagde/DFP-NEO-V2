@@ -26363,9 +26363,14 @@ const App: React.FC = () => {
         authUser?.id,
         authUser?.userId,
         authUser?.username,
+        (authUser as any)?.email,
         authUser?.displayName,
+        authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : '',
+        authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : '',
         sessionUser?.userId,
         sessionUser?.username,
+        sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.lastName)}, ${stripCourseDetailsFromLoginName(sessionUser.firstName)}` : '',
+        sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.firstName)} ${stripCourseDetailsFromLoginName(sessionUser.lastName)}` : '',
         currentUserName,
     ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
 
