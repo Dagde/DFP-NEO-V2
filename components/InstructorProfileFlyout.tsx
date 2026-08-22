@@ -21,8 +21,7 @@ import {
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
 import {
-  getPlatformAccessContext,
-  getPlatformPermissionProfiles,
+  getAssignedPlatformPermissionProfileLabels,
   isFixedCrewLikeOperationalModel,
   normaliseOperationalModel,
   type PlatformConfig,
@@ -1156,7 +1155,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     simIpDisplayLabel,
   );
   const assignedPermissionProfileLabels = useMemo(() => {
-    const accessContext = getPlatformAccessContext(platformConfig, [
+    return getAssignedPlatformPermissionProfileLabels(platformConfig, [
       (instructor as any).id,
       (instructor as any).userId,
       (instructor as any).personnelId,
@@ -1164,16 +1163,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       instructor.email,
       instructor.name,
     ]);
-    const profileIdSet = new Set(
-      (accessContext.permissionProfileIds || []).map(id => String(id || '').trim().toLowerCase()).filter(Boolean),
-    );
-    if (profileIdSet.size === 0) return [];
-    const profiles = getPlatformPermissionProfiles(platformConfig);
-    const labels = Array.from(profileIdSet).map(profileId => {
-      const profile = profiles.find(candidate => String(candidate.id || '').trim().toLowerCase() === profileId);
-      return profile?.name || profileId;
-    });
-    return Array.from(new Set(labels.map(label => String(label || '').trim()).filter(Boolean)));
   }, [instructor, platformConfig]);
 
   // Trainee avatar icon
@@ -2096,53 +2085,52 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <h3 className="text-xl font-bold text-white">{instructor.name}</h3>
                         <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white">Active</span>
                       </div>
-                      <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
+                      <div className="grid grid-cols-4 gap-x-4 gap-y-2 text-xs">
                         {/* Row 1 */}
                         <div><span className="text-gray-400 block text-[10px]">Personnel ID</span><span className="text-white font-medium">{instructor.idNumber || '-'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{profileRoleDisplay.label}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{displayCallsign || '[None]'}</span></div>
+                        {/* Row 2 */}
                         <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">{instructor.secondaryCallsign || '[None]'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{instructor.crew || '[None]'}</span></div>
-                        {/* Row 2 */}
                         <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{instructor.service || '[None]'}</span></div>
+                        {/* Row 3 */}
                         <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{instructor.unit}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{instructor.seatConfig}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{instructor.location}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{instructor.flight || 'N/A'}</span></div>
-                        {/* Row 3 */}
-                        <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
-                        <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
+                        {/* Row 4 */}
+                        <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
+                        <div className="col-span-3"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
                       </div>
-                    </div>
-
-                    {/* Qualifications panel */}
-                    <div className="flex-shrink-0 w-44 space-y-2">
-                      <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Qualifications</div>
-                        <div className="space-y-1">
-                          {assignedQualificationLabels.length > 0
-                            ? assignedQualificationLabels.map(label => (
-                                <div key={label} className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold">
-                                  {label}
-                                </div>
-                              ))
-                            : <div className="text-gray-500 text-[10px] italic">None</div>
-                          }
+                      <div className="mt-3 grid grid-cols-2 gap-3">
+                        <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Qualifications</div>
+                          <div className="flex flex-wrap gap-1">
+                            {assignedQualificationLabels.length > 0
+                              ? assignedQualificationLabels.map(label => (
+                                  <span key={label} className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold">
+                                    {label}
+                                  </span>
+                                ))
+                              : <span className="text-gray-500 text-[10px] italic">None</span>
+                            }
+                          </div>
                         </div>
-                      </div>
-                      <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
-                        <div className="space-y-1">
-                          {assignedPermissionProfileLabels.length > 0
-                            ? assignedPermissionProfileLabels.map(label => (
-                                <div key={label} className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold">
-                                  {label}
-                                </div>
-                              ))
-                            : <div className="text-gray-500 text-[10px] italic">None</div>
-                          }
+                        <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
+                          <div className="flex flex-wrap gap-1">
+                            {assignedPermissionProfileLabels.length > 0
+                              ? assignedPermissionProfileLabels.map(label => (
+                                  <span key={label} className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold">
+                                    {label}
+                                  </span>
+                                ))
+                              : <span className="text-gray-500 text-[10px] italic">None</span>
+                            }
+                          </div>
                         </div>
                       </div>
                     </div>

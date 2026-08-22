@@ -2676,6 +2676,42 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = []) 
     permissions: permissionContext.permissions
   };
 };
+const getAssignedPlatformPermissionProfileLabels = (config, userIdentifiers) => {
+  if (!config || !Array.isArray(config.userAccess) || config.userAccess.length === 0) return [];
+  const identifiers = new Set(accessIdentityVariants(...userIdentifiers));
+  if (identifiers.size === 0) return [];
+  const activeRows = config.userAccess.map(normaliseAccessRow).filter((row) => normaliseAccessValue(row.status) !== "inactive");
+  const rows = activeRows.filter((row) => {
+    const platformUser = (config.platformUsers || []).find((user) => accessIdentityVariants(user?.id, user?.userId, user?.username, user?.email, user?.displayName).some((identifier) => accessIdentityVariants(row.userId, row.username, row.displayName).includes(identifier)));
+    const rowIdentifiers = accessIdentityVariants(
+      row.userId,
+      row.username,
+      row.displayName,
+      row.userName,
+      row.email,
+      row.personnelId,
+      row.idNumber,
+      row.staffId,
+      platformUser?.id,
+      platformUser?.userId,
+      platformUser?.username,
+      platformUser?.email,
+      platformUser?.displayName,
+      platformUser?.firstName && platformUser?.lastName ? `${platformUser.lastName}, ${platformUser.firstName}` : "",
+      platformUser?.firstName && platformUser?.lastName ? `${platformUser.firstName} ${platformUser.lastName}` : ""
+    );
+    return rowIdentifiers.some((identifier) => identifiers.has(identifier));
+  });
+  const profileIds = getExplicitPermissionProfileIds(rows);
+  if (profileIds.length === 0) return [];
+  const profiles = getPlatformPermissionProfiles(config);
+  const profileNameById = new Map(
+    profiles.map((profile) => [normaliseAccessValue(profile.id), profile.name || profile.id])
+  );
+  return uniqueValues$1(
+    profileIds.map((profileId) => profileNameById.get(normaliseAccessValue(profileId)) || profileId).map((label) => String(label || "").trim()).filter(Boolean)
+  );
+};
 const hasPlatformPermission = (accessContext, permissionId) => {
   if (!accessContext.isConfigured) return true;
   if (accessContext.isSuperAdmin) return true;
@@ -27027,7 +27063,7 @@ const TraineeProfileFlyout = ({
   );
   const assignedQualificationLabels = reactExports.useMemo(() => assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map((qualification) => qualification.code || qualification.name), [activeQualificationOptions, assignedQualifications]);
   const assignedPermissionProfileLabels = reactExports.useMemo(() => {
-    const accessContext = getPlatformAccessContext(platformConfig, [
+    return getAssignedPlatformPermissionProfileLabels(platformConfig, [
       trainee.id,
       trainee.userId,
       trainee.personnelId,
@@ -27036,16 +27072,6 @@ const TraineeProfileFlyout = ({
       trainee.name,
       trainee.fullName
     ]);
-    const profileIdSet = new Set(
-      (accessContext.permissionProfileIds || []).map((id) => String(id || "").trim().toLowerCase()).filter(Boolean)
-    );
-    if (profileIdSet.size === 0) return [];
-    const profiles = getPlatformPermissionProfiles(platformConfig);
-    const labels = Array.from(profileIdSet).map((profileId) => {
-      const profile = profiles.find((candidate) => String(candidate.id || "").trim().toLowerCase() === profileId);
-      return profile?.name || profileId;
-    });
-    return Array.from(new Set(labels.map((label) => String(label || "").trim()).filter(Boolean)));
   }, [platformConfig, trainee]);
   const visiblePermissionLabels = assignedPermissionProfileLabels.length > 0 ? assignedPermissionProfileLabels : getVisiblePermissions(trainee.permissions);
   const isSuspended = reactExports.useMemo(() => isTraineeSuspended({ permissions }), [permissions]);
@@ -28654,7 +28680,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white", children: trainee.name }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded text-xs font-bold ${isTraineeSuspended(trainee) ? "bg-red-600 text-white" : trainee.isPaused ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`, children: isTraineeSuspended(trainee) ? "Suspended" : trainee.isPaused ? "Paused" : "Active" })
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-6 gap-x-4 gap-y-2 text-xs", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-4 gap-x-4 gap-y-2 text-xs", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Personnel ID" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: trainee.idNumber || "-" })
@@ -28726,21 +28752,19 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Email" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: trainee.email || "N/A" })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", {}),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", {}),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", {}),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", {})
+                        ] })
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-2", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 mb-1 font-semibold", children: "Qualifications" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 bg-teal-900/80 text-teal-200 rounded text-[9px]", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "None" }) })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-2 gap-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-2", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 mb-1 font-semibold", children: "Qualifications" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 bg-teal-900/80 text-teal-200 rounded text-[9px]", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "None" }) })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-2", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 mb-1 font-semibold", children: "Permissions" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]", children: p }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "None" }) })
+                        ] })
                       ] })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 flex-shrink-0 space-y-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 mb-1 font-semibold", children: "Permissions" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]", children: p }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "None" }) })
-                    ] }) })
+                    ] })
                   ] })
                 )
               ] }),
@@ -58301,7 +58325,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     simIpDisplayLabel
   );
   const assignedPermissionProfileLabels = reactExports.useMemo(() => {
-    const accessContext = getPlatformAccessContext(platformConfig, [
+    return getAssignedPlatformPermissionProfileLabels(platformConfig, [
       instructor.id,
       instructor.userId,
       instructor.personnelId,
@@ -58309,16 +58333,6 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       instructor.email,
       instructor.name
     ]);
-    const profileIdSet = new Set(
-      (accessContext.permissionProfileIds || []).map((id) => String(id || "").trim().toLowerCase()).filter(Boolean)
-    );
-    if (profileIdSet.size === 0) return [];
-    const profiles = getPlatformPermissionProfiles(platformConfig);
-    const labels = Array.from(profileIdSet).map((profileId) => {
-      const profile = profiles.find((candidate) => String(candidate.id || "").trim().toLowerCase() === profileId);
-      return profile?.name || profileId;
-    });
-    return Array.from(new Set(labels.map((label) => String(label || "").trim()).filter(Boolean)));
   }, [instructor, platformConfig]);
   const TraineeIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -59223,7 +59237,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                     /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white", children: instructor.name }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white", children: "Active" })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-6 gap-x-4 gap-y-2 text-xs", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-4 gap-x-4 gap-y-2 text-xs", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Personnel ID" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.idNumber || "-" })
@@ -59272,24 +59286,24 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Flight" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.flight || "N/A" })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Phone Number" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.phoneNumber || "N/A" })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-4", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-3", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Email" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.email || "N/A" })
                     ] })
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 w-44 space-y-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Qualifications" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Permissions" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: assignedPermissionProfileLabels.length > 0 ? assignedPermissionProfileLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-2 gap-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Qualifications" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Permissions" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: assignedPermissionProfileLabels.length > 0 ? assignedPermissionProfileLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
+                    ] })
                   ] })
                 ] })
               ] })

@@ -42,8 +42,7 @@ import {
 import { isExternalDataAllowed } from '../utils/externalDataControls';
 import {
   filterMasterLmpCodesForAccess,
-  getPlatformAccessContext,
-  getPlatformPermissionProfiles,
+  getAssignedPlatformPermissionProfileLabels,
   normaliseMasterLmpCatalogue,
   type PlatformConfig,
 } from '../utils/platformConfigService';
@@ -1265,7 +1264,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             .map(qualification => qualification.code || qualification.name)
     ), [activeQualificationOptions, assignedQualifications]);
     const assignedPermissionProfileLabels = useMemo(() => {
-        const accessContext = getPlatformAccessContext(platformConfig, [
+        return getAssignedPlatformPermissionProfileLabels(platformConfig, [
             (trainee as any).id,
             (trainee as any).userId,
             (trainee as any).personnelId,
@@ -1274,16 +1273,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             trainee.name,
             trainee.fullName,
         ]);
-        const profileIdSet = new Set(
-            (accessContext.permissionProfileIds || []).map(id => String(id || '').trim().toLowerCase()).filter(Boolean),
-        );
-        if (profileIdSet.size === 0) return [];
-        const profiles = getPlatformPermissionProfiles(platformConfig);
-        const labels = Array.from(profileIdSet).map(profileId => {
-            const profile = profiles.find(candidate => String(candidate.id || '').trim().toLowerCase() === profileId);
-            return profile?.name || profileId;
-        });
-        return Array.from(new Set(labels.map(label => String(label || '').trim()).filter(Boolean)));
     }, [platformConfig, trainee]);
     const visiblePermissionLabels = assignedPermissionProfileLabels.length > 0
         ? assignedPermissionProfileLabels
@@ -3158,7 +3147,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 {isTraineeSuspended(trainee) ? 'Suspended' : trainee.isPaused ? 'Paused' : 'Active'}
                               </span>
                             </div>
-                            <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
+                            <div className="grid grid-cols-4 gap-x-4 gap-y-2 text-xs">
                               {/* Row 1 */}
                               <div><span className="text-gray-400 block text-[10px]">Personnel ID</span><span className="text-white font-medium">{trainee.idNumber || '-'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Course</span><span
@@ -3168,43 +3157,38 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               >{trainee.course}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || <span className="text-gray-500 italic">None</span>}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Academic LMP</span><span className="text-purple-300 font-medium">{(trainee as any).academicLmpType || <span className="text-gray-500 italic">None</span>}</span></div>
+                              {/* Row 2 */}
                               <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-white font-medium">{trainee.secondaryCallsign || '-'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
-                              {/* Row 2 */}
                               <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{trainee.rank}</span></div>
+                              {/* Row 3 */}
                               <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{trainee.role || <span className="text-gray-500 italic">None</span>}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{trainee.service || '[None]'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{trainee.unit}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{trainee.crew || 'N/A'}</span></div>
+                              {/* Row 4 */}
                               <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{trainee.location}</span></div>
-                              {/* Row 3 */}
                               <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{trainee.flight || 'N/A'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{trainee.email || 'N/A'}</span></div>
-                              <div></div>
-                              <div></div>
-                              <div></div>
-                              <div></div>
                             </div>
-                            <div className="bg-gray-700/30 rounded p-2">
-                              <div className="text-[10px] text-gray-400 mb-1 font-semibold">Qualifications</div>
-                              <div className="flex flex-wrap gap-1">
-                                {assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map(label => (
-                                  <span key={label} className="px-1.5 py-0.5 bg-teal-900/80 text-teal-200 rounded text-[9px]">{label}</span>
-                                )) : <span className="text-gray-500 text-[10px]">None</span>}
+                            <div className="mt-3 grid grid-cols-2 gap-3">
+                              <div className="bg-gray-700/30 rounded p-2">
+                                <div className="text-[10px] text-gray-400 mb-1 font-semibold">Qualifications</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map(label => (
+                                    <span key={label} className="px-1.5 py-0.5 bg-teal-900/80 text-teal-200 rounded text-[9px]">{label}</span>
+                                  )) : <span className="text-gray-500 text-[10px]">None</span>}
+                                </div>
                               </div>
-                            </div>
-                          </div>
-
-                          {/* Permissions panel */}
-                          <div className="w-40 flex-shrink-0 space-y-2">
-                            <div className="bg-gray-700/30 rounded p-2">
-                              <div className="text-[10px] text-gray-400 mb-1 font-semibold">Permissions</div>
-                              <div className="flex flex-wrap gap-1">
-                                {visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p: string) => (
-                                  <span key={p} className="px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]">{p}</span>
-                                )) : <span className="text-gray-500 text-[10px]">None</span>}
+                              <div className="bg-gray-700/30 rounded p-2">
+                                <div className="text-[10px] text-gray-400 mb-1 font-semibold">Permissions</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p: string) => (
+                                    <span key={p} className="px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]">{p}</span>
+                                  )) : <span className="text-gray-500 text-[10px]">None</span>}
+                                </div>
                               </div>
                             </div>
                           </div>

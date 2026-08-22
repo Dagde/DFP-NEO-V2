@@ -980,6 +980,59 @@ export const getPlatformAccessContext = (
   };
 };
 
+export const getAssignedPlatformPermissionProfileLabels = (
+  config: PlatformConfig | null,
+  userIdentifiers: Array<string | number | null | undefined>,
+): string[] => {
+  if (!config || !Array.isArray(config.userAccess) || config.userAccess.length === 0) return [];
+
+  const identifiers = new Set(accessIdentityVariants(...userIdentifiers));
+  if (identifiers.size === 0) return [];
+
+  const activeRows = (config.userAccess as PlatformAccessRow[])
+    .map(normaliseAccessRow)
+    .filter((row) => normaliseAccessValue(row.status) !== 'inactive');
+
+  const rows = activeRows.filter((row) => {
+    const platformUser = (config.platformUsers || []).find((user: any) => (
+      accessIdentityVariants(user?.id, user?.userId, user?.username, user?.email, user?.displayName)
+        .some((identifier) => accessIdentityVariants(row.userId, row.username, row.displayName).includes(identifier))
+    ));
+    const rowIdentifiers = accessIdentityVariants(
+      row.userId,
+      row.username,
+      row.displayName,
+      (row as any).userName,
+      (row as any).email,
+      (row as any).personnelId,
+      (row as any).idNumber,
+      (row as any).staffId,
+      platformUser?.id,
+      platformUser?.userId,
+      platformUser?.username,
+      platformUser?.email,
+      platformUser?.displayName,
+      platformUser?.firstName && platformUser?.lastName ? `${platformUser.lastName}, ${platformUser.firstName}` : '',
+      platformUser?.firstName && platformUser?.lastName ? `${platformUser.firstName} ${platformUser.lastName}` : '',
+    );
+    return rowIdentifiers.some((identifier) => identifiers.has(identifier));
+  });
+
+  const profileIds = getExplicitPermissionProfileIds(rows);
+  if (profileIds.length === 0) return [];
+
+  const profiles = getPlatformPermissionProfiles(config);
+  const profileNameById = new Map(
+    profiles.map((profile) => [normaliseAccessValue(profile.id), profile.name || profile.id]),
+  );
+  return uniqueValues(
+    profileIds
+      .map((profileId) => profileNameById.get(normaliseAccessValue(profileId)) || profileId)
+      .map((label) => String(label || '').trim())
+      .filter(Boolean),
+  );
+};
+
 export const hasPlatformPermission = (
   accessContext: PlatformAccessContext,
   permissionId: PlatformPermissionId,
