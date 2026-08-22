@@ -45,18 +45,39 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   const isAnyDashboardActive = dashboardViews.includes(activeView);
 
   const { isFrozen } = useSystemFreeze();
+  const [permissionNotice, setPermissionNotice] = useState<string | null>(null);
   const canOpen = (view: string) => canAccessView ? canAccessView(view) : true;
   const isModelUnavailable = (view: string) => modelUnavailableViews.includes(view);
   const canBuild = canRunNeoBuild && canOpen('NextDayBuild');
   const canPublish = canPublishDfp && canOpen('NextDayBuild');
   const accessButtonClass = (view: string) => {
     if (isModelUnavailable(view)) return 'cursor-not-allowed';
-    return canOpen(view) ? '' : 'opacity-45 cursor-not-allowed';
+    return canOpen(view) ? '' : 'cursor-not-allowed';
   };
-  const actionButtonClass = (allowed: boolean) => allowed ? '' : 'opacity-45 cursor-not-allowed grayscale';
+  const actionButtonClass = (allowed: boolean) => allowed ? '' : 'cursor-not-allowed';
+  const showPermissionNotice = (key: string) => {
+    setPermissionNotice(key);
+    window.setTimeout(() => {
+      setPermissionNotice(current => current === key ? null : current);
+    }, 1800);
+  };
+  const permissionNoticeBubble = (key: string) => (
+    permissionNotice === key ? (
+      <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg">
+        Permissions: Not Allowed
+      </span>
+    ) : null
+  );
   const navigateIfAllowed = (view: string) => {
-    if (isModelUnavailable(view)) return;
-    if (canOpen(view)) onNavigate(view);
+    if (isModelUnavailable(view)) {
+      showPermissionNotice(view);
+      return;
+    }
+    if (canOpen(view)) {
+      onNavigate(view);
+      return;
+    }
+    showPermissionNotice(view);
   };
 
   // Extract surname from currentUserName (format: "Bloggs, Joe")
@@ -81,65 +102,85 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           <span className="leading-tight">Duty<br/>Pilot</span>
         </button>
 
-        <button
-          onClick={onBuildDfpClick}
-          disabled={!canBuild}
-          title={canBuild ? 'Run NEO Build' : 'Access denied: NEO Build permission required'}
-          className={`mt-[14px] w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`}
-        >
-          <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO Build</span>
-        </button>
+        <div className="relative mt-[14px]">
+          {permissionNoticeBubble('NEO Build')}
+          <button
+            onClick={() => canBuild ? onBuildDfpClick() : showPermissionNotice('NEO Build')}
+            aria-disabled={!canBuild}
+            title={canBuild ? 'Run NEO Build' : 'Access denied: NEO Build permission required'}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`}
+          >
+            <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO Build</span>
+          </button>
+        </div>
 
-        <button
-          onClick={() => navigateIfAllowed('NextDayBuild')}
-          disabled={!canOpen('NextDayBuild')}
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''} ${accessButtonClass('NextDayBuild')}`}
-        >
-          <span className="text-center leading-tight">Program Schedule</span>
-        </button>
+        <div className="relative">
+          {permissionNoticeBubble('NextDayBuild')}
+          <button
+            onClick={() => navigateIfAllowed('NextDayBuild')}
+            aria-disabled={!canOpen('NextDayBuild')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''} ${accessButtonClass('NextDayBuild')}`}
+          >
+            <span className="text-center leading-tight">Program Schedule</span>
+          </button>
+        </div>
 
-        <button
-          onClick={() => navigateIfAllowed('NextDayInstructorSchedule')}
-          disabled={!canOpen('NextDayInstructorSchedule')}
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayInstructorSchedule' ? 'active' : ''} ${accessButtonClass('NextDayInstructorSchedule')}`}
-        >
-          <span className="text-center leading-tight">Staff Schedule</span>
-        </button>
+        <div className="relative">
+          {permissionNoticeBubble('NextDayInstructorSchedule')}
+          <button
+            onClick={() => navigateIfAllowed('NextDayInstructorSchedule')}
+            aria-disabled={!canOpen('NextDayInstructorSchedule')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayInstructorSchedule' ? 'active' : ''} ${accessButtonClass('NextDayInstructorSchedule')}`}
+          >
+            <span className="text-center leading-tight">Staff Schedule</span>
+          </button>
+        </div>
 
-        <button
-          onClick={() => navigateIfAllowed('NextDayTraineeSchedule')}
-          disabled={!canOpen('NextDayTraineeSchedule')}
-          aria-disabled={isModelUnavailable('NextDayTraineeSchedule') || !canOpen('NextDayTraineeSchedule')}
-          title={isModelUnavailable('NextDayTraineeSchedule') ? 'Trainee schedule functions are not used by the Air Combat Model.' : undefined}
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''} ${accessButtonClass('NextDayTraineeSchedule')}`}
-        >
-          <span className="text-center leading-tight">Trainee Schedule</span>
-        </button>
+        <div className="relative">
+          {permissionNoticeBubble('NextDayTraineeSchedule')}
+          <button
+            onClick={() => navigateIfAllowed('NextDayTraineeSchedule')}
+            aria-disabled={isModelUnavailable('NextDayTraineeSchedule') || !canOpen('NextDayTraineeSchedule')}
+            title={isModelUnavailable('NextDayTraineeSchedule') ? 'Trainee schedule functions are not used by this operational model.' : undefined}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''} ${accessButtonClass('NextDayTraineeSchedule')}`}
+          >
+            <span className="text-center leading-tight">Trainee Schedule</span>
+          </button>
+        </div>
 
-        <button
-          onClick={onPublish}
-          disabled={!canPublish}
-          title={canPublish ? 'Publish DFP' : 'Access denied: Publish DFP permission required'}
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canPublish)}`}
-        >
-          <span className="text-center leading-tight" style={{color: "#22c55e"}}>Publish</span>
-        </button>
+        <div className="relative">
+          {permissionNoticeBubble('Publish')}
+          <button
+            onClick={() => canPublish ? onPublish() : showPermissionNotice('Publish')}
+            aria-disabled={!canPublish}
+            title={canPublish ? 'Publish DFP' : 'Access denied: Publish DFP permission required'}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canPublish)}`}
+          >
+            <span className="text-center leading-tight" style={{color: "#22c55e"}}>Publish</span>
+          </button>
+        </div>
 
-        <button
-          onClick={() => navigateIfAllowed('Priorities')}
-          disabled={!canOpen('Priorities')}
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''} ${accessButtonClass('Priorities')}`}
-        >
-          <span className="text-center leading-tight">{isFixedCrewModel ? <>Build<br/>Planner</> : 'Priorities'}</span>
-        </button>
+        <div className="relative">
+          {permissionNoticeBubble('Priorities')}
+          <button
+            onClick={() => navigateIfAllowed('Priorities')}
+            aria-disabled={!canOpen('Priorities')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''} ${accessButtonClass('Priorities')}`}
+          >
+            <span className="text-center leading-tight">{isFixedCrewModel ? <>Build<br/>Planner</> : 'Priorities'}</span>
+          </button>
+        </div>
 
-        <button
-          onClick={() => navigateIfAllowed('BuildIntelligence')}
-          disabled={!canOpen('BuildIntelligence')}
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildIntelligence' ? 'active' : ''} ${accessButtonClass('BuildIntelligence')}`}
-        >
-          <span className="text-center leading-tight">Build Intelligence</span>
-        </button>
+        <div className="relative">
+          {permissionNoticeBubble('BuildIntelligence')}
+          <button
+            onClick={() => navigateIfAllowed('BuildIntelligence')}
+            aria-disabled={!canOpen('BuildIntelligence')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildIntelligence' ? 'active' : ''} ${accessButtonClass('BuildIntelligence')}`}
+          >
+            <span className="text-center leading-tight">Build Intelligence</span>
+          </button>
+        </div>
       </nav>
 
       {/* User Info Section - Bottom */}

@@ -48719,6 +48719,7 @@ appliedUpdates.forEach(update => {
                             operationalModel={activeOperationalModel}
                             operationalContext={activeOperationalContext}
                             trainingReportDisplayName={configuredTrainingReportDisplayName}
+                            canUsePlatformPermission={canUsePlatformPermission}
                         />;
             case 'MyDashboard':
                 // Get all events from published schedules for training report lookup

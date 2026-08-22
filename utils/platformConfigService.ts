@@ -171,6 +171,7 @@ export const PLATFORM_PERMISSION_CATALOG: PlatformPermissionCatalogGroup[] = [
       ['neo.publish.view', 'Open NEO Build Publish controls'],
       ['neo.priorities', 'Edit build priorities'],
       ['neo.intelligence', 'View build intelligence'],
+      ['neo.intelligence.operational.view', 'View Build Intelligence - Operational'],
       ['neo.intelligence.people.view', 'View Build Intelligence - People'],
       ['neo.intelligence.courseMetrics.view', 'View Build Intelligence - Course Metrics'],
       ['neo.intelligence.buildAnalytics.view', 'View Build Intelligence - Build Analytics'],
@@ -318,7 +319,7 @@ export const DEFAULT_PLATFORM_PERMISSION_PROFILES: PlatformPermissionProfile[] =
     id: 'scheduler',
     name: 'Scheduler',
     description: 'Scheduling and build management access.',
-    permissions: ['dfp.view', 'dfp.editTiles', 'dfp.flightLine.view', 'dfp.flightLine.inventory.edit', 'dfp.flightLine.availability.edit', 'dfp.flightLine.availabilityLink.edit', 'dfp.aircraftNumber.edit', 'dfp.validation', 'neo.run', 'neo.priorities', 'neo.intelligence', 'neo.override', 'reporting.view'],
+    permissions: ['dfp.view', 'dfp.editTiles', 'dfp.flightLine.view', 'dfp.flightLine.inventory.edit', 'dfp.flightLine.availability.edit', 'dfp.flightLine.availabilityLink.edit', 'dfp.aircraftNumber.edit', 'dfp.validation', 'neo.run', 'neo.priorities', 'neo.intelligence', 'neo.intelligence.operational.view', 'neo.intelligence.people.view', 'neo.intelligence.courseMetrics.view', 'neo.intelligence.buildAnalytics.view', 'neo.intelligence.acHistory.view', 'neo.intelligence.managerialAnalytics.view', 'neo.intelligence.bli.view', 'neo.override', 'reporting.view'],
     settings: { profileType: 'role' },
   },
   {

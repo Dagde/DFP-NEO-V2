@@ -102,6 +102,7 @@ interface BuildIntelligenceViewProps {
     isSharedFleetContext?: boolean;
   };
   trainingReportDisplayName?: string;
+  canUsePlatformPermission?: (permissionId: string) => boolean;
   
   // From Build Analysis
   buildDate: string;
@@ -110,13 +111,36 @@ interface BuildIntelligenceViewProps {
 
 type TabType = 'air-combat' | 'people' | 'course-metrics' | 'build-analytics' | 'ac-history' | 'managerial-analytics' | 'bli';
 
+const TAB_PERMISSION_IDS: Record<TabType, string> = {
+  'air-combat': 'neo.intelligence.operational.view',
+  people: 'neo.intelligence.people.view',
+  'course-metrics': 'neo.intelligence.courseMetrics.view',
+  'build-analytics': 'neo.intelligence.buildAnalytics.view',
+  'ac-history': 'neo.intelligence.acHistory.view',
+  'managerial-analytics': 'neo.intelligence.managerialAnalytics.view',
+  bli: 'neo.intelligence.bli.view',
+};
+
 const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   const activeModel = normaliseOperationalModel(props.operationalModel);
   const isAirCombatModel = activeModel === 'air_combat';
   const isCrewOperationalModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
   const [activeTab, setActiveTab] = useState<TabType>(isCrewOperationalModel ? 'air-combat' : 'people');
+  const [permissionNoticeTab, setPermissionNoticeTab] = useState<TabType | null>(null);
   const resourceDisplayNames = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
+  const canUsePermission = props.canUsePlatformPermission || (() => true);
+  const hasAnySpecificTabPermission = Object.values(TAB_PERMISSION_IDS).some(permissionId => canUsePermission(permissionId));
+  const canOpenTab = (tabId: TabType) => (
+    canUsePermission(TAB_PERMISSION_IDS[tabId])
+    || (!hasAnySpecificTabPermission && canUsePermission('neo.intelligence'))
+  );
+  const showTabPermissionNotice = (tabId: TabType) => {
+    setPermissionNoticeTab(tabId);
+    window.setTimeout(() => {
+      setPermissionNoticeTab(current => current === tabId ? null : current);
+    }, 1800);
+  };
 
   const formattedDate = useMemo(() => {
     const [year, month, day] = props.date.split('-').map(Number);
@@ -133,6 +157,12 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   useEffect(() => {
     if (!isCrewOperationalModel && activeTab === 'air-combat') setActiveTab('people');
   }, [activeTab, isCrewOperationalModel]);
+
+  useEffect(() => {
+    if (canOpenTab(activeTab)) return;
+    const nextAllowedTab = tabs.find(tab => canOpenTab(tab.id))?.id;
+    if (nextAllowedTab) setActiveTab(nextAllowedTab);
+  }, [activeTab, props.canUsePlatformPermission, isCrewOperationalModel]);
 
   const tabs = [
     ...(isCrewOperationalModel ? [{ id: 'air-combat' as TabType, label: 'Operational' }] : []),
@@ -167,21 +197,33 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
         <div className="px-6 pt-5">
           <div className="mx-auto max-w-7xl rounded-lg border border-cyan-500/25 bg-slate-900/80 p-3 shadow-[0_10px_24px_rgba(0,0,0,0.22)]">
             <nav className="flex flex-wrap gap-2" aria-label="Build intelligence tabs">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    min-w-[170px] rounded-md border px-4 py-2.5 text-sm font-semibold transition-all duration-200
-                    ${activeTab === tab.id
-                      ? 'border-cyan-400/70 bg-cyan-500/15 text-white shadow-[0_0_0_1px_rgba(34,211,238,0.12)]'
-                      : 'border-slate-700 bg-slate-950/70 text-slate-300 hover:border-cyan-500/45 hover:bg-cyan-500/10 hover:text-white'
-                    }
-                  `}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              {tabs.map((tab) => {
+                const isAllowed = canOpenTab(tab.id);
+                return (
+                  <div key={tab.id} className="relative">
+                    {permissionNoticeTab === tab.id && (
+                      <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg">
+                        Permissions: Not Allowed
+                      </span>
+                    )}
+                    <button
+                      onClick={() => isAllowed ? setActiveTab(tab.id) : showTabPermissionNotice(tab.id)}
+                      aria-disabled={!isAllowed}
+                      className={`
+                        min-w-[170px] rounded-md border px-4 py-2.5 text-sm font-semibold transition-all duration-200
+                        ${!isAllowed
+                          ? 'cursor-not-allowed border-slate-700 bg-slate-950/70 text-slate-300'
+                          : activeTab === tab.id
+                            ? 'border-cyan-400/70 bg-cyan-500/15 text-white shadow-[0_0_0_1px_rgba(34,211,238,0.12)]'
+                            : 'border-slate-700 bg-slate-950/70 text-slate-300 hover:border-cyan-500/45 hover:bg-cyan-500/10 hover:text-white'
+                        }
+                      `}
+                    >
+                      {tab.label}
+                    </button>
+                  </div>
+                );
+              })}
             </nav>
           </div>
         </div>
