@@ -1157,8 +1157,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center" onClick={onClose}>
-        <div className="bg-[#141e2e] rounded-lg shadow-2xl w-[calc(100vw-2rem)] md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[94vh] flex flex-col border border-gray-600 overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]" onClick={onClose}>
+        <div className="bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden" onClick={e => e.stopPropagation()}>
 
           {/* Header */}
           <div className="px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0">
@@ -2067,9 +2067,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="text-xl font-bold text-white">{instructor.name}</h3>
                         <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white">Active</span>
-                        {assignedQualificationLabels.map(label => (
-                          <span key={label} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-800 text-emerald-100">{label}</span>
-                        ))}
                       </div>
                       <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
                         {/* Row 1 */}
