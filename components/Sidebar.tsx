@@ -19,6 +19,7 @@ interface SidebarProps {
     school?: string;
     allTraineesData?: any[];
     canAccessView?: (view: string) => boolean;
+    canUsePlatformPermission?: (permissionId: string) => boolean;
     modelUnavailableViews?: string[];
     colourKeyItems?: Array<{ key: string; label: string; color: string }>;
     unreadMessageCount?: number;
@@ -28,9 +29,10 @@ const formatCourseName = (name: string): string => {
   return String(name || '').trim();
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = useState(false);
+  const [permissionNotice, setPermissionNotice] = useState<string | null>(null);
 
   // User selector state
   const [showUserSelector, setShowUserSelector] = useState(false);
@@ -131,14 +133,49 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
   const canOpen = (view: string) => canAccessView ? canAccessView(view) : true;
+  const canUsePermission = canUsePlatformPermission || (() => true);
+  const leftNavigationPermissions: Record<string, string> = {
+    'Program Schedule': 'dfp.view',
+    Staff: 'staff.view',
+    Trainee: 'trainee.roster.view',
+    Syllabus: 'lmp.manage.use',
+    CourseProgress: 'courseProgress.view',
+    TrainingRecords: 'trainingRecords.courseManagement.view',
+    Settings: 'settings.view',
+  };
+  const canOpenLeftView = (view: string) => {
+    const permissionId = leftNavigationPermissions[view];
+    if (!permissionId) return canOpen(view);
+    return canOpen(view) && canUsePermission(permissionId);
+  };
   const isModelUnavailable = (view: string) => modelUnavailableViews.includes(view);
   const accessButtonClass = (view: string) => {
     if (isModelUnavailable(view)) return 'cursor-not-allowed';
-    return canOpen(view) ? '' : 'opacity-45 cursor-not-allowed';
+    return canOpenLeftView(view) ? '' : 'cursor-not-allowed';
   };
+  const showPermissionNotice = (key: string) => {
+    setPermissionNotice(key);
+    window.setTimeout(() => {
+      setPermissionNotice(current => current === key ? null : current);
+    }, 1800);
+  };
+  const permissionNoticeBubble = (key: string) => (
+    permissionNotice === key ? (
+      <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg">
+        Permissions: Not Allowed
+      </span>
+    ) : null
+  );
   const navigateIfAllowed = (view: string) => {
-    if (isModelUnavailable(view)) return;
-    if (canOpen(view)) onNavigate(view);
+    if (isModelUnavailable(view)) {
+      showPermissionNotice(view);
+      return;
+    }
+    if (canOpenLeftView(view)) {
+      onNavigate(view);
+      return;
+    }
+    showPermissionNotice(view);
   };
 
 
@@ -164,69 +201,89 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         {/* Scrollable Main Navigation - Centre Aligned */}
         <nav className="flex-1 overflow-y-auto px-2 pt-[15px] space-y-[1px] flex flex-col items-center">
           {/* DFP Button */}
-          <button
-            onClick={() => navigateIfAllowed('Program Schedule')}
-            disabled={!canOpen('Program Schedule')}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Program Schedule')}`}
-          >
-            <span style={{color: activeView === 'Program Schedule' && !isAnyDashboardActive ? '#ffffff' : '#22c55e'}}>DFP</span>
-          </button>
+          <div className="relative">
+            {permissionNoticeBubble('Program Schedule')}
+            <button
+              onClick={() => navigateIfAllowed('Program Schedule')}
+              aria-disabled={!canOpenLeftView('Program Schedule')}
+              className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Program Schedule')}`}
+            >
+              <span style={{color: activeView === 'Program Schedule' && !isAnyDashboardActive ? '#ffffff' : '#22c55e'}}>DFP</span>
+            </button>
+          </div>
 
           {/* Staff Button */}
-          <button
-            onClick={() => navigateIfAllowed('Staff')}
-            disabled={!canOpen('Staff')}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Staff' ? 'active' : ''} ${accessButtonClass('Staff')}`}
-          >
-            <span>Staff</span>
-          </button>
+          <div className="relative">
+            {permissionNoticeBubble('Staff')}
+            <button
+              onClick={() => navigateIfAllowed('Staff')}
+              aria-disabled={!canOpenLeftView('Staff')}
+              className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Staff' ? 'active' : ''} ${accessButtonClass('Staff')}`}
+            >
+              <span>Staff</span>
+            </button>
+          </div>
 
           {/* Trainee Button */}
-          <button
-            onClick={() => navigateIfAllowed('Trainee')}
-            disabled={!canOpen('Trainee')}
-            aria-disabled={isModelUnavailable('Trainee') || !canOpen('Trainee')}
-            title={isModelUnavailable('Trainee') ? 'Trainee functions are not used by this operational model.' : undefined}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Trainee' ? 'active' : ''} ${accessButtonClass('Trainee')}`}
-          >
-            <span>Trainee</span>
-          </button>
+          <div className="relative">
+            {permissionNoticeBubble('Trainee')}
+            <button
+              onClick={() => navigateIfAllowed('Trainee')}
+              aria-disabled={isModelUnavailable('Trainee') || !canOpenLeftView('Trainee')}
+              title={isModelUnavailable('Trainee') ? 'Trainee functions are not used by this operational model.' : undefined}
+              className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Trainee' ? 'active' : ''} ${accessButtonClass('Trainee')}`}
+            >
+              <span>Trainee</span>
+            </button>
+          </div>
 
           {/* LMP - Square Button with Smaller Text */}
-          <button
-            onClick={() => navigateIfAllowed('Syllabus')}
-            disabled={!canOpen('Syllabus')}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Syllabus' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Syllabus')}`}
-          >
-            <span className="text-center leading-tight">LMP</span>
-          </button>
+          <div className="relative">
+            {permissionNoticeBubble('Syllabus')}
+            <button
+              onClick={() => navigateIfAllowed('Syllabus')}
+              aria-disabled={!canOpenLeftView('Syllabus')}
+              className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Syllabus' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Syllabus')}`}
+            >
+              <span className="text-center leading-tight">LMP</span>
+            </button>
+          </div>
 
 {/* Course Progress - Square Button with Smaller Text */}
-          <button
-            onClick={() => navigateIfAllowed('CourseProgress')}
-            disabled={!canOpen('CourseProgress')}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'CourseProgress' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('CourseProgress')}`}
-          >
-            <span className="text-center leading-tight">Course Progress</span>
-          </button>
+          <div className="relative">
+            {permissionNoticeBubble('CourseProgress')}
+            <button
+              onClick={() => navigateIfAllowed('CourseProgress')}
+              aria-disabled={!canOpenLeftView('CourseProgress')}
+              className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'CourseProgress' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('CourseProgress')}`}
+            >
+              <span className="text-center leading-tight">Course Progress</span>
+            </button>
+          </div>
 
           {/* Training Records - Square Button with Smaller Text */}
-          <button
-            onClick={() => navigateIfAllowed('TrainingRecords')}
-            disabled={!canOpen('TrainingRecords')}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'TrainingRecords' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('TrainingRecords')}`}
-          >
-            <span className="text-center leading-tight">Training Records</span>
-          </button>
+          <div className="relative">
+            {permissionNoticeBubble('TrainingRecords')}
+            <button
+              onClick={() => navigateIfAllowed('TrainingRecords')}
+              aria-disabled={!canOpenLeftView('TrainingRecords')}
+              className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'TrainingRecords' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('TrainingRecords')}`}
+            >
+              <span className="text-center leading-tight">Training Records</span>
+            </button>
+          </div>
 
           {/* Settings - Square Button */}
-          <button
-            onClick={() => navigateIfAllowed('Settings')}
-            disabled={!canOpen('Settings')}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''} ${accessButtonClass('Settings')}`}
-          >
-            <span className="text-center leading-tight">Settings</span>
-          </button>
+          <div className="relative">
+            {permissionNoticeBubble('Settings')}
+            <button
+              onClick={() => navigateIfAllowed('Settings')}
+              aria-disabled={!canOpenLeftView('Settings')}
+              className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''} ${accessButtonClass('Settings')}`}
+            >
+              <span className="text-center leading-tight">Settings</span>
+            </button>
+          </div>
 
         </nav>
 

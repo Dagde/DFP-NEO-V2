@@ -8300,9 +8300,10 @@ const RemoveCourseFlyout = ({ onClose, onArchive, activeCourses }) => {
 const formatCourseName = (name) => {
   return String(name || "").trim();
 };
-const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
+const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = reactExports.useState(false);
+  const [permissionNotice, setPermissionNotice] = reactExports.useState(null);
   const [showUserSelector, setShowUserSelector] = reactExports.useState(false);
   const [searchTerm, setSearchTerm] = reactExports.useState("");
   const [selectedUser, setSelectedUser] = reactExports.useState(null);
@@ -8367,14 +8368,43 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
   const dashboardViews = ["MyDashboard", "SupervisorDashboard"];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
   const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
+  const canUsePermission = canUsePlatformPermission || (() => true);
+  const leftNavigationPermissions = {
+    "Program Schedule": "dfp.view",
+    Staff: "staff.view",
+    Trainee: "trainee.roster.view",
+    Syllabus: "lmp.manage.use",
+    CourseProgress: "courseProgress.view",
+    TrainingRecords: "trainingRecords.courseManagement.view",
+    Settings: "settings.view"
+  };
+  const canOpenLeftView = (view2) => {
+    const permissionId = leftNavigationPermissions[view2];
+    if (!permissionId) return canOpen(view2);
+    return canOpen(view2) && canUsePermission(permissionId);
+  };
   const isModelUnavailable = (view2) => modelUnavailableViews.includes(view2);
   const accessButtonClass = (view2) => {
     if (isModelUnavailable(view2)) return "cursor-not-allowed";
-    return canOpen(view2) ? "" : "opacity-45 cursor-not-allowed";
+    return canOpenLeftView(view2) ? "" : "cursor-not-allowed";
   };
+  const showPermissionNotice = (key) => {
+    setPermissionNotice(key);
+    window.setTimeout(() => {
+      setPermissionNotice((current) => current === key ? null : current);
+    }, 1800);
+  };
+  const permissionNoticeBubble = (key) => permissionNotice === key ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg", children: "Permissions: Not Allowed" }) : null;
   const navigateIfAllowed = (view2) => {
-    if (isModelUnavailable(view2)) return;
-    if (canOpen(view2)) onNavigate(view2);
+    if (isModelUnavailable(view2)) {
+      showPermissionNotice(view2);
+      return;
+    }
+    if (canOpenLeftView(view2)) {
+      onNavigate(view2);
+      return;
+    }
+    showPermissionNotice(view2);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700", children: [
@@ -8395,71 +8425,91 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         }
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto px-2 pt-[15px] space-y-[1px] flex flex-col items-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("Program Schedule"),
-            disabled: !canOpen("Program Schedule"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Program Schedule" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Program Schedule")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: activeView === "Program Schedule" && !isAnyDashboardActive ? "#ffffff" : "#22c55e" }, children: "DFP" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("Staff"),
-            disabled: !canOpen("Staff"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Staff" ? "active" : ""} ${accessButtonClass("Staff")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Staff" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("Trainee"),
-            disabled: !canOpen("Trainee"),
-            "aria-disabled": isModelUnavailable("Trainee") || !canOpen("Trainee"),
-            title: isModelUnavailable("Trainee") ? "Trainee functions are not used by this operational model." : void 0,
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Trainee" ? "active" : ""} ${accessButtonClass("Trainee")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Trainee" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("Syllabus"),
-            disabled: !canOpen("Syllabus"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Syllabus" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Syllabus")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "LMP" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("CourseProgress"),
-            disabled: !canOpen("CourseProgress"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "CourseProgress" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("CourseProgress")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Course Progress" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("TrainingRecords"),
-            disabled: !canOpen("TrainingRecords"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "TrainingRecords" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("TrainingRecords")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Training Records" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("Settings"),
-            disabled: !canOpen("Settings"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Settings" ? "active" : ""} ${accessButtonClass("Settings")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Settings" })
-          }
-        )
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          permissionNoticeBubble("Program Schedule"),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => navigateIfAllowed("Program Schedule"),
+              "aria-disabled": !canOpenLeftView("Program Schedule"),
+              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Program Schedule" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Program Schedule")}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: activeView === "Program Schedule" && !isAnyDashboardActive ? "#ffffff" : "#22c55e" }, children: "DFP" })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          permissionNoticeBubble("Staff"),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => navigateIfAllowed("Staff"),
+              "aria-disabled": !canOpenLeftView("Staff"),
+              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Staff" ? "active" : ""} ${accessButtonClass("Staff")}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Staff" })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          permissionNoticeBubble("Trainee"),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => navigateIfAllowed("Trainee"),
+              "aria-disabled": isModelUnavailable("Trainee") || !canOpenLeftView("Trainee"),
+              title: isModelUnavailable("Trainee") ? "Trainee functions are not used by this operational model." : void 0,
+              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Trainee" ? "active" : ""} ${accessButtonClass("Trainee")}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Trainee" })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          permissionNoticeBubble("Syllabus"),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => navigateIfAllowed("Syllabus"),
+              "aria-disabled": !canOpenLeftView("Syllabus"),
+              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Syllabus" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Syllabus")}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "LMP" })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          permissionNoticeBubble("CourseProgress"),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => navigateIfAllowed("CourseProgress"),
+              "aria-disabled": !canOpenLeftView("CourseProgress"),
+              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "CourseProgress" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("CourseProgress")}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Course Progress" })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          permissionNoticeBubble("TrainingRecords"),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => navigateIfAllowed("TrainingRecords"),
+              "aria-disabled": !canOpenLeftView("TrainingRecords"),
+              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "TrainingRecords" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("TrainingRecords")}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Training Records" })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          permissionNoticeBubble("Settings"),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => navigateIfAllowed("Settings"),
+              "aria-disabled": !canOpenLeftView("Settings"),
+              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Settings" ? "active" : ""} ${accessButtonClass("Settings")}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Settings" })
+            }
+          )
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 border-t border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-sidebar-course-legend": "true", className: "border-t border-gray-700 flex-shrink-0", children: [
@@ -137722,6 +137772,7 @@ Do you want to replace the existing entry?`,
           school,
           allTraineesData: traineesData,
           canAccessView,
+          canUsePlatformPermission,
           modelUnavailableViews: modelUnavailableLeftViews,
           colourKeyItems: fixedCrewTileColourKeyItems,
           unreadMessageCount: dashboardUnreadMessageCount

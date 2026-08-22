@@ -50759,6 +50759,7 @@ appliedUpdates.forEach(update => {
                 school={school}
                 allTraineesData={traineesData}
                 canAccessView={canAccessView}
+                canUsePlatformPermission={canUsePlatformPermission}
                 modelUnavailableViews={modelUnavailableLeftViews}
                 colourKeyItems={fixedCrewTileColourKeyItems}
                 unreadMessageCount={dashboardUnreadMessageCount}
