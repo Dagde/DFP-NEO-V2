@@ -34102,12 +34102,12 @@ const App: React.FC = () => {
     const canRunNeoBuildForActiveModel = canRunNeoBuild && isNeoCapableOperationalModel;
     const modelUnavailableLeftViews = activeOperationalModel === 'air_combat' || isFixedCrewLikeOperationalModel(activeOperationalModel) ? ['Trainee'] : [];
     const modelUnavailableRightViews = activeOperationalModel === 'air_combat' ? ['NextDayTraineeSchedule'] : [];
-    const canViewOwnTraineeProfile = canUsePlatformPermission('trainee.profile.own');
+    const canViewOwnTraineeProfile = true;
     const canViewOtherTraineeProfiles = canUsePlatformPermission('trainee.profile.others');
-    const canViewOwnPt051 = canUsePlatformPermission('trainee.pt051.own');
+    const canViewOwnPt051 = true;
     const canViewOtherPt051 = canUsePlatformPermission('trainee.pt051.others');
     const canEditPt051Records = canUsePlatformPermission('trainee.pt051.edit');
-    const canViewOwnLmp = canUsePlatformPermission('trainee.lmp.own');
+    const canViewOwnLmp = true;
     const canViewOtherLmp = canUsePlatformPermission('trainee.lmp.others');
     const canAddRemedialPackage = canUsePlatformPermission('trainee.remedial.add');
 
@@ -34142,6 +34142,43 @@ const App: React.FC = () => {
         return traineeKeys.some(key => userKeys.includes(key));
     }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
 
+    const isOwnStaffRecord = useCallback((staff?: Instructor | null): boolean => {
+        if (!staff) return false;
+        const staffKeys = [
+            staff.idNumber,
+            staff.name,
+            (staff as any).fullName,
+            (staff as any).username,
+            (staff as any).userId,
+        ].map(normalizePersonKey).filter(Boolean);
+        const userKeys = [
+            authUser?.id,
+            authUser?.userId,
+            authUser?.username,
+            authUser?.displayName,
+            authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
+            authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
+            sessionUser?.userId,
+            sessionUser?.username,
+            sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : '',
+            sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : '',
+            currentUserName,
+        ].map(normalizePersonKey).filter(Boolean);
+        return staffKeys.some(key => userKeys.includes(key));
+    }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
+
+    const currentUserStaffProfile = useMemo(() => (
+        instructorsData.find(isOwnStaffRecord)
+            || allInstructorsData.find(isOwnStaffRecord)
+            || null
+    ), [allInstructorsData, instructorsData, isOwnStaffRecord]);
+
+    const currentUserTraineeProfile = useMemo(() => (
+        traineesData.find(isOwnTraineeRecord)
+            || allTraineesData.find(isOwnTraineeRecord)
+            || null
+    ), [allTraineesData, traineesData, isOwnTraineeRecord]);
+
     const canViewTraineeProfile = useCallback((trainee?: Trainee | null): boolean => (
         isOwnTraineeRecord(trainee) ? canViewOwnTraineeProfile : canViewOtherTraineeProfiles
     ), [isOwnTraineeRecord, canViewOwnTraineeProfile, canViewOtherTraineeProfiles]);
@@ -34151,8 +34188,8 @@ const App: React.FC = () => {
     ), [canEditPt051Records, isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
 
     const canEditTraineePt051 = useCallback((trainee?: Trainee | null): boolean => (
-        canEditPt051Records && canViewTraineePt051(trainee)
-    ), [canEditPt051Records, canViewTraineePt051]);
+        isOwnTraineeRecord(trainee) || (canEditPt051Records && canViewTraineePt051(trainee))
+    ), [canEditPt051Records, canViewTraineePt051, isOwnTraineeRecord]);
 
     const canViewTraineeLmp = useCallback((trainee?: Trainee | null): boolean => (
         isOwnTraineeRecord(trainee) ? canViewOwnLmp : canViewOtherLmp
@@ -34175,19 +34212,33 @@ const App: React.FC = () => {
         return viewPermissions[view] || null;
     }, []);
 
+    const canOpenSelfScopedView = useCallback((view: string): boolean => {
+        if (view === 'Staff') return Boolean(currentUserStaffProfile);
+        if (view === 'Trainee' && !modelUnavailableLeftViews.includes('Trainee')) return Boolean(currentUserTraineeProfile);
+        return false;
+    }, [currentUserStaffProfile, currentUserTraineeProfile, modelUnavailableLeftViews]);
+
+    const hasPlatformModuleAccessForView = useCallback((view: string): boolean => {
+        const moduleCode = getPlatformModuleForView(view);
+        if (!moduleCode) return true;
+        return getDailySnapshotLocationAliases(school).some(locationAlias => (
+            hasPlatformModuleAccess(platformAccessContext, locationAlias, moduleCode)
+        ));
+    }, [getDailySnapshotLocationAliases, platformAccessContext, school]);
+
+    const hasFullStaffRosterAccess = canUsePlatformPermission('staff.view') && hasPlatformModuleAccessForView('Staff');
+    const hasFullTraineeRosterAccess = canUsePlatformPermission('trainee.roster.view') && hasPlatformModuleAccessForView('Trainee');
+
     const canAccessView = useCallback((view: string): boolean => {
         if (view === 'MyDashboard') return true;
         if (view === 'Settings') {
             return !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
         }
         const requiredPermission = getRequiredPlatformPermissionForView(view);
-        if (requiredPermission && !canUsePlatformPermission(requiredPermission)) return false;
-        const moduleCode = getPlatformModuleForView(view);
-        if (!moduleCode) return true;
-        return getDailySnapshotLocationAliases(school).some(locationAlias => (
-            hasPlatformModuleAccess(platformAccessContext, locationAlias, moduleCode)
-        ));
-    }, [canUsePlatformPermission, getDailySnapshotLocationAliases, getRequiredPlatformPermissionForView, platformAccessContext, school]);
+        if (requiredPermission && !canUsePlatformPermission(requiredPermission) && !canOpenSelfScopedView(view)) return false;
+        if (!hasPlatformModuleAccessForView(view) && !canOpenSelfScopedView(view)) return false;
+        return true;
+    }, [canOpenSelfScopedView, canUsePlatformPermission, getRequiredPlatformPermissionForView, hasPlatformModuleAccessForView, platformAccessContext]);
 
     const navigateToView = (view: string) => {
         if (!canAccessView(view)) {
@@ -48198,7 +48249,8 @@ appliedUpdates.forEach(update => {
                             canViewTraineePt051={canViewTraineePt051}
                             canEditTraineePt051={canEditTraineePt051}
                             canViewTraineeLmp={canViewTraineeLmp}
-                            canAddRemedialPackageForTrainee={() => canAddRemedialPackage}
+                            canAddRemedialPackageForTrainee={(trainee) => isOwnTraineeRecord(trainee) || canAddRemedialPackage}
+                            selfOnlyProfile={!hasFullTraineeRosterAccess ? currentUserTraineeProfile : null}
                             onDeleteRemedialItem={handleDeleteRemedialLmpItem}
                             onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
                             onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
@@ -49502,6 +49554,7 @@ appliedUpdates.forEach(update => {
                             activeUnitCode={activeUnitCode}
                             defaultLocationName={activeLocationDisplayName}
                             canUsePlatformPermission={canUsePlatformPermission}
+                            selfOnlyProfile={!hasFullStaffRosterAccess ? currentUserStaffProfile : null}
                         />;
             case 'Instructors':
                 return <InstructorListView
@@ -51001,6 +51054,7 @@ appliedUpdates.forEach(update => {
                 allTraineesData={traineesData}
                 canAccessView={canAccessView}
                 canUsePlatformPermission={canUsePlatformPermission}
+                canOpenSelfScopedView={canOpenSelfScopedView}
                 modelUnavailableViews={modelUnavailableLeftViews}
                 colourKeyItems={fixedCrewTileColourKeyItems}
                 unreadMessageCount={dashboardUnreadMessageCount}

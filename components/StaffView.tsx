@@ -56,6 +56,7 @@ interface StaffViewProps {
   activeUnitCode?: string;
   defaultLocationName?: string;
   canUsePlatformPermission?: (permissionId: string) => boolean;
+  selfOnlyProfile?: any | null;
 
   // Props for InstructorScheduleView
   date: string;
@@ -77,8 +78,9 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule' | 'crewSchedule'>('profile');
   const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
   const canUsePermission = props.canUsePlatformPermission || (() => true);
-  const canViewStaffProfiles = canUsePermission('staff.view');
-  const canViewStaffSchedule = canUsePermission('staff.schedule.view');
+  const isSelfOnly = Boolean(props.selfOnlyProfile);
+  const canViewStaffProfiles = isSelfOnly || canUsePermission('staff.view');
+  const canViewStaffSchedule = isSelfOnly || canUsePermission('staff.schedule.view');
   const normaliseUnitCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
   const sharedUnitTabs = useMemo(() => (
     Array.from(new Set((props.sharedUnitTabs || []).map(normaliseUnitCode).filter(Boolean)))
@@ -92,7 +94,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   }, [activeUnitTab, sharedUnitTabs]);
   const { isFrozen } = useSystemFreeze();
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(props.operationalModel);
-  const shouldShowUnitTabs = isFixedCrewModel && sharedUnitTabs.length > 1;
+  const shouldShowUnitTabs = !isSelfOnly && isFixedCrewModel && sharedUnitTabs.length > 1;
   useEffect(() => {
     if (!isFixedCrewModel && activeTab === 'crewSchedule') {
       setActiveTab('schedule');
@@ -115,17 +117,19 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
     }
     setActiveTab(tab);
   };
+  const activeInstructorsData = isSelfOnly && props.selfOnlyProfile ? [props.selfOnlyProfile] : props.instructorsData;
+  const activeArchivedInstructorsData = isSelfOnly ? [] : props.archivedInstructorsData;
   const scopedInstructorsData = shouldShowUnitTabs
-    ? props.instructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
-    : props.instructorsData;
+    ? activeInstructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
+    : activeInstructorsData;
   const scopedArchivedInstructorsData = shouldShowUnitTabs
-    ? props.archivedInstructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
-    : props.archivedInstructorsData;
+    ? activeArchivedInstructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
+    : activeArchivedInstructorsData;
 
   // App already provides the active location/unit scoped staff list.
   const shouldGroupCombinedUnitStaffSchedule = isFixedCrewModel && sharedUnitTabs.length > 1;
   const scheduleInstructorsData = shouldGroupCombinedUnitStaffSchedule
-    ? props.instructorsData.filter(instructor => sharedUnitTabs.includes(normaliseUnitCode(instructor.unit)))
+    ? activeInstructorsData.filter(instructor => sharedUnitTabs.includes(normaliseUnitCode(instructor.unit)))
     : scopedInstructorsData;
   const isFlyingCrewRole = (person: any): boolean => (
     String(person?.role || '').trim().toLowerCase() === 'pilot' ||
@@ -243,7 +247,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onRequestSct={props.onRequestSct}
             locations={props.locations}
             units={props.units}
-            selectedPersonForProfile={props.selectedPersonForProfile}
+            selectedPersonForProfile={props.selfOnlyProfile || props.selectedPersonForProfile}
             onProfileOpened={props.onProfileOpened}
             onViewLogbook={props.onViewLogbook}
             masterCurrencies={props.masterCurrencies}
@@ -293,7 +297,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             date={props.date}
             onDateChange={props.onDateChange}
             events={props.eventSegmentsForDate}
-            instructorsData={props.instructorsData}
+            instructorsData={activeInstructorsData}
             traineesData={props.traineesData}
             onSelectEvent={props.onSelectEvent}
             zoomLevel={props.zoomLevel}

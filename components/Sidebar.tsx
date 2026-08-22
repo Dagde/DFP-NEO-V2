@@ -21,6 +21,7 @@ interface SidebarProps {
     allTraineesData?: any[];
     canAccessView?: (view: string) => boolean;
     canUsePlatformPermission?: (permissionId: string) => boolean;
+    canOpenSelfScopedView?: (view: string) => boolean;
     modelUnavailableViews?: string[];
     colourKeyItems?: Array<{ key: string; label: string; color: string }>;
     unreadMessageCount?: number;
@@ -30,7 +31,7 @@ const formatCourseName = (name: string): string => {
   return String(name || '').trim();
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, canOpenSelfScopedView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = useState(false);
   const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
@@ -147,7 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
   const canOpenLeftView = (view: string) => {
     const permissionId = leftNavigationPermissions[view];
     if (!permissionId) return canOpen(view);
-    return canOpen(view) && canUsePermission(permissionId);
+    return canOpen(view) && (canUsePermission(permissionId) || Boolean(canOpenSelfScopedView?.(view)));
   };
   const isModelUnavailable = (view: string) => modelUnavailableViews.includes(view);
   const accessButtonClass = (view: string) => {

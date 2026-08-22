@@ -79,6 +79,7 @@ interface TraineeViewProps {
   trainingReportTerminology?: TrainingReportTerminology;
   trainingReportTemplate?: any;
   platformConfig?: PlatformConfig | null;
+  selfOnlyProfile?: any | null;
 
   // Props for TraineeScheduleView
   date: string;
@@ -98,9 +99,10 @@ interface TraineeViewProps {
 const TraineeView: React.FC<TraineeViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile');
   const { isFrozen } = useSystemFreeze();
+  const activeTraineesData = props.selfOnlyProfile ? [props.selfOnlyProfile] : props.traineesData;
 
   // Sort trainees for schedule view
-  const sortedTrainees = [...props.traineesData]
+  const sortedTrainees = [...activeTraineesData]
     .sort((a, b) => {
       // First sort by course
       if (a.course !== b.course) {
@@ -143,7 +145,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
         {activeTab === 'profile' && (
           <CourseRosterView
             events={props.events}
-            traineesData={props.traineesData}
+            traineesData={activeTraineesData}
             courseColors={props.courseColors}
             archivedCourses={props.archivedCourses}
             personnelData={props.personnelData}
@@ -169,7 +171,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             locations={props.locations}
             units={props.units}
             platformConfig={props.platformConfig}
-            selectedPersonForProfile={props.selectedPersonForProfile}
+            selectedPersonForProfile={props.selfOnlyProfile || props.selectedPersonForProfile}
             selectedProfileInitialTab={props.selectedProfileInitialTab}
             onProfileOpened={props.onProfileOpened}
             traineeLMPs={props.traineeLMPs}
@@ -214,7 +216,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onDateChange={props.onDateChange}
             events={props.eventsForStaffTraineeSchedule}
             trainees={sortedTrainees}
-            traineesData={props.traineesData}
+            traineesData={activeTraineesData}
             instructorsData={props.instructorsData}
             onSelectEvent={props.onSelectEvent}
             onUpdateEvent={props.onUpdateEvent}

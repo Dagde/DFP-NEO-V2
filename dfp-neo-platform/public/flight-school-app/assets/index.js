@@ -8424,7 +8424,7 @@ const PermissionNotice = ({
 const formatCourseName = (name) => {
   return String(name || "").trim();
 };
-const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
+const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, canOpenSelfScopedView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = reactExports.useState(false);
   const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
@@ -8505,7 +8505,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
   const canOpenLeftView = (view2) => {
     const permissionId = leftNavigationPermissions[view2];
     if (!permissionId) return canOpen(view2);
-    return canOpen(view2) && canUsePermission(permissionId);
+    return canOpen(view2) && (canUsePermission(permissionId) || Boolean(canOpenSelfScopedView?.(view2)));
   };
   const isModelUnavailable = (view2) => modelUnavailableViews.includes(view2);
   const accessButtonClass = (view2) => {
@@ -61120,8 +61120,9 @@ const StaffView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("profile");
   const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   const canUsePermission = props.canUsePlatformPermission || (() => true);
-  const canViewStaffProfiles = canUsePermission("staff.view");
-  const canViewStaffSchedule = canUsePermission("staff.schedule.view");
+  const isSelfOnly = Boolean(props.selfOnlyProfile);
+  const canViewStaffProfiles = isSelfOnly || canUsePermission("staff.view");
+  const canViewStaffSchedule = isSelfOnly || canUsePermission("staff.schedule.view");
   const normaliseUnitCode2 = (value) => String(value || "").trim().toUpperCase();
   const sharedUnitTabs = reactExports.useMemo(() => Array.from(new Set((props.sharedUnitTabs || []).map(normaliseUnitCode2).filter(Boolean))), [props.sharedUnitTabs]);
   const [activeUnitTab, setActiveUnitTab] = reactExports.useState(() => sharedUnitTabs[0] || normaliseUnitCode2(props.activeUnitCode));
@@ -61133,7 +61134,7 @@ const StaffView = (props) => {
   }, [activeUnitTab, sharedUnitTabs]);
   useSystemFreeze();
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(props.operationalModel);
-  const shouldShowUnitTabs = isFixedCrewModel && sharedUnitTabs.length > 1;
+  const shouldShowUnitTabs = !isSelfOnly && isFixedCrewModel && sharedUnitTabs.length > 1;
   reactExports.useEffect(() => {
     if (!isFixedCrewModel && activeTab === "crewSchedule") {
       setActiveTab("schedule");
@@ -61156,10 +61157,12 @@ const StaffView = (props) => {
     }
     setActiveTab(tab);
   };
-  const scopedInstructorsData = shouldShowUnitTabs ? props.instructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : props.instructorsData;
-  const scopedArchivedInstructorsData = shouldShowUnitTabs ? props.archivedInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : props.archivedInstructorsData;
+  const activeInstructorsData = isSelfOnly && props.selfOnlyProfile ? [props.selfOnlyProfile] : props.instructorsData;
+  const activeArchivedInstructorsData = isSelfOnly ? [] : props.archivedInstructorsData;
+  const scopedInstructorsData = shouldShowUnitTabs ? activeInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : activeInstructorsData;
+  const scopedArchivedInstructorsData = shouldShowUnitTabs ? activeArchivedInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : activeArchivedInstructorsData;
   const shouldGroupCombinedUnitStaffSchedule = isFixedCrewModel && sharedUnitTabs.length > 1;
-  const scheduleInstructorsData = shouldGroupCombinedUnitStaffSchedule ? props.instructorsData.filter((instructor) => sharedUnitTabs.includes(normaliseUnitCode2(instructor.unit))) : scopedInstructorsData;
+  const scheduleInstructorsData = shouldGroupCombinedUnitStaffSchedule ? activeInstructorsData.filter((instructor) => sharedUnitTabs.includes(normaliseUnitCode2(instructor.unit))) : scopedInstructorsData;
   const isFlyingCrewRole = (person) => String(person?.role || "").trim().toLowerCase() === "pilot" || Boolean(findCrewPositionEntry(person?.role, props.crewPositionTerminology));
   const locationFilteredInstructorsForSchedule = [...scheduleInstructorsData].sort((a, b) => {
     if (shouldGroupCombinedUnitStaffSchedule) {
@@ -61247,7 +61250,7 @@ const StaffView = (props) => {
           onRequestSct: props.onRequestSct,
           locations: props.locations,
           units: props.units,
-          selectedPersonForProfile: props.selectedPersonForProfile,
+          selectedPersonForProfile: props.selfOnlyProfile || props.selectedPersonForProfile,
           onProfileOpened: props.onProfileOpened,
           onViewLogbook: props.onViewLogbook,
           masterCurrencies: props.masterCurrencies,
@@ -61299,7 +61302,7 @@ const StaffView = (props) => {
           date: props.date,
           onDateChange: props.onDateChange,
           events: props.eventSegmentsForDate,
-          instructorsData: props.instructorsData,
+          instructorsData: activeInstructorsData,
           traineesData: props.traineesData,
           onSelectEvent: props.onSelectEvent,
           zoomLevel: props.zoomLevel,
@@ -61322,7 +61325,8 @@ const StaffView = (props) => {
 const TraineeView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("profile");
   useSystemFreeze();
-  const sortedTrainees = [...props.traineesData].sort((a, b) => {
+  const activeTraineesData = props.selfOnlyProfile ? [props.selfOnlyProfile] : props.traineesData;
+  const sortedTrainees = [...activeTraineesData].sort((a, b) => {
     if (a.course !== b.course) {
       return a.course.localeCompare(b.course);
     }
@@ -61352,7 +61356,7 @@ const TraineeView = (props) => {
         CourseRosterView,
         {
           events: props.events,
-          traineesData: props.traineesData,
+          traineesData: activeTraineesData,
           courseColors: props.courseColors,
           archivedCourses: props.archivedCourses,
           personnelData: props.personnelData,
@@ -61378,7 +61382,7 @@ const TraineeView = (props) => {
           locations: props.locations,
           units: props.units,
           platformConfig: props.platformConfig,
-          selectedPersonForProfile: props.selectedPersonForProfile,
+          selectedPersonForProfile: props.selfOnlyProfile || props.selectedPersonForProfile,
           selectedProfileInitialTab: props.selectedProfileInitialTab,
           onProfileOpened: props.onProfileOpened,
           traineeLMPs: props.traineeLMPs,
@@ -61424,7 +61428,7 @@ const TraineeView = (props) => {
           onDateChange: props.onDateChange,
           events: props.eventsForStaffTraineeSchedule,
           trainees: sortedTrainees,
-          traineesData: props.traineesData,
+          traineesData: activeTraineesData,
           instructorsData: props.instructorsData,
           onSelectEvent: props.onSelectEvent,
           onUpdateEvent: props.onUpdateEvent,
@@ -123919,12 +123923,12 @@ ${"=".repeat(60)}`);
   const canRunNeoBuildForActiveModel = canRunNeoBuild && isNeoCapableOperationalModel;
   const modelUnavailableLeftViews = activeOperationalModel === "air_combat" || isFixedCrewLikeOperationalModel(activeOperationalModel) ? ["Trainee"] : [];
   const modelUnavailableRightViews = activeOperationalModel === "air_combat" ? ["NextDayTraineeSchedule"] : [];
-  const canViewOwnTraineeProfile = canUsePlatformPermission("trainee.profile.own");
+  const canViewOwnTraineeProfile = true;
   const canViewOtherTraineeProfiles = canUsePlatformPermission("trainee.profile.others");
-  const canViewOwnPt051 = canUsePlatformPermission("trainee.pt051.own");
+  const canViewOwnPt051 = true;
   const canViewOtherPt051 = canUsePlatformPermission("trainee.pt051.others");
   const canEditPt051Records = canUsePlatformPermission("trainee.pt051.edit");
-  const canViewOwnLmp = canUsePlatformPermission("trainee.lmp.own");
+  const canViewOwnLmp = true;
   const canViewOtherLmp = canUsePlatformPermission("trainee.lmp.others");
   const canAddRemedialPackage = canUsePlatformPermission("trainee.remedial.add");
   const normalizePersonKey = reactExports.useCallback((value) => String(value ?? "").toLowerCase().replace(/[^a-z0-9]/g, ""), []);
@@ -123952,9 +123956,35 @@ ${"=".repeat(60)}`);
     ].map(normalizePersonKey).filter(Boolean);
     return traineeKeys.some((key) => userKeys.includes(key));
   }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
+  const isOwnStaffRecord = reactExports.useCallback((staff) => {
+    if (!staff) return false;
+    const staffKeys = [
+      staff.idNumber,
+      staff.name,
+      staff.fullName,
+      staff.username,
+      staff.userId
+    ].map(normalizePersonKey).filter(Boolean);
+    const userKeys = [
+      authUser?.id,
+      authUser?.userId,
+      authUser?.username,
+      authUser?.displayName,
+      authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
+      authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
+      sessionUser?.userId,
+      sessionUser?.username,
+      sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : "",
+      sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : "",
+      currentUserName
+    ].map(normalizePersonKey).filter(Boolean);
+    return staffKeys.some((key) => userKeys.includes(key));
+  }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
+  const currentUserStaffProfile = reactExports.useMemo(() => instructorsData.find(isOwnStaffRecord) || allInstructorsData.find(isOwnStaffRecord) || null, [allInstructorsData, instructorsData, isOwnStaffRecord]);
+  const currentUserTraineeProfile = reactExports.useMemo(() => traineesData.find(isOwnTraineeRecord) || allTraineesData.find(isOwnTraineeRecord) || null, [allTraineesData, traineesData, isOwnTraineeRecord]);
   const canViewTraineeProfile = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnTraineeProfile : canViewOtherTraineeProfiles, [isOwnTraineeRecord, canViewOwnTraineeProfile, canViewOtherTraineeProfiles]);
   const canViewTraineePt051 = reactExports.useCallback((trainee) => canEditPt051Records || (isOwnTraineeRecord(trainee) ? canViewOwnPt051 : canViewOtherPt051), [canEditPt051Records, isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
-  const canEditTraineePt051 = reactExports.useCallback((trainee) => canEditPt051Records && canViewTraineePt051(trainee), [canEditPt051Records, canViewTraineePt051]);
+  const canEditTraineePt051 = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) || canEditPt051Records && canViewTraineePt051(trainee), [canEditPt051Records, canViewTraineePt051, isOwnTraineeRecord]);
   const canViewTraineeLmp = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnLmp : canViewOtherLmp, [isOwnTraineeRecord, canViewOwnLmp, canViewOtherLmp]);
   const getRequiredPlatformPermissionForView = reactExports.useCallback((view2) => {
     const viewPermissions = {
@@ -123972,17 +124002,28 @@ ${"=".repeat(60)}`);
     };
     return viewPermissions[view2] || null;
   }, []);
+  const canOpenSelfScopedView = reactExports.useCallback((view2) => {
+    if (view2 === "Staff") return Boolean(currentUserStaffProfile);
+    if (view2 === "Trainee" && !modelUnavailableLeftViews.includes("Trainee")) return Boolean(currentUserTraineeProfile);
+    return false;
+  }, [currentUserStaffProfile, currentUserTraineeProfile, modelUnavailableLeftViews]);
+  const hasPlatformModuleAccessForView = reactExports.useCallback((view2) => {
+    const moduleCode = getPlatformModuleForView(view2);
+    if (!moduleCode) return true;
+    return getDailySnapshotLocationAliases(school).some((locationAlias) => hasPlatformModuleAccess(platformAccessContext, locationAlias, moduleCode));
+  }, [getDailySnapshotLocationAliases, platformAccessContext, school]);
+  const hasFullStaffRosterAccess = canUsePlatformPermission("staff.view") && hasPlatformModuleAccessForView("Staff");
+  const hasFullTraineeRosterAccess = canUsePlatformPermission("trainee.roster.view") && hasPlatformModuleAccessForView("Trainee");
   const canAccessView = reactExports.useCallback((view2) => {
     if (view2 === "MyDashboard") return true;
     if (view2 === "Settings") {
       return !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
     }
     const requiredPermission = getRequiredPlatformPermissionForView(view2);
-    if (requiredPermission && !canUsePlatformPermission(requiredPermission)) return false;
-    const moduleCode = getPlatformModuleForView(view2);
-    if (!moduleCode) return true;
-    return getDailySnapshotLocationAliases(school).some((locationAlias) => hasPlatformModuleAccess(platformAccessContext, locationAlias, moduleCode));
-  }, [canUsePlatformPermission, getDailySnapshotLocationAliases, getRequiredPlatformPermissionForView, platformAccessContext, school]);
+    if (requiredPermission && !canUsePlatformPermission(requiredPermission) && !canOpenSelfScopedView(view2)) return false;
+    if (!hasPlatformModuleAccessForView(view2) && !canOpenSelfScopedView(view2)) return false;
+    return true;
+  }, [canOpenSelfScopedView, canUsePlatformPermission, getRequiredPlatformPermissionForView, hasPlatformModuleAccessForView, platformAccessContext]);
   const navigateToView = (view2) => {
     if (!canAccessView(view2)) {
       setShowInfoNotification("Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.");
@@ -135556,7 +135597,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             canViewTraineePt051,
             canEditTraineePt051,
             canViewTraineeLmp,
-            canAddRemedialPackageForTrainee: () => canAddRemedialPackage,
+            canAddRemedialPackageForTrainee: (trainee) => isOwnTraineeRecord(trainee) || canAddRemedialPackage,
+            selfOnlyProfile: !hasFullTraineeRosterAccess ? currentUserTraineeProfile : null,
             onDeleteRemedialItem: handleDeleteRemedialLmpItem,
             onGeneratePt051ForItem: handleGeneratePt051FromLmpItem,
             onInsertCustomLmpEvent: handleInsertCustomLmpEvent,
@@ -136750,7 +136792,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             sharedUnitTabs: fixedCrewSharedResourceUnitTabs,
             activeUnitCode,
             defaultLocationName: activeLocationDisplayName,
-            canUsePlatformPermission
+            canUsePlatformPermission,
+            selfOnlyProfile: !hasFullStaffRosterAccess ? currentUserStaffProfile : null
           }
         );
       case "Instructors":
@@ -138099,6 +138142,7 @@ Do you want to replace the existing entry?`,
           allTraineesData: traineesData,
           canAccessView,
           canUsePlatformPermission,
+          canOpenSelfScopedView,
           modelUnavailableViews: modelUnavailableLeftViews,
           colourKeyItems: fixedCrewTileColourKeyItems,
           unreadMessageCount: dashboardUnreadMessageCount
