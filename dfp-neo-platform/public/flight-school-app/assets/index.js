@@ -118378,53 +118378,6 @@ const App = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
-  reactExports.useEffect(() => {
-    if (activeView !== "Staff") return;
-    const activeStaff = allInstructorsData.filter(isRecordActive);
-    const locationFilteredStaff = activeStaff.filter(personMatchesActiveLocation);
-    const contextFilteredStaff = activeContextUnitCodeSet.size > 0 ? locationFilteredStaff.filter((person) => {
-      const unitCode = normalisePersonnelUnitCode(person.unit);
-      return !unitCode || activeContextUnitCodeSet.has(unitCode);
-    }) : locationFilteredStaff;
-    pushStaffRosterTrace("render:staff-roster-filter", {
-      dataSourceSettings,
-      activeStaff: {
-        total: activeStaff.length,
-        units: summarisePersonnelUnits(activeStaff),
-        sources: summarisePersonnelSources(activeStaff)
-      },
-      locationFilteredStaff: {
-        total: locationFilteredStaff.length,
-        units: summarisePersonnelUnits(locationFilteredStaff),
-        sources: summarisePersonnelSources(locationFilteredStaff)
-      },
-      contextFilteredStaff: {
-        total: contextFilteredStaff.length,
-        units: summarisePersonnelUnits(contextFilteredStaff),
-        sources: summarisePersonnelSources(contextFilteredStaff)
-      },
-      visibleStaff: {
-        total: instructorsData.length,
-        units: summarisePersonnelUnits(instructorsData),
-        sources: summarisePersonnelSources(instructorsData)
-      },
-      activeContextUnitCodeSet: Array.from(activeContextUnitCodeSet),
-      activeLocationAliases: getDailySnapshotLocationAliases(school),
-      hasFullStaffRosterAccess,
-      selfOnlyProfile: currentUserStaffProfile ? { name: currentUserStaffProfile.name, unit: currentUserStaffProfile.unit, idNumber: currentUserStaffProfile.idNumber } : null
-    });
-  }, [
-    activeContextUnitCodeSet,
-    activeView,
-    allInstructorsData,
-    currentUserStaffProfile,
-    dataSourceSettings,
-    getDailySnapshotLocationAliases,
-    hasFullStaffRosterAccess,
-    instructorsData,
-    personMatchesActiveLocation,
-    school
-  ]);
   function pushDashboardReportDiag(stage, details = {}) {
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -124178,6 +124131,53 @@ ${"=".repeat(60)}`);
   }, [getDailySnapshotLocationAliases, platformAccessContext, school]);
   const hasFullStaffRosterAccess = canUsePlatformPermission("staff.view") && hasPlatformModuleAccessForView("Staff");
   const hasFullTraineeRosterAccess = canUsePlatformPermission("trainee.roster.view") && hasPlatformModuleAccessForView("Trainee");
+  reactExports.useEffect(() => {
+    if (activeView !== "Staff") return;
+    const activeStaff = allInstructorsData.filter(isRecordActive);
+    const locationFilteredStaff = activeStaff.filter(personMatchesActiveLocation);
+    const contextFilteredStaff = activeContextUnitCodeSet.size > 0 ? locationFilteredStaff.filter((person) => {
+      const unitCode = normalisePersonnelUnitCode(person.unit);
+      return !unitCode || activeContextUnitCodeSet.has(unitCode);
+    }) : locationFilteredStaff;
+    pushStaffRosterTrace("render:staff-roster-filter", {
+      dataSourceSettings,
+      activeStaff: {
+        total: activeStaff.length,
+        units: summarisePersonnelUnits(activeStaff),
+        sources: summarisePersonnelSources(activeStaff)
+      },
+      locationFilteredStaff: {
+        total: locationFilteredStaff.length,
+        units: summarisePersonnelUnits(locationFilteredStaff),
+        sources: summarisePersonnelSources(locationFilteredStaff)
+      },
+      contextFilteredStaff: {
+        total: contextFilteredStaff.length,
+        units: summarisePersonnelUnits(contextFilteredStaff),
+        sources: summarisePersonnelSources(contextFilteredStaff)
+      },
+      visibleStaff: {
+        total: instructorsData.length,
+        units: summarisePersonnelUnits(instructorsData),
+        sources: summarisePersonnelSources(instructorsData)
+      },
+      activeContextUnitCodeSet: Array.from(activeContextUnitCodeSet),
+      activeLocationAliases: getDailySnapshotLocationAliases(school),
+      hasFullStaffRosterAccess,
+      selfOnlyProfile: currentUserStaffProfile ? { name: currentUserStaffProfile.name, unit: currentUserStaffProfile.unit, idNumber: currentUserStaffProfile.idNumber } : null
+    });
+  }, [
+    activeContextUnitCodeSet,
+    activeView,
+    allInstructorsData,
+    currentUserStaffProfile,
+    dataSourceSettings,
+    getDailySnapshotLocationAliases,
+    hasFullStaffRosterAccess,
+    instructorsData,
+    personMatchesActiveLocation,
+    school
+  ]);
   const canAccessView = reactExports.useCallback((view2) => {
     if (view2 === "MyDashboard") return true;
     if (view2 === "Settings") {
