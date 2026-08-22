@@ -123918,15 +123918,33 @@ ${"=".repeat(60)}`);
   const canViewTraineePt051 = reactExports.useCallback((trainee) => canEditPt051Records || (isOwnTraineeRecord(trainee) ? canViewOwnPt051 : canViewOtherPt051), [canEditPt051Records, isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
   const canEditTraineePt051 = reactExports.useCallback((trainee) => canEditPt051Records && canViewTraineePt051(trainee), [canEditPt051Records, canViewTraineePt051]);
   const canViewTraineeLmp = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnLmp : canViewOtherLmp, [isOwnTraineeRecord, canViewOwnLmp, canViewOtherLmp]);
+  const getRequiredPlatformPermissionForView = reactExports.useCallback((view2) => {
+    const viewPermissions = {
+      "Program Schedule": "dfp.view",
+      Staff: "staff.view",
+      Trainee: "trainee.roster.view",
+      Syllabus: "lmp.manage.use",
+      CourseProgress: "courseProgress.view",
+      TrainingRecords: "trainingRecords.courseManagement.view",
+      NextDayBuild: "neo.programSchedule.view",
+      NextDayInstructorSchedule: "neo.staffSchedule.view",
+      NextDayTraineeSchedule: "neo.traineeSchedule.view",
+      Priorities: "neo.priorities",
+      BuildIntelligence: "neo.intelligence"
+    };
+    return viewPermissions[view2] || null;
+  }, []);
   const canAccessView = reactExports.useCallback((view2) => {
     if (view2 === "MyDashboard") return true;
     if (view2 === "Settings") {
       return !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
     }
+    const requiredPermission = getRequiredPlatformPermissionForView(view2);
+    if (requiredPermission && !canUsePlatformPermission(requiredPermission)) return false;
     const moduleCode = getPlatformModuleForView(view2);
     if (!moduleCode) return true;
     return getDailySnapshotLocationAliases(school).some((locationAlias) => hasPlatformModuleAccess(platformAccessContext, locationAlias, moduleCode));
-  }, [getDailySnapshotLocationAliases, platformAccessContext, school]);
+  }, [canUsePlatformPermission, getDailySnapshotLocationAliases, getRequiredPlatformPermissionForView, platformAccessContext, school]);
   const navigateToView = (view2) => {
     if (!canAccessView(view2)) {
       setShowInfoNotification("Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.");
@@ -135151,6 +135169,13 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
   }, [activeUnitCode, resolveCourseMovementDirection, school, scopedApiPath]);
   const renderActiveView = (viewOverride = activeView) => {
+    if (!canAccessView(viewOverride)) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full min-h-0 items-center justify-center bg-gray-900 p-6 text-slate-100", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-lg rounded-lg border border-cyan-500/30 bg-slate-900/95 p-6 shadow-2xl", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300", children: "Permissions" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold", children: "Not Allowed" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-sm leading-6 text-slate-300", children: "This page is not available for the current permission profile. Ask a Platform Admin to adjust the profile or assign an exception." })
+      ] }) });
+    }
     switch (viewOverride) {
       case "Program Schedule":
         return /* @__PURE__ */ jsxRuntimeExports.jsx(

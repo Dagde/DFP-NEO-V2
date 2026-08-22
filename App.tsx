@@ -34158,17 +34158,36 @@ const App: React.FC = () => {
         isOwnTraineeRecord(trainee) ? canViewOwnLmp : canViewOtherLmp
     ), [isOwnTraineeRecord, canViewOwnLmp, canViewOtherLmp]);
 
+    const getRequiredPlatformPermissionForView = useCallback((view: string): string | null => {
+        const viewPermissions: Record<string, string> = {
+            'Program Schedule': 'dfp.view',
+            Staff: 'staff.view',
+            Trainee: 'trainee.roster.view',
+            Syllabus: 'lmp.manage.use',
+            CourseProgress: 'courseProgress.view',
+            TrainingRecords: 'trainingRecords.courseManagement.view',
+            NextDayBuild: 'neo.programSchedule.view',
+            NextDayInstructorSchedule: 'neo.staffSchedule.view',
+            NextDayTraineeSchedule: 'neo.traineeSchedule.view',
+            Priorities: 'neo.priorities',
+            BuildIntelligence: 'neo.intelligence',
+        };
+        return viewPermissions[view] || null;
+    }, []);
+
     const canAccessView = useCallback((view: string): boolean => {
         if (view === 'MyDashboard') return true;
         if (view === 'Settings') {
             return !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
         }
+        const requiredPermission = getRequiredPlatformPermissionForView(view);
+        if (requiredPermission && !canUsePlatformPermission(requiredPermission)) return false;
         const moduleCode = getPlatformModuleForView(view);
         if (!moduleCode) return true;
         return getDailySnapshotLocationAliases(school).some(locationAlias => (
             hasPlatformModuleAccess(platformAccessContext, locationAlias, moduleCode)
         ));
-    }, [getDailySnapshotLocationAliases, platformAccessContext, school]);
+    }, [canUsePlatformPermission, getDailySnapshotLocationAliases, getRequiredPlatformPermissionForView, platformAccessContext, school]);
 
     const navigateToView = (view: string) => {
         if (!canAccessView(view)) {
@@ -47812,6 +47831,19 @@ appliedUpdates.forEach(update => {
 
 
     const renderActiveView = (viewOverride: string = activeView) => {
+        if (!canAccessView(viewOverride)) {
+            return (
+                <div className="flex h-full min-h-0 items-center justify-center bg-gray-900 p-6 text-slate-100">
+                    <div className="max-w-lg rounded-lg border border-cyan-500/30 bg-slate-900/95 p-6 shadow-2xl">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Permissions</p>
+                        <h2 className="text-2xl font-bold">Not Allowed</h2>
+                        <p className="mt-3 text-sm leading-6 text-slate-300">
+                            This page is not available for the current permission profile. Ask a Platform Admin to adjust the profile or assign an exception.
+                        </p>
+                    </div>
+                </div>
+            );
+        }
         switch (viewOverride) {
             case 'Program Schedule':
                 return <ScheduleView
