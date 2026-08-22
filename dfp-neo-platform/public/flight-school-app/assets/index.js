@@ -79711,14 +79711,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       "application/json"
     );
   };
-  reactExports.useEffect(() => {
-    window.downloadNeoSettingsPerformanceTrace = downloadSettingsPerformanceTrace;
-    return () => {
-      if (window.downloadNeoSettingsPerformanceTrace === downloadSettingsPerformanceTrace) {
-        delete window.downloadNeoSettingsPerformanceTrace;
-      }
-    };
-  });
   const renderPlatformConfigError = () => {
     if (!error) return null;
     const canNavigate = Boolean(errorLink?.target && onNavigateToSettingsSection);
@@ -84465,7 +84457,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-user-access-records", className: "space-y-3 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(160px,auto)]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(120px,auto)_minmax(120px,auto)]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   UserSearchSelect,
                   {
@@ -84488,7 +84480,16 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Access Scopes" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: visibleSelectedAccessRows.length })
-                ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: downloadSettingsPerformanceTrace,
+                    className: "rounded border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-500/20",
+                    children: "Settings Trace"
+                  }
+                ) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Scope fields define where those profiles apply." })
             ] }),
@@ -119020,14 +119021,6 @@ const App = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
-  function downloadSettingsPerformanceTraceReport() {
-    const downloadTrace = window.downloadNeoSettingsPerformanceTrace;
-    if (typeof downloadTrace === "function") {
-      downloadTrace();
-      return;
-    }
-    window.alert("Settings Trace is available after opening Settings.");
-  }
   function pushDashboardReportDiag(stage, details = {}) {
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -140281,10 +140274,10 @@ Do you want to replace the existing entry?`,
         "button",
         {
           type: "button",
-          onClick: activeView === "Settings" ? downloadSettingsPerformanceTraceReport : downloadStaffRosterTraceReport,
-          className: `rounded border px-1.5 py-0.5 transition-colors hover:text-white ${activeView === "Settings" ? "border-violet-500/40 text-violet-200 hover:border-violet-300/70" : "border-cyan-500/40 text-cyan-200 hover:border-cyan-300/70"}`,
-          title: activeView === "Settings" ? "Download settings performance trace" : "Download staff roster context trace",
-          children: activeView === "Settings" ? "Settings Trace" : "Staff Trace"
+          onClick: downloadStaffRosterTraceReport,
+          className: "rounded border border-cyan-500/40 px-1.5 py-0.5 text-cyan-200 transition-colors hover:border-cyan-300/70 hover:text-white",
+          title: "Download staff roster context trace",
+          children: "Staff Trace"
         }
       )
     ] })
