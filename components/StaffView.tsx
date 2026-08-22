@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import InstructorListView from './InstructorListView';
 import InstructorScheduleView from './InstructorScheduleView';
 import CrewScheduleView from './CrewScheduleView';
+import PermissionNotice from './PermissionNotice';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
@@ -54,6 +55,7 @@ interface StaffViewProps {
   sharedUnitTabs?: string[];
   activeUnitCode?: string;
   defaultLocationName?: string;
+  canUsePlatformPermission?: (permissionId: string) => boolean;
 
   // Props for InstructorScheduleView
   date: string;
@@ -73,6 +75,10 @@ interface StaffViewProps {
 
 const StaffView: React.FC<StaffViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule' | 'crewSchedule'>('profile');
+  const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
+  const canUsePermission = props.canUsePlatformPermission || (() => true);
+  const canViewStaffProfiles = canUsePermission('staff.view');
+  const canViewStaffSchedule = canUsePermission('staff.schedule.view');
   const normaliseUnitCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
   const sharedUnitTabs = useMemo(() => (
     Array.from(new Set((props.sharedUnitTabs || []).map(normaliseUnitCode).filter(Boolean)))
@@ -91,7 +97,24 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
     if (!isFixedCrewModel && activeTab === 'crewSchedule') {
       setActiveTab('schedule');
     }
-  }, [activeTab, isFixedCrewModel]);
+    if ((activeTab === 'schedule' || activeTab === 'crewSchedule') && !canViewStaffSchedule) {
+      setActiveTab('profile');
+    }
+    if (activeTab === 'profile' && !canViewStaffProfiles && canViewStaffSchedule) {
+      setActiveTab('schedule');
+    }
+  }, [activeTab, canViewStaffProfiles, canViewStaffSchedule, isFixedCrewModel]);
+  const openTabIfAllowed = (tab: 'profile' | 'schedule' | 'crewSchedule', anchor: HTMLElement) => {
+    if (tab === 'profile' && !canViewStaffProfiles) {
+      setPermissionNoticeRect(anchor.getBoundingClientRect());
+      return;
+    }
+    if ((tab === 'schedule' || tab === 'crewSchedule') && !canViewStaffSchedule) {
+      setPermissionNoticeRect(anchor.getBoundingClientRect());
+      return;
+    }
+    setActiveTab(tab);
+  };
   const scopedInstructorsData = shouldShowUnitTabs
     ? props.instructorsData.filter(instructor => normaliseUnitCode(instructor.unit) === activeUnitTab)
     : props.instructorsData;
@@ -156,33 +179,36 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
         )}
         <div className="flex space-x-2">
           <button
-            onClick={() => setActiveTab('profile')}
+            onClick={(event) => openTabIfAllowed('profile', event.currentTarget)}
+            aria-disabled={!canViewStaffProfiles}
             className={`px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${
               activeTab === 'profile'
                 ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
                 : 'bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500'
-            }`}
+            } ${canViewStaffProfiles ? '' : 'cursor-not-allowed'}`}
           >
             Staff Profile
           </button>
           <button
-            onClick={() => setActiveTab('schedule')}
+            onClick={(event) => openTabIfAllowed('schedule', event.currentTarget)}
+            aria-disabled={!canViewStaffSchedule}
             className={`px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${
               activeTab === 'schedule'
                 ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
                 : 'bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500'
-            }`}
+            } ${canViewStaffSchedule ? '' : 'cursor-not-allowed'}`}
           >
             Staff Schedule
           </button>
           {isFixedCrewModel && (
             <button
-              onClick={() => setActiveTab('crewSchedule')}
+              onClick={(event) => openTabIfAllowed('crewSchedule', event.currentTarget)}
+              aria-disabled={!canViewStaffSchedule}
               className={`px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${
                 activeTab === 'crewSchedule'
                   ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
                   : 'bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500'
-              }`}
+              } ${canViewStaffSchedule ? '' : 'cursor-not-allowed'}`}
             >
               Crew Schedule
             </button>
@@ -278,6 +304,10 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
           />
         )}
       </div>
+      <PermissionNotice
+        anchorRect={permissionNoticeRect}
+        onClose={() => setPermissionNoticeRect(null)}
+      />
     </div>
   );
 };

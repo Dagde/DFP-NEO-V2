@@ -49491,6 +49491,7 @@ appliedUpdates.forEach(update => {
                             sharedUnitTabs={fixedCrewSharedResourceUnitTabs}
                             activeUnitCode={activeUnitCode}
                             defaultLocationName={activeLocationDisplayName}
+                            canUsePlatformPermission={canUsePlatformPermission}
                         />;
             case 'Instructors':
                 return <InstructorListView

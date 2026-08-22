@@ -61118,6 +61118,10 @@ const CrewScheduleView = ({
 };
 const StaffView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("profile");
+  const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
+  const canUsePermission = props.canUsePlatformPermission || (() => true);
+  const canViewStaffProfiles = canUsePermission("staff.view");
+  const canViewStaffSchedule = canUsePermission("staff.schedule.view");
   const normaliseUnitCode2 = (value) => String(value || "").trim().toUpperCase();
   const sharedUnitTabs = reactExports.useMemo(() => Array.from(new Set((props.sharedUnitTabs || []).map(normaliseUnitCode2).filter(Boolean))), [props.sharedUnitTabs]);
   const [activeUnitTab, setActiveUnitTab] = reactExports.useState(() => sharedUnitTabs[0] || normaliseUnitCode2(props.activeUnitCode));
@@ -61134,7 +61138,24 @@ const StaffView = (props) => {
     if (!isFixedCrewModel && activeTab === "crewSchedule") {
       setActiveTab("schedule");
     }
-  }, [activeTab, isFixedCrewModel]);
+    if ((activeTab === "schedule" || activeTab === "crewSchedule") && !canViewStaffSchedule) {
+      setActiveTab("profile");
+    }
+    if (activeTab === "profile" && !canViewStaffProfiles && canViewStaffSchedule) {
+      setActiveTab("schedule");
+    }
+  }, [activeTab, canViewStaffProfiles, canViewStaffSchedule, isFixedCrewModel]);
+  const openTabIfAllowed = (tab, anchor) => {
+    if (tab === "profile" && !canViewStaffProfiles) {
+      setPermissionNoticeRect(anchor.getBoundingClientRect());
+      return;
+    }
+    if ((tab === "schedule" || tab === "crewSchedule") && !canViewStaffSchedule) {
+      setPermissionNoticeRect(anchor.getBoundingClientRect());
+      return;
+    }
+    setActiveTab(tab);
+  };
   const scopedInstructorsData = shouldShowUnitTabs ? props.instructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : props.instructorsData;
   const scopedArchivedInstructorsData = shouldShowUnitTabs ? props.archivedInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : props.archivedInstructorsData;
   const shouldGroupCombinedUnitStaffSchedule = isFixedCrewModel && sharedUnitTabs.length > 1;
@@ -61173,24 +61194,27 @@ const StaffView = (props) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => setActiveTab("profile"),
-            className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+            onClick: (event) => openTabIfAllowed("profile", event.currentTarget),
+            "aria-disabled": !canViewStaffProfiles,
+            className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"} ${canViewStaffProfiles ? "" : "cursor-not-allowed"}`,
             children: "Staff Profile"
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => setActiveTab("schedule"),
-            className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+            onClick: (event) => openTabIfAllowed("schedule", event.currentTarget),
+            "aria-disabled": !canViewStaffSchedule,
+            className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"} ${canViewStaffSchedule ? "" : "cursor-not-allowed"}`,
             children: "Staff Schedule"
           }
         ),
         isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => setActiveTab("crewSchedule"),
-            className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "crewSchedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+            onClick: (event) => openTabIfAllowed("crewSchedule", event.currentTarget),
+            "aria-disabled": !canViewStaffSchedule,
+            className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "crewSchedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"} ${canViewStaffSchedule ? "" : "cursor-not-allowed"}`,
             children: "Crew Schedule"
           }
         )
@@ -61285,7 +61309,14 @@ const StaffView = (props) => {
           conflictingEventIds: props.conflictingEventIds
         }
       )
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PermissionNotice,
+      {
+        anchorRect: permissionNoticeRect,
+        onClose: () => setPermissionNoticeRect(null)
+      }
+    )
   ] });
 };
 const TraineeView = (props) => {
@@ -136710,7 +136741,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             sharedUnitTabs: fixedCrewSharedResourceUnitTabs,
             activeUnitCode,
-            defaultLocationName: activeLocationDisplayName
+            defaultLocationName: activeLocationDisplayName,
+            canUsePlatformPermission
           }
         );
       case "Instructors":
