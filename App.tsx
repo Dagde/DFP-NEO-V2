@@ -50833,6 +50833,157 @@ appliedUpdates.forEach(update => {
              setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
        }
     };
+
+    const downloadDfpAccessJsonReport = useCallback(() => {
+        const readJsonArray = (storageKey: string): any[] => {
+            try {
+                const raw = localStorage.getItem(storageKey);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        };
+        const accessRows = platformAccessContext.rows || [];
+        const report = {
+            generatedAt: new Date().toISOString(),
+            reportType: 'dfp-access-render-report',
+            purpose: 'Investigate why a signed-in user can open the DFP but no tiles are visible.',
+            session: {
+                currentUserName,
+                signedInDisplayName,
+                authUser: authUser ? {
+                    id: authUser.id || null,
+                    userId: authUser.userId || null,
+                    username: authUser.username || null,
+                    displayName: authUser.displayName || null,
+                    firstName: authUser.firstName || null,
+                    lastName: authUser.lastName || null,
+                    role: authUser.role || null,
+                    emailPresent: Boolean((authUser as any).email),
+                } : null,
+                sessionUser,
+                activeView,
+                date,
+                school,
+                activeUnitCode,
+                activeContextUnitCodes,
+            },
+            access: {
+                isAuthenticated,
+                isConfigured: platformAccessContext.isConfigured,
+                isPlatformAdmin: platformAccessContext.isPlatformAdmin,
+                isSuperAdmin: platformAccessContext.isSuperAdmin,
+                accessibleLocations: platformAccessContext.accessibleLocations,
+                permissionProfileIds: platformAccessContext.permissionProfileIds,
+                permissionCount: platformAccessContext.permissions.length,
+                permissions: platformAccessContext.permissions,
+                hasDfpView: hasPlatformPermission(platformAccessContext, 'dfp.view'),
+                hasDfpModuleAccessForSchool: getDailySnapshotLocationAliases(school).some(locationAlias => (
+                    hasPlatformModuleAccess(platformAccessContext, locationAlias, 'dfp')
+                )),
+                rowCount: accessRows.length,
+                rows: accessRows.map((row: any) => ({
+                    userId: row.userId || null,
+                    username: row.username || row.userName || null,
+                    displayName: row.displayName || null,
+                    locationCode: row.locationCode || null,
+                    unitCode: row.unitCode || null,
+                    moduleCode: row.moduleCode || null,
+                    accessLevel: row.accessLevel || null,
+                    role: row.role || null,
+                    status: row.status || null,
+                    permissionProfileIds: Array.isArray(row?.settings?.permissionProfileIds)
+                        ? row.settings.permissionProfileIds
+                        : [],
+                })),
+                baseSelectableLocationCodes,
+                selectableLocationCodes,
+                platformDataScopeQuery,
+            },
+            dfpData: {
+                renderedDate: date,
+                publishedScheduleDateCount: Object.keys(publishedSchedules).length,
+                publishedScheduleKeys: Object.keys(publishedSchedules).slice(0, 120),
+                eventsForDateCount: eventsForDate.length,
+                eventSegmentsForDateCount: eventSegmentsForDate.length,
+                snapshotDateCount: snapshotDates.length,
+                snapshotDates: snapshotDates.slice(0, 120),
+                dfpSnapshotLoadState,
+                sampleEventsForDate: eventsForDate.slice(0, 25).map((event: ScheduleEvent) => ({
+                    id: event.id,
+                    date: event.date,
+                    type: event.type,
+                    resourceId: event.resourceId,
+                    startTime: event.startTime,
+                    duration: event.duration,
+                    flightNumber: event.flightNumber,
+                    instructor: event.instructor,
+                    student: event.student,
+                    pilot: event.pilot,
+                    crew: event.crew,
+                })),
+                sampleEventSegments: eventSegmentsForDate.slice(0, 25).map((event: any) => ({
+                    id: event.id,
+                    date: event.date,
+                    type: event.type,
+                    resourceId: event.resourceId,
+                    startTime: event.startTime,
+                    segmentStartTime: event.segmentStartTime,
+                    duration: event.duration,
+                    segmentDuration: event.segmentDuration,
+                    flightNumber: event.flightNumber,
+                    instructor: event.instructor,
+                    student: event.student,
+                    pilot: event.pilot,
+                    crew: event.crew,
+                })),
+            },
+            diagnostics: {
+                neoDfpDataDiag: readJsonArray('neo_dfp_data_diag'),
+                neoDashboardReportDiag: readJsonArray('neo_dashboard_report_diag'),
+            },
+        };
+        const safeUser = String(signedInDisplayName || currentUserName || 'user')
+            .replace(/[^a-z0-9]+/gi, '-')
+            .replace(/^-+|-+$/g, '')
+            .toLowerCase() || 'user';
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `dfp-access-render-report-${safeUser}-${date || 'unknown-date'}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, [
+        activeContextUnitCodes,
+        activeUnitCode,
+        activeView,
+        authUser,
+        baseSelectableLocationCodes,
+        currentUserName,
+        date,
+        dfpSnapshotLoadState,
+        eventSegmentsForDate,
+        eventsForDate,
+        getDailySnapshotLocationAliases,
+        isAuthenticated,
+        platformAccessContext,
+        platformDataScopeQuery,
+        publishedSchedules,
+        school,
+        selectableLocationCodes,
+        sessionUser,
+        signedInDisplayName,
+        snapshotDates,
+    ]);
+
+    const shouldShowDfpAccessReportDownload = activeView === 'Program Schedule'
+        && eventSegmentsForDate.length === 0
+        && (eventsForDate.length === 0 || dfpSnapshotLoadState.status === 'empty' || platformAccessContext.rows.length === 0);
+
     return (
     <>
         {setupTestProfile && (
@@ -51015,6 +51166,23 @@ appliedUpdates.forEach(update => {
                     <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                         {renderActiveView()}
                     </div>
+                    {shouldShowDfpAccessReportDownload && (
+                        <div className="pointer-events-none absolute left-1/2 top-6 z-50 w-[min(520px,calc(100%-32px))] -translate-x-1/2 rounded-md border border-amber-300/45 bg-slate-950/95 px-4 py-3 text-slate-100 shadow-2xl shadow-black/35">
+                            <div className="text-sm font-bold text-amber-100">DFP tiles are not visible</div>
+                            <div className="mt-1 text-xs font-medium text-slate-300">
+                                Download this JSON report and send it back so the access and render path can be compared with a working user.
+                            </div>
+                            <div className="mt-3 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={downloadDfpAccessJsonReport}
+                                    className="pointer-events-auto rounded-md border border-amber-300/50 bg-amber-500/18 px-3 py-1.5 text-xs font-bold text-amber-100 hover:bg-amber-500/28"
+                                >
+                                    Download JSON Report
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     {activeView === 'Program Schedule' && (
                         <aside
                             className={`absolute inset-y-0 right-0 z-40 w-[40%] min-w-[360px] max-w-[680px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
