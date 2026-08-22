@@ -47642,6 +47642,13 @@ appliedUpdates.forEach(update => {
         const canUseMultiSelectOnActiveDfp = canUseMultiSelect;
         const canPauseFlightOpsOnActiveDfp = canUsePauseFlightOps && !isViewingPastDfp && canRunNeoBuildForActiveModel;
         const canUseValidation = canRunValidation;
+        const toggleValidationFromContextMenu = () => {
+            if (!canUseValidation) {
+                denyPlatformAction('Run validation checks is not permitted for your assigned permission profile');
+                return;
+            }
+            setShowValidation(value => !value);
+        };
         const menuItems: DfpContextMenuItem[] = [];
         let title = 'DFP Workspace';
         let subtitle = activeView;
@@ -47840,9 +47847,12 @@ appliedUpdates.forEach(update => {
                     setShowFlightLinePanel(true);
                 }}
             );
-            if (canUseValidation) {
-                menuItems.push({ label: showValidation ? 'Hide Validation' : 'Show Validation', detail: 'Toggle schedule validation overlay.', onSelect: () => setShowValidation(!showValidation) });
-            }
+            menuItems.push({
+                label: showValidation ? 'Hide Validation' : 'Show Validation',
+                detail: canUseValidation ? 'Toggle schedule validation overlay.' : 'Validation Check is not available for this profile.',
+                disabled: !canUseValidation,
+                onSelect: toggleValidationFromContextMenu,
+            });
         } else if (gridElement) {
             const rect = gridElement.getBoundingClientRect();
             const pixelsPerHour = Number(gridElement.dataset.schedulePixelsPerHour || 200);
@@ -47863,7 +47873,7 @@ appliedUpdates.forEach(update => {
                     handleOpenModal(null, { type: 'flight', oracleContext: isNeoBuildScheduleView ? 'nextDayBuild' : null });
                 }},
                 { label: 'Add Ground Tile', detail: canAddGroundOnActiveDfp ? 'Create a new ground event.' : 'Add Ground Tile is not available for this profile or DFP.', disabled: !canAddGroundOnActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
-                { label: showValidation ? 'Validation Check OFF' : 'Validation Check ON', disabled: !canUseValidation, onSelect: () => setShowValidation(!showValidation) },
+                { label: showValidation ? 'Validation Check OFF' : 'Validation Check ON', disabled: !canUseValidation, onSelect: toggleValidationFromContextMenu },
                 { label: showDepartureDensityOverlay ? 'Dispatch Rate OFF' : 'Dispatch Rate ON', disabled: !canUseDispatchRateOnActiveDfp, onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
                 { label: isMagnifierEnabled ? 'Magnifier OFF' : 'Magnifier ON', onSelect: () => setIsMagnifierEnabled(!isMagnifierEnabled) },
                 { label: isMultiSelectMode ? 'Multi Select OFF' : 'Multi Select ON', disabled: !canUseMultiSelectOnActiveDfp, onSelect: () => handleSetIsMultiSelectMode(!isMultiSelectMode) },
