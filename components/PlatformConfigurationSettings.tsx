@@ -6408,7 +6408,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         return [
           ...nextRows,
           {
-            id: createClientRecordId('user-access'),
             userId: selectedUserId,
             username: selectedUsername,
             displayName: selectedDisplayName || selectedUsername || selectedUserId,

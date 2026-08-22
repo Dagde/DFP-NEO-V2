@@ -4210,9 +4210,25 @@ app.post('/api/platform-config', async (req, res) => {
         toJson(access.settings),
         now,
       ];
+      const upsertUserAccessScope = async () => db.$executeRawUnsafe(`
+        INSERT INTO "CommercialUserAccess" ("id", "userId", "username", "displayName", "organisationCode", "locationCode", "unitCode", "moduleCode", "scopeKey", "role", "accessLevel", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::timestamp, $13::timestamp)
+        ON CONFLICT ("scopeKey") DO UPDATE SET
+          "username" = $2,
+          "displayName" = $3,
+          "organisationCode" = $4,
+          "locationCode" = $5,
+          "unitCode" = $6,
+          "moduleCode" = $7,
+          "role" = $9,
+          "accessLevel" = $10,
+          "status" = $11,
+          "settings" = $12::jsonb,
+          "updatedAt" = $13::timestamp
+      `, ...accessValues);
 
       if (access.id) {
-        await db.$executeRawUnsafe(`
+        const updatedRows = await db.$executeRawUnsafe(`
           UPDATE "CommercialUserAccess" SET
             "userId" = $2,
             "username" = $3,
@@ -4229,24 +4245,9 @@ app.post('/api/platform-config', async (req, res) => {
             "updatedAt" = $14::timestamp
           WHERE "id" = $1
         `, access.id, ...accessValues);
-      } else {
-        await db.$executeRawUnsafe(`
-          INSERT INTO "CommercialUserAccess" ("id", "userId", "username", "displayName", "organisationCode", "locationCode", "unitCode", "moduleCode", "scopeKey", "role", "accessLevel", "status", "settings", "createdAt", "updatedAt")
-          VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::timestamp, $13::timestamp)
-          ON CONFLICT ("scopeKey") DO UPDATE SET
-            "username" = $2,
-            "displayName" = $3,
-            "organisationCode" = $4,
-            "locationCode" = $5,
-            "unitCode" = $6,
-            "moduleCode" = $7,
-            "role" = $9,
-            "accessLevel" = $10,
-            "status" = $11,
-            "settings" = $12::jsonb,
-            "updatedAt" = $13::timestamp
-        `, ...accessValues);
+        if (Number(updatedRows) > 0) continue;
       }
+      await upsertUserAccessScope();
     }
 
     let auditResult = { count: 0 };

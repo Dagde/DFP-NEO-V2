@@ -78274,7 +78274,6 @@ This removes it from the master list and from every user assignment that current
         return [
           ...nextRows,
           {
-            id: createClientRecordId("user-access"),
             userId: selectedUserId,
             username: selectedUsername,
             displayName: selectedDisplayName || selectedUsername || selectedUserId,
