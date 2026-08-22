@@ -72187,7 +72187,7 @@ const OrganisationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Controls whether selected units operate from shared DFP Resource Rows and one shared DFP context. This does not share staff unless Staff Sharing is also enabled." }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative inline-flex items-center cursor-pointer", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-3 cursor-pointer", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
                     {
@@ -72200,8 +72200,8 @@ const OrganisationSettings = ({
                       className: "sr-only peer"
                     }
                   ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-3 text-sm font-medium text-white", children: "Enable Aircraft & Resource Sharing For This Arrangement" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative h-6 w-11 shrink-0 rounded-full bg-gray-600 transition-colors after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-transform after:content-[''] peer-checked:bg-sky-600 peer-checked:after:translate-x-5 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 peer-disabled:opacity-60" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-white", children: "Enable Aircraft & Resource Sharing For This Arrangement" })
                 ] }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full items-center justify-between gap-4", children: [

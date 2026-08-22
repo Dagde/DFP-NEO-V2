@@ -1013,7 +1013,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
               Controls whether selected units operate from shared DFP Resource Rows and one shared DFP context. This does not share staff unless Staff Sharing is also enabled.
             </p>
             <div className="flex items-center">
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label className="inline-flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={activeResourceSharingGroupIsVisible && activeResourceSharingEnabled}
@@ -1023,8 +1023,8 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                   }}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
-                <span className="ml-3 text-sm font-medium text-white">
+                <div className="relative h-6 w-11 shrink-0 rounded-full bg-gray-600 transition-colors after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-transform after:content-[''] peer-checked:bg-sky-600 peer-checked:after:translate-x-5 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 peer-disabled:opacity-60" />
+                <span className="text-sm font-medium text-white">
                   Enable Aircraft & Resource Sharing For This Arrangement
                 </span>
               </label>
