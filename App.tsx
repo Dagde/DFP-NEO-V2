@@ -6037,6 +6037,7 @@ const REMEDIAL_EARLIEST_START = 10.0;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = 'neo_remedial_force_schedule_requests';
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = 'dfp_active_operational_context';
 const ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY = 'neo_context_selector_diag';
+const STAFF_ROSTER_TRACE_KEY = 'neo_staff_roster_trace';
 const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
 const HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX = 'dfp_highest_priority_events_v1';
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
@@ -26587,6 +26588,185 @@ const App: React.FC = () => {
         }
     }
 
+    function summarisePersonnelUnits(records: any[]): Record<string, number> {
+        return records.reduce((acc: Record<string, number>, record: any) => {
+            const unit = String(record?.unit || 'NO_UNIT').trim().toUpperCase() || 'NO_UNIT';
+            acc[unit] = (acc[unit] || 0) + 1;
+            return acc;
+        }, {});
+    }
+
+    function summarisePersonnelSources(records: any[]): Record<string, number> {
+        return records.reduce((acc: Record<string, number>, record: any) => {
+            const source = String(record?._dataSource || 'unknown').trim() || 'unknown';
+            acc[source] = (acc[source] || 0) + 1;
+            return acc;
+        }, {});
+    }
+
+    function pushStaffRosterTrace(stage: string, details: Record<string, any> = {}): void {
+        const entry = {
+            ts: new Date().toISOString(),
+            perfMs: typeof performance !== 'undefined' && typeof performance.now === 'function'
+                ? Math.round(performance.now())
+                : null,
+            stage,
+            browser: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+            activeView,
+            user: {
+                displayName: signedInDisplayName,
+                currentUserName,
+                role: sessionUser?.role || authUser?.role || '',
+            },
+            context: {
+                school,
+                activeUnitCode,
+                activeContextUnitCodes,
+                fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
+                resourceSharingGroups: organisationSettings.resourceSharingGroups,
+                platformDataScopeQuery,
+            },
+            details,
+        };
+        try {
+            const existing = JSON.parse(localStorage.getItem(STAFF_ROSTER_TRACE_KEY) || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-240);
+            localStorage.setItem(STAFF_ROSTER_TRACE_KEY, JSON.stringify(next));
+            (window as any).neoStaffRosterTrace = next;
+        } catch (error) {
+            try {
+                localStorage.removeItem(STAFF_ROSTER_TRACE_KEY);
+                (window as any).neoStaffRosterTrace = [entry];
+            } catch {
+                // ignore diagnostic storage failures
+            }
+        }
+    }
+
+    function downloadStaffRosterTraceReport(): void {
+        const safeUser = String(currentUserName || signedInDisplayName || 'user')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '') || 'user';
+        const reportDate = date || getEffectiveDfpDateString();
+        let traceEntries: any[] = [];
+        let contextEntries: any[] = [];
+        try {
+            const storedTrace = JSON.parse(localStorage.getItem(STAFF_ROSTER_TRACE_KEY) || '[]');
+            traceEntries = Array.isArray(storedTrace) ? storedTrace : [];
+        } catch {
+            traceEntries = [];
+        }
+        try {
+            const storedContext = JSON.parse(localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY) || '[]');
+            contextEntries = Array.isArray(storedContext) ? storedContext : [];
+        } catch {
+            contextEntries = [];
+        }
+        const payload = {
+            generatedAt: new Date().toISOString(),
+            reportType: 'staff-roster-context-trace',
+            instructions: 'Generated from the DFP Sync panel after a staff roster unit list disappeared.',
+            currentState: {
+                browser: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+                activeView,
+                date,
+                school,
+                activeUnitCode,
+                activeContextUnitCodes,
+                currentUserName,
+                signedInDisplayName,
+                liveSyncEnabled,
+                lastPollTime,
+                platformDataScopeQuery,
+                fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
+                resourceSharingGroups: organisationSettings.resourceSharingGroups,
+                activeLocationUnitOptions: activeLocationUnitOptions.map((option: any) => ({
+                    code: option.code,
+                    name: option.name,
+                    disabled: option.disabled === true,
+                    isSharedFleetContext: option.isSharedFleetContext === true,
+                    memberUnits: option.memberUnits || [],
+                })),
+                allStaff: {
+                    total: allInstructorsData.length,
+                    active: allInstructorsData.filter(isRecordActive).length,
+                    units: summarisePersonnelUnits(allInstructorsData.filter(isRecordActive)),
+                    sources: summarisePersonnelSources(allInstructorsData),
+                },
+                visibleStaff: {
+                    total: instructorsData.length,
+                    units: summarisePersonnelUnits(instructorsData),
+                    sources: summarisePersonnelSources(instructorsData),
+                },
+            },
+            traceEntries,
+            contextEntries,
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `staff-roster-trace-${safeUser}-${reportDate}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    useEffect(() => {
+        if (activeView !== 'Staff') return;
+        const activeStaff = allInstructorsData.filter(isRecordActive);
+        const locationFilteredStaff = activeStaff.filter(personMatchesActiveLocation);
+        const contextFilteredStaff = activeContextUnitCodeSet.size > 0
+            ? locationFilteredStaff.filter((person: any) => {
+                const unitCode = normalisePersonnelUnitCode(person.unit);
+                return !unitCode || activeContextUnitCodeSet.has(unitCode);
+            })
+            : locationFilteredStaff;
+        pushStaffRosterTrace('render:staff-roster-filter', {
+            dataSourceSettings,
+            activeStaff: {
+                total: activeStaff.length,
+                units: summarisePersonnelUnits(activeStaff),
+                sources: summarisePersonnelSources(activeStaff),
+            },
+            locationFilteredStaff: {
+                total: locationFilteredStaff.length,
+                units: summarisePersonnelUnits(locationFilteredStaff),
+                sources: summarisePersonnelSources(locationFilteredStaff),
+            },
+            contextFilteredStaff: {
+                total: contextFilteredStaff.length,
+                units: summarisePersonnelUnits(contextFilteredStaff),
+                sources: summarisePersonnelSources(contextFilteredStaff),
+            },
+            visibleStaff: {
+                total: instructorsData.length,
+                units: summarisePersonnelUnits(instructorsData),
+                sources: summarisePersonnelSources(instructorsData),
+            },
+            activeContextUnitCodeSet: Array.from(activeContextUnitCodeSet),
+            activeLocationAliases: getDailySnapshotLocationAliases(school),
+            hasFullStaffRosterAccess,
+            selfOnlyProfile: currentUserStaffProfile
+                ? { name: currentUserStaffProfile.name, unit: currentUserStaffProfile.unit, idNumber: currentUserStaffProfile.idNumber }
+                : null,
+        });
+    }, [
+        activeContextUnitCodeSet,
+        activeView,
+        allInstructorsData,
+        currentUserStaffProfile,
+        dataSourceSettings,
+        getDailySnapshotLocationAliases,
+        hasFullStaffRosterAccess,
+        instructorsData,
+        personMatchesActiveLocation,
+        school,
+    ]);
+
     function pushDashboardReportDiag(stage: string, details: Record<string, any> = {}): void {
         const entry = {
             ts: new Date().toISOString(),
@@ -44860,11 +45040,21 @@ appliedUpdates.forEach(update => {
         if (isSetupTestMode()) return false;
         if (isUserEditing()) return false;
         try {
+            const personnelUrl = scopedApiPath('/api/personnel');
+            const traineesUrl = scopedApiPath('/api/trainees');
             const [personnelRes, traineesRes] = await Promise.all([
-                fetch(scopedApiPath('/api/personnel'), { credentials: 'include' }),
-                fetch(scopedApiPath('/api/trainees'),  { credentials: 'include' }),
+                fetch(personnelUrl, { credentials: 'include' }),
+                fetch(traineesUrl,  { credentials: 'include' }),
             ]);
             logRoutineAppDebug('[Poll] Personnel response:', personnelRes.status, 'Trainees response:', traineesRes.status);
+            pushStaffRosterTrace('poll:response-status', {
+                personnelUrl,
+                traineesUrl,
+                personnelStatus: personnelRes.status,
+                personnelOk: personnelRes.ok,
+                traineesStatus: traineesRes.status,
+                traineesOk: traineesRes.ok,
+            });
             let pollChanged = false;
             if (personnelRes.ok) {
                 const personnelData = await personnelRes.json();
@@ -44874,10 +45064,40 @@ appliedUpdates.forEach(update => {
                     _dataSource: 'database' as const,
                 }));
                 logRoutineAppDebug('[Poll] Fetched', dbPersonnel.length, 'personnel. Unavailability total:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
+                pushStaffRosterTrace('poll:personnel-payload', {
+                    count: dbPersonnel.length,
+                    units: summarisePersonnelUnits(dbPersonnel),
+                    sources: summarisePersonnelSources(dbPersonnel),
+                    sample: dbPersonnel.slice(0, 12).map((person: any) => ({
+                        name: person.name,
+                        unit: person.unit,
+                        location: person.location,
+                        role: person.role,
+                        source: person._dataSource,
+                    })),
+                });
                 setInstructorsData(prev => {
                     const nextPersonnel = mergePolledDatabasePeople(prev, dbPersonnel, dataSourceSettings.staff === true);
                     const prevHash = buildPersonnelStatusHash(prev);
                     const newHash  = buildPersonnelStatusHash(nextPersonnel);
+                    pushStaffRosterTrace('poll:personnel-merge', {
+                        changed: prevHash !== newHash,
+                        previous: {
+                            total: prev.length,
+                            units: summarisePersonnelUnits(prev),
+                            sources: summarisePersonnelSources(prev),
+                        },
+                        polled: {
+                            total: dbPersonnel.length,
+                            units: summarisePersonnelUnits(dbPersonnel),
+                            sources: summarisePersonnelSources(dbPersonnel),
+                        },
+                        next: {
+                            total: nextPersonnel.length,
+                            units: summarisePersonnelUnits(nextPersonnel),
+                            sources: summarisePersonnelSources(nextPersonnel),
+                        },
+                    });
                     if (prevHash === newHash) return prev;
                     logRoutineAppDebug('[Poll] Personnel availability/status CHANGED - updating state');
                     pollChanged = true;
@@ -44908,6 +45128,9 @@ appliedUpdates.forEach(update => {
             return pollChanged;
         } catch (e) {
             console.error('[Poll] Error during poll:', e);
+            pushStaffRosterTrace('poll:error', {
+                error: e instanceof Error ? e.message : String(e),
+            });
             return false;
         }
     }, [buildPersonnelStatusHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing, mergePolledDatabasePeople, scopedApiPath]);
@@ -52364,6 +52587,14 @@ appliedUpdates.forEach(update => {
                     title="Manually refresh mobile unavailability and alert responses"
                 >
                     {isManualSyncing ? 'Syncing' : 'Sync Now'}
+                </button>
+                <button
+                    type="button"
+                    onClick={downloadStaffRosterTraceReport}
+                    className="rounded border border-cyan-500/40 px-1.5 py-0.5 text-cyan-200 transition-colors hover:border-cyan-300/70 hover:text-white"
+                    title="Download staff roster context trace"
+                >
+                    Staff Trace
                 </button>
             </div>
         )}
