@@ -73411,6 +73411,7 @@ const getNextFlightLineUnavailableReasonLabel = (existingReasons) => {
   while (existing.has(`new reason ${nextIndex}`)) nextIndex += 1;
   return `New reason ${nextIndex}`;
 };
+const BULK_ACCESS_PEOPLE_RENDER_LIMIT = 80;
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
 const emptyConfig = {
@@ -78074,18 +78075,31 @@ This removes it from the master list and from every user assignment that current
       return queryTokens.every((token) => searchText.includes(token));
     });
   }, [bulkAccessPeopleSearch, bulkAccessUserOptions]);
+  const renderedBulkAccessUserOptions = reactExports.useMemo(() => {
+    if (visibleBulkAccessUserOptions.length <= BULK_ACCESS_PEOPLE_RENDER_LIMIT) return visibleBulkAccessUserOptions;
+    const selectedIds = new Set(bulkAccessUserIds);
+    const selectedVisibleUsers = visibleBulkAccessUserOptions.filter((user) => selectedIds.has(user.id));
+    const unselectedVisibleUsers = visibleBulkAccessUserOptions.filter((user) => !selectedIds.has(user.id));
+    return [
+      ...selectedVisibleUsers,
+      ...unselectedVisibleUsers.slice(0, Math.max(0, BULK_ACCESS_PEOPLE_RENDER_LIMIT - selectedVisibleUsers.length))
+    ];
+  }, [bulkAccessUserIds, visibleBulkAccessUserOptions]);
+  const hiddenBulkAccessUserCount = Math.max(0, visibleBulkAccessUserOptions.length - renderedBulkAccessUserOptions.length);
   const bulkAccessUserGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
-    visibleBulkAccessUserOptions.forEach((user) => {
+    renderedBulkAccessUserOptions.forEach((user) => {
       const categoryGroups = groups.get(user.category) || /* @__PURE__ */ new Map();
-      categoryGroups.set(user.group, [...categoryGroups.get(user.group) || [], user]);
+      const groupUsers = categoryGroups.get(user.group) || [];
+      groupUsers.push(user);
+      categoryGroups.set(user.group, groupUsers);
       groups.set(user.category, categoryGroups);
     });
     return Array.from(groups.entries()).map(([category, categoryGroups]) => ({
       category,
       groups: Array.from(categoryGroups.entries())
     }));
-  }, [visibleBulkAccessUserOptions]);
+  }, [renderedBulkAccessUserOptions]);
   const toggleBulkAccessUser = (userId, checked) => {
     setBulkAccessUserIds((current) => checked ? Array.from(/* @__PURE__ */ new Set([...current, userId])) : current.filter((id) => id !== userId));
   };
@@ -84393,6 +84407,13 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   className: "mb-3 w-full rounded border border-cyan-500/30 bg-gray-950 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:border-cyan-300 focus:outline-none"
                 }
               ),
+              hiddenBulkAccessUserCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded border border-cyan-500/25 bg-cyan-950/30 px-3 py-2 text-xs text-cyan-100/80", children: [
+                "Showing ",
+                renderedBulkAccessUserOptions.length,
+                " of ",
+                visibleBulkAccessUserOptions.length,
+                " people. Search by name, Personnel ID, unit or course to narrow the list."
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-0 flex-1 space-y-3 overflow-y-auto pr-1", children: [
                 bulkAccessUserGroups.map(({ category, groups }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 rounded border border-cyan-500/25 bg-cyan-950 px-2 py-1.5 text-xs font-extrabold uppercase tracking-wide text-cyan-50", children: category }),
