@@ -75030,6 +75030,8 @@ const PlatformConfigurationSettings = ({
   }, []);
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");
   const [userSearch, setUserSearch] = reactExports.useState("");
+  const [bulkAccessPeopleSearch, setBulkAccessPeopleSearch] = reactExports.useState("");
+  const deferredBulkAccessPeopleSearch = reactExports.useDeferredValue(bulkAccessPeopleSearch);
   const [bulkAccessUserIds, setBulkAccessUserIds] = reactExports.useState([]);
   const [bulkAccessProfileIds, setBulkAccessProfileIds] = reactExports.useState([]);
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
@@ -77792,40 +77794,154 @@ This removes it from the master list and from every user assignment that current
     const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
     return fullName || user.displayName || user.username || user.userId || "Unknown User";
   };
+  const buildAccessUserSearchText = (values) => uniqueValues(values.flatMap((value) => String(value || "").toLowerCase().split(/[^a-z0-9]+/)).filter(Boolean)).join(" ");
+  const buildStaffAccessId = (staff) => {
+    const recordId = toIdentifier(staff?.id);
+    if (recordId) return `staff:${recordId}`;
+    const personnelId = toIdentifier(staff?.idNumber || staff?.personnelId || staff?.serviceNumber);
+    if (personnelId) return `staff-id:${personnelId}`;
+    const email = toIdentifier(staff?.email).toLowerCase();
+    if (email) return `staff-email:${email}`;
+    return `staff-name:${String(staff?.name || staff?.fullName || "").trim().toLowerCase()}`;
+  };
+  const buildTraineeAccessId = (trainee) => {
+    const recordId = toIdentifier(trainee?.id);
+    if (recordId) return `trainee:${recordId}`;
+    const personnelId = toIdentifier(trainee?.idNumber || trainee?.personnelId || trainee?.serviceNumber);
+    if (personnelId) return `trainee-id:${personnelId}`;
+    const email = toIdentifier(trainee?.email).toLowerCase();
+    if (email) return `trainee-email:${email}`;
+    return `trainee-name:${String(trainee?.name || trainee?.fullName || "").trim().toLowerCase()}`;
+  };
   const userOptions = reactExports.useMemo(
     () => {
-      const platformOptions = configPlatformUsers.map((user) => ({
-        id: user.userId || user.username,
-        name: displayUserName(user),
-        username: user.username || user.userId || "",
-        email: user.email || "",
-        staffRecordId: user.staffRecordId || "",
-        staffName: user.staffName || "",
-        staffRank: user.staffRank || "",
-        staffUnit: user.staffUnit || "",
-        staffLocation: user.staffLocation || "",
-        traineeRecordId: user.traineeRecordId || "",
-        traineeName: user.traineeName || "",
-        traineeFullName: user.traineeFullName || "",
-        traineeRank: user.traineeRank || "",
-        traineeCourse: user.traineeCourse || "",
-        traineeUnit: user.traineeUnit || "",
-        traineeLocation: user.traineeLocation || ""
-      })).filter((user) => user.id);
+      const withSearchText = (user) => ({
+        ...user,
+        searchText: buildAccessUserSearchText([
+          user.id,
+          user.name,
+          user.username,
+          user.email,
+          user.personnelId,
+          user.staffRecordId,
+          user.staffPersonnelId,
+          user.staffName,
+          user.staffRank,
+          user.staffUnit,
+          user.staffLocation,
+          user.traineeRecordId,
+          user.traineePersonnelId,
+          user.traineeName,
+          user.traineeFullName,
+          user.traineeRank,
+          user.traineeCourse,
+          user.traineeUnit,
+          user.traineeLocation
+        ])
+      });
+      const platformOptions = configPlatformUsers.map((user) => {
+        const staffPersonnelId = toIdentifier(user.staffPersonnelId || user.staffIdNumber || user.personnelId);
+        const traineePersonnelId = toIdentifier(user.traineePersonnelId || user.traineeIdNumber || user.personnelId);
+        return withSearchText({
+          id: user.userId || user.username,
+          name: displayUserName(user),
+          username: user.username || user.userId || "",
+          email: user.email || "",
+          personnelId: staffPersonnelId || traineePersonnelId || toIdentifier(user.personnelId),
+          staffRecordId: user.staffRecordId || "",
+          staffPersonnelId,
+          staffName: user.staffName || "",
+          staffRank: user.staffRank || "",
+          staffUnit: user.staffUnit || "",
+          staffLocation: user.staffLocation || "",
+          traineeRecordId: user.traineeRecordId || "",
+          traineePersonnelId,
+          traineeName: user.traineeName || "",
+          traineeFullName: user.traineeFullName || "",
+          traineeRank: user.traineeRank || "",
+          traineeCourse: user.traineeCourse || "",
+          traineeUnit: user.traineeUnit || "",
+          traineeLocation: user.traineeLocation || ""
+        });
+      }).filter((user) => user.id);
+      const representedKeys = /* @__PURE__ */ new Set();
+      const addRepresentedKey = (prefix, value) => {
+        const normalised = String(value || "").trim().toLowerCase();
+        if (normalised) representedKeys.add(`${prefix}:${normalised}`);
+      };
+      platformOptions.forEach((user) => {
+        addRepresentedKey("user", user.id);
+        addRepresentedKey("user", user.username);
+        addRepresentedKey("email", user.email);
+        addRepresentedKey("staff-record", user.staffRecordId);
+        addRepresentedKey("staff-personnel", user.staffPersonnelId);
+        addRepresentedKey("staff-name", user.staffName);
+        addRepresentedKey("trainee-record", user.traineeRecordId);
+        addRepresentedKey("trainee-personnel", user.traineePersonnelId);
+        addRepresentedKey("trainee-name", user.traineeName || user.traineeFullName);
+      });
       const platformUserIds = new Set(platformOptions.flatMap((user) => uniqueValues([user.id, user.username].map(toIdentifier))));
       const orphanOptions = configUserAccess.filter((access) => {
         const accessUserId = toIdentifier(access.userId);
         const accessUsername = toIdentifier(access.username);
         return (accessUserId || accessUsername) && !platformUserIds.has(accessUserId) && !platformUserIds.has(accessUsername);
-      }).map((access) => ({
+      }).map((access) => withSearchText({
         id: access.userId || access.username,
         name: `${access.displayName || access.username || access.userId || "Unknown user"} (missing user record)`,
         username: access.username || access.userId || "",
-        email: ""
+        email: "",
+        personnelId: toIdentifier(access.personnelId || access.staffPersonnelId || access.traineePersonnelId)
       })).filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index);
-      return [...platformOptions, ...orphanOptions].sort((a, b) => a.name.localeCompare(b.name));
+      const staffOptions = instructorsData.filter((staff) => String(staff?.name || staff?.fullName || "").trim()).filter((staff) => {
+        const recordId = toIdentifier(staff?.id).toLowerCase();
+        const personnelId = toIdentifier(staff?.idNumber || staff?.personnelId || staff?.serviceNumber).toLowerCase();
+        const email = toIdentifier(staff?.email).toLowerCase();
+        const name = String(staff?.name || staff?.fullName || "").trim().toLowerCase();
+        return !(recordId && representedKeys.has(`staff-record:${recordId}`) || personnelId && representedKeys.has(`staff-personnel:${personnelId}`) || email && representedKeys.has(`email:${email}`) || name && representedKeys.has(`staff-name:${name}`));
+      }).map((staff) => {
+        const personnelId = toIdentifier(staff?.idNumber || staff?.personnelId || staff?.serviceNumber);
+        return withSearchText({
+          id: buildStaffAccessId(staff),
+          name: String(staff?.name || staff?.fullName || "").trim(),
+          username: personnelId || String(staff?.email || "").trim(),
+          email: String(staff?.email || "").trim(),
+          personnelId,
+          staffRecordId: toIdentifier(staff?.id),
+          staffPersonnelId: personnelId,
+          staffName: String(staff?.name || staff?.fullName || "").trim(),
+          staffRank: String(staff?.rank || "").trim(),
+          staffUnit: String(staff?.unit || "").trim(),
+          staffLocation: String(staff?.location || "").trim()
+        });
+      });
+      const traineeOptions = traineesData.filter((trainee) => String(trainee?.name || trainee?.fullName || "").trim()).filter((trainee) => {
+        const recordId = toIdentifier(trainee?.id).toLowerCase();
+        const personnelId = toIdentifier(trainee?.idNumber || trainee?.personnelId || trainee?.serviceNumber).toLowerCase();
+        const email = toIdentifier(trainee?.email).toLowerCase();
+        const name = String(trainee?.name || trainee?.fullName || "").trim().toLowerCase();
+        return !(recordId && representedKeys.has(`trainee-record:${recordId}`) || personnelId && representedKeys.has(`trainee-personnel:${personnelId}`) || email && representedKeys.has(`email:${email}`) || name && representedKeys.has(`trainee-name:${name}`));
+      }).map((trainee) => {
+        const personnelId = toIdentifier(trainee?.idNumber || trainee?.personnelId || trainee?.serviceNumber);
+        const name = String(trainee?.name || trainee?.fullName || "").trim();
+        return withSearchText({
+          id: buildTraineeAccessId(trainee),
+          name,
+          username: personnelId || String(trainee?.email || "").trim(),
+          email: String(trainee?.email || "").trim(),
+          personnelId,
+          traineeRecordId: toIdentifier(trainee?.id),
+          traineePersonnelId: personnelId,
+          traineeName: name,
+          traineeFullName: String(trainee?.fullName || trainee?.name || "").trim(),
+          traineeRank: String(trainee?.rank || "").trim(),
+          traineeCourse: String(trainee?.course || "").trim(),
+          traineeUnit: String(trainee?.unit || "").trim(),
+          traineeLocation: String(trainee?.location || "").trim()
+        });
+      });
+      return [...platformOptions, ...orphanOptions, ...staffOptions, ...traineeOptions].filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index).sort((a, b) => a.name.localeCompare(b.name));
     },
-    [configPlatformUsers, configUserAccess]
+    [configPlatformUsers, configUserAccess, instructorsData, traineesData]
   );
   const activeBulkUnitCodes = reactExports.useMemo(() => Array.from(new Set([
     ...Array.isArray(activeUnitCodes) ? activeUnitCodes : [],
@@ -77851,8 +77967,11 @@ This removes it from the master list and from every user assignment that current
   const matchesBulkAccessPerson = (user, person, personType) => {
     const linkedRecordId = personType === "staff" ? user.staffRecordId : user.traineeRecordId;
     if (linkedRecordId && String(linkedRecordId).trim() === String(person.id || "").trim()) return true;
-    const userKeys = uniqueValues([user.id, user.username, user.email, user.name].map((value) => String(value || "").trim().toLowerCase()));
-    const personKeys = uniqueValues([person.id, person.email, person.name, person.fullName].map((value) => String(value || "").trim().toLowerCase()));
+    const linkedPersonnelId = personType === "staff" ? user.staffPersonnelId : user.traineePersonnelId;
+    const personPersonnelId = toIdentifier(person.idNumber || person.personnelId || person.serviceNumber).toLowerCase();
+    if (linkedPersonnelId && personPersonnelId && String(linkedPersonnelId).trim().toLowerCase() === personPersonnelId) return true;
+    const userKeys = uniqueValues([user.id, user.username, user.email, user.name, user.personnelId, linkedPersonnelId].map((value) => String(value || "").trim().toLowerCase()));
+    const personKeys = uniqueValues([person.id, person.email, person.name, person.fullName, personPersonnelId].map((value) => String(value || "").trim().toLowerCase()));
     if (personKeys.some((key) => key && userKeys.includes(key))) return true;
     const userNameKeys = uniqueValues([user.username, user.email?.split("@")[0], user.name].flatMap(getBulkAccessNameKeys));
     const personNameKeys = uniqueValues([person.name, person.fullName].flatMap(getBulkAccessNameKeys));
@@ -77869,7 +77988,8 @@ This removes it from the master list and from every user assignment that current
       id: user.id,
       name: user.name,
       username: user.username,
-      email: user.email
+      email: user.email,
+      searchText: user.searchText || buildAccessUserSearchText([user.id, user.name, user.username, user.email])
     });
     const options = [];
     const staffByDisplayOrder = [...instructorsData].filter((staff) => String(staff?.name || "").trim() && isActiveUnitPerson(staff.unit)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
@@ -77937,9 +78057,27 @@ This removes it from the master list and from every user assignment that current
     });
     return options;
   }, [activeBulkUnitCodes, instructorsData, personnelDisplaySettings, traineesData, userOptions]);
+  const visibleBulkAccessUserOptions = reactExports.useMemo(() => {
+    const queryTokens = buildAccessUserSearchText([deferredBulkAccessPeopleSearch]).split(" ").filter(Boolean);
+    if (queryTokens.length === 0) return bulkAccessUserOptions;
+    return bulkAccessUserOptions.filter((user) => {
+      const searchText = user.searchText || buildAccessUserSearchText([
+        user.id,
+        user.name,
+        user.username,
+        user.email,
+        user.rank,
+        user.unit,
+        user.course,
+        user.category,
+        user.group
+      ]);
+      return queryTokens.every((token) => searchText.includes(token));
+    });
+  }, [bulkAccessUserOptions, deferredBulkAccessPeopleSearch]);
   const bulkAccessUserGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
-    bulkAccessUserOptions.forEach((user) => {
+    visibleBulkAccessUserOptions.forEach((user) => {
       const categoryGroups = groups.get(user.category) || /* @__PURE__ */ new Map();
       categoryGroups.set(user.group, [...categoryGroups.get(user.group) || [], user]);
       groups.set(user.category, categoryGroups);
@@ -77948,7 +78086,7 @@ This removes it from the master list and from every user assignment that current
       category,
       groups: Array.from(categoryGroups.entries())
     }));
-  }, [bulkAccessUserOptions]);
+  }, [visibleBulkAccessUserOptions]);
   const toggleBulkAccessUser = (userId, checked) => {
     setBulkAccessUserIds((current) => checked ? Array.from(/* @__PURE__ */ new Set([...current, userId])) : current.filter((id) => id !== userId));
   };
@@ -78011,11 +78149,15 @@ This removes it from the master list and from every user assignment that current
     () => configPlatformUsers.find((user) => (user.userId || user.username) === selectedAccessUserId),
     [configPlatformUsers, selectedAccessUserId]
   );
+  const selectedAccessUserOption = reactExports.useMemo(
+    () => userOptions.find((user) => user.id === selectedAccessUserId),
+    [selectedAccessUserId, userOptions]
+  );
   const selectedAccessRows = reactExports.useMemo(
     () => configUserAccess.map((access, index) => ({ access, index })).filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId)),
     [configUserAccess, selectedAccessUserId]
   );
-  const selectedAccessDisplayName = selectedAccessUser ? `${selectedAccessUser.firstName || ""} ${selectedAccessUser.lastName || ""}`.trim() || selectedAccessUser.username || selectedAccessUser.userId : selectedAccessRows[0]?.access.displayName ? `${selectedAccessRows[0].access.displayName} (missing platform user record)` : selectedAccessUserId ? `${selectedAccessUserId} (missing platform user record)` : "No user selected";
+  const selectedAccessDisplayName = selectedAccessUser ? `${selectedAccessUser.firstName || ""} ${selectedAccessUser.lastName || ""}`.trim() || selectedAccessUser.username || selectedAccessUser.userId : selectedAccessUserOption ? selectedAccessUserOption.name : selectedAccessRows[0]?.access.displayName ? `${selectedAccessRows[0].access.displayName} (missing platform user record)` : selectedAccessUserId ? `${selectedAccessUserId} (missing platform user record)` : "No user selected";
   const selectedUserProfileIds = reactExports.useMemo(() => {
     const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || "").toUpperCase() !== "INACTIVE");
     const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
@@ -78025,20 +78167,20 @@ This removes it from the master list and from every user assignment that current
   const setSelectedUserProfileIds = (profileIds) => {
     setConfig((prev) => ({
       ...prev,
-      userAccess: (Array.isArray(prev.userAccess) ? prev.userAccess : []).map((access) => access.userId === selectedAccessUserId ? { ...access, settings: { ...access.settings || {}, permissionProfileIds: profileIds } } : access)
+      userAccess: (Array.isArray(prev.userAccess) ? prev.userAccess : []).map((access) => access.userId === selectedAccessUserId || access.username === selectedAccessUserId ? { ...access, settings: { ...access.settings || {}, permissionProfileIds: profileIds } } : access)
     }));
   };
   const addUserAccess = () => {
-    const defaultUser = selectedAccessUser || configPlatformUsers[0];
-    const userId = selectedAccessUserId || defaultUser?.userId || defaultUser?.username || "";
-    const displayName = defaultUser ? `${defaultUser.firstName || ""} ${defaultUser.lastName || ""}`.trim() || defaultUser.username || userId : "";
+    const defaultUser = selectedAccessUserOption || selectedAccessUser || userOptions[0] || configPlatformUsers[0];
+    const userId = selectedAccessUserId || defaultUser?.id || defaultUser?.userId || defaultUser?.username || "";
+    const displayName = selectedAccessUserOption?.name || (defaultUser ? `${defaultUser.firstName || ""} ${defaultUser.lastName || ""}`.trim() || defaultUser.username || userId : "");
     setConfig((prev) => ({
       ...prev,
       userAccess: [
         ...Array.isArray(prev.userAccess) ? prev.userAccess : [],
         {
           userId,
-          username: defaultUser?.username || "",
+          username: defaultUser?.username || userId,
           displayName,
           organisationCode: (Array.isArray(prev.organisations) ? prev.organisations : [])[0]?.code || "DEFAULT",
           locationCode: (Array.isArray(prev.locations) ? prev.locations : [])[0]?.code || "",
@@ -79265,7 +79407,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     locationCode: access.locationCode,
     organisationCode: access.organisationCode
   }));
-  const visibleSelectedAccessRows = visibleUserAccessRows.filter(({ access }) => String(access.userId || "").trim() === selectedAccessUserId);
+  const visibleSelectedAccessRows = visibleUserAccessRows.filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId));
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
     const name = String(pool.name || "").trim() || "Unnamed DFP Resource Rows";
@@ -84243,6 +84385,17 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   " selected"
                 ] })
               ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "search",
+                  value: bulkAccessPeopleSearch,
+                  onChange: (event) => setBulkAccessPeopleSearch(event.target.value),
+                  onKeyDown: stopEditableKeyPropagation,
+                  placeholder: "Search people by name, ID, unit or course...",
+                  className: "mb-3 w-full rounded border border-cyan-500/30 bg-gray-950 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:border-cyan-300 focus:outline-none"
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-0 flex-1 space-y-3 overflow-y-auto pr-1", children: [
                 bulkAccessUserGroups.map(({ category, groups }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 rounded border border-cyan-500/25 bg-cyan-950 px-2 py-1.5 text-xs font-extrabold uppercase tracking-wide text-cyan-50", children: category }),
@@ -84266,7 +84419,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     ] }, `${category}-${groupName}-${user.id}`)) })
                   ] }, `${category}-${groupName}`))
                 ] }, category)),
-                bulkAccessUserGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-100", children: "No platform users are available for group assignment." })
+                bulkAccessUserGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-100", children: "No people match that search." })
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full min-h-[34rem] flex-col rounded border border-gray-700 bg-gray-950/70 p-3", children: [
@@ -85451,11 +85604,14 @@ const UserSearchSelect = ({
 }) => {
   const [isOpen, setIsOpen] = reactExports.useState(false);
   const [draftSearch, setDraftSearch] = reactExports.useState(search || "");
-  const query = draftSearch.trim().toLowerCase();
-  const filteredUsers = users.filter((user) => {
-    if (!query) return true;
-    return [user.name, user.username, user.email].some((field) => field.toLowerCase().includes(query));
-  }).slice(0, 30);
+  const filteredUsers = reactExports.useMemo(() => {
+    const query = draftSearch.trim().toLowerCase();
+    return users.filter((user) => {
+      if (!query) return true;
+      const searchText = user.searchText || [user.name, user.username, user.email, user.personnelId].map((field) => String(field || "").toLowerCase()).join(" ");
+      return query.split(/\s+/).filter(Boolean).every((token) => searchText.includes(token));
+    }).slice(0, 30);
+  }, [draftSearch, users]);
   reactExports.useEffect(() => {
     if (!isOpen) setDraftSearch(search || "");
   }, [isOpen, search]);
@@ -85473,8 +85629,6 @@ const UserSearchSelect = ({
         disabled,
         placeholder: "Search by name...",
         autoComplete: "off",
-        onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateSearchDraft),
-        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateSearchDraft),
         onKeyDown: stopEditableKeyPropagation,
         onChange: (event) => updateSearchDraft(event.target.value),
         onFocus: () => {
