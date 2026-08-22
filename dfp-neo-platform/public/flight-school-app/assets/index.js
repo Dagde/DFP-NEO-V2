@@ -2416,6 +2416,61 @@ const accessIdentityVariants = (...values) => uniqueValues$1(
     return variants;
   }).flatMap((variant) => [normaliseAccessValue(variant), compactAccessValue(variant)]).filter(Boolean)
 );
+const platformUserIdentityValues = (user) => [
+  user?.id,
+  user?.userId,
+  user?.username,
+  user?.email,
+  user?.displayName,
+  user?.name,
+  user?.staffRecordId,
+  user?.staffName,
+  user?.traineeRecordId,
+  user?.traineeName,
+  user?.traineeFullName,
+  user?.personnelId,
+  user?.idNumber,
+  user?.firstName && user?.lastName ? `${user.lastName}, ${user.firstName}` : "",
+  user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : ""
+];
+const accessRowIdentityValues = (row) => {
+  const settings = parseSettingsObject(row.settings);
+  return [
+    row.userId,
+    row.username,
+    row.displayName,
+    row.userName,
+    row.email,
+    row.personnelId,
+    row.idNumber,
+    row.staffId,
+    row.staffRecordId,
+    row.staffName,
+    row.traineeRecordId,
+    row.traineeName,
+    row.traineeFullName,
+    settings.userId,
+    settings.username,
+    settings.displayName,
+    settings.userName,
+    settings.name,
+    settings.email,
+    settings.personnelId,
+    settings.idNumber,
+    settings.staffId,
+    settings.staffRecordId,
+    settings.staffName,
+    settings.traineeRecordId,
+    settings.traineeName,
+    settings.traineeFullName,
+    settings.linkedPersonId,
+    settings.linkedPersonnelId,
+    settings.linkedStaffId,
+    settings.linkedStaffRecordId,
+    settings.linkedTraineeId,
+    settings.linkedTraineeRecordId
+  ];
+};
 const normaliseAccessLevel = (value) => {
   const token = String(value || "").trim().toLowerCase();
   if (token === "manage" || token === "admin" || token === "manage/edit" || token === "edit") return "Manage";
@@ -2631,23 +2686,11 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = []) 
     accessIdentityVariants(...userIdentifiers)
   );
   const rows = activeRows.filter((row) => {
-    const platformUser = (config.platformUsers || []).find((user) => accessIdentityVariants(user?.id, user?.userId, user?.username, user?.email, user?.displayName).some((identifier) => accessIdentityVariants(row.userId, row.username, row.displayName).includes(identifier)));
+    const rowVariants = accessIdentityVariants(...accessRowIdentityValues(row));
+    const platformUser = (config.platformUsers || []).find((user) => accessIdentityVariants(...platformUserIdentityValues(user)).some((identifier) => rowVariants.includes(identifier)));
     const rowIdentifiers = accessIdentityVariants(
-      row.userId,
-      row.username,
-      row.displayName,
-      row.userName,
-      row.email,
-      row.personnelId,
-      row.idNumber,
-      row.staffId,
-      platformUser?.id,
-      platformUser?.userId,
-      platformUser?.username,
-      platformUser?.email,
-      platformUser?.displayName,
-      platformUser?.firstName && platformUser?.lastName ? `${platformUser.lastName}, ${platformUser.firstName}` : "",
-      platformUser?.firstName && platformUser?.lastName ? `${platformUser.firstName} ${platformUser.lastName}` : ""
+      ...accessRowIdentityValues(row),
+      ...platformUserIdentityValues(platformUser)
     );
     return rowIdentifiers.some((identifier) => identifiers.has(identifier));
   });
@@ -2682,23 +2725,11 @@ const getAssignedPlatformPermissionProfileLabels = (config, userIdentifiers) => 
   if (identifiers.size === 0) return [];
   const activeRows = config.userAccess.map(normaliseAccessRow).filter((row) => normaliseAccessValue(row.status) !== "inactive");
   const rows = activeRows.filter((row) => {
-    const platformUser = (config.platformUsers || []).find((user) => accessIdentityVariants(user?.id, user?.userId, user?.username, user?.email, user?.displayName).some((identifier) => accessIdentityVariants(row.userId, row.username, row.displayName).includes(identifier)));
+    const rowVariants = accessIdentityVariants(...accessRowIdentityValues(row));
+    const platformUser = (config.platformUsers || []).find((user) => accessIdentityVariants(...platformUserIdentityValues(user)).some((identifier) => rowVariants.includes(identifier)));
     const rowIdentifiers = accessIdentityVariants(
-      row.userId,
-      row.username,
-      row.displayName,
-      row.userName,
-      row.email,
-      row.personnelId,
-      row.idNumber,
-      row.staffId,
-      platformUser?.id,
-      platformUser?.userId,
-      platformUser?.username,
-      platformUser?.email,
-      platformUser?.displayName,
-      platformUser?.firstName && platformUser?.lastName ? `${platformUser.lastName}, ${platformUser.firstName}` : "",
-      platformUser?.firstName && platformUser?.lastName ? `${platformUser.firstName} ${platformUser.lastName}` : ""
+      ...accessRowIdentityValues(row),
+      ...platformUserIdentityValues(platformUser)
     );
     return rowIdentifiers.some((identifier) => identifiers.has(identifier));
   });
