@@ -827,6 +827,59 @@ const normaliseAccessRow = (row: PlatformAccessRow): PlatformAccessRow => ({
   settings: parseSettingsObject(row.settings),
 });
 
+export const getPlatformUserIdentityValuesForPerson = (
+  config: PlatformConfig | null,
+  person: Record<string, any> | null | undefined,
+  personType: 'staff' | 'trainee',
+): unknown[] => {
+  if (!config || !person || !Array.isArray(config.platformUsers)) return [];
+
+  const personVariants = accessIdentityVariants(
+    person.id,
+    person.userId,
+    person.personnelId,
+    person.idNumber,
+    person.email,
+    person.name,
+    person.fullName,
+  );
+  if (personVariants.length === 0) return [];
+
+  const linkedUsers = config.platformUsers.filter((user: any) => {
+    const userSettings = parseSettingsObject(user?.settings);
+    const linkedRecordValues = personType === 'staff'
+      ? [
+          user?.staffRecordId,
+          userSettings.staffRecordId,
+          userSettings.linkedStaffRecordId,
+          userSettings.staffId,
+          userSettings.linkedStaffId,
+        ]
+      : [
+          user?.traineeRecordId,
+          userSettings.traineeRecordId,
+          userSettings.linkedTraineeRecordId,
+          userSettings.traineeId,
+          userSettings.linkedTraineeId,
+        ];
+    const linkedRecordVariants = accessIdentityVariants(...linkedRecordValues);
+    if (linkedRecordVariants.some((identifier) => personVariants.includes(identifier))) return true;
+
+    const userVariants = accessIdentityVariants(
+      ...platformUserIdentityValues(user),
+      userSettings.personnelId,
+      userSettings.idNumber,
+      userSettings.email,
+      userSettings.displayName,
+      personType === 'staff' ? userSettings.staffName : userSettings.traineeName,
+      personType === 'trainee' ? userSettings.traineeFullName : '',
+    );
+    return userVariants.some((identifier) => personVariants.includes(identifier));
+  });
+
+  return uniqueValues(linkedUsers.flatMap((user) => platformUserIdentityValues(user)));
+};
+
 export const getPlatformPermissionProfiles = (
   config: PlatformConfig | null,
 ): PlatformPermissionProfile[] => {

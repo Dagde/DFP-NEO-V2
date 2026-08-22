@@ -2586,6 +2586,48 @@ const normaliseAccessRow = (row) => ({
   ...row,
   settings: parseSettingsObject(row.settings)
 });
+const getPlatformUserIdentityValuesForPerson = (config, person, personType) => {
+  if (!config || !person || !Array.isArray(config.platformUsers)) return [];
+  const personVariants = accessIdentityVariants(
+    person.id,
+    person.userId,
+    person.personnelId,
+    person.idNumber,
+    person.email,
+    person.name,
+    person.fullName
+  );
+  if (personVariants.length === 0) return [];
+  const linkedUsers = config.platformUsers.filter((user) => {
+    const userSettings = parseSettingsObject(user?.settings);
+    const linkedRecordValues = personType === "staff" ? [
+      user?.staffRecordId,
+      userSettings.staffRecordId,
+      userSettings.linkedStaffRecordId,
+      userSettings.staffId,
+      userSettings.linkedStaffId
+    ] : [
+      user?.traineeRecordId,
+      userSettings.traineeRecordId,
+      userSettings.linkedTraineeRecordId,
+      userSettings.traineeId,
+      userSettings.linkedTraineeId
+    ];
+    const linkedRecordVariants = accessIdentityVariants(...linkedRecordValues);
+    if (linkedRecordVariants.some((identifier) => personVariants.includes(identifier))) return true;
+    const userVariants = accessIdentityVariants(
+      ...platformUserIdentityValues(user),
+      userSettings.personnelId,
+      userSettings.idNumber,
+      userSettings.email,
+      userSettings.displayName,
+      personType === "staff" ? userSettings.staffName : userSettings.traineeName,
+      personType === "trainee" ? userSettings.traineeFullName : ""
+    );
+    return userVariants.some((identifier) => personVariants.includes(identifier));
+  });
+  return uniqueValues$1(linkedUsers.flatMap((user) => platformUserIdentityValues(user)));
+};
 const getPlatformPermissionProfiles = (config) => {
   const profileConfig = parseSettingsObject(config?.organisations?.[0]?.settings)?.permissionProfiles;
   const normalisedProfiles = Array.isArray(profileConfig) ? profileConfig.map((profile) => {
@@ -27094,7 +27136,9 @@ const TraineeProfileFlyout = ({
   );
   const assignedQualificationLabels = reactExports.useMemo(() => assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map((qualification) => qualification.code || qualification.name), [activeQualificationOptions, assignedQualifications]);
   const assignedPermissionProfileLabels = reactExports.useMemo(() => {
+    const linkedPlatformUserIdentifiers = getPlatformUserIdentityValuesForPerson(platformConfig, trainee, "trainee");
     return getAssignedPlatformPermissionProfileLabels(platformConfig, [
+      ...linkedPlatformUserIdentifiers,
       trainee.id,
       trainee.userId,
       trainee.personnelId,
@@ -58356,7 +58400,9 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     simIpDisplayLabel
   );
   const assignedPermissionProfileLabels = reactExports.useMemo(() => {
+    const linkedPlatformUserIdentifiers = getPlatformUserIdentityValuesForPerson(platformConfig, instructor, "staff");
     return getAssignedPlatformPermissionProfileLabels(platformConfig, [
+      ...linkedPlatformUserIdentifiers,
       instructor.id,
       instructor.userId,
       instructor.personnelId,
@@ -61359,6 +61405,7 @@ const StaffView = (props) => {
           personnelDisplaySettings: props.personnelDisplaySettings,
           instructorLabel: props.instructorLabel,
           operationalModel: props.operationalModel,
+          platformConfig: props.platformConfig,
           crewPositionTerminology: props.crewPositionTerminology,
           staffQualificationCatalogue: props.staffQualificationCatalogue,
           sctTerminology: props.sctTerminology,

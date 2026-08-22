@@ -9,7 +9,7 @@ import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '..
 import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { SctTerminology } from '../utils/sctTerminology';
-import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
+import { isFixedCrewLikeOperationalModel, type PlatformConfig } from '../utils/platformConfigService';
 
 interface StaffViewProps {
   // Props for InstructorListView
@@ -49,6 +49,7 @@ interface StaffViewProps {
   personnelDisplaySettings?: PersonnelDisplaySettings;
   instructorLabel?: string;
   operationalModel?: string;
+  platformConfig?: PlatformConfig | null;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   sctTerminology?: SctTerminology;
@@ -261,6 +262,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             personnelDisplaySettings={props.personnelDisplaySettings}
             instructorLabel={props.instructorLabel}
             operationalModel={props.operationalModel}
+            platformConfig={props.platformConfig}
             crewPositionTerminology={props.crewPositionTerminology}
             staffQualificationCatalogue={props.staffQualificationCatalogue}
             sctTerminology={props.sctTerminology}

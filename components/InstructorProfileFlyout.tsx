@@ -22,6 +22,7 @@ import {
 } from '../utils/personnelDisplaySettings';
 import {
   getAssignedPlatformPermissionProfileLabels,
+  getPlatformUserIdentityValuesForPerson,
   isFixedCrewLikeOperationalModel,
   normaliseOperationalModel,
   type PlatformConfig,
@@ -1155,7 +1156,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     simIpDisplayLabel,
   );
   const assignedPermissionProfileLabels = useMemo(() => {
+    const linkedPlatformUserIdentifiers = getPlatformUserIdentityValuesForPerson(platformConfig, instructor as any, 'staff');
     return getAssignedPlatformPermissionProfileLabels(platformConfig, [
+      ...linkedPlatformUserIdentifiers,
       (instructor as any).id,
       (instructor as any).userId,
       (instructor as any).personnelId,

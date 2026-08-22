@@ -43,6 +43,7 @@ import { isExternalDataAllowed } from '../utils/externalDataControls';
 import {
   filterMasterLmpCodesForAccess,
   getAssignedPlatformPermissionProfileLabels,
+  getPlatformUserIdentityValuesForPerson,
   normaliseMasterLmpCatalogue,
   type PlatformConfig,
 } from '../utils/platformConfigService';
@@ -1264,7 +1265,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             .map(qualification => qualification.code || qualification.name)
     ), [activeQualificationOptions, assignedQualifications]);
     const assignedPermissionProfileLabels = useMemo(() => {
+        const linkedPlatformUserIdentifiers = getPlatformUserIdentityValuesForPerson(platformConfig, trainee as any, 'trainee');
         return getAssignedPlatformPermissionProfileLabels(platformConfig, [
+            ...linkedPlatformUserIdentifiers,
             (trainee as any).id,
             (trainee as any).userId,
             (trainee as any).personnelId,
