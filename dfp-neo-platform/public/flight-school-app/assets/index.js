@@ -2561,7 +2561,6 @@ const addImpliedViewPermissions = (permissionIds) => {
     permissions.add("dfp.flightLine.view");
     permissions.add("maintenance.slideout.view");
   }
-  if (hasPrefix("staff.")) permissions.add("staff.view");
   if (hasPrefix("trainee.")) permissions.add("trainee.roster.view");
   if (hasLmpManagementAction) permissions.add("lmp.manage.use");
   if (hasPrefix("courseprogress.")) permissions.add("courseProgress.view");
@@ -123839,7 +123838,7 @@ ${"=".repeat(60)}`);
     const hasPrefix = (prefix) => Array.from(assignedPlatformProfilePermissions).some((assignedPermissionId) => assignedPermissionId.startsWith(prefix));
     if (requested === "dfp.view") return hasPrefix("dfp.") || hasPrefix("maintenance.");
     if (requested === "dfp.flightline.view") return hasPrefix("dfp.flightline.") || hasPrefix("maintenance.");
-    if (requested === "staff.view") return hasPrefix("staff.");
+    if (requested === "staff.view") return false;
     if (requested === "trainee.roster.view") return hasPrefix("trainee.");
     if (requested === "lmp.manage.use") {
       return Array.from(assignedPlatformProfilePermissions).some((assignedPermissionId) => assignedPermissionId.startsWith("lmp.") && assignedPermissionId !== "lmp.eventdetails.view");

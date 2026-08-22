@@ -34048,7 +34048,7 @@ const App: React.FC = () => {
             .some((assignedPermissionId) => assignedPermissionId.startsWith(prefix));
         if (requested === 'dfp.view') return hasPrefix('dfp.') || hasPrefix('maintenance.');
         if (requested === 'dfp.flightline.view') return hasPrefix('dfp.flightline.') || hasPrefix('maintenance.');
-        if (requested === 'staff.view') return hasPrefix('staff.');
+        if (requested === 'staff.view') return false;
         if (requested === 'trainee.roster.view') return hasPrefix('trainee.');
         if (requested === 'lmp.manage.use') {
             return Array.from(assignedPlatformProfilePermissions).some((assignedPermissionId) => (
