@@ -26519,77 +26519,6 @@ const App: React.FC = () => {
         }
     }
 
-    useEffect(() => {
-        const accessRows = platformAccessContext.rows || [];
-        const rowSummary = accessRows.slice(0, 12).map((row: any) => ({
-            userId: row.userId || null,
-            username: row.username || row.userName || null,
-            displayName: row.displayName || null,
-            locationCode: row.locationCode || null,
-            unitCode: row.unitCode || null,
-            moduleCode: row.moduleCode || null,
-            accessLevel: row.accessLevel || null,
-            role: row.role || null,
-            status: row.status || null,
-            permissionProfileIds: Array.isArray(row?.settings?.permissionProfileIds)
-                ? row.settings.permissionProfileIds
-                : [],
-        }));
-        const signedInIdentifiers = [
-            authUser?.id,
-            authUser?.userId,
-            authUser?.username,
-            (authUser as any)?.email,
-            authUser?.displayName,
-            authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : '',
-            authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : '',
-            sessionUser?.userId,
-            sessionUser?.username,
-            sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.lastName)}, ${stripCourseDetailsFromLoginName(sessionUser.firstName)}` : '',
-            sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.firstName)} ${stripCourseDetailsFromLoginName(sessionUser.lastName)}` : '',
-            currentUserName,
-        ].map(value => String(value || '').trim()).filter(Boolean);
-        pushDfpDataDiag('access:resolved-context', {
-            signedInIdentifiers,
-            authRole: authUser?.role || null,
-            currentUserName,
-            signedInDisplayName,
-            isAuthenticated,
-            isConfigured: platformAccessContext.isConfigured,
-            isPlatformAdmin: platformAccessContext.isPlatformAdmin,
-            isSuperAdmin: platformAccessContext.isSuperAdmin,
-            rowCount: accessRows.length,
-            rowSummary,
-            accessibleLocations: platformAccessContext.accessibleLocations,
-            permissionProfileIds: platformAccessContext.permissionProfileIds,
-            permissionCount: platformAccessContext.permissions.length,
-            hasDfpView: hasPlatformPermission(platformAccessContext, 'dfp.view'),
-            hasDfpModuleAccessForSchool: getDailySnapshotLocationAliases(school).some(locationAlias => (
-                hasPlatformModuleAccess(platformAccessContext, locationAlias, 'dfp')
-            )),
-            baseSelectableLocationCodes,
-            selectableLocationCodes,
-            school,
-            activeUnitCode,
-            activeContextUnitCodes,
-            platformDataScopeQuery,
-        });
-    }, [
-        activeContextUnitCodes,
-        activeUnitCode,
-        authUser,
-        baseSelectableLocationCodes,
-        currentUserName,
-        getDailySnapshotLocationAliases,
-        isAuthenticated,
-        platformAccessContext,
-        platformDataScopeQuery,
-        school,
-        selectableLocationCodes,
-        sessionUser,
-        signedInDisplayName,
-    ]);
-
     function pushDashboardReportDiag(stage: string, details: Record<string, any> = {}): void {
         const entry = {
             ts: new Date().toISOString(),
@@ -34128,6 +34057,77 @@ const App: React.FC = () => {
             hasPlatformModuleAccess(platformAccessContext, locationAlias, moduleCode)
         ));
     }, [getDailySnapshotLocationAliases, platformAccessContext, school]);
+
+    useEffect(() => {
+        const accessRows = platformAccessContext.rows || [];
+        const rowSummary = accessRows.slice(0, 12).map((row: any) => ({
+            userId: row.userId || null,
+            username: row.username || row.userName || null,
+            displayName: row.displayName || null,
+            locationCode: row.locationCode || null,
+            unitCode: row.unitCode || null,
+            moduleCode: row.moduleCode || null,
+            accessLevel: row.accessLevel || null,
+            role: row.role || null,
+            status: row.status || null,
+            permissionProfileIds: Array.isArray(row?.settings?.permissionProfileIds)
+                ? row.settings.permissionProfileIds
+                : [],
+        }));
+        const signedInIdentifiers = [
+            authUser?.id,
+            authUser?.userId,
+            authUser?.username,
+            (authUser as any)?.email,
+            authUser?.displayName,
+            authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : '',
+            authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : '',
+            sessionUser?.userId,
+            sessionUser?.username,
+            sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.lastName)}, ${stripCourseDetailsFromLoginName(sessionUser.firstName)}` : '',
+            sessionUser?.firstName && sessionUser.lastName ? `${stripCourseDetailsFromLoginName(sessionUser.firstName)} ${stripCourseDetailsFromLoginName(sessionUser.lastName)}` : '',
+            currentUserName,
+        ].map(value => String(value || '').trim()).filter(Boolean);
+        pushDfpDataDiag('access:resolved-context', {
+            signedInIdentifiers,
+            authRole: authUser?.role || null,
+            currentUserName,
+            signedInDisplayName,
+            isAuthenticated,
+            isConfigured: platformAccessContext.isConfigured,
+            isPlatformAdmin: platformAccessContext.isPlatformAdmin,
+            isSuperAdmin: platformAccessContext.isSuperAdmin,
+            rowCount: accessRows.length,
+            rowSummary,
+            accessibleLocations: platformAccessContext.accessibleLocations,
+            permissionProfileIds: platformAccessContext.permissionProfileIds,
+            permissionCount: platformAccessContext.permissions.length,
+            hasDfpView: hasPlatformPermission(platformAccessContext, 'dfp.view'),
+            hasDfpModuleAccessForSchool: getDailySnapshotLocationAliases(school).some(locationAlias => (
+                hasPlatformModuleAccess(platformAccessContext, locationAlias, 'dfp')
+            )),
+            baseSelectableLocationCodes,
+            selectableLocationCodes,
+            school,
+            activeUnitCode,
+            activeContextUnitCodes,
+            platformDataScopeQuery,
+        });
+    }, [
+        activeContextUnitCodes,
+        activeUnitCode,
+        authUser,
+        baseSelectableLocationCodes,
+        currentUserName,
+        getDailySnapshotLocationAliases,
+        isAuthenticated,
+        platformAccessContext,
+        platformDataScopeQuery,
+        school,
+        selectableLocationCodes,
+        sessionUser,
+        signedInDisplayName,
+    ]);
 
     const navigateToView = (view: string) => {
         if (!canAccessView(view)) {
