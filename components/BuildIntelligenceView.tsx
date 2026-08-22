@@ -8,6 +8,7 @@ import AirCombatTrainingAnalyticsTab from './tabs/AirCombatTrainingAnalyticsTab'
 import BliTab from './tabs/BliTab';
 import AirCombatIntelligenceTab from './tabs/AirCombatIntelligenceTab';
 import ACHistoryIntelligencePanel from './ACHistoryIntelligencePanel';
+import PermissionNotice from './PermissionNotice';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
   getOperationalModelLabel,
@@ -127,7 +128,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   const isCrewOperationalModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
   const [activeTab, setActiveTab] = useState<TabType>(isCrewOperationalModel ? 'air-combat' : 'people');
-  const [permissionNoticeTab, setPermissionNoticeTab] = useState<TabType | null>(null);
+  const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
   const resourceDisplayNames = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
   const canUsePermission = props.canUsePlatformPermission || (() => true);
   const hasAnySpecificTabPermission = Object.values(TAB_PERMISSION_IDS).some(permissionId => canUsePermission(permissionId));
@@ -135,11 +136,8 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
     canUsePermission(TAB_PERMISSION_IDS[tabId])
     || (!hasAnySpecificTabPermission && canUsePermission('neo.intelligence'))
   );
-  const showTabPermissionNotice = (tabId: TabType) => {
-    setPermissionNoticeTab(tabId);
-    window.setTimeout(() => {
-      setPermissionNoticeTab(current => current === tabId ? null : current);
-    }, 1800);
+  const showTabPermissionNotice = (anchor: HTMLElement) => {
+    setPermissionNoticeRect(anchor.getBoundingClientRect());
   };
 
   const formattedDate = useMemo(() => {
@@ -201,13 +199,8 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 const isAllowed = canOpenTab(tab.id);
                 return (
                   <div key={tab.id} className="relative">
-                    {permissionNoticeTab === tab.id && (
-                      <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg">
-                        Permissions: Not Allowed
-                      </span>
-                    )}
                     <button
-                      onClick={() => isAllowed ? setActiveTab(tab.id) : showTabPermissionNotice(tab.id)}
+                      onClick={(event) => isAllowed ? setActiveTab(tab.id) : showTabPermissionNotice(event.currentTarget)}
                       aria-disabled={!isAllowed}
                       className={`
                         min-w-[170px] rounded-md border px-4 py-2.5 text-sm font-semibold transition-all duration-200
@@ -332,6 +325,10 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
           </div>
         </div>
       </div>
+      <PermissionNotice
+        anchorRect={permissionNoticeRect}
+        onClose={() => setPermissionNoticeRect(null)}
+      />
     </div>
   );
 };

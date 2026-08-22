@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
+import PermissionNotice from './PermissionNotice';
 
 interface RightSidebarProps {
     activeView: string;
@@ -47,7 +48,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   const isAnyDashboardActive = dashboardViews.includes(activeView);
 
   const { isFrozen } = useSystemFreeze();
-  const [permissionNotice, setPermissionNotice] = useState<string | null>(null);
+  const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
   const canOpen = (view: string) => canAccessView ? canAccessView(view) : true;
   const canUsePermission = canUsePlatformPermission || (() => true);
   const neoNavigationPermissions: Record<string, string> = {
@@ -75,29 +76,19 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     return canOpenNeoView(view) ? '' : 'cursor-not-allowed';
   };
   const actionButtonClass = (allowed: boolean) => allowed ? '' : 'cursor-not-allowed';
-  const showPermissionNotice = (key: string) => {
-    setPermissionNotice(key);
-    window.setTimeout(() => {
-      setPermissionNotice(current => current === key ? null : current);
-    }, 1800);
+  const showPermissionNotice = (anchor: HTMLElement) => {
+    setPermissionNoticeRect(anchor.getBoundingClientRect());
   };
-  const permissionNoticeBubble = (key: string) => (
-    permissionNotice === key ? (
-      <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg">
-        Permissions: Not Allowed
-      </span>
-    ) : null
-  );
-  const navigateIfAllowed = (view: string) => {
+  const navigateIfAllowed = (view: string, anchor: HTMLElement) => {
     if (isModelUnavailable(view)) {
-      showPermissionNotice(view);
+      showPermissionNotice(anchor);
       return;
     }
     if (canOpenNeoView(view)) {
       onNavigate(view);
       return;
     }
-    showPermissionNotice(view);
+    showPermissionNotice(anchor);
   };
 
   // Extract surname from currentUserName (format: "Bloggs, Joe")
@@ -123,9 +114,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </button>
 
         <div className="relative mt-[14px]">
-          {permissionNoticeBubble('NEO Build')}
           <button
-            onClick={() => canBuild ? onBuildDfpClick() : showPermissionNotice('NEO Build')}
+            onClick={(event) => canBuild ? onBuildDfpClick() : showPermissionNotice(event.currentTarget)}
             aria-disabled={!canBuild}
             title={canBuild ? 'Run NEO Build' : 'Access denied: NEO Build permission required'}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`}
@@ -135,9 +125,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
 
         <div className="relative">
-          {permissionNoticeBubble('NextDayBuild')}
           <button
-            onClick={() => navigateIfAllowed('NextDayBuild')}
+            onClick={(event) => navigateIfAllowed('NextDayBuild', event.currentTarget)}
             aria-disabled={!canOpen('NextDayBuild')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''} ${accessButtonClass('NextDayBuild')}`}
           >
@@ -146,9 +135,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
 
         <div className="relative">
-          {permissionNoticeBubble('NextDayInstructorSchedule')}
           <button
-            onClick={() => navigateIfAllowed('NextDayInstructorSchedule')}
+            onClick={(event) => navigateIfAllowed('NextDayInstructorSchedule', event.currentTarget)}
             aria-disabled={!canOpen('NextDayInstructorSchedule')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayInstructorSchedule' ? 'active' : ''} ${accessButtonClass('NextDayInstructorSchedule')}`}
           >
@@ -157,9 +145,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
 
         <div className="relative">
-          {permissionNoticeBubble('NextDayTraineeSchedule')}
           <button
-            onClick={() => navigateIfAllowed('NextDayTraineeSchedule')}
+            onClick={(event) => navigateIfAllowed('NextDayTraineeSchedule', event.currentTarget)}
             aria-disabled={isModelUnavailable('NextDayTraineeSchedule') || !canOpen('NextDayTraineeSchedule')}
             title={isModelUnavailable('NextDayTraineeSchedule') ? 'Trainee schedule functions are not used by this operational model.' : undefined}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''} ${accessButtonClass('NextDayTraineeSchedule')}`}
@@ -169,9 +156,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
 
         <div className="relative">
-          {permissionNoticeBubble('Publish')}
           <button
-            onClick={() => canPublish ? onPublish() : showPermissionNotice('Publish')}
+            onClick={(event) => canPublish ? onPublish() : showPermissionNotice(event.currentTarget)}
             aria-disabled={!canPublish}
             title={canPublish ? 'Publish DFP' : 'Access denied: Publish DFP permission required'}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canPublish)}`}
@@ -181,9 +167,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
 
         <div className="relative">
-          {permissionNoticeBubble('Priorities')}
           <button
-            onClick={() => navigateIfAllowed('Priorities')}
+            onClick={(event) => navigateIfAllowed('Priorities', event.currentTarget)}
             aria-disabled={!canOpen('Priorities')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''} ${accessButtonClass('Priorities')}`}
           >
@@ -192,9 +177,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
 
         <div className="relative">
-          {permissionNoticeBubble('BuildIntelligence')}
           <button
-            onClick={() => navigateIfAllowed('BuildIntelligence')}
+            onClick={(event) => navigateIfAllowed('BuildIntelligence', event.currentTarget)}
             aria-disabled={!canOpen('BuildIntelligence')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildIntelligence' ? 'active' : ''} ${accessButtonClass('BuildIntelligence')}`}
           >
@@ -210,6 +194,10 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         <span className="text-[9px] text-gray-300">{currentUserLocation || 'N/A'}</span>
         <span className="text-[9px] text-gray-300">{currentUserUnit || 'N/A'}</span>
       </div>
+      <PermissionNotice
+        anchorRect={permissionNoticeRect}
+        onClose={() => setPermissionNoticeRect(null)}
+      />
     </aside>
   );
 };

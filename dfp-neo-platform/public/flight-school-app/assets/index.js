@@ -8297,13 +8297,77 @@ const RemoveCourseFlyout = ({ onClose, onArchive, activeCourses }) => {
     ] })
   ] }) });
 };
+const VIEWPORT_GAP = 8;
+const ANCHOR_GAP = 8;
+const PermissionNotice = ({
+  anchorRect,
+  message = "Permissions: Not Allowed",
+  durationMs = 5e3,
+  onClose
+}) => {
+  const noticeRef = reactExports.useRef(null);
+  const [position, setPosition] = reactExports.useState(null);
+  reactExports.useLayoutEffect(() => {
+    if (!anchorRect) return;
+    const updatePosition = () => {
+      const notice = noticeRef.current;
+      if (!notice) return;
+      const noticeRect = notice.getBoundingClientRect();
+      const desiredLeft = anchorRect.left + anchorRect.width / 2 - noticeRect.width / 2;
+      const left = Math.min(
+        Math.max(desiredLeft, VIEWPORT_GAP),
+        Math.max(VIEWPORT_GAP, window.innerWidth - noticeRect.width - VIEWPORT_GAP)
+      );
+      const aboveTop = anchorRect.top - noticeRect.height - ANCHOR_GAP;
+      const belowTop = anchorRect.bottom + ANCHOR_GAP;
+      const top = aboveTop >= VIEWPORT_GAP ? aboveTop : Math.min(
+        belowTop,
+        Math.max(VIEWPORT_GAP, window.innerHeight - noticeRect.height - VIEWPORT_GAP)
+      );
+      setPosition({ left, top });
+    };
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [anchorRect]);
+  reactExports.useEffect(() => {
+    const timer = window.setTimeout(onClose, durationMs);
+    const closeOnNextInteraction = () => onClose();
+    window.addEventListener("pointerdown", closeOnNextInteraction);
+    window.addEventListener("keydown", closeOnNextInteraction);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("pointerdown", closeOnNextInteraction);
+      window.removeEventListener("keydown", closeOnNextInteraction);
+    };
+  }, [durationMs, onClose]);
+  if (!anchorRect) return null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "div",
+    {
+      ref: noticeRef,
+      className: "pointer-events-none fixed z-[250] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg",
+      style: {
+        left: position?.left ?? -9999,
+        top: position?.top ?? -9999
+      },
+      role: "status",
+      "aria-live": "polite",
+      children: message
+    }
+  );
+};
 const formatCourseName = (name) => {
   return String(name || "").trim();
 };
 const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = reactExports.useState(false);
-  const [permissionNotice, setPermissionNotice] = reactExports.useState(null);
+  const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   const [showUserSelector, setShowUserSelector] = reactExports.useState(false);
   const [searchTerm, setSearchTerm] = reactExports.useState("");
   const [selectedUser, setSelectedUser] = reactExports.useState(null);
@@ -8388,30 +8452,26 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
     if (isModelUnavailable(view2)) return "cursor-not-allowed";
     return canOpenLeftView(view2) ? "" : "cursor-not-allowed";
   };
-  const showPermissionNotice = (key) => {
-    setPermissionNotice(key);
-    window.setTimeout(() => {
-      setPermissionNotice((current) => current === key ? null : current);
-    }, 1800);
+  const showPermissionNotice = (anchor) => {
+    setPermissionNoticeRect(anchor.getBoundingClientRect());
   };
-  const permissionNoticeBubble = (key) => permissionNotice === key ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg", children: "Permissions: Not Allowed" }) : null;
-  const navigateIfAllowed = (view2) => {
+  const navigateIfAllowed = (view2, anchor) => {
     if (isModelUnavailable(view2)) {
-      showPermissionNotice(view2);
+      showPermissionNotice(anchor);
       return;
     }
     if (canOpenLeftView(view2)) {
       onNavigate(view2);
       return;
     }
-    showPermissionNotice(view2);
+    showPermissionNotice(anchor);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "button",
         {
-          onClick: () => navigateIfAllowed("MyDashboard"),
+          onClick: (event) => navigateIfAllowed("MyDashboard", event.currentTarget),
           className: `relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active" : ""}`,
           "aria-current": activeView === "MyDashboard" ? "page" : void 0,
           children: [
@@ -8425,91 +8485,70 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         }
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto px-2 pt-[15px] space-y-[1px] flex flex-col items-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-          permissionNoticeBubble("Program Schedule"),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => navigateIfAllowed("Program Schedule"),
-              "aria-disabled": !canOpenLeftView("Program Schedule"),
-              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Program Schedule" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Program Schedule")}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: activeView === "Program Schedule" && !isAnyDashboardActive ? "#ffffff" : "#22c55e" }, children: "DFP" })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-          permissionNoticeBubble("Staff"),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => navigateIfAllowed("Staff"),
-              "aria-disabled": !canOpenLeftView("Staff"),
-              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Staff" ? "active" : ""} ${accessButtonClass("Staff")}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Staff" })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-          permissionNoticeBubble("Trainee"),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => navigateIfAllowed("Trainee"),
-              "aria-disabled": isModelUnavailable("Trainee") || !canOpenLeftView("Trainee"),
-              title: isModelUnavailable("Trainee") ? "Trainee functions are not used by this operational model." : void 0,
-              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Trainee" ? "active" : ""} ${accessButtonClass("Trainee")}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Trainee" })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-          permissionNoticeBubble("Syllabus"),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => navigateIfAllowed("Syllabus"),
-              "aria-disabled": !canOpenLeftView("Syllabus"),
-              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Syllabus" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Syllabus")}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "LMP" })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-          permissionNoticeBubble("CourseProgress"),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => navigateIfAllowed("CourseProgress"),
-              "aria-disabled": !canOpenLeftView("CourseProgress"),
-              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "CourseProgress" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("CourseProgress")}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Course Progress" })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-          permissionNoticeBubble("TrainingRecords"),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => navigateIfAllowed("TrainingRecords"),
-              "aria-disabled": !canOpenLeftView("TrainingRecords"),
-              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "TrainingRecords" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("TrainingRecords")}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Training Records" })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-          permissionNoticeBubble("Settings"),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => navigateIfAllowed("Settings"),
-              "aria-disabled": !canOpenLeftView("Settings"),
-              className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Settings" ? "active" : ""} ${accessButtonClass("Settings")}`,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Settings" })
-            }
-          )
-        ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: (event) => navigateIfAllowed("Program Schedule", event.currentTarget),
+            "aria-disabled": !canOpenLeftView("Program Schedule"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Program Schedule" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Program Schedule")}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: activeView === "Program Schedule" && !isAnyDashboardActive ? "#ffffff" : "#22c55e" }, children: "DFP" })
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: (event) => navigateIfAllowed("Staff", event.currentTarget),
+            "aria-disabled": !canOpenLeftView("Staff"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Staff" ? "active" : ""} ${accessButtonClass("Staff")}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Staff" })
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: (event) => navigateIfAllowed("Trainee", event.currentTarget),
+            "aria-disabled": isModelUnavailable("Trainee") || !canOpenLeftView("Trainee"),
+            title: isModelUnavailable("Trainee") ? "Trainee functions are not used by this operational model." : void 0,
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Trainee" ? "active" : ""} ${accessButtonClass("Trainee")}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Trainee" })
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: (event) => navigateIfAllowed("Syllabus", event.currentTarget),
+            "aria-disabled": !canOpenLeftView("Syllabus"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Syllabus" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Syllabus")}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "LMP" })
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: (event) => navigateIfAllowed("CourseProgress", event.currentTarget),
+            "aria-disabled": !canOpenLeftView("CourseProgress"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "CourseProgress" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("CourseProgress")}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Course Progress" })
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: (event) => navigateIfAllowed("TrainingRecords", event.currentTarget),
+            "aria-disabled": !canOpenLeftView("TrainingRecords"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "TrainingRecords" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("TrainingRecords")}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Training Records" })
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: (event) => navigateIfAllowed("Settings", event.currentTarget),
+            "aria-disabled": !canOpenLeftView("Settings"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Settings" ? "active" : ""} ${accessButtonClass("Settings")}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Settings" })
+          }
+        ) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 border-t border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-sidebar-course-legend": "true", className: "border-t border-gray-700 flex-shrink-0", children: [
@@ -8547,6 +8586,13 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         onClose: () => setShowRemoveCourseFlyout(false),
         onArchive: handleArchiveCourse,
         activeCourses: courseColors
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PermissionNotice,
+      {
+        anchorRect: permissionNoticeRect,
+        onClose: () => setPermissionNoticeRect(null)
       }
     ),
     showPinModal && selectedUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center", onClick: () => setShowPinModal(false), children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
@@ -8685,7 +8731,7 @@ const RightSidebar = ({
 }) => {
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
   const { isFrozen } = useSystemFreeze();
-  const [permissionNotice, setPermissionNotice] = reactExports.useState(null);
+  const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
   const canUsePermission = canUsePlatformPermission || (() => true);
   const neoNavigationPermissions = {
@@ -8710,23 +8756,19 @@ const RightSidebar = ({
     return canOpenNeoView(view2) ? "" : "cursor-not-allowed";
   };
   const actionButtonClass = (allowed) => allowed ? "" : "cursor-not-allowed";
-  const showPermissionNotice = (key) => {
-    setPermissionNotice(key);
-    window.setTimeout(() => {
-      setPermissionNotice((current) => current === key ? null : current);
-    }, 1800);
+  const showPermissionNotice = (anchor) => {
+    setPermissionNoticeRect(anchor.getBoundingClientRect());
   };
-  const permissionNoticeBubble = (key) => permissionNotice === key ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg", children: "Permissions: Not Allowed" }) : null;
-  const navigateIfAllowed = (view2) => {
+  const navigateIfAllowed = (view2, anchor) => {
     if (isModelUnavailable(view2)) {
-      showPermissionNotice(view2);
+      showPermissionNotice(anchor);
       return;
     }
     if (canOpenNeoView(view2)) {
       onNavigate(view2);
       return;
     }
-    showPermissionNotice(view2);
+    showPermissionNotice(anchor);
   };
   const userSurname = currentUserName.split(",")[0];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700 relative", children: [
@@ -8746,104 +8788,90 @@ const RightSidebar = ({
           ] })
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mt-[14px]", children: [
-        permissionNoticeBubble("NEO Build"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => canBuild ? onBuildDfpClick() : showPermissionNotice("NEO Build"),
-            "aria-disabled": !canBuild,
-            title: canBuild ? "Run NEO Build" : "Access denied: NEO Build permission required",
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#fb923c" }, children: "NEO Build" })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-        permissionNoticeBubble("NextDayBuild"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("NextDayBuild"),
-            "aria-disabled": !canOpen("NextDayBuild"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayBuild" ? "active" : ""} ${accessButtonClass("NextDayBuild")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Program Schedule" })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-        permissionNoticeBubble("NextDayInstructorSchedule"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("NextDayInstructorSchedule"),
-            "aria-disabled": !canOpen("NextDayInstructorSchedule"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayInstructorSchedule" ? "active" : ""} ${accessButtonClass("NextDayInstructorSchedule")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Staff Schedule" })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-        permissionNoticeBubble("NextDayTraineeSchedule"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("NextDayTraineeSchedule"),
-            "aria-disabled": isModelUnavailable("NextDayTraineeSchedule") || !canOpen("NextDayTraineeSchedule"),
-            title: isModelUnavailable("NextDayTraineeSchedule") ? "Trainee schedule functions are not used by this operational model." : void 0,
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayTraineeSchedule" ? "active" : ""} ${accessButtonClass("NextDayTraineeSchedule")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Trainee Schedule" })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-        permissionNoticeBubble("Publish"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => canPublish ? onPublish() : showPermissionNotice("Publish"),
-            "aria-disabled": !canPublish,
-            title: canPublish ? "Publish DFP" : "Access denied: Publish DFP permission required",
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canPublish)}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#22c55e" }, children: "Publish" })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-        permissionNoticeBubble("Priorities"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("Priorities"),
-            "aria-disabled": !canOpen("Priorities"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Priorities" ? "active" : ""} ${accessButtonClass("Priorities")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              "Build",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Planner"
-            ] }) : "Priorities" })
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-        permissionNoticeBubble("BuildIntelligence"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => navigateIfAllowed("BuildIntelligence"),
-            "aria-disabled": !canOpen("BuildIntelligence"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "BuildIntelligence" ? "active" : ""} ${accessButtonClass("BuildIntelligence")}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Build Intelligence" })
-          }
-        )
-      ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-[14px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: (event) => canBuild ? onBuildDfpClick() : showPermissionNotice(event.currentTarget),
+          "aria-disabled": !canBuild,
+          title: canBuild ? "Run NEO Build" : "Access denied: NEO Build permission required",
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`,
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#fb923c" }, children: "NEO Build" })
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: (event) => navigateIfAllowed("NextDayBuild", event.currentTarget),
+          "aria-disabled": !canOpen("NextDayBuild"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayBuild" ? "active" : ""} ${accessButtonClass("NextDayBuild")}`,
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Program Schedule" })
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: (event) => navigateIfAllowed("NextDayInstructorSchedule", event.currentTarget),
+          "aria-disabled": !canOpen("NextDayInstructorSchedule"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayInstructorSchedule" ? "active" : ""} ${accessButtonClass("NextDayInstructorSchedule")}`,
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Staff Schedule" })
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: (event) => navigateIfAllowed("NextDayTraineeSchedule", event.currentTarget),
+          "aria-disabled": isModelUnavailable("NextDayTraineeSchedule") || !canOpen("NextDayTraineeSchedule"),
+          title: isModelUnavailable("NextDayTraineeSchedule") ? "Trainee schedule functions are not used by this operational model." : void 0,
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayTraineeSchedule" ? "active" : ""} ${accessButtonClass("NextDayTraineeSchedule")}`,
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Trainee Schedule" })
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: (event) => canPublish ? onPublish() : showPermissionNotice(event.currentTarget),
+          "aria-disabled": !canPublish,
+          title: canPublish ? "Publish DFP" : "Access denied: Publish DFP permission required",
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canPublish)}`,
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#22c55e" }, children: "Publish" })
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: (event) => navigateIfAllowed("Priorities", event.currentTarget),
+          "aria-disabled": !canOpen("Priorities"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Priorities" ? "active" : ""} ${accessButtonClass("Priorities")}`,
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            "Build",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "Planner"
+          ] }) : "Priorities" })
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: (event) => navigateIfAllowed("BuildIntelligence", event.currentTarget),
+          "aria-disabled": !canOpen("BuildIntelligence"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "BuildIntelligence" ? "active" : ""} ${accessButtonClass("BuildIntelligence")}`,
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Build Intelligence" })
+        }
+      ) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-sidebar-user-footer": "true", className: "flex-shrink-0 border-t border-gray-700 p-4 flex flex-col items-center justify-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300 font-semibold", children: currentUserRank }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: userSurname }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: currentUserLocation || "N/A" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: currentUserUnit || "N/A" })
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PermissionNotice,
+      {
+        anchorRect: permissionNoticeRect,
+        onClose: () => setPermissionNoticeRect(null)
+      }
+    )
   ] });
 };
 const stripCourseDetailsFromHeaderName = (value) => {
@@ -56895,16 +56923,13 @@ const BuildIntelligenceView = (props) => {
   const isCrewOperationalModel = isAirCombatModel || isFixedCrewLikeOperationalModel(activeModel);
   const activeModelLabel = getOperationalModelLabel(activeModel);
   const [activeTab, setActiveTab] = reactExports.useState(isCrewOperationalModel ? "air-combat" : "people");
-  const [permissionNoticeTab, setPermissionNoticeTab] = reactExports.useState(null);
+  const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   const resourceDisplayNames = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
   const canUsePermission = props.canUsePlatformPermission || (() => true);
   const hasAnySpecificTabPermission = Object.values(TAB_PERMISSION_IDS).some((permissionId) => canUsePermission(permissionId));
   const canOpenTab = (tabId) => canUsePermission(TAB_PERMISSION_IDS[tabId]) || !hasAnySpecificTabPermission && canUsePermission("neo.intelligence");
-  const showTabPermissionNotice = (tabId) => {
-    setPermissionNoticeTab(tabId);
-    window.setTimeout(() => {
-      setPermissionNoticeTab((current) => current === tabId ? null : current);
-    }, 1800);
+  const showTabPermissionNotice = (anchor) => {
+    setPermissionNoticeRect(anchor.getBoundingClientRect());
   };
   const formattedDate = reactExports.useMemo(() => {
     const [year, month, day] = props.date.split("-").map(Number);
@@ -56933,29 +56958,28 @@ const BuildIntelligenceView = (props) => {
     ...!isCrewOperationalModel ? [{ id: "managerial-analytics", label: "Managerial Analytics" }] : [],
     { id: "bli", label: "BLI" }
   ];
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex flex-col overflow-hidden bg-[#111827] text-slate-100", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("header", { className: "border-b border-slate-700/60 bg-[#111827] px-6 py-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-7xl rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-5 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-10 w-1 rounded-full bg-cyan-300", "aria-hidden": "true" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70", children: "NEO Build" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "Build Intelligence" })
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col overflow-hidden bg-[#111827] text-slate-100", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("header", { className: "border-b border-slate-700/60 bg-[#111827] px-6 py-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-7xl rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-5 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-10 w-1 rounded-full bg-cyan-300", "aria-hidden": "true" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70", children: "NEO Build" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "Build Intelligence" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-slate-300", children: [
+          activeModelLabel,
+          " analysis for DFP on ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: formattedDate })
         ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-slate-300", children: [
-        activeModelLabel,
-        " analysis for DFP on ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: formattedDate })
-      ] })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 pt-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto max-w-7xl rounded-lg border border-cyan-500/25 bg-slate-900/80 p-3 shadow-[0_10px_24px_rgba(0,0,0,0.22)]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex flex-wrap gap-2", "aria-label": "Build intelligence tabs", children: tabs.map((tab) => {
-      const isAllowed = canOpenTab(tab.id);
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-        permissionNoticeTab === tab.id && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg", children: "Permissions: Not Allowed" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 pt-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto max-w-7xl rounded-lg border border-cyan-500/25 bg-slate-900/80 p-3 shadow-[0_10px_24px_rgba(0,0,0,0.22)]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex flex-wrap gap-2", "aria-label": "Build intelligence tabs", children: tabs.map((tab) => {
+        const isAllowed = canOpenTab(tab.id);
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => isAllowed ? setActiveTab(tab.id) : showTabPermissionNotice(tab.id),
+            onClick: (event) => isAllowed ? setActiveTab(tab.id) : showTabPermissionNotice(event.currentTarget),
             "aria-disabled": !isAllowed,
             className: `
                         min-w-[170px] rounded-md border px-4 py-2.5 text-sm font-semibold transition-all duration-200
@@ -56963,107 +56987,114 @@ const BuildIntelligenceView = (props) => {
                       `,
             children: tab.label
           }
+        ) }, tab.id);
+      }) }) }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto w-full max-w-7xl", children: [
+        activeTab === "people" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          PeopleTab,
+          {
+            date: props.date,
+            events: props.events,
+            instructorsData: props.instructorsData,
+            traineesData: props.traineesData,
+            onNavigateAndSelectPerson: props.onNavigateAndSelectPerson,
+            scores: props.scores,
+            traineeLMPs: props.traineeLMPs,
+            syllabusDetails: props.syllabusDetails,
+            courseColors: props.courseColors,
+            resourceDisplayNames,
+            instructorLabel: props.instructorLabel,
+            operationalModel: props.operationalModel,
+            operationalContext: props.operationalContext,
+            cancellationCodes: props.cancellationCodes
+          }
+        ),
+        activeTab === "air-combat" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          AirCombatIntelligenceTab,
+          {
+            date: props.date,
+            events: props.events,
+            instructorsData: props.instructorsData,
+            currentAircraftAvailable: props.currentAircraftAvailable,
+            totalAircraft: props.totalAircraft,
+            resourceDisplayNames,
+            operationalContext: props.operationalContext,
+            operationalModel: props.operationalModel
+          }
+        ),
+        activeTab === "course-metrics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          CourseMetricsTab,
+          {
+            date: props.date,
+            events: props.events,
+            traineesData: props.traineesData,
+            activeCourses: props.activeCourses,
+            courseColors: props.courseColors,
+            onNavigateAndSelectPerson: props.onNavigateAndSelectPerson,
+            analysis: props.analysis,
+            resourceDisplayNames,
+            instructorsData: props.instructorsData,
+            syllabusDetails: props.syllabusDetails,
+            operationalModel: props.operationalModel,
+            operationalContext: props.operationalContext
+          }
+        ),
+        activeTab === "build-analytics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          BuildAnalyticsTab,
+          {
+            events: props.events,
+            analysis: props.analysis,
+            resourceDisplayNames,
+            instructorLabel: props.instructorLabel
+          }
+        ),
+        activeTab === "ac-history" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ACHistoryIntelligencePanel,
+          {
+            cancellationRecords: props.cancellationRecords,
+            currentUserId: props.currentUserId,
+            currentAircraftAvailable: props.currentAircraftAvailable,
+            totalAircraft: props.totalAircraft,
+            currentUserRole: props.currentUserRole,
+            timezoneOffset: props.timezoneOffset,
+            dayFlyingStart: props.dayFlyingStart,
+            dayFlyingEnd: props.dayFlyingEnd,
+            operationalContext: props.operationalContext,
+            resourceDisplayNames
+          }
+        ),
+        activeTab === "managerial-analytics" && (isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          AirCombatTrainingAnalyticsTab,
+          {
+            instructorsData: props.instructorsData,
+            syllabusDetails: props.syllabusDetails,
+            operationalContext: props.operationalContext
+          }
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingIntelligenceTab, { trainingReportDisplayName: props.trainingReportDisplayName })),
+        activeTab === "bli" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          BliTab,
+          {
+            date: props.date,
+            events: props.events,
+            instructorsData: props.instructorsData,
+            traineesData: props.traineesData,
+            currentAircraftAvailable: props.currentAircraftAvailable,
+            totalAircraft: props.totalAircraft,
+            operationalContext: props.operationalContext,
+            cancellationCodes: props.cancellationCodes,
+            syllabusDetails: props.syllabusDetails
+          }
         )
-      ] }, tab.id);
-    }) }) }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto w-full max-w-7xl", children: [
-      activeTab === "people" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        PeopleTab,
-        {
-          date: props.date,
-          events: props.events,
-          instructorsData: props.instructorsData,
-          traineesData: props.traineesData,
-          onNavigateAndSelectPerson: props.onNavigateAndSelectPerson,
-          scores: props.scores,
-          traineeLMPs: props.traineeLMPs,
-          syllabusDetails: props.syllabusDetails,
-          courseColors: props.courseColors,
-          resourceDisplayNames,
-          instructorLabel: props.instructorLabel,
-          operationalModel: props.operationalModel,
-          operationalContext: props.operationalContext,
-          cancellationCodes: props.cancellationCodes
-        }
-      ),
-      activeTab === "air-combat" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        AirCombatIntelligenceTab,
-        {
-          date: props.date,
-          events: props.events,
-          instructorsData: props.instructorsData,
-          currentAircraftAvailable: props.currentAircraftAvailable,
-          totalAircraft: props.totalAircraft,
-          resourceDisplayNames,
-          operationalContext: props.operationalContext,
-          operationalModel: props.operationalModel
-        }
-      ),
-      activeTab === "course-metrics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        CourseMetricsTab,
-        {
-          date: props.date,
-          events: props.events,
-          traineesData: props.traineesData,
-          activeCourses: props.activeCourses,
-          courseColors: props.courseColors,
-          onNavigateAndSelectPerson: props.onNavigateAndSelectPerson,
-          analysis: props.analysis,
-          resourceDisplayNames,
-          instructorsData: props.instructorsData,
-          syllabusDetails: props.syllabusDetails,
-          operationalModel: props.operationalModel,
-          operationalContext: props.operationalContext
-        }
-      ),
-      activeTab === "build-analytics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        BuildAnalyticsTab,
-        {
-          events: props.events,
-          analysis: props.analysis,
-          resourceDisplayNames,
-          instructorLabel: props.instructorLabel
-        }
-      ),
-      activeTab === "ac-history" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ACHistoryIntelligencePanel,
-        {
-          cancellationRecords: props.cancellationRecords,
-          currentUserId: props.currentUserId,
-          currentAircraftAvailable: props.currentAircraftAvailable,
-          totalAircraft: props.totalAircraft,
-          currentUserRole: props.currentUserRole,
-          timezoneOffset: props.timezoneOffset,
-          dayFlyingStart: props.dayFlyingStart,
-          dayFlyingEnd: props.dayFlyingEnd,
-          operationalContext: props.operationalContext,
-          resourceDisplayNames
-        }
-      ),
-      activeTab === "managerial-analytics" && (isAirCombatModel ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-        AirCombatTrainingAnalyticsTab,
-        {
-          instructorsData: props.instructorsData,
-          syllabusDetails: props.syllabusDetails,
-          operationalContext: props.operationalContext
-        }
-      ) : /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingIntelligenceTab, { trainingReportDisplayName: props.trainingReportDisplayName })),
-      activeTab === "bli" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        BliTab,
-        {
-          date: props.date,
-          events: props.events,
-          instructorsData: props.instructorsData,
-          traineesData: props.traineesData,
-          currentAircraftAvailable: props.currentAircraftAvailable,
-          totalAircraft: props.totalAircraft,
-          operationalContext: props.operationalContext,
-          cancellationCodes: props.cancellationCodes,
-          syllabusDetails: props.syllabusDetails
-        }
-      )
-    ] }) })
-  ] }) });
+      ] }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PermissionNotice,
+      {
+        anchorRect: permissionNoticeRect,
+        onClose: () => setPermissionNoticeRect(null)
+      }
+    )
+  ] });
 };
 const BuildDfpLoadingFlyout = () => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-xl border border-sky-500 p-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center space-y-4", children: [

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
 import RemoveCourseFlyout from './RemoveCourseFlyout';
+import PermissionNotice from './PermissionNotice';
 
 interface SidebarProps {
     activeView: string;
@@ -32,7 +33,7 @@ const formatCourseName = (name: string): string => {
 const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, canUsePlatformPermission, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = useState(false);
-  const [permissionNotice, setPermissionNotice] = useState<string | null>(null);
+  const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
 
   // User selector state
   const [showUserSelector, setShowUserSelector] = useState(false);
@@ -153,29 +154,19 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     if (isModelUnavailable(view)) return 'cursor-not-allowed';
     return canOpenLeftView(view) ? '' : 'cursor-not-allowed';
   };
-  const showPermissionNotice = (key: string) => {
-    setPermissionNotice(key);
-    window.setTimeout(() => {
-      setPermissionNotice(current => current === key ? null : current);
-    }, 1800);
+  const showPermissionNotice = (anchor: HTMLElement) => {
+    setPermissionNoticeRect(anchor.getBoundingClientRect());
   };
-  const permissionNoticeBubble = (key: string) => (
-    permissionNotice === key ? (
-      <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-[calc(100%+6px)] whitespace-nowrap rounded-md border border-red-400/40 bg-slate-950 px-2.5 py-1 text-[10px] font-bold text-red-200 shadow-lg">
-        Permissions: Not Allowed
-      </span>
-    ) : null
-  );
-  const navigateIfAllowed = (view: string) => {
+  const navigateIfAllowed = (view: string, anchor: HTMLElement) => {
     if (isModelUnavailable(view)) {
-      showPermissionNotice(view);
+      showPermissionNotice(anchor);
       return;
     }
     if (canOpenLeftView(view)) {
       onNavigate(view);
       return;
     }
-    showPermissionNotice(view);
+    showPermissionNotice(anchor);
   };
 
 
@@ -185,7 +176,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         {/* My Home Button - Top Level */}
         <div className="flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0">
           <button
-            onClick={() => navigateIfAllowed('MyDashboard')}
+            onClick={(event) => navigateIfAllowed('MyDashboard', event.currentTarget)}
             className={`relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
             aria-current={activeView === 'MyDashboard' ? 'page' : undefined}
           >
@@ -202,9 +193,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         <nav className="flex-1 overflow-y-auto px-2 pt-[15px] space-y-[1px] flex flex-col items-center">
           {/* DFP Button */}
           <div className="relative">
-            {permissionNoticeBubble('Program Schedule')}
             <button
-              onClick={() => navigateIfAllowed('Program Schedule')}
+              onClick={(event) => navigateIfAllowed('Program Schedule', event.currentTarget)}
               aria-disabled={!canOpenLeftView('Program Schedule')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Program Schedule')}`}
             >
@@ -214,9 +204,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
           {/* Staff Button */}
           <div className="relative">
-            {permissionNoticeBubble('Staff')}
             <button
-              onClick={() => navigateIfAllowed('Staff')}
+              onClick={(event) => navigateIfAllowed('Staff', event.currentTarget)}
               aria-disabled={!canOpenLeftView('Staff')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Staff' ? 'active' : ''} ${accessButtonClass('Staff')}`}
             >
@@ -226,9 +215,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
           {/* Trainee Button */}
           <div className="relative">
-            {permissionNoticeBubble('Trainee')}
             <button
-              onClick={() => navigateIfAllowed('Trainee')}
+              onClick={(event) => navigateIfAllowed('Trainee', event.currentTarget)}
               aria-disabled={isModelUnavailable('Trainee') || !canOpenLeftView('Trainee')}
               title={isModelUnavailable('Trainee') ? 'Trainee functions are not used by this operational model.' : undefined}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Trainee' ? 'active' : ''} ${accessButtonClass('Trainee')}`}
@@ -239,9 +227,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
           {/* LMP - Square Button with Smaller Text */}
           <div className="relative">
-            {permissionNoticeBubble('Syllabus')}
             <button
-              onClick={() => navigateIfAllowed('Syllabus')}
+              onClick={(event) => navigateIfAllowed('Syllabus', event.currentTarget)}
               aria-disabled={!canOpenLeftView('Syllabus')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Syllabus' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Syllabus')}`}
             >
@@ -251,9 +238,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
 {/* Course Progress - Square Button with Smaller Text */}
           <div className="relative">
-            {permissionNoticeBubble('CourseProgress')}
             <button
-              onClick={() => navigateIfAllowed('CourseProgress')}
+              onClick={(event) => navigateIfAllowed('CourseProgress', event.currentTarget)}
               aria-disabled={!canOpenLeftView('CourseProgress')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'CourseProgress' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('CourseProgress')}`}
             >
@@ -263,9 +249,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
           {/* Training Records - Square Button with Smaller Text */}
           <div className="relative">
-            {permissionNoticeBubble('TrainingRecords')}
             <button
-              onClick={() => navigateIfAllowed('TrainingRecords')}
+              onClick={(event) => navigateIfAllowed('TrainingRecords', event.currentTarget)}
               aria-disabled={!canOpenLeftView('TrainingRecords')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'TrainingRecords' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('TrainingRecords')}`}
             >
@@ -275,9 +260,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
           {/* Settings - Square Button */}
           <div className="relative">
-            {permissionNoticeBubble('Settings')}
             <button
-              onClick={() => navigateIfAllowed('Settings')}
+              onClick={(event) => navigateIfAllowed('Settings', event.currentTarget)}
               aria-disabled={!canOpenLeftView('Settings')}
               className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''} ${accessButtonClass('Settings')}`}
             >
@@ -332,6 +316,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           activeCourses={courseColors}
         />
       )}
+      <PermissionNotice
+        anchorRect={permissionNoticeRect}
+        onClose={() => setPermissionNoticeRect(null)}
+      />
 
       {/* PIN Confirmation Modal */}
       {showPinModal && selectedUser && (
