@@ -1,7 +1,8 @@
 import { useSystemFreeze } from "../hooks/useSystemFreeze";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import CourseRosterView from './CourseRosterView';
 import TraineeScheduleView from './TraineeScheduleView';
+import PermissionNotice from './PermissionNotice';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TrainingReportTerminology } from '../utils/trainingReportTerminology';
@@ -80,6 +81,7 @@ interface TraineeViewProps {
   trainingReportTemplate?: any;
   platformConfig?: PlatformConfig | null;
   selfOnlyProfile?: any | null;
+  canUsePlatformPermission?: (permissionId: string) => boolean;
 
   // Props for TraineeScheduleView
   date: string;
@@ -98,8 +100,24 @@ interface TraineeViewProps {
 
 const TraineeView: React.FC<TraineeViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile');
+  const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
   const { isFrozen } = useSystemFreeze();
+  const canUsePermission = props.canUsePlatformPermission || (() => true);
+  const isSelfOnly = Boolean(props.selfOnlyProfile);
+  const canViewTraineeSchedule = isSelfOnly || canUsePermission('trainee.schedule.view');
   const activeTraineesData = props.selfOnlyProfile ? [props.selfOnlyProfile] : props.traineesData;
+  const openTabIfAllowed = (tab: 'profile' | 'schedule', anchor: HTMLElement) => {
+    if (tab === 'schedule' && !canViewTraineeSchedule) {
+      setPermissionNoticeRect(anchor.getBoundingClientRect());
+      return;
+    }
+    setActiveTab(tab);
+  };
+  useEffect(() => {
+    if (activeTab === 'schedule' && !canViewTraineeSchedule) {
+      setActiveTab('profile');
+    }
+  }, [activeTab, canViewTraineeSchedule]);
 
   // Sort trainees for schedule view
   const sortedTrainees = [...activeTraineesData]
@@ -118,7 +136,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
       <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 pt-3">
         <div className="flex space-x-2">
           <button
-            onClick={() => setActiveTab('profile')}
+            onClick={(event) => openTabIfAllowed('profile', event.currentTarget)}
             className={`px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${
               activeTab === 'profile'
                 ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
@@ -128,12 +146,13 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             Trainee Profile
           </button>
           <button
-            onClick={() => setActiveTab('schedule')}
+            onClick={(event) => openTabIfAllowed('schedule', event.currentTarget)}
+            aria-disabled={!canViewTraineeSchedule}
             className={`px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${
               activeTab === 'schedule'
                 ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
                 : 'bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500'
-            }`}
+            } ${canViewTraineeSchedule ? '' : 'cursor-not-allowed'}`}
           >
             Trainee Schedule
           </button>
@@ -233,6 +252,10 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
           />
         )}
       </div>
+      <PermissionNotice
+        anchorRect={permissionNoticeRect}
+        onClose={() => setPermissionNoticeRect(null)}
+      />
     </div>
   );
 };

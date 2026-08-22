@@ -61596,8 +61596,24 @@ const StaffView = (props) => {
 };
 const TraineeView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("profile");
+  const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   useSystemFreeze();
+  const canUsePermission = props.canUsePlatformPermission || (() => true);
+  const isSelfOnly = Boolean(props.selfOnlyProfile);
+  const canViewTraineeSchedule = isSelfOnly || canUsePermission("trainee.schedule.view");
   const activeTraineesData = props.selfOnlyProfile ? [props.selfOnlyProfile] : props.traineesData;
+  const openTabIfAllowed = (tab, anchor) => {
+    if (tab === "schedule" && !canViewTraineeSchedule) {
+      setPermissionNoticeRect(anchor.getBoundingClientRect());
+      return;
+    }
+    setActiveTab(tab);
+  };
+  reactExports.useEffect(() => {
+    if (activeTab === "schedule" && !canViewTraineeSchedule) {
+      setActiveTab("profile");
+    }
+  }, [activeTab, canViewTraineeSchedule]);
   const sortedTrainees = [...activeTraineesData].sort((a, b) => {
     if (a.course !== b.course) {
       return a.course.localeCompare(b.course);
@@ -61609,7 +61625,7 @@ const TraineeView = (props) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => setActiveTab("profile"),
+          onClick: (event) => openTabIfAllowed("profile", event.currentTarget),
           className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
           children: "Trainee Profile"
         }
@@ -61617,8 +61633,9 @@ const TraineeView = (props) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => setActiveTab("schedule"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+          onClick: (event) => openTabIfAllowed("schedule", event.currentTarget),
+          "aria-disabled": !canViewTraineeSchedule,
+          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"} ${canViewTraineeSchedule ? "" : "cursor-not-allowed"}`,
           children: "Trainee Schedule"
         }
       )
@@ -61716,7 +61733,14 @@ const TraineeView = (props) => {
           courseColors: props.courseColors
         }
       )
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PermissionNotice,
+      {
+        anchorRect: permissionNoticeRect,
+        onClose: () => setPermissionNoticeRect(null)
+      }
+    )
   ] });
 };
 const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee, personnelDisplaySettings }) => {
@@ -136620,7 +136644,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,
-            platformConfig
+            platformConfig,
+            canUsePlatformPermission
           }
         );
       case "CourseRoster":

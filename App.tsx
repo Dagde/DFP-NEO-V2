@@ -48607,6 +48607,7 @@ appliedUpdates.forEach(update => {
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}
                             platformConfig={platformConfig}
+                            canUsePlatformPermission={canUsePlatformPermission}
                         />;
             case 'CourseRoster':
                 return <CourseRosterView
