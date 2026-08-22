@@ -52622,19 +52622,15 @@ appliedUpdates.forEach(update => {
                 </button>
                 <button
                     type="button"
-                    onClick={downloadStaffRosterTraceReport}
-                    className="rounded border border-cyan-500/40 px-1.5 py-0.5 text-cyan-200 transition-colors hover:border-cyan-300/70 hover:text-white"
-                    title="Download staff roster context trace"
+                    onClick={activeView === 'Settings' ? downloadSettingsPerformanceTraceReport : downloadStaffRosterTraceReport}
+                    className={`rounded border px-1.5 py-0.5 transition-colors hover:text-white ${
+                        activeView === 'Settings'
+                            ? 'border-violet-500/40 text-violet-200 hover:border-violet-300/70'
+                            : 'border-cyan-500/40 text-cyan-200 hover:border-cyan-300/70'
+                    }`}
+                    title={activeView === 'Settings' ? 'Download settings performance trace' : 'Download staff roster context trace'}
                 >
-                    Staff Trace
-                </button>
-                <button
-                    type="button"
-                    onClick={downloadSettingsPerformanceTraceReport}
-                    className="rounded border border-violet-500/40 px-1.5 py-0.5 text-violet-200 transition-colors hover:border-violet-300/70 hover:text-white"
-                    title="Download settings performance trace"
-                >
-                    Settings Trace
+                    {activeView === 'Settings' ? 'Settings Trace' : 'Staff Trace'}
                 </button>
             </div>
         )}
