@@ -16,6 +16,7 @@ interface RightSidebarProps {
     canAccessView?: (view: string) => boolean;
     canRunNeoBuild?: boolean;
     canPublishDfp?: boolean;
+    canUsePlatformPermission?: (permissionId: string) => boolean;
     modelUnavailableViews?: string[];
     operationalModel?: string;
 }
@@ -34,6 +35,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     canAccessView,
     canRunNeoBuild = true,
     canPublishDfp = true,
+    canUsePlatformPermission,
     modelUnavailableViews = [],
     operationalModel,
 }) => {
@@ -47,12 +49,30 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   const { isFrozen } = useSystemFreeze();
   const [permissionNotice, setPermissionNotice] = useState<string | null>(null);
   const canOpen = (view: string) => canAccessView ? canAccessView(view) : true;
+  const canUsePermission = canUsePlatformPermission || (() => true);
+  const neoNavigationPermissions: Record<string, string> = {
+    NextDayBuild: 'neo.programSchedule.view',
+    NextDayInstructorSchedule: 'neo.staffSchedule.view',
+    NextDayTraineeSchedule: 'neo.traineeSchedule.view',
+    Publish: 'neo.publish.view',
+    Priorities: 'neo.priorities',
+    BuildIntelligence: 'neo.intelligence',
+  };
+  const hasSpecificNeoNavigationPermission = Object.values(neoNavigationPermissions).some(permissionId => canUsePermission(permissionId));
+  const canOpenNeoView = (view: string) => {
+    const permissionId = neoNavigationPermissions[view];
+    if (!permissionId) return canOpen(view);
+    return canOpen(view) && (
+      canUsePermission(permissionId)
+      || (!hasSpecificNeoNavigationPermission && canOpen(view))
+    );
+  };
   const isModelUnavailable = (view: string) => modelUnavailableViews.includes(view);
-  const canBuild = canRunNeoBuild && canOpen('NextDayBuild');
-  const canPublish = canPublishDfp && canOpen('NextDayBuild');
+  const canBuild = canRunNeoBuild && canOpenNeoView('NextDayBuild');
+  const canPublish = canPublishDfp && canOpenNeoView('Publish');
   const accessButtonClass = (view: string) => {
     if (isModelUnavailable(view)) return 'cursor-not-allowed';
-    return canOpen(view) ? '' : 'cursor-not-allowed';
+    return canOpenNeoView(view) ? '' : 'cursor-not-allowed';
   };
   const actionButtonClass = (allowed: boolean) => allowed ? '' : 'cursor-not-allowed';
   const showPermissionNotice = (key: string) => {
@@ -73,7 +93,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       showPermissionNotice(view);
       return;
     }
-    if (canOpen(view)) {
+    if (canOpenNeoView(view)) {
       onNavigate(view);
       return;
     }

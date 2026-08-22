@@ -51128,6 +51128,7 @@ appliedUpdates.forEach(update => {
                 canAccessView={canAccessView}
                 canRunNeoBuild={canRunNeoBuildForActiveModel}
                 canPublishDfp={canPublishDfp}
+                canUsePlatformPermission={canUsePlatformPermission}
                 modelUnavailableViews={modelUnavailableRightViews}
                 operationalModel={activeOperationalModel}
             />

@@ -2251,7 +2251,7 @@ const DEFAULT_PLATFORM_PERMISSION_PROFILES = [
     id: "scheduler",
     name: "Scheduler",
     description: "Scheduling and build management access.",
-    permissions: ["dfp.view", "dfp.editTiles", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.flightLine.availabilityLink.edit", "dfp.aircraftNumber.edit", "dfp.validation", "neo.run", "neo.priorities", "neo.intelligence", "neo.intelligence.operational.view", "neo.intelligence.people.view", "neo.intelligence.courseMetrics.view", "neo.intelligence.buildAnalytics.view", "neo.intelligence.acHistory.view", "neo.intelligence.managerialAnalytics.view", "neo.intelligence.bli.view", "neo.override", "reporting.view"],
+    permissions: ["dfp.view", "dfp.editTiles", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.flightLine.availabilityLink.edit", "dfp.aircraftNumber.edit", "dfp.validation", "neo.run", "neo.programSchedule.view", "neo.staffSchedule.view", "neo.traineeSchedule.view", "neo.publish.view", "neo.priorities", "neo.intelligence", "neo.intelligence.operational.view", "neo.intelligence.people.view", "neo.intelligence.courseMetrics.view", "neo.intelligence.buildAnalytics.view", "neo.intelligence.acHistory.view", "neo.intelligence.managerialAnalytics.view", "neo.intelligence.bli.view", "neo.override", "reporting.view"],
     settings: { profileType: "role" }
   },
   {
@@ -8629,6 +8629,7 @@ const RightSidebar = ({
   canAccessView,
   canRunNeoBuild = true,
   canPublishDfp = true,
+  canUsePlatformPermission,
   modelUnavailableViews = [],
   operationalModel
 }) => {
@@ -8636,12 +8637,27 @@ const RightSidebar = ({
   const { isFrozen } = useSystemFreeze();
   const [permissionNotice, setPermissionNotice] = reactExports.useState(null);
   const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
+  const canUsePermission = canUsePlatformPermission || (() => true);
+  const neoNavigationPermissions = {
+    NextDayBuild: "neo.programSchedule.view",
+    NextDayInstructorSchedule: "neo.staffSchedule.view",
+    NextDayTraineeSchedule: "neo.traineeSchedule.view",
+    Publish: "neo.publish.view",
+    Priorities: "neo.priorities",
+    BuildIntelligence: "neo.intelligence"
+  };
+  const hasSpecificNeoNavigationPermission = Object.values(neoNavigationPermissions).some((permissionId) => canUsePermission(permissionId));
+  const canOpenNeoView = (view2) => {
+    const permissionId = neoNavigationPermissions[view2];
+    if (!permissionId) return canOpen(view2);
+    return canOpen(view2) && (canUsePermission(permissionId) || !hasSpecificNeoNavigationPermission && canOpen(view2));
+  };
   const isModelUnavailable = (view2) => modelUnavailableViews.includes(view2);
-  const canBuild = canRunNeoBuild && canOpen("NextDayBuild");
-  const canPublish = canPublishDfp && canOpen("NextDayBuild");
+  const canBuild = canRunNeoBuild && canOpenNeoView("NextDayBuild");
+  const canPublish = canPublishDfp && canOpenNeoView("Publish");
   const accessButtonClass = (view2) => {
     if (isModelUnavailable(view2)) return "cursor-not-allowed";
-    return canOpen(view2) ? "" : "cursor-not-allowed";
+    return canOpenNeoView(view2) ? "" : "cursor-not-allowed";
   };
   const actionButtonClass = (allowed) => allowed ? "" : "cursor-not-allowed";
   const showPermissionNotice = (key) => {
@@ -8656,7 +8672,7 @@ const RightSidebar = ({
       showPermissionNotice(view2);
       return;
     }
-    if (canOpen(view2)) {
+    if (canOpenNeoView(view2)) {
       onNavigate(view2);
       return;
     }
@@ -138090,6 +138106,7 @@ Do you want to replace the existing entry?`,
           canAccessView,
           canRunNeoBuild: canRunNeoBuildForActiveModel,
           canPublishDfp,
+          canUsePlatformPermission,
           modelUnavailableViews: modelUnavailableRightViews,
           operationalModel: activeOperationalModel
         }
