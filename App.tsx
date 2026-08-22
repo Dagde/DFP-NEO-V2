@@ -29000,17 +29000,43 @@ const App: React.FC = () => {
                     const resolvedSchool = resolvedKeyParts.school || snapshotSchool;
                     const resolvedUnit = resolvedKeyParts.unit || snapshotUnit;
                     const isAdminContextFallback = adminFallbackSnapshotKeySet.has(resolvedSnapshotKey);
+                    const resolvedUnitKey = normaliseDailySnapshotPart(resolvedUnit).toUpperCase();
+                    const resolvedUnitOption = resolvedUnitKey
+                        ? getUnitOptionsForLocation(resolvedSchool).find((unit: any) => (
+                            normaliseDailySnapshotPart(unit?.code).toUpperCase() === resolvedUnitKey
+                            && unit?.disabled !== true
+                        ))
+                        : null;
+                    const canAdoptAdminFallbackContext = !isAdminContextFallback
+                        || !resolvedUnitKey
+                        || Boolean(resolvedUnitOption);
+                    if (isAdminContextFallback && !canAdoptAdminFallbackContext) {
+                        pushDfpDataDiag('snapshot:admin-fallback-context-not-adopted', {
+                            targetDate,
+                            snapshotKey,
+                            resolvedSnapshotKey,
+                            resolvedSchool,
+                            resolvedUnit,
+                            optionCodes: getUnitOptionsForLocation(resolvedSchool).map((unit: any) => ({
+                                code: unit.code,
+                                disabled: unit.disabled === true,
+                                disabledReason: unit.disabledReason || '',
+                                isSharedFleetContext: unit.isSharedFleetContext === true,
+                            })),
+                            reason: 'Fallback snapshot unit is not a valid selectable context for the current settings.',
+                        });
+                    }
                     const eventCount = applyDailySnapshot(
                         targetDate,
-                        isAdminContextFallback ? resolvedSchool : snapshotSchool,
-                        isAdminContextFallback ? resolvedUnit : snapshotUnit,
+                        isAdminContextFallback && canAdoptAdminFallbackContext ? resolvedSchool : snapshotSchool,
+                        isAdminContextFallback && canAdoptAdminFallbackContext ? resolvedUnit : snapshotUnit,
                         snap,
                         replace || shouldReplaceCachedEvents,
                         'network'
                     );
                     cacheDailySnapshot(snapshotKey, snap, targetDate);
                     loadedSnapshotDates.current.add(snapshotKey);
-                    if (isAdminContextFallback && eventCount > 0) {
+                    if (isAdminContextFallback && canAdoptAdminFallbackContext && eventCount > 0) {
                         const fallbackPayload = {
                             location: resolvedSchool,
                             unit: resolvedUnit,
