@@ -9,6 +9,7 @@ import BulkUpdateFlyout from './BulkUpdateFlyout';
 import ArchiveConfirmationFlyout from './ArchiveConfirmationFlyout';
 import ArchivedInstructorsFlyout from './ArchivedInstructorsFlyout';
 import AuditButton from './AuditButton';
+import PermissionNotice from './PermissionNotice';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
@@ -188,6 +189,7 @@ interface InstructorListViewProps {
   trainingReportStatusFieldLabel?: string;
   defaultUnitCode?: string;
   defaultLocationName?: string;
+  canUsePlatformPermission?: (permissionId: string) => boolean;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -237,6 +239,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     trainingReportStatusFieldLabel = 'Mission Status',
     defaultUnitCode = '',
     defaultLocationName = '',
+    canUsePlatformPermission,
 }) => {
   const [hoveredInstructor, setHoveredInstructor] = useState<{ instructor: Instructor; events: ScheduleEvent[] } | null>(null);
   const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
@@ -253,14 +256,41 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   // State for archiving
   const [isArchiveMode, setIsArchiveMode] = useState(false);
   const [instructorToArchive, setInstructorToArchive] = useState<Instructor | null>(null);
-  const normalisedCurrentUserRole = String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
-  const canManageArchive = normalisedCurrentUserRole === 'ADMIN' || normalisedCurrentUserRole === 'SUPER_ADMIN';
   const [showArchivedFlyout, setShowArchivedFlyout] = useState(false);
   const [selectedStaffRoleFilter, setSelectedStaffRoleFilter] = useState('ALL');
+  const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
   const staffNameResolver = useMemo(() => buildCompactPersonNameResolver(instructorsData as any), [instructorsData]);
+  const canUsePermission = canUsePlatformPermission || (() => true);
+  const normaliseIdentityValue = (value?: string | number | null): string => (
+    String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9@.]/g, '')
+  );
+  const isCurrentUserStaffRecord = (instructor: Instructor): boolean => {
+    const userKeys = [
+      currentUserId,
+      currentUserName,
+    ].map(normaliseIdentityValue).filter(Boolean);
+    if (userKeys.length === 0) return false;
+    const staffKeys = [
+      (instructor as any).id,
+      (instructor as any).userId,
+      (instructor as any).personnelId,
+      instructor.idNumber,
+      instructor.email,
+      instructor.name,
+    ].map(normaliseIdentityValue).filter(Boolean);
+    return userKeys.some(key => staffKeys.includes(key));
+  };
+  const canViewStaffProfile = (instructor: Instructor): boolean => (
+    isCurrentUserStaffRecord(instructor) || canUsePermission('staff.profile.view')
+  );
+  const canEditStaffDetails = canUsePermission('staff.edit') || canUsePermission('staff.profile.edit');
+  const canManageArchive = canEditStaffDetails;
 
   useEffect(() => {
     if (selectedPersonForProfile) {
+        if (!canViewStaffProfile(selectedPersonForProfile)) {
+            return;
+        }
         // Try to find element, though in grid it might be scrolled out.
         // If not found, originRect is null, which flyout handles gracefully (fades in center)
         const matchingElement = document.getElementById(`instructor-row-${getPersonDomIdSuffix(selectedPersonForProfile as any, 'staff')}`);
@@ -545,6 +575,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   };
 
   const handleInstructorClick = (e: React.MouseEvent<HTMLLIElement>, instructor: Instructor) => {
+    if (!canViewStaffProfile(instructor)) {
+        setPermissionNoticeRect(e.currentTarget.getBoundingClientRect());
+        return;
+    }
     if (selectedInstructor && samePersonRecord(selectedInstructor as any, instructor as any)) {
         handleCloseProfile();
     } else {
@@ -565,7 +599,11 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     }, 300);
   };
 
-  const handleShowAddChoice = () => {
+  const handleShowAddChoice = (anchor: HTMLElement) => {
+    if (!canEditStaffDetails) {
+      setPermissionNoticeRect(anchor.getBoundingClientRect());
+      return;
+    }
     setIsArchiveMode(false);
     setShowAddChoice(true);
   }
@@ -617,8 +655,11 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     }
   };
 
-  const toggleArchiveMode = () => {
-    if (!canManageArchive) return;
+  const toggleArchiveMode = (anchor: HTMLElement) => {
+    if (!canManageArchive) {
+      setPermissionNoticeRect(anchor.getBoundingClientRect());
+      return;
+    }
     setIsArchiveMode(!isArchiveMode);
     setSelectedInstructor(null);
   }
@@ -797,14 +838,16 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     View Archived
                 </button>
                 <button
-                    onClick={toggleArchiveMode}
+                    onClick={(event) => toggleArchiveMode(event.currentTarget)}
+                    aria-disabled={!canManageArchive}
                     className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${isArchiveMode ? 'text-green-500' : 'text-black'} ${canManageArchive ? '' : 'cursor-not-allowed'}`}
                 >
                     {isArchiveMode ? 'Done' : 'Archive'}
                 </button>
                 <button
-                    onClick={handleShowAddChoice}
-                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
+                    onClick={(event) => handleShowAddChoice(event.currentTarget)}
+                    aria-disabled={!canEditStaffDetails}
+                    className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500 ${canEditStaffDetails ? '' : 'cursor-not-allowed'}`}
                 >
                     Add Staff
                 </button>
@@ -908,6 +951,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     sctTerminology={sctTerminology}
                     trainingReportDisplayName={trainingReportDisplayName}
                     trainingReportStatusFieldLabel={trainingReportStatusFieldLabel}
+                    canUsePlatformPermission={canUsePlatformPermission}
                 />
         )}
 
@@ -965,6 +1009,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             )}
         />
       )}
+      <PermissionNotice
+        anchorRect={permissionNoticeRect}
+        onClose={() => setPermissionNoticeRect(null)}
+      />
     </>
   );
 };

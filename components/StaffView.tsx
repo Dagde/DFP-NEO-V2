@@ -266,6 +266,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             crewPositionTerminology={props.crewPositionTerminology}
             staffQualificationCatalogue={props.staffQualificationCatalogue}
             sctTerminology={props.sctTerminology}
+            canUsePlatformPermission={props.canUsePlatformPermission}
             defaultUnitCode={shouldShowUnitTabs ? activeUnitTab : props.activeUnitCode}
             defaultLocationName={props.defaultLocationName}
           />

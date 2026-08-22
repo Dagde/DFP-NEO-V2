@@ -4,6 +4,7 @@ import { InstructorRank, Instructor, InstructorCategory, SeatConfig, Unavailabil
 import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import AuditButton from './AuditButton';
+import PermissionNotice from './PermissionNotice';
 import { InsertEventModal, LmpEventEditModal, type InsertLmpEventRequest } from './TraineeLmpView';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
@@ -140,6 +141,7 @@ interface InstructorProfileFlyoutProps {
   sctTerminology?: SctTerminology;
   trainingReportDisplayName?: string;
   trainingReportStatusFieldLabel?: string;
+  canUsePlatformPermission?: (permissionId: string) => boolean;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -353,6 +355,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   trainingReportDisplayName = 'Training Report',
   trainingReportStatusFieldLabel = 'Mission Status',
+  canUsePlatformPermission,
 }) => {
   const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
@@ -480,6 +483,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [phoneNumber, setPhoneNumber] = useState(instructor.phoneNumber || '');
   const [email, setEmail] = useState(instructor.email || '');
   const [permissions, setPermissions] = useState<string[]>(instructor.permissions || []);
+  const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
   const [assignedQualifications, setAssignedQualifications] = useState<string[]>(() => getAssignedQualificationIds(instructor));
   const [priorExperience, setPriorExperience] = useState<LogbookExperience>(instructor.priorExperience || initialExperience);
 
@@ -1128,12 +1132,50 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     }
   }, [profileInitialTab]);
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
-  const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
+  const tabBtnClass = (tab: string, allowed = true) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}${allowed ? '' : ' cursor-not-allowed'}`;
   // Ref for the scrollable content area - used to scroll to top when a tab opens
   const contentScrollRef = useRef<HTMLDivElement>(null);
+  const canUsePermission = canUsePlatformPermission || (() => true);
+  const normaliseIdentityValue = (value?: string | number | null): string => (
+    String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9@.]/g, '')
+  );
+  const isOwnStaffProfile = useMemo(() => {
+    const userKeys = [currentUserId, currentUserName].map(normaliseIdentityValue).filter(Boolean);
+    if (userKeys.length === 0) return false;
+    const staffKeys = [
+      (instructor as any).id,
+      (instructor as any).userId,
+      (instructor as any).personnelId,
+      instructor.idNumber,
+      instructor.email,
+      instructor.name,
+    ].map(normaliseIdentityValue).filter(Boolean);
+    return userKeys.some(key => staffKeys.includes(key));
+  }, [currentUserId, currentUserName, instructor]);
+  const canUseStaffProfileAction = (permissionId: string): boolean => (
+    isOwnStaffProfile || canUsePermission(permissionId)
+  );
+  const staffProfileTabPermissions: Partial<Record<NonNullable<StaffProfileTab>, string>> = {
+    unavailable: 'staff.profile.unavailable.use',
+    currency: 'staff.profile.currency.use',
+    logbook: 'staff.profile.logbook.use',
+    sct: 'staff.profile.sctRequest.use',
+    trainingReports: 'staff.profile.trainingReport.use',
+    trainingProgress: 'staff.profile.trainingProgress.use',
+  };
+  const canOpenStaffProfileTab = (tab: NonNullable<StaffProfileTab>): boolean => (
+    canUseStaffProfileAction(staffProfileTabPermissions[tab] || 'staff.profile.view')
+  );
+  const showPermissionNoticeForElement = (element: HTMLElement) => {
+    setPermissionNoticeRect(element.getBoundingClientRect());
+  };
 
   // Toggle: clicking active tab closes it; clicking another opens it
-  const handleTabClick = (tab: typeof activeTab) => {
+  const handleTabClick = (tab: typeof activeTab, anchor?: HTMLElement) => {
+    if (tab && !canOpenStaffProfileTab(tab)) {
+      if (anchor) showPermissionNoticeForElement(anchor);
+      return;
+    }
     setActiveTab(prev => {
       const next = prev === tab ? null : tab;
       // Scroll to top so the tab panel is visible
@@ -2384,13 +2426,20 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             {/* RIGHT BUTTON PANEL */}
             <div className="w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#0f1824] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]">
               {!isEditing && !isCreating && (<>
-                <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavailable</button>
-                <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
-                <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
-                <button onClick={() => handleTabClick('sct')} className={tabBtnClass('sct')}>Request {continuationShortLabel}</button>
-                <button onClick={() => handleTabClick('trainingReports')} className={tabBtnClass('trainingReports')}>Training Reports</button>
-                <button onClick={() => handleTabClick('trainingProgress')} className={tabBtnClass('trainingProgress')}>Training Progress</button>
-                <button onClick={() => { setActiveTab(null); handleEdit(); }} disabled={isFrozen} className={btnClass}>Edit</button>
+                <button onClick={(event) => handleTabClick('unavailable', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenStaffProfileTab('unavailable'))}>Unavailable</button>
+                <button onClick={(event) => handleTabClick('currency', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('currency')} className={tabBtnClass('currency', canOpenStaffProfileTab('currency'))}>Currency</button>
+                <button onClick={(event) => handleTabClick('logbook', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('logbook')} className={tabBtnClass('logbook', canOpenStaffProfileTab('logbook'))}>Logbook</button>
+                <button onClick={(event) => handleTabClick('sct', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('sct')} className={tabBtnClass('sct', canOpenStaffProfileTab('sct'))}>Request {continuationShortLabel}</button>
+                <button onClick={(event) => handleTabClick('trainingReports', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('trainingReports')} className={tabBtnClass('trainingReports', canOpenStaffProfileTab('trainingReports'))}>Training Reports</button>
+                <button onClick={(event) => handleTabClick('trainingProgress', event.currentTarget)} aria-disabled={!canOpenStaffProfileTab('trainingProgress')} className={tabBtnClass('trainingProgress', canOpenStaffProfileTab('trainingProgress'))}>Training Progress</button>
+                <button onClick={(event) => {
+                  if (!canUseStaffProfileAction('staff.profile.edit')) {
+                    showPermissionNoticeForElement(event.currentTarget);
+                    return;
+                  }
+                  setActiveTab(null);
+                  handleEdit();
+                }} disabled={isFrozen} aria-disabled={!canUseStaffProfileAction('staff.profile.edit')} className={`${btnClass} ${canUseStaffProfileAction('staff.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
                 <button onClick={onClose} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>
@@ -2498,6 +2547,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       {showAddUnavailability && !isCreating && (
         <AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnly} onSave={handleSaveUnavailability} unavailabilityPeriods={unavailabilityPeriods} onRemove={handleRemoveUnavailability} />
       )}
+      <PermissionNotice
+        anchorRect={permissionNoticeRect}
+        onClose={() => setPermissionNoticeRect(null)}
+      />
     </>
   );
 };

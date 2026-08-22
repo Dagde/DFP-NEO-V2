@@ -57738,7 +57738,8 @@ const InstructorProfileFlyout = ({
   staffQualificationCatalogue: staffQualificationCatalogue2,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   trainingReportDisplayName = "Training Report",
-  trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status"
+  trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status",
+  canUsePlatformPermission
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
@@ -57837,6 +57838,7 @@ const InstructorProfileFlyout = ({
   const [phoneNumber, setPhoneNumber] = reactExports.useState(instructor.phoneNumber || "");
   const [email, setEmail] = reactExports.useState(instructor.email || "");
   const [permissions, setPermissions] = reactExports.useState(instructor.permissions || []);
+  const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   const [assignedQualifications, setAssignedQualifications] = reactExports.useState(() => getAssignedQualificationIds(instructor));
   const [priorExperience, setPriorExperience] = reactExports.useState(instructor.priorExperience || initialExperience);
   const [isTestingOfficer, setIsTestingOfficer] = reactExports.useState(instructor.isTestingOfficer);
@@ -58419,9 +58421,41 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     }
   }, [profileInitialTab]);
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
-  const tabBtnClass = (tab) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? " active" : ""}`;
+  const tabBtnClass = (tab, allowed = true) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? " active" : ""}${allowed ? "" : " cursor-not-allowed"}`;
   const contentScrollRef = reactExports.useRef(null);
-  const handleTabClick = (tab) => {
+  const canUsePermission = canUsePlatformPermission || (() => true);
+  const normaliseIdentityValue = (value) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9@.]/g, "");
+  const isOwnStaffProfile = reactExports.useMemo(() => {
+    const userKeys = [currentUserId, currentUserName].map(normaliseIdentityValue).filter(Boolean);
+    if (userKeys.length === 0) return false;
+    const staffKeys = [
+      instructor.id,
+      instructor.userId,
+      instructor.personnelId,
+      instructor.idNumber,
+      instructor.email,
+      instructor.name
+    ].map(normaliseIdentityValue).filter(Boolean);
+    return userKeys.some((key) => staffKeys.includes(key));
+  }, [currentUserId, currentUserName, instructor]);
+  const canUseStaffProfileAction = (permissionId) => isOwnStaffProfile || canUsePermission(permissionId);
+  const staffProfileTabPermissions = {
+    unavailable: "staff.profile.unavailable.use",
+    currency: "staff.profile.currency.use",
+    logbook: "staff.profile.logbook.use",
+    sct: "staff.profile.sctRequest.use",
+    trainingReports: "staff.profile.trainingReport.use",
+    trainingProgress: "staff.profile.trainingProgress.use"
+  };
+  const canOpenStaffProfileTab = (tab) => canUseStaffProfileAction(staffProfileTabPermissions[tab] || "staff.profile.view");
+  const showPermissionNoticeForElement = (element) => {
+    setPermissionNoticeRect(element.getBoundingClientRect());
+  };
+  const handleTabClick = (tab, anchor) => {
+    if (tab && !canOpenStaffProfileTab(tab)) {
+      if (anchor) showPermissionNoticeForElement(anchor);
+      return;
+    }
     setActiveTab((prev) => {
       const next = prev === tab ? null : tab;
       if (next !== null) {
@@ -59664,19 +59698,23 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#0f1824] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]", children: [
           !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("unavailable"), className: tabBtnClass("unavailable"), children: "Unavailable" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("currency"), className: tabBtnClass("currency"), children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: () => handleTabClick("sct"), className: tabBtnClass("sct"), children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("unavailable", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenStaffProfileTab("unavailable")), children: "Unavailable" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("currency", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("currency"), className: tabBtnClass("currency", canOpenStaffProfileTab("currency")), children: "Currency" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("logbook", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("logbook"), className: tabBtnClass("logbook", canOpenStaffProfileTab("logbook")), children: "Logbook" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: (event) => handleTabClick("sct", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("sct"), className: tabBtnClass("sct", canOpenStaffProfileTab("sct")), children: [
               "Request ",
               continuationShortLabel
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("trainingReports"), className: tabBtnClass("trainingReports"), children: "Training Reports" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("trainingProgress"), className: tabBtnClass("trainingProgress"), children: "Training Progress" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("trainingReports", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("trainingReports"), className: tabBtnClass("trainingReports", canOpenStaffProfileTab("trainingReports")), children: "Training Reports" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("trainingProgress", event.currentTarget), "aria-disabled": !canOpenStaffProfileTab("trainingProgress"), className: tabBtnClass("trainingProgress", canOpenStaffProfileTab("trainingProgress")), children: "Training Progress" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
+              if (!canUseStaffProfileAction("staff.profile.edit")) {
+                showPermissionNoticeForElement(event.currentTarget);
+                return;
+              }
               setActiveTab(null);
               handleEdit();
-            }, disabled: isFrozen, className: btnClass, children: "Edit" }),
+            }, disabled: isFrozen, "aria-disabled": !canUseStaffProfileAction("staff.profile.edit"), className: `${btnClass} ${canUseStaffProfileAction("staff.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -59785,7 +59823,14 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
         )
       ] })
     ] }) }),
-    showAddUnavailability && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnly, onSave: handleSaveUnavailability, unavailabilityPeriods, onRemove: handleRemoveUnavailability })
+    showAddUnavailability && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnly, onSave: handleSaveUnavailability, unavailabilityPeriods, onRemove: handleRemoveUnavailability }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PermissionNotice,
+      {
+        anchorRect: permissionNoticeRect,
+        onClose: () => setPermissionNoticeRect(null)
+      }
+    )
   ] });
 };
 const AddInstructorChoiceFlyout = ({ onClose, onIndividual, onBulk }) => {
@@ -60389,7 +60434,8 @@ const InstructorListView = ({
   trainingReportDisplayName = "Training Report",
   trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status",
   defaultUnitCode = "",
-  defaultLocationName = ""
+  defaultLocationName = "",
+  canUsePlatformPermission
 }) => {
   const [hoveredInstructor, setHoveredInstructor] = reactExports.useState(null);
   const [flyoutPosition, setFlyoutPosition] = reactExports.useState(null);
@@ -60402,13 +60448,36 @@ const InstructorListView = ({
   const [newInstructorTemplate, setNewInstructorTemplate] = reactExports.useState(null);
   const [isArchiveMode, setIsArchiveMode] = reactExports.useState(false);
   const [instructorToArchive, setInstructorToArchive] = reactExports.useState(null);
-  const normalisedCurrentUserRole = String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
-  const canManageArchive = normalisedCurrentUserRole === "ADMIN" || normalisedCurrentUserRole === "SUPER_ADMIN";
   const [showArchivedFlyout, setShowArchivedFlyout] = reactExports.useState(false);
   const [selectedStaffRoleFilter, setSelectedStaffRoleFilter] = reactExports.useState("ALL");
+  const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   const staffNameResolver = reactExports.useMemo(() => buildCompactPersonNameResolver(instructorsData), [instructorsData]);
+  const canUsePermission = canUsePlatformPermission || (() => true);
+  const normaliseIdentityValue = (value) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9@.]/g, "");
+  const isCurrentUserStaffRecord = (instructor) => {
+    const userKeys = [
+      currentUserId,
+      currentUserName
+    ].map(normaliseIdentityValue).filter(Boolean);
+    if (userKeys.length === 0) return false;
+    const staffKeys = [
+      instructor.id,
+      instructor.userId,
+      instructor.personnelId,
+      instructor.idNumber,
+      instructor.email,
+      instructor.name
+    ].map(normaliseIdentityValue).filter(Boolean);
+    return userKeys.some((key) => staffKeys.includes(key));
+  };
+  const canViewStaffProfile = (instructor) => isCurrentUserStaffRecord(instructor) || canUsePermission("staff.profile.view");
+  const canEditStaffDetails = canUsePermission("staff.edit") || canUsePermission("staff.profile.edit");
+  const canManageArchive = canEditStaffDetails;
   reactExports.useEffect(() => {
     if (selectedPersonForProfile) {
+      if (!canViewStaffProfile(selectedPersonForProfile)) {
+        return;
+      }
       const matchingElement = document.getElementById(`instructor-row-${getPersonDomIdSuffix(selectedPersonForProfile, "staff")}`);
       if (matchingElement) {
         setOriginRect(matchingElement.getBoundingClientRect());
@@ -60642,6 +60711,10 @@ const InstructorListView = ({
     setFlyoutPosition(null);
   };
   const handleInstructorClick = (e, instructor) => {
+    if (!canViewStaffProfile(instructor)) {
+      setPermissionNoticeRect(e.currentTarget.getBoundingClientRect());
+      return;
+    }
     if (selectedInstructor && samePersonRecord(selectedInstructor, instructor)) {
       handleCloseProfile();
     } else {
@@ -60660,7 +60733,11 @@ const InstructorListView = ({
       setNewInstructorTemplate(null);
     }, 300);
   };
-  const handleShowAddChoice = () => {
+  const handleShowAddChoice = (anchor) => {
+    if (!canEditStaffDetails) {
+      setPermissionNoticeRect(anchor.getBoundingClientRect());
+      return;
+    }
     setIsArchiveMode(false);
     setShowAddChoice(true);
   };
@@ -60708,8 +60785,11 @@ const InstructorListView = ({
       return false;
     }
   };
-  const toggleArchiveMode = () => {
-    if (!canManageArchive) return;
+  const toggleArchiveMode = (anchor) => {
+    if (!canManageArchive) {
+      setPermissionNoticeRect(anchor.getBoundingClientRect());
+      return;
+    }
     setIsArchiveMode(!isArchiveMode);
     setSelectedInstructor(null);
   };
@@ -60847,7 +60927,8 @@ const InstructorListView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
-              onClick: toggleArchiveMode,
+              onClick: (event) => toggleArchiveMode(event.currentTarget),
+              "aria-disabled": !canManageArchive,
               className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${isArchiveMode ? "text-green-500" : "text-black"} ${canManageArchive ? "" : "cursor-not-allowed"}`,
               children: isArchiveMode ? "Done" : "Archive"
             }
@@ -60855,8 +60936,9 @@ const InstructorListView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
-              onClick: handleShowAddChoice,
-              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500",
+              onClick: (event) => handleShowAddChoice(event.currentTarget),
+              "aria-disabled": !canEditStaffDetails,
+              className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500 ${canEditStaffDetails ? "" : "cursor-not-allowed"}`,
               children: "Add Staff"
             }
           ),
@@ -60930,7 +61012,8 @@ const InstructorListView = ({
         staffQualificationCatalogue: staffQualificationCatalogue2,
         sctTerminology,
         trainingReportDisplayName,
-        trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2
+        trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2,
+        canUsePlatformPermission
       }
     ),
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60989,6 +61072,13 @@ const InstructorListView = ({
           `Enter your password to restore ${instructorName}.`,
           "Restore Password Required"
         )
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PermissionNotice,
+      {
+        anchorRect: permissionNoticeRect,
+        onClose: () => setPermissionNoticeRect(null)
       }
     )
   ] });
@@ -61448,6 +61538,7 @@ const StaffView = (props) => {
           crewPositionTerminology: props.crewPositionTerminology,
           staffQualificationCatalogue: props.staffQualificationCatalogue,
           sctTerminology: props.sctTerminology,
+          canUsePlatformPermission: props.canUsePlatformPermission,
           defaultUnitCode: shouldShowUnitTabs ? activeUnitTab : props.activeUnitCode,
           defaultLocationName: props.defaultLocationName
         }
