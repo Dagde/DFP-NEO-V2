@@ -59,14 +59,10 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     Priorities: 'neo.priorities',
     BuildIntelligence: 'neo.intelligence',
   };
-  const hasSpecificNeoNavigationPermission = Object.values(neoNavigationPermissions).some(permissionId => canUsePermission(permissionId));
   const canOpenNeoView = (view: string) => {
     const permissionId = neoNavigationPermissions[view];
     if (!permissionId) return canOpen(view);
-    return canOpen(view) && (
-      canUsePermission(permissionId)
-      || (!hasSpecificNeoNavigationPermission && canOpen(view))
-    );
+    return canOpen(view) && canUsePermission(permissionId);
   };
   const isModelUnavailable = (view: string) => modelUnavailableViews.includes(view);
   const canBuild = canRunNeoBuild && canOpenNeoView('NextDayBuild');

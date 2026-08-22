@@ -2516,8 +2516,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     settingsTraceRef.current.maxRenderGapMs = Number(Math.max(settingsTraceRef.current.maxRenderGapMs, now - previousRenderAt).toFixed(2));
   });
 
-  const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
-  const hasRankTerminologyEditPermission = canUsePlatformPermission?.('settings.rankTerminology.edit') ?? canEdit;
+  const hasLegacySettingsAdminRole = ['Super Admin', 'Admin'].includes(currentUserPermission);
+  const hasSettingsPermission = (permissionId: string): boolean => (
+    canUsePlatformPermission ? canUsePlatformPermission(permissionId) : hasLegacySettingsAdminRole
+  );
+  const hasAnySettingsEditPermission = [
+    'settings.edit',
+    'settings.platform.edit',
+    'settings.userAccess.edit',
+    'settings.rankTerminology.edit',
+    'settings.schedulingRules.edit',
+  ].some(hasSettingsPermission);
+  const canEdit = hasLegacySettingsAdminRole || hasAnySettingsEditPermission;
+  const hasRankTerminologyEditPermission = hasSettingsPermission('settings.rankTerminology.edit') || hasSettingsPermission('settings.edit');
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const canEditTrainingReportTemplate = canEdit && !!trainingReportTemplateUnlocked;
@@ -7267,7 +7278,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const isSectionEditActive = (sectionId: string): boolean => (
     !sectionOnly || sectionEditUnlocked[sectionId] === true
   );
-  const canEditSection = (sectionId: string): boolean => canEdit && isSectionEditActive(sectionId);
+  const getRequiredSettingsEditPermission = (sectionId: string): string => {
+    if (sectionId === 'platform-user-access' || sectionId === 'platform-permission-profiles') return 'settings.userAccess.edit';
+    if (sectionId.includes('rank') || sectionId.includes('terminology')) return 'settings.rankTerminology.edit';
+    if (sectionId.includes('scheduling-rule')) return 'settings.schedulingRules.edit';
+    return 'settings.platform.edit';
+  };
+  const canEditSectionPermission = (sectionId: string): boolean => (
+    hasLegacySettingsAdminRole
+    || hasSettingsPermission('settings.edit')
+    || hasSettingsPermission(getRequiredSettingsEditPermission(sectionId))
+  );
+  const canEditSection = (sectionId: string): boolean => (
+    canEdit && canEditSectionPermission(sectionId) && isSectionEditActive(sectionId)
+  );
   const saveSectionAndExitEdit = async (sectionId: string) => {
     const saved = await save(undefined, sectionId);
     if (saved) {
@@ -7275,7 +7299,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }
   };
   const renderSectionEditSaveButton = (sectionId: string) => {
-    if (!canEdit) return null;
+    if (!canEdit || !canEditSectionPermission(sectionId)) return null;
     const isEditing = isSectionEditActive(sectionId);
     return (
       <button

@@ -95,6 +95,7 @@ interface CourseRosterViewProps {
     staffQualificationCatalogue?: StaffQualificationCatalogue;
     operationalModel?: OperationalModelCode | string;
     crewPositionTerminology?: CrewPositionTerminology;
+    canUsePlatformPermission?: (permissionId: string) => boolean;
 }
 
 const generateNewTraineeTemplate = (defaults: Partial<Pick<Trainee, 'course' | 'unit' | 'location' | 'service'>> = {}): Trainee => ({
@@ -197,6 +198,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     staffQualificationCatalogue,
     operationalModel = 'flight_school',
     crewPositionTerminology,
+    canUsePlatformPermission,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -700,6 +702,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     phraseBank={phraseBank}
                     trainingReportTemplate={trainingReportTemplate}
                     onAccessDenied={onAccessDenied}
+                    canUsePlatformPermission={canUsePlatformPermission}
                 />
             )}
             {hoveredTrainee && flyoutPosition && (

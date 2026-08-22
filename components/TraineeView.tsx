@@ -227,6 +227,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             canViewTraineeLmp={props.canViewTraineeLmp}
             canAddRemedialPackageForTrainee={props.canAddRemedialPackageForTrainee}
             onAccessDenied={props.onAccessDenied}
+            canUsePlatformPermission={props.canUsePlatformPermission}
           />
         )}
         {activeTab === 'schedule' && (

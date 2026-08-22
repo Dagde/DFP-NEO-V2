@@ -48757,6 +48757,7 @@ appliedUpdates.forEach(update => {
                             pt051Assessments={pt051Assessments}
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}
+                            canUsePlatformPermission={canUsePlatformPermission}
                         />;
             case 'HateSheet':
                 return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">

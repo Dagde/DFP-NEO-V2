@@ -8927,11 +8927,10 @@ const RightSidebar = ({
     Priorities: "neo.priorities",
     BuildIntelligence: "neo.intelligence"
   };
-  const hasSpecificNeoNavigationPermission = Object.values(neoNavigationPermissions).some((permissionId) => canUsePermission(permissionId));
   const canOpenNeoView = (view2) => {
     const permissionId = neoNavigationPermissions[view2];
     if (!permissionId) return canOpen(view2);
-    return canOpen(view2) && (canUsePermission(permissionId) || !hasSpecificNeoNavigationPermission && canOpen(view2));
+    return canOpen(view2) && canUsePermission(permissionId);
   };
   const isModelUnavailable = (view2) => modelUnavailableViews.includes(view2);
   const canBuild = canRunNeoBuild && canOpenNeoView("NextDayBuild");
@@ -26584,10 +26583,12 @@ const TraineeProfileFlyout = ({
   platformConfig = null,
   staffQualificationCatalogue: staffQualificationCatalogue2,
   operationalModel = "flight_school",
-  crewPositionTerminology
+  crewPositionTerminology,
+  canUsePlatformPermission
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
+  const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
   const canManageAccountAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase());
   const allAcademicLmpCourses = reactExports.useMemo(() => {
@@ -26623,8 +26624,42 @@ const TraineeProfileFlyout = ({
   const localCurrencyStatusRef = reactExports.useRef(void 0);
   const [showCurrencyAudit, setShowCurrencyAudit] = reactExports.useState(false);
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
-  const tabBtnClass = (tab) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab || tab === "hatesheet" && activeTab === "pt051" ? " active" : ""}`;
+  const tabBtnClass = (tab, allowed = true) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab || tab === "hatesheet" && activeTab === "pt051" ? " active" : ""}${allowed ? "" : " cursor-not-allowed"}`;
   const contentScrollRef = reactExports.useRef(null);
+  const canUsePermission = canUsePlatformPermission || (() => true);
+  const normaliseIdentityValue = (value) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9@.]/g, "");
+  const isOwnTraineeProfile = reactExports.useMemo(() => {
+    const userKeys = [currentUserId, currentUserName].map(normaliseIdentityValue).filter(Boolean);
+    if (userKeys.length === 0) return false;
+    const traineeKeys = [
+      trainee.id,
+      trainee.userId,
+      trainee.personnelId,
+      trainee.idNumber,
+      trainee.email,
+      trainee.name,
+      trainee.fullName
+    ].map(normaliseIdentityValue).filter(Boolean);
+    return userKeys.some((key) => traineeKeys.includes(key));
+  }, [currentUserId, currentUserName, trainee]);
+  const canUseTraineeProfileAction = (permissionId) => isOwnTraineeProfile || canUsePermission(permissionId);
+  const traineeProfileTabPermissions = {
+    unavailable: "trainee.profile.unavailable.use",
+    currency: "trainee.profile.currency.use",
+    review: "trainee.profile.review.use",
+    logbook: "trainee.profile.logbook.use",
+    hatesheet: "trainee.profile.trainingReport.use",
+    pt051: "trainee.profile.trainingReport.use",
+    lmp: "trainee.profile.lmp.use"
+  };
+  const canOpenTraineeProfileTab = (tab) => {
+    if ((tab === "hatesheet" || tab === "pt051") && !canViewPt051) return false;
+    if (tab === "lmp" && !canViewIndividualLmp) return false;
+    return canUseTraineeProfileAction(traineeProfileTabPermissions[tab] || "trainee.profile.own");
+  };
+  const showPermissionNoticeForElement = (element) => {
+    setPermissionNoticeRect(element.getBoundingClientRect());
+  };
   const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
   const activeTrainingReportUnitCode = trainee.unit || "";
   const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
@@ -27064,13 +27099,19 @@ const TraineeProfileFlyout = ({
     addText(`Totals: Logbook ${reviewFormatHours(reviewData.hourTotals.logbook)} | Syllabus ${reviewFormatHours(reviewData.hourTotals.syllabus)} | Effective ${reviewFormatHours(reviewData.hourTotals.effective)}`, margin, y, 8, "bold");
     doc.save(`Trainee_Review_${trainee.name.replace(/[^A-Za-z0-9]+/g, "_")}.pdf`);
   };
-  const handleTabClick = (tab) => setActiveTab((prev) => {
-    const next = prev === tab ? null : tab;
-    if (next !== null) {
-      setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 0);
+  const handleTabClick = (tab, anchor) => {
+    if (tab && !canOpenTraineeProfileTab(tab)) {
+      if (anchor) showPermissionNoticeForElement(anchor);
+      return;
     }
-    return next;
-  });
+    setActiveTab((prev) => {
+      const next = prev === tab ? null : tab;
+      if (next !== null) {
+        setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 0);
+      }
+      return next;
+    });
+  };
   const [showPauseConfirm, setShowPauseConfirm] = reactExports.useState(false);
   const [showScheduleWarning, setShowScheduleWarning] = reactExports.useState(false);
   const [name, setName] = reactExports.useState(trainee.name);
@@ -29072,13 +29113,20 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col gap-px", children: [
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("unavailable"), className: tabBtnClass("unavailable"), children: "Unavail­able" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("currency"), className: tabBtnClass("currency"), children: "Currency" }),
-            canViewPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("unavailable", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenTraineeProfileTab("unavailable")), children: "Unavail­able" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("currency", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("currency"), className: tabBtnClass("currency", canOpenTraineeProfileTab("currency")), children: "Currency" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
-                onClick: handleHateSheetClick,
-                className: tabBtnClass("hatesheet"),
+                onClick: (event) => {
+                  if (!canOpenTraineeProfileTab("hatesheet")) {
+                    showPermissionNoticeForElement(event.currentTarget);
+                    return;
+                  }
+                  handleHateSheetClick();
+                },
+                "aria-disabled": !canOpenTraineeProfileTab("hatesheet"),
+                className: tabBtnClass("hatesheet", canOpenTraineeProfileTab("hatesheet")),
                 title: "Training Report",
                 children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
                   "Training",
@@ -29087,15 +29135,33 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                 ] })
               }
             ),
-            canViewIndividualLmp && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleIndividualLMPClick, className: tabBtnClass("lmp"), children: "View Individual LMP" }),
-            canAddRemedialPackage && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("review"), className: tabBtnClass("review"), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
+              if (!canOpenTraineeProfileTab("lmp")) {
+                showPermissionNoticeForElement(event.currentTarget);
+                return;
+              }
+              handleIndividualLMPClick();
+            }, "aria-disabled": !canOpenTraineeProfileTab("lmp"), className: tabBtnClass("lmp", canOpenTraineeProfileTab("lmp")), children: "View Individual LMP" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
+              if (!canAddRemedialPackage) {
+                showPermissionNoticeForElement(event.currentTarget);
+                return;
+              }
+              onAddRemedialPackage(trainee);
+            }, "aria-disabled": !canAddRemedialPackage, className: `${btnClass} ${canAddRemedialPackage ? "" : "cursor-not-allowed"}`, children: "Add Remedial Package" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("review", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("review"), className: tabBtnClass("review", canOpenTraineeProfileTab("review")), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
               "Trainee",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Review"
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setIsEditing(true), disabled: isFrozen, className: btnClass, children: "Edit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("logbook", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("logbook"), className: tabBtnClass("logbook", canOpenTraineeProfileTab("logbook")), children: "Logbook" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => {
+              if (!canUseTraineeProfileAction("trainee.profile.edit")) {
+                showPermissionNoticeForElement(event.currentTarget);
+                return;
+              }
+              setIsEditing(true);
+            }, disabled: isFrozen, "aria-disabled": !canUseTraineeProfileAction("trainee.profile.edit"), className: `${btnClass} ${canUseTraineeProfileAction("trainee.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -29113,7 +29179,14 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
       setShowScheduleWarning(false);
       setShowPauseConfirm(true);
     } }),
-    showPauseConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx(PauseConfirmationFlyout, { isPaused, onConfirm: confirmPause, onCancel: () => setShowPauseConfirm(false) })
+    showPauseConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx(PauseConfirmationFlyout, { isPaused, onConfirm: confirmPause, onCancel: () => setShowPauseConfirm(false) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PermissionNotice,
+      {
+        anchorRect: permissionNoticeRect,
+        onClose: () => setPermissionNoticeRect(null)
+      }
+    )
   ] });
 };
 const RestoreCourseConfirmation = ({ courseNumber, onConfirm, onClose }) => {
@@ -30609,7 +30682,8 @@ const CourseRosterView = ({
   platformConfig = null,
   staffQualificationCatalogue: staffQualificationCatalogue2,
   operationalModel = "flight_school",
-  crewPositionTerminology
+  crewPositionTerminology,
+  canUsePlatformPermission
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -31028,7 +31102,8 @@ const CourseRosterView = ({
         registerDirtyCheck,
         phraseBank,
         trainingReportTemplate,
-        onAccessDenied
+        onAccessDenied,
+        canUsePlatformPermission
       }
     ),
     hoveredTrainee && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -61733,7 +61808,8 @@ const TraineeView = (props) => {
           canEditTraineePt051: props.canEditTraineePt051,
           canViewTraineeLmp: props.canViewTraineeLmp,
           canAddRemedialPackageForTrainee: props.canAddRemedialPackageForTrainee,
-          onAccessDenied: props.onAccessDenied
+          onAccessDenied: props.onAccessDenied,
+          canUsePlatformPermission: props.canUsePlatformPermission
         }
       ),
       activeTab === "schedule" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -75173,8 +75249,17 @@ const PlatformConfigurationSettings = ({
     settingsTraceRef.current.lastRenderAtMs = now;
     settingsTraceRef.current.maxRenderGapMs = Number(Math.max(settingsTraceRef.current.maxRenderGapMs, now - previousRenderAt).toFixed(2));
   });
-  const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
-  const hasRankTerminologyEditPermission = canUsePlatformPermission?.("settings.rankTerminology.edit") ?? canEdit;
+  const hasLegacySettingsAdminRole = ["Super Admin", "Admin"].includes(currentUserPermission);
+  const hasSettingsPermission = (permissionId) => canUsePlatformPermission ? canUsePlatformPermission(permissionId) : hasLegacySettingsAdminRole;
+  const hasAnySettingsEditPermission = [
+    "settings.edit",
+    "settings.platform.edit",
+    "settings.userAccess.edit",
+    "settings.rankTerminology.edit",
+    "settings.schedulingRules.edit"
+  ].some(hasSettingsPermission);
+  const canEdit = hasLegacySettingsAdminRole || hasAnySettingsEditPermission;
+  const hasRankTerminologyEditPermission = hasSettingsPermission("settings.rankTerminology.edit") || hasSettingsPermission("settings.edit");
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const canEditTrainingReportTemplateSection = (sectionId) => canEdit && trainingReportTemplateUnlocked === sectionId;
@@ -79028,7 +79113,14 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     if (saved) setCrewCompositionUnlocked(false);
   };
   const isSectionEditActive = (sectionId) => !sectionOnly || sectionEditUnlocked[sectionId] === true;
-  const canEditSection = (sectionId) => canEdit && isSectionEditActive(sectionId);
+  const getRequiredSettingsEditPermission = (sectionId) => {
+    if (sectionId === "platform-user-access" || sectionId === "platform-permission-profiles") return "settings.userAccess.edit";
+    if (sectionId.includes("rank") || sectionId.includes("terminology")) return "settings.rankTerminology.edit";
+    if (sectionId.includes("scheduling-rule")) return "settings.schedulingRules.edit";
+    return "settings.platform.edit";
+  };
+  const canEditSectionPermission = (sectionId) => hasLegacySettingsAdminRole || hasSettingsPermission("settings.edit") || hasSettingsPermission(getRequiredSettingsEditPermission(sectionId));
+  const canEditSection = (sectionId) => canEdit && canEditSectionPermission(sectionId) && isSectionEditActive(sectionId);
   const saveSectionAndExitEdit = async (sectionId) => {
     const saved = await save(void 0, sectionId);
     if (saved) {
@@ -79036,7 +79128,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     }
   };
   const renderSectionEditSaveButton = (sectionId) => {
-    if (!canEdit) return null;
+    if (!canEdit || !canEditSectionPermission(sectionId)) return null;
     const isEditing = isSectionEditActive(sectionId);
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
@@ -136933,7 +137025,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             trainingReportTemplate,
             pt051Assessments,
             pt051PerformanceLoading,
-            userProfile: currentUser2
+            userProfile: currentUser2,
+            canUsePlatformPermission
           }
         );
       case "HateSheet":

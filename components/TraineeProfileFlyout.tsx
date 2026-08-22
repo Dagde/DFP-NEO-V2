@@ -14,6 +14,7 @@ import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 import HateSheetView from './HateSheetView';
 import TraineeLmpView from './TraineeLmpView';
 import TrainingReportView from './PT051View';
+import PermissionNotice from './PermissionNotice';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, formatResourceLabel as formatConfiguredResourceLabel, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -198,6 +199,7 @@ interface TraineeProfileFlyoutProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   operationalModel?: OperationalModelCode | string;
   crewPositionTerminology?: CrewPositionTerminology;
+  canUsePlatformPermission?: (permissionId: string) => boolean;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -551,9 +553,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   staffQualificationCatalogue,
   operationalModel = 'flight_school',
   crewPositionTerminology,
+  canUsePlatformPermission,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
+    const [permissionNoticeRect, setPermissionNoticeRect] = useState<DOMRect | null>(null);
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
     const canManageAccountAccess = ['ADMIN', 'SUPER_ADMIN'].includes(String(currentUserRole || '').trim().toUpperCase());
 
@@ -601,9 +605,47 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     // Audit flyout visibility
     const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
     const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
-    const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab || (tab === 'hatesheet' && activeTab === 'pt051') ? ' active' : ''}`;
+    const tabBtnClass = (tab: string, allowed = true) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab || (tab === 'hatesheet' && activeTab === 'pt051') ? ' active' : ''}${allowed ? '' : ' cursor-not-allowed'}`;
     // Ref for scrollable content area - used to scroll to top when a tab opens
     const contentScrollRef = useRef<HTMLDivElement>(null);
+    const canUsePermission = canUsePlatformPermission || (() => true);
+    const normaliseIdentityValue = (value?: string | number | null): string => (
+        String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9@.]/g, '')
+    );
+    const isOwnTraineeProfile = useMemo(() => {
+        const userKeys = [currentUserId, currentUserName].map(normaliseIdentityValue).filter(Boolean);
+        if (userKeys.length === 0) return false;
+        const traineeKeys = [
+            (trainee as any).id,
+            (trainee as any).userId,
+            (trainee as any).personnelId,
+            trainee.idNumber,
+            trainee.email,
+            trainee.name,
+            trainee.fullName,
+        ].map(normaliseIdentityValue).filter(Boolean);
+        return userKeys.some(key => traineeKeys.includes(key));
+    }, [currentUserId, currentUserName, trainee]);
+    const canUseTraineeProfileAction = (permissionId: string): boolean => (
+        isOwnTraineeProfile || canUsePermission(permissionId)
+    );
+    const traineeProfileTabPermissions: Partial<Record<NonNullable<typeof activeTab>, string>> = {
+        unavailable: 'trainee.profile.unavailable.use',
+        currency: 'trainee.profile.currency.use',
+        review: 'trainee.profile.review.use',
+        logbook: 'trainee.profile.logbook.use',
+        hatesheet: 'trainee.profile.trainingReport.use',
+        pt051: 'trainee.profile.trainingReport.use',
+        lmp: 'trainee.profile.lmp.use',
+    };
+    const canOpenTraineeProfileTab = (tab: NonNullable<typeof activeTab>): boolean => {
+        if ((tab === 'hatesheet' || tab === 'pt051') && !canViewPt051) return false;
+        if (tab === 'lmp' && !canViewIndividualLmp) return false;
+        return canUseTraineeProfileAction(traineeProfileTabPermissions[tab] || 'trainee.profile.own');
+    };
+    const showPermissionNoticeForElement = (element: HTMLElement) => {
+        setPermissionNoticeRect(element.getBoundingClientRect());
+    };
     const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
     const activeTrainingReportUnitCode = trainee.unit || '';
     const activeTrainingReportTemplate = trainingReportTemplate
@@ -1122,13 +1164,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         doc.save(`Trainee_Review_${trainee.name.replace(/[^A-Za-z0-9]+/g, '_')}.pdf`);
     };
 
-    const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => {
-      const next = prev === tab ? null : tab;
-      if (next !== null) {
-        setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
+    const handleTabClick = (tab: typeof activeTab, anchor?: HTMLElement) => {
+      if (tab && !canOpenTraineeProfileTab(tab)) {
+        if (anchor) showPermissionNoticeForElement(anchor);
+        return;
       }
-      return next;
-    });
+      setActiveTab(prev => {
+        const next = prev === tab ? null : tab;
+        if (next !== null) {
+          setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
+        }
+        return next;
+      });
+    };
     const [showPauseConfirm, setShowPauseConfirm] = useState(false);
     const [showScheduleWarning, setShowScheduleWarning] = useState(false);
 
@@ -3388,24 +3436,47 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     <div className="w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col gap-px">
                       {!isEditing && (
                         <>
-                          <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
-                          <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
-                          {canViewPt051 && (
-                            <button
-                              onClick={handleHateSheetClick}
-                              className={tabBtnClass('hatesheet')}
-                              title="Training Report"
-                            >
-                              <span className="leading-tight">Training<br />Report</span>
-                            </button>
-                          )}
-                          {canViewIndividualLmp && <button onClick={handleIndividualLMPClick} className={tabBtnClass('lmp')}>View Individual LMP</button>}
-                          {canAddRemedialPackage && <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>}
-                          <button onClick={() => handleTabClick('review')} className={tabBtnClass('review')}>
+                          <button onClick={(event) => handleTabClick('unavailable', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenTraineeProfileTab('unavailable'))}>Unavail&shy;able</button>
+                          <button onClick={(event) => handleTabClick('currency', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('currency')} className={tabBtnClass('currency', canOpenTraineeProfileTab('currency'))}>Currency</button>
+                          <button
+                            onClick={(event) => {
+                              if (!canOpenTraineeProfileTab('hatesheet')) {
+                                showPermissionNoticeForElement(event.currentTarget);
+                                return;
+                              }
+                              handleHateSheetClick();
+                            }}
+                            aria-disabled={!canOpenTraineeProfileTab('hatesheet')}
+                            className={tabBtnClass('hatesheet', canOpenTraineeProfileTab('hatesheet'))}
+                            title="Training Report"
+                          >
+                            <span className="leading-tight">Training<br />Report</span>
+                          </button>
+                          <button onClick={(event) => {
+                            if (!canOpenTraineeProfileTab('lmp')) {
+                              showPermissionNoticeForElement(event.currentTarget);
+                              return;
+                            }
+                            handleIndividualLMPClick();
+                          }} aria-disabled={!canOpenTraineeProfileTab('lmp')} className={tabBtnClass('lmp', canOpenTraineeProfileTab('lmp'))}>View Individual LMP</button>
+                          <button onClick={(event) => {
+                            if (!canAddRemedialPackage) {
+                              showPermissionNoticeForElement(event.currentTarget);
+                              return;
+                            }
+                            onAddRemedialPackage(trainee);
+                          }} aria-disabled={!canAddRemedialPackage} className={`${btnClass} ${canAddRemedialPackage ? '' : 'cursor-not-allowed'}`}>Add Remedial Package</button>
+                          <button onClick={(event) => handleTabClick('review', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('review')} className={tabBtnClass('review', canOpenTraineeProfileTab('review'))}>
                             <span className="leading-tight">Trainee<br />Review</span>
                           </button>
-                          <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
-                          <button onClick={() => setIsEditing(true)} disabled={isFrozen} className={btnClass}>Edit</button>
+                          <button onClick={(event) => handleTabClick('logbook', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('logbook')} className={tabBtnClass('logbook', canOpenTraineeProfileTab('logbook'))}>Logbook</button>
+                          <button onClick={(event) => {
+                            if (!canUseTraineeProfileAction('trainee.profile.edit')) {
+                              showPermissionNoticeForElement(event.currentTarget);
+                              return;
+                            }
+                            setIsEditing(true);
+                          }} disabled={isFrozen} aria-disabled={!canUseTraineeProfileAction('trainee.profile.edit')} className={`${btnClass} ${canUseTraineeProfileAction('trainee.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
                           <button onClick={onClose} className={btnClass}>Close</button>
                         </>
                       )}
@@ -3427,6 +3498,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={unavailability} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
             {showPauseConfirm && <PauseConfirmationFlyout isPaused={isPaused} onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
+            <PermissionNotice
+                anchorRect={permissionNoticeRect}
+                onClose={() => setPermissionNoticeRect(null)}
+            />
         </>
     );
 
