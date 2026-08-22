@@ -2107,13 +2107,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </div>
                     </div>
 
-                    <div className="flex-shrink-0 w-56 space-y-2">
-                      <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                    <div className="flex-shrink-0 flex gap-2">
+                      <div className={card3d + " w-36 p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                         <div className="text-[10px] text-gray-400 font-semibold mb-2">Qualifications</div>
                         <div className="space-y-1">
                           {assignedQualificationLabels.length > 0
                             ? assignedQualificationLabels.map(label => (
-                                <div key={label} className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold">
+                                <div key={label} className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold break-words">
                                   {label}
                                 </div>
                               ))
@@ -2121,12 +2121,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           }
                         </div>
                       </div>
-                      <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                      <div className={card3d + " w-36 p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                         <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
                         <div className="space-y-1">
                           {assignedPermissionProfileLabels.length > 0
                             ? assignedPermissionProfileLabels.map(label => (
-                                <div key={label} className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold">
+                                <div key={label} className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold break-words">
                                   {label}
                                 </div>
                               ))

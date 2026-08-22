@@ -3175,20 +3175,20 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </div>
                           </div>
 
-                          <div className="flex-shrink-0 w-56 space-y-2">
-                            <div className="bg-gray-700/30 rounded p-2">
+                          <div className="flex-shrink-0 flex gap-2">
+                            <div className="w-36 bg-gray-700/30 rounded p-2">
                               <div className="text-[10px] text-gray-400 mb-1 font-semibold">Qualifications</div>
                               <div className="space-y-1">
                                 {assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map(label => (
-                                  <div key={label} className="rounded border border-teal-500/20 bg-teal-900/80 px-2 py-1 text-teal-200 text-[9px] font-semibold">{label}</div>
+                                  <div key={label} className="rounded border border-teal-500/20 bg-teal-900/80 px-2 py-1 text-teal-200 text-[9px] font-semibold break-words">{label}</div>
                                 )) : <div className="text-gray-500 text-[10px] italic">None</div>}
                               </div>
                             </div>
-                            <div className="bg-gray-700/30 rounded p-2">
+                            <div className="w-36 bg-gray-700/30 rounded p-2">
                               <div className="text-[10px] text-gray-400 mb-1 font-semibold">Permissions</div>
                               <div className="space-y-1">
                                 {visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p: string) => (
-                                  <div key={p} className="rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold">{p}</div>
+                                  <div key={p} className="rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold break-words">{p}</div>
                                 )) : <div className="text-gray-500 text-[10px] italic">None</div>}
                               </div>
                             </div>
