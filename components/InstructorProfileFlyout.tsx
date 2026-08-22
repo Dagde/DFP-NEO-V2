@@ -20,7 +20,13 @@ import {
   normalisePersonnelDisplaySettings,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
-import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
+import {
+  getPlatformAccessContext,
+  getPlatformPermissionProfiles,
+  isFixedCrewLikeOperationalModel,
+  normaliseOperationalModel,
+  type PlatformConfig,
+} from '../utils/platformConfigService';
 import { normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports } from '../utils/airCombatTraining';
 import { type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
@@ -128,6 +134,7 @@ interface InstructorProfileFlyoutProps {
   instructorLabel?: string;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
   operationalModel?: string;
+  platformConfig?: PlatformConfig | null;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   sctTerminology?: SctTerminology;
@@ -340,6 +347,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   instructorLabel = 'Instructor',
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   operationalModel = 'flight_school',
+  platformConfig = null,
   crewPositionTerminology,
   staffQualificationCatalogue,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY,
@@ -1147,6 +1155,26 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     instructorLabel,
     simIpDisplayLabel,
   );
+  const assignedPermissionProfileLabels = useMemo(() => {
+    const accessContext = getPlatformAccessContext(platformConfig, [
+      (instructor as any).id,
+      (instructor as any).userId,
+      (instructor as any).personnelId,
+      instructor.idNumber,
+      instructor.email,
+      instructor.name,
+    ]);
+    const profileIdSet = new Set(
+      (accessContext.permissionProfileIds || []).map(id => String(id || '').trim().toLowerCase()).filter(Boolean),
+    );
+    if (profileIdSet.size === 0) return [];
+    const profiles = getPlatformPermissionProfiles(platformConfig);
+    const labels = Array.from(profileIdSet).map(profileId => {
+      const profile = profiles.find(candidate => String(candidate.id || '').trim().toLowerCase() === profileId);
+      return profile?.name || profileId;
+    });
+    return Array.from(new Set(labels.map(label => String(label || '').trim()).filter(Boolean)));
+  }, [instructor, platformConfig]);
 
   // Trainee avatar icon
   const TraineeIcon = () => (
@@ -2090,13 +2118,26 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     </div>
 
                     {/* Qualifications panel */}
-                    <div className="flex-shrink-0 w-44">
-                      <div className={card3d + " p-2 h-full"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                    <div className="flex-shrink-0 w-44 space-y-2">
+                      <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                         <div className="text-[10px] text-gray-400 font-semibold mb-2">Qualifications</div>
                         <div className="space-y-1">
                           {assignedQualificationLabels.length > 0
                             ? assignedQualificationLabels.map(label => (
                                 <div key={label} className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold">
+                                  {label}
+                                </div>
+                              ))
+                            : <div className="text-gray-500 text-[10px] italic">None</div>
+                          }
+                        </div>
+                      </div>
+                      <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
+                        <div className="space-y-1">
+                          {assignedPermissionProfileLabels.length > 0
+                            ? assignedPermissionProfileLabels.map(label => (
+                                <div key={label} className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold">
                                   {label}
                                 </div>
                               ))

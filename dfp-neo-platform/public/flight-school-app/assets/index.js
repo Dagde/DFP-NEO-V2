@@ -27026,6 +27026,28 @@ const TraineeProfileFlyout = ({
     () => normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue)
   );
   const assignedQualificationLabels = reactExports.useMemo(() => assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map((qualification) => qualification.code || qualification.name), [activeQualificationOptions, assignedQualifications]);
+  const assignedPermissionProfileLabels = reactExports.useMemo(() => {
+    const accessContext = getPlatformAccessContext(platformConfig, [
+      trainee.id,
+      trainee.userId,
+      trainee.personnelId,
+      trainee.idNumber,
+      trainee.email,
+      trainee.name,
+      trainee.fullName
+    ]);
+    const profileIdSet = new Set(
+      (accessContext.permissionProfileIds || []).map((id) => String(id || "").trim().toLowerCase()).filter(Boolean)
+    );
+    if (profileIdSet.size === 0) return [];
+    const profiles = getPlatformPermissionProfiles(platformConfig);
+    const labels = Array.from(profileIdSet).map((profileId) => {
+      const profile = profiles.find((candidate) => String(candidate.id || "").trim().toLowerCase() === profileId);
+      return profile?.name || profileId;
+    });
+    return Array.from(new Set(labels.map((label) => String(label || "").trim()).filter(Boolean)));
+  }, [platformConfig, trainee]);
+  const visiblePermissionLabels = assignedPermissionProfileLabels.length > 0 ? assignedPermissionProfileLabels : getVisiblePermissions(trainee.permissions);
   const isSuspended = reactExports.useMemo(() => isTraineeSuspended({ permissions }), [permissions]);
   const traineeStatusLabel = isSuspended ? "Suspended" : isPaused ? "Paused" : "Active";
   const [priorExperience, setPriorExperience] = reactExports.useState(trainee.priorExperience || initialExperience$1);
@@ -28717,7 +28739,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 flex-shrink-0 space-y-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-2", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 mb-1 font-semibold", children: "Permissions" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: getVisiblePermissions(trainee.permissions).length > 0 ? getVisiblePermissions(trainee.permissions).map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]", children: p }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "None" }) })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]", children: p }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "None" }) })
                     ] }) })
                   ] })
                 )
@@ -57573,6 +57595,7 @@ const InstructorProfileFlyout = ({
   instructorLabel: instructorLabel2 = "Instructor",
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   operationalModel = "flight_school",
+  platformConfig = null,
   crewPositionTerminology,
   staffQualificationCatalogue: staffQualificationCatalogue2,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
@@ -58277,6 +58300,26 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     instructorLabel2,
     simIpDisplayLabel
   );
+  const assignedPermissionProfileLabels = reactExports.useMemo(() => {
+    const accessContext = getPlatformAccessContext(platformConfig, [
+      instructor.id,
+      instructor.userId,
+      instructor.personnelId,
+      instructor.idNumber,
+      instructor.email,
+      instructor.name
+    ]);
+    const profileIdSet = new Set(
+      (accessContext.permissionProfileIds || []).map((id) => String(id || "").trim().toLowerCase()).filter(Boolean)
+    );
+    if (profileIdSet.size === 0) return [];
+    const profiles = getPlatformPermissionProfiles(platformConfig);
+    const labels = Array.from(profileIdSet).map((profileId) => {
+      const profile = profiles.find((candidate) => String(candidate.id || "").trim().toLowerCase() === profileId);
+      return profile?.name || profileId;
+    });
+    return Array.from(new Set(labels.map((label) => String(label || "").trim()).filter(Boolean)));
+  }, [instructor, platformConfig]);
   const TraineeIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
@@ -59239,10 +59282,16 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                     ] })
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 w-44", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2 h-full", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Qualifications" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
-                ] }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 w-44 space-y-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Qualifications" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-emerald-100 text-[10px] font-semibold", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Permissions" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: assignedPermissionProfileLabels.length > 0 ? assignedPermissionProfileLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
+                  ] })
+                ] })
               ] })
             )
           ] }),
@@ -60203,6 +60252,7 @@ const InstructorListView = ({
   personnelDisplaySettings,
   instructorLabel: instructorLabel2 = "Instructor",
   operationalModel = "flight_school",
+  platformConfig = null,
   crewPositionTerminology,
   staffQualificationCatalogue: staffQualificationCatalogue2,
   sctTerminology,
@@ -60745,6 +60795,7 @@ const InstructorListView = ({
         personnelDisplaySettings,
         instructorLabel: instructorLabel2,
         operationalModel,
+        platformConfig,
         crewPositionTerminology,
         staffQualificationCatalogue: staffQualificationCatalogue2,
         sctTerminology,
@@ -136998,6 +137049,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             personnelDisplaySettings,
             instructorLabel: instructorLabel2,
             operationalModel: activeOperationalModel,
+            platformConfig,
             crewPositionTerminology: activeCrewPositionTerminology,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),

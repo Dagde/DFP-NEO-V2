@@ -19,7 +19,7 @@ import {
     splitPersonName,
     type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
-import { isFixedCrewLikeOperationalModel, normaliseOperationalModel, type OperationalModelCode } from '../utils/platformConfigService';
+import { isFixedCrewLikeOperationalModel, normaliseOperationalModel, type OperationalModelCode, type PlatformConfig } from '../utils/platformConfigService';
 import { type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { findCrewPositionEntry, getCrewPositionOptions, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
@@ -180,6 +180,7 @@ interface InstructorListViewProps {
   personnelDisplaySettings?: PersonnelDisplaySettings;
   instructorLabel?: string;
   operationalModel?: string;
+  platformConfig?: PlatformConfig | null;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   sctTerminology?: SctTerminology;
@@ -228,6 +229,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     personnelDisplaySettings,
     instructorLabel = 'Instructor',
     operationalModel = 'flight_school',
+    platformConfig = null,
     crewPositionTerminology,
     staffQualificationCatalogue,
     sctTerminology,
@@ -900,6 +902,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     personnelDisplaySettings={personnelDisplaySettings}
                     instructorLabel={instructorLabel}
                     operationalModel={operationalModel}
+                    platformConfig={platformConfig}
                     crewPositionTerminology={crewPositionTerminology}
                     staffQualificationCatalogue={staffQualificationCatalogue}
                     sctTerminology={sctTerminology}

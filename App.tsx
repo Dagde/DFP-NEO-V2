@@ -49780,6 +49780,7 @@ appliedUpdates.forEach(update => {
                             personnelDisplaySettings={personnelDisplaySettings}
                             instructorLabel={instructorLabel}
                             operationalModel={activeOperationalModel}
+                            platformConfig={platformConfig}
                             crewPositionTerminology={activeCrewPositionTerminology}
                             staffQualificationCatalogue={activeStaffQualificationCatalogue}
                             sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}

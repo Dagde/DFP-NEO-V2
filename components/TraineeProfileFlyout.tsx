@@ -42,6 +42,8 @@ import {
 import { isExternalDataAllowed } from '../utils/externalDataControls';
 import {
   filterMasterLmpCodesForAccess,
+  getPlatformAccessContext,
+  getPlatformPermissionProfiles,
   normaliseMasterLmpCatalogue,
   type PlatformConfig,
 } from '../utils/platformConfigService';
@@ -1262,6 +1264,30 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             .filter((qualification): qualification is StaffQualificationDefinition => Boolean(qualification))
             .map(qualification => qualification.code || qualification.name)
     ), [activeQualificationOptions, assignedQualifications]);
+    const assignedPermissionProfileLabels = useMemo(() => {
+        const accessContext = getPlatformAccessContext(platformConfig, [
+            (trainee as any).id,
+            (trainee as any).userId,
+            (trainee as any).personnelId,
+            trainee.idNumber,
+            trainee.email,
+            trainee.name,
+            trainee.fullName,
+        ]);
+        const profileIdSet = new Set(
+            (accessContext.permissionProfileIds || []).map(id => String(id || '').trim().toLowerCase()).filter(Boolean),
+        );
+        if (profileIdSet.size === 0) return [];
+        const profiles = getPlatformPermissionProfiles(platformConfig);
+        const labels = Array.from(profileIdSet).map(profileId => {
+            const profile = profiles.find(candidate => String(candidate.id || '').trim().toLowerCase() === profileId);
+            return profile?.name || profileId;
+        });
+        return Array.from(new Set(labels.map(label => String(label || '').trim()).filter(Boolean)));
+    }, [platformConfig, trainee]);
+    const visiblePermissionLabels = assignedPermissionProfileLabels.length > 0
+        ? assignedPermissionProfileLabels
+        : getVisiblePermissions(trainee.permissions);
     const isSuspended = useMemo(() => isTraineeSuspended({ permissions }), [permissions]);
     const traineeStatusLabel = isSuspended ? 'Suspended' : (isPaused ? 'Paused' : 'Active');
 
@@ -3171,12 +3197,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </div>
                           </div>
 
-                          {/* Permissions and Roles panels */}
+                          {/* Permissions panel */}
                           <div className="w-40 flex-shrink-0 space-y-2">
                             <div className="bg-gray-700/30 rounded p-2">
                               <div className="text-[10px] text-gray-400 mb-1 font-semibold">Permissions</div>
                               <div className="flex flex-wrap gap-1">
-                                {getVisiblePermissions(trainee.permissions).length > 0 ? getVisiblePermissions(trainee.permissions).map((p: string) => (
+                                {visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p: string) => (
                                   <span key={p} className="px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]">{p}</span>
                                 )) : <span className="text-gray-500 text-[10px]">None</span>}
                               </div>
