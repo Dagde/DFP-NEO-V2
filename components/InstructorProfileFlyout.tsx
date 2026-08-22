@@ -2179,9 +2179,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               ))
                             : <div className="text-gray-500 text-[10px] italic">None</div>
                           }
-                          {hasPermissionProfileExceptions && (
-                            <div className="text-[9px] font-semibold text-amber-200">* user-specific exceptions</div>
-                          )}
                         </div>
                       </div>
                     </div>

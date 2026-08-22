@@ -28894,13 +28894,10 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-36 bg-gray-700/30 rounded p-2", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 mb-1 font-semibold", children: "Permissions" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
-                          visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold break-words", children: [
-                            p,
-                            hasPermissionProfileExceptions ? " *" : ""
-                          ] }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }),
-                          hasPermissionProfileExceptions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold text-amber-200", children: "* user-specific exceptions" })
-                        ] })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold break-words", children: [
+                          p,
+                          hasPermissionProfileExceptions ? " *" : ""
+                        ] }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
                       ] })
                     ] })
                   ] })
@@ -59479,13 +59476,10 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " w-36 p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Permissions" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
-                      assignedPermissionProfileLabels.length > 0 ? assignedPermissionProfileLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold break-words", children: [
-                        label,
-                        hasPermissionProfileExceptions ? " *" : ""
-                      ] }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }),
-                      hasPermissionProfileExceptions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold text-amber-200", children: "* user-specific exceptions" })
-                    ] })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: assignedPermissionProfileLabels.length > 0 ? assignedPermissionProfileLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold break-words", children: [
+                      label,
+                      hasPermissionProfileExceptions ? " *" : ""
+                    ] }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
                   ] })
                 ] })
               ] })

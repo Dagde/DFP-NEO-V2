@@ -3195,9 +3195,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 {visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p: string) => (
                                   <div key={p} className="rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold break-words">{p}{hasPermissionProfileExceptions ? ' *' : ''}</div>
                                 )) : <div className="text-gray-500 text-[10px] italic">None</div>}
-                                {hasPermissionProfileExceptions && (
-                                  <div className="text-[9px] font-semibold text-amber-200">* user-specific exceptions</div>
-                                )}
                               </div>
                             </div>
                           </div>
