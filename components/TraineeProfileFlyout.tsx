@@ -42,7 +42,7 @@ import {
 import { isExternalDataAllowed } from '../utils/externalDataControls';
 import {
   filterMasterLmpCodesForAccess,
-  getAssignedPlatformPermissionProfileLabels,
+  getAssignedPlatformPermissionProfileSummary,
   getPlatformUserIdentityValuesForPerson,
   normaliseMasterLmpCatalogue,
   type PlatformConfig,
@@ -1264,9 +1264,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             .filter((qualification): qualification is StaffQualificationDefinition => Boolean(qualification))
             .map(qualification => qualification.code || qualification.name)
     ), [activeQualificationOptions, assignedQualifications]);
-    const assignedPermissionProfileLabels = useMemo(() => {
+    const assignedPermissionProfileSummary = useMemo(() => {
         const linkedPlatformUserIdentifiers = getPlatformUserIdentityValuesForPerson(platformConfig, trainee as any, 'trainee');
-        return getAssignedPlatformPermissionProfileLabels(platformConfig, [
+        return getAssignedPlatformPermissionProfileSummary(platformConfig, [
             ...linkedPlatformUserIdentifiers,
             (trainee as any).id,
             (trainee as any).userId,
@@ -1277,6 +1277,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             trainee.fullName,
         ]);
     }, [platformConfig, trainee]);
+    const assignedPermissionProfileLabels = assignedPermissionProfileSummary.labels;
+    const hasPermissionProfileExceptions = assignedPermissionProfileSummary.hasPermissionOverrides;
     const visiblePermissionLabels = assignedPermissionProfileLabels.length > 0
         ? assignedPermissionProfileLabels
         : getVisiblePermissions(trainee.permissions);
@@ -3191,8 +3193,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div className="text-[10px] text-gray-400 mb-1 font-semibold">Permissions</div>
                               <div className="space-y-1">
                                 {visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p: string) => (
-                                  <div key={p} className="rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold break-words">{p}</div>
+                                  <div key={p} className="rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold break-words">{p}{hasPermissionProfileExceptions ? ' *' : ''}</div>
                                 )) : <div className="text-gray-500 text-[10px] italic">None</div>}
+                                {hasPermissionProfileExceptions && (
+                                  <div className="text-[9px] font-semibold text-amber-200">* user-specific exceptions</div>
+                                )}
                               </div>
                             </div>
                           </div>

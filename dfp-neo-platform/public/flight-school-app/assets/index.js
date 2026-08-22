@@ -2769,10 +2769,12 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = []) 
     permissions: permissionContext.permissions
   };
 };
-const getAssignedPlatformPermissionProfileLabels = (config, userIdentifiers) => {
-  if (!config || !Array.isArray(config.userAccess) || config.userAccess.length === 0) return [];
+const getAssignedPlatformPermissionProfileSummary = (config, userIdentifiers) => {
+  if (!config || !Array.isArray(config.userAccess) || config.userAccess.length === 0) {
+    return { labels: [], hasPermissionOverrides: false };
+  }
   const identifiers = new Set(accessIdentityVariants(...userIdentifiers));
-  if (identifiers.size === 0) return [];
+  if (identifiers.size === 0) return { labels: [], hasPermissionOverrides: false };
   const activeRows = config.userAccess.map(normaliseAccessRow).filter((row) => normaliseAccessValue(row.status) !== "inactive");
   const rows = activeRows.filter((row) => {
     const rowVariants = accessIdentityVariants(...accessRowIdentityValues(row));
@@ -2784,14 +2786,20 @@ const getAssignedPlatformPermissionProfileLabels = (config, userIdentifiers) => 
     return rowIdentifiers.some((identifier) => identifiers.has(identifier));
   });
   const profileIds = getExplicitPermissionProfileIds(rows);
-  if (profileIds.length === 0) return [];
+  if (profileIds.length === 0) return {
+    labels: [],
+    hasPermissionOverrides: getExplicitPermissionAllowIds(rows).length > 0 || getExplicitPermissionDenyIds(rows).length > 0
+  };
   const profiles = getPlatformPermissionProfiles(config);
   const profileNameById = new Map(
     profiles.map((profile) => [normaliseAccessValue(profile.id), profile.name || profile.id])
   );
-  return uniqueValues$1(
-    profileIds.map((profileId) => profileNameById.get(normaliseAccessValue(profileId)) || profileId).map((label) => String(label || "").trim()).filter(Boolean)
-  );
+  return {
+    labels: uniqueValues$1(
+      profileIds.map((profileId) => profileNameById.get(normaliseAccessValue(profileId)) || profileId).map((label) => String(label || "").trim()).filter(Boolean)
+    ),
+    hasPermissionOverrides: getExplicitPermissionAllowIds(rows).length > 0 || getExplicitPermissionDenyIds(rows).length > 0
+  };
 };
 const hasPlatformPermission = (accessContext, permissionId) => {
   if (!accessContext.isConfigured) return true;
@@ -27182,9 +27190,9 @@ const TraineeProfileFlyout = ({
     () => normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue)
   );
   const assignedQualificationLabels = reactExports.useMemo(() => assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map((qualification) => qualification.code || qualification.name), [activeQualificationOptions, assignedQualifications]);
-  const assignedPermissionProfileLabels = reactExports.useMemo(() => {
+  const assignedPermissionProfileSummary = reactExports.useMemo(() => {
     const linkedPlatformUserIdentifiers = getPlatformUserIdentityValuesForPerson(platformConfig, trainee, "trainee");
-    return getAssignedPlatformPermissionProfileLabels(platformConfig, [
+    return getAssignedPlatformPermissionProfileSummary(platformConfig, [
       ...linkedPlatformUserIdentifiers,
       trainee.id,
       trainee.userId,
@@ -27195,6 +27203,8 @@ const TraineeProfileFlyout = ({
       trainee.fullName
     ]);
   }, [platformConfig, trainee]);
+  const assignedPermissionProfileLabels = assignedPermissionProfileSummary.labels;
+  const hasPermissionProfileExceptions = assignedPermissionProfileSummary.hasPermissionOverrides;
   const visiblePermissionLabels = assignedPermissionProfileLabels.length > 0 ? assignedPermissionProfileLabels : getVisiblePermissions(trainee.permissions);
   const isSuspended = reactExports.useMemo(() => isTraineeSuspended({ permissions }), [permissions]);
   const traineeStatusLabel = isSuspended ? "Suspended" : isPaused ? "Paused" : "Active";
@@ -28884,7 +28894,13 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-36 bg-gray-700/30 rounded p-2", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 mb-1 font-semibold", children: "Permissions" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold break-words", children: p }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+                          visiblePermissionLabels.length > 0 ? visiblePermissionLabels.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-500/20 bg-sky-800 px-2 py-1 text-sky-200 text-[9px] font-semibold break-words", children: [
+                            p,
+                            hasPermissionProfileExceptions ? " *" : ""
+                          ] }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }),
+                          hasPermissionProfileExceptions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold text-amber-200", children: "* user-specific exceptions" })
+                        ] })
                       ] })
                     ] })
                   ] })
@@ -58480,9 +58496,9 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     instructorLabel2,
     simIpDisplayLabel
   );
-  const assignedPermissionProfileLabels = reactExports.useMemo(() => {
+  const assignedPermissionProfileSummary = reactExports.useMemo(() => {
     const linkedPlatformUserIdentifiers = getPlatformUserIdentityValuesForPerson(platformConfig, instructor, "staff");
-    return getAssignedPlatformPermissionProfileLabels(platformConfig, [
+    return getAssignedPlatformPermissionProfileSummary(platformConfig, [
       ...linkedPlatformUserIdentifiers,
       instructor.id,
       instructor.userId,
@@ -58492,6 +58508,8 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       instructor.name
     ]);
   }, [instructor, platformConfig]);
+  const assignedPermissionProfileLabels = assignedPermissionProfileSummary.labels;
+  const hasPermissionProfileExceptions = assignedPermissionProfileSummary.hasPermissionOverrides;
   const TraineeIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
@@ -59461,7 +59479,13 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " w-36 p-2", style: { ...card3dStyle, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-2", children: "Permissions" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: assignedPermissionProfileLabels.length > 0 ? assignedPermissionProfileLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold break-words", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+                      assignedPermissionProfileLabels.length > 0 ? assignedPermissionProfileLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold break-words", children: [
+                        label,
+                        hasPermissionProfileExceptions ? " *" : ""
+                      ] }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic", children: "None" }),
+                      hasPermissionProfileExceptions && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-semibold text-amber-200", children: "* user-specific exceptions" })
+                    ] })
                   ] })
                 ] })
               ] })

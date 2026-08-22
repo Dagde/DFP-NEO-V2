@@ -1101,10 +1101,19 @@ export const getAssignedPlatformPermissionProfileLabels = (
   config: PlatformConfig | null,
   userIdentifiers: Array<string | number | null | undefined>,
 ): string[] => {
-  if (!config || !Array.isArray(config.userAccess) || config.userAccess.length === 0) return [];
+  return getAssignedPlatformPermissionProfileSummary(config, userIdentifiers).labels;
+};
+
+export const getAssignedPlatformPermissionProfileSummary = (
+  config: PlatformConfig | null,
+  userIdentifiers: Array<string | number | null | undefined>,
+): { labels: string[]; hasPermissionOverrides: boolean } => {
+  if (!config || !Array.isArray(config.userAccess) || config.userAccess.length === 0) {
+    return { labels: [], hasPermissionOverrides: false };
+  }
 
   const identifiers = new Set(accessIdentityVariants(...userIdentifiers));
-  if (identifiers.size === 0) return [];
+  if (identifiers.size === 0) return { labels: [], hasPermissionOverrides: false };
 
   const activeRows = (config.userAccess as PlatformAccessRow[])
     .map(normaliseAccessRow)
@@ -1124,18 +1133,24 @@ export const getAssignedPlatformPermissionProfileLabels = (
   });
 
   const profileIds = getExplicitPermissionProfileIds(rows);
-  if (profileIds.length === 0) return [];
+  if (profileIds.length === 0) return {
+    labels: [],
+    hasPermissionOverrides: getExplicitPermissionAllowIds(rows).length > 0 || getExplicitPermissionDenyIds(rows).length > 0,
+  };
 
   const profiles = getPlatformPermissionProfiles(config);
   const profileNameById = new Map(
     profiles.map((profile) => [normaliseAccessValue(profile.id), profile.name || profile.id]),
   );
-  return uniqueValues(
-    profileIds
-      .map((profileId) => profileNameById.get(normaliseAccessValue(profileId)) || profileId)
-      .map((label) => String(label || '').trim())
-      .filter(Boolean),
-  );
+  return {
+    labels: uniqueValues(
+      profileIds
+        .map((profileId) => profileNameById.get(normaliseAccessValue(profileId)) || profileId)
+        .map((label) => String(label || '').trim())
+        .filter(Boolean),
+    ),
+    hasPermissionOverrides: getExplicitPermissionAllowIds(rows).length > 0 || getExplicitPermissionDenyIds(rows).length > 0,
+  };
 };
 
 export const hasPlatformPermission = (

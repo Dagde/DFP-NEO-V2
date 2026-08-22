@@ -22,7 +22,7 @@ import {
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
 import {
-  getAssignedPlatformPermissionProfileLabels,
+  getAssignedPlatformPermissionProfileSummary,
   getPlatformUserIdentityValuesForPerson,
   isFixedCrewLikeOperationalModel,
   normaliseOperationalModel,
@@ -1197,9 +1197,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     instructorLabel,
     simIpDisplayLabel,
   );
-  const assignedPermissionProfileLabels = useMemo(() => {
+  const assignedPermissionProfileSummary = useMemo(() => {
     const linkedPlatformUserIdentifiers = getPlatformUserIdentityValuesForPerson(platformConfig, instructor as any, 'staff');
-    return getAssignedPlatformPermissionProfileLabels(platformConfig, [
+    return getAssignedPlatformPermissionProfileSummary(platformConfig, [
       ...linkedPlatformUserIdentifiers,
       (instructor as any).id,
       (instructor as any).userId,
@@ -1209,6 +1209,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       instructor.name,
     ]);
   }, [instructor, platformConfig]);
+  const assignedPermissionProfileLabels = assignedPermissionProfileSummary.labels;
+  const hasPermissionProfileExceptions = assignedPermissionProfileSummary.hasPermissionOverrides;
 
   // Trainee avatar icon
   const TraineeIcon = () => (
@@ -2172,11 +2174,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           {assignedPermissionProfileLabels.length > 0
                             ? assignedPermissionProfileLabels.map(label => (
                                 <div key={label} className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-100 text-[10px] font-semibold break-words">
-                                  {label}
+                                  {label}{hasPermissionProfileExceptions ? ' *' : ''}
                                 </div>
                               ))
                             : <div className="text-gray-500 text-[10px] italic">None</div>
                           }
+                          {hasPermissionProfileExceptions && (
+                            <div className="text-[9px] font-semibold text-amber-200">* user-specific exceptions</div>
+                          )}
                         </div>
                       </div>
                     </div>
