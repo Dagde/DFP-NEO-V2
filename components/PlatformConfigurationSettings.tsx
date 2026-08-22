@@ -2413,6 +2413,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [bulkAccessPeopleSearch, setBulkAccessPeopleSearch] = useState('');
   const [bulkAccessUserIds, setBulkAccessUserIds] = useState<string[]>([]);
   const [bulkAccessProfileIds, setBulkAccessProfileIds] = useState<string[]>([]);
+  const [bulkAccessAssignmentOpen, setBulkAccessAssignmentOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = useState<Record<string, boolean>>({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = useState(false);
@@ -6101,6 +6102,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const bulkAccessUserOptions = useMemo<BulkAccessUserOption[]>(() => {
     const traceStartedAt = getTraceNow();
+    if (!bulkAccessAssignmentOpen) {
+      recordSettingsTraceTiming('bulkAccessUserOptions', traceStartedAt);
+      return [];
+    }
     const usedUserIds = new Set<string>();
     const isActiveUnitPerson = (unit?: string) => {
       if (activeBulkUnitCodes.length === 0) return true;
@@ -6188,7 +6193,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
     recordSettingsTraceTiming('bulkAccessUserOptions', traceStartedAt);
     return options;
-  }, [activeBulkUnitCodes, instructorsData, personnelDisplaySettings, traineesData, userOptions]);
+  }, [activeBulkUnitCodes, bulkAccessAssignmentOpen, instructorsData, personnelDisplaySettings, traineesData, userOptions]);
 
   const visibleBulkAccessUserOptions = useMemo(() => {
     const traceStartedAt = getTraceNow();
@@ -6368,13 +6373,56 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, [selectedAccessRows]);
 
   const setSelectedUserProfileIds = (profileIds: string[]) => {
+    const cleanProfileIds = Array.from(new Set(profileIds.filter(Boolean)));
+    const selectedUser = selectedAccessUserOption || selectedAccessUser;
+    const selectedUserId = String(selectedAccessUserId || selectedUser?.id || selectedUser?.userId || selectedUser?.username || '').trim();
+    if (!selectedUserId) return;
+    const selectedUsername = String(selectedUser?.username || selectedUserId).trim();
+    const selectedDisplayName = selectedAccessDisplayName && !selectedAccessDisplayName.includes('(missing')
+      ? selectedAccessDisplayName
+      : String(selectedUser?.name || `${selectedUser?.firstName || ''} ${selectedUser?.lastName || ''}`.trim() || selectedUsername || selectedUserId).trim();
     setConfig((prev) => ({
       ...prev,
-      userAccess: (Array.isArray(prev.userAccess) ? prev.userAccess : []).map((access) => (
-        access.userId === selectedAccessUserId || access.username === selectedAccessUserId
-          ? { ...access, settings: { ...(access.settings || {}), permissionProfileIds: profileIds } }
-          : access
-      )),
+      userAccess: (() => {
+        const rows = Array.isArray(prev.userAccess) ? prev.userAccess : [];
+        let matched = false;
+        const nextRows = rows.map((access) => {
+          const accessUserId = String(access.userId || '').trim();
+          const accessUsername = String(access.username || '').trim();
+          if (accessUserId !== selectedUserId && accessUsername !== selectedUserId) return access;
+          matched = true;
+          return {
+            ...access,
+            settings: { ...(access.settings || {}), permissionProfileIds: cleanProfileIds },
+          };
+        });
+        if (matched) return nextRows;
+        const defaultUnitCode = activeBulkUnitCodes[0] || activeUnitCode || '';
+        const defaultLocationCode = String(
+          (Array.isArray(prev.units) ? prev.units : []).find((unit) => (
+            String(unit.code || '').trim().toUpperCase() === String(defaultUnitCode || '').trim().toUpperCase()
+          ))?.locationCode
+          || (Array.isArray(prev.locations) ? prev.locations : [])[0]?.code
+          || ''
+        ).trim();
+        return [
+          ...nextRows,
+          {
+            id: createClientRecordId('user-access'),
+            userId: selectedUserId,
+            username: selectedUsername,
+            displayName: selectedDisplayName || selectedUsername || selectedUserId,
+            organisationCode: (Array.isArray(prev.organisations) ? prev.organisations : [])[0]?.code || 'DEFAULT',
+            locationCode: defaultLocationCode || null,
+            unitCode: defaultUnitCode || null,
+            moduleCode: null,
+            role: 'Viewer',
+            accessLevel: 'Read',
+            status: 'ACTIVE',
+            settings: { permissionProfileIds: cleanProfileIds },
+          },
+        ];
+      })(),
     }));
   };
 
@@ -13196,7 +13244,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       type="checkbox"
                       className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
                       checked={checked}
-                      disabled={!canEditSection('platform-user-access') || visibleSelectedAccessRows.length === 0}
+                      disabled={!canEditSection('platform-user-access') || !selectedAccessUserId}
                       onChange={(event) => {
                         const profileIds = event.target.checked
                           ? Array.from(new Set([...selectedUserProfileIds, profile.id]))
@@ -13232,16 +13280,28 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   Additions and deletions in the master list are reflected in this list automatically.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={applyBulkAccessProfiles}
-                disabled={!canEditSection('platform-user-access') || bulkAccessUserIds.length === 0 || bulkAccessProfileIds.length === 0}
-                className="rounded border border-cyan-500/40 bg-cyan-600/25 px-3 py-2 text-xs font-bold text-cyan-50 hover:bg-cyan-500/35 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Apply to Selected
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkAccessAssignmentOpen((current) => !current)}
+                  className="rounded border border-cyan-500/40 bg-cyan-600/15 px-3 py-2 text-xs font-bold text-cyan-50 hover:bg-cyan-500/25"
+                >
+                  {bulkAccessAssignmentOpen ? 'Hide Bulk Assignment' : 'Show Bulk Assignment'}
+                </button>
+                {bulkAccessAssignmentOpen && (
+                  <button
+                    type="button"
+                    onClick={applyBulkAccessProfiles}
+                    disabled={!canEditSection('platform-user-access') || bulkAccessUserIds.length === 0 || bulkAccessProfileIds.length === 0}
+                    className="rounded border border-cyan-500/40 bg-cyan-600/25 px-3 py-2 text-xs font-bold text-cyan-50 hover:bg-cyan-500/35 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Apply to Selected
+                  </button>
+                )}
+              </div>
             </div>
 
+            {bulkAccessAssignmentOpen ? (
             <div className="grid items-stretch gap-3 xl:grid-cols-[1.2fr_0.8fr]">
               <div className="flex h-full min-h-[34rem] flex-col rounded border border-gray-700 bg-gray-950/70 p-3">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -13336,11 +13396,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
               </div>
             </div>
+            ) : (
+              <div className="rounded border border-cyan-500/20 bg-gray-950/60 px-3 py-3 text-sm text-cyan-100/75">
+                Bulk assignment is closed. Open it only when assigning profiles to many people at once.
+              </div>
+            )}
           </div>
 
           {visibleSelectedAccessRows.length === 0 && (
             <div className="rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100">
-              This user has no access scopes. Add a scope before testing this account.
+              This user has no access scopes. Tick a master profile above to create a current-unit scope automatically, or use Add Scope to create one manually.
             </div>
           )}
 
