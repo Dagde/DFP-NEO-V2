@@ -36054,7 +36054,7 @@ const App: React.FC = () => {
         const nextDate = getLocalDateString(currentDate);
         setBuildDfpDate(nextDate);
         setDate(nextDate);
-        void loadSnapshotForDate(nextDate);
+        void loadSnapshotForDate(nextDate, { useCache: true, allowAdminFallbackContext: false });
     };
 
     const handleAddTrainee = useCallback(async (newTrainee: Trainee) => {
@@ -37384,14 +37384,14 @@ const App: React.FC = () => {
         const newDateStr = currentDate.toISOString().split('T')[0];
         setDate(newDateStr);
         setBuildDfpDate(newDateStr);
-        void loadSnapshotForDate(newDateStr);
+        void loadSnapshotForDate(newDateStr, { useCache: true, allowAdminFallbackContext: false });
     };
 
     // Navigate directly to a specific date (used by calendar dropdown on date selector)
     const handleDateSelect = (selectedDate: string) => {
         setDate(selectedDate);
         setBuildDfpDate(selectedDate);
-        void loadSnapshotForDate(selectedDate);
+        void loadSnapshotForDate(selectedDate, { useCache: true, allowAdminFallbackContext: false });
     };
 
     const shouldInsertTrainingReportExtraEvent = (assessment: Pt051Assessment): boolean => (

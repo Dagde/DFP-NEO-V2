@@ -126678,7 +126678,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const nextDate = getLocalDateString2(currentDate);
     setBuildDfpDate(nextDate);
     setDate(nextDate);
-    void loadSnapshotForDate(nextDate);
+    void loadSnapshotForDate(nextDate, { useCache: true, allowAdminFallbackContext: false });
   };
   const handleAddTrainee = reactExports.useCallback(async (newTrainee) => {
     const traineeToCreate = {
@@ -127803,12 +127803,12 @@ ${error instanceof Error ? error.message : String(error)}`,
     const newDateStr = currentDate.toISOString().split("T")[0];
     setDate(newDateStr);
     setBuildDfpDate(newDateStr);
-    void loadSnapshotForDate(newDateStr);
+    void loadSnapshotForDate(newDateStr, { useCache: true, allowAdminFallbackContext: false });
   };
   const handleDateSelect = (selectedDate) => {
     setDate(selectedDate);
     setBuildDfpDate(selectedDate);
-    void loadSnapshotForDate(selectedDate);
+    void loadSnapshotForDate(selectedDate, { useCache: true, allowAdminFallbackContext: false });
   };
   const shouldInsertTrainingReportExtraEvent = (assessment) => assessment.dcoResult === "DPCO" && assessment.dpcoFollowUp?.action === "extra-event" || assessment.dcoResult === "DNCO" && assessment.dncoFollowUp?.requestExtraFlight === true;
   const shouldExtendTrainingReportNextEvent = (assessment) => assessment.dcoResult === "DPCO" && assessment.dpcoFollowUp?.action === "extra-hours-next-event" && Number(assessment.dpcoFollowUp?.extraHours) > 0;
