@@ -10066,7 +10066,8 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
   try {
     const db = await getPrisma();
       const jwtUserId = req.userId; // Human-readable user ID from the mobile token.
-    const { date, startDate, endDate } = req.query;
+    const { date, startDate, endDate, debug } = req.query;
+    const includeDebug = debug === '1' || debug === 'true';
 
     console.log("📅 Fetching schedule for jwtUserId=" + jwtUserId + ", params: " + JSON.stringify(req.query));
 
@@ -10172,6 +10173,19 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       orderBy: { date: 'asc' }
     });
 
+    const scheduleDebug = {
+      routeBuild: "mobile-schedule-linked-identity-v2",
+      scheduleRowCount: schedules ? schedules.length : 0,
+      scheduleRowsWithEvents: 0,
+      snapshotFound: false,
+      snapshotDate: null,
+      snapshotRawEventCount: 0,
+      snapshotUniqueEventCount: 0,
+      matchedEventCount: 0,
+      matchNameCount: matchNames.size,
+      matchIdCount: matchIds.size
+    };
+
     // Helper: convert decimal hours (e.g. 9.5) or HH:MM string to "HH:MM"
     function toHHMM(val) {
       if (!val && val !== 0) return "00:00";
@@ -10269,15 +10283,23 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         };
       });
       const schedulesWithEvents = transformedSchedules.filter(schedule => schedule.events.length > 0);
+      scheduleDebug.scheduleRowsWithEvents = schedulesWithEvents.length;
 
       if (date && schedulesWithEvents.length > 0) {
         console.log("✅ GET /api/mobile/schedule - Single date: " + date + ", events: " + schedulesWithEvents[0].events.length);
-        return res.json({ schedule: schedulesWithEvents[0] });
+        return res.json({
+          schedule: schedulesWithEvents[0],
+          ...(includeDebug ? { debug: scheduleDebug } : {})
+        });
       }
 
       if (!date && schedulesWithEvents.length > 0) {
         console.log("✅ GET /api/mobile/schedule - Found " + schedulesWithEvents.length + " schedules for userId=" + jwtUserId);
-        return res.json({ success: true, schedules: schedulesWithEvents });
+        return res.json({
+          success: true,
+          schedules: schedulesWithEvents,
+          ...(includeDebug ? { debug: scheduleDebug } : {})
+        });
       }
 
       console.log("ℹ️ GET /api/mobile/schedule - Schedule rows had no events; checking DailySnapshot fallback");
@@ -10312,12 +10334,15 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
 
       if (snapRows && snapRows.length > 0) {
         const snap = snapRows[0];
+        scheduleDebug.snapshotFound = true;
+        scheduleDebug.snapshotDate = snap.date;
         // Combine all event arrays and deduplicate by id
         const allSnapshotEventsRaw = [
           ...(Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : []),
           ...(Array.isArray(snap.staffEvents) ? snap.staffEvents : []),
           ...(Array.isArray(snap.traineeEvents) ? snap.traineeEvents : [])
         ];
+        scheduleDebug.snapshotRawEventCount = allSnapshotEventsRaw.length;
         const seenIds = new Set();
         const allSnapshotEvents = allSnapshotEventsRaw.filter(e => {
           const eid = e.id || e.eventId;
@@ -10325,6 +10350,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           if (eid) seenIds.add(eid);
           return true;
         });
+        scheduleDebug.snapshotUniqueEventCount = allSnapshotEvents.length;
 
         // Filter events for this user by linked User, Trainee, and Personnel identifiers.
         const nameMatch = (nameField) => {
@@ -10356,6 +10382,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           idMatch(e.traineeId) ||
           idMatch(e.groupTraineeIds)
         );
+        scheduleDebug.matchedEventCount = userEvents.length;
 
         if (userEvents.length > 0) {
           const mappedEvents = userEvents.map((e, idx) => {
@@ -10391,7 +10418,8 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
                 isPublished: true,
                 events: mappedEvents,
                 serverTime: new Date().toISOString()
-              }
+              },
+              ...(includeDebug ? { debug: scheduleDebug } : {})
             });
           }
         }
@@ -10408,7 +10436,8 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           events: [],
           serverTime: new Date().toISOString()
         },
-        message: "No events scheduled for " + queryDate
+        message: "No events scheduled for " + queryDate,
+        ...(includeDebug ? { debug: scheduleDebug } : {})
       });
 
   } catch (error) {
