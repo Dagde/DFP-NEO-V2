@@ -11843,9 +11843,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </button>
                 )}
               </div>
-              <div className="grid gap-3 md:grid-cols-[1fr_1fr_180px_180px]">
+              <div className="grid gap-3 md:grid-cols-2">
                 <DraftField label="Profile Name" value={selectedPermissionProfile.name} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value })} />
                 <DraftField label="Description" value={selectedPermissionProfile.description} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value })} />
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div>
                   <span className={labelClass}>Profile Type</span>
                   <select

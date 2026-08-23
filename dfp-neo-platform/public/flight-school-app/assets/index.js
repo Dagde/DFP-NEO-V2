@@ -83355,9 +83355,11 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   }
                 )
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_1fr_180px_180px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Profile Name", value: selectedPermissionProfile.name, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Description", value: selectedPermissionProfile.description, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Description", value: selectedPermissionProfile.description, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Profile Type" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs(
