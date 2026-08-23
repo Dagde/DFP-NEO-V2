@@ -624,6 +624,168 @@ async function repairSessionPersonLink(db, user) {
   );
 }
 
+function getUserNameCandidates(user = {}) {
+  const firstName = String(user.firstName || '').trim();
+  const lastName = String(user.lastName || '').trim();
+  const candidates = [];
+  if (firstName && lastName) {
+    candidates.push(`${lastName}, ${firstName}`);
+    candidates.push(`${firstName} ${lastName}`);
+  }
+
+  const loginId = String(user.userId || user.username || '').trim();
+  if (loginId && loginId.includes('.')) {
+    const [firstPart, ...lastParts] = loginId.split('.');
+    const derivedFirstName = firstPart ? firstPart.charAt(0).toUpperCase() + firstPart.slice(1) : '';
+    const derivedLastName = lastParts.length
+      ? lastParts.join(' ').replace(/\b\w/g, (char) => char.toUpperCase())
+      : '';
+    if (derivedFirstName && derivedLastName) {
+      candidates.push(`${derivedLastName}, ${derivedFirstName}`);
+      candidates.push(`${derivedFirstName} ${derivedLastName}`);
+    }
+  }
+
+  return [...new Set(candidates.map((name) => name.trim()).filter(Boolean))];
+}
+
+function splitCanonicalPersonName(name) {
+  const clean = String(name || '').split(' – ')[0].split(' - ')[0].trim();
+  if (!clean) return { firstName: '', lastName: '' };
+  if (clean.includes(',')) {
+    const [lastName, ...firstParts] = clean.split(',');
+    return { firstName: firstParts.join(',').trim(), lastName: lastName.trim() };
+  }
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return { firstName: '', lastName: clean };
+  return { firstName: parts.slice(0, -1).join(' '), lastName: parts[parts.length - 1] };
+}
+
+async function findCanonicalPersonForUser(db, user) {
+  if (!user?.id) return null;
+
+  const linkedRows = await db.$queryRawUnsafe(
+    `SELECT 'staff' AS type, id, "idNumber", name, NULL::text AS "fullName", email, unit, location, flight, "userId"
+       FROM "Personnel"
+      WHERE "userId" = $1
+      UNION ALL
+     SELECT 'trainee' AS type, id, "idNumber", name, "fullName", email, unit, location, flight, "userId"
+       FROM "Trainee"
+      WHERE "userId" = $1
+      LIMIT 2`,
+    user.id
+  );
+  if (linkedRows?.length === 1) return linkedRows[0];
+  if (linkedRows?.length > 1) return null;
+
+  const personnelId = normalisePersonnelId(user.userId || user.username);
+  if (personnelId) {
+    const idRows = await db.$queryRawUnsafe(
+      `SELECT 'staff' AS type, id, "idNumber", name, NULL::text AS "fullName", email, unit, location, flight, "userId"
+         FROM "Personnel"
+        WHERE "idNumber"::text = $1
+        UNION ALL
+       SELECT 'trainee' AS type, id, "idNumber", name, "fullName", email, unit, location, flight, "userId"
+         FROM "Trainee"
+        WHERE "idNumber"::text = $1
+        LIMIT 2`,
+      personnelId
+    );
+    const usableIdRows = (idRows || []).filter((row) => !row.userId || row.userId === user.id);
+    if (usableIdRows.length === 1) return usableIdRows[0];
+    if ((idRows || []).length > 1) return null;
+  }
+
+  const nameCandidates = getUserNameCandidates(user);
+  if (nameCandidates.length === 0) return null;
+  const loweredNameCandidates = nameCandidates.map((name) => name.toLowerCase());
+  const namePlaceholders = loweredNameCandidates.map((_, index) => `$${index + 1}`).join(', ');
+  const nameRows = await db.$queryRawUnsafe(
+    `SELECT 'staff' AS type, id, "idNumber", name, NULL::text AS "fullName", email, unit, location, flight, "userId"
+       FROM "Personnel"
+      WHERE LOWER(name) IN (${namePlaceholders})
+      UNION ALL
+     SELECT 'trainee' AS type, id, "idNumber", name, "fullName", email, unit, location, flight, "userId"
+       FROM "Trainee"
+      WHERE LOWER(name) IN (${namePlaceholders})
+         OR LOWER("fullName") IN (${namePlaceholders})
+      LIMIT 3`,
+    ...loweredNameCandidates
+  );
+  const usableNameRows = (nameRows || []).filter((row) => !row.userId || row.userId === user.id);
+  return usableNameRows.length === 1 ? usableNameRows[0] : null;
+}
+
+async function syncCanonicalPersonIdentity(db, user, person) {
+  if (!user?.id || !person?.id || (person.userId && person.userId !== user.id)) return user;
+
+  const table = person.type === 'staff' ? 'Personnel' : 'Trainee';
+  if (!person.userId) {
+    await db.$executeRawUnsafe(
+      `UPDATE "${table}" SET "userId" = $1 WHERE id = $2 AND "userId" IS NULL`,
+      user.id,
+      person.id
+    );
+    person.userId = user.id;
+  }
+
+  const canonicalEmail = String(person.email || '').trim();
+  if (!canonicalEmail || canonicalEmail.toLowerCase() === String(user.email || '').trim().toLowerCase()) {
+    return user;
+  }
+
+  const conflicts = await db.$queryRawUnsafe(
+    `SELECT id FROM "User" WHERE LOWER(email) = LOWER($1) AND id <> $2 LIMIT 1`,
+    canonicalEmail,
+    user.id
+  );
+  if (conflicts?.length) return user;
+
+  const updatedRows = await db.$queryRawUnsafe(
+    `UPDATE "User"
+        SET email = $1,
+            "updatedAt" = NOW()
+      WHERE id = $2
+      RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", password`,
+    canonicalEmail,
+    user.id
+  );
+  return updatedRows?.[0] || { ...user, email: canonicalEmail };
+}
+
+async function buildCanonicalMobileUserPayload(db, user) {
+  const person = await findCanonicalPersonForUser(db, user);
+  const syncedUser = person ? await syncCanonicalPersonIdentity(db, user, person) : user;
+  const personName = person?.fullName || person?.name || '';
+  const personNameParts = splitCanonicalPersonName(personName);
+  const firstName = personNameParts.firstName || syncedUser.firstName || '';
+  const lastName = personNameParts.lastName || syncedUser.lastName || '';
+  const displayName = personName || `${firstName} ${lastName}`.trim() || syncedUser.username || syncedUser.userId;
+  const canonicalEmail = String(person?.email || '').trim() || syncedUser.email || null;
+
+  return {
+    user: syncedUser,
+    person,
+    payload: {
+      id: syncedUser.userId,
+      userId: syncedUser.userId,
+      displayName,
+      email: canonicalEmail,
+      isActive: syncedUser.isActive,
+      firstName,
+      lastName,
+      personType: person?.type || null,
+      personRecordId: person?.id || null,
+      personnelId: person?.idNumber ? String(person.idNumber) : null,
+      unit: person?.unit || null,
+      location: person?.location || null,
+      flight: person?.flight || null,
+      accountEmail: syncedUser.email || null,
+      profileEmail: person?.email || null,
+    },
+  };
+}
+
 function getBooleanEnv(value, fallback = false) {
   const clean = String(value ?? '').trim().toLowerCase();
   if (!clean) return fallback;
@@ -9965,6 +10127,7 @@ app.post('/api/admin/direct-delete-user', async (req, res) => {
         'PILOT': 'OTHER'
       };
       const iOSRole = roleMap[user.role] || 'OTHER';
+      const canonicalMobileUser = await buildCanonicalMobileUserPayload(db, user);
 
       console.log(`✅ Mobile login successful for userId=${loginUserId}, role=${user.role}`);
 
@@ -9975,14 +10138,8 @@ app.post('/api/admin/direct-delete-user', async (req, res) => {
              accessToken,
              refreshToken,
              user: {
-               id: user.userId,
-               userId: user.userId,
-               displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-               email: user.email,
-               isActive: user.isActive,
+               ...canonicalMobileUser.payload,
                role: iOSRole,
-               firstName: user.firstName,
-               lastName: user.lastName
              }
            }
          });
