@@ -461,6 +461,11 @@ app.use('/api', (req, res, next) => {
             action: req.body?.action || 'sign',
             isVerbal: req.body?.isVerbal === true || String(req.body?.isVerbal || '').trim().toLowerCase() === 'true',
           }
+        : pathName === '/api/mobile/flight-times'
+          ? {
+              date: req.body?.snapshotKey || req.body?.date || null,
+              eventId: req.body?.eventId || null,
+            }
         : {};
     broadcastLiveChange({
       sourceClientId: String(req.headers['x-neo-client-id'] || '').trim(),
@@ -10469,6 +10474,14 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           verbalAuthBy: e.verbalAuthBy || null,
           dualAuthSignedAnnotation: e.dualAuthSignedAnnotation || null,
           authorised: e.authorised === true,
+          postFlightStatus: e.postFlightStatus || e.result || null,
+          takeoffTime: e.takeoffTime || null,
+          landTime: e.landTime || null,
+          airborneTime: e.airborneTime != null ? String(e.airborneTime) : null,
+          taxiGroundTime: e.taxiGroundTime != null ? String(e.taxiGroundTime) : null,
+          blockTime: e.blockTime != null ? String(e.blockTime) : null,
+          totalTime: e.totalTime != null ? String(e.totalTime) : null,
+          postFlightUpdatedAt: e.postFlightUpdatedAt || null,
           updatedAt: e.updatedAt || null
         };
       });
@@ -10964,6 +10977,512 @@ async function writeMobileFlightAuthorisationAudit(db, req, user, snapshotKey, b
     req.headers['user-agent'] || 'unknown'
   );
 }
+
+function toMobileTimeString(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const text = String(value).trim();
+  if (/^\d{1,2}:\d{2}$/.test(text)) {
+    const [h, m] = text.split(':');
+    return `${h.padStart(2, '0')}:${m}`;
+  }
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return text;
+  const hours = Math.floor(numeric);
+  const minutes = Math.round((numeric - hours) * 60);
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function parseMobileFlightTimeToMinutes(value) {
+  const clean = String(value || '').trim().replace(':', '');
+  if (!/^\d{3,4}$/.test(clean)) return null;
+  const padded = clean.padStart(4, '0');
+  const hours = Number(padded.slice(0, 2));
+  const minutes = Number(padded.slice(2, 4));
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours < 0 || hours >= 24 || minutes < 0 || minutes >= 60) return null;
+  return (hours * 60) + minutes;
+}
+
+function calculateMobileAirborneHours(takeoffTime, landTime) {
+  const start = parseMobileFlightTimeToMinutes(takeoffTime);
+  const endRaw = parseMobileFlightTimeToMinutes(landTime);
+  if (start === null || endRaw === null) return 0;
+  let end = endRaw;
+  if (end < start) end += 24 * 60;
+  return Math.max(0, Math.round(((end - start) / 60) * 10) / 10);
+}
+
+function normaliseMobilePersonMatch(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\s*[–-]\s*\w+\d+\s*$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function mobileEventMatchesTarget(event, eventId) {
+  return String(event && (event.id || event.eventId || '')) === String(eventId);
+}
+
+function getMobileFlightTypeDefaults(event) {
+  const type = String(event?.type || event?.eventType || '').trim().toLowerCase();
+  const flightType = String(event?.flightType || '').trim().toLowerCase();
+  const eventCode = String(event?.flightNumber || event?.eventCode || event?.title || '').trim().toLowerCase();
+  const isFtdLog = type === 'ftd' || eventCode.includes('ftd') || eventCode.includes('sim');
+  const isFlightLog = !isFtdLog;
+  return {
+    isFlightLog,
+    isFtdLog,
+    isSolo: flightType === 'solo',
+    isDual: flightType === 'dual' || Boolean(event?.student && (event?.instructor || event?.pilot)),
+  };
+}
+
+function buildMobileFlightTimesDefaults(event, settings, existingCompletion, existingLogs) {
+  const typeDefaults = getMobileFlightTypeDefaults(event);
+  const instructorLog = (existingLogs || []).find(row => String(row.personRole || '').toLowerCase() === 'instructor');
+  const traineeLog = (existingLogs || []).find(row => String(row.personRole || '').toLowerCase() === 'trainee');
+  const captainLog = (existingLogs || []).find(row => ['instructor', 'fixed_crew_pic'].includes(String(row.personRole || '').toLowerCase())) || instructorLog || traineeLog;
+  const defaultTakeoff = toMobileTimeString(existingCompletion?.takeoffTime || captainLog?.takeoffTime || event?.takeoffTime || event?.startTime);
+  const defaultLand = toMobileTimeString(existingCompletion?.landTime || captainLog?.landTime || event?.landTime || event?.endTime || (
+    event?.startTime != null ? Number(event.startTime) + (Number(event.duration) || 1) : null
+  ));
+  const policyTaxi = Number(settings?.taxiGroundTime);
+  const taxiGround = existingCompletion?.taxiGroundTime ?? captainLog?.taxiGroundTime ?? event?.taxiGroundTime ?? (Number.isFinite(policyTaxi) ? policyTaxi : 0.1);
+  const airborne = existingCompletion?.airborneTime ?? captainLog?.airborneTime ?? event?.airborneTime ?? calculateMobileAirborneHours(defaultTakeoff, defaultLand);
+  const block = existingCompletion?.blockTime ?? captainLog?.blockTime ?? event?.blockTime ?? (Number(airborne || 0) + Number(taxiGround || 0));
+  const result = existingCompletion?.dcoResult || event?.postFlightStatus || event?.result || '';
+
+  return {
+    result,
+    isFlightLog: captainLog?.isFlightLog ?? typeDefaults.isFlightLog,
+    isFtdLog: captainLog?.isFtdLog ?? typeDefaults.isFtdLog,
+    isSolo: existingCompletion?.isSolo ?? captainLog?.isSolo ?? typeDefaults.isSolo,
+    isDual: existingCompletion?.isDual ?? captainLog?.isDual ?? typeDefaults.isDual,
+    aircraftNumber: existingCompletion?.aircraftNumber || captainLog?.aircraftNumber || event?.aircraftNumber || event?.aircraft || event?.resourceId || '',
+    from: captainLog?.fromIcao || event?.origin || event?.location || '',
+    to: captainLog?.toIcao || event?.destination || event?.origin || event?.location || '',
+    duty: captainLog?.duty || event?.flightNumber || event?.eventCode || event?.title || '',
+    takeoffTime: defaultTakeoff,
+    landTime: defaultLand,
+    airborneTime: Number(airborne || 0).toFixed(1),
+    taxiGroundTime: Number(taxiGround || 0).toFixed(1),
+    blockTime: Number(block || 0).toFixed(1),
+    totalTime: Number(block || 0).toFixed(1),
+    captainTime: captainLog?.captainTime != null ? Number(captainLog.captainTime).toFixed(1) : (typeDefaults.isFlightLog ? Number(block || 0).toFixed(1) : ''),
+    instructorTime: instructorLog?.instructorTime != null ? Number(instructorLog.instructorTime).toFixed(1) : '',
+    nightTime: captainLog?.nightTime != null ? Number(captainLog.nightTime).toFixed(1) : '',
+    ifActualTime: captainLog?.ifActualTime != null ? Number(captainLog.ifActualTime).toFixed(1) : '',
+    ifSimTime: captainLog?.ifSimTime != null ? Number(captainLog.ifSimTime).toFixed(1) : '',
+    ineffectiveTime: captainLog?.ineffectiveTime != null ? Number(captainLog.ineffectiveTime).toFixed(1) : '',
+    approaches: {
+      ils: captainLog?.ilsCount || traineeLog?.ilsCount || 0,
+      rnp: captainLog?.rnpCount || traineeLog?.rnpCount || 0,
+      tacan: captainLog?.tacanCount || traineeLog?.tacanCount || 0,
+      vor: captainLog?.vorCount || traineeLog?.vorCount || 0,
+    },
+    approachAssignments: event?.approachAssignments && typeof event.approachAssignments === 'object'
+      ? event.approachAssignments
+      : { ils: '', rnp: '', tacan: '', vor: '' },
+    clientEventUpdatedAt: event?.postFlightUpdatedAt || event?.updatedAt || null,
+  };
+}
+
+async function resolveMobileFlightTimesRequest(db, req) {
+  const jwtUserId = req.userId;
+  const params = req.method === 'GET' ? req.query : (req.body || {});
+  const { date, snapshotKey, eventId } = params;
+  if (!date || !eventId) return { errorStatus: 400, error: { error: 'date and eventId are required' } };
+
+  const users = await db.$queryRawUnsafe(
+    `SELECT id, "userId", username, "firstName", "lastName", email, role, "isActive"
+       FROM "User"
+      WHERE "userId" = $1
+      LIMIT 1`,
+    jwtUserId
+  );
+  if (!users || users.length === 0) return { errorStatus: 401, error: { error: 'User not found' } };
+  const user = users[0];
+  if (!user.isActive) return { errorStatus: 403, error: { error: 'Account is inactive' } };
+
+  const snapshotRows = snapshotKey
+    ? await db.$queryRawUnsafe(
+        `SELECT date, "scheduleEvents", "traineeEvents", "staffEvents"
+           FROM "DailySnapshot"
+          WHERE date = $1::text
+          LIMIT 1`,
+        snapshotKey
+      )
+    : await db.$queryRawUnsafe(
+        `SELECT date, "scheduleEvents", "traineeEvents", "staffEvents"
+           FROM "DailySnapshot"
+          WHERE date = $1::text OR date LIKE $2::text
+          ORDER BY CASE WHEN date = $1::text THEN 0 ELSE 1 END`,
+        date,
+        `${date}__%`
+      );
+  if (!snapshotRows || snapshotRows.length === 0) return { errorStatus: 404, error: { error: 'Published schedule snapshot not found' } };
+
+  const snapshot = snapshotRows.find((row) => [
+    ...(Array.isArray(row.scheduleEvents) ? row.scheduleEvents : []),
+    ...(Array.isArray(row.traineeEvents) ? row.traineeEvents : []),
+    ...(Array.isArray(row.staffEvents) ? row.staffEvents : []),
+  ].some(event => mobileEventMatchesTarget(event, eventId))) || null;
+  if (!snapshot) return { errorStatus: 404, error: { error: 'Event not found in published schedule snapshot' } };
+
+  const snapshotContext = getSnapshotContextFromKey(snapshot.date);
+  if (snapshotContext.date && snapshotContext.date !== String(date).slice(0, 10)) {
+    return { errorStatus: 400, error: { error: 'Snapshot key does not match requested date' } };
+  }
+
+  const scheduleEvents = Array.isArray(snapshot.scheduleEvents) ? snapshot.scheduleEvents : [];
+  const traineeEvents = Array.isArray(snapshot.traineeEvents) ? snapshot.traineeEvents : [];
+  const staffEvents = Array.isArray(snapshot.staffEvents) ? snapshot.staffEvents : [];
+  const event = [...scheduleEvents, ...traineeEvents, ...staffEvents].find(item => mobileEventMatchesTarget(item, eventId));
+  if (!event) return { errorStatus: 404, error: { error: 'Event not found in published schedule snapshot' } };
+
+  const canonicalMobileUser = await buildCanonicalMobileUserPayload(db, user);
+  const effectiveUser = canonicalMobileUser.user || user;
+  const canonicalPerson = canonicalMobileUser.person;
+  const linkedPersonnel = await db.personnel.findMany({
+    where: { userId: user.id },
+    select: { id: true, idNumber: true, name: true, email: true }
+  });
+  const linkedTrainees = await db.trainee.findMany({
+    where: { userId: user.id },
+    select: { id: true, idNumber: true, name: true, fullName: true, email: true }
+  });
+  const userFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+  const userFullNameReversed = `${user.lastName || ''}, ${user.firstName || ''}`.trim();
+  const matchValues = new Set([
+    jwtUserId,
+    user.userId,
+    user.email,
+    effectiveUser.email,
+    userFullName,
+    userFullNameReversed,
+    canonicalPerson?.id,
+    canonicalPerson?.name,
+    canonicalPerson?.fullName,
+    canonicalPerson?.email,
+    canonicalPerson?.idNumber,
+    ...linkedPersonnel.flatMap(person => [person.id, person.name, person.email, person.idNumber]),
+    ...linkedTrainees.flatMap(person => [person.id, person.name, person.fullName, person.email, person.idNumber]),
+  ].map(normaliseMobilePersonMatch).filter(Boolean));
+  const eventFields = [
+    event.student, event.instructor, event.pilot, event.crew, event.attendees,
+    event.traineeId, event.groupTraineeIds, event.personnelId, event.pilotId, event.instructorId,
+  ];
+  const userMatchesEvent = eventFields.some((field) => {
+    if (Array.isArray(field)) return field.some(item => matchValues.has(normaliseMobilePersonMatch(item)));
+    return matchValues.has(normaliseMobilePersonMatch(field));
+  });
+
+  const access = await getMobileAuthorisationAccess(db, effectiveUser, snapshotContext);
+  const permissionSet = new Set(access.permissions || []);
+  const isPlatformAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(String(effectiveUser.role || user.role || '').toUpperCase());
+  const canManageFlightTimes = userMatchesEvent
+    || access.hasFlightAuthorisationPermission
+    || permissionSet.has('trainee.pt051.edit')
+    || permissionSet.has('trainee.pt051.others')
+    || permissionSet.has('dfp.publish')
+    || permissionSet.has('settings.superAdmin')
+    || isPlatformAdmin;
+
+  return { user, effectiveUser, snapshot, snapshotContext, scheduleEvents, traineeEvents, staffEvents, event, userMatchesEvent, canManageFlightTimes };
+}
+
+async function writeMobileFlightTimesAudit(db, req, user, snapshotKey, beforeEvent, afterEvent, flightTimes) {
+  await db.$executeRawUnsafe(
+    `INSERT INTO "AuditLog" ("id", "userId", action, "entityType", "entityId", changes, "ipAddress", "userAgent", "createdAt")
+     VALUES (gen_random_uuid()::text, $1, 'MOBILE_FLIGHT_TIMES', 'DailySnapshotEvent', $2, $3::jsonb, $4, $5, NOW())`,
+    user.id,
+    afterEvent?.id || afterEvent?.eventId || beforeEvent?.id || beforeEvent?.eventId || null,
+    JSON.stringify({
+      source: 'iOS Mobile Flight Times',
+      snapshotKey,
+      before: {
+        postFlightStatus: beforeEvent?.postFlightStatus || beforeEvent?.result || null,
+        takeoffTime: beforeEvent?.takeoffTime || null,
+        landTime: beforeEvent?.landTime || null,
+        blockTime: beforeEvent?.blockTime || beforeEvent?.totalTime || null,
+      },
+      after: {
+        postFlightStatus: afterEvent?.postFlightStatus || afterEvent?.result || null,
+        takeoffTime: afterEvent?.takeoffTime || null,
+        landTime: afterEvent?.landTime || null,
+        blockTime: afterEvent?.blockTime || afterEvent?.totalTime || null,
+      },
+      flightTimes,
+    }),
+    getRequestIp(req),
+    req.headers['user-agent'] || 'unknown'
+  ).catch((err) => console.warn('⚠️ Mobile flight times audit failed:', err.message));
+}
+
+app.get('/api/mobile/flight-times', authenticateMobileJWT, async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureFlightLogSnapshotColumns(db);
+    await ensureEventCompletionTimeColumns(db);
+    const resolved = await resolveMobileFlightTimesRequest(db, req);
+    if (resolved.errorStatus) return res.status(resolved.errorStatus).json(resolved.error);
+    if (!resolved.userMatchesEvent && !resolved.canManageFlightTimes) {
+      return res.status(403).json({ error: 'User is not permitted to view flight times for this event' });
+    }
+
+    const settings = await loadMobileAppSettings(db);
+    const eventId = String(req.query.eventId || '').trim();
+    const completion = await db.eventCompletion.findUnique({ where: { scheduleEventId: eventId } }).catch(() => null);
+    const logs = await db.flightLogEntry.findMany({ where: { scheduleEventId: eventId } }).catch(() => []);
+    const flightTimes = buildMobileFlightTimesDefaults(resolved.event, settings, completion, logs);
+
+    return res.json({
+      success: true,
+      snapshotKey: resolved.snapshot.date,
+      event: resolved.event,
+      flightTimes,
+      serverTime: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('❌ GET /api/mobile/flight-times error:', error);
+    res.status(500).json({ error: 'Failed to load mobile flight times', details: error.message });
+  }
+});
+
+app.post('/api/mobile/flight-times', authenticateMobileJWT, async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureFlightLogSnapshotColumns(db);
+    await ensureEventCompletionTimeColumns(db);
+    const resolved = await resolveMobileFlightTimesRequest(db, req);
+    if (resolved.errorStatus) return res.status(resolved.errorStatus).json(resolved.error);
+    if (!resolved.canManageFlightTimes) return res.status(403).json({ error: 'User is not permitted to save flight times for this event' });
+
+    const body = req.body || {};
+    const eventId = String(body.eventId || '').trim();
+    const clientUpdatedAt = String(body.clientEventUpdatedAt || '').trim();
+    const serverEventUpdatedAt = String(resolved.event.postFlightUpdatedAt || resolved.event.updatedAt || '').trim();
+    if (clientUpdatedAt && serverEventUpdatedAt && clientUpdatedAt !== serverEventUpdatedAt) {
+      const settings = await loadMobileAppSettings(db);
+      const completion = await db.eventCompletion.findUnique({ where: { scheduleEventId: eventId } }).catch(() => null);
+      const logs = await db.flightLogEntry.findMany({ where: { scheduleEventId: eventId } }).catch(() => []);
+      return res.status(409).json({
+        success: false,
+        conflict: true,
+        message: 'Flight times changed since loaded',
+        snapshotKey: resolved.snapshot.date,
+        event: resolved.event,
+        flightTimes: buildMobileFlightTimesDefaults(resolved.event, settings, completion, logs),
+        serverTime: new Date().toISOString(),
+      });
+    }
+
+    const settings = await loadMobileAppSettings(db);
+    const serverTime = new Date().toISOString();
+    const takeoffTime = toMobileTimeString(body.takeoffTime || resolved.event.takeoffTime || resolved.event.startTime);
+    const landTime = toMobileTimeString(body.landTime || resolved.event.landTime || resolved.event.endTime || (
+      resolved.event.startTime != null ? Number(resolved.event.startTime) + (Number(resolved.event.duration) || 1) : null
+    ));
+    const policyTaxi = Number(settings?.taxiGroundTime);
+    const requestedTaxi = Number(body.taxiGroundTime);
+    const taxiGroundTime = Number.isFinite(requestedTaxi) && requestedTaxi >= 0 ? Math.round(requestedTaxi * 10) / 10 : (Number.isFinite(policyTaxi) ? policyTaxi : 0.1);
+    const airborneTime = calculateMobileAirborneHours(takeoffTime, landTime);
+    const blockTime = Math.round((airborneTime + taxiGroundTime) * 10) / 10;
+    const totalTime = blockTime;
+    const typeDefaults = getMobileFlightTypeDefaults(resolved.event);
+    const isFlightLog = body.isFlightLog !== undefined ? !!body.isFlightLog : typeDefaults.isFlightLog;
+    const isFtdLog = body.isFtdLog !== undefined ? !!body.isFtdLog : typeDefaults.isFtdLog;
+    const isSolo = body.isSolo !== undefined ? !!body.isSolo : typeDefaults.isSolo;
+    const isDual = body.isDual !== undefined ? !!body.isDual : typeDefaults.isDual;
+    const result = String(body.result || '').trim();
+    const aircraftNumber = String(body.aircraftNumber || resolved.event.aircraftNumber || resolved.event.aircraft || resolved.event.resourceId || '').trim();
+    const from = String(body.from || resolved.event.origin || resolved.event.location || '').trim();
+    const to = String(body.to || from || '').trim();
+    const duty = String(body.duty || resolved.event.flightNumber || resolved.event.eventCode || resolved.event.title || '').trim();
+    const approaches = body.approaches && typeof body.approaches === 'object' ? body.approaches : {};
+    const approachAssignments = body.approachAssignments && typeof body.approachAssignments === 'object' ? body.approachAssignments : { ils: '', rnp: '', tacan: '', vor: '' };
+    const parseOptionalFloat = (value) => {
+      if (value === null || value === undefined || value === '') return null;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    const traineeName = String(resolved.event.student || resolved.event.trainee || '').trim();
+    const instructorName = String(resolved.event.instructor || resolved.event.pilot || '').trim();
+    const traineeMatches = traineeName || resolved.event.traineeId
+      ? await db.trainee.findMany({
+          where: {
+            OR: [
+              resolved.event.traineeId ? { id: String(resolved.event.traineeId) } : undefined,
+              traineeName ? { name: traineeName } : undefined,
+              traineeName ? { fullName: traineeName } : undefined,
+            ].filter(Boolean),
+          },
+          select: { id: true, idNumber: true, name: true, fullName: true },
+          take: 1,
+        }).catch(() => [])
+      : [];
+    const personnelMatches = instructorName
+      ? await db.personnel.findMany({
+          where: { name: instructorName },
+          select: { id: true, idNumber: true, name: true },
+          take: 1,
+        }).catch(() => [])
+      : [];
+    const traineeRecord = traineeMatches?.[0] || null;
+    const instructorRecord = personnelMatches?.[0] || null;
+
+    const completionPayload = {
+      scheduleEventId: eventId,
+      eventCode: resolved.event.flightNumber || resolved.event.eventCode || eventId,
+      eventDate: String(body.date || resolved.snapshotContext.date || '').slice(0, 10),
+      eventType: resolved.event.type || resolved.event.eventType || 'flight',
+      startTime: resolved.event.startTime ?? 0,
+      duration: resolved.event.duration ?? 0,
+      traineeId: traineeRecord?.id || null,
+      traineeFullName: traineeName || resolved.event.pilot || 'Unknown',
+      instructorName: instructorName || null,
+      dcoResult: result || 'DCO',
+      aircraftNumber,
+      takeoffTime,
+      landTime,
+      airborneTime,
+      taxiGroundTime,
+      blockTime,
+      totalFlightTime: totalTime,
+      isSolo,
+      isDual,
+      isCountedAsElce: result !== 'DNCO',
+      recordedBy: resolved.effectiveUser.userId || resolved.effectiveUser.id || req.userId,
+      source: 'post_flight_mobile',
+    };
+
+    let completion = null;
+    if (['DCO', 'DPCO', 'DNCO'].includes(result)) {
+      completion = await db.eventCompletion.upsert({
+        where: { scheduleEventId: eventId },
+        create: completionPayload,
+        update: completionPayload,
+      });
+    }
+
+    const baseLogPayload = {
+      scheduleEventId: eventId,
+      eventCode: completionPayload.eventCode,
+      eventDate: completionPayload.eventDate,
+      eventType: completionPayload.eventType,
+      aircraftNumber,
+      fromIcao: from || null,
+      toIcao: to || null,
+      duty,
+      isSolo,
+      isDual,
+      isFlightLog,
+      isFtdLog,
+      takeoffTime,
+      landTime,
+      airborneTime,
+      taxiGroundTime,
+      blockTime,
+      totalTime,
+      nightTime: parseOptionalFloat(body.nightTime),
+      ifActualTime: parseOptionalFloat(body.ifActualTime),
+      ifSimTime: parseOptionalFloat(body.ifSimTime),
+      ineffectiveTime: parseOptionalFloat(body.ineffectiveTime),
+      ilsCount: parseInt(approaches.ils, 10) || 0,
+      rnpCount: parseInt(approaches.rnp, 10) || 0,
+      tacanCount: parseInt(approaches.tacan, 10) || 0,
+      vorCount: parseInt(approaches.vor, 10) || 0,
+      recordedBy: resolved.effectiveUser.userId || resolved.effectiveUser.id || req.userId,
+    };
+
+    async function upsertMobileFlightLog(payload) {
+      const existing = await db.flightLogEntry.findFirst({
+        where: { scheduleEventId: payload.scheduleEventId, personRole: payload.personRole },
+        select: { id: true },
+      });
+      return existing
+        ? db.flightLogEntry.update({ where: { id: existing.id }, data: payload })
+        : db.flightLogEntry.create({ data: payload });
+    }
+
+    const savedLogs = [];
+    if (traineeName) {
+      savedLogs.push(await upsertMobileFlightLog({
+        ...baseLogPayload,
+        traineeId: traineeRecord?.id || null,
+        personnelId: null,
+        personName: traineeName,
+        personRole: 'trainee',
+        captainTime: isSolo ? totalTime : parseOptionalFloat(body.captainTime),
+        instructorTime: null,
+      }));
+    }
+    if (instructorName) {
+      savedLogs.push(await upsertMobileFlightLog({
+        ...baseLogPayload,
+        traineeId: null,
+        personnelId: instructorRecord?.id || null,
+        personName: instructorName,
+        personRole: 'instructor',
+        captainTime: isFlightLog ? totalTime : parseOptionalFloat(body.captainTime),
+        instructorTime: parseOptionalFloat(body.instructorTime),
+      }));
+    }
+
+    const beforeEvent = { ...resolved.event };
+    let updatedEvent = null;
+    function updatePostFlightEvent(event) {
+      if (!mobileEventMatchesTarget(event, eventId)) return event;
+      const next = {
+        ...event,
+        postFlightStatus: result || null,
+        result: result || event.result || null,
+        takeoffTime,
+        landTime,
+        airborneTime: airborneTime.toFixed(1),
+        taxiGroundTime: taxiGroundTime.toFixed(1),
+        blockTime: blockTime.toFixed(1),
+        totalTime: totalTime.toFixed(1),
+        approachAssignments,
+        postFlightUpdatedAt: serverTime,
+        updatedAt: serverTime,
+      };
+      updatedEvent = next;
+      return next;
+    }
+
+    const nextScheduleEvents = resolved.scheduleEvents.map(updatePostFlightEvent);
+    const nextTraineeEvents = resolved.traineeEvents.map(updatePostFlightEvent);
+    const nextStaffEvents = resolved.staffEvents.map(updatePostFlightEvent);
+    await db.$executeRawUnsafe(
+      `UPDATE "DailySnapshot"
+         SET "scheduleEvents" = $1::jsonb,
+             "traineeEvents" = $2::jsonb,
+             "staffEvents" = $3::jsonb,
+             "savedAt" = NOW()
+       WHERE date = $4::text`,
+      JSON.stringify(nextScheduleEvents),
+      JSON.stringify(nextTraineeEvents),
+      JSON.stringify(nextStaffEvents),
+      resolved.snapshot.date
+    );
+
+    const flightTimes = buildMobileFlightTimesDefaults(updatedEvent || resolved.event, settings, completion, savedLogs);
+    await writeMobileFlightTimesAudit(db, req, resolved.effectiveUser, resolved.snapshot.date, beforeEvent, updatedEvent || resolved.event, flightTimes);
+
+    return res.json({
+      success: true,
+      snapshotKey: resolved.snapshot.date,
+      event: updatedEvent || resolved.event,
+      flightTimes,
+      serverTime,
+    });
+  } catch (error) {
+    console.error('❌ POST /api/mobile/flight-times error:', error);
+    res.status(500).json({ error: 'Failed to save mobile flight times', details: error.message });
+  }
+});
 
   // POST /api/mobile/flight-authorisation - Sign published schedule event authorisation
   app.post('/api/mobile/flight-authorisation', authenticateMobileJWT, async (req, res) => {

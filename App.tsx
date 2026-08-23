@@ -45345,7 +45345,7 @@ appliedUpdates.forEach(update => {
             if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
             const change = (event as CustomEvent)?.detail || {};
             const changePath = String(change.path || '');
-            if (changePath !== '/api/daily-snapshot/save' && changePath !== '/api/mobile/flight-authorisation') return;
+            if (changePath !== '/api/daily-snapshot/save' && changePath !== '/api/mobile/flight-authorisation' && changePath !== '/api/mobile/flight-times') return;
             const snapshotDate = String(change.detail?.date || '').trim();
             const parsedSnapshotKey = parseDailySnapshotKey(snapshotDate);
             const targetDate = parsedSnapshotKey.date || getDailySnapshotDate(snapshotDate);

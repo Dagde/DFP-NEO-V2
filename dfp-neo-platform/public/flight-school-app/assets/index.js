@@ -134599,7 +134599,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
       const change = event?.detail || {};
       const changePath = String(change.path || "");
-      if (changePath !== "/api/daily-snapshot/save" && changePath !== "/api/mobile/flight-authorisation") return;
+      if (changePath !== "/api/daily-snapshot/save" && changePath !== "/api/mobile/flight-authorisation" && changePath !== "/api/mobile/flight-times") return;
       const snapshotDate = String(change.detail?.date || "").trim();
       const parsedSnapshotKey = parseDailySnapshotKey(snapshotDate);
       const targetDate = parsedSnapshotKey.date || getDailySnapshotDate(snapshotDate);
