@@ -10174,7 +10174,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
     });
 
     const scheduleDebug = {
-      routeBuild: "mobile-schedule-linked-identity-v2",
+      routeBuild: "mobile-schedule-context-date-v3",
       scheduleRowCount: schedules ? schedules.length : 0,
       scheduleRowsWithEvents: 0,
       snapshotFound: false,
@@ -10389,6 +10389,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
             OR date = $3::text
             OR date LIKE $4::text
             OR date LIKE $5::text
+            OR date LIKE $6::text
          ORDER BY
            CASE
              WHEN date = $1::text THEN 0
@@ -10396,14 +10397,16 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
              WHEN date = $3::text THEN 2
              WHEN date LIKE $4::text THEN 3
              WHEN date LIKE $5::text THEN 4
-             ELSE 5
+             WHEN date LIKE $6::text THEN 5
+             ELSE 6
            END
          LIMIT 1`,
         date,
         `${date}__ESL`,
         `${date}__PEA`,
         `${date}__ESL__%`,
-        `${date}__PEA__%`
+        `${date}__PEA__%`,
+        `${date}__%`
       );
 
       if (snapRows && snapRows.length > 0) {
