@@ -1081,6 +1081,39 @@ function sendPersonnelIdConflict(res, conflict) {
   });
 }
 
+async function syncLinkedPersonLoginEmail(db, personRecord, nextEmail) {
+  const linkedUserId = String(personRecord?.userId || '').trim();
+  if (!linkedUserId) return null;
+  const cleanEmail = String(nextEmail || '').trim();
+  if (cleanEmail) {
+    const emailConflicts = await db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email
+       FROM "User"
+       WHERE LOWER(email) = LOWER($1)
+         AND id <> $2
+       LIMIT 1`,
+      cleanEmail,
+      linkedUserId
+    );
+    if (emailConflicts?.length) {
+      const error = new Error(`Email ${cleanEmail} is already used by login account ${emailConflicts[0].userId || emailConflicts[0].username}. Use a unique email address before saving account access.`);
+      error.status = 409;
+      error.code = 'EMAIL_ACCOUNT_CONFLICT';
+      throw error;
+    }
+  }
+  const updatedUsers = await db.$queryRawUnsafe(
+    `UPDATE "User"
+     SET email = $1,
+         "updatedAt" = NOW()
+     WHERE id = $2
+     RETURNING id, "userId", username, email`,
+    cleanEmail || null,
+    linkedUserId
+  );
+  return updatedUsers?.[0] || null;
+}
+
 function logApiTiming(label, startedAt, details = {}) {
   const elapsedMs = Date.now() - startedAt;
   if (elapsedMs > 1000) {
@@ -4787,6 +4820,10 @@ app.patch('/api/personnel/:id', async (req, res) => {
       };
     }
 
+    if ('email' in sanitizedUpdates && existing.userId) {
+      await syncLinkedPersonLoginEmail(db, existing, sanitizedUpdates.email);
+    }
+
     const updated = await db.personnel.update({
       where: { id },
       data: sanitizedUpdates
@@ -6986,6 +7023,10 @@ app.patch('/api/trainees/:id', async (req, res) => {
       if (idConflict) {
         return sendPersonnelIdConflict(res, idConflict);
       }
+    }
+
+    if ('email' in sanitizedUpdates && existing.userId) {
+      await syncLinkedPersonLoginEmail(db, existing, sanitizedUpdates.email);
     }
 
     // Update the trainee record
