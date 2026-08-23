@@ -30717,6 +30717,7 @@ const App: React.FC = () => {
     const [flightTurnaround, setFlightTurnaround] = useState(1.2);
     const [ftdTurnaround, setFtdTurnaround] = useState(0.5);
     const [cptTurnaround, setCptTurnaround] = useState(0.5);
+    const [taxiGroundTime, setTaxiGroundTime] = useState(0.1);
     const [isBuildingDfp, setIsBuildingDfp] = useState(false);
     const [isStaffLoaded, setIsStaffLoaded] = useState(false);
     const [isTraineeLoaded, setIsTraineeLoaded] = useState(false);
@@ -31722,6 +31723,7 @@ const App: React.FC = () => {
                 if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
                 if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
                 if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
+                if ((saved as any).taxiGroundTime != null) setTaxiGroundTime(Math.max(0, Number((saved as any).taxiGroundTime) || 0));
                 if (saved.flyingStartTime != null) setFlyingStartTime(saved.flyingStartTime);
                 if (saved.flyingEndTime != null) setFlyingEndTime(saved.flyingEndTime);
                 if (saved.ftdStartTime != null) setFtdStartTime(saved.ftdStartTime);
@@ -31932,6 +31934,7 @@ const App: React.FC = () => {
             flightTurnaround,
             ftdTurnaround,
             cptTurnaround,
+            taxiGroundTime,
             flyingStartTime,
             flyingEndTime,
             ftdStartTime,
@@ -31977,6 +31980,7 @@ const App: React.FC = () => {
         preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour, dispatchStaggerSettings,
         dispatchRateWindowMinutes,
         flightTurnaround, ftdTurnaround, cptTurnaround,
+        taxiGroundTime,
         flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
         flyingWindowExclusions, flyingWindowExclusionsByUnit, activeFlyingWindowExclusionUnitKey,
@@ -50298,6 +50302,8 @@ appliedUpdates.forEach(update => {
                     onUpdateFtdTurnaround={setFtdTurnaround}
                     cptTurnaround={cptTurnaround}
                     onUpdateCptTurnaround={setCptTurnaround}
+                    taxiGroundTime={taxiGroundTime}
+                    onUpdateTaxiGroundTime={(value) => setTaxiGroundTime(Math.max(0, Number(value) || 0))}
                     currentUserPermission={currentUserPermission}
                     maxDispatchPerHour={maxDispatchPerHour}
                     onUpdateMaxDispatchPerHour={setMaxDispatchPerHour}
@@ -50675,6 +50681,7 @@ appliedUpdates.forEach(update => {
                     return <PostFlightView
                                 event={eventForPostFlight}
                                 trainingReportTemplate={trainingReportTemplate}
+                                taxiGroundTime={taxiGroundTime}
                                 onReturn={() => {
                                     setEventForPostFlight(null);
                                     handleNavigation('Program Schedule');
@@ -50744,16 +50751,9 @@ appliedUpdates.forEach(update => {
                                                 ? traineesData.find(t => t.name === pfEvent.student || t.fullName === pfEvent.student)
                                                 : null;
 
-                                            // Build total flight time from takeoff / land strings
-                                            let totalFlightTime: number | undefined;
-                                            if (data.takeoffTime && data.landTime) {
-                                                const toHm = (data.takeoffTime as string).split(':').map(Number);
-                                                const laHm = (data.landTime   as string).split(':').map(Number);
-                                                const toDecimal = toHm[0] + (toHm[1] || 0) / 60;
-                                                const laDecimal = laHm[0] + (laHm[1] || 0) / 60;
-                                                const diff = laDecimal - toDecimal;
-                                                if (diff > 0) totalFlightTime = Math.round(diff * 100) / 100;
-                                            }
+                                            const totalFlightTime = Number.isFinite(Number(data.totalTime))
+                                                ? Math.round(Number(data.totalTime) * 100) / 100
+                                                : undefined;
 
                                             const completionPayload = {
                                                 scheduleEventId: pfEvent.id,
@@ -50770,6 +50770,9 @@ appliedUpdates.forEach(update => {
                                                 takeoffTime:     data.takeoffTime     ?? undefined,
                                                 landTime:        data.landTime        ?? undefined,
                                                 totalFlightTime,
+                                                airborneTime:     data.airborneTime    ?? undefined,
+                                                taxiGroundTime:   data.taxiGroundTime  ?? undefined,
+                                                blockTime:        data.blockTime       ?? data.totalTime ?? undefined,
                                                 isSolo:          !!data.isSolo,
                                                 isDual:          !!data.isDual,
                                                 source:          'post_flight' as const,
@@ -51115,6 +51118,9 @@ appliedUpdates.forEach(update => {
                                             isFtdLog:        !!data.isFtdLog,
                                             takeoffTime:     data.takeoffTime || undefined,
                                             landTime:        data.landTime    || undefined,
+                                            airborneTime:    data.airborneTime != null ? parseFloat(data.airborneTime) : undefined,
+                                            taxiGroundTime:  data.taxiGroundTime != null ? parseFloat(data.taxiGroundTime) : undefined,
+                                            blockTime:       data.blockTime != null ? parseFloat(data.blockTime) : parsedTotal,
                                             totalTime:       parsedTotal,
                                             nightTime:       parsedNight,
                                             ifActualTime:    parsedIfAct,

@@ -14,6 +14,8 @@ interface DutyTurnaroundSectionProps {
     onUpdateFtdTurnaround: (value: number) => void;
     cptTurnaround: number;
     onUpdateCptTurnaround: (value: number) => void;
+    taxiGroundTime: number;
+    onUpdateTaxiGroundTime: (value: number) => void;
     canEdit?: boolean;
     onShowSuccess?: (message: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
@@ -30,6 +32,8 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
     onUpdateFtdTurnaround,
     cptTurnaround,
     onUpdateCptTurnaround,
+    taxiGroundTime,
+    onUpdateTaxiGroundTime,
     canEdit = true,
     onShowSuccess,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
@@ -40,8 +44,10 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
     const [draftFlightTurnaround, setDraftFlightTurnaround] = useState(flightTurnaround);
     const [draftFtdTurnaround, setDraftFtdTurnaround] = useState(ftdTurnaround);
     const [draftCptTurnaround, setDraftCptTurnaround] = useState(cptTurnaround);
+    const [draftTaxiGroundTime, setDraftTaxiGroundTime] = useState(taxiGroundTime);
     const [openTurnaroundMenu, setOpenTurnaroundMenu] = useState<string | null>(null);
     const turnaroundOptions = useMemo(() => Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 0.1).toFixed(1))), []);
+    const taxiGroundOptions = useMemo(() => Array.from({ length: 10 }, (_, i) => parseFloat((i * 0.1).toFixed(1))), []);
     const standardSettingsButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
 
     useEffect(() => {
@@ -51,7 +57,8 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
         setDraftFlightTurnaround(flightTurnaround);
         setDraftFtdTurnaround(ftdTurnaround);
         setDraftCptTurnaround(cptTurnaround);
-    }, [cptTurnaround, flightTurnaround, ftdTurnaround, isEditing, maxCrewDutyPeriod, preferredDutyPeriod]);
+        setDraftTaxiGroundTime(taxiGroundTime);
+    }, [cptTurnaround, flightTurnaround, ftdTurnaround, isEditing, maxCrewDutyPeriod, preferredDutyPeriod, taxiGroundTime]);
 
     const handleEdit = () => {
         setDraftPreferredDutyPeriod(preferredDutyPeriod);
@@ -59,6 +66,7 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
         setDraftFlightTurnaround(flightTurnaround);
         setDraftFtdTurnaround(ftdTurnaround);
         setDraftCptTurnaround(cptTurnaround);
+        setDraftTaxiGroundTime(taxiGroundTime);
         setOpenTurnaroundMenu(null);
         setIsEditing(true);
     };
@@ -69,6 +77,7 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
         setDraftFlightTurnaround(flightTurnaround);
         setDraftFtdTurnaround(ftdTurnaround);
         setDraftCptTurnaround(cptTurnaround);
+        setDraftTaxiGroundTime(taxiGroundTime);
         setOpenTurnaroundMenu(null);
         setIsEditing(false);
     };
@@ -79,13 +88,14 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
         onUpdateFlightTurnaround(draftFlightTurnaround);
         onUpdateFtdTurnaround(draftFtdTurnaround);
         onUpdateCptTurnaround(draftCptTurnaround);
+        onUpdateTaxiGroundTime(draftTaxiGroundTime);
         setOpenTurnaroundMenu(null);
         setIsEditing(false);
         logAudit(
             'Settings - Duty & Turnaround',
             'update',
             'Updated duty and turnaround settings',
-            `Duty period soft/hard: ${preferredDutyPeriod}/${maxCrewDutyPeriod} → ${draftPreferredDutyPeriod}/${draftMaxCrewDutyPeriod}; turnaround ${flightTurnaround}/${ftdTurnaround}/${cptTurnaround} → ${draftFlightTurnaround}/${draftFtdTurnaround}/${draftCptTurnaround}`,
+            `Duty period soft/hard: ${preferredDutyPeriod}/${maxCrewDutyPeriod} → ${draftPreferredDutyPeriod}/${draftMaxCrewDutyPeriod}; turnaround ${flightTurnaround}/${ftdTurnaround}/${cptTurnaround} → ${draftFlightTurnaround}/${draftFtdTurnaround}/${draftCptTurnaround}; taxi/ground ${taxiGroundTime} → ${draftTaxiGroundTime}`,
         );
         onShowSuccess?.('Duty and turnaround settings updated');
     };
@@ -227,6 +237,18 @@ const DutyTurnaroundSection: React.FC<DutyTurnaroundSectionProps> = ({
                             options={turnaroundOptions}
                         />
                     </div>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-400">Post Flight Time Accounting</label>
+                    <div className="grid grid-cols-3 gap-2 mt-1">
+                        <TurnaroundInput
+                            label="Taxi/Ground"
+                            value={draftTaxiGroundTime}
+                            onChange={setDraftTaxiGroundTime}
+                            options={taxiGroundOptions}
+                        />
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">Default extra time added to airborne time to calculate block time.</p>
                 </div>
             </div>
         </div>

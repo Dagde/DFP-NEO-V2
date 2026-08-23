@@ -56,6 +56,7 @@ export interface AppSettingsData {
   flightTurnaround: number;
   ftdTurnaround: number;
   cptTurnaround: number;
+  taxiGroundTime: number;
 
   // Flying Windows
   flyingStartTime: number;
@@ -327,6 +328,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     flightTurnaround: state.flightTurnaround ?? 1.2,
     ftdTurnaround: state.ftdTurnaround ?? 0.5,
     cptTurnaround: state.cptTurnaround ?? 0.5,
+    taxiGroundTime: state.taxiGroundTime ?? 0.1,
     flyingStartTime: state.flyingStartTime ?? 8.0,
     flyingEndTime: state.flyingEndTime ?? 17.0,
     ftdStartTime: state.ftdStartTime ?? 8.0,

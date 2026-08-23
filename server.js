@@ -18673,10 +18673,26 @@ async function ensureFlightLogSnapshotColumns(db) {
     await db.$executeRawUnsafe(`
       ALTER TABLE "FlightLogEntry"
         ADD COLUMN IF NOT EXISTS "captainLogSnapshot" JSONB,
-        ADD COLUMN IF NOT EXISTS "crewLogSnapshot" JSONB
+        ADD COLUMN IF NOT EXISTS "crewLogSnapshot" JSONB,
+        ADD COLUMN IF NOT EXISTS "airborneTime" DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS "taxiGroundTime" DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS "blockTime" DOUBLE PRECISION
     `);
   } catch (err) {
     console.log('[FlightLog] snapshot column ensure:', err.message);
+  }
+}
+
+async function ensureEventCompletionTimeColumns(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "EventCompletion"
+        ADD COLUMN IF NOT EXISTS "airborneTime" DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS "taxiGroundTime" DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS "blockTime" DOUBLE PRECISION
+    `);
+  } catch (err) {
+    console.log('[EventCompletion] time column ensure:', err.message);
   }
 }
 
@@ -18728,7 +18744,7 @@ app.post('/api/flight-log', async (req, res) => {
       traineeId, personnelId, personName, personRole,
       aircraftNumber, fromIcao, toIcao, duty,
       isSolo, isDual, isFlightLog, isFtdLog,
-      takeoffTime, landTime, totalTime, captainTime, instructorTime,
+      takeoffTime, landTime, airborneTime, taxiGroundTime, blockTime, totalTime, captainTime, instructorTime,
       nightTime, ifActualTime, ifSimTime, ineffectiveTime,
       ilsCount, rnpCount, tacanCount, vorCount,
       captainLogSnapshot, crewLogSnapshot,
@@ -18763,6 +18779,9 @@ app.post('/api/flight-log', async (req, res) => {
       isFtdLog:       !!isFtdLog,
       takeoffTime:    takeoffTime || null,
       landTime:       landTime   || null,
+      airborneTime:   airborneTime    != null ? parseFloat(airborneTime)    : null,
+      taxiGroundTime: taxiGroundTime  != null ? parseFloat(taxiGroundTime)  : null,
+      blockTime:      blockTime       != null ? parseFloat(blockTime)       : (totalTime != null ? parseFloat(totalTime) : null),
       totalTime:      totalTime       != null ? parseFloat(totalTime)       : null,
       captainTime:    captainTime     != null ? parseFloat(captainTime)     : null,
       instructorTime: instructorTime  != null ? parseFloat(instructorTime)  : null,
@@ -18805,6 +18824,7 @@ app.post('/api/flight-log', async (req, res) => {
 app.get('/api/event-completions', async (req, res) => {
   try {
     const db = await getPrisma();
+    await ensureEventCompletionTimeColumns(db);
     const { scheduleEventId, traineeId, eventDate, eventCode, instructorName, dcoResult } = req.query;
 
     const where = {};
@@ -18835,13 +18855,14 @@ app.get('/api/event-completions', async (req, res) => {
 app.post('/api/event-completions', async (req, res) => {
   try {
     const db = await getPrisma();
+    await ensureEventCompletionTimeColumns(db);
     const body = req.body || {};
     const {
       scheduleEventId, eventCode, eventDate, eventType,
       startTime, duration,
       traineeId, traineeFullName, instructorName,
       dcoResult, overallGrade, overallResult,
-      aircraftNumber, takeoffTime, landTime, totalFlightTime,
+      aircraftNumber, takeoffTime, landTime, airborneTime, taxiGroundTime, blockTime, totalFlightTime,
       isSolo, isDual, isCountedAsElce,
       recordedBy, source, notes,
     } = body;
@@ -18866,6 +18887,9 @@ app.post('/api/event-completions', async (req, res) => {
       aircraftNumber:  aircraftNumber || null,
       takeoffTime:     takeoffTime   || null,
       landTime:        landTime      || null,
+      airborneTime:    airborneTime   != null ? parseFloat(airborneTime)   : null,
+      taxiGroundTime:  taxiGroundTime != null ? parseFloat(taxiGroundTime) : null,
+      blockTime:       blockTime      != null ? parseFloat(blockTime)      : (totalFlightTime != null ? parseFloat(totalFlightTime) : null),
       totalFlightTime: totalFlightTime != null ? parseFloat(totalFlightTime) : null,
       isSolo:          !!isSolo,
       isDual:          !!isDual,

@@ -410,6 +410,9 @@ model EventCompletion {
   aircraftNumber  String?
   takeoffTime     String?
   landTime        String?
+  airborneTime    Float?
+  taxiGroundTime  Float?
+  blockTime       Float?
   totalFlightTime Float?
   isSolo          Boolean  @default(false)
   isDual          Boolean  @default(false)
@@ -449,6 +452,9 @@ model FlightLogEntry {
   isFtdLog        Boolean  @default(false)
   takeoffTime     String?
   landTime        String?
+  airborneTime    Float?
+  taxiGroundTime  Float?
+  blockTime       Float?
   totalTime       Float?
   captainTime     Float?
   instructorTime  Float?

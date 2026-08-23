@@ -101,6 +101,8 @@ interface SettingsViewWithMenuProps {
     onUpdateFtdTurnaround: (value: number) => void;
     cptTurnaround: number;
     onUpdateCptTurnaround: (value: number) => void;
+    taxiGroundTime: number;
+    onUpdateTaxiGroundTime: (value: number) => void;
     currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
@@ -1552,6 +1554,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 props.flightTurnaround,
                 props.ftdTurnaround,
                 props.cptTurnaround,
+                props.taxiGroundTime,
                 props.dayFlyingStart,
                 props.dayFlyingEnd,
             ),
@@ -1617,6 +1620,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         props.flightTurnaround,
         props.ftdTurnaround,
         props.cptTurnaround,
+        props.taxiGroundTime,
         props.dayFlyingStart,
         props.dayFlyingEnd,
         props.organisationSettings,

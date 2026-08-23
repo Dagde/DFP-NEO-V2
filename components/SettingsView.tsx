@@ -133,6 +133,8 @@ interface SettingsViewProps {
     onUpdateFtdTurnaround: (value: number) => void;
     cptTurnaround: number;
     onUpdateCptTurnaround: (value: number) => void;
+    taxiGroundTime: number;
+    onUpdateTaxiGroundTime: (value: number) => void;
     currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
     scoringMatrixActiveTab?: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
     scoringMatrixReadOnly?: boolean;
@@ -608,6 +610,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onUpdateFtdTurnaround,
     cptTurnaround,
     onUpdateCptTurnaround,
+    taxiGroundTime,
+    onUpdateTaxiGroundTime,
     currentUserPermission,
     activeSection = 'scoring-matrix',
     scoringMatrixActiveTab,
@@ -1120,6 +1124,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         onUpdateFtdTurnaround={onUpdateFtdTurnaround}
                         cptTurnaround={cptTurnaround}
                         onUpdateCptTurnaround={onUpdateCptTurnaround}
+                        taxiGroundTime={taxiGroundTime}
+                        onUpdateTaxiGroundTime={onUpdateTaxiGroundTime}
                         canEdit={canEditSettings}
                         onShowSuccess={onShowSuccess}
                         resourceDisplayNames={resourceDisplayNames}
