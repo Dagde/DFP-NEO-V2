@@ -78098,10 +78098,10 @@ This removes it from the master list and from every user assignment that current
         addRepresentedKey("email", user.email);
         addRepresentedKey("staff-record", user.staffRecordId);
         addRepresentedKey("staff-personnel", user.staffPersonnelId);
-        addRepresentedKey("staff-name", user.staffName);
+        if (!user.staffRecordId && !user.staffPersonnelId && !user.email) addRepresentedKey("staff-name", user.staffName);
         addRepresentedKey("trainee-record", user.traineeRecordId);
         addRepresentedKey("trainee-personnel", user.traineePersonnelId);
-        addRepresentedKey("trainee-name", user.traineeName || user.traineeFullName);
+        if (!user.traineeRecordId && !user.traineePersonnelId && !user.email) addRepresentedKey("trainee-name", user.traineeName || user.traineeFullName);
       });
       const platformUserIds = new Set(platformOptions.flatMap((user) => uniqueValues([user.id, user.username].map(toIdentifier))));
       const orphanOptions = configUserAccess.filter((access) => {
@@ -78120,7 +78120,8 @@ This removes it from the master list and from every user assignment that current
         const personnelId = toIdentifier(staff?.idNumber || staff?.personnelId || staff?.serviceNumber).toLowerCase();
         const email = toIdentifier(staff?.email).toLowerCase();
         const name = String(staff?.name || staff?.fullName || "").trim().toLowerCase();
-        return !(recordId && representedKeys.has(`staff-record:${recordId}`) || personnelId && representedKeys.has(`staff-personnel:${personnelId}`) || email && representedKeys.has(`email:${email}`) || name && representedKeys.has(`staff-name:${name}`));
+        const hasStableIdentity = Boolean(recordId || personnelId || email);
+        return !(recordId && representedKeys.has(`staff-record:${recordId}`) || personnelId && representedKeys.has(`staff-personnel:${personnelId}`) || email && representedKeys.has(`email:${email}`) || !hasStableIdentity && name && representedKeys.has(`staff-name:${name}`));
       }).map((staff) => {
         const personnelId = toIdentifier(staff?.idNumber || staff?.personnelId || staff?.serviceNumber);
         return withSearchText({
@@ -78142,7 +78143,8 @@ This removes it from the master list and from every user assignment that current
         const personnelId = toIdentifier(trainee?.idNumber || trainee?.personnelId || trainee?.serviceNumber).toLowerCase();
         const email = toIdentifier(trainee?.email).toLowerCase();
         const name = getAccessPersonDisplayName(trainee, "trainee").toLowerCase();
-        return !(recordId && representedKeys.has(`trainee-record:${recordId}`) || personnelId && representedKeys.has(`trainee-personnel:${personnelId}`) || email && representedKeys.has(`email:${email}`) || name && representedKeys.has(`trainee-name:${name}`));
+        const hasStableIdentity = Boolean(recordId || personnelId || email);
+        return !(recordId && representedKeys.has(`trainee-record:${recordId}`) || personnelId && representedKeys.has(`trainee-personnel:${personnelId}`) || email && representedKeys.has(`email:${email}`) || !hasStableIdentity && name && representedKeys.has(`trainee-name:${name}`));
       }).map((trainee) => {
         const personnelId = toIdentifier(trainee?.idNumber || trainee?.personnelId || trainee?.serviceNumber);
         const name = getAccessPersonDisplayName(trainee, "trainee");
