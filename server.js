@@ -10903,8 +10903,11 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         if (isVerbal) {
           next.isVerbalAuth = true;
           next.verbalAuthBy = signatureName;
-          next.authoSignedBy = next.authoSignedBy || signatureName;
-          next.authoSignedAt = next.authoSignedAt || serverTime;
+          next.authoSignedBy = signatureName;
+          next.authoSignedAt = serverTime;
+          next.captainSignedBy = signatureName;
+          next.captainSignedAt = serverTime;
+          next.authNotes = (typeof notes === 'string' && notes.trim()) ? notes.trim() : (next.authNotes || 'Verbal Auth received');
         }
         if (typeof notes === 'string' && notes.trim()) {
           next.authNotes = notes.trim();
