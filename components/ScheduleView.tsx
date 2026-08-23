@@ -2386,7 +2386,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Access rules" value="No unit-specific Master LMP restrictions. Organisation settings apply." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="User Access Scopes" description="Users or profiles with access that includes this unit." action={settingsLink('platform-user-access', 'Open User Access', { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : 'platform-user-access-records' })}>
+                    <UnitSettingsGroup title="Manage User Permissions" description="Users or profiles with access that includes this unit." action={settingsLink('platform-user-access', 'Open User Access', { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : 'platform-user-access-records' })}>
                         {userAccessScopeCards.length > 0 ? (
                             <div className="space-y-3 border-t border-white/10 p-4">
                                 {userAccessScopeCards.map((card: any, index: number) => (

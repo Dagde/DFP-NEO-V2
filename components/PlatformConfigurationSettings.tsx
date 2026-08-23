@@ -1737,12 +1737,12 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
   }
   if (area === 'User Access') {
     if (lowerTitle.includes('no permission profile')) {
-      return 'Open Settings → People & Permissions → User Access Scopes, search for the user, then tick at least one configured permission profile that matches their duties.';
+      return 'Open Settings → People & Permissions → Manage User Permissions, search for the user, then tick at least one configured permission profile that matches their duties.';
     }
     if (lowerTitle.includes('unknown permission profile')) {
-      return 'Open Settings → People & Permissions → Master Permission Profiles and recreate the missing profile, or remove the unknown profile from User Access Scopes.';
+      return 'Open Settings → People & Permissions → Master Permission Profiles and recreate the missing profile, or remove the unknown profile from Manage User Permissions.';
     }
-    return 'Open Settings → People & Permissions → User Access Scopes, search for the user, then correct the active access scope so the user, location, unit and feature area match active records.';
+    return 'Open Settings → People & Permissions → Manage User Permissions, search for the user, then correct the active access scope so the user, location, unit and feature area match active records.';
   }
   if (area === 'Permission Profiles') {
     return 'Open Settings → People & Permissions → Master Permission Profiles and tick the capabilities this profile should grant, or remove the profile if it is no longer used.';
@@ -13506,7 +13506,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-user-access" className={getSectionClass('platform-user-access')}>
         <SectionHeader
-          title="Manage User Permissions"
+          title="Assign User Permissions"
           subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
           action={(
             <div className="flex flex-wrap justify-end gap-[1px]">

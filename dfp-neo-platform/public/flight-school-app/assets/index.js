@@ -13154,7 +13154,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Location", value: rule.locationCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { locationCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: rule.unitCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { unitCode: value }), disabled: true })
         ] }, rule.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Access rules", value: "No unit-specific Master LMP restrictions. Organisation settings apply.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "User Access Scopes", description: "Users or profiles with access that includes this unit.", action: settingsLink("platform-user-access", "Open User Access", { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : "platform-user-access-records" }), children: userAccessScopeCards.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 border-t border-white/10 p-4", children: userAccessScopeCards.map((card, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-white/10 bg-slate-950/35 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Manage User Permissions", description: "Users or profiles with access that includes this unit.", action: settingsLink("platform-user-access", "Open User Access", { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : "platform-user-access-records" }), children: userAccessScopeCards.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 border-t border-white/10 p-4", children: userAccessScopeCards.map((card, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-white/10 bg-slate-950/35 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-slate-50", children: card.userLabel }),
@@ -74714,12 +74714,12 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
   }
   if (area === "User Access") {
     if (lowerTitle.includes("no permission profile")) {
-      return "Open Settings → People & Permissions → User Access Scopes, search for the user, then tick at least one configured permission profile that matches their duties.";
+      return "Open Settings → People & Permissions → Manage User Permissions, search for the user, then tick at least one configured permission profile that matches their duties.";
     }
     if (lowerTitle.includes("unknown permission profile")) {
-      return "Open Settings → People & Permissions → Master Permission Profiles and recreate the missing profile, or remove the unknown profile from User Access Scopes.";
+      return "Open Settings → People & Permissions → Master Permission Profiles and recreate the missing profile, or remove the unknown profile from Manage User Permissions.";
     }
-    return "Open Settings → People & Permissions → User Access Scopes, search for the user, then correct the active access scope so the user, location, unit and feature area match active records.";
+    return "Open Settings → People & Permissions → Manage User Permissions, search for the user, then correct the active access scope so the user, location, unit and feature area match active records.";
   }
   if (area === "Permission Profiles") {
     return "Open Settings → People & Permissions → Master Permission Profiles and tick the capabilities this profile should grant, or remove the profile if it is no longer used.";
@@ -84980,7 +84980,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             SectionHeader,
             {
-              title: "Manage User Permissions",
+              title: "Assign User Permissions",
               subtitle: "Search by user name, assign permission profiles, then define where those profiles apply.",
               action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: downloadSettingsPerformanceTrace, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
@@ -86920,7 +86920,7 @@ const sectionLabels = {
   "platform-licensing": "Licensing & Deployment",
   "platform-permission-profiles": "Master Permission Profiles",
   "platform-rank-terminology": "Rank, Terminology & Labels",
-  "platform-user-access": "User Access Scopes",
+  "platform-user-access": "Manage User Permissions",
   "platform-scheduling-rule-sets": "Scheduling Rule Sets",
   "appearance": "App Appearance",
   "email-activation": "Email & Account Activation",

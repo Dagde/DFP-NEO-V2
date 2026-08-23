@@ -309,7 +309,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'platform-licensing': 'Licensing & Deployment',
     'platform-permission-profiles': 'Master Permission Profiles',
     'platform-rank-terminology': 'Rank, Terminology & Labels',
-    'platform-user-access': 'User Access Scopes',
+    'platform-user-access': 'Manage User Permissions',
     'platform-scheduling-rule-sets': 'Scheduling Rule Sets',
     'appearance': 'App Appearance',
     'email-activation': 'Email & Account Activation',
