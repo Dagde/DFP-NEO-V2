@@ -10182,6 +10182,11 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       snapshotRawEventCount: 0,
       snapshotUniqueEventCount: 0,
       matchedEventCount: 0,
+      historicalFound: false,
+      historicalDateFound: false,
+      historicalRawEventCount: 0,
+      historicalUniqueEventCount: 0,
+      historicalMatchedEventCount: 0,
       matchNameCount: matchNames.size,
       matchIdCount: matchIds.size
     };
@@ -10220,6 +10225,75 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       if (r === 'pilot') return "Pilot";
       if (r === 'copilot' || r === 'co-pilot') return "Co-Pilot";
       return null;
+    }
+
+    const nameMatch = (nameField) => {
+      if (!nameField) return false;
+      if (Array.isArray(nameField)) {
+        return nameField.some(nameMatch);
+      }
+
+      const normalized = normalizeIdentifier(nameField);
+      return normalized ? matchNames.has(normalized) : false;
+    };
+
+    const idMatch = (idField) => {
+      if (idField === null || idField === undefined) return false;
+      if (Array.isArray(idField)) {
+        return idField.some(idMatch);
+      }
+
+      const normalized = normalizeIdentifier(idField);
+      return normalized ? matchIds.has(normalized) || matchNames.has(normalized) : false;
+    };
+
+    function filterEventsForMobileUser(events) {
+      return (events || []).filter(e =>
+        nameMatch(e.student) ||
+        nameMatch(e.instructor) ||
+        nameMatch(e.pilot) ||
+        nameMatch(e.crew) ||
+        nameMatch(e.attendees) ||
+        idMatch(e.traineeId) ||
+        idMatch(e.groupTraineeIds)
+      );
+    }
+
+    function dedupeEvents(events) {
+      const seenIds = new Set();
+      return (events || []).filter(e => {
+        const eid = e.id || e.eventId;
+        if (eid && seenIds.has(eid)) return false;
+        if (eid) seenIds.add(eid);
+        return true;
+      });
+    }
+
+    function mapMobileEvents(events) {
+      return (events || []).map((e, idx) => {
+        const isStandby = (e.resourceId && e.resourceId.toLowerCase().includes('stby')) ||
+                          (e.flightNumber && e.flightNumber.toLowerCase().includes('stby')) ||
+                          (e.status && e.status.toLowerCase() === 'stby');
+        const endTimeVal = e.endTime != null ? e.endTime :
+          (e.startTime != null ? parseFloat(e.startTime) + (parseFloat(e.duration) || 1) : null);
+        return {
+          id: String(e.id || e.eventId || idx + 1),
+          title: e.flightNumber || e.resourceId || e.eventCode || null,
+          startTime: toHHMM(e.startTime),
+          endTime: toHHMM(endTimeVal),
+          eventType: mapEventType(e.type || e.eventType || e.eventCode),
+          location: e.location || e.origin || null,
+          role: mapRole(nameMatch(e.student) ? 'Student' : (nameMatch(e.instructor) || nameMatch(e.pilot)) ? 'Instructor' : e.role || null),
+          status: isStandby ? "STBY" : "Published",
+          isStandby: isStandby,
+          notes: e.notes || e.eventDescription || null,
+          aircraft: e.aircraft || e.aircraftNumber || e.resourceId || null,
+          instructor: e.instructor || null,
+          student: e.student || null,
+          pilot: e.pilot || null,
+          resourceId: e.resourceId || null
+        };
+      });
     }
 
     // Helper: extract events from Schedule.data JSON blob
@@ -10423,6 +10497,57 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
             });
           }
         }
+    }
+
+    if (date) {
+      const historicalRows = await db.dataBackup.findMany({
+        where: { type: 'historical_published_schedules' },
+        orderBy: { createdAt: 'desc' },
+        take: 1
+      });
+
+      if (historicalRows && historicalRows.length > 0) {
+        scheduleDebug.historicalFound = true;
+        const publishedSchedules = historicalRows[0].data || {};
+        const dateKeys = [
+          date,
+          `${date}__ESL`,
+          `${date}__PEA`
+        ];
+
+        const matchingHistoricalKey = Object.keys(publishedSchedules).find(key =>
+          dateKeys.includes(key) ||
+          key.startsWith(`${date}__ESL__`) ||
+          key.startsWith(`${date}__PEA__`)
+        );
+
+        if (matchingHistoricalKey && Array.isArray(publishedSchedules[matchingHistoricalKey])) {
+          scheduleDebug.historicalDateFound = true;
+          const historicalEvents = publishedSchedules[matchingHistoricalKey];
+          scheduleDebug.historicalRawEventCount = historicalEvents.length;
+
+          const uniqueHistoricalEvents = dedupeEvents(historicalEvents);
+          scheduleDebug.historicalUniqueEventCount = uniqueHistoricalEvents.length;
+
+          const userHistoricalEvents = filterEventsForMobileUser(uniqueHistoricalEvents);
+          scheduleDebug.historicalMatchedEventCount = userHistoricalEvents.length;
+
+          if (userHistoricalEvents.length > 0) {
+            const mappedEvents = mapMobileEvents(userHistoricalEvents);
+            console.log("✅ GET /api/mobile/schedule - Found " + mappedEvents.length + " events in historical publishedSchedules for date=" + date);
+            return res.json({
+              schedule: {
+                id: "historical-" + matchingHistoricalKey,
+                date: date,
+                isPublished: true,
+                events: mappedEvents,
+                serverTime: new Date().toISOString()
+              },
+              ...(includeDebug ? { debug: scheduleDebug } : {})
+            });
+          }
+        }
+      }
     }
 
       // No schedule found for this user/date - return empty schedule instead of hanging
