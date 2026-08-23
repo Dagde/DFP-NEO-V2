@@ -26213,7 +26213,8 @@ const AccountAccessPanel = ({
   idNumber,
   name,
   email,
-  canManage
+  canManage,
+  activationDisabledReason = ""
 }) => {
   const [payload, setPayload] = reactExports.useState(null);
   const [loading, setLoading] = reactExports.useState(false);
@@ -26277,6 +26278,11 @@ const AccountAccessPanel = ({
     }
   };
   const handleSendActivation = async () => {
+    if (activationDisabledReason) {
+      setMessage("");
+      setError(activationDisabledReason);
+      return;
+    }
     setWorking(true);
     setMessage("");
     setError("");
@@ -26358,7 +26364,8 @@ const AccountAccessPanel = ({
           {
             type: "button",
             onClick: handleSendActivation,
-            disabled: working,
+            disabled: working || Boolean(activationDisabledReason),
+            title: activationDisabledReason || "Send activation email",
             className: "rounded border border-green-500/50 bg-green-900/40 px-3 py-1.5 text-xs font-semibold text-green-100 hover:bg-green-800/60 disabled:cursor-not-allowed disabled:opacity-50",
             children: working ? "Working..." : "Send Activation Email"
           }
@@ -28774,7 +28781,8 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                       idNumber,
                       name: name || trainee.fullName,
                       email,
-                      canManage: canManageAccountAccess
+                      canManage: canManageAccountAccess,
+                      activationDisabledReason: "Save this profile before sending account activation."
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -59413,7 +59421,8 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   idNumber,
                   name: name || instructor.name,
                   email,
-                  canManage: canManageAccountAccess
+                  canManage: canManageAccountAccess,
+                  activationDisabledReason: "Save this profile before sending account activation."
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-3", children: [

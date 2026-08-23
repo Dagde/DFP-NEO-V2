@@ -39,6 +39,7 @@ interface AccountAccessPanelProps {
   name: string;
   email?: string | null;
   canManage: boolean;
+  activationDisabledReason?: string;
 }
 
 const statusBadgeClass = (status: string): string => {
@@ -78,6 +79,7 @@ const AccountAccessPanel: React.FC<AccountAccessPanelProps> = ({
   name,
   email,
   canManage,
+  activationDisabledReason = '',
 }) => {
   const [payload, setPayload] = useState<AccountPayload | null>(null);
   const [loading, setLoading] = useState(false);
@@ -148,6 +150,11 @@ const AccountAccessPanel: React.FC<AccountAccessPanelProps> = ({
   };
 
   const handleSendActivation = async () => {
+    if (activationDisabledReason) {
+      setMessage('');
+      setError(activationDisabledReason);
+      return;
+    }
     setWorking(true);
     setMessage('');
     setError('');
@@ -240,7 +247,8 @@ const AccountAccessPanel: React.FC<AccountAccessPanelProps> = ({
             <button
               type="button"
               onClick={handleSendActivation}
-              disabled={working}
+              disabled={working || Boolean(activationDisabledReason)}
+              title={activationDisabledReason || 'Send activation email'}
               className="rounded border border-green-500/50 bg-green-900/40 px-3 py-1.5 text-xs font-semibold text-green-100 hover:bg-green-800/60 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {working ? 'Working...' : 'Send Activation Email'}

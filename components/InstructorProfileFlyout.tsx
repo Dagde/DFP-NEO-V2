@@ -2045,6 +2045,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       name={name || instructor.name}
                       email={email}
                       canManage={canManageAccountAccess}
+                      activationDisabledReason="Save this profile before sending account activation."
                     />
                     {/* Qualification checkboxes */}
                     <div className="bg-gray-700/30 rounded p-3">

@@ -3101,6 +3101,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             name={name || trainee.fullName}
                             email={email}
                             canManage={canManageAccountAccess}
+                            activationDisabledReason="Save this profile before sending account activation."
                           />
 
                           <div>
