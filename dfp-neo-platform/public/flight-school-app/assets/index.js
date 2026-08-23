@@ -118049,7 +118049,7 @@ const App = () => {
     };
     try {
       const existing = JSON.parse(localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY) || "[]");
-      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-80);
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-400);
       localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY, JSON.stringify(next));
       window.neoContextSelectorDiag = next;
     } catch (error) {
@@ -118091,6 +118091,23 @@ const App = () => {
       })()
     });
   }, []);
+  const previousContextDateRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    const previousDate = previousContextDateRef.current;
+    previousContextDateRef.current = date;
+    if (previousDate === null || previousDate === date) return;
+    pushContextSelectorDiag("state:date-changed", {
+      previousDate,
+      nextDate: date,
+      storedContext: (() => {
+        try {
+          return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
+        } catch {
+          return null;
+        }
+      })()
+    });
+  }, [date, pushContextSelectorDiag]);
   reactExports.useEffect(() => {
     const handleOperationalContextStorage = (event) => {
       if (event.key !== ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY) return;
@@ -119526,6 +119543,83 @@ const App = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
+  function downloadContextSelectorTraceReport() {
+    const safeContext = `${String(school || "location").trim()}-${String(activeUnitCode || "unit").trim()}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "context";
+    const reportDate = date || getEffectiveDfpDateString();
+    let contextEntries = [];
+    try {
+      const storedContext = JSON.parse(localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY) || "[]");
+      contextEntries = Array.isArray(storedContext) ? storedContext : [];
+    } catch {
+      contextEntries = [];
+    }
+    const payload = {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      reportType: "operational-context-selector-trace",
+      instructions: "Generated after the locality/unit selector changed unexpectedly. Reproduce the bounce, then download this trace.",
+      currentState: {
+        browser: typeof navigator !== "undefined" ? navigator.userAgent : "",
+        activeView,
+        date,
+        school,
+        activeUnitCode,
+        activeContextUnitCodes,
+        currentUserName,
+        signedInDisplayName,
+        authUser: authUser ? {
+          id: authUser.id,
+          userId: authUser.userId,
+          username: authUser.username,
+          role: authUser.role,
+          displayName: authUser.displayName
+        } : null,
+        sessionUser,
+        liveSyncEnabled,
+        lastPollTime,
+        dfpSnapshotLoadState,
+        platformDataScopeQuery,
+        hasRuntimePlatformWideAccess,
+        platformAccessContext: {
+          isConfigured: platformAccessContext.isConfigured,
+          isPlatformAdmin: platformAccessContext.isPlatformAdmin,
+          isSuperAdmin: platformAccessContext.isSuperAdmin,
+          accessibleLocations: platformAccessContext.accessibleLocations,
+          permissionProfileIds: platformAccessContext.permissionProfileIds,
+          permissions: platformAccessContext.permissions,
+          rows: platformAccessContext.rows
+        },
+        baseSelectableLocationCodes,
+        selectableLocationCodes,
+        operationalContextOptions,
+        activeLocationUnitOptions: activeLocationUnitOptions.map((option) => ({
+          code: option.code,
+          name: option.name,
+          disabled: option.disabled === true,
+          disabledReason: option.disabledReason || "",
+          isSharedFleetContext: option.isSharedFleetContext === true,
+          memberUnits: option.memberUnits || []
+        })),
+        storedContext: (() => {
+          try {
+            return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
+          } catch {
+            return null;
+          }
+        })(),
+        storedDiagLength: contextEntries.length
+      },
+      contextEntries
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `context-selector-trace-${safeContext}-${reportDate}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
   function pushDashboardReportDiag(stage, details = {}) {
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -119633,15 +119727,31 @@ const App = () => {
     });
     if (aliasMatchedLocation) {
       const nextUnits = getUnitOptionsForLocation(aliasMatchedLocation);
+      pushContextSelectorDiag("access:alias-match-location", {
+        from: { school, activeUnitCode },
+        to: {
+          school: aliasMatchedLocation,
+          activeUnitCode: nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode) ? nextUnits[0].code : activeUnitCode
+        },
+        selectableLocationCodes,
+        nextUnitCodes: nextUnits.map((unit) => unit.code)
+      });
       setSchool(aliasMatchedLocation);
       if (nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode)) {
         setActiveUnitCode(nextUnits[0].code);
       }
     } else {
+      pushContextSelectorDiag("access:reset-to-first-selectable-location", {
+        from: { school, activeUnitCode },
+        toLocation: selectableLocationCodes[0],
+        selectableLocationCodes,
+        platformDataScopeQuery,
+        accessibleLocations: platformAccessContext.accessibleLocations
+      });
       changeSchool(selectableLocationCodes[0]);
       setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
     }
-  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformConfig, platformConfigLoaded, selectableLocationCodes, school]);
+  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, pushContextSelectorDiag, selectableLocationCodes, school]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {
@@ -121116,6 +121226,14 @@ const App = () => {
               source: "snapshot-fallback",
               updatedAt: (/* @__PURE__ */ new Date()).toISOString()
             };
+            pushContextSelectorDiag("snapshot:adopt-admin-fallback-context", {
+              targetDate,
+              from: { school, activeUnitCode },
+              to: { school: resolvedSchool, activeUnitCode: resolvedUnit },
+              snapshotKey,
+              resolvedSnapshotKey,
+              fallbackPayload
+            });
             setSchool(resolvedSchool);
             setActiveUnitCode(resolvedUnit);
             try {
@@ -121171,7 +121289,7 @@ const App = () => {
     } finally {
       loadingSnapshotDates.current.delete(snapshotKey);
     }
-  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, hasRuntimePlatformWideAccess, school]);
+  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, hasRuntimePlatformWideAccess, pushContextSelectorDiag, school]);
   reactExports.useEffect(() => {
     if (setupTestProfile || isInitialSetupWizardActive) {
       loadingSnapshotDates.current.clear();
@@ -140794,6 +140912,16 @@ Do you want to replace the existing entry?`,
           className: "rounded border border-cyan-500/40 px-1.5 py-0.5 text-cyan-200 transition-colors hover:border-cyan-300/70 hover:text-white",
           title: "Download staff roster context trace",
           children: "Staff Trace"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: downloadContextSelectorTraceReport,
+          className: "rounded border border-violet-500/40 px-1.5 py-0.5 text-violet-200 transition-colors hover:border-violet-300/70 hover:text-white",
+          title: "Download locality/unit context trace",
+          children: "Context Trace"
         }
       )
     ] })
