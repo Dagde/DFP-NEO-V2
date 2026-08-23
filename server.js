@@ -4835,8 +4835,10 @@ app.patch('/api/personnel/:id', async (req, res) => {
   } catch (error) {
     console.error('❌ PATCH /api/personnel error:', error);
     const status = error.status || 500;
+    const fallbackMessage = status === 409 ? 'Account conflict' : 'Failed to update personnel';
     res.status(status).json({
-      error: status === 409 ? 'Account conflict' : 'Failed to update personnel',
+      error: fallbackMessage,
+      message: error.message || fallbackMessage,
       details: error.message,
     });
   }
@@ -7045,8 +7047,10 @@ app.patch('/api/trainees/:id', async (req, res) => {
   } catch (error) {
     console.error('❌ PATCH /api/trainees error:', error);
     const status = error.status || 500;
+    const fallbackMessage = status === 409 ? 'Account conflict' : 'Failed to update trainee';
     res.status(status).json({
-      error: status === 409 ? 'Account conflict' : 'Failed to update trainee',
+      error: fallbackMessage,
+      message: error.message || fallbackMessage,
       details: error.message,
     });
   }

@@ -5310,7 +5310,7 @@ const normalisePersonnelRecord = (person: any): any => {
 
 const formatApiErrorMessage = (fallback: string, status?: number, data?: any): string => {
     const source = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
-    const primary = String(source.error || source.details || source.message || '').trim();
+    const primary = String(source.message || source.details || source.error || '').trim();
     const conflict = source.conflict && typeof source.conflict === 'object' ? source.conflict : null;
     const conflictParts = conflict
         ? [

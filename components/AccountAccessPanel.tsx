@@ -66,7 +66,7 @@ const formatDateTime = (value?: string | null): string => {
 const readErrorMessage = async (response: Response, fallback: string): Promise<string> => {
   try {
     const data = await response.json();
-    return data?.message || data?.error || fallback;
+    return data?.message || data?.details || data?.error || fallback;
   } catch {
     return fallback;
   }

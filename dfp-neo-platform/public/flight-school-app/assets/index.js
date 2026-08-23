@@ -26202,7 +26202,7 @@ const formatDateTime = (value) => {
 const readErrorMessage = async (response, fallback) => {
   try {
     const data = await response.json();
-    return data?.message || data?.error || fallback;
+    return data?.message || data?.details || data?.error || fallback;
   } catch {
     return fallback;
   }
@@ -102090,7 +102090,7 @@ const normalisePersonnelRecord = (person) => {
 };
 const formatApiErrorMessage = (fallback, status, data) => {
   const source = data && typeof data === "object" && !Array.isArray(data) ? data : {};
-  const primary = String(source.error || source.details || source.message || "").trim();
+  const primary = String(source.message || source.details || source.error || "").trim();
   const conflict = source.conflict && typeof source.conflict === "object" ? source.conflict : null;
   const conflictParts = conflict ? [
     conflict.name,
