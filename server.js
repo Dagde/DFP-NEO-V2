@@ -10969,6 +10969,7 @@ async function writeMobileFlightAuthorisationAudit(db, req, user, snapshotKey, b
         role,
         signedBy,
         isVerbal = false,
+        action = 'sign',
         notes,
         clientEventUpdatedAt
       } = req.body || {};
@@ -10980,6 +10981,12 @@ async function writeMobileFlightAuthorisationAudit(db, req, user, snapshotKey, b
       if (!['autho', 'captain'].includes(role)) {
         return res.status(400).json({ error: 'role must be autho or captain' });
       }
+
+      const cleanAction = String(action || 'sign').trim().toLowerCase();
+      if (!['sign', 'remove'].includes(cleanAction)) {
+        return res.status(400).json({ error: 'action must be sign or remove' });
+      }
+      const isVerbalRequest = isVerbal === true || String(isVerbal).trim().toLowerCase() === 'true';
 
       const users = await db.$queryRawUnsafe(
         `SELECT id, "userId", "firstName", "lastName", email, "role", "isActive"
@@ -11117,7 +11124,7 @@ async function writeMobileFlightAuthorisationAudit(db, req, user, snapshotKey, b
         return res.status(404).json({ error: 'Event not found in published schedule snapshot' });
       }
 
-      if (role === 'captain' && !isVerbal && !userMatchesEvent(existingEvent) && !access.permissions.includes('settings.superAdmin')) {
+      if (role === 'captain' && !isVerbalRequest && !userMatchesEvent(existingEvent) && !access.permissions.includes('settings.superAdmin')) {
         return res.status(403).json({ error: 'User is not permitted to authorise this flight' });
       }
 
@@ -11145,25 +11152,38 @@ async function writeMobileFlightAuthorisationAudit(db, req, user, snapshotKey, b
         }
 
         const next = { ...event };
-        if (role === 'autho') {
-          next.authoSignedBy = signatureName;
-          next.authoSignedAt = serverTime;
-        }
-        if (role === 'captain') {
-          next.captainSignedBy = signatureName;
-          next.captainSignedAt = serverTime;
-        }
-        if (isVerbal) {
+        const cleanNotes = (typeof notes === 'string' && notes.trim()) ? notes.trim() : '';
+
+        if (cleanAction === 'remove') {
+          if (isVerbalRequest) {
+            next.isVerbalAuth = false;
+            next.verbalAuthBy = null;
+            if (String(next.authNotes || '').trim() === 'Verbal Auth received') {
+              next.authNotes = null;
+            }
+          } else if (role === 'autho') {
+            next.authoSignedBy = null;
+            next.authoSignedAt = null;
+          } else if (role === 'captain') {
+            next.captainSignedBy = null;
+            next.captainSignedAt = null;
+          }
+        } else if (isVerbalRequest) {
           next.isVerbalAuth = true;
           next.verbalAuthBy = signatureName;
+          next.authNotes = cleanNotes || next.authNotes || 'Verbal Auth received';
+        } else if (role === 'autho') {
           next.authoSignedBy = signatureName;
           next.authoSignedAt = serverTime;
+          if (cleanNotes) {
+            next.authNotes = cleanNotes;
+          }
+        } else if (role === 'captain') {
           next.captainSignedBy = signatureName;
           next.captainSignedAt = serverTime;
-          next.authNotes = (typeof notes === 'string' && notes.trim()) ? notes.trim() : 'Verbal Auth received';
-        }
-        if (typeof notes === 'string' && notes.trim()) {
-          next.authNotes = notes.trim();
+          if (cleanNotes) {
+            next.authNotes = cleanNotes;
+          }
         }
 
         const hasAutho = !!String(next.authoSignedBy || '').trim();
@@ -11171,7 +11191,7 @@ async function writeMobileFlightAuthorisationAudit(db, req, user, snapshotKey, b
         next.authorised = hasAutho && hasCaptain;
         next.dualAuthSignedAnnotation = next.authorised
           ? `AUTHO: ${next.authoSignedBy}; PIC: ${next.captainSignedBy}`
-          : next.dualAuthSignedAnnotation || null;
+          : null;
         next.updatedAt = serverTime;
 
         updatedEvent = next;
@@ -11195,9 +11215,10 @@ async function writeMobileFlightAuthorisationAudit(db, req, user, snapshotKey, b
         snapshot.date
       );
 
-      await writeMobileFlightAuthorisationAudit(db, req, effectiveUser, snapshot.date, beforeEvent, updatedEvent, isVerbal ? 'verbal' : role);
+      const auditAction = `${cleanAction}:${isVerbalRequest ? 'verbal' : role}`;
+      await writeMobileFlightAuthorisationAudit(db, req, effectiveUser, snapshot.date, beforeEvent, updatedEvent, auditAction);
 
-      console.log(`✅ POST /api/mobile/flight-authorisation - ${role} signed event=${eventId} snapshot=${snapshot.date} user=${jwtUserId}`);
+      console.log(`✅ POST /api/mobile/flight-authorisation - ${auditAction} event=${eventId} snapshot=${snapshot.date} user=${jwtUserId}`);
 
       return res.json({
         success: true,
@@ -11211,6 +11232,7 @@ async function writeMobileFlightAuthorisationAudit(db, req, user, snapshotKey, b
           isVerbalAuth: updatedEvent.isVerbalAuth === true,
           verbalAuthBy: updatedEvent.verbalAuthBy || null,
           dualAuthSignedAnnotation: updatedEvent.dualAuthSignedAnnotation || null,
+          authorised: updatedEvent.authorised === true,
           isFullyAuthorised: !!updatedEvent.authorised
         },
         serverTime
