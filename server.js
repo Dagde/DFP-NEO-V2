@@ -10186,7 +10186,9 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       }
     }
 
-    // Step 3: If Schedule records exist, use them
+    // Step 3: If Schedule records exist and contain events, use them.
+    // Empty per-user Schedule records can exist even when published events are in DailySnapshot.
+    // In that case, continue to the DailySnapshot fallback below.
     if (schedules && schedules.length > 0) {
       const transformedSchedules = schedules.map(schedule => {
         const events = extractEventsFromData(schedule.data);
@@ -10198,14 +10200,19 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           serverTime: new Date().toISOString()
         };
       });
+      const schedulesWithEvents = transformedSchedules.filter(schedule => schedule.events.length > 0);
 
-      if (date && transformedSchedules.length > 0) {
-        console.log("✅ GET /api/mobile/schedule - Single date: " + date + ", events: " + transformedSchedules[0].events.length);
-        return res.json({ schedule: transformedSchedules[0] });
+      if (date && schedulesWithEvents.length > 0) {
+        console.log("✅ GET /api/mobile/schedule - Single date: " + date + ", events: " + schedulesWithEvents[0].events.length);
+        return res.json({ schedule: schedulesWithEvents[0] });
       }
 
-      console.log("✅ GET /api/mobile/schedule - Found " + transformedSchedules.length + " schedules for userId=" + jwtUserId);
-      return res.json({ success: true, schedules: transformedSchedules });
+      if (!date && schedulesWithEvents.length > 0) {
+        console.log("✅ GET /api/mobile/schedule - Found " + schedulesWithEvents.length + " schedules for userId=" + jwtUserId);
+        return res.json({ success: true, schedules: schedulesWithEvents });
+      }
+
+      console.log("ℹ️ GET /api/mobile/schedule - Schedule rows had no events; checking DailySnapshot fallback");
     }
 
     // Step 4: No Schedule record - check DailySnapshot for published events filtered to this user
@@ -10267,7 +10274,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           nameMatch(e.student) ||
           nameMatch(e.instructor) ||
           nameMatch(e.pilot) ||
-            (e.traineeId && e.traineeId.toLowerCase() === jwtUserId.toLowerCase())
+            (e.traineeId && String(e.traineeId).toLowerCase() === jwtUserId.toLowerCase())
         );
 
         if (userEvents.length > 0) {
