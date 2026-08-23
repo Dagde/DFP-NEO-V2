@@ -4820,20 +4820,25 @@ app.patch('/api/personnel/:id', async (req, res) => {
       };
     }
 
-    if ('email' in sanitizedUpdates && existing.userId) {
-      await syncLinkedPersonLoginEmail(db, existing, sanitizedUpdates.email);
-    }
-
-    const updated = await db.personnel.update({
-      where: { id },
-      data: sanitizedUpdates
+    const updated = await db.$transaction(async (tx) => {
+      if ('email' in sanitizedUpdates && existing.userId) {
+        await syncLinkedPersonLoginEmail(tx, existing, sanitizedUpdates.email);
+      }
+      return tx.personnel.update({
+        where: { id },
+        data: sanitizedUpdates
+      });
     });
 
     console.log(`✅ PATCH /api/personnel/${id} - updated: ${updated.name}`);
     res.json({ success: true, personnel: updated });
   } catch (error) {
     console.error('❌ PATCH /api/personnel error:', error);
-    res.status(500).json({ error: 'Failed to update personnel', details: error.message });
+    const status = error.status || 500;
+    res.status(status).json({
+      error: status === 409 ? 'Account conflict' : 'Failed to update personnel',
+      details: error.message,
+    });
   }
 });
 
@@ -7025,21 +7030,25 @@ app.patch('/api/trainees/:id', async (req, res) => {
       }
     }
 
-    if ('email' in sanitizedUpdates && existing.userId) {
-      await syncLinkedPersonLoginEmail(db, existing, sanitizedUpdates.email);
-    }
-
-    // Update the trainee record
-    const updated = await db.trainee.update({
-      where: { id },
-      data: sanitizedUpdates
+    const updated = await db.$transaction(async (tx) => {
+      if ('email' in sanitizedUpdates && existing.userId) {
+        await syncLinkedPersonLoginEmail(tx, existing, sanitizedUpdates.email);
+      }
+      return tx.trainee.update({
+        where: { id },
+        data: sanitizedUpdates
+      });
     });
 
     console.log(`✅ PATCH /api/trainees/${id} - updated: ${updated.name}`);
     res.json({ success: true, trainee: updated });
   } catch (error) {
     console.error('❌ PATCH /api/trainees error:', error);
-    res.status(500).json({ error: 'Failed to update trainee', details: error.message });
+    const status = error.status || 500;
+    res.status(status).json({
+      error: status === 409 ? 'Account conflict' : 'Failed to update trainee',
+      details: error.message,
+    });
   }
 });
 
