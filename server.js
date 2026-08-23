@@ -10448,7 +10448,18 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           instructor: e.instructor || null,
           student: e.student || null,
           pilot: e.pilot || null,
-          resourceId: e.resourceId || null
+          resourceId: e.resourceId || null,
+          eventId: e.eventId || e.id || null,
+          authoSignedBy: e.authoSignedBy || null,
+          authoSignedAt: e.authoSignedAt || null,
+          captainSignedBy: e.captainSignedBy || null,
+          captainSignedAt: e.captainSignedAt || null,
+          authNotes: e.authNotes || null,
+          isVerbalAuth: e.isVerbalAuth === true,
+          verbalAuthBy: e.verbalAuthBy || null,
+          dualAuthSignedAnnotation: e.dualAuthSignedAnnotation || null,
+          authorised: e.authorised === true,
+          updatedAt: e.updatedAt || null
         };
       });
     }
@@ -10640,7 +10651,18 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
               instructor: e.instructor || null,
               student: e.student || null,
               pilot: e.pilot || null,
-              resourceId: e.resourceId || null
+              resourceId: e.resourceId || null,
+              eventId: e.eventId || e.id || null,
+              authoSignedBy: e.authoSignedBy || null,
+              authoSignedAt: e.authoSignedAt || null,
+              captainSignedBy: e.captainSignedBy || null,
+              captainSignedAt: e.captainSignedAt || null,
+              authNotes: e.authNotes || null,
+              isVerbalAuth: e.isVerbalAuth === true,
+              verbalAuthBy: e.verbalAuthBy || null,
+              dualAuthSignedAnnotation: e.dualAuthSignedAnnotation || null,
+              authorised: e.authorised === true,
+              updatedAt: e.updatedAt || null
             };
           });
 
@@ -10649,10 +10671,12 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
               schedule: {
                 id: "snapshot-" + snap.date,
                 date: date,
+                snapshotKey: snap.date,
                 isPublished: true,
                 events: mappedEvents,
                 serverTime: new Date().toISOString()
               },
+              snapshotKey: snap.date,
               ...(includeDebug ? { debug: scheduleDebug } : {})
             });
           }
@@ -10730,6 +10754,212 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch schedule', details: error.message });
   }
 });
+
+  // POST /api/mobile/flight-authorisation - Sign published schedule event authorisation
+  app.post('/api/mobile/flight-authorisation', authenticateMobileJWT, async (req, res) => {
+    try {
+      const db = await getPrisma();
+      const jwtUserId = req.userId;
+      const {
+        date,
+        snapshotKey,
+        eventId,
+        role,
+        signedBy,
+        isVerbal = false,
+        notes
+      } = req.body || {};
+
+      if (!date || !eventId || !role) {
+        return res.status(400).json({ error: 'date, eventId, and role are required' });
+      }
+
+      if (!['autho', 'captain'].includes(role)) {
+        return res.status(400).json({ error: 'role must be autho or captain' });
+      }
+
+      const users = await db.$queryRawUnsafe(
+        `SELECT id, "userId", "firstName", "lastName", email, "role", "isActive"
+         FROM "User"
+         WHERE "userId" = $1
+         LIMIT 1`,
+        jwtUserId
+      );
+
+      if (!users || users.length === 0) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+
+      const user = users[0];
+      if (!user.isActive) {
+        return res.status(403).json({ error: 'Account is inactive' });
+      }
+
+      const linkedPersonnel = await db.personnel.findMany({
+        where: { userId: user.id },
+        select: { id: true, idNumber: true, name: true, email: true }
+      });
+
+      function normalizeAuthValue(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+          .toLowerCase()
+          .replace(/\s*[–-]\s*\w+\d+\s*$/, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      const userFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      const userFullNameReversed = `${user.lastName || ''}, ${user.firstName || ''}`.trim();
+      const signatureName =
+        (linkedPersonnel[0] && linkedPersonnel[0].name) ||
+        userFullNameReversed ||
+        userFullName ||
+        signedBy ||
+        jwtUserId;
+
+      const snapshotRows = snapshotKey
+        ? await db.$queryRawUnsafe(
+            `SELECT date, "scheduleEvents", "traineeEvents", "staffEvents"
+             FROM "DailySnapshot"
+             WHERE date = $1::text
+             LIMIT 1`,
+            snapshotKey
+          )
+        : await db.$queryRawUnsafe(
+            `SELECT date, "scheduleEvents", "traineeEvents", "staffEvents"
+             FROM "DailySnapshot"
+             WHERE date = $1::text OR date LIKE $2::text
+             ORDER BY CASE WHEN date = $1::text THEN 0 ELSE 1 END
+             LIMIT 1`,
+            date,
+            `${date}__%`
+          );
+
+      if (!snapshotRows || snapshotRows.length === 0) {
+        return res.status(404).json({ error: 'Published schedule snapshot not found' });
+      }
+
+      const snapshot = snapshotRows[0];
+      const scheduleEvents = Array.isArray(snapshot.scheduleEvents) ? snapshot.scheduleEvents : [];
+      const traineeEvents = Array.isArray(snapshot.traineeEvents) ? snapshot.traineeEvents : [];
+      const staffEvents = Array.isArray(snapshot.staffEvents) ? snapshot.staffEvents : [];
+
+      const userMatchNames = new Set([
+        jwtUserId,
+        user.userId,
+        user.email,
+        userFullName,
+        userFullNameReversed,
+        signedBy,
+        ...linkedPersonnel.flatMap(person => [person.name, person.email, person.idNumber])
+      ].map(normalizeAuthValue).filter(Boolean));
+
+      function eventMatchesTarget(event) {
+        return String(event && (event.id || event.eventId || '')) === String(eventId);
+      }
+
+      function userMatchesEvent(event) {
+        const fields = [event.instructor, event.pilot, event.crew, event.attendees];
+        return fields.some(field => {
+          if (Array.isArray(field)) {
+            return field.some(item => userMatchNames.has(normalizeAuthValue(item)));
+          }
+          return userMatchNames.has(normalizeAuthValue(field));
+        });
+      }
+
+      const allEvents = [...scheduleEvents, ...traineeEvents, ...staffEvents];
+      const existingEvent = allEvents.find(eventMatchesTarget);
+
+      if (!existingEvent) {
+        return res.status(404).json({ error: 'Event not found in published schedule snapshot' });
+      }
+
+      const privilegedRoles = new Set(['SUPER_ADMIN', 'ADMIN', 'INSTRUCTOR']);
+      if (!privilegedRoles.has(user.role) && !userMatchesEvent(existingEvent)) {
+        return res.status(403).json({ error: 'User is not permitted to authorise this flight' });
+      }
+
+      const serverTime = new Date().toISOString();
+      let updatedEvent = null;
+
+      function updateEvent(event) {
+        if (!eventMatchesTarget(event)) {
+          return event;
+        }
+
+        const next = { ...event };
+        if (role === 'autho') {
+          next.authoSignedBy = signatureName;
+          next.authoSignedAt = serverTime;
+        }
+        if (role === 'captain') {
+          next.captainSignedBy = signatureName;
+          next.captainSignedAt = serverTime;
+        }
+        if (isVerbal) {
+          next.isVerbalAuth = true;
+          next.verbalAuthBy = signatureName;
+          next.authoSignedBy = next.authoSignedBy || signatureName;
+          next.authoSignedAt = next.authoSignedAt || serverTime;
+        }
+        if (typeof notes === 'string' && notes.trim()) {
+          next.authNotes = notes.trim();
+        }
+
+        const hasAutho = !!String(next.authoSignedBy || '').trim();
+        const hasCaptain = !!String(next.captainSignedBy || '').trim();
+        next.authorised = hasAutho && hasCaptain;
+        next.dualAuthSignedAnnotation = next.authorised
+          ? `AUTHO: ${next.authoSignedBy}; PIC: ${next.captainSignedBy}`
+          : next.dualAuthSignedAnnotation || null;
+        next.updatedAt = serverTime;
+
+        updatedEvent = next;
+        return next;
+      }
+
+      const nextScheduleEvents = scheduleEvents.map(updateEvent);
+      const nextTraineeEvents = traineeEvents.map(updateEvent);
+      const nextStaffEvents = staffEvents.map(updateEvent);
+
+      await db.$executeRawUnsafe(
+        `UPDATE "DailySnapshot"
+         SET "scheduleEvents" = $1::jsonb,
+             "traineeEvents" = $2::jsonb,
+             "staffEvents" = $3::jsonb,
+             "savedAt" = NOW()
+         WHERE date = $4::text`,
+        JSON.stringify(nextScheduleEvents),
+        JSON.stringify(nextTraineeEvents),
+        JSON.stringify(nextStaffEvents),
+        snapshot.date
+      );
+
+      console.log(`✅ POST /api/mobile/flight-authorisation - ${role} signed event=${eventId} snapshot=${snapshot.date} user=${jwtUserId}`);
+
+      return res.json({
+        success: true,
+        snapshotKey: snapshot.date,
+        event: updatedEvent,
+        authorisation: {
+          authoSignedBy: updatedEvent.authoSignedBy || null,
+          authoSignedAt: updatedEvent.authoSignedAt || null,
+          captainSignedBy: updatedEvent.captainSignedBy || null,
+          captainSignedAt: updatedEvent.captainSignedAt || null,
+          isVerbalAuth: updatedEvent.isVerbalAuth === true,
+          verbalAuthBy: updatedEvent.verbalAuthBy || null,
+          dualAuthSignedAnnotation: updatedEvent.dualAuthSignedAnnotation || null,
+          isFullyAuthorised: !!updatedEvent.authorised
+        },
+        serverTime
+      });
+    } catch (error) {
+      console.error('❌ POST /api/mobile/flight-authorisation error:', error);
+      return res.status(500).json({ error: 'Failed to update flight authorisation', details: error.message });
+    }
+  });
   // ============================================================
   // MOBILE UNAVAILABILITY ENDPOINTS
   // ============================================================
