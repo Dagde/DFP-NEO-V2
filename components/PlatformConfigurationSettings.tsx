@@ -11843,11 +11843,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </button>
                 )}
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_180px_180px]">
                 <DraftField label="Profile Name" value={selectedPermissionProfile.name} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value })} />
-                <DraftField label="Description" value={selectedPermissionProfile.description} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value })} />
-              </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div>
                   <span className={labelClass}>Profile Type</span>
                   <select
@@ -11874,6 +11871,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     ))}
                   </select>
                 </div>
+              </div>
+              <div className="mt-3">
+                <DraftField label="Description" value={selectedPermissionProfile.description} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value })} />
               </div>
               <div className="mt-4 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
