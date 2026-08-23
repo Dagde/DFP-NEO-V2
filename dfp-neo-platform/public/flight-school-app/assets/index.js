@@ -121027,6 +121027,11 @@ const App = () => {
         });
         return prev;
       }
+      if (replace && existingNonSeed.length > 0 && events2.length > 0) {
+        const existingSignature = getSnapshotEventsSignature(existingNonSeed);
+        const incomingSignature = getSnapshotEventsSignature(events2);
+        if (existingSignature === incomingSignature) return prev;
+      }
       return { ...prev, [targetDate]: events2 };
     });
     const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
@@ -121034,6 +121039,11 @@ const App = () => {
       const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
       if (!replace && prev[baselineKey] && events2.length > 0) return prev;
       if (!replace && prev[baselineKey] && events2.length === 0) return prev;
+      if (replace && prev[baselineKey] && baselineEvts.length > 0) {
+        const existingSignature = getSnapshotEventsSignature(prev[baselineKey] || []);
+        const incomingSignature = getSnapshotEventsSignature(baselineEvts);
+        if (existingSignature === incomingSignature) return prev;
+      }
       return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
     });
     if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
@@ -121181,7 +121191,7 @@ const App = () => {
             const contextQuery = candidateKey === targetDate ? `?school=${encodeURIComponent(snapshotSchool)}&unit=${encodeURIComponent(snapshotUnit)}` : "";
             const candidateUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(candidateKey)}${contextQuery}`;
             const candidateStartedAt = performance.now();
-            const candidateRes = await fetch(candidateUrl);
+            const candidateRes = await fetch(candidateUrl, { cache: "no-store" });
             pushDfpDataDiag("snapshot:fetch-response", {
               kind: candidateKey === targetDate ? "legacy-date" : candidateKey.includes(`__${snapshotUnit}`) ? "unit-scoped-or-alias" : "location-scoped-or-alias",
               url: candidateUrl,
@@ -121823,7 +121833,17 @@ const App = () => {
       e.flightNumber || "",
       e.instructor || "",
       e.student || "",
-      e.pilot || ""
+      e.pilot || "",
+      e.authoSignedBy || "",
+      e.authoSignedAt || "",
+      e.captainSignedBy || "",
+      e.captainSignedAt || "",
+      e.isVerbalAuth === true ? "verbal" : "",
+      e.verbalAuthBy || "",
+      e.authNotes || "",
+      e.dualAuthSignedAnnotation || "",
+      e.authorised === true ? "authorised" : "",
+      e.updatedAt || ""
     ].join("|")).sort().join("||");
   }
   function pruneDailySnapshotCache(maxEntries = 3) {
@@ -123166,6 +123186,12 @@ ${"=".repeat(60)}`);
   const [eventForAuth, setEventForAuth] = reactExports.useState(null);
   const [showPostFlightView, setShowPostFlightView] = reactExports.useState(false);
   const [eventForPostFlight, setEventForPostFlight] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (!eventForAuth?.id) return;
+    const latestEvent = Object.values(publishedSchedules).flat().find((event) => event.id === eventForAuth.id);
+    if (!latestEvent || latestEvent === eventForAuth) return;
+    setEventForAuth(latestEvent);
+  }, [eventForAuth, publishedSchedules]);
   const [masterCurrencies, setMasterCurrencies] = reactExports.useState([]);
   const [currencyRequirements, setCurrencyRequirements] = reactExports.useState([]);
   const [fallbackMasterCurrencies, setFallbackMasterCurrencies] = reactExports.useState([]);
@@ -134523,11 +134549,25 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     const pollInterval = setInterval(syncUnavailabilityFromDatabase, 5 * 1e3);
     return () => clearInterval(pollInterval);
   }, [isAddFlightTileModalOpen, liveSyncEnabled, syncUnavailabilityFromDatabase]);
+  const syncPublishedScheduleForCurrentDate = reactExports.useCallback(async () => {
+    if (setupTestProfile || isInitialSetupWizardActive || !liveSyncEnabled || isAddFlightTileModalOpen || isUserEditing() || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return;
+    }
+    await loadSnapshotForDate(date, {
+      force: true,
+      replace: true,
+      useCache: false,
+      schoolOverride: school,
+      unitOverride: activeUnitCode,
+      allowAdminFallbackContext: false
+    });
+  }, [activeUnitCode, date, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, setupTestProfile]);
   reactExports.useEffect(() => {
     const handleLiveDfpSnapshotChange = (event) => {
       if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
       const change = event?.detail || {};
-      if (String(change.path || "") !== "/api/daily-snapshot/save") return;
+      const changePath = String(change.path || "");
+      if (changePath !== "/api/daily-snapshot/save" && changePath !== "/api/mobile/flight-authorisation") return;
       const snapshotDate = String(change.detail?.date || "").trim();
       const parsedSnapshotKey = parseDailySnapshotKey(snapshotDate);
       const targetDate = parsedSnapshotKey.date || getDailySnapshotDate(snapshotDate);
@@ -134554,6 +134594,26 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
     return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
   }, [activeUnitCode, date, getDailySnapshotLocationAliases, isAddFlightTileModalOpen, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent]);
+  reactExports.useEffect(() => {
+    if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
+    void syncPublishedScheduleForCurrentDate();
+    const pollInterval = setInterval(() => {
+      void syncPublishedScheduleForCurrentDate();
+    }, 3 * 1e3);
+    const handleFocusRefresh = () => {
+      void syncPublishedScheduleForCurrentDate();
+    };
+    const handleVisibilityRefresh = () => {
+      if (!document.hidden) void syncPublishedScheduleForCurrentDate();
+    };
+    window.addEventListener("focus", handleFocusRefresh);
+    document.addEventListener("visibilitychange", handleVisibilityRefresh);
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleFocusRefresh);
+      document.removeEventListener("visibilitychange", handleVisibilityRefresh);
+    };
+  }, [isAddFlightTileModalOpen, liveSyncEnabled, syncPublishedScheduleForCurrentDate]);
   reactExports.useEffect(() => {
     const handleLivePeopleChange = (event) => {
       if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
@@ -134596,12 +134656,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     try {
       await Promise.all([
         syncUnavailabilityFromDatabase(),
-        syncAlertsForCurrentDate()
+        syncAlertsForCurrentDate(),
+        syncPublishedScheduleForCurrentDate()
       ]);
     } finally {
       setIsManualSyncing(false);
     }
-  }, [isManualSyncing, syncAlertsForCurrentDate, syncUnavailabilityFromDatabase]);
+  }, [isManualSyncing, syncAlertsForCurrentDate, syncPublishedScheduleForCurrentDate, syncUnavailabilityFromDatabase]);
   reactExports.useCallback((newSyllabus) => {
     const updatedMap = new Map(newSyllabus.map((s) => [s.code.trim().replace(/\s/g, "").toLowerCase(), s]));
     setSyllabusDetails((prevSyllabus) => {

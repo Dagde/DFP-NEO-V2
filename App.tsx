@@ -28912,6 +28912,11 @@ const App: React.FC = () => {
                 });
                 return prev;
             }
+            if (replace && existingNonSeed.length > 0 && events.length > 0) {
+                const existingSignature = getSnapshotEventsSignature(existingNonSeed);
+                const incomingSignature = getSnapshotEventsSignature(events);
+                if (existingSignature === incomingSignature) return prev;
+            }
             return { ...prev, [targetDate]: events };
         });
 
@@ -28922,6 +28927,11 @@ const App: React.FC = () => {
             const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
             if (!replace && prev[baselineKey] && events.length > 0) return prev;
             if (!replace && prev[baselineKey] && events.length === 0) return prev;
+            if (replace && prev[baselineKey] && baselineEvts.length > 0) {
+                const existingSignature = getSnapshotEventsSignature(prev[baselineKey] || []);
+                const incomingSignature = getSnapshotEventsSignature(baselineEvts);
+                if (existingSignature === incomingSignature) return prev;
+            }
             return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
         });
         if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
@@ -29087,7 +29097,7 @@ const App: React.FC = () => {
                             : '';
                         const candidateUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(candidateKey)}${contextQuery}`;
                         const candidateStartedAt = performance.now();
-                        const candidateRes = await fetch(candidateUrl);
+                        const candidateRes = await fetch(candidateUrl, { cache: 'no-store' });
                         pushDfpDataDiag('snapshot:fetch-response', {
                             kind: candidateKey === targetDate
                                 ? 'legacy-date'
@@ -29863,6 +29873,16 @@ const App: React.FC = () => {
                 e.instructor || '',
                 e.student || '',
                 e.pilot || '',
+                e.authoSignedBy || '',
+                e.authoSignedAt || '',
+                e.captainSignedBy || '',
+                e.captainSignedAt || '',
+                e.isVerbalAuth === true ? 'verbal' : '',
+                e.verbalAuthBy || '',
+                e.authNotes || '',
+                e.dualAuthSignedAnnotation || '',
+                e.authorised === true ? 'authorised' : '',
+                e.updatedAt || '',
             ].join('|'))
             .sort()
             .join('||');
@@ -31422,6 +31442,15 @@ const App: React.FC = () => {
     const [eventForAuth, setEventForAuth] = useState<ScheduleEvent | null>(null);
     const [showPostFlightView, setShowPostFlightView] = useState(false);
     const [eventForPostFlight, setEventForPostFlight] = useState<ScheduleEvent | null>(null);
+
+    useEffect(() => {
+        if (!eventForAuth?.id) return;
+        const latestEvent = Object.values(publishedSchedules)
+            .flat()
+            .find((event) => event.id === eventForAuth.id);
+        if (!latestEvent || latestEvent === eventForAuth) return;
+        setEventForAuth(latestEvent);
+    }, [eventForAuth, publishedSchedules]);
 
     // Currency setup state
     const [masterCurrencies, setMasterCurrencies] = useState<MasterCurrency[]>([]);
@@ -45284,11 +45313,35 @@ appliedUpdates.forEach(update => {
         return () => clearInterval(pollInterval);
     }, [isAddFlightTileModalOpen, liveSyncEnabled, syncUnavailabilityFromDatabase]);
 
+    const syncPublishedScheduleForCurrentDate = useCallback(async () => {
+        if (
+            setupTestProfile ||
+            isInitialSetupWizardActive ||
+            !liveSyncEnabled ||
+            isAddFlightTileModalOpen ||
+            isUserEditing() ||
+            !date ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(date)
+        ) {
+            return;
+        }
+
+        await loadSnapshotForDate(date, {
+            force: true,
+            replace: true,
+            useCache: false,
+            schoolOverride: school,
+            unitOverride: activeUnitCode,
+            allowAdminFallbackContext: false,
+        });
+    }, [activeUnitCode, date, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, setupTestProfile]);
+
     useEffect(() => {
         const handleLiveDfpSnapshotChange = (event: Event) => {
             if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
             const change = (event as CustomEvent)?.detail || {};
-            if (String(change.path || '') !== '/api/daily-snapshot/save') return;
+            const changePath = String(change.path || '');
+            if (changePath !== '/api/daily-snapshot/save' && changePath !== '/api/mobile/flight-authorisation') return;
             const snapshotDate = String(change.detail?.date || '').trim();
             const parsedSnapshotKey = parseDailySnapshotKey(snapshotDate);
             const targetDate = parsedSnapshotKey.date || getDailySnapshotDate(snapshotDate);
@@ -45317,6 +45370,27 @@ appliedUpdates.forEach(update => {
         window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
         return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
     }, [activeUnitCode, date, getDailySnapshotLocationAliases, isAddFlightTileModalOpen, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent]);
+
+    useEffect(() => {
+        if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
+        void syncPublishedScheduleForCurrentDate();
+        const pollInterval = setInterval(() => {
+            void syncPublishedScheduleForCurrentDate();
+        }, 3 * 1000);
+        const handleFocusRefresh = () => {
+            void syncPublishedScheduleForCurrentDate();
+        };
+        const handleVisibilityRefresh = () => {
+            if (!document.hidden) void syncPublishedScheduleForCurrentDate();
+        };
+        window.addEventListener('focus', handleFocusRefresh);
+        document.addEventListener('visibilitychange', handleVisibilityRefresh);
+        return () => {
+            clearInterval(pollInterval);
+            window.removeEventListener('focus', handleFocusRefresh);
+            document.removeEventListener('visibilitychange', handleVisibilityRefresh);
+        };
+    }, [isAddFlightTileModalOpen, liveSyncEnabled, syncPublishedScheduleForCurrentDate]);
 
     useEffect(() => {
         const handleLivePeopleChange = (event: Event) => {
@@ -45372,11 +45446,12 @@ appliedUpdates.forEach(update => {
             await Promise.all([
                 syncUnavailabilityFromDatabase(),
                 syncAlertsForCurrentDate(),
+                syncPublishedScheduleForCurrentDate(),
             ]);
         } finally {
             setIsManualSyncing(false);
         }
-    }, [isManualSyncing, syncAlertsForCurrentDate, syncUnavailabilityFromDatabase]);
+    }, [isManualSyncing, syncAlertsForCurrentDate, syncPublishedScheduleForCurrentDate, syncUnavailabilityFromDatabase]);
 
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
         const updatedMap = new Map(newSyllabus.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));

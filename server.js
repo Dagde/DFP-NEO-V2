@@ -453,7 +453,15 @@ app.use('/api', (req, res, next) => {
           unitCode: req.body?.unitCode || null,
           eventCount: Array.isArray(req.body?.scheduleEvents) ? req.body.scheduleEvents.length : null,
         }
-      : {};
+      : pathName === '/api/mobile/flight-authorisation'
+        ? {
+            date: req.body?.snapshotKey || req.body?.date || null,
+            eventId: req.body?.eventId || null,
+            role: req.body?.role || null,
+            action: req.body?.action || 'sign',
+            isVerbal: req.body?.isVerbal === true || String(req.body?.isVerbal || '').trim().toLowerCase() === 'true',
+          }
+        : {};
     broadcastLiveChange({
       sourceClientId: String(req.headers['x-neo-client-id'] || '').trim(),
       method,
@@ -16010,6 +16018,9 @@ app.get('/api/daily-snapshot/:date', async (req, res) => {
       return res.status(404).json({ error: `No snapshot found for date ${date}` });
     }
     console.log(`✅ GET /api/daily-snapshot/${date} - Loaded snapshot ${rows[0].date}`);
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.json({ snapshot: rows[0] });
   } catch (error) {
     console.error('❌ GET /api/daily-snapshot/:date error:', error);
