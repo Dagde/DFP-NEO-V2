@@ -2645,25 +2645,48 @@ const getPlatformPermissionProfiles = (config) => {
   return Array.isArray(profileConfig) ? normalisedProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
 };
 const uniqueValues$1 = (values) => Array.from(new Set(values));
-const addImpliedViewPermissions = (permissionIds) => {
+const addImpliedPlatformPermissionIds = (permissionIds) => {
   const permissions = new Set(
     permissionIds.map((permissionId) => String(permissionId || "").trim()).filter(Boolean)
   );
   const normalisedPermissions = () => Array.from(permissions).map(normaliseAccessValue);
   const hasPrefix = (prefix) => normalisedPermissions().some((permissionId) => permissionId.startsWith(prefix));
+  const hasPermission = (permissionId) => normalisedPermissions().includes(normaliseAccessValue(permissionId));
+  const hasActionWithPrefix = (prefix, viewPermissionIds = []) => {
+    const viewPermissions = new Set(viewPermissionIds.map(normaliseAccessValue));
+    return normalisedPermissions().some((permissionId) => permissionId.startsWith(prefix) && !viewPermissions.has(permissionId));
+  };
   const hasLmpManagementAction = normalisedPermissions().some((permissionId) => permissionId.startsWith("lmp.") && permissionId !== "lmp.eventdetails.view");
   if (hasPrefix("dfp.")) permissions.add("dfp.view");
+  if (hasPrefix("dfp.flightline.")) permissions.add("dfp.flightLine.view");
   if (hasPrefix("maintenance.")) {
     permissions.add("dfp.view");
     permissions.add("dfp.flightLine.view");
     permissions.add("maintenance.slideout.view");
   }
+  if (hasPrefix("neo.intelligence.")) permissions.add("neo.intelligence");
+  if (hasActionWithPrefix("staff.profile.", ["staff.profile.view"])) permissions.add("staff.profile.view");
+  if (hasPermission("staff.edit") || hasActionWithPrefix("staff.profile.", ["staff.profile.view"]) || hasPrefix("staff.currency.")) permissions.add("staff.view");
+  if (hasPermission("staff.schedule.edit")) permissions.add("staff.schedule.view");
+  if (hasPermission("staff.currency.edit")) permissions.add("staff.currency.view");
+  if (hasActionWithPrefix("trainee.profile.", ["trainee.profile.own", "trainee.profile.others"])) permissions.add("trainee.roster.view");
+  if (hasActionWithPrefix("trainee.profile.", ["trainee.profile.own", "trainee.profile.others"])) permissions.add("trainee.profile.others");
+  if (hasPermission("trainee.schedule.edit")) permissions.add("trainee.schedule.view");
+  if (hasPermission("trainee.pt051.edit")) permissions.add("trainee.pt051.others");
+  if (hasPermission("lmp.eventDetails.edit")) permissions.add("lmp.eventDetails.view");
   if (hasLmpManagementAction) permissions.add("lmp.manage.use");
   if (hasPrefix("courseprogress.")) permissions.add("courseProgress.view");
   if (hasPrefix("trainingrecords.")) permissions.add("trainingRecords.courseManagement.view");
+  if (hasPermission("priorities.flyingWindow.edit")) permissions.add("priorities.flyingWindow.view");
+  if (hasPermission("priorities.instructorRules.edit")) permissions.add("priorities.instructorRules.view");
+  if (hasPermission("priorities.courseDemand.edit")) permissions.add("priorities.courseDemand.view");
+  if (hasPermission("priorities.directedTasks.edit")) permissions.add("priorities.directedTasks.view");
+  if (hasPermission("reporting.export")) permissions.add("reporting.view");
+  if (hasPermission("neoAssist.slideout.edit")) permissions.add("neoAssist.slideout.view");
   if (hasPrefix("settings.")) permissions.add("settings.view");
   return Array.from(permissions);
 };
+const addImpliedViewPermissions = (permissionIds) => addImpliedPlatformPermissionIds(permissionIds);
 const getExplicitPermissionProfileIds = (rows) => uniqueValues$1(
   rows.flatMap((row) => Array.isArray(parseSettingsObject(row.settings).permissionProfileIds) ? parseSettingsObject(row.settings).permissionProfileIds.map((id) => String(id || "").trim()).filter(Boolean) : [])
 );
@@ -78413,12 +78436,13 @@ This removes it from the master list and from every user assignment that current
   }, [selectedAccessRows]);
   const selectedBasePermissionIds = reactExports.useMemo(() => {
     const selectedProfileSet = new Set(selectedUserProfileIds.map((id) => String(id || "").trim()));
-    return uniqueValues(permissionProfiles.filter((profile) => selectedProfileSet.has(profile.id)).flatMap((profile) => profile.permissions || []));
+    const profilePermissionIds = uniqueValues(permissionProfiles.filter((profile) => selectedProfileSet.has(profile.id)).flatMap((profile) => profile.permissions || []));
+    return uniqueValues(addImpliedPlatformPermissionIds(profilePermissionIds).map((id) => String(id || "").trim()).filter(Boolean));
   }, [permissionProfiles, selectedUserProfileIds]);
   const selectedEffectivePermissionIds = reactExports.useMemo(() => {
     const traceStartedAt = getTraceNow();
     const deniedSet = new Set(selectedUserPermissionDenyIds);
-    const result = uniqueValues([...selectedBasePermissionIds, ...selectedUserPermissionAllowIds]).filter((permissionId) => !deniedSet.has(permissionId));
+    const result = uniqueValues(addImpliedPlatformPermissionIds([...selectedBasePermissionIds, ...selectedUserPermissionAllowIds]).map((id) => String(id || "").trim()).filter(Boolean)).filter((permissionId) => !deniedSet.has(permissionId));
     recordSettingsTraceTiming("selectedEffectivePermissionIds", traceStartedAt);
     return result;
   }, [selectedBasePermissionIds, selectedUserPermissionAllowIds, selectedUserPermissionDenyIds]);
@@ -78427,6 +78451,7 @@ This removes it from the master list and from every user assignment that current
   const selectedUserPermissionAllowIdSet = reactExports.useMemo(() => new Set(selectedUserPermissionAllowIds), [selectedUserPermissionAllowIds]);
   const selectedUserPermissionDenyIdSet = reactExports.useMemo(() => new Set(selectedUserPermissionDenyIds), [selectedUserPermissionDenyIds]);
   const selectedUserHasPermissionOverrides = selectedUserPermissionAllowIds.length > 0 || selectedUserPermissionDenyIds.length > 0;
+  const applyPermissionDependencies = (permissionIds) => uniqueValues(addImpliedPlatformPermissionIds(permissionIds).map((id) => String(id || "").trim()).filter(Boolean));
   const setSelectedUserPermissionOverrides = (allowIds, denyIds) => {
     const cleanAllowIds = uniqueValues(allowIds);
     const cleanDenyIds = uniqueValues(denyIds).filter((id) => !cleanAllowIds.includes(id));
@@ -78483,11 +78508,12 @@ This removes it from the master list and from every user assignment that current
     }));
   };
   const toggleSelectedUserPermission = (permissionId, checked) => {
-    const isBasePermission = selectedBasePermissionIdSet.has(permissionId);
-    const nextAllowIds = selectedUserPermissionAllowIds.filter((id) => id !== permissionId);
-    const nextDenyIds = selectedUserPermissionDenyIds.filter((id) => id !== permissionId);
-    if (checked && !isBasePermission) nextAllowIds.push(permissionId);
-    if (!checked && isBasePermission) nextDenyIds.push(permissionId);
+    const currentEffectiveIds = selectedEffectivePermissionIds.filter((id) => id !== permissionId);
+    const desiredEffectiveIds = applyPermissionDependencies(checked ? [...currentEffectiveIds, permissionId] : currentEffectiveIds);
+    const desiredEffectiveSet = new Set(desiredEffectiveIds);
+    const basePermissionSet = selectedBasePermissionIdSet;
+    const nextAllowIds = desiredEffectiveIds.filter((id) => !basePermissionSet.has(id));
+    const nextDenyIds = selectedBasePermissionIds.filter((id) => !desiredEffectiveSet.has(id));
     setSelectedUserPermissionOverrides(nextAllowIds, nextDenyIds);
   };
   const setSelectedUserProfileIds = (profileIds) => {
@@ -83202,7 +83228,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         checked,
                         disabled: !canEditSection("platform-permission-profiles"),
                         onChange: (event) => {
-                          const permissions = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedPermissionProfile.permissions, permissionId])) : selectedPermissionProfile.permissions.filter((id) => id !== permissionId);
+                          const permissions = applyPermissionDependencies(event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedPermissionProfile.permissions, permissionId])) : selectedPermissionProfile.permissions.filter((id) => id !== permissionId));
                           updatePermissionProfile(selectedPermissionProfile.id, { permissions });
                         }
                       }

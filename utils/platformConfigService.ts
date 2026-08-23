@@ -910,7 +910,7 @@ export const getPlatformPermissionProfiles = (
 
 const uniqueValues = <T,>(values: T[]): T[] => Array.from(new Set(values));
 
-const addImpliedViewPermissions = (permissionIds: PlatformPermissionId[]): PlatformPermissionId[] => {
+export const addImpliedPlatformPermissionIds = (permissionIds: PlatformPermissionId[] | string[]): PlatformPermissionId[] => {
   const permissions = new Set(
     permissionIds
       .map((permissionId) => String(permissionId || '').trim())
@@ -918,24 +918,50 @@ const addImpliedViewPermissions = (permissionIds: PlatformPermissionId[]): Platf
   );
   const normalisedPermissions = () => Array.from(permissions).map(normaliseAccessValue);
   const hasPrefix = (prefix: string) => normalisedPermissions().some((permissionId) => permissionId.startsWith(prefix));
+  const hasPermission = (permissionId: PlatformPermissionId | string) => normalisedPermissions().includes(normaliseAccessValue(permissionId));
+  const hasActionWithPrefix = (prefix: string, viewPermissionIds: Array<PlatformPermissionId | string> = []) => {
+    const viewPermissions = new Set(viewPermissionIds.map(normaliseAccessValue));
+    return normalisedPermissions().some((permissionId) => permissionId.startsWith(prefix) && !viewPermissions.has(permissionId));
+  };
   const hasLmpManagementAction = normalisedPermissions().some((permissionId) => (
     permissionId.startsWith('lmp.')
     && permissionId !== 'lmp.eventdetails.view'
   ));
 
   if (hasPrefix('dfp.')) permissions.add('dfp.view');
+  if (hasPrefix('dfp.flightline.')) permissions.add('dfp.flightLine.view');
   if (hasPrefix('maintenance.')) {
     permissions.add('dfp.view');
     permissions.add('dfp.flightLine.view');
     permissions.add('maintenance.slideout.view');
   }
+  if (hasPrefix('neo.intelligence.')) permissions.add('neo.intelligence');
+  if (hasActionWithPrefix('staff.profile.', ['staff.profile.view'])) permissions.add('staff.profile.view');
+  if (hasPermission('staff.edit') || hasActionWithPrefix('staff.profile.', ['staff.profile.view']) || hasPrefix('staff.currency.')) permissions.add('staff.view');
+  if (hasPermission('staff.schedule.edit')) permissions.add('staff.schedule.view');
+  if (hasPermission('staff.currency.edit')) permissions.add('staff.currency.view');
+  if (hasActionWithPrefix('trainee.profile.', ['trainee.profile.own', 'trainee.profile.others'])) permissions.add('trainee.roster.view');
+  if (hasActionWithPrefix('trainee.profile.', ['trainee.profile.own', 'trainee.profile.others'])) permissions.add('trainee.profile.others');
+  if (hasPermission('trainee.schedule.edit')) permissions.add('trainee.schedule.view');
+  if (hasPermission('trainee.pt051.edit')) permissions.add('trainee.pt051.others');
+  if (hasPermission('lmp.eventDetails.edit')) permissions.add('lmp.eventDetails.view');
   if (hasLmpManagementAction) permissions.add('lmp.manage.use');
   if (hasPrefix('courseprogress.')) permissions.add('courseProgress.view');
   if (hasPrefix('trainingrecords.')) permissions.add('trainingRecords.courseManagement.view');
+  if (hasPermission('priorities.flyingWindow.edit')) permissions.add('priorities.flyingWindow.view');
+  if (hasPermission('priorities.instructorRules.edit')) permissions.add('priorities.instructorRules.view');
+  if (hasPermission('priorities.courseDemand.edit')) permissions.add('priorities.courseDemand.view');
+  if (hasPermission('priorities.directedTasks.edit')) permissions.add('priorities.directedTasks.view');
+  if (hasPermission('reporting.export')) permissions.add('reporting.view');
+  if (hasPermission('neoAssist.slideout.edit')) permissions.add('neoAssist.slideout.view');
   if (hasPrefix('settings.')) permissions.add('settings.view');
 
-  return Array.from(permissions);
+  return Array.from(permissions) as PlatformPermissionId[];
 };
+
+const addImpliedViewPermissions = (permissionIds: PlatformPermissionId[]): PlatformPermissionId[] => (
+  addImpliedPlatformPermissionIds(permissionIds)
+);
 
 const getExplicitPermissionProfileIds = (rows: PlatformAccessRow[]): string[] => uniqueValues(
   rows.flatMap((row) => (

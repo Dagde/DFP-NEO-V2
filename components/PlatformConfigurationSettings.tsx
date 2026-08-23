@@ -5,6 +5,7 @@ import {
   DEFAULT_OPERATIONAL_MODEL,
   OPERATIONAL_MODEL_OPTIONS,
   PLATFORM_PERMISSION_CATALOG,
+  addImpliedPlatformPermissionIds,
   getUnitOperationalModel,
   getLocationResourcePool,
   isFixedCrewLikeOperationalModel,
@@ -6421,15 +6422,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const selectedBasePermissionIds = useMemo(() => {
     const selectedProfileSet = new Set(selectedUserProfileIds.map((id) => String(id || '').trim()));
-    return uniqueValues(permissionProfiles
+    const profilePermissionIds = uniqueValues(permissionProfiles
       .filter((profile) => selectedProfileSet.has(profile.id))
       .flatMap((profile) => profile.permissions || []));
+    return uniqueValues(addImpliedPlatformPermissionIds(profilePermissionIds).map((id) => String(id || '').trim()).filter(Boolean));
   }, [permissionProfiles, selectedUserProfileIds]);
 
   const selectedEffectivePermissionIds = useMemo(() => {
     const traceStartedAt = getTraceNow();
     const deniedSet = new Set(selectedUserPermissionDenyIds);
-    const result = uniqueValues([...selectedBasePermissionIds, ...selectedUserPermissionAllowIds])
+    const result = uniqueValues(addImpliedPlatformPermissionIds([...selectedBasePermissionIds, ...selectedUserPermissionAllowIds]).map((id) => String(id || '').trim()).filter(Boolean))
       .filter((permissionId) => !deniedSet.has(permissionId));
     recordSettingsTraceTiming('selectedEffectivePermissionIds', traceStartedAt);
     return result;
@@ -6440,6 +6442,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const selectedUserPermissionAllowIdSet = useMemo(() => new Set(selectedUserPermissionAllowIds), [selectedUserPermissionAllowIds]);
   const selectedUserPermissionDenyIdSet = useMemo(() => new Set(selectedUserPermissionDenyIds), [selectedUserPermissionDenyIds]);
   const selectedUserHasPermissionOverrides = selectedUserPermissionAllowIds.length > 0 || selectedUserPermissionDenyIds.length > 0;
+
+  const applyPermissionDependencies = (permissionIds: string[]): string[] => (
+    uniqueValues(addImpliedPlatformPermissionIds(permissionIds).map((id) => String(id || '').trim()).filter(Boolean))
+  );
 
   const setSelectedUserPermissionOverrides = (allowIds: string[], denyIds: string[]) => {
     const cleanAllowIds = uniqueValues(allowIds);
@@ -6504,11 +6510,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const toggleSelectedUserPermission = (permissionId: string, checked: boolean) => {
-    const isBasePermission = selectedBasePermissionIdSet.has(permissionId);
-    const nextAllowIds = selectedUserPermissionAllowIds.filter((id) => id !== permissionId);
-    const nextDenyIds = selectedUserPermissionDenyIds.filter((id) => id !== permissionId);
-    if (checked && !isBasePermission) nextAllowIds.push(permissionId);
-    if (!checked && isBasePermission) nextDenyIds.push(permissionId);
+    const currentEffectiveIds = selectedEffectivePermissionIds.filter((id) => id !== permissionId);
+    const desiredEffectiveIds = applyPermissionDependencies(checked ? [...currentEffectiveIds, permissionId] : currentEffectiveIds);
+    const desiredEffectiveSet = new Set(desiredEffectiveIds);
+    const basePermissionSet = selectedBasePermissionIdSet;
+    const nextAllowIds = desiredEffectiveIds.filter((id) => !basePermissionSet.has(id));
+    const nextDenyIds = selectedBasePermissionIds.filter((id) => !desiredEffectiveSet.has(id));
     setSelectedUserPermissionOverrides(nextAllowIds, nextDenyIds);
   };
 
@@ -11744,9 +11751,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               checked={checked}
                               disabled={!canEditSection('platform-permission-profiles')}
                               onChange={(event) => {
-                                const permissions = event.target.checked
+                                const permissions = applyPermissionDependencies(event.target.checked
                                   ? Array.from(new Set([...selectedPermissionProfile.permissions, permissionId]))
-                                  : selectedPermissionProfile.permissions.filter((id) => id !== permissionId);
+                                  : selectedPermissionProfile.permissions.filter((id) => id !== permissionId));
                                 updatePermissionProfile(selectedPermissionProfile.id, { permissions });
                               }}
                             />
