@@ -882,10 +882,10 @@ const sectionGroups: {
   {
     label: 'Training & Standards',
     shortLabel: 'Training',
-    description: 'Scoring rules, training records, trainee instructor allocation, currency requirements and continuation training event standards.',
+    description: 'Scoring rules, training records, trainee instructor allocation, currency requirements, duty rules and continuation training event standards.',
     accent: 'sky',
     defaultSection: 'scoring-matrix',
-    sections: ['scoring-matrix', 'training-report-template', 'trainee-reallocation', 'sct-events', 'currencies'],
+    sections: ['scoring-matrix', 'training-report-template', 'trainee-reallocation', 'sct-events', 'currencies', 'duty-turnaround'],
   },
   {
     label: 'DFP Build Rules',
@@ -897,7 +897,6 @@ const sectionGroups: {
     searchSections: [
       'scheduling-rules',
       'event-limits',
-      'duty-turnaround',
       'business-rules',
       'platform-scheduling-rule-sets',
       'people-profile',
