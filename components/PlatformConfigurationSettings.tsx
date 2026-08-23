@@ -13506,7 +13506,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-user-access" className={getSectionClass('platform-user-access')}>
         <SectionHeader
-          title="User Access Context"
+          title="Assign User Permissions"
           subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
           action={(
             <div className="flex flex-wrap justify-end gap-[1px]">
