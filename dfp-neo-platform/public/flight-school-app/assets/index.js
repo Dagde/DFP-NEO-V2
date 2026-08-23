@@ -120795,7 +120795,7 @@ const App = () => {
   }, [activeUnitCode]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
     const loadStartedAt = performance.now();
-    const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = "" } = options;
+    const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = "", allowAdminFallbackContext = true } = options;
     const snapshotSchool = schoolOverride ?? school;
     const snapshotUnit = unitOverride ?? activeUnitCode;
     const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
@@ -120814,6 +120814,7 @@ const App = () => {
       force,
       replace,
       useCache,
+      allowAdminFallbackContext,
       loaded: loadedSnapshotDates.current.has(snapshotKey),
       loading: loadingSnapshotDates.current.has(snapshotKey),
       existingEventsForTarget: (publishedSchedulesRef.current[targetDate] || []).length
@@ -120893,13 +120894,14 @@ const App = () => {
           });
           const adminFallbackSnapshotKeys = hasRuntimePlatformWideAccess ? knownDateSnapshotKeys.filter((candidateKey) => !knownContextSnapshotKeys.includes(candidateKey)) : [];
           const adminFallbackSnapshotKeySet = new Set(adminFallbackSnapshotKeys);
+          const permittedAdminFallbackSnapshotKeys = allowAdminFallbackContext ? adminFallbackSnapshotKeys : [];
           const candidateKeys = [
             exactSnapshotKey,
             ...knownContextSnapshotKeys,
             ...snapshotLocationAliases.map((locationAlias) => getDailySnapshotKey(targetDate, locationAlias, snapshotUnit)),
             ...snapshotLocationAliases.map((locationAlias) => getDailySnapshotKey(targetDate, locationAlias, "")),
             targetDate,
-            ...adminFallbackSnapshotKeys
+            ...permittedAdminFallbackSnapshotKeys
           ].filter((key, index, keys) => Boolean(key) && keys.indexOf(key) === index);
           let res = null;
           let resolvedSnapshotKey = snapshotKey;
@@ -120910,6 +120912,7 @@ const App = () => {
             retryDelayMs: delay,
             candidateCount: candidateKeys.length,
             candidateKeys,
+            adminFallbackSuppressed: adminFallbackSnapshotKeys.length > 0 && !allowAdminFallbackContext,
             elapsedMs: Math.round(performance.now() - loadStartedAt)
           });
           for (const [candidateIndex, candidateKey] of candidateKeys.entries()) {
@@ -127396,7 +127399,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     setTimeout(() => setIsLocalityChangeVisible(false), 2e3);
     setNextDayBuildEvents([]);
     setPublishedSchedules({});
-    void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: nextUnit });
+    void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: nextUnit, allowAdminFallbackContext: false });
   };
   const changeOperationalContext = (newSchool, newUnit) => {
     pushContextSelectorDiag("action:change-operational-context", {
@@ -127411,7 +127414,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     setTimeout(() => setIsLocalityChangeVisible(false), 2e3);
     setNextDayBuildEvents([]);
     setPublishedSchedules({});
-    void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: newUnit });
+    void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: newUnit, allowAdminFallbackContext: false });
   };
   const handleAddCourseFromTrainingRecords = async (data) => {
     setCourseColors((prev) => ({ ...prev, [data.number]: data.color }));
