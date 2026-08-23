@@ -316,6 +316,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
             // Also check other key fields
             const otherChanged = updatedInstructor.name !== selectedInstructor.name ||
+                updatedInstructor.email !== selectedInstructor.email ||
+                updatedInstructor.phoneNumber !== selectedInstructor.phoneNumber ||
+                (updatedInstructor as any).userId !== (selectedInstructor as any).userId ||
                 (updatedInstructor as any).isActive !== (selectedInstructor as any).isActive;
 
             if (unavailChanged || preferencesChanged || otherChanged) {

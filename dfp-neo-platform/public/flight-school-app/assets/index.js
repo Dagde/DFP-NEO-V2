@@ -30735,7 +30735,7 @@ const CourseRosterView = ({
         const prevUnavailHash = JSON.stringify((selectedTrainee.unavailability || []).map((u) => u.id).sort());
         const newUnavailHash = JSON.stringify((updatedTrainee.unavailability || []).map((u) => u.id).sort());
         const unavailChanged = prevUnavailHash !== newUnavailHash;
-        const otherChanged = updatedTrainee.fullName !== selectedTrainee.fullName || updatedTrainee.isPaused !== selectedTrainee.isPaused || updatedTrainee.course !== selectedTrainee.course;
+        const otherChanged = updatedTrainee.fullName !== selectedTrainee.fullName || updatedTrainee.isPaused !== selectedTrainee.isPaused || updatedTrainee.course !== selectedTrainee.course || updatedTrainee.email !== selectedTrainee.email || updatedTrainee.phoneNumber !== selectedTrainee.phoneNumber || updatedTrainee.userId !== selectedTrainee.userId;
         if (unavailChanged || otherChanged) {
           setSelectedTrainee({
             ...updatedTrainee,
@@ -60597,7 +60597,7 @@ const InstructorListView = ({
         const newUnavailHash = JSON.stringify((updatedInstructor.unavailability || []).map((u) => u.id).sort());
         const unavailChanged = prevUnavailHash !== newUnavailHash;
         const preferencesChanged = JSON.stringify(selectedInstructor.preferences || {}) !== JSON.stringify(updatedInstructor.preferences || {});
-        const otherChanged = updatedInstructor.name !== selectedInstructor.name || updatedInstructor.isActive !== selectedInstructor.isActive;
+        const otherChanged = updatedInstructor.name !== selectedInstructor.name || updatedInstructor.email !== selectedInstructor.email || updatedInstructor.phoneNumber !== selectedInstructor.phoneNumber || updatedInstructor.userId !== selectedInstructor.userId || updatedInstructor.isActive !== selectedInstructor.isActive;
         if (unavailChanged || preferencesChanged || otherChanged) {
           setSelectedInstructor({
             ...updatedInstructor,

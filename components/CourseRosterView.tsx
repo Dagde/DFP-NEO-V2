@@ -268,7 +268,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                 // Also check other key fields
                 const otherChanged = updatedTrainee.fullName !== selectedTrainee.fullName ||
                     updatedTrainee.isPaused !== selectedTrainee.isPaused ||
-                    updatedTrainee.course !== selectedTrainee.course;
+                    updatedTrainee.course !== selectedTrainee.course ||
+                    updatedTrainee.email !== selectedTrainee.email ||
+                    updatedTrainee.phoneNumber !== selectedTrainee.phoneNumber ||
+                    (updatedTrainee as any).userId !== (selectedTrainee as any).userId;
 
                 if (unavailChanged || otherChanged) {
                     // Preserve any locally-edited currencyStatus so a background traineesData refresh
