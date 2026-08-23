@@ -2416,6 +2416,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [bulkAccessProfileIds, setBulkAccessProfileIds] = useState<string[]>([]);
   const [bulkAccessAssignmentOpen, setBulkAccessAssignmentOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
+  const [showOrganisationPermissionTemplates, setShowOrganisationPermissionTemplates] = useState(false);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = useState<Record<string, boolean>>({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = useState(false);
   const [, setRankTerminologyDirty] = useState(false);
@@ -5690,6 +5691,63 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return Array.isArray(profiles) ? profiles : DEFAULT_PERMISSION_PROFILES;
   }, [configOrganisations]);
 
+  const activePermissionTemplateUnitCode = useMemo(() => {
+    const fromActiveUnit = String(activeUnitCode || '').includes('+')
+      ? String(activeUnitCode || '').split('+')[0]
+      : activeUnitCode;
+    const resolved = String(
+      (Array.isArray(activeUnitCodes) && activeUnitCodes[0])
+      || fromActiveUnit
+      || configUnits.find(isActiveRecord)?.code
+      || configUnits[0]?.code
+      || '',
+    ).trim().toUpperCase();
+    return resolved;
+  }, [activeUnitCode, activeUnitCodes, configUnits]);
+
+  const activePermissionTemplateUnit = useMemo(
+    () => configUnits.find((unit) => String(unit.code || '').trim().toUpperCase() === activePermissionTemplateUnitCode) || null,
+    [activePermissionTemplateUnitCode, configUnits],
+  );
+
+  const activePermissionTemplateLocationCode = String(activePermissionTemplateUnit?.locationCode || configLocations[0]?.code || '').trim().toUpperCase();
+  const activePermissionTemplateOrganisationCode = String(activePermissionTemplateUnit?.organisationCode || configOrganisations[0]?.code || 'DEFAULT').trim().toUpperCase();
+  const permissionTemplateUnitOptions = useMemo(
+    () => configUnits
+      .filter(isActiveRecord)
+      .map((unit) => String(unit.code || '').trim().toUpperCase())
+      .filter(Boolean),
+    [configUnits],
+  );
+
+  const getPermissionProfileUnitCode = (profile?: PermissionProfile | null): string => (
+    String(profile?.settings?.unitCode || '').trim().toUpperCase()
+  );
+
+  const getPermissionProfileScopeLabel = (profile?: PermissionProfile | null): string => {
+    const unitCode = getPermissionProfileUnitCode(profile);
+    const sourceUnitCode = String(profile?.settings?.copiedFromUnitCode || profile?.settings?.sourceUnitCode || '').trim().toUpperCase();
+    if (unitCode) return unitCode === activePermissionTemplateUnitCode ? `This unit: ${unitCode}` : `Unit: ${unitCode}`;
+    if (sourceUnitCode) return `Copied from ${sourceUnitCode}`;
+    return 'Organisation-wide';
+  };
+
+  const isPermissionProfileAvailableToActiveUnit = (profile: PermissionProfile): boolean => {
+    const unitCode = getPermissionProfileUnitCode(profile);
+    return !unitCode || unitCode === activePermissionTemplateUnitCode;
+  };
+
+  const activeUnitPermissionProfiles = useMemo(
+    () => permissionProfiles.filter(isPermissionProfileAvailableToActiveUnit),
+    [activePermissionTemplateUnitCode, permissionProfiles],
+  );
+
+  const visiblePermissionProfiles = showOrganisationPermissionTemplates
+    ? permissionProfiles
+    : activeUnitPermissionProfiles;
+
+  const assignablePermissionProfiles = activeUnitPermissionProfiles;
+
   const configurationHealthUnitCodes = useMemo(
     () => parseConfigurationHealthUnitCodes(
       ...(Array.isArray(activeUnitCodes) ? activeUnitCodes : []),
@@ -5795,6 +5853,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     )));
   };
 
+  const updatePermissionProfileUnit = (profileId: string, unitCode: string) => {
+    const profile = permissionProfiles.find((candidate) => candidate.id === profileId);
+    const cleanUnitCode = String(unitCode || '').trim().toUpperCase();
+    const unit = configUnits.find((candidate) => String(candidate.code || '').trim().toUpperCase() === cleanUnitCode);
+    updatePermissionProfile(profileId, {
+      settings: {
+        ...(profile?.settings || {}),
+        organisationCode: String(unit?.organisationCode || configOrganisations[0]?.code || 'DEFAULT').trim().toUpperCase(),
+        locationCode: String(unit?.locationCode || '').trim().toUpperCase(),
+        unitCode: cleanUnitCode,
+        templateScope: cleanUnitCode ? 'unit' : 'organisation',
+      },
+    });
+  };
+
   const selectedPermissionProfile = useMemo(
     () => permissionProfiles.find((profile) => profile.id === selectedProfileId) || permissionProfiles[0],
     [permissionProfiles, selectedProfileId],
@@ -5838,10 +5911,47 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ? 'Additional access granted to selected users outside their normal role.'
           : 'Describe what this role profile allows.',
         permissions: profileType === 'exception' ? [] : ['dfp.view'],
-        settings: { profileType },
+        settings: {
+          profileType,
+          templateScope: activePermissionTemplateUnitCode ? 'unit' : 'organisation',
+          organisationCode: activePermissionTemplateOrganisationCode,
+          locationCode: activePermissionTemplateLocationCode,
+          unitCode: activePermissionTemplateUnitCode,
+        },
       },
     ]);
     setSelectedProfileId(id);
+  };
+
+  const copyPermissionProfileToActiveUnit = (sourceProfile: PermissionProfile) => {
+    if (!activePermissionTemplateUnitCode) return;
+    const idBase = `${sourceProfile.id}-${activePermissionTemplateUnitCode}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    const id = `${idBase || 'permission-profile'}-${Date.now()}`;
+    const sourceUnitCode = getPermissionProfileUnitCode(sourceProfile);
+    const copiedProfile: PermissionProfile = {
+      ...sourceProfile,
+      id,
+      name: sourceProfile.name || 'Copied Permission Profile',
+      description: sourceProfile.description || '',
+      permissions: [...(sourceProfile.permissions || [])],
+      settings: {
+        ...(sourceProfile.settings || {}),
+        templateScope: 'unit',
+        organisationCode: activePermissionTemplateOrganisationCode,
+        locationCode: activePermissionTemplateLocationCode,
+        unitCode: activePermissionTemplateUnitCode,
+        copiedFromProfileId: sourceProfile.id,
+        copiedFromProfileName: sourceProfile.name,
+        copiedFromUnitCode: sourceUnitCode || '',
+        copiedAt: new Date().toISOString(),
+      },
+    };
+    updatePermissionProfiles([...permissionProfiles, copiedProfile]);
+    setSelectedProfileId(id);
+    onShowSuccess(`Copied "${sourceProfile.name}" into ${activePermissionTemplateUnitCode} templates. Rename it if needed, then press Save.`);
   };
 
   const deleteSelectedPermissionProfile = async () => {
@@ -11638,7 +11748,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-permission-profiles" className={getSectionClass('platform-permission-profiles')}>
         <SectionHeader
           title="Master Permission Profiles"
-          subtitle="This is the single master list of role and exception profiles. User and group assignment panels reuse this same list."
+          subtitle="Build role and exception templates for the active unit. Browse organisation templates when you need to copy another unit's template into this unit."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-permission-profiles')}
@@ -11662,17 +11772,31 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="grid gap-4 p-4 xl:grid-cols-[340px,1fr]">
           <div className="space-y-2">
             <div className="rounded-lg border border-cyan-500/25 bg-cyan-950/25 px-4 py-3 text-xs text-cyan-50">
-              <div className="font-bold uppercase tracking-wide text-cyan-200">Single Master List</div>
+              <div className="font-bold uppercase tracking-wide text-cyan-200">Unit Template Library</div>
               <p className="mt-1 text-cyan-100/80">
-                These profiles control app access only. Staff and trainee profile roles remain operational data for scheduling, training and display. User and group assignment panels always use this same master list.
+                Templates control app access only. Staff and trainee profile roles remain operational data for scheduling, training and display.
               </p>
+              <div className="mt-3 rounded border border-cyan-500/20 bg-gray-950/40 px-3 py-2">
+                <div className="font-semibold text-cyan-100">Active template unit: {activePermissionTemplateUnitCode || 'No active unit'}</div>
+                <label className="mt-2 flex items-center gap-2 text-cyan-50/90">
+                  <input
+                    type="checkbox"
+                    checked={showOrganisationPermissionTemplates}
+                    onChange={(event) => setShowOrganisationPermissionTemplates(event.target.checked)}
+                    className="h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                  />
+                  <span>Show templates from all units in this organisation</span>
+                </label>
+              </div>
             </div>
-            {permissionProfiles.length === 0 && (
+            {visiblePermissionProfiles.length === 0 && (
               <div className="rounded border border-dashed border-gray-700 bg-gray-950/70 px-4 py-5 text-sm text-gray-400">
-                No master permission profiles configured.
+                No permission templates available for this filter.
               </div>
             )}
-            {permissionProfiles.map((profile) => (
+            {visiblePermissionProfiles.map((profile) => {
+              const isActiveUnitTemplate = isPermissionProfileAvailableToActiveUnit(profile);
+              return (
               <button
                 key={profile.id}
                 type="button"
@@ -11689,13 +11813,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     {getPermissionProfileType(profile)}
                   </span>
                 </div>
-                <div className="mt-1 text-xs text-gray-400">{profile.permissions.length} permissions</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                  <span>{profile.permissions.length} permissions</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                    isActiveUnitTemplate ? 'bg-emerald-500/15 text-emerald-200' : 'bg-violet-500/15 text-violet-200'
+                  }`}>
+                    {getPermissionProfileScopeLabel(profile)}
+                  </span>
+                </div>
               </button>
-            ))}
+              );
+            })}
           </div>
           {selectedPermissionProfile && (
             <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
-              <div className="grid gap-3 md:grid-cols-[1fr_1fr_180px]">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wide text-gray-400">Template Scope</div>
+                  <div className="mt-1 text-sm font-semibold text-white">{getPermissionProfileScopeLabel(selectedPermissionProfile)}</div>
+                </div>
+                {!isPermissionProfileAvailableToActiveUnit(selectedPermissionProfile) && (
+                  <button
+                    type="button"
+                    disabled={!canEditSection('platform-permission-profiles') || !activePermissionTemplateUnitCode}
+                    onClick={() => copyPermissionProfileToActiveUnit(selectedPermissionProfile)}
+                    className="rounded border border-violet-500/40 bg-violet-600/15 px-3 py-2 text-xs font-bold text-violet-50 hover:bg-violet-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Add to {activePermissionTemplateUnitCode || 'Unit'} Templates
+                  </button>
+                )}
+              </div>
+              <div className="grid gap-3 md:grid-cols-[1fr_1fr_180px_180px]">
                 <DraftField label="Profile Name" value={selectedPermissionProfile.name} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value })} />
                 <DraftField label="Description" value={selectedPermissionProfile.description} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value })} />
                 <div>
@@ -11708,6 +11856,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   >
                     <option value="role">Role</option>
                     <option value="exception">Exception</option>
+                  </select>
+                </div>
+                <div>
+                  <span className={labelClass}>Template Unit</span>
+                  <select
+                    className={fieldClass}
+                    value={getPermissionProfileUnitCode(selectedPermissionProfile)}
+                    disabled={!canEditSection('platform-permission-profiles')}
+                    onChange={(event) => updatePermissionProfileUnit(selectedPermissionProfile.id, event.target.value)}
+                  >
+                    <option value="">Organisation-wide</option>
+                    {permissionTemplateUnitOptions.map((unitCode) => (
+                      <option key={unitCode} value={unitCode}>{unitCode}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -13418,7 +13580,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               )}
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {permissionProfiles.map((profile) => {
+              {assignablePermissionProfiles.map((profile) => {
                 const checked = selectedUserProfileIdSet.has(profile.id);
                 const profileType = getPermissionProfileType(profile);
                 return (
@@ -13619,7 +13781,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </span>
                 </div>
                 <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                  {permissionProfiles.map((profile) => (
+                  {assignablePermissionProfiles.map((profile) => (
                     <label key={`bulk-${profile.id}`} className="flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100">
                       <input
                         type="checkbox"

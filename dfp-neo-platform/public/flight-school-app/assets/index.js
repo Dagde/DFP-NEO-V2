@@ -75253,6 +75253,7 @@ const PlatformConfigurationSettings = ({
   const [bulkAccessProfileIds, setBulkAccessProfileIds] = reactExports.useState([]);
   const [bulkAccessAssignmentOpen, setBulkAccessAssignmentOpen] = reactExports.useState(false);
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
+  const [showOrganisationPermissionTemplates, setShowOrganisationPermissionTemplates] = reactExports.useState(false);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = reactExports.useState({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = reactExports.useState(false);
   const [, setRankTerminologyDirty] = reactExports.useState(false);
@@ -77912,6 +77913,41 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     const profiles = configOrganisations[0]?.settings?.permissionProfiles;
     return Array.isArray(profiles) ? profiles : DEFAULT_PERMISSION_PROFILES;
   }, [configOrganisations]);
+  const activePermissionTemplateUnitCode = reactExports.useMemo(() => {
+    const fromActiveUnit = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0] : activeUnitCode;
+    const resolved = String(
+      Array.isArray(activeUnitCodes) && activeUnitCodes[0] || fromActiveUnit || configUnits.find(isActiveRecord)?.code || configUnits[0]?.code || ""
+    ).trim().toUpperCase();
+    return resolved;
+  }, [activeUnitCode, activeUnitCodes, configUnits]);
+  const activePermissionTemplateUnit = reactExports.useMemo(
+    () => configUnits.find((unit) => String(unit.code || "").trim().toUpperCase() === activePermissionTemplateUnitCode) || null,
+    [activePermissionTemplateUnitCode, configUnits]
+  );
+  const activePermissionTemplateLocationCode = String(activePermissionTemplateUnit?.locationCode || configLocations[0]?.code || "").trim().toUpperCase();
+  const activePermissionTemplateOrganisationCode = String(activePermissionTemplateUnit?.organisationCode || configOrganisations[0]?.code || "DEFAULT").trim().toUpperCase();
+  const permissionTemplateUnitOptions = reactExports.useMemo(
+    () => configUnits.filter(isActiveRecord).map((unit) => String(unit.code || "").trim().toUpperCase()).filter(Boolean),
+    [configUnits]
+  );
+  const getPermissionProfileUnitCode = (profile) => String(profile?.settings?.unitCode || "").trim().toUpperCase();
+  const getPermissionProfileScopeLabel = (profile) => {
+    const unitCode = getPermissionProfileUnitCode(profile);
+    const sourceUnitCode = String(profile?.settings?.copiedFromUnitCode || profile?.settings?.sourceUnitCode || "").trim().toUpperCase();
+    if (unitCode) return unitCode === activePermissionTemplateUnitCode ? `This unit: ${unitCode}` : `Unit: ${unitCode}`;
+    if (sourceUnitCode) return `Copied from ${sourceUnitCode}`;
+    return "Organisation-wide";
+  };
+  const isPermissionProfileAvailableToActiveUnit = (profile) => {
+    const unitCode = getPermissionProfileUnitCode(profile);
+    return !unitCode || unitCode === activePermissionTemplateUnitCode;
+  };
+  const activeUnitPermissionProfiles = reactExports.useMemo(
+    () => permissionProfiles.filter(isPermissionProfileAvailableToActiveUnit),
+    [activePermissionTemplateUnitCode, permissionProfiles]
+  );
+  const visiblePermissionProfiles = showOrganisationPermissionTemplates ? permissionProfiles : activeUnitPermissionProfiles;
+  const assignablePermissionProfiles = activeUnitPermissionProfiles;
   const configurationHealthUnitCodes = reactExports.useMemo(
     () => parseConfigurationHealthUnitCodes(
       ...Array.isArray(activeUnitCodes) ? activeUnitCodes : [],
@@ -77992,6 +78028,20 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
   const updatePermissionProfile = (profileId, changes) => {
     updatePermissionProfiles(permissionProfiles.map((profile) => profile.id === profileId ? { ...profile, ...changes } : profile));
   };
+  const updatePermissionProfileUnit = (profileId, unitCode) => {
+    const profile = permissionProfiles.find((candidate) => candidate.id === profileId);
+    const cleanUnitCode = String(unitCode || "").trim().toUpperCase();
+    const unit = configUnits.find((candidate) => String(candidate.code || "").trim().toUpperCase() === cleanUnitCode);
+    updatePermissionProfile(profileId, {
+      settings: {
+        ...profile?.settings || {},
+        organisationCode: String(unit?.organisationCode || configOrganisations[0]?.code || "DEFAULT").trim().toUpperCase(),
+        locationCode: String(unit?.locationCode || "").trim().toUpperCase(),
+        unitCode: cleanUnitCode,
+        templateScope: cleanUnitCode ? "unit" : "organisation"
+      }
+    });
+  };
   const selectedPermissionProfile = reactExports.useMemo(
     () => permissionProfiles.find((profile) => profile.id === selectedProfileId) || permissionProfiles[0],
     [permissionProfiles, selectedProfileId]
@@ -78027,10 +78077,43 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
         name: profileType === "exception" ? "New Exception Access" : "New Permission Profile",
         description: profileType === "exception" ? "Additional access granted to selected users outside their normal role." : "Describe what this role profile allows.",
         permissions: profileType === "exception" ? [] : ["dfp.view"],
-        settings: { profileType }
+        settings: {
+          profileType,
+          templateScope: activePermissionTemplateUnitCode ? "unit" : "organisation",
+          organisationCode: activePermissionTemplateOrganisationCode,
+          locationCode: activePermissionTemplateLocationCode,
+          unitCode: activePermissionTemplateUnitCode
+        }
       }
     ]);
     setSelectedProfileId(id);
+  };
+  const copyPermissionProfileToActiveUnit = (sourceProfile) => {
+    if (!activePermissionTemplateUnitCode) return;
+    const idBase = `${sourceProfile.id}-${activePermissionTemplateUnitCode}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const id = `${idBase || "permission-profile"}-${Date.now()}`;
+    const sourceUnitCode = getPermissionProfileUnitCode(sourceProfile);
+    const copiedProfile = {
+      ...sourceProfile,
+      id,
+      name: sourceProfile.name || "Copied Permission Profile",
+      description: sourceProfile.description || "",
+      permissions: [...sourceProfile.permissions || []],
+      settings: {
+        ...sourceProfile.settings || {},
+        templateScope: "unit",
+        organisationCode: activePermissionTemplateOrganisationCode,
+        locationCode: activePermissionTemplateLocationCode,
+        unitCode: activePermissionTemplateUnitCode,
+        copiedFromProfileId: sourceProfile.id,
+        copiedFromProfileName: sourceProfile.name,
+        copiedFromUnitCode: sourceUnitCode || "",
+        copiedAt: (/* @__PURE__ */ new Date()).toISOString()
+      }
+    };
+    updatePermissionProfiles([...permissionProfiles, copiedProfile]);
+    setSelectedProfileId(id);
+    onShowSuccess(`Copied "${sourceProfile.name}" into ${activePermissionTemplateUnitCode} templates. Rename it if needed, then press Save.`);
   };
   const deleteSelectedPermissionProfile = async () => {
     if (!selectedPermissionProfile) return;
@@ -83170,7 +83253,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             SectionHeader,
             {
               title: "Master Permission Profiles",
-              subtitle: "This is the single master list of role and exception profiles. User and group assignment panels reuse this same list.",
+              subtitle: "Build role and exception templates for the active unit. Browse organisation templates when you need to copy another unit's template into this unit.",
               action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
                 renderSectionEditSaveButton("platform-permission-profiles"),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -83203,32 +83286,76 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 xl:grid-cols-[340px,1fr]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-950/25 px-4 py-3 text-xs text-cyan-50", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold uppercase tracking-wide text-cyan-200", children: "Single Master List" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-cyan-100/80", children: "These profiles control app access only. Staff and trainee profile roles remain operational data for scheduling, training and display. User and group assignment panels always use this same master list." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold uppercase tracking-wide text-cyan-200", children: "Unit Template Library" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-cyan-100/80", children: "Templates control app access only. Staff and trainee profile roles remain operational data for scheduling, training and display." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-cyan-500/20 bg-gray-950/40 px-3 py-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold text-cyan-100", children: [
+                    "Active template unit: ",
+                    activePermissionTemplateUnitCode || "No active unit"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mt-2 flex items-center gap-2 text-cyan-50/90", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: showOrganisationPermissionTemplates,
+                        onChange: (event) => setShowOrganisationPermissionTemplates(event.target.checked),
+                        className: "h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Show templates from all units in this organisation" })
+                  ] })
+                ] })
               ] }),
-              permissionProfiles.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950/70 px-4 py-5 text-sm text-gray-400", children: "No master permission profiles configured." }),
-              permissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => setSelectedProfileId(profile.id),
-                  className: `w-full rounded border px-4 py-3 text-left ${selectedPermissionProfile?.id === profile.id ? "border-cyan-400 bg-cyan-500/20" : "border-gray-700 bg-gray-900 hover:bg-gray-950"}`,
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 flex-1 text-sm font-bold text-white", children: profile.name }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getPermissionProfileType(profile) === "exception" ? "bg-amber-500/20 text-amber-200" : "bg-cyan-500/20 text-cyan-200"}`, children: getPermissionProfileType(profile) })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
-                      profile.permissions.length,
-                      " permissions"
-                    ] })
-                  ]
-                },
-                profile.id
-              ))
+              visiblePermissionProfiles.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950/70 px-4 py-5 text-sm text-gray-400", children: "No permission templates available for this filter." }),
+              visiblePermissionProfiles.map((profile) => {
+                const isActiveUnitTemplate = isPermissionProfileAvailableToActiveUnit(profile);
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setSelectedProfileId(profile.id),
+                    className: `w-full rounded border px-4 py-3 text-left ${selectedPermissionProfile?.id === profile.id ? "border-cyan-400 bg-cyan-500/20" : "border-gray-700 bg-gray-900 hover:bg-gray-950"}`,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 flex-1 text-sm font-bold text-white", children: profile.name }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getPermissionProfileType(profile) === "exception" ? "bg-amber-500/20 text-amber-200" : "bg-cyan-500/20 text-cyan-200"}`, children: getPermissionProfileType(profile) })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                          profile.permissions.length,
+                          " permissions"
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isActiveUnitTemplate ? "bg-emerald-500/15 text-emerald-200" : "bg-violet-500/15 text-violet-200"}`, children: getPermissionProfileScopeLabel(profile) })
+                      ] })
+                    ]
+                  },
+                  profile.id
+                );
+              })
             ] }),
             selectedPermissionProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_1fr_180px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-gray-400", children: "Template Scope" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-white", children: getPermissionProfileScopeLabel(selectedPermissionProfile) })
+                ] }),
+                !isPermissionProfileAvailableToActiveUnit(selectedPermissionProfile) && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    disabled: !canEditSection("platform-permission-profiles") || !activePermissionTemplateUnitCode,
+                    onClick: () => copyPermissionProfileToActiveUnit(selectedPermissionProfile),
+                    className: "rounded border border-violet-500/40 bg-violet-600/15 px-3 py-2 text-xs font-bold text-violet-50 hover:bg-violet-500/25 disabled:cursor-not-allowed disabled:opacity-50",
+                    children: [
+                      "Add to ",
+                      activePermissionTemplateUnitCode || "Unit",
+                      " Templates"
+                    ]
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_1fr_180px_180px]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Profile Name", value: selectedPermissionProfile.name, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Description", value: selectedPermissionProfile.description, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -83243,6 +83370,22 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "role", children: "Role" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "exception", children: "Exception" })
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Template Unit" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      className: fieldClass,
+                      value: getPermissionProfileUnitCode(selectedPermissionProfile),
+                      disabled: !canEditSection("platform-permission-profiles"),
+                      onChange: (event) => updatePermissionProfileUnit(selectedPermissionProfile.id, event.target.value),
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Organisation-wide" }),
+                        permissionTemplateUnitOptions.map((unitCode) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unitCode, children: unitCode }, unitCode))
                       ]
                     }
                   )
@@ -84901,7 +85044,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/70", children: "Changes made in Master Permission Profiles appear here automatically because this is not a separate role list." }),
                 selectedUserHasPermissionOverrides && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 inline-flex rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-100", children: "Custom exceptions are active for this user." })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: permissionProfiles.map((profile) => {
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: assignablePermissionProfiles.map((profile) => {
                 const checked = selectedUserProfileIdSet.has(profile.id);
                 const profileType = getPermissionProfileType(profile);
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-950 p-3 text-sm text-gray-200", children: [
@@ -85060,7 +85203,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       " selected"
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto pr-1", children: permissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto pr-1", children: assignablePermissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "input",
                       {
