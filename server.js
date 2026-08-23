@@ -10072,7 +10072,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
 
     // Step 1: Look up the User record by userId to get the DB id (cuid)
     const users = await db.$queryRawUnsafe(
-      `SELECT id, "userId", "firstName", "lastName" FROM "User" WHERE "userId" = $1 LIMIT 1`,
+      `SELECT id, "userId", username, "firstName", "lastName", email FROM "User" WHERE "userId" = $1 LIMIT 1`,
       jwtUserId
     );
 
@@ -10086,6 +10086,74 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
     const userFullName = ((dbUser.firstName || '') + ' ' + (dbUser.lastName || '')).trim();
     // Also build "Last, First" format used in DailySnapshot events
     const userFullNameReversed = ((dbUser.lastName || '') + ', ' + (dbUser.firstName || '')).trim();
+
+    const linkedTrainees = await db.trainee.findMany({
+      where: { userId: dbUserId },
+      select: {
+        id: true,
+        idNumber: true,
+        name: true,
+        fullName: true,
+        traineeCallsign: true,
+        email: true
+      }
+    });
+
+    const linkedPersonnel = await db.personnel.findMany({
+      where: { userId: dbUserId },
+      select: {
+        id: true,
+        idNumber: true,
+        name: true,
+        email: true
+      }
+    });
+
+    function normalizeIdentifier(value) {
+      if (value === null || value === undefined) return null;
+      const normalized = String(value)
+        .toLowerCase()
+        .replace(/\s*[–-]\s*\w+\d+\s*$/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return normalized || null;
+    }
+
+    const matchNames = new Set();
+    const matchIds = new Set();
+    const addMatchName = (value) => {
+      const normalized = normalizeIdentifier(value);
+      if (normalized) matchNames.add(normalized);
+    };
+    const addMatchId = (value) => {
+      const normalized = normalizeIdentifier(value);
+      if (normalized) matchIds.add(normalized);
+    };
+
+    [
+      jwtUserId,
+      dbUser.userId,
+      dbUser.username,
+      dbUser.email,
+      userFullName,
+      userFullNameReversed
+    ].forEach(addMatchName);
+
+    linkedTrainees.forEach(trainee => {
+      addMatchName(trainee.name);
+      addMatchName(trainee.fullName);
+      addMatchName(trainee.email);
+      addMatchName(trainee.traineeCallsign);
+      addMatchId(trainee.id);
+      addMatchId(trainee.idNumber);
+    });
+
+    linkedPersonnel.forEach(person => {
+      addMatchName(person.name);
+      addMatchName(person.email);
+      addMatchId(person.id);
+      addMatchId(person.idNumber);
+    });
 
     console.log("👤 Resolved user: dbId=" + dbUserId + ", name=" + userFullName);
 
@@ -10258,23 +10326,35 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           return true;
         });
 
-        // Filter events for this user by name or traineeId matching userId
-        // Match by "First Last", "Last, First", or traineeId
+        // Filter events for this user by linked User, Trainee, and Personnel identifiers.
         const nameMatch = (nameField) => {
           if (!nameField) return false;
-          const n = nameField.toLowerCase();
-          // Strip course suffix like "– ADF302" for student fields
-          const nClean = n.replace(/\s*[–-]\s*\w+\d+\s*$/, '').trim();
-          return nClean === userFullName.toLowerCase() ||
-                 nClean === userFullNameReversed.toLowerCase() ||
-                 n === userFullName.toLowerCase() ||
-                 n === userFullNameReversed.toLowerCase();
+          if (Array.isArray(nameField)) {
+            return nameField.some(nameMatch);
+          }
+
+          const normalized = normalizeIdentifier(nameField);
+          return normalized ? matchNames.has(normalized) : false;
         };
+
+        const idMatch = (idField) => {
+          if (idField === null || idField === undefined) return false;
+          if (Array.isArray(idField)) {
+            return idField.some(idMatch);
+          }
+
+          const normalized = normalizeIdentifier(idField);
+          return normalized ? matchIds.has(normalized) || matchNames.has(normalized) : false;
+        };
+
         const userEvents = allSnapshotEvents.filter(e =>
           nameMatch(e.student) ||
           nameMatch(e.instructor) ||
           nameMatch(e.pilot) ||
-            (e.traineeId && String(e.traineeId).toLowerCase() === jwtUserId.toLowerCase())
+          nameMatch(e.crew) ||
+          nameMatch(e.attendees) ||
+          idMatch(e.traineeId) ||
+          idMatch(e.groupTraineeIds)
         );
 
         if (userEvents.length > 0) {
