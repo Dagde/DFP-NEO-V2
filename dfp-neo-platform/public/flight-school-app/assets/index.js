@@ -84980,7 +84980,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             SectionHeader,
             {
-              title: "Assign User Permissions",
+              title: "Manage User Permissions",
               subtitle: "Search by user name, assign permission profiles, then define where those profiles apply.",
               action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: downloadSettingsPerformanceTrace, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
