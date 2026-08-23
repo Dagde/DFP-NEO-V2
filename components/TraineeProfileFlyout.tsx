@@ -1321,8 +1321,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             (trainee as any).personnelId,
             trainee.idNumber,
             trainee.email,
-            trainee.name,
-            trainee.fullName,
         ]);
     }, [platformConfig, trainee]);
     const assignedPermissionProfileLabels = assignedPermissionProfileSummary.labels;

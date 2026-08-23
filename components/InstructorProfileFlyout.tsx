@@ -1206,7 +1206,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       (instructor as any).personnelId,
       instructor.idNumber,
       instructor.email,
-      instructor.name,
     ]);
   }, [instructor, platformConfig]);
   const assignedPermissionProfileLabels = assignedPermissionProfileSummary.labels;

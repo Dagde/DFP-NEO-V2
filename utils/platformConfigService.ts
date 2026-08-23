@@ -572,6 +572,11 @@ export const getLocationCodesForCurrentRuntime = (
 
 const normaliseAccessValue = (value: unknown): string => String(value || '').trim().toLowerCase();
 const compactAccessValue = (value: unknown): string => normaliseAccessValue(value).replace(/[^a-z0-9]/g, '');
+const syntheticAccessIdentityValues = (value: unknown): string[] => {
+  const raw = String(value || '').trim();
+  const match = raw.match(/^(staff|trainee|staff-id|trainee-id|staff-email|trainee-email):(.+)$/i);
+  return match?.[2] ? [match[2].trim()] : [];
+};
 
 const accessIdentityVariants = (...values: unknown[]): string[] => uniqueValues(
   values
@@ -615,36 +620,53 @@ const platformUserIdentityValues = (user: any): unknown[] => [
   user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : '',
 ];
 
-const accessRowIdentityValues = (row: PlatformAccessRow): unknown[] => {
+const platformUserStableIdentityValues = (user: any): unknown[] => [
+  user?.id,
+  user?.userId,
+  user?.username,
+  user?.email,
+  user?.staffRecordId,
+  user?.traineeRecordId,
+  user?.personnelId,
+  user?.idNumber,
+];
+
+const platformUserNameIdentityValues = (user: any): unknown[] => [
+  user?.displayName,
+  user?.name,
+  user?.staffName,
+  user?.traineeName,
+  user?.traineeFullName,
+  user?.firstName && user?.lastName ? `${user.lastName}, ${user.firstName}` : '',
+  user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : '',
+];
+
+const accessRowStableIdentityValues = (row: PlatformAccessRow): unknown[] => {
   const settings = parseSettingsObject(row.settings);
+  const syntheticValues = [
+    ...syntheticAccessIdentityValues(row.userId),
+    ...syntheticAccessIdentityValues(row.username),
+    ...syntheticAccessIdentityValues(settings.userId),
+    ...syntheticAccessIdentityValues(settings.username),
+  ];
   return [
     row.userId,
     row.username,
-    row.displayName,
-    (row as any).userName,
+    ...syntheticValues,
     (row as any).email,
     (row as any).personnelId,
     (row as any).idNumber,
     (row as any).staffId,
     (row as any).staffRecordId,
-    (row as any).staffName,
     (row as any).traineeRecordId,
-    (row as any).traineeName,
-    (row as any).traineeFullName,
     settings.userId,
     settings.username,
-    settings.displayName,
-    settings.userName,
-    settings.name,
     settings.email,
     settings.personnelId,
     settings.idNumber,
     settings.staffId,
     settings.staffRecordId,
-    settings.staffName,
     settings.traineeRecordId,
-    settings.traineeName,
-    settings.traineeFullName,
     settings.linkedPersonId,
     settings.linkedPersonnelId,
     settings.linkedStaffId,
@@ -652,6 +674,65 @@ const accessRowIdentityValues = (row: PlatformAccessRow): unknown[] => {
     settings.linkedTraineeId,
     settings.linkedTraineeRecordId,
   ];
+};
+
+const accessRowNameIdentityValues = (row: PlatformAccessRow): unknown[] => {
+  const settings = parseSettingsObject(row.settings);
+  return [
+    row.displayName,
+    (row as any).userName,
+    (row as any).staffName,
+    (row as any).traineeName,
+    (row as any).traineeFullName,
+    settings.displayName,
+    settings.userName,
+    settings.name,
+    settings.staffName,
+    settings.traineeName,
+    settings.traineeFullName,
+  ];
+};
+
+const identityVariantsOverlap = (left: string[], right: string[]): boolean => (
+  left.some((identifier) => right.includes(identifier))
+);
+
+const findPlatformUserForAccessRow = (config: PlatformConfig | null, row: PlatformAccessRow): any => {
+  const users = Array.isArray(config?.platformUsers) ? config?.platformUsers || [] : [];
+  if (users.length === 0) return null;
+  const rowStableVariants = accessIdentityVariants(...accessRowStableIdentityValues(row));
+  if (rowStableVariants.length > 0) {
+    return users.find((user: any) => identityVariantsOverlap(
+      accessIdentityVariants(...platformUserStableIdentityValues(user)),
+      rowStableVariants,
+    )) || null;
+  }
+  const rowNameVariants = accessIdentityVariants(...accessRowNameIdentityValues(row));
+  if (rowNameVariants.length === 0) return null;
+  return users.find((user: any) => identityVariantsOverlap(
+    accessIdentityVariants(...platformUserNameIdentityValues(user)),
+    rowNameVariants,
+  )) || null;
+};
+
+const accessRowMatchesIdentifiers = (
+  config: PlatformConfig | null,
+  row: PlatformAccessRow,
+  identifiers: Set<string>,
+): boolean => {
+  const platformUser = findPlatformUserForAccessRow(config, row);
+  const stableIdentifiers = accessIdentityVariants(
+    ...accessRowStableIdentityValues(row),
+    ...platformUserStableIdentityValues(platformUser),
+  );
+  if (stableIdentifiers.length > 0) {
+    return stableIdentifiers.some((identifier) => identifiers.has(identifier));
+  }
+  const nameIdentifiers = accessIdentityVariants(
+    ...accessRowNameIdentityValues(row),
+    ...platformUserNameIdentityValues(platformUser),
+  );
+  return nameIdentifiers.some((identifier) => identifiers.has(identifier));
 };
 
 const normaliseAccessLevel = (value: unknown): MasterLmpAccessLevel => {
@@ -834,16 +915,18 @@ export const getPlatformUserIdentityValuesForPerson = (
 ): unknown[] => {
   if (!config || !person || !Array.isArray(config.platformUsers)) return [];
 
-  const personVariants = accessIdentityVariants(
+  const personStableVariants = accessIdentityVariants(
     person.id,
     person.userId,
     person.personnelId,
     person.idNumber,
     person.email,
+  );
+  const personNameVariants = accessIdentityVariants(
     person.name,
     person.fullName,
   );
-  if (personVariants.length === 0) return [];
+  if (personStableVariants.length === 0 && personNameVariants.length === 0) return [];
 
   const linkedUsers = config.platformUsers.filter((user: any) => {
     const userSettings = parseSettingsObject(user?.settings);
@@ -863,18 +946,25 @@ export const getPlatformUserIdentityValuesForPerson = (
           userSettings.linkedTraineeId,
         ];
     const linkedRecordVariants = accessIdentityVariants(...linkedRecordValues);
-    if (linkedRecordVariants.some((identifier) => personVariants.includes(identifier))) return true;
+    if (personStableVariants.length > 0 && linkedRecordVariants.some((identifier) => personStableVariants.includes(identifier))) return true;
 
-    const userVariants = accessIdentityVariants(
-      ...platformUserIdentityValues(user),
+    const userStableVariants = accessIdentityVariants(
+      ...platformUserStableIdentityValues(user),
       userSettings.personnelId,
       userSettings.idNumber,
       userSettings.email,
+    );
+    if (personStableVariants.length > 0) {
+      return userStableVariants.some((identifier) => personStableVariants.includes(identifier));
+    }
+
+    const userNameVariants = accessIdentityVariants(
+      ...platformUserNameIdentityValues(user),
       userSettings.displayName,
       personType === 'staff' ? userSettings.staffName : userSettings.traineeName,
       personType === 'trainee' ? userSettings.traineeFullName : '',
     );
-    return userVariants.some((identifier) => personVariants.includes(identifier));
+    return userNameVariants.some((identifier) => personNameVariants.includes(identifier));
   });
 
   return uniqueValues(linkedUsers.flatMap((user) => platformUserIdentityValues(user)));
@@ -1077,18 +1167,7 @@ export const getPlatformAccessContext = (
     accessIdentityVariants(...userIdentifiers),
   );
 
-  const rows = activeRows.filter((row) => {
-    const rowVariants = accessIdentityVariants(...accessRowIdentityValues(row));
-    const platformUser = (config.platformUsers || []).find((user: any) => (
-      accessIdentityVariants(...platformUserIdentityValues(user))
-        .some((identifier) => rowVariants.includes(identifier))
-    ));
-    const rowIdentifiers = accessIdentityVariants(
-      ...accessRowIdentityValues(row),
-      ...platformUserIdentityValues(platformUser),
-    );
-    return rowIdentifiers.some((identifier) => identifiers.has(identifier));
-  });
+  const rows = activeRows.filter((row) => accessRowMatchesIdentifiers(config, row, identifiers));
 
   if (rows.length === 0) {
     return {
@@ -1145,18 +1224,7 @@ export const getAssignedPlatformPermissionProfileSummary = (
     .map(normaliseAccessRow)
     .filter((row) => normaliseAccessValue(row.status) !== 'inactive');
 
-  const rows = activeRows.filter((row) => {
-    const rowVariants = accessIdentityVariants(...accessRowIdentityValues(row));
-    const platformUser = (config.platformUsers || []).find((user: any) => (
-      accessIdentityVariants(...platformUserIdentityValues(user))
-        .some((identifier) => rowVariants.includes(identifier))
-    ));
-    const rowIdentifiers = accessIdentityVariants(
-      ...accessRowIdentityValues(row),
-      ...platformUserIdentityValues(platformUser),
-    );
-    return rowIdentifiers.some((identifier) => identifiers.has(identifier));
-  });
+  const rows = activeRows.filter((row) => accessRowMatchesIdentifiers(config, row, identifiers));
 
   const profileIds = getExplicitPermissionProfileIds(rows);
   if (profileIds.length === 0) return {
