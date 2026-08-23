@@ -55,7 +55,7 @@ const stripPostFlightDutyRoutePrefix = (value?: string | null): string => {
 };
 
 // FIX: Changed to a named export to resolve module resolution errors.
-export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, getSunTimesForAirfieldDate, taxiGroundTime = 0.1 }) => {
+export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, taxiGroundTime = 0.1 }) => {
     const { freezeState, checkAndWarn } = useSystemFreeze();
     // Find trainee or pilot for header
     const person = useMemo(() => {
@@ -293,15 +293,6 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     };
 
      // Derived Total Time
-    const parsePostFlightTimeToHours = (tStr: string): number | null => {
-        const clean = String(tStr || '').trim().replace(':', '');
-        if (!/^\d{4}$/.test(clean)) return null;
-        const h = parseInt(clean.substring(0, 2), 10);
-        const m = parseInt(clean.substring(2, 4), 10);
-        if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h >= 24 || m < 0 || m >= 60) return null;
-        return h + (m / 60);
-    };
-
     const airborneTime = useMemo(() => {
         const parseTime = (tStr: string) => {
              const clean = tStr.replace(':', '');
@@ -341,40 +332,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         return (airborne + effectiveTaxiGroundTime).toFixed(1);
     }, [airborneTime, effectiveTaxiGroundTime]);
 
-    const calculatedDayNightSplit = useMemo(() => {
-        if (!isFlightLog || typeof getSunTimesForAirfieldDate !== 'function') return null;
-        const total = parseFloat(totalTime) || 0;
-        if (total <= 0) return null;
-        const startParsed = parsePostFlightTimeToHours(takeoffTime);
-        const endParsed = parsePostFlightTimeToHours(landTime);
-        if (startParsed === null || endParsed === null) return null;
-        let start = startParsed;
-        let end = endParsed;
-        if (end <= start) end += 24;
-
-        const sunTimes = getSunTimesForAirfieldDate(event.date, from || event.origin || school);
-        const firstLight = Number(sunTimes?.firstLightDecimal);
-        const lastLight = Number(sunTimes?.lastLightDecimal);
-        if (!Number.isFinite(firstLight) || !Number.isFinite(lastLight)) return null;
-
-        const dayWindows = [
-            { start: firstLight, end: lastLight },
-            { start: firstLight + 24, end: lastLight + 24 },
-        ];
-        const dayHours = dayWindows.reduce((sum, window) => {
-            const overlapStart = Math.max(start, window.start);
-            const overlapEnd = Math.min(end, window.end);
-            return sum + Math.max(0, overlapEnd - overlapStart);
-        }, 0);
-        const day = Math.min(total, Math.max(0, dayHours));
-        const night = Math.max(0, total - day);
-        return {
-            day: Number(day.toFixed(1)),
-            night: Number(night.toFixed(1)),
-        };
-    }, [event.date, event.origin, from, getSunTimesForAirfieldDate, isFlightLog, landTime, school, takeoffTime, totalTime]);
-
-    const effectiveNightTime = calculatedDayNightSplit ? calculatedDayNightSplit.night.toFixed(1) : nightTime;
+    const effectiveNightTime = nightTime;
 
     useEffect(() => {
         // Prefill times
@@ -535,14 +493,6 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         }
     }, [captainTime, isFlightLog, totalTime]);
 
-    // Auto-populate Instructor time based on Dual status.
-    // Only auto-populate if the field is currently empty (don't overwrite restored values)
-    useEffect(() => {
-        if (isDual && !instructorTime) {
-            setInstructorTime(totalTime);
-        }
-    }, [isDual, instructorTime, totalTime]);
-
     // --- LOGBOOK OVERRIDE STATE ---
     // Each key corresponds to a logbook field. These are auto-populated from
     // getLogbookData() but the user can manually override any field.
@@ -584,8 +534,15 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             setTaxiGroundTimeInput(String(saved.taxiGroundTime));
         }
         if (saved.captainTime != null) setCaptainTime(String(saved.captainTime));
-        if (saved.instructorTime != null) setInstructorTime(String(saved.instructorTime));
-        if (saved.nightTime != null) setNightTime(String(saved.nightTime));
+        const savedTaxiGroundTime = Number(saved.taxiGroundTime);
+        const clearLegacyTaxiOnlyValue = (value: unknown) => {
+            const text = String(value ?? '').trim();
+            return Number.isFinite(savedTaxiGroundTime) && savedTaxiGroundTime > 0 && Number(text) === savedTaxiGroundTime
+                ? ''
+                : text;
+        };
+        if (saved.instructorTime != null) setInstructorTime(clearLegacyTaxiOnlyValue(saved.instructorTime));
+        if (saved.nightTime != null) setNightTime(clearLegacyTaxiOnlyValue(saved.nightTime));
         if (saved.ifActualTime != null) setIfActualTime(String(saved.ifActualTime));
         if (saved.ifSimTime != null) setIfSimTime(String(saved.ifSimTime));
         if (saved.ineffectiveTime != null) setIneffectiveTime(String(saved.ineffectiveTime));
@@ -643,8 +600,8 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 ? '0.0'
                 : saved.taxiGroundTime != null ? String(saved.taxiGroundTime) : taxiGroundTimeInput,
             captainTime: saved.captainTime != null ? String(saved.captainTime) : captainTime,
-            instructorTime: saved.instructorTime != null ? String(saved.instructorTime) : instructorTime,
-            nightTime: saved.nightTime != null ? String(saved.nightTime) : nightTime,
+            instructorTime: saved.instructorTime != null ? clearLegacyTaxiOnlyValue(saved.instructorTime) : instructorTime,
+            nightTime: saved.nightTime != null ? clearLegacyTaxiOnlyValue(saved.nightTime) : nightTime,
             ifActualTime: saved.ifActualTime != null ? String(saved.ifActualTime) : ifActualTime,
             ifSimTime: saved.ifSimTime != null ? String(saved.ifSimTime) : ifSimTime,
             ineffectiveTime: saved.ineffectiveTime != null ? String(saved.ineffectiveTime) : ineffectiveTime,
@@ -750,7 +707,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     nightP1 = night;
                     logCaptTime = totalTime;
                     if (isDual) {
-                        logInstTime = instructorTime || totalTime;
+                        logInstTime = instructorTime;
                     }
                 } else if (role === 'P2') {
                     dayP2 = day;
