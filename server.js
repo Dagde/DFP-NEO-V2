@@ -10335,6 +10335,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       scheduleRowCount: schedules ? schedules.length : 0,
       scheduleRowsWithEvents: 0,
       snapshotFound: false,
+      snapshotCandidateCount: 0,
       snapshotDate: null,
       snapshotRawEventCount: 0,
       snapshotUniqueEventCount: 0,
@@ -10567,8 +10568,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
              WHEN date LIKE $5::text THEN 4
              WHEN date LIKE $6::text THEN 5
              ELSE 6
-           END
-         LIMIT 1`,
+           END`,
         date,
         `${date}__ESL`,
         `${date}__PEA`,
@@ -10578,7 +10578,8 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       );
 
       if (snapRows && snapRows.length > 0) {
-        const snap = snapRows[0];
+        scheduleDebug.snapshotCandidateCount = snapRows.length;
+        for (const snap of snapRows) {
         scheduleDebug.snapshotFound = true;
         scheduleDebug.snapshotDate = snap.date;
         // Combine all event arrays and deduplicate by id
@@ -10681,6 +10682,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
             });
           }
         }
+      }
     }
 
     if (date) {
