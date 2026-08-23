@@ -121186,7 +121186,7 @@ const App = () => {
       return;
     }
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-    void loadSnapshotForDate(date, { useCache: true });
+    void loadSnapshotForDate(date, { useCache: true, allowAdminFallbackContext: false });
   }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive, setupTestProfile]);
   reactExports.useEffect(() => {
     if (activeView !== "Program Schedule") {
@@ -121205,7 +121205,7 @@ const App = () => {
     if (currentEvents.length > 0) return;
     const snapshotKey = getDailySnapshotKey(date, school, activeUnitCode);
     loadedSnapshotDates.current.delete(snapshotKey);
-    void loadSnapshotForDate(date, { force: true, replace: false, useCache: true });
+    void loadSnapshotForDate(date, { force: true, replace: false, useCache: true, allowAdminFallbackContext: false });
   }, [activeUnitCode, activeView, date, isInitialSetupWizardActive, loadSnapshotForDate, school, setupTestProfile]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
@@ -134284,7 +134284,8 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         useCache: false,
         schoolOverride: savedLocation || school,
         unitOverride: savedUnit || activeUnitCode,
-        exactSnapshotKey: snapshotDate
+        exactSnapshotKey: snapshotDate,
+        allowAdminFallbackContext: false
       });
     };
     window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
@@ -140747,7 +140748,7 @@ Do you want to replace the existing entry?`,
         "button",
         {
           type: "button",
-          onClick: () => void loadSnapshotForDate(date, { force: true, replace: true, useCache: true }),
+          onClick: () => void loadSnapshotForDate(date, { force: true, replace: true, useCache: true, allowAdminFallbackContext: false }),
           className: "rounded border border-gray-600/50 px-1.5 py-0.5 text-gray-300 transition-colors hover:border-gray-500 hover:text-white",
           title: "Retry loading the DFP for this date",
           children: "Retry"

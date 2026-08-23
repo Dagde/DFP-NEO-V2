@@ -29261,7 +29261,7 @@ const App: React.FC = () => {
             return;
         }
         if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-        void loadSnapshotForDate(date, { useCache: true });
+        void loadSnapshotForDate(date, { useCache: true, allowAdminFallbackContext: false });
     }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive, setupTestProfile]);
 
     useEffect(() => {
@@ -29283,7 +29283,7 @@ const App: React.FC = () => {
 
         const snapshotKey = getDailySnapshotKey(date, school, activeUnitCode);
         loadedSnapshotDates.current.delete(snapshotKey);
-        void loadSnapshotForDate(date, { force: true, replace: false, useCache: true });
+        void loadSnapshotForDate(date, { force: true, replace: false, useCache: true, allowAdminFallbackContext: false });
     }, [activeUnitCode, activeView, date, isInitialSetupWizardActive, loadSnapshotForDate, school, setupTestProfile]);
 
        // Show commit alert on app mount - DISABLED
@@ -45194,6 +45194,7 @@ appliedUpdates.forEach(update => {
                 schoolOverride: savedLocation || school,
                 unitOverride: savedUnit || activeUnitCode,
                 exactSnapshotKey: snapshotDate,
+                allowAdminFallbackContext: false,
             });
         };
         window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
@@ -52581,7 +52582,7 @@ appliedUpdates.forEach(update => {
                     {dfpSnapshotLoadState.status === 'error' && (
                         <button
                             type="button"
-                            onClick={() => void loadSnapshotForDate(date, { force: true, replace: true, useCache: true })}
+                            onClick={() => void loadSnapshotForDate(date, { force: true, replace: true, useCache: true, allowAdminFallbackContext: false })}
                             className="rounded border border-gray-600/50 px-1.5 py-0.5 text-gray-300 transition-colors hover:border-gray-500 hover:text-white"
                             title="Retry loading the DFP for this date"
                         >
