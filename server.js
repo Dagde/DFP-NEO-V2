@@ -8894,7 +8894,7 @@ const normalisePersonAccountType = (value) => {
 };
 
 function splitDisplayNameForAccount(name) {
-  const clean = String(name || '').trim();
+  const clean = String(name || '').split(' – ')[0].split(' - ')[0].trim();
   if (!clean) return { firstName: '', lastName: '' };
   if (clean.includes(',')) {
     const [lastName, ...firstParts] = clean.split(',');
@@ -8986,7 +8986,7 @@ async function ensureDirectPersonLoginAccount(db, adminId, personType, record, r
   const safeRole = ['SUPER_ADMIN', 'ADMIN', 'INSTRUCTOR', 'PILOT', 'USER'].includes(String(role).toUpperCase())
     ? String(role).toUpperCase()
     : 'USER';
-  const displayName = record.fullName || record.name || '';
+  const displayName = record.name || record.fullName || '';
   const nameParts = splitDisplayNameForAccount(displayName);
   const existingUsers = await db.$queryRawUnsafe(
     `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",

@@ -5870,9 +5870,24 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setSelectedProfileId(nextProfiles[0]?.id || '');
   };
 
+  const stripAccessPersonContext = (value: unknown): string =>
+    String(value || '').split(' – ')[0].split(' - ')[0].trim();
+
   const displayUserName = (user: any): string => {
-    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-    return fullName || user.displayName || user.username || user.userId || 'Unknown User';
+    const fullName = `${stripAccessPersonContext(user.firstName)} ${stripAccessPersonContext(user.lastName)}`.trim();
+    return fullName || stripAccessPersonContext(user.displayName) || user.username || user.userId || 'Unknown User';
+  };
+
+  const getAccessPersonDisplayName = (person: any, personType?: 'staff' | 'trainee'): string => {
+    if (!person) return '';
+    if (personType === 'trainee') {
+      return stripAccessPersonContext(person.traineeName || person.name || person.traineeFullName || person.fullName);
+    }
+    if (personType === 'staff') {
+      return stripAccessPersonContext(person.staffName || person.name || person.staffFullName || person.fullName);
+    }
+    const linkedName = stripAccessPersonContext(person.staffName || person.traineeName || person.name || person.staffFullName || person.traineeFullName || person.fullName);
+    return linkedName || displayUserName(person);
   };
 
   const buildAccessUserSearchText = (values: unknown[]): string => uniqueValues(values
@@ -5932,20 +5947,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         const traineePersonnelId = toIdentifier((user as any).traineePersonnelId || (user as any).traineeIdNumber || (user as any).personnelId);
         return withSearchText({
           id: user.userId || user.username,
-          name: displayUserName(user),
+          name: getAccessPersonDisplayName(user),
           username: user.username || user.userId || '',
           email: user.email || '',
           personnelId: staffPersonnelId || traineePersonnelId || toIdentifier((user as any).personnelId),
           staffRecordId: user.staffRecordId || '',
           staffPersonnelId,
-          staffName: user.staffName || '',
+          staffName: stripAccessPersonContext(user.staffName),
           staffRank: user.staffRank || '',
           staffUnit: user.staffUnit || '',
           staffLocation: user.staffLocation || '',
           traineeRecordId: user.traineeRecordId || '',
           traineePersonnelId,
-          traineeName: user.traineeName || '',
-          traineeFullName: user.traineeFullName || '',
+          traineeName: stripAccessPersonContext(user.traineeName),
+          traineeFullName: stripAccessPersonContext(user.traineeFullName),
           traineeRank: user.traineeRank || '',
           traineeCourse: user.traineeCourse || '',
           traineeUnit: user.traineeUnit || '',
@@ -6021,7 +6036,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           const recordId = toIdentifier(trainee?.id).toLowerCase();
           const personnelId = toIdentifier(trainee?.idNumber || trainee?.personnelId || trainee?.serviceNumber).toLowerCase();
           const email = toIdentifier(trainee?.email).toLowerCase();
-          const name = String(trainee?.name || trainee?.fullName || '').trim().toLowerCase();
+          const name = getAccessPersonDisplayName(trainee, 'trainee').toLowerCase();
           return !(
             (recordId && representedKeys.has(`trainee-record:${recordId}`))
             || (personnelId && representedKeys.has(`trainee-personnel:${personnelId}`))
@@ -6031,7 +6046,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         })
         .map((trainee) => {
           const personnelId = toIdentifier(trainee?.idNumber || trainee?.personnelId || trainee?.serviceNumber);
-          const name = String(trainee?.name || trainee?.fullName || '').trim();
+          const name = getAccessPersonDisplayName(trainee, 'trainee');
           return withSearchText({
             id: buildTraineeAccessId(trainee),
             name,
@@ -6041,7 +6056,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             traineeRecordId: toIdentifier(trainee?.id),
             traineePersonnelId: personnelId,
             traineeName: name,
-            traineeFullName: String(trainee?.fullName || trainee?.name || '').trim(),
+            traineeFullName: stripAccessPersonContext(trainee?.fullName || trainee?.name),
             traineeRank: String(trainee?.rank || '').trim(),
             traineeCourse: String(trainee?.course || '').trim(),
             traineeUnit: String(trainee?.unit || '').trim(),
@@ -6365,7 +6380,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   );
 
   const selectedAccessDisplayName = selectedAccessUser
-    ? `${selectedAccessUser.firstName || ''} ${selectedAccessUser.lastName || ''}`.trim() || selectedAccessUser.username || selectedAccessUser.userId
+    ? getAccessPersonDisplayName(selectedAccessUser) || selectedAccessUser.username || selectedAccessUser.userId
     : selectedAccessUserOption
       ? selectedAccessUserOption.name
     : selectedAccessRows[0]?.access.displayName
@@ -6435,7 +6450,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const selectedUsername = String(selectedUser?.username || selectedUserId).trim();
     const selectedDisplayName = selectedAccessDisplayName && !selectedAccessDisplayName.includes('(missing')
       ? selectedAccessDisplayName
-      : String(selectedUser?.name || `${selectedUser?.firstName || ''} ${selectedUser?.lastName || ''}`.trim() || selectedUsername || selectedUserId).trim();
+      : String(getAccessPersonDisplayName(selectedUser) || selectedUsername || selectedUserId).trim();
     setConfig((prev) => ({
       ...prev,
       userAccess: (() => {
@@ -6505,7 +6520,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const selectedUsername = String(selectedUser?.username || selectedUserId).trim();
     const selectedDisplayName = selectedAccessDisplayName && !selectedAccessDisplayName.includes('(missing')
       ? selectedAccessDisplayName
-      : String(selectedUser?.name || `${selectedUser?.firstName || ''} ${selectedUser?.lastName || ''}`.trim() || selectedUsername || selectedUserId).trim();
+      : String(getAccessPersonDisplayName(selectedUser) || selectedUsername || selectedUserId).trim();
     setConfig((prev) => ({
       ...prev,
       userAccess: (() => {
@@ -6554,7 +6569,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const defaultUser = selectedAccessUserOption || selectedAccessUser || userOptions[0] || configPlatformUsers[0];
     const userId = selectedAccessUserId || defaultUser?.id || defaultUser?.userId || defaultUser?.username || '';
     const displayName = selectedAccessUserOption?.name || (defaultUser
-      ? `${defaultUser.firstName || ''} ${defaultUser.lastName || ''}`.trim() || defaultUser.username || userId
+      ? getAccessPersonDisplayName(defaultUser) || defaultUser.username || userId
       : '');
 
     setConfig((prev) => ({

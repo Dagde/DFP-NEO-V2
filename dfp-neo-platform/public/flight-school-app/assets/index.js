@@ -77977,9 +77977,21 @@ This removes it from the master list and from every user assignment that current
     }));
     setSelectedProfileId(nextProfiles[0]?.id || "");
   };
+  const stripAccessPersonContext = (value) => String(value || "").split(" – ")[0].split(" - ")[0].trim();
   const displayUserName = (user) => {
-    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
-    return fullName || user.displayName || user.username || user.userId || "Unknown User";
+    const fullName = `${stripAccessPersonContext(user.firstName)} ${stripAccessPersonContext(user.lastName)}`.trim();
+    return fullName || stripAccessPersonContext(user.displayName) || user.username || user.userId || "Unknown User";
+  };
+  const getAccessPersonDisplayName = (person, personType) => {
+    if (!person) return "";
+    if (personType === "trainee") {
+      return stripAccessPersonContext(person.traineeName || person.name || person.traineeFullName || person.fullName);
+    }
+    if (personType === "staff") {
+      return stripAccessPersonContext(person.staffName || person.name || person.staffFullName || person.fullName);
+    }
+    const linkedName = stripAccessPersonContext(person.staffName || person.traineeName || person.name || person.staffFullName || person.traineeFullName || person.fullName);
+    return linkedName || displayUserName(person);
   };
   const buildAccessUserSearchText = (values) => uniqueValues(values.flatMap((value) => String(value || "").toLowerCase().split(/[^a-z0-9]+/)).filter(Boolean)).join(" ");
   const buildStaffAccessId = (staff) => {
@@ -78032,20 +78044,20 @@ This removes it from the master list and from every user assignment that current
         const traineePersonnelId = toIdentifier(user.traineePersonnelId || user.traineeIdNumber || user.personnelId);
         return withSearchText({
           id: user.userId || user.username,
-          name: displayUserName(user),
+          name: getAccessPersonDisplayName(user),
           username: user.username || user.userId || "",
           email: user.email || "",
           personnelId: staffPersonnelId || traineePersonnelId || toIdentifier(user.personnelId),
           staffRecordId: user.staffRecordId || "",
           staffPersonnelId,
-          staffName: user.staffName || "",
+          staffName: stripAccessPersonContext(user.staffName),
           staffRank: user.staffRank || "",
           staffUnit: user.staffUnit || "",
           staffLocation: user.staffLocation || "",
           traineeRecordId: user.traineeRecordId || "",
           traineePersonnelId,
-          traineeName: user.traineeName || "",
-          traineeFullName: user.traineeFullName || "",
+          traineeName: stripAccessPersonContext(user.traineeName),
+          traineeFullName: stripAccessPersonContext(user.traineeFullName),
           traineeRank: user.traineeRank || "",
           traineeCourse: user.traineeCourse || "",
           traineeUnit: user.traineeUnit || "",
@@ -78106,11 +78118,11 @@ This removes it from the master list and from every user assignment that current
         const recordId = toIdentifier(trainee?.id).toLowerCase();
         const personnelId = toIdentifier(trainee?.idNumber || trainee?.personnelId || trainee?.serviceNumber).toLowerCase();
         const email = toIdentifier(trainee?.email).toLowerCase();
-        const name = String(trainee?.name || trainee?.fullName || "").trim().toLowerCase();
+        const name = getAccessPersonDisplayName(trainee, "trainee").toLowerCase();
         return !(recordId && representedKeys.has(`trainee-record:${recordId}`) || personnelId && representedKeys.has(`trainee-personnel:${personnelId}`) || email && representedKeys.has(`email:${email}`) || name && representedKeys.has(`trainee-name:${name}`));
       }).map((trainee) => {
         const personnelId = toIdentifier(trainee?.idNumber || trainee?.personnelId || trainee?.serviceNumber);
-        const name = String(trainee?.name || trainee?.fullName || "").trim();
+        const name = getAccessPersonDisplayName(trainee, "trainee");
         return withSearchText({
           id: buildTraineeAccessId(trainee),
           name,
@@ -78120,7 +78132,7 @@ This removes it from the master list and from every user assignment that current
           traineeRecordId: toIdentifier(trainee?.id),
           traineePersonnelId: personnelId,
           traineeName: name,
-          traineeFullName: String(trainee?.fullName || trainee?.name || "").trim(),
+          traineeFullName: stripAccessPersonContext(trainee?.fullName || trainee?.name),
           traineeRank: String(trainee?.rank || "").trim(),
           traineeCourse: String(trainee?.course || "").trim(),
           traineeUnit: String(trainee?.unit || "").trim(),
@@ -78381,7 +78393,7 @@ This removes it from the master list and from every user assignment that current
     () => configUserAccess.map((access, index) => ({ access, index })).filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId)),
     [configUserAccess, selectedAccessUserId]
   );
-  const selectedAccessDisplayName = selectedAccessUser ? `${selectedAccessUser.firstName || ""} ${selectedAccessUser.lastName || ""}`.trim() || selectedAccessUser.username || selectedAccessUser.userId : selectedAccessUserOption ? selectedAccessUserOption.name : selectedAccessRows[0]?.access.displayName ? `${selectedAccessRows[0].access.displayName} (missing platform user record)` : selectedAccessUserId ? `${selectedAccessUserId} (missing platform user record)` : "No user selected";
+  const selectedAccessDisplayName = selectedAccessUser ? getAccessPersonDisplayName(selectedAccessUser) || selectedAccessUser.username || selectedAccessUser.userId : selectedAccessUserOption ? selectedAccessUserOption.name : selectedAccessRows[0]?.access.displayName ? `${selectedAccessRows[0].access.displayName} (missing platform user record)` : selectedAccessUserId ? `${selectedAccessUserId} (missing platform user record)` : "No user selected";
   const selectedUserProfileIds = reactExports.useMemo(() => {
     const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || "").toUpperCase() !== "INACTIVE");
     const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
@@ -78422,7 +78434,7 @@ This removes it from the master list and from every user assignment that current
     const selectedUserId = String(selectedAccessUserId || selectedUser?.id || selectedUser?.userId || selectedUser?.username || "").trim();
     if (!selectedUserId) return;
     const selectedUsername = String(selectedUser?.username || selectedUserId).trim();
-    const selectedDisplayName = selectedAccessDisplayName && !selectedAccessDisplayName.includes("(missing") ? selectedAccessDisplayName : String(selectedUser?.name || `${selectedUser?.firstName || ""} ${selectedUser?.lastName || ""}`.trim() || selectedUsername || selectedUserId).trim();
+    const selectedDisplayName = selectedAccessDisplayName && !selectedAccessDisplayName.includes("(missing") ? selectedAccessDisplayName : String(getAccessPersonDisplayName(selectedUser) || selectedUsername || selectedUserId).trim();
     setConfig((prev) => ({
       ...prev,
       userAccess: (() => {
@@ -78484,7 +78496,7 @@ This removes it from the master list and from every user assignment that current
     const selectedUserId = String(selectedAccessUserId || selectedUser?.id || selectedUser?.userId || selectedUser?.username || "").trim();
     if (!selectedUserId) return;
     const selectedUsername = String(selectedUser?.username || selectedUserId).trim();
-    const selectedDisplayName = selectedAccessDisplayName && !selectedAccessDisplayName.includes("(missing") ? selectedAccessDisplayName : String(selectedUser?.name || `${selectedUser?.firstName || ""} ${selectedUser?.lastName || ""}`.trim() || selectedUsername || selectedUserId).trim();
+    const selectedDisplayName = selectedAccessDisplayName && !selectedAccessDisplayName.includes("(missing") ? selectedAccessDisplayName : String(getAccessPersonDisplayName(selectedUser) || selectedUsername || selectedUserId).trim();
     setConfig((prev) => ({
       ...prev,
       userAccess: (() => {
@@ -78527,7 +78539,7 @@ This removes it from the master list and from every user assignment that current
   const addUserAccess = () => {
     const defaultUser = selectedAccessUserOption || selectedAccessUser || userOptions[0] || configPlatformUsers[0];
     const userId = selectedAccessUserId || defaultUser?.id || defaultUser?.userId || defaultUser?.username || "";
-    const displayName = selectedAccessUserOption?.name || (defaultUser ? `${defaultUser.firstName || ""} ${defaultUser.lastName || ""}`.trim() || defaultUser.username || userId : "");
+    const displayName = selectedAccessUserOption?.name || (defaultUser ? getAccessPersonDisplayName(defaultUser) || defaultUser.username || userId : "");
     setConfig((prev) => ({
       ...prev,
       userAccess: [
