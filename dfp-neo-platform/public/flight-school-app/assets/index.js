@@ -87933,6 +87933,45 @@ const SettingsViewWithMenu = (props) => {
   const isContinuationCurrencySection = (section) => section === "sct-events" || section === "currency-profiles";
   const getSectionLabel = (section) => isContinuationCurrencySection(section) ? continuationCurrencyLabel : sectionLabels[section];
   const getSectionDescription = (section) => isContinuationCurrencySection(section) ? `Configure ${continuationCurrencyLabel} settings` : sectionDescriptions[section];
+  const hasLegacySettingsAdminRole = ["Super Admin", "Admin"].includes(props.currentUserPermission);
+  const canUseSettingsPermission = (permissionId) => hasLegacySettingsAdminRole || Boolean(props.canUsePlatformPermission?.(permissionId));
+  const settingsEditPermissionIds = [
+    "settings.edit",
+    "settings.platform.edit",
+    "settings.userAccess.edit",
+    "settings.rankTerminology.edit",
+    "settings.schedulingRules.edit"
+  ];
+  const hasSpecificSettingsEditPermission = settingsEditPermissionIds.some(canUseSettingsPermission);
+  const hasGeneralSettingsEditPermission = canUseSettingsPermission("settings.edit");
+  const getRequiredSettingsSectionPermission = (section) => {
+    if (section === "platform-user-access" || section === "platform-permission-profiles" || section === "user-list") {
+      return "settings.userAccess.edit";
+    }
+    if (section === "platform-rank-terminology") return "settings.rankTerminology.edit";
+    if (section === "scheduling-rules" || section === "platform-scheduling-rule-sets") return "settings.schedulingRules.edit";
+    if (isPlatformConfigurationMenuSection(section)) return "settings.platform.edit";
+    if ([
+      "organisation",
+      "crew-composition",
+      "standard-missions",
+      "currency-profiles",
+      "appearance",
+      "email-activation",
+      "emergency"
+    ].includes(section)) {
+      return "settings.platform.edit";
+    }
+    return null;
+  };
+  const canAccessSettingsSection = (section) => {
+    if (hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission) return true;
+    if (hasSpecificSettingsEditPermission) {
+      const requiredPermission = getRequiredSettingsSectionPermission(section);
+      return Boolean(requiredPermission && canUseSettingsPermission(requiredPermission));
+    }
+    return canUseSettingsPermission("settings.view");
+  };
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
       setEmbeddedCurrencyBuilderOpen(false);
@@ -87940,6 +87979,7 @@ const SettingsViewWithMenu = (props) => {
     setActiveSection(section);
   };
   const selectSettingsSectionFromMenu = (section, groupLabel) => {
+    if (!canAccessSettingsSection(section)) return;
     const contextSnippet = groupLabel && settingsSearch.trim() ? getSearchContextSnippet(section, groupLabel) : null;
     const fallbackToken = getSearchQueryTokens().filter((token) => token.length >= 2).sort((a, b) => b.length - a.length)[0] || "";
     if (contextSnippet?.match || fallbackToken) {
@@ -88321,18 +88361,26 @@ const SettingsViewWithMenu = (props) => {
   }, [activeSection, settingsSearchFocus]);
   const visibleSettingGroups = reactExports.useMemo(() => isSearchActive ? sectionGroups.map((group) => ({
     ...group,
-    visibleSections: (group.searchSections || group.sections).filter((section) => matchesSettingsSearch(section, group.label))
+    visibleSections: (group.searchSections || group.sections).filter((section) => canAccessSettingsSection(section) && matchesSettingsSearch(section, group.label))
   })).filter((group) => group.visibleSections.length > 0) : sectionGroups.map((group) => ({
     ...group,
-    visibleSections: group.sections
-  })), [
+    visibleSections: group.sections.filter(canAccessSettingsSection)
+  })).filter((group) => group.visibleSections.length > 0), [
     isSearchActive,
     isSearchFiltering,
     searchQueryTokens,
     settingsDataSearchTermsBySection,
-    continuationCurrencyLabel
+    continuationCurrencyLabel,
+    props.currentUserPermission,
+    props.canUsePlatformPermission
   ]);
   const hasSettingsMatches = visibleSettingGroups.length > 0;
+  reactExports.useEffect(() => {
+    if (activeSection === "home") return;
+    if (Object.prototype.hasOwnProperty.call(sectionLabels, activeSection) && canAccessSettingsSection(activeSection)) return;
+    const firstVisibleSection = visibleSettingGroups[0]?.visibleSections[0];
+    changeActiveSection(firstVisibleSection || "home");
+  }, [activeSection, visibleSettingGroups]);
   const activePlatformTarget = activeSection !== "home" && isPlatformConfigurationMenuSection(activeSection) ? platformSectionTargets[activeSection] : void 0;
   const isPlatformConfigurationActive = Boolean(activePlatformTarget);
   const navigateToSettingsSection = (section) => {
