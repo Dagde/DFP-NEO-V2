@@ -140,6 +140,7 @@ export const PLATFORM_PERMISSION_CATALOG: PlatformPermissionCatalogGroup[] = [
       ['dfp.audit.view', 'Open DFP Audit Log'],
       ['dfp.multiSelect.use', 'Use Multi Select'],
       ['dfp.validation', 'Run validation checks'],
+      ['dfp.flightAuthorisation.use', 'Authorise flights'],
       ['dfp.dispatchRate.view', 'Open Dispatch Rate'],
       ['dfp.pauseFlightOps.use', 'Pause Flight Ops'],
       ['dfp.addGroundTile.use', 'Add Ground Tile'],
@@ -305,14 +306,14 @@ export const DEFAULT_PLATFORM_PERMISSION_PROFILES: PlatformPermissionProfile[] =
     id: 'instructor',
     name: 'Instructor-Qualified',
     description: 'Instructor-qualified access to DFP, staff roster, trainee profiles, training reports and LMP records.',
-    permissions: ['dfp.view', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others'],
+    permissions: ['dfp.view', 'dfp.flightAuthorisation.use', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others'],
     settings: { profileType: 'role' },
   },
   {
     id: 'flying-supervisor',
     name: 'Flying Supervisor',
     description: 'Supervisor access for daily flying control, validation, publishing and trainee oversight.',
-    permissions: ['dfp.view', 'dfp.editTiles', 'dfp.validation', 'dfp.publish', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others', 'trainee.remedial.add', 'reporting.view'],
+    permissions: ['dfp.view', 'dfp.editTiles', 'dfp.validation', 'dfp.flightAuthorisation.use', 'dfp.publish', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others', 'trainee.remedial.add', 'reporting.view'],
     settings: { profileType: 'role' },
   },
   {
@@ -1019,6 +1020,7 @@ export const addImpliedPlatformPermissionIds = (permissionIds: PlatformPermissio
   ));
 
   if (hasPrefix('dfp.')) permissions.add('dfp.view');
+  if (hasPermission('dfp.flightAuthorisation.use')) permissions.add('dfp.view');
   if (hasPrefix('dfp.flightline.')) permissions.add('dfp.flightLine.view');
   if (hasPrefix('maintenance.')) {
     permissions.add('dfp.view');

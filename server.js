@@ -2340,6 +2340,7 @@ const PLATFORM_PERMISSION_LABELS = {
   'dfp.view': 'View DFP',
   'dfp.editTiles': 'Add, edit and delete tiles',
   'dfp.validation': 'Run validation checks',
+  'dfp.flightAuthorisation.use': 'Authorise flights',
   'dfp.publish': 'Publish DFP',
   'dfp.history': 'View historical DFP records',
   'neo.run': 'Run NEO Build',
@@ -10757,6 +10758,205 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
   }
 });
 
+const MOBILE_FLIGHT_AUTHORISATION_PERMISSION = 'dfp.flightAuthorisation.use';
+const MOBILE_FLIGHT_AUTHORISATION_LEGACY_PERMISSIONS = ['dfp.publish'];
+const MOBILE_PERMISSION_PROFILE_FALLBACKS = {
+  instructor: ['dfp.view', MOBILE_FLIGHT_AUTHORISATION_PERMISSION, 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others'],
+  'flying-supervisor': ['dfp.view', 'dfp.editTiles', 'dfp.validation', MOBILE_FLIGHT_AUTHORISATION_PERMISSION, 'dfp.publish', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others', 'trainee.remedial.add', 'reporting.view'],
+  'unit-admin': ['settings.superAdmin', MOBILE_FLIGHT_AUTHORISATION_PERMISSION],
+  'super-admin': ['settings.superAdmin', MOBILE_FLIGHT_AUTHORISATION_PERMISSION],
+};
+
+function normaliseMobilePermissionId(value) {
+  return String(value || '').trim();
+}
+
+function addMobileImpliedPermissions(permissionIds = []) {
+  const permissions = new Set(permissionIds.map(normaliseMobilePermissionId).filter(Boolean));
+  if ([...permissions].some((permissionId) => permissionId.startsWith('dfp.'))) permissions.add('dfp.view');
+  if (permissions.has(MOBILE_FLIGHT_AUTHORISATION_PERMISSION)) permissions.add('dfp.view');
+  return [...permissions];
+}
+
+function getSnapshotContextFromKey(key) {
+  const parts = String(key || '').split('__');
+  return {
+    date: parts[0] || '',
+    locationCode: parts[1] || '',
+    unitCode: parts[2] || '',
+  };
+}
+
+function splitUnitTokens(value) {
+  return String(value || '')
+    .toUpperCase()
+    .split(/[+\-/_,\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function mobileUnitScopeMatches(accessUnitCode, snapshotUnitCode) {
+  const access = String(accessUnitCode || '').trim().toUpperCase();
+  const snapshot = String(snapshotUnitCode || '').trim().toUpperCase();
+  if (!access || !snapshot || access === snapshot) return true;
+  const accessParts = splitUnitTokens(access);
+  const snapshotParts = splitUnitTokens(snapshot);
+  if (accessParts.length === 0 || snapshotParts.length === 0) return true;
+  return accessParts.some((part) => snapshotParts.includes(part));
+}
+
+function mobileLocationScopeMatches(accessLocationCode, snapshotLocationCode) {
+  const access = String(accessLocationCode || '').trim().toUpperCase();
+  const snapshot = String(snapshotLocationCode || '').trim().toUpperCase();
+  return !access || !snapshot || access === snapshot;
+}
+
+function getMobileProfilePermissionMap(organisations = []) {
+  const map = new Map();
+  for (const [profileId, permissions] of Object.entries(MOBILE_PERMISSION_PROFILE_FALLBACKS)) {
+    map.set(profileId, addMobileImpliedPermissions(permissions));
+  }
+  for (const organisation of organisations || []) {
+    const profiles = Array.isArray(organisation?.settings?.permissionProfiles)
+      ? organisation.settings.permissionProfiles
+      : [];
+    for (const profile of profiles) {
+      const profileId = normaliseMobilePermissionId(profile?.id);
+      if (!profileId) continue;
+      map.set(profileId, addMobileImpliedPermissions(Array.isArray(profile.permissions) ? profile.permissions : []));
+    }
+  }
+  return map;
+}
+
+function getMobileAccessRowPermissions(accessRows, profilePermissionMap, snapshotContext) {
+  const permissionSet = new Set();
+  const denySet = new Set();
+  let hasScopedRow = false;
+  for (const row of accessRows || []) {
+    if (String(row.status || 'ACTIVE').toUpperCase() === 'INACTIVE') continue;
+    if (!mobileLocationScopeMatches(row.locationCode, snapshotContext.locationCode)) continue;
+    if (!mobileUnitScopeMatches(row.unitCode, snapshotContext.unitCode)) continue;
+    hasScopedRow = true;
+    const settings = row.settings && typeof row.settings === 'object' ? row.settings : {};
+    const profileIds = Array.isArray(settings.permissionProfileIds) ? settings.permissionProfileIds : [];
+    for (const profileId of profileIds.map(normaliseMobilePermissionId).filter(Boolean)) {
+      for (const permissionId of profilePermissionMap.get(profileId) || []) permissionSet.add(permissionId);
+    }
+    for (const permissionId of addMobileImpliedPermissions(Array.isArray(settings.permissionAllowIds) ? settings.permissionAllowIds : [])) {
+      permissionSet.add(permissionId);
+    }
+    for (const permissionId of (Array.isArray(settings.permissionDenyIds) ? settings.permissionDenyIds : []).map(normaliseMobilePermissionId).filter(Boolean)) {
+      denySet.add(permissionId);
+    }
+  }
+  for (const permissionId of denySet) permissionSet.delete(permissionId);
+  return { hasScopedRow, permissions: [...permissionSet], deniedPermissions: [...denySet] };
+}
+
+async function getMobileAuthorisationAccess(db, user, snapshotContext) {
+  const accessRows = await db.$queryRawUnsafe(
+    `SELECT "userId", username, "organisationCode", "locationCode", "unitCode", status, settings
+       FROM "CommercialUserAccess"
+      WHERE status IS DISTINCT FROM 'INACTIVE'
+        AND (
+          "userId" = $1 OR username = $1 OR
+          "userId" = $2 OR username = $2 OR
+          LOWER(COALESCE(username, '')) = LOWER($3) OR
+          LOWER(COALESCE("userId", '')) = LOWER($3)
+        )`,
+    user.userId || '',
+    user.id || '',
+    user.email || ''
+  );
+  const organisations = await db.$queryRawUnsafe(`SELECT code, settings FROM "CommercialOrganisation"`);
+  const profilePermissionMap = getMobileProfilePermissionMap(organisations);
+  const scoped = getMobileAccessRowPermissions(accessRows || [], profilePermissionMap, snapshotContext);
+  const permissions = new Set(scoped.permissions);
+  const deniedPermissions = new Set(scoped.deniedPermissions || []);
+  const hasExplicitPermission = permissions.has(MOBILE_FLIGHT_AUTHORISATION_PERMISSION);
+  const hasDeniedFlightAuthorisation = deniedPermissions.has(MOBILE_FLIGHT_AUTHORISATION_PERMISSION);
+  const hasLegacyPermission = !hasDeniedFlightAuthorisation && MOBILE_FLIGHT_AUTHORISATION_LEGACY_PERMISSIONS.some((permissionId) => permissions.has(permissionId));
+  const isPlatformAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(String(user.role || '').toUpperCase());
+  const hasSuperAdminPermission = permissions.has('settings.superAdmin') && !hasDeniedFlightAuthorisation;
+  return {
+    ...scoped,
+    hasAccessRows: (accessRows || []).length > 0,
+    hasFlightAuthorisationPermission: !hasDeniedFlightAuthorisation && (hasExplicitPermission || hasLegacyPermission || hasSuperAdminPermission || (isPlatformAdmin && !scoped.hasScopedRow)),
+    permissionMatchedBy: hasExplicitPermission
+      ? MOBILE_FLIGHT_AUTHORISATION_PERMISSION
+      : hasLegacyPermission
+        ? MOBILE_FLIGHT_AUTHORISATION_LEGACY_PERMISSIONS.find((permissionId) => permissions.has(permissionId))
+        : hasSuperAdminPermission
+          ? 'settings.superAdmin'
+          : isPlatformAdmin && !scoped.hasScopedRow
+            ? 'platform-admin-fallback'
+            : null,
+  };
+}
+
+async function loadMobileAppSettings(db) {
+  const rows = await db.$queryRawUnsafe(`SELECT data FROM "AppSettings" WHERE "orgId" = 'default' LIMIT 1`);
+  return rows?.[0]?.data && typeof rows[0].data === 'object' ? rows[0].data : {};
+}
+
+function isMobileFlightAuthorisationRequired(settings) {
+  return settings?.tileStatusSettings?.flightAuthorisationRequired !== false;
+}
+
+function isMobileFlightAuthorisationFrozen(settings) {
+  const freeze = settings?.emergencyFreezeState;
+  return !!(freeze?.isFrozen && !freeze?.allowedActions?.flightAuthorisation);
+}
+
+function isPastMobileDfpDate(dateValue) {
+  const dateText = String(dateValue || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateText)) return false;
+  const todayText = new Date().toISOString().slice(0, 10);
+  return dateText < todayText;
+}
+
+async function writeMobileFlightAuthorisationAudit(db, req, user, snapshotKey, beforeEvent, afterEvent, action) {
+  await db.$executeRawUnsafe(
+    `INSERT INTO "AuditLog" ("id", "userId", action, "entityType", "entityId", changes, "ipAddress", "userAgent", "createdAt")
+     VALUES (gen_random_uuid()::text, $1, 'MOBILE_FLIGHT_AUTHORISATION', 'DailySnapshotEvent', $2, $3::jsonb, $4, $5, NOW())`,
+    user.id,
+    afterEvent?.id || afterEvent?.eventId || beforeEvent?.id || beforeEvent?.eventId || null,
+    JSON.stringify({
+      source: 'iOS Mobile Flight Authorisation',
+      action,
+      snapshotKey,
+      userId: user.userId,
+      before: {
+        authoSignedBy: beforeEvent?.authoSignedBy || null,
+        authoSignedAt: beforeEvent?.authoSignedAt || null,
+        captainSignedBy: beforeEvent?.captainSignedBy || null,
+        captainSignedAt: beforeEvent?.captainSignedAt || null,
+        authNotes: beforeEvent?.authNotes || null,
+        isVerbalAuth: beforeEvent?.isVerbalAuth === true,
+        verbalAuthBy: beforeEvent?.verbalAuthBy || null,
+        dualAuthSignedAnnotation: beforeEvent?.dualAuthSignedAnnotation || null,
+        authorised: beforeEvent?.authorised === true,
+        updatedAt: beforeEvent?.updatedAt || null,
+      },
+      after: {
+        authoSignedBy: afterEvent?.authoSignedBy || null,
+        authoSignedAt: afterEvent?.authoSignedAt || null,
+        captainSignedBy: afterEvent?.captainSignedBy || null,
+        captainSignedAt: afterEvent?.captainSignedAt || null,
+        authNotes: afterEvent?.authNotes || null,
+        isVerbalAuth: afterEvent?.isVerbalAuth === true,
+        verbalAuthBy: afterEvent?.verbalAuthBy || null,
+        dualAuthSignedAnnotation: afterEvent?.dualAuthSignedAnnotation || null,
+        authorised: afterEvent?.authorised === true,
+        updatedAt: afterEvent?.updatedAt || null,
+      },
+    }),
+    getRequestIp(req),
+    req.headers['user-agent'] || 'unknown'
+  );
+}
+
   // POST /api/mobile/flight-authorisation - Sign published schedule event authorisation
   app.post('/api/mobile/flight-authorisation', authenticateMobileJWT, async (req, res) => {
     try {
@@ -10769,7 +10969,8 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         role,
         signedBy,
         isVerbal = false,
-        notes
+        notes,
+        clientEventUpdatedAt
       } = req.body || {};
 
       if (!date || !eventId || !role) {
@@ -10797,6 +10998,10 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         return res.status(403).json({ error: 'Account is inactive' });
       }
 
+      const canonicalMobileUser = await buildCanonicalMobileUserPayload(db, user);
+      const canonicalPerson = canonicalMobileUser.person;
+      const effectiveUser = canonicalMobileUser.user || user;
+
       const linkedPersonnel = await db.personnel.findMany({
         where: { userId: user.id },
         select: { id: true, idNumber: true, name: true, email: true }
@@ -10814,6 +11019,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       const userFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
       const userFullNameReversed = `${user.lastName || ''}, ${user.firstName || ''}`.trim();
       const signatureName =
+        (canonicalPerson?.type === 'staff' && (canonicalPerson.name || canonicalPerson.fullName)) ||
         (linkedPersonnel[0] && linkedPersonnel[0].name) ||
         userFullNameReversed ||
         userFullName ||
@@ -10832,8 +11038,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
             `SELECT date, "scheduleEvents", "traineeEvents", "staffEvents"
              FROM "DailySnapshot"
              WHERE date = $1::text OR date LIKE $2::text
-             ORDER BY CASE WHEN date = $1::text THEN 0 ELSE 1 END
-             LIMIT 1`,
+             ORDER BY CASE WHEN date = $1::text THEN 0 ELSE 1 END`,
             date,
             `${date}__%`
           );
@@ -10842,7 +11047,41 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         return res.status(404).json({ error: 'Published schedule snapshot not found' });
       }
 
-      const snapshot = snapshotRows[0];
+      function eventMatchesTarget(event) {
+        return String(event && (event.id || event.eventId || '')) === String(eventId);
+      }
+
+      const snapshot = snapshotRows.find((row) => [
+        ...(Array.isArray(row.scheduleEvents) ? row.scheduleEvents : []),
+        ...(Array.isArray(row.traineeEvents) ? row.traineeEvents : []),
+        ...(Array.isArray(row.staffEvents) ? row.staffEvents : []),
+      ].some(eventMatchesTarget)) || null;
+
+      if (!snapshot) {
+        return res.status(404).json({ error: 'Event not found in published schedule snapshot' });
+      }
+
+      const snapshotContext = getSnapshotContextFromKey(snapshot.date);
+      if (snapshotContext.date && snapshotContext.date !== String(date).slice(0, 10)) {
+        return res.status(400).json({ error: 'Snapshot key does not match requested date' });
+      }
+
+      const appSettings = await loadMobileAppSettings(db);
+      if (!isMobileFlightAuthorisationRequired(appSettings)) {
+        return res.status(403).json({ error: 'Flight authorisation is optional for this unit' });
+      }
+      if (isMobileFlightAuthorisationFrozen(appSettings)) {
+        return res.status(403).json({ error: 'System is frozen; flight authorisation is not permitted' });
+      }
+      if (isPastMobileDfpDate(snapshotContext.date || date)) {
+        return res.status(403).json({ error: 'Past DFP dates are locked for flight authorisation' });
+      }
+
+      const access = await getMobileAuthorisationAccess(db, effectiveUser, snapshotContext);
+      if (!access.hasFlightAuthorisationPermission) {
+        return res.status(403).json({ error: 'User is not permitted to authorise this flight' });
+      }
+
       const scheduleEvents = Array.isArray(snapshot.scheduleEvents) ? snapshot.scheduleEvents : [];
       const traineeEvents = Array.isArray(snapshot.traineeEvents) ? snapshot.traineeEvents : [];
       const staffEvents = Array.isArray(snapshot.staffEvents) ? snapshot.staffEvents : [];
@@ -10851,15 +11090,15 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         jwtUserId,
         user.userId,
         user.email,
+        effectiveUser.email,
         userFullName,
         userFullNameReversed,
-        signedBy,
+        canonicalPerson?.name,
+        canonicalPerson?.fullName,
+        canonicalPerson?.email,
+        canonicalPerson?.idNumber,
         ...linkedPersonnel.flatMap(person => [person.name, person.email, person.idNumber])
       ].map(normalizeAuthValue).filter(Boolean));
-
-      function eventMatchesTarget(event) {
-        return String(event && (event.id || event.eventId || '')) === String(eventId);
-      }
 
       function userMatchesEvent(event) {
         const fields = [event.instructor, event.pilot, event.crew, event.attendees];
@@ -10878,13 +11117,27 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         return res.status(404).json({ error: 'Event not found in published schedule snapshot' });
       }
 
-      const privilegedRoles = new Set(['SUPER_ADMIN', 'ADMIN', 'INSTRUCTOR']);
-      if (!privilegedRoles.has(user.role) && !userMatchesEvent(existingEvent)) {
+      if (role === 'captain' && !isVerbal && !userMatchesEvent(existingEvent) && !access.permissions.includes('settings.superAdmin')) {
         return res.status(403).json({ error: 'User is not permitted to authorise this flight' });
+      }
+
+      const serverEventUpdatedAt = String(existingEvent.updatedAt || '').trim();
+      const clientUpdatedAt = String(clientEventUpdatedAt || '').trim();
+      if (clientUpdatedAt && serverEventUpdatedAt && clientUpdatedAt !== serverEventUpdatedAt) {
+        const serverTime = new Date().toISOString();
+        return res.status(409).json({
+          success: false,
+          conflict: true,
+          message: 'Event changed since loaded',
+          snapshotKey: snapshot.date,
+          event: existingEvent,
+          serverTime
+        });
       }
 
       const serverTime = new Date().toISOString();
       let updatedEvent = null;
+      const beforeEvent = { ...existingEvent };
 
       function updateEvent(event) {
         if (!eventMatchesTarget(event)) {
@@ -10907,7 +11160,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           next.authoSignedAt = serverTime;
           next.captainSignedBy = signatureName;
           next.captainSignedAt = serverTime;
-          next.authNotes = (typeof notes === 'string' && notes.trim()) ? notes.trim() : (next.authNotes || 'Verbal Auth received');
+          next.authNotes = (typeof notes === 'string' && notes.trim()) ? notes.trim() : 'Verbal Auth received';
         }
         if (typeof notes === 'string' && notes.trim()) {
           next.authNotes = notes.trim();
@@ -10941,6 +11194,8 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         JSON.stringify(nextStaffEvents),
         snapshot.date
       );
+
+      await writeMobileFlightAuthorisationAudit(db, req, effectiveUser, snapshot.date, beforeEvent, updatedEvent, isVerbal ? 'verbal' : role);
 
       console.log(`✅ POST /api/mobile/flight-authorisation - ${role} signed event=${eventId} snapshot=${snapshot.date} user=${jwtUserId}`);
 
