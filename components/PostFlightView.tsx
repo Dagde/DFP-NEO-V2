@@ -129,7 +129,6 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
     const [takeoffTime, setTakeoffTime] = useState('');
     const [landTime, setLandTime] = useState('');
-    const [addTaxiGroundTime, setAddTaxiGroundTime] = useState(true);
     const [taxiGroundTimeInput, setTaxiGroundTimeInput] = useState(() => (Number.isFinite(Number(taxiGroundTime)) ? Number(taxiGroundTime) : 0.1).toFixed(1));
 
     // New state for Durations & Approaches
@@ -332,11 +331,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     }, [takeoffTime, landTime]);
 
     const effectiveTaxiGroundTime = useMemo(() => {
-        if (!addTaxiGroundTime) return 0;
         const parsed = Number(taxiGroundTimeInput);
         if (!Number.isFinite(parsed) || parsed < 0) return 0;
         return parsed;
-    }, [addTaxiGroundTime, taxiGroundTimeInput]);
+    }, [taxiGroundTimeInput]);
 
     const totalTime = useMemo(() => {
         const airborne = parseFloat(airborneTime) || 0;
@@ -410,7 +408,6 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 duty: stripPostFlightDutyRoutePrefix(event.flightNumber),
                 takeoffTime: initialTakeoff,
                 landTime: initialLand,
-                addTaxiGroundTime: true,
                 taxiGroundTime: (Number.isFinite(Number(taxiGroundTime)) ? Number(taxiGroundTime) : 0.1).toFixed(1),
                 captainTime: '',
                 instructorTime: '',
@@ -581,8 +578,11 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         if (saved.duty) setDuty(stripPostFlightDutyRoutePrefix(saved.duty));
         if (saved.takeoffTime) setTakeoffTime(saved.takeoffTime);
         if (saved.landTime) setLandTime(saved.landTime);
-        if (saved.addTaxiGroundTime != null) setAddTaxiGroundTime(saved.addTaxiGroundTime !== false);
-        if (saved.taxiGroundTime != null) setTaxiGroundTimeInput(String(saved.taxiGroundTime));
+        if (saved.addTaxiGroundTime === false) {
+            setTaxiGroundTimeInput('0.0');
+        } else if (saved.taxiGroundTime != null) {
+            setTaxiGroundTimeInput(String(saved.taxiGroundTime));
+        }
         if (saved.captainTime != null) setCaptainTime(String(saved.captainTime));
         if (saved.instructorTime != null) setInstructorTime(String(saved.instructorTime));
         if (saved.nightTime != null) setNightTime(String(saved.nightTime));
@@ -639,8 +639,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             duty: stripPostFlightDutyRoutePrefix(saved.duty || duty),
             takeoffTime: saved.takeoffTime || takeoffTime,
             landTime: saved.landTime || landTime,
-            addTaxiGroundTime: saved.addTaxiGroundTime ?? addTaxiGroundTime,
-            taxiGroundTime: saved.taxiGroundTime != null ? String(saved.taxiGroundTime) : taxiGroundTimeInput,
+            taxiGroundTime: saved.addTaxiGroundTime === false
+                ? '0.0'
+                : saved.taxiGroundTime != null ? String(saved.taxiGroundTime) : taxiGroundTimeInput,
             captainTime: saved.captainTime != null ? String(saved.captainTime) : captainTime,
             instructorTime: saved.instructorTime != null ? String(saved.instructorTime) : instructorTime,
             nightTime: saved.nightTime != null ? String(saved.nightTime) : nightTime,
@@ -841,7 +842,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         if (!initialFormState.current) return;
 
         const currentState = {
-            result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, addTaxiGroundTime, taxiGroundTime: taxiGroundTimeInput, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount: ilsChecked ? ilsCount : 0, rnpChecked, rnpCount: rnpChecked ? rnpCount : 0, tacanChecked, tacanCount: tacanChecked ? tacanCount : 0, vorChecked, vorCount: vorChecked ? vorCount : 0, approachAssignments, currencyValues,
+            result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, taxiGroundTime: taxiGroundTimeInput, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount: ilsChecked ? ilsCount : 0, rnpChecked, rnpCount: rnpChecked ? rnpCount : 0, tacanChecked, tacanCount: tacanChecked ? tacanCount : 0, vorChecked, vorCount: vorChecked ? vorCount : 0, approachAssignments, currencyValues,
         };
         const initialStateForCompare = {
             ...initialFormState.current,
@@ -855,7 +856,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             setIsDirty(true);
             setSaveStatus('Saving...');
         }
-    }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, addTaxiGroundTime, taxiGroundTimeInput, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, approachAssignments, currencyValues]);
+    }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, taxiGroundTimeInput, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, approachAssignments, currencyValues]);
 
     const aircraftNumberOptions = useMemo(() => Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')), []);
 
@@ -897,7 +898,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             takeoffTime,
             landTime,
             airborneTime,
-            addTaxiGroundTime,
+            addTaxiGroundTime: effectiveTaxiGroundTime > 0,
             taxiGroundTime: effectiveTaxiGroundTime.toFixed(1),
             blockTime: totalTime,
             totalTime,
@@ -936,7 +937,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             if (takeoffTime) changes.push(`Takeoff: ${takeoffTime}`);
             if (landTime) changes.push(`Land: ${landTime}`);
             if (airborneTime) changes.push(`Airborne: ${airborneTime}`);
-            changes.push(`Taxi/Ground: ${addTaxiGroundTime ? effectiveTaxiGroundTime.toFixed(1) : '0.0'}`);
+            changes.push(`Taxi/Ground: ${effectiveTaxiGroundTime.toFixed(1)}`);
             if (totalTime) changes.push(`Block Time: ${totalTime}`);
 
             logAudit({
@@ -993,7 +994,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [isDirty, result, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, addTaxiGroundTime, taxiGroundTimeInput, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, currencyValues]);
+    }, [isDirty, result, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, taxiGroundTimeInput, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, currencyValues]);
 
     const handleAttemptReturn = () => {
         if (isDirty) {
@@ -1667,31 +1668,17 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                                 className="mt-1 block w-24 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono"
                             />
                         </div>
-                        {/* Airborne Time */}
-                        <div className="flex-shrink-0">
-                            <label className="block text-sm font-medium text-gray-400">Airborne</label>
-                            <div className="mt-1 p-2 bg-gray-900/50 border border-gray-600 rounded-md text-gray-200 h-[38px] flex items-center justify-center font-mono w-20">{airborneTime}</div>
-                        </div>
                         {/* Taxi/Ground Time */}
                         <div className="flex-shrink-0">
-                            <label className="flex items-center gap-2 text-sm font-medium text-gray-400">
-                                <input
-                                    type="checkbox"
-                                    checked={addTaxiGroundTime}
-                                    onChange={e => setAddTaxiGroundTime(e.target.checked)}
-                                    className="h-4 w-4 accent-sky-500 bg-gray-600 rounded border-gray-500"
-                                />
-                                <span>Add Taxi/Ground</span>
-                            </label>
+                            <label className="block text-sm font-medium text-gray-400">Taxi/Ground</label>
                             <input
                                 type="number"
                                 min={0}
                                 step={0.1}
                                 value={taxiGroundTimeInput}
                                 onChange={e => setTaxiGroundTimeInput(e.target.value)}
-                                disabled={!addTaxiGroundTime}
                                 placeholder="0.1"
-                                className="mt-1 block w-24 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+                                className="mt-1 block w-24 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono"
                             />
                         </div>
                         {/* Block Time */}

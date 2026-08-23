@@ -89092,7 +89092,6 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   const [isDual, setIsDual] = reactExports.useState(event.flightType === "Dual");
   const [takeoffTime, setTakeoffTime] = reactExports.useState("");
   const [landTime, setLandTime] = reactExports.useState("");
-  const [addTaxiGroundTime, setAddTaxiGroundTime] = reactExports.useState(true);
   const [taxiGroundTimeInput, setTaxiGroundTimeInput] = reactExports.useState(() => (Number.isFinite(Number(taxiGroundTime)) ? Number(taxiGroundTime) : 0.1).toFixed(1));
   const [duty, setDuty] = reactExports.useState(stripPostFlightDutyRoutePrefix(event.flightNumber));
   const [captainTime, setCaptainTime] = reactExports.useState("");
@@ -89243,11 +89242,10 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     return durationHours.toFixed(1);
   }, [takeoffTime, landTime]);
   const effectiveTaxiGroundTime = reactExports.useMemo(() => {
-    if (!addTaxiGroundTime) return 0;
     const parsed = Number(taxiGroundTimeInput);
     if (!Number.isFinite(parsed) || parsed < 0) return 0;
     return parsed;
-  }, [addTaxiGroundTime, taxiGroundTimeInput]);
+  }, [taxiGroundTimeInput]);
   const totalTime = reactExports.useMemo(() => {
     const airborne = parseFloat(airborneTime) || 0;
     return (airborne + effectiveTaxiGroundTime).toFixed(1);
@@ -89311,7 +89309,6 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         duty: stripPostFlightDutyRoutePrefix(event.flightNumber),
         takeoffTime: initialTakeoff,
         landTime: initialLand,
-        addTaxiGroundTime: true,
         taxiGroundTime: (Number.isFinite(Number(taxiGroundTime)) ? Number(taxiGroundTime) : 0.1).toFixed(1),
         captainTime: "",
         instructorTime: "",
@@ -89441,8 +89438,11 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     if (saved.duty) setDuty(stripPostFlightDutyRoutePrefix(saved.duty));
     if (saved.takeoffTime) setTakeoffTime(saved.takeoffTime);
     if (saved.landTime) setLandTime(saved.landTime);
-    if (saved.addTaxiGroundTime != null) setAddTaxiGroundTime(saved.addTaxiGroundTime !== false);
-    if (saved.taxiGroundTime != null) setTaxiGroundTimeInput(String(saved.taxiGroundTime));
+    if (saved.addTaxiGroundTime === false) {
+      setTaxiGroundTimeInput("0.0");
+    } else if (saved.taxiGroundTime != null) {
+      setTaxiGroundTimeInput(String(saved.taxiGroundTime));
+    }
     if (saved.captainTime != null) setCaptainTime(String(saved.captainTime));
     if (saved.instructorTime != null) setInstructorTime(String(saved.instructorTime));
     if (saved.nightTime != null) setNightTime(String(saved.nightTime));
@@ -89487,8 +89487,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       duty: stripPostFlightDutyRoutePrefix(saved.duty || duty),
       takeoffTime: saved.takeoffTime || takeoffTime,
       landTime: saved.landTime || landTime,
-      addTaxiGroundTime: saved.addTaxiGroundTime ?? addTaxiGroundTime,
-      taxiGroundTime: saved.taxiGroundTime != null ? String(saved.taxiGroundTime) : taxiGroundTimeInput,
+      taxiGroundTime: saved.addTaxiGroundTime === false ? "0.0" : saved.taxiGroundTime != null ? String(saved.taxiGroundTime) : taxiGroundTimeInput,
       captainTime: saved.captainTime != null ? String(saved.captainTime) : captainTime,
       instructorTime: saved.instructorTime != null ? String(saved.instructorTime) : instructorTime,
       nightTime: saved.nightTime != null ? String(saved.nightTime) : nightTime,
@@ -89699,7 +89698,6 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       duty,
       takeoffTime,
       landTime,
-      addTaxiGroundTime,
       taxiGroundTime: taxiGroundTimeInput,
       captainTime,
       instructorTime,
@@ -89729,7 +89727,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       setIsDirty(true);
       setSaveStatus("Saving...");
     }
-  }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, addTaxiGroundTime, taxiGroundTimeInput, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, approachAssignments, currencyValues]);
+  }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, taxiGroundTimeInput, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, approachAssignments, currencyValues]);
   const aircraftNumberOptions = reactExports.useMemo(() => Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")), []);
   const handleResultChange = (newResult) => {
     const oldResult = result;
@@ -89765,7 +89763,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       takeoffTime,
       landTime,
       airborneTime,
-      addTaxiGroundTime,
+      addTaxiGroundTime: effectiveTaxiGroundTime > 0,
       taxiGroundTime: effectiveTaxiGroundTime.toFixed(1),
       blockTime: totalTime,
       totalTime,
@@ -89800,7 +89798,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       if (takeoffTime) changes.push(`Takeoff: ${takeoffTime}`);
       if (landTime) changes.push(`Land: ${landTime}`);
       if (airborneTime) changes.push(`Airborne: ${airborneTime}`);
-      changes.push(`Taxi/Ground: ${addTaxiGroundTime ? effectiveTaxiGroundTime.toFixed(1) : "0.0"}`);
+      changes.push(`Taxi/Ground: ${effectiveTaxiGroundTime.toFixed(1)}`);
       if (totalTime) changes.push(`Block Time: ${totalTime}`);
       logAudit({
         action: "Edit",
@@ -89850,7 +89848,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
       }, 1e3);
       return () => clearTimeout(timer);
     }
-  }, [isDirty, result, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, addTaxiGroundTime, taxiGroundTimeInput, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, currencyValues]);
+  }, [isDirty, result, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, taxiGroundTimeInput, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, currencyValues]);
   const handleAttemptReturn = () => {
     if (isDirty) {
       setShowUnsavedWarning(true);
@@ -90310,22 +90308,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
               )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Airborne" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-900/50 border border-gray-600 rounded-md text-gray-200 h-[38px] flex items-center justify-center font-mono w-20", children: airborneTime })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm font-medium text-gray-400", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "checkbox",
-                    checked: addTaxiGroundTime,
-                    onChange: (e) => setAddTaxiGroundTime(e.target.checked),
-                    className: "h-4 w-4 accent-sky-500 bg-gray-600 rounded border-gray-500"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Add Taxi/Ground" })
-              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Taxi/Ground" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -90334,9 +90317,8 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
                   step: 0.1,
                   value: taxiGroundTimeInput,
                   onChange: (e) => setTaxiGroundTimeInput(e.target.value),
-                  disabled: !addTaxiGroundTime,
                   placeholder: "0.1",
-                  className: "mt-1 block w-24 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
+                  className: "mt-1 block w-24 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono"
                 }
               )
             ] }),
