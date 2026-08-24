@@ -1033,7 +1033,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
       return (
           <div
               className="absolute bottom-0.5 flex items-center gap-1 pointer-events-none text-right"
-              style={{ right: 'calc(0.25rem + 10px)' }}
+              style={{ right: 'calc(0.25rem + 5px)' }}
           >
               {event.area && (
                   <div

@@ -10485,7 +10485,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       "div",
       {
         className: "absolute bottom-0.5 flex items-center gap-1 pointer-events-none text-right",
-        style: { right: "calc(0.25rem + 10px)" },
+        style: { right: "calc(0.25rem + 5px)" },
         children: [
           event.area && /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
