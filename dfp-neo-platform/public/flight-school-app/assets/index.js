@@ -121067,7 +121067,7 @@ const App = () => {
       }
       return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
     });
-    if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
+    if (snap2.alertsData && typeof snap2.alertsData === "object") {
       setAlertsDataByDate((prev) => ({ ...prev, [targetDate]: snap2.alertsData }));
     }
     if (snap2.aircraftConfigState && Object.keys(snap2.aircraftConfigState).length > 0) {
@@ -129818,10 +129818,18 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     }
     const apiBase = "/api";
     try {
+      const snapshotDate = getDailySnapshotKey(date);
       const res = await fetch(`${apiBase}/alerts/clear`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId, date, clearedBy: getCurrentUserId() || currentUserName })
+        body: JSON.stringify({
+          eventId,
+          date: snapshotDate,
+          eventDate: date,
+          school,
+          unit: activeUnitCode,
+          clearedBy: getCurrentUserId() || currentUserName
+        })
       });
       if (res.ok) {
         setAlertsDataByDate((prev) => {

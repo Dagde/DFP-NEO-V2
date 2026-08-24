@@ -17743,16 +17743,42 @@ app.post('/api/alerts/:alertId/dismiss', async (req, res) => {
 app.post('/api/alerts/clear', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { eventId, date, clearedBy } = req.body;
+    const { eventId, date, eventDate, school, unit, clearedBy } = req.body;
 
     if (!eventId || !date) {
       return res.status(400).json({ error: 'eventId and date are required' });
     }
 
-    const rows = await db.$queryRawUnsafe(
+    let snapshotDate = date;
+    let rows = await db.$queryRawUnsafe(
       `SELECT "alertsData" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
-      date
+      snapshotDate
     );
+    if ((!rows || rows.length === 0) && !String(date).includes('__')) {
+      const candidateDates = school
+        ? [
+            ...(unit ? [`${date}__${String(school).toUpperCase()}__${String(unit).replace(/[^A-Za-z0-9_-]/g, '-')}`] : []),
+            `${date}__${String(school).toUpperCase()}`
+          ]
+        : [`${date}__ESL`, `${date}__PEA`];
+      for (const candidateDate of candidateDates) {
+        rows = await db.$queryRawUnsafe(
+          `SELECT "alertsData" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+          candidateDate
+        );
+        if (rows && rows.length > 0) {
+          snapshotDate = candidateDate;
+          break;
+        }
+      }
+      if ((!rows || rows.length === 0) && school) {
+        rows = await db.$queryRawUnsafe(
+          `SELECT "alertsData", date FROM "DailySnapshot" WHERE date LIKE $1::text ORDER BY date DESC LIMIT 1`,
+          `${date}__${String(school).toUpperCase()}__%`
+        );
+        if (rows && rows.length > 0) snapshotDate = rows[0].date;
+      }
+    }
 
     if (!rows || rows.length === 0) {
       return res.status(404).json({ error: `No snapshot found for date ${date}` });
@@ -17771,6 +17797,7 @@ app.post('/api/alerts/clear', async (req, res) => {
       type: 'cleared',
       clearedBy: clearedBy || 'unknown',
       clearedAt: new Date().toISOString(),
+      eventDate: getAlertEventDate(snapshotDate, eventDate),
       originalAlert: clearedAlert
     });
 
@@ -17780,11 +17807,11 @@ app.post('/api/alerts/clear', async (req, res) => {
     await db.$executeRawUnsafe(
       `UPDATE "DailySnapshot" SET "alertsData" = $1::jsonb WHERE date = $2::text`,
       JSON.stringify(alertsData),
-      date
+      snapshotDate
     );
 
-    console.log(`✅ POST /api/alerts/clear - Alert cleared for event ${eventId} on ${date} by ${clearedBy}`);
-    res.json({ success: true });
+    console.log(`✅ POST /api/alerts/clear - Alert cleared for event ${eventId} on ${snapshotDate} by ${clearedBy}`);
+    res.json({ success: true, snapshotDate, alertsData });
   } catch (error) {
     console.error('❌ POST /api/alerts/clear error:', error);
     res.status(500).json({ error: 'Failed to clear alert', details: error.message });

@@ -28934,7 +28934,7 @@ const App: React.FC = () => {
             }
             return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
         });
-        if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
+        if (snap.alertsData && typeof snap.alertsData === 'object') {
             setAlertsDataByDate(prev => ({ ...prev, [targetDate]: snap.alertsData }));
         }
 
@@ -39625,10 +39625,18 @@ const App: React.FC = () => {
         }
         const apiBase = '/api';
         try {
+            const snapshotDate = getDailySnapshotKey(date);
             const res = await fetch(`${apiBase}/alerts/clear`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ eventId, date, clearedBy: getCurrentUserId() || currentUserName }),
+                body: JSON.stringify({
+                    eventId,
+                    date: snapshotDate,
+                    eventDate: date,
+                    school,
+                    unit: activeUnitCode,
+                    clearedBy: getCurrentUserId() || currentUserName,
+                }),
             });
             if (res.ok) {
                 // Remove from local state immediately
