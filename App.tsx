@@ -28952,10 +28952,13 @@ const App: React.FC = () => {
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
     const loadSnapshotForDate = React.useCallback(async (
         targetDate: string,
-        options: { force?: boolean; replace?: boolean; schoolOverride?: string; unitOverride?: string; useCache?: boolean; exactSnapshotKey?: string; allowAdminFallbackContext?: boolean } = {}
+        options: { force?: boolean; replace?: boolean; schoolOverride?: string; unitOverride?: string; useCache?: boolean; exactSnapshotKey?: string; allowAdminFallbackContext?: boolean; silent?: boolean } = {}
     ) => {
         const loadStartedAt = performance.now();
-        const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = '', allowAdminFallbackContext = true } = options;
+        const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = '', allowAdminFallbackContext = true, silent = false } = options;
+        const updateDfpSnapshotLoadState = (nextState: any) => {
+            if (!silent) setDfpSnapshotLoadState(nextState);
+        };
         const snapshotSchool = schoolOverride ?? school;
         const snapshotUnit = unitOverride ?? activeUnitCode;
         const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
@@ -29006,7 +29009,7 @@ const App: React.FC = () => {
                     const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, parsedCachedSnapshot, false, 'cache');
                     if (cachedEvents > 0) {
                         cachedEventsSignature = getSnapshotEventsSignature(parsedCachedSnapshot.scheduleEvents || []);
-                        setDfpSnapshotLoadState({
+                        updateDfpSnapshotLoadState({
                             status: 'cached',
                             date: targetDate,
                             message: 'Showing cached DFP while refreshing',
@@ -29029,7 +29032,7 @@ const App: React.FC = () => {
                 const attemptStartedAt = performance.now();
                 const delay = retryDelays[attempt];
                 if (delay > 0) {
-                    setDfpSnapshotLoadState({
+                    updateDfpSnapshotLoadState({
                         status: 'retrying',
                         date: targetDate,
                         message: `Retrying DFP load (${attempt + 1}/${retryDelays.length})`,
@@ -29037,7 +29040,7 @@ const App: React.FC = () => {
                     });
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else {
-                    setDfpSnapshotLoadState({
+                    updateDfpSnapshotLoadState({
                         status: 'loading',
                         date: targetDate,
                         message: 'Loading DFP',
@@ -29086,7 +29089,7 @@ const App: React.FC = () => {
                     });
                     for (const [candidateIndex, candidateKey] of candidateKeys.entries()) {
                         const progress = Math.min(82, 18 + Math.round((candidateIndex / Math.max(candidateKeys.length, 1)) * 56));
-                        setDfpSnapshotLoadState({
+                        updateDfpSnapshotLoadState({
                             status: attempt > 0 ? 'retrying' : 'loading',
                             date: targetDate,
                             message: `Retrieving DFP data (${candidateIndex + 1}/${candidateKeys.length})`,
@@ -29148,7 +29151,7 @@ const App: React.FC = () => {
                                 replace,
                                 durationMs: Math.round(performance.now() - loadStartedAt),
                             });
-                            setDfpSnapshotLoadState({
+                            updateDfpSnapshotLoadState({
                                 status: 'loaded',
                                 date: targetDate,
                                 message: `Showing existing DFP for ${targetDate}`,
@@ -29177,7 +29180,7 @@ const App: React.FC = () => {
                                             eventCount: cachedEvents,
                                             durationMs: Math.round(performance.now() - loadStartedAt),
                                         });
-                                        setDfpSnapshotLoadState({
+                                        updateDfpSnapshotLoadState({
                                             status: 'cached',
                                             date: targetDate,
                                             message: `Restored ${cachedEvents} cached DFP events`,
@@ -29209,7 +29212,7 @@ const App: React.FC = () => {
                             durationMs: Math.round(performance.now() - loadStartedAt),
                         });
                         loadedSnapshotDates.current.add(snapshotKey);
-                        setDfpSnapshotLoadState({
+                        updateDfpSnapshotLoadState({
                             status: 'empty',
                             date: targetDate,
                             message: 'No published DFP for this date',
@@ -29223,7 +29226,7 @@ const App: React.FC = () => {
                         continue;
                     }
 
-                    setDfpSnapshotLoadState({
+                    updateDfpSnapshotLoadState({
                         status: attempt > 0 ? 'retrying' : 'loading',
                         date: targetDate,
                         message: 'Reading DFP data',
@@ -29250,7 +29253,7 @@ const App: React.FC = () => {
 
                     const currentEventsSignature = getSnapshotEventsSignature(publishedSchedulesRef.current[targetDate] || []);
                     const shouldReplaceCachedEvents = !!cachedEventsSignature && currentEventsSignature === cachedEventsSignature;
-                    setDfpSnapshotLoadState({
+                    updateDfpSnapshotLoadState({
                         status: attempt > 0 ? 'retrying' : 'loading',
                         date: targetDate,
                         message: 'Applying DFP data',
@@ -29328,7 +29331,7 @@ const App: React.FC = () => {
                         durationMs: Math.round(performance.now() - loadStartedAt),
                         eventCount,
                     });
-                    setDfpSnapshotLoadState({
+                    updateDfpSnapshotLoadState({
                         status: 'loaded',
                         date: targetDate,
                         message: eventCount > 0 ? `Loaded ${eventCount} DFP events` : 'DFP loaded',
@@ -29353,7 +29356,7 @@ const App: React.FC = () => {
 
             throw lastError || new Error('Snapshot request failed');
         } catch (err) {
-            setDfpSnapshotLoadState({
+            updateDfpSnapshotLoadState({
                 status: 'error',
                 date: targetDate,
                 message: 'DFP did not load. Check connection or retry.',
@@ -45325,6 +45328,7 @@ appliedUpdates.forEach(update => {
             isInitialSetupWizardActive ||
             !liveSyncEnabled ||
             isAddFlightTileModalOpen ||
+            Boolean(selectedEvent) ||
             isUserEditing() ||
             !date ||
             !/^\d{4}-\d{2}-\d{2}$/.test(date)
@@ -45342,8 +45346,9 @@ appliedUpdates.forEach(update => {
             schoolOverride: school,
             unitOverride: activeUnitCode,
             allowAdminFallbackContext: false,
+            silent: true,
         });
-    }, [activeUnitCode, date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, setupTestProfile]);
+    }, [activeUnitCode, date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent, setupTestProfile]);
 
     useEffect(() => {
         const handleLiveDfpSnapshotChange = (event: Event) => {
@@ -45374,6 +45379,7 @@ appliedUpdates.forEach(update => {
                 unitOverride: savedUnit || activeUnitCode,
                 exactSnapshotKey: snapshotDate,
                 allowAdminFallbackContext: false,
+                silent: true,
             });
         };
         window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);

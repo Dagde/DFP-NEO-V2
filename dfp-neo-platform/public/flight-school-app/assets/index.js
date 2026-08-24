@@ -121081,7 +121081,10 @@ const App = () => {
   }, [activeUnitCode]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
     const loadStartedAt = performance.now();
-    const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = "", allowAdminFallbackContext = true } = options;
+    const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = "", allowAdminFallbackContext = true, silent = false } = options;
+    const updateDfpSnapshotLoadState = (nextState) => {
+      if (!silent) setDfpSnapshotLoadState(nextState);
+    };
     const snapshotSchool = schoolOverride ?? school;
     const snapshotUnit = unitOverride ?? activeUnitCode;
     const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
@@ -121130,7 +121133,7 @@ const App = () => {
           const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, parsedCachedSnapshot, false, "cache");
           if (cachedEvents > 0) {
             cachedEventsSignature = getSnapshotEventsSignature(parsedCachedSnapshot.scheduleEvents || []);
-            setDfpSnapshotLoadState({
+            updateDfpSnapshotLoadState({
               status: "cached",
               date: targetDate,
               message: "Showing cached DFP while refreshing",
@@ -121150,7 +121153,7 @@ const App = () => {
         const attemptStartedAt = performance.now();
         const delay = retryDelays[attempt];
         if (delay > 0) {
-          setDfpSnapshotLoadState({
+          updateDfpSnapshotLoadState({
             status: "retrying",
             date: targetDate,
             message: `Retrying DFP load (${attempt + 1}/${retryDelays.length})`,
@@ -121158,7 +121161,7 @@ const App = () => {
           });
           await new Promise((resolve) => setTimeout(resolve, delay));
         } else {
-          setDfpSnapshotLoadState({
+          updateDfpSnapshotLoadState({
             status: "loading",
             date: targetDate,
             message: "Loading DFP",
@@ -121203,7 +121206,7 @@ const App = () => {
           });
           for (const [candidateIndex, candidateKey] of candidateKeys.entries()) {
             const progress = Math.min(82, 18 + Math.round(candidateIndex / Math.max(candidateKeys.length, 1) * 56));
-            setDfpSnapshotLoadState({
+            updateDfpSnapshotLoadState({
               status: attempt > 0 ? "retrying" : "loading",
               date: targetDate,
               message: `Retrieving DFP data (${candidateIndex + 1}/${candidateKeys.length})`,
@@ -121257,7 +121260,7 @@ const App = () => {
                 replace,
                 durationMs: Math.round(performance.now() - loadStartedAt)
               });
-              setDfpSnapshotLoadState({
+              updateDfpSnapshotLoadState({
                 status: "loaded",
                 date: targetDate,
                 message: `Showing existing DFP for ${targetDate}`,
@@ -121286,7 +121289,7 @@ const App = () => {
                       eventCount: cachedEvents,
                       durationMs: Math.round(performance.now() - loadStartedAt)
                     });
-                    setDfpSnapshotLoadState({
+                    updateDfpSnapshotLoadState({
                       status: "cached",
                       date: targetDate,
                       message: `Restored ${cachedEvents} cached DFP events`,
@@ -121318,7 +121321,7 @@ const App = () => {
               durationMs: Math.round(performance.now() - loadStartedAt)
             });
             loadedSnapshotDates.current.add(snapshotKey);
-            setDfpSnapshotLoadState({
+            updateDfpSnapshotLoadState({
               status: "empty",
               date: targetDate,
               message: "No published DFP for this date",
@@ -121330,7 +121333,7 @@ const App = () => {
             lastError = new Error(`Snapshot request failed with ${res.status}`);
             continue;
           }
-          setDfpSnapshotLoadState({
+          updateDfpSnapshotLoadState({
             status: attempt > 0 ? "retrying" : "loading",
             date: targetDate,
             message: "Reading DFP data",
@@ -121356,7 +121359,7 @@ const App = () => {
           }
           const currentEventsSignature = getSnapshotEventsSignature(publishedSchedulesRef.current[targetDate] || []);
           const shouldReplaceCachedEvents = !!cachedEventsSignature && currentEventsSignature === cachedEventsSignature;
-          setDfpSnapshotLoadState({
+          updateDfpSnapshotLoadState({
             status: attempt > 0 ? "retrying" : "loading",
             date: targetDate,
             message: "Applying DFP data",
@@ -121426,7 +121429,7 @@ const App = () => {
             durationMs: Math.round(performance.now() - loadStartedAt),
             eventCount
           });
-          setDfpSnapshotLoadState({
+          updateDfpSnapshotLoadState({
             status: "loaded",
             date: targetDate,
             message: eventCount > 0 ? `Loaded ${eventCount} DFP events` : "DFP loaded",
@@ -121450,7 +121453,7 @@ const App = () => {
       }
       throw lastError || new Error("Snapshot request failed");
     } catch (err) {
-      setDfpSnapshotLoadState({
+      updateDfpSnapshotLoadState({
         status: "error",
         date: targetDate,
         message: "DFP did not load. Check connection or retry.",
@@ -134577,7 +134580,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     return () => clearInterval(pollInterval);
   }, [isAddFlightTileModalOpen, liveSyncEnabled, syncUnavailabilityFromDatabase]);
   const syncPublishedScheduleForCurrentDate = reactExports.useCallback(async () => {
-    if (setupTestProfile || isInitialSetupWizardActive || !liveSyncEnabled || isAddFlightTileModalOpen || isUserEditing() || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (setupTestProfile || isInitialSetupWizardActive || !liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing() || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return;
     }
     if (dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty") {
@@ -134589,9 +134592,10 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       useCache: false,
       schoolOverride: school,
       unitOverride: activeUnitCode,
-      allowAdminFallbackContext: false
+      allowAdminFallbackContext: false,
+      silent: true
     });
-  }, [activeUnitCode, date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, setupTestProfile]);
+  }, [activeUnitCode, date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent, setupTestProfile]);
   reactExports.useEffect(() => {
     const handleLiveDfpSnapshotChange = (event) => {
       if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
@@ -134618,7 +134622,8 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         schoolOverride: savedLocation || school,
         unitOverride: savedUnit || activeUnitCode,
         exactSnapshotKey: snapshotDate,
-        allowAdminFallbackContext: false
+        allowAdminFallbackContext: false,
+        silent: true
       });
     };
     window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
