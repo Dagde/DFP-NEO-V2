@@ -10481,32 +10481,40 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
     const eventTypeToken = String(event.type || "").trim().toLowerCase();
     const canShowCallsignMarker = ["flight", "ftd", "cpt", "sim", "simulator"].includes(eventTypeToken);
     if (!canShowCallsignMarker || !callsign && !event.area || isPreview || isSmallTile || isDutySup) return null;
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-0.5 right-1 flex items-center gap-1 pointer-events-none text-right", children: [
-      event.area && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          className: `font-sans font-light ${["A", "B", "C", "D", "E", "F", "G", "H"].includes(event.area) ? "text-white" : "text-yellow-300"}`,
-          style: {
-            fontSize: `${scaledFontSize}px`,
-            lineHeight: "1",
-            opacity: 0.7
-          },
-          children: event.area
-        }
-      ),
-      callsign && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          className: "font-mono text-white/80 whitespace-nowrap",
-          style: {
-            fontSize: `${scaledFontSize}px`,
-            lineHeight: "1",
-            opacity: 0.8
-          },
-          children: callsign
-        }
-      )
-    ] });
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "absolute bottom-0.5 flex items-center gap-1 pointer-events-none text-right",
+        style: { right: "calc(0.25rem + 10px)" },
+        children: [
+          event.area && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              className: `font-sans font-light ${["A", "B", "C", "D", "E", "F", "G", "H"].includes(event.area) ? "text-white" : "text-yellow-300"}`,
+              style: {
+                fontSize: `${scaledFontSize}px`,
+                lineHeight: "1",
+                opacity: 0.7,
+                marginRight: "5px"
+              },
+              children: event.area
+            }
+          ),
+          callsign && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              className: "font-mono text-white/80 whitespace-nowrap",
+              style: {
+                fontSize: `${scaledFontSize}px`,
+                lineHeight: "1",
+                opacity: 0.8
+              },
+              children: callsign
+            }
+          )
+        ]
+      }
+    );
   };
   const renderPreFlightNotesMarker = () => {
     if (!preFlightNotesForTile || isPreview) return null;
