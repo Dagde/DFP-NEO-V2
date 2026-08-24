@@ -11041,27 +11041,28 @@ function buildMobileFlightTimesDefaults(event, settings, existingCompletion, exi
   const typeDefaults = getMobileFlightTypeDefaults(event);
   const instructorLog = (existingLogs || []).find(row => String(row.personRole || '').toLowerCase() === 'instructor');
   const traineeLog = (existingLogs || []).find(row => String(row.personRole || '').toLowerCase() === 'trainee');
-  const captainLog = (existingLogs || []).find(row => ['instructor', 'fixed_crew_pic'].includes(String(row.personRole || '').toLowerCase())) || instructorLog || traineeLog;
-  const defaultTakeoff = toMobileTimeString(existingCompletion?.takeoffTime || captainLog?.takeoffTime || event?.takeoffTime || event?.startTime);
-  const defaultLand = toMobileTimeString(existingCompletion?.landTime || captainLog?.landTime || event?.landTime || event?.endTime || (
+  const captainLog = traineeLog || (existingLogs || []).find(row => String(row.personRole || '').toLowerCase() === 'fixed_crew_pic') || null;
+  const timingLog = captainLog || instructorLog || traineeLog;
+  const defaultTakeoff = toMobileTimeString(existingCompletion?.takeoffTime || timingLog?.takeoffTime || event?.takeoffTime || event?.startTime);
+  const defaultLand = toMobileTimeString(existingCompletion?.landTime || timingLog?.landTime || event?.landTime || event?.endTime || (
     event?.startTime != null ? Number(event.startTime) + (Number(event.duration) || 1) : null
   ));
   const policyTaxi = Number(settings?.taxiGroundTime);
-  const taxiGround = existingCompletion?.taxiGroundTime ?? captainLog?.taxiGroundTime ?? event?.taxiGroundTime ?? (Number.isFinite(policyTaxi) ? policyTaxi : 0.1);
-  const airborne = existingCompletion?.airborneTime ?? captainLog?.airborneTime ?? event?.airborneTime ?? calculateMobileAirborneHours(defaultTakeoff, defaultLand);
-  const block = existingCompletion?.blockTime ?? captainLog?.blockTime ?? event?.blockTime ?? (Number(airborne || 0) + Number(taxiGround || 0));
+  const taxiGround = existingCompletion?.taxiGroundTime ?? timingLog?.taxiGroundTime ?? event?.taxiGroundTime ?? (Number.isFinite(policyTaxi) ? policyTaxi : 0.1);
+  const airborne = existingCompletion?.airborneTime ?? timingLog?.airborneTime ?? event?.airborneTime ?? calculateMobileAirborneHours(defaultTakeoff, defaultLand);
+  const block = existingCompletion?.blockTime ?? timingLog?.blockTime ?? event?.blockTime ?? (Number(airborne || 0) + Number(taxiGround || 0));
   const result = existingCompletion?.dcoResult || event?.postFlightStatus || event?.result || '';
 
   return {
     result,
-    isFlightLog: captainLog?.isFlightLog ?? typeDefaults.isFlightLog,
-    isFtdLog: captainLog?.isFtdLog ?? typeDefaults.isFtdLog,
-    isSolo: existingCompletion?.isSolo ?? captainLog?.isSolo ?? typeDefaults.isSolo,
-    isDual: existingCompletion?.isDual ?? captainLog?.isDual ?? typeDefaults.isDual,
-    aircraftNumber: existingCompletion?.aircraftNumber || captainLog?.aircraftNumber || event?.aircraftNumber || event?.aircraft || event?.resourceId || '',
-    from: captainLog?.fromIcao || event?.origin || event?.location || '',
-    to: captainLog?.toIcao || event?.destination || event?.origin || event?.location || '',
-    duty: captainLog?.duty || event?.flightNumber || event?.eventCode || event?.title || '',
+    isFlightLog: timingLog?.isFlightLog ?? typeDefaults.isFlightLog,
+    isFtdLog: timingLog?.isFtdLog ?? typeDefaults.isFtdLog,
+    isSolo: existingCompletion?.isSolo ?? timingLog?.isSolo ?? typeDefaults.isSolo,
+    isDual: existingCompletion?.isDual ?? timingLog?.isDual ?? typeDefaults.isDual,
+    aircraftNumber: existingCompletion?.aircraftNumber || timingLog?.aircraftNumber || event?.aircraftNumber || event?.aircraft || event?.resourceId || '',
+    from: timingLog?.fromIcao || event?.origin || event?.location || '',
+    to: timingLog?.toIcao || event?.destination || event?.origin || event?.location || '',
+    duty: timingLog?.duty || event?.flightNumber || event?.eventCode || event?.title || '',
     takeoffTime: defaultTakeoff,
     landTime: defaultLand,
     airborneTime: Number(airborne || 0).toFixed(1),
@@ -11070,10 +11071,10 @@ function buildMobileFlightTimesDefaults(event, settings, existingCompletion, exi
     totalTime: Number(block || 0).toFixed(1),
     captainTime: captainLog?.captainTime != null ? Number(captainLog.captainTime).toFixed(1) : (typeDefaults.isFlightLog ? Number(block || 0).toFixed(1) : ''),
     instructorTime: instructorLog?.instructorTime != null ? Number(instructorLog.instructorTime).toFixed(1) : '',
-    nightTime: captainLog?.nightTime != null ? Number(captainLog.nightTime).toFixed(1) : '',
-    ifActualTime: captainLog?.ifActualTime != null ? Number(captainLog.ifActualTime).toFixed(1) : '',
-    ifSimTime: captainLog?.ifSimTime != null ? Number(captainLog.ifSimTime).toFixed(1) : '',
-    ineffectiveTime: captainLog?.ineffectiveTime != null ? Number(captainLog.ineffectiveTime).toFixed(1) : '',
+    nightTime: timingLog?.nightTime != null ? Number(timingLog.nightTime).toFixed(1) : '',
+    ifActualTime: timingLog?.ifActualTime != null ? Number(timingLog.ifActualTime).toFixed(1) : '',
+    ifSimTime: timingLog?.ifSimTime != null ? Number(timingLog.ifSimTime).toFixed(1) : '',
+    ineffectiveTime: timingLog?.ineffectiveTime != null ? Number(timingLog.ineffectiveTime).toFixed(1) : '',
     approaches: {
       ils: captainLog?.ilsCount || traineeLog?.ilsCount || 0,
       rnp: captainLog?.rnpCount || traineeLog?.rnpCount || 0,
@@ -11295,6 +11296,9 @@ app.post('/api/mobile/flight-times', authenticateMobileJWT, async (req, res) => 
     const isSolo = body.isSolo !== undefined ? !!body.isSolo : typeDefaults.isSolo;
     const isDual = body.isDual !== undefined ? !!body.isDual : typeDefaults.isDual;
     const result = String(body.result || '').trim();
+    if (result && !['DCO', 'DPCO', 'DNCO'].includes(result)) {
+      return res.status(400).json({ error: 'result must be DCO, DPCO, DNCO, or blank' });
+    }
     const aircraftNumber = String(body.aircraftNumber || resolved.event.aircraftNumber || resolved.event.aircraft || resolved.event.resourceId || '').trim();
     const from = String(body.from || resolved.event.origin || resolved.event.location || '').trim();
     const to = String(body.to || from || '').trim();
@@ -11364,6 +11368,8 @@ app.post('/api/mobile/flight-times', authenticateMobileJWT, async (req, res) => 
         create: completionPayload,
         update: completionPayload,
       });
+    } else {
+      await db.eventCompletion.deleteMany({ where: { scheduleEventId: eventId } });
     }
 
     const baseLogPayload = {
@@ -11425,7 +11431,7 @@ app.post('/api/mobile/flight-times', authenticateMobileJWT, async (req, res) => 
         personnelId: instructorRecord?.id || null,
         personName: instructorName,
         personRole: 'instructor',
-        captainTime: isFlightLog ? totalTime : parseOptionalFloat(body.captainTime),
+        captainTime: null,
         instructorTime: parseOptionalFloat(body.instructorTime),
       }));
     }
@@ -11437,7 +11443,7 @@ app.post('/api/mobile/flight-times', authenticateMobileJWT, async (req, res) => 
       const next = {
         ...event,
         postFlightStatus: result || null,
-        result: result || event.result || null,
+        result: result || null,
         takeoffTime,
         landTime,
         airborneTime: airborneTime.toFixed(1),
