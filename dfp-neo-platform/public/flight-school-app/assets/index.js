@@ -121324,6 +121324,7 @@ const App = () => {
               replace,
               durationMs: Math.round(performance.now() - loadStartedAt)
             });
+            loadedSnapshotDates.current.add(snapshotKey);
             setDfpSnapshotLoadState({
               status: "empty",
               date: targetDate,
@@ -121505,6 +121506,7 @@ const App = () => {
     const currentEvents = publishedSchedulesRef.current[date] || [];
     if (currentEvents.length > 0) return;
     const snapshotKey = getDailySnapshotKey(date, school, activeUnitCode);
+    if (loadedSnapshotDates.current.has(snapshotKey)) return;
     loadedSnapshotDates.current.delete(snapshotKey);
     void loadSnapshotForDate(date, { force: true, replace: false, useCache: true, allowAdminFallbackContext: false });
   }, [activeUnitCode, activeView, date, isInitialSetupWizardActive, loadSnapshotForDate, school, setupTestProfile]);
@@ -134585,6 +134587,9 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     if (setupTestProfile || isInitialSetupWizardActive || !liveSyncEnabled || isAddFlightTileModalOpen || isUserEditing() || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return;
     }
+    if (dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty") {
+      return;
+    }
     await loadSnapshotForDate(date, {
       force: true,
       replace: true,
@@ -134593,7 +134598,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       unitOverride: activeUnitCode,
       allowAdminFallbackContext: false
     });
-  }, [activeUnitCode, date, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, setupTestProfile]);
+  }, [activeUnitCode, date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, setupTestProfile]);
   reactExports.useEffect(() => {
     const handleLiveDfpSnapshotChange = (event) => {
       if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;

@@ -29208,6 +29208,7 @@ const App: React.FC = () => {
                             replace,
                             durationMs: Math.round(performance.now() - loadStartedAt),
                         });
+                        loadedSnapshotDates.current.add(snapshotKey);
                         setDfpSnapshotLoadState({
                             status: 'empty',
                             date: targetDate,
@@ -29409,6 +29410,7 @@ const App: React.FC = () => {
         if (currentEvents.length > 0) return;
 
         const snapshotKey = getDailySnapshotKey(date, school, activeUnitCode);
+        if (loadedSnapshotDates.current.has(snapshotKey)) return;
         loadedSnapshotDates.current.delete(snapshotKey);
         void loadSnapshotForDate(date, { force: true, replace: false, useCache: true, allowAdminFallbackContext: false });
     }, [activeUnitCode, activeView, date, isInitialSetupWizardActive, loadSnapshotForDate, school, setupTestProfile]);
@@ -45329,6 +45331,9 @@ appliedUpdates.forEach(update => {
         ) {
             return;
         }
+        if (dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === 'empty') {
+            return;
+        }
 
         await loadSnapshotForDate(date, {
             force: true,
@@ -45338,7 +45343,7 @@ appliedUpdates.forEach(update => {
             unitOverride: activeUnitCode,
             allowAdminFallbackContext: false,
         });
-    }, [activeUnitCode, date, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, setupTestProfile]);
+    }, [activeUnitCode, date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, setupTestProfile]);
 
     useEffect(() => {
         const handleLiveDfpSnapshotChange = (event: Event) => {
