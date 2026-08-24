@@ -33289,7 +33289,7 @@ const App: React.FC = () => {
         // This enables change bar detection for moved events
         // Uses publishedSchedules (not events) as that's what ScheduleView renders from
         const dateStr = date;
-        const baselineKey = `${school}:${dateStr}`;
+        const baselineKey = activeBaselineKey;
         const eventsForCurrentDate = publishedSchedules[dateStr] || [];
 
         if (eventsForCurrentDate.length > 0 && !baselineSchedules[baselineKey]) {
@@ -33298,7 +33298,7 @@ const App: React.FC = () => {
                 [baselineKey]: JSON.parse(JSON.stringify(eventsForCurrentDate))
             }));
         }
-    }, [publishedSchedules, date, school, baselineSchedules]);
+    }, [publishedSchedules, date, activeBaselineKey, baselineSchedules]);
 
     const staffCallsignAssignments = useMemo(
         () => getStaffCallsignAssignments(allInstructorsData.filter(isRecordActive), personnelDisplaySettings, activeUnitCallsignSettings),
@@ -47713,7 +47713,7 @@ appliedUpdates.forEach(update => {
     }, [date, eventSegmentsForDate, publishedSchedules]);
 
     const hasChangeBarNotification = useCallback((candidateEvent: ScheduleEvent | null): boolean => {
-        if (!candidateEvent || date !== getEffectiveDfpDateString()) return false;
+        if (!candidateEvent) return false;
         const baselineEvents = baselineSchedules[activeBaselineKey];
         if (!Array.isArray(baselineEvents)) return false;
         const baselineEvent = baselineEvents.find((baseline) => baseline.id === candidateEvent.id);
@@ -47728,7 +47728,7 @@ appliedUpdates.forEach(update => {
             candidateEvent.pilot !== baselineEvent.pilot ||
             (candidateEvent.area || '') !== (baselineEvent.area || '')
         );
-    }, [activeBaselineKey, baselineSchedules, date, getEffectiveDfpDateString]);
+    }, [activeBaselineKey, baselineSchedules]);
 
     const handleRemoveChangeBarNotification = useCallback((candidateEvents: ScheduleEvent | ScheduleEvent[]) => {
         if (isPastDfpDate(date)) {

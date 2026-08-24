@@ -10857,8 +10857,8 @@ const AircraftAvailabilityOverlay = ({
   }, [onAvailabilityChange]);
   const sortSnapshots = (snaps) => [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   const makeDayStart = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
-  const getLocalDateString2 = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-  const isSelectedDateToday = (dateKey) => dateKey === getLocalDateString2(/* @__PURE__ */ new Date());
+  const getLocalDateString = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const isSelectedDateToday = (dateKey) => dateKey === getLocalDateString(/* @__PURE__ */ new Date());
   const isStoredSyntheticInitialOnly = (loaded) => loaded.length === 1 && /initial availability at start of day/i.test(String(loaded[0]?.notes || ""));
   const snapshotsFromDbEvents = (events) => sortSnapshots(
     events.map((event) => {
@@ -11662,12 +11662,6 @@ const checkIsChanged = (event, baselineEvents) => {
   if (Math.abs(event.startTime - baseline.startTime) > epsilon) return true;
   if (Math.abs(event.duration - baseline.duration) > epsilon) return true;
   return event.resourceId !== baseline.resourceId || event.instructor !== baseline.instructor || event.student !== baseline.student || event.pilot !== baseline.pilot || (event.area || "") !== (baseline.area || "");
-};
-const getLocalDateString = (date = /* @__PURE__ */ new Date()) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 };
 const normaliseUnitTypeOptions = (platformConfig) => {
   const seen = /* @__PURE__ */ new Set();
@@ -19029,8 +19023,7 @@ const ScheduleView = ({
           }
         }
         const isSelected = selectedEventIds.has(event.id);
-        const shouldShowChangeBarsForDate = date === getLocalDateString();
-        const isChanged = shouldShowChangeBarsForDate && checkIsChanged(event, baselineEvents);
+        const isChanged = checkIsChanged(event, baselineEvents);
         const isPauseCompleted = !!(pauseCompletedEventIds?.size && pauseCompletedEventIds.has(event.id));
         const alertEntry = alertsData?.[event.id];
         let alertStatus = null;
@@ -56313,7 +56306,7 @@ const ACHistoryAircraftAvailability = ({
   const refreshTodaysAverage = async () => {
     setTodaysAverageLoading(true);
     try {
-      const today = getLocalDateString2();
+      const today = getLocalDateString();
       const recalcRes = await fetch("/api/aircraft-availability-recalculate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56407,7 +56400,7 @@ const ACHistoryAircraftAvailability = ({
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   };
-  const getLocalDateString2 = (d = /* @__PURE__ */ new Date()) => {
+  const getLocalDateString = (d = /* @__PURE__ */ new Date()) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
@@ -56532,7 +56525,7 @@ const ACHistoryAircraftAvailability = ({
     const fetchTodaysAverage = async () => {
       setTodaysAverageLoading(true);
       try {
-        const today = getLocalDateString2();
+        const today = getLocalDateString();
         const recalcRes = await fetch("/api/aircraft-availability-recalculate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -56571,7 +56564,7 @@ const ACHistoryAircraftAvailability = ({
         }
       } catch (err) {
         console.error("Failed to fetch today's average:", err);
-        const today = getLocalDateString2();
+        const today = getLocalDateString();
         const localAvg = computeAverageFromLocalStorage(today);
         if (localAvg !== null) {
           setTodaysAverageWithMetadata({
@@ -56593,7 +56586,7 @@ const ACHistoryAircraftAvailability = ({
   }, [timezoneOffset, dayFlyingStart, dayFlyingEnd, availabilityContext.locationCode, availabilityContext.unitCode]);
   reactExports.useEffect(() => {
     const timeoutId = setTimeout(async () => {
-      const today = getLocalDateString2();
+      const today = getLocalDateString();
       try {
         const res = await fetch("/api/aircraft-availability-recalculate", {
           method: "POST",
@@ -78768,7 +78761,7 @@ This removes it from the master list and from every user assignment that current
       }
     });
   };
-  const getLocalDateString2 = (offsetDays = 0) => {
+  const getLocalDateString = (offsetDays = 0) => {
     const dateValue = /* @__PURE__ */ new Date();
     dateValue.setDate(dateValue.getDate() + offsetDays);
     const year = dateValue.getFullYear();
@@ -78807,18 +78800,18 @@ This removes it from the master list and from every user assignment that current
   const normaliseDfpResourceRowsHistory = (settings = {}) => Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
   const sameDfpResourceRowsHistory = (leftSettings = {}, rightSettings = {}) => JSON.stringify(normaliseDfpResourceRowsHistory(leftSettings)) === JSON.stringify(normaliseDfpResourceRowsHistory(rightSettings));
   const getEditableDfpResourceRows = (pool, index) => {
-    if (!resourcePoolsUnlocked) return getDfpResourceRowsForDate(pool, getLocalDateString2(1));
+    if (!resourcePoolsUnlocked) return getDfpResourceRowsForDate(pool, getLocalDateString(1));
     const currentRows = normaliseDfpResourceRowsSnapshot(pool?.settings || {});
     const baselinePools = Array.isArray(resourcePoolEditBaselineRef.current?.resourcePools) ? resourcePoolEditBaselineRef.current.resourcePools : [];
     const baselineKey = getResourcePoolSaveKey(pool, index);
     const baselinePool = baselinePools.find((candidate, candidateIndex) => getResourcePoolSaveKey(candidate, candidateIndex) === baselineKey);
     const baselineRows = normaliseDfpResourceRowsSnapshot(baselinePool?.settings || {});
     if (!baselinePool || !sameDfpResourceRows(currentRows, baselineRows)) return currentRows;
-    return getDfpResourceRowsForDate(pool, getLocalDateString2(1));
+    return getDfpResourceRowsForDate(pool, getLocalDateString(1));
   };
   const clonePlatformConfigForResourceRowBaseline = (sourceConfig) => JSON.parse(JSON.stringify(sourceConfig));
   const enterResourcePoolsEditMode = () => {
-    const tomorrow = getLocalDateString2(1);
+    const tomorrow = getLocalDateString(1);
     const editConfig = clonePlatformConfigForResourceRowBaseline({
       ...loadedConfigRef.current,
       resourcePools: (Array.isArray(loadedConfigRef.current.resourcePools) ? loadedConfigRef.current.resourcePools : []).map((pool) => ({
@@ -78831,8 +78824,8 @@ This removes it from the master list and from every user assignment that current
     setResourcePoolsUnlocked(true);
   };
   const buildResourceRowSavePlan = (candidateConfig = config, baselineConfig = loadedConfigRef.current) => {
-    const today = getLocalDateString2();
-    const tomorrow = getLocalDateString2(1);
+    const today = getLocalDateString();
+    const tomorrow = getLocalDateString(1);
     const previousPoolsByKey = new Map(
       (baselineConfig.resourcePools || []).map((pool, index) => [getResourcePoolSaveKey(pool, index), pool])
     );
@@ -117988,7 +117981,7 @@ const App = () => {
     [tileStatusSettings]
   );
   const flightAuthorisationRequired = effectiveTileStatusSettings.flightAuthorisationRequired;
-  const getLocalDateString2 = (date2 = /* @__PURE__ */ new Date()) => {
+  const getLocalDateString = (date2 = /* @__PURE__ */ new Date()) => {
     const offsetMs = timezoneOffset * 60 * 60 * 1e3;
     const adjustedDate = new Date(date2.getTime() + offsetMs);
     const year = adjustedDate.getUTCFullYear();
@@ -118108,7 +118101,7 @@ const App = () => {
   const [requestedSettingsSection, setRequestedSettingsSection] = reactExports.useState(null);
   const [previousView, setPreviousView] = reactExports.useState("Program Schedule");
   const [date, setDate] = reactExports.useState(() => {
-    return getLocalDateString2();
+    return getLocalDateString();
   });
   const initialDfpDateRef = reactExports.useRef(date);
   const hasSyncedInitialDfpDateWithEffectiveTimezoneRef = reactExports.useRef(false);
@@ -124705,7 +124698,7 @@ ${"=".repeat(60)}`);
   }, [buildDfpDate, decorateEventWithForwardedPreFlightNotes, isBuildingDfp, nextDayBuildEvents]);
   reactExports.useEffect(() => {
     const dateStr = date;
-    const baselineKey = `${school}:${dateStr}`;
+    const baselineKey = activeBaselineKey;
     const eventsForCurrentDate = publishedSchedules[dateStr] || [];
     if (eventsForCurrentDate.length > 0 && !baselineSchedules[baselineKey]) {
       setBaselineSchedules((prev) => ({
@@ -124713,7 +124706,7 @@ ${"=".repeat(60)}`);
         [baselineKey]: JSON.parse(JSON.stringify(eventsForCurrentDate))
       }));
     }
-  }, [publishedSchedules, date, school, baselineSchedules]);
+  }, [publishedSchedules, date, activeBaselineKey, baselineSchedules]);
   const staffCallsignAssignments = reactExports.useMemo(
     () => getStaffCallsignAssignments(allInstructorsData.filter(isRecordActive), personnelDisplaySettings, activeUnitCallsignSettings),
     [activeUnitCallsignSettings, allInstructorsData, personnelDisplaySettings]
@@ -126008,7 +126001,7 @@ ${"=".repeat(60)}`);
   }, [activeView, eventForPt051, selectedTraineeForHateSheet, loadedPt051Keys, loadPersistedPt051Assessment]);
   const buildPt051EventFromLmpItem = (trainee, item) => {
     const eventType = item.type === "Flight" ? "flight" : item.type === "FTD" ? "ftd" : item.code.includes("CPT") ? "cpt" : "ground";
-    const eventDate = getLocalDateString2();
+    const eventDate = getLocalDateString();
     const duration = item.totalEventHours || item.duration || item.flightOrSimHours || 1;
     return {
       id: `lmp-${trainee.id || trainee.idNumber}-${item.code}`,
@@ -126125,7 +126118,7 @@ ${"=".repeat(60)}`);
     const eventForAssessment = buildPt051EventFromLmpItem(trainee, item);
     const eventId = eventForAssessment.id;
     const grantedAt = item.rplGrantedAt || (/* @__PURE__ */ new Date()).toISOString();
-    const reportDate = /^\d{4}-\d{2}-\d{2}/.test(grantedAt) ? grantedAt.slice(0, 10) : getLocalDateString2();
+    const reportDate = /^\d{4}-\d{2}-\d{2}/.test(grantedAt) ? grantedAt.slice(0, 10) : getLocalDateString();
     const assessment = {
       id: `pt051-${eventId}-${trainee.fullName}`,
       traineeFullName: trainee.fullName,
@@ -126248,7 +126241,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const buildAirCombatTrainingReportEventFromItem = (staff, assignment, item) => {
     const eventType = item.type === "Flight" ? "flight" : item.type === "FTD" ? "ftd" : item.code.includes("CPT") ? "cpt" : "ground";
-    const eventDate = getLocalDateString2();
+    const eventDate = getLocalDateString();
     const duration = item.totalEventHours || item.duration || item.flightOrSimHours || 1;
     const stableStaffId = staff.id || staff.idNumber;
     const stableEventId = item.id || item.code;
@@ -126544,7 +126537,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       eventDescription: matchingItem.eventDescription || sourceEvent.notes,
       eventType: matchingItem.type || sourceEvent.type,
       dashboardAssigneeName: existingReport?.dashboardAssigneeName || staff.name,
-      date: sourceEvent.date || getLocalDateString2(),
+      date: sourceEvent.date || getLocalDateString(),
       startTime: sourceEvent.startTime,
       duration: sourceEvent.duration,
       resourceId: sourceEvent.resourceId,
@@ -126880,7 +126873,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
     setNextDayBuildEvents([]);
-    const nextDate = getLocalDateString2(currentDate);
+    const nextDate = getLocalDateString(currentDate);
     setBuildDfpDate(nextDate);
     setDate(nextDate);
     void loadSnapshotForDate(nextDate, { useCache: true, allowAdminFallbackContext: false });
@@ -136422,14 +136415,14 @@ ${error instanceof Error ? error.message : String(error)}`,
     return (eventSegmentsForDate || []).find((event) => event.id === eventId) || (publishedSchedules[date] || []).find((event) => event.id === eventId) || null;
   }, [date, eventSegmentsForDate, publishedSchedules]);
   const hasChangeBarNotification = reactExports.useCallback((candidateEvent) => {
-    if (!candidateEvent || date !== getEffectiveDfpDateString()) return false;
+    if (!candidateEvent) return false;
     const baselineEvents = baselineSchedules[activeBaselineKey];
     if (!Array.isArray(baselineEvents)) return false;
     const baselineEvent = baselineEvents.find((baseline) => baseline.id === candidateEvent.id);
     if (!baselineEvent) return true;
     const epsilon = 1e-3;
     return Math.abs(candidateEvent.startTime - baselineEvent.startTime) > epsilon || Math.abs(candidateEvent.duration - baselineEvent.duration) > epsilon || candidateEvent.resourceId !== baselineEvent.resourceId || candidateEvent.instructor !== baselineEvent.instructor || candidateEvent.student !== baselineEvent.student || candidateEvent.pilot !== baselineEvent.pilot || (candidateEvent.area || "") !== (baselineEvent.area || "");
-  }, [activeBaselineKey, baselineSchedules, date, getEffectiveDfpDateString]);
+  }, [activeBaselineKey, baselineSchedules]);
   const handleRemoveChangeBarNotification = reactExports.useCallback((candidateEvents) => {
     if (isPastDfpDate(date)) {
       denyPastDfpEdit("remove change bar notifications");

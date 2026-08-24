@@ -8973,8 +8973,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 }
 
                 const isSelected = selectedEventIds.has(event.id);
-                const shouldShowChangeBarsForDate = date === getLocalDateString();
-                const isChanged = shouldShowChangeBarsForDate && checkIsChanged(event, baselineEvents);
+                const isChanged = checkIsChanged(event, baselineEvents);
                 // Stay highlighted as long as event is in pauseCompletedEventIds (not just during selection mode)
                 const isPauseCompleted = !!(pauseCompletedEventIds?.size && pauseCompletedEventIds.has(event.id));
 
