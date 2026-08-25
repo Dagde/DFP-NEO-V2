@@ -40571,7 +40571,6 @@ const MyDashboard = ({
   const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
   const signedInUserLabel = `${userRank || ""} ${userName}`.trim() || userName;
   const [staffPickerEntry, setStaffPickerEntry] = reactExports.useState(null);
-  const [reportContextMenu, setReportContextMenu] = reactExports.useState(null);
   const dashboardActionButtonClass = "btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]";
   const [isMessagesOpen, setIsMessagesOpen] = reactExports.useState(false);
   const [isContactPickerOpen, setIsContactPickerOpen] = reactExports.useState(false);
@@ -40824,18 +40823,6 @@ const MyDashboard = ({
     persistDashboardMessages((messages) => messages.map((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && normaliseDashboardContactName(message.from) === selectedKey && !message.readAt ? { ...message, readAt: now } : message));
     markDashboardConversationReadInApi(dashboardMessageUserName, selectedMessageContact.name, messageIdsToMarkRead).then(() => refreshDashboardMessages()).catch((error) => console.warn("[Dashboard Messages] Could not mark shared messages read:", error));
   }, [dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.name, unreadMessages.length]);
-  reactExports.useEffect(() => {
-    if (!reportContextMenu) return;
-    const closeMenu = () => setReportContextMenu(null);
-    window.addEventListener("click", closeMenu);
-    window.addEventListener("keydown", closeMenu);
-    window.addEventListener("scroll", closeMenu, true);
-    return () => {
-      window.removeEventListener("click", closeMenu);
-      window.removeEventListener("keydown", closeMenu);
-      window.removeEventListener("scroll", closeMenu, true);
-    };
-  }, [reportContextMenu]);
   const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
   reactExports.useEffect(() => {
     if (!newestUnreadMessage) {
@@ -40926,19 +40913,15 @@ const MyDashboard = ({
       return !staffReportCodeDates.has(codeDate);
     });
   }, [incompletePt051s, visibleTrainingReportsToComplete]);
-  const openReportContextMenu = (event, label, onDelete) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const menuWidth = 172;
-    const menuHeight = 46;
-    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-    setReportContextMenu({
-      x: Math.max(8, Math.min(event.clientX, viewportWidth - menuWidth - 8)),
-      y: Math.max(8, Math.min(event.clientY, viewportHeight - menuHeight - 8)),
-      label,
-      onDelete
-    });
+  const confirmDeleteReportMessage = async (label, onDelete) => {
+    const confirmed = await showDarkConfirm(
+      `Delete ${label} from Reports to be completed? This removes the dashboard message and stops it returning.`,
+      "Delete message?",
+      "warning"
+    );
+    if (confirmed) {
+      await onDelete();
+    }
   };
   const EventRow = ({ event }) => {
     const isStby = isDashboardStandbyEvent(event);
@@ -41259,28 +41242,47 @@ const MyDashboard = ({
             "li",
             {
               className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors",
-              onContextMenu: onDeletePt051ReportMessage ? (event) => openReportContextMenu(
-                event,
-                assessment.flightNumber || "report",
-                () => onDeletePt051ReportMessage(assessment)
-              ) : void 0,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => onSelectPt051(assessment),
-                  className: "w-full text-left",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: assessment.flightNumber }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: assessment.trainedFullName })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(assessment.date) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Pending" })
-                    ] })
-                  ] })
-                }
-              )
+              onContextMenu: (event) => event.preventDefault(),
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      onClick: () => onSelectPt051(assessment),
+                      className: "text-left",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: assessment.flightNumber }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: assessment.trainedFullName })
+                      ]
+                    }
+                  ),
+                  onDeletePt051ReportMessage && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void confirmDeleteReportMessage(
+                          assessment.flightNumber || "report",
+                          () => onDeletePt051ReportMessage(assessment)
+                        );
+                      },
+                      className: "mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-red-300 hover:text-red-200",
+                      title: "Delete message",
+                      "aria-label": `Delete ${assessment.flightNumber || "report"} message`,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-3.5 w-3.5", strokeWidth: 2.2 }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Delete Message" })
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "shrink-0 text-right", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(assessment.date) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Pending" })
+                ] })
+              ] })
             },
             assessment.id
           )),
@@ -41288,32 +41290,51 @@ const MyDashboard = ({
             "li",
             {
               className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors",
-              onContextMenu: onDeleteTrainingReportMessage ? (event) => openReportContextMenu(
-                event,
-                entry.report.eventCode || "report",
-                () => onDeleteTrainingReportMessage(entry)
-              ) : void 0,
-              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: () => onSelectTrainingReport?.(entry),
-                    className: "min-w-0 flex-1 text-left",
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-sm text-gray-400", children: [
-                          "Report to complete from flight ",
-                          entry.report.callsign || entry.report.eventCode
+              onContextMenu: (event) => event.preventDefault(),
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => onSelectTrainingReport?.(entry),
+                      className: "w-full min-w-0 text-left",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-sm text-gray-400", children: [
+                            "Report to complete from flight ",
+                            entry.report.callsign || entry.report.eventCode
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center justify-end gap-1.5 text-right", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-nowrap text-[10px] font-mono text-gray-300", children: formatDate$2(entry.report.date) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-5 items-center whitespace-nowrap rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold text-amber-300", children: "Training Report" })
                         ] })
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center justify-end gap-1.5 text-right", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-nowrap text-[10px] font-mono text-gray-300", children: formatDate$2(entry.report.date) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-5 items-center whitespace-nowrap rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold text-amber-300", children: "Training Report" })
                       ] })
-                    ] })
-                  }
-                ),
+                    }
+                  ),
+                  onDeleteTrainingReportMessage && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void confirmDeleteReportMessage(
+                          entry.report.eventCode || "report",
+                          () => onDeleteTrainingReportMessage(entry)
+                        );
+                      },
+                      className: "mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-red-300 hover:text-red-200",
+                      title: "Delete message",
+                      "aria-label": `Delete ${entry.report.eventCode || "report"} message`,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-3.5 w-3.5", strokeWidth: 2.2 }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Delete Message" })
+                      ]
+                    }
+                  )
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
@@ -41328,36 +41349,7 @@ const MyDashboard = ({
             entry.report.id
           ))
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-4", children: "No pending reports." })
-      ] }),
-      reportContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          className: "fixed z-[120] min-w-[172px] rounded-md border border-gray-600 bg-gray-900 py-1 shadow-2xl",
-          style: { left: reportContextMenu.x, top: reportContextMenu.y },
-          onClick: (event) => event.stopPropagation(),
-          onContextMenu: (event) => event.preventDefault(),
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: async () => {
-                const menu = reportContextMenu;
-                const confirmed = await showDarkConfirm(
-                  `Delete ${menu.label} from Reports to be completed? This removes the dashboard message and stops it returning.`,
-                  "Delete message?",
-                  "warning"
-                );
-                if (confirmed) {
-                  await menu.onDelete();
-                }
-                setReportContextMenu(null);
-              },
-              className: "block w-full px-3 py-2 text-left text-sm font-semibold text-red-300 hover:bg-red-500/15",
-              children: "Delete Message"
-            }
-          )
-        }
-      )
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Today's Schedule" }),

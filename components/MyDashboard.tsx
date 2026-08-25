@@ -22,8 +22,8 @@ interface MyDashboardProps {
     trainingReportsToComplete?: Array<{ report: AirCombatTrainingReport; staff: Instructor }>;
     onSelectTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
     onReassignTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }, assignee: Instructor) => void;
-    onDeletePt051ReportMessage?: (assessment: TrainingReportAssessment) => void;
-    onDeleteTrainingReportMessage?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
+    onDeletePt051ReportMessage?: (assessment: TrainingReportAssessment) => void | Promise<void>;
+    onDeleteTrainingReportMessage?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void | Promise<void>;
     staffOptions?: Instructor[];
     messageContactStaffOptions?: Instructor[];
     messageContactTraineeOptions?: Trainee[];
@@ -425,12 +425,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
     const signedInUserLabel = `${userRank || ''} ${userName}`.trim() || userName;
     const [staffPickerEntry, setStaffPickerEntry] = useState<{ report: AirCombatTrainingReport; staff: Instructor; mode: 'open' | 'reassign' } | null>(null);
-    const [reportContextMenu, setReportContextMenu] = useState<{
-        x: number;
-        y: number;
-        label: string;
-        onDelete: () => void | Promise<void>;
-    } | null>(null);
     const dashboardActionButtonClass = 'btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]';
     const [isMessagesOpen, setIsMessagesOpen] = useState(false);
     const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
@@ -739,18 +733,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .then(() => refreshDashboardMessages())
             .catch(error => console.warn('[Dashboard Messages] Could not mark shared messages read:', error));
     }, [dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.name, unreadMessages.length]);
-    useEffect(() => {
-        if (!reportContextMenu) return;
-        const closeMenu = () => setReportContextMenu(null);
-        window.addEventListener('click', closeMenu);
-        window.addEventListener('keydown', closeMenu);
-        window.addEventListener('scroll', closeMenu, true);
-        return () => {
-            window.removeEventListener('click', closeMenu);
-            window.removeEventListener('keydown', closeMenu);
-            window.removeEventListener('scroll', closeMenu, true);
-        };
-    }, [reportContextMenu]);
     const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
     useEffect(() => {
         if (!newestUnreadMessage) {
@@ -867,23 +849,18 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         });
     }, [incompletePt051s, visibleTrainingReportsToComplete]);
 
-    const openReportContextMenu = (
-        event: React.MouseEvent,
+    const confirmDeleteReportMessage = async (
         label: string,
         onDelete: () => void | Promise<void>,
     ) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const menuWidth = 172;
-        const menuHeight = 46;
-        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-        setReportContextMenu({
-            x: Math.max(8, Math.min(event.clientX, viewportWidth - menuWidth - 8)),
-            y: Math.max(8, Math.min(event.clientY, viewportHeight - menuHeight - 8)),
-            label,
-            onDelete,
-        });
+        const confirmed = await showDarkConfirm(
+            `Delete ${label} from Reports to be completed? This removes the dashboard message and stops it returning.`,
+            'Delete message?',
+            'warning',
+        );
+        if (confirmed) {
+            await onDelete();
+        }
     };
 
     const EventRow: React.FC<{event: ScheduleEvent}> = ({event}) => {
@@ -1245,66 +1222,98 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 <li
                                     key={assessment.id}
                                     className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors"
-                                    onContextMenu={onDeletePt051ReportMessage ? (event) => openReportContextMenu(
-                                        event,
-                                        assessment.flightNumber || 'report',
-                                        () => onDeletePt051ReportMessage(assessment),
-                                    ) : undefined}
+                                    onContextMenu={(event) => event.preventDefault()}
                                 >
-                                    <button 
-                                        onClick={() => onSelectPt051(assessment)}
-                                        className="w-full text-left"
-                                    >
-                                        <div className="flex justify-between items-center">
-                                            <div>
+                                    <div className="flex justify-between items-start gap-3">
+                                        <div className="min-w-0">
+                                            <button
+                                                onClick={() => onSelectPt051(assessment)}
+                                                className="text-left"
+                                            >
                                                 <p className="font-semibold text-white">{assessment.flightNumber}</p>
                                                 <p className="text-sm text-gray-400">{assessment.trainedFullName}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-sm text-gray-300 font-mono">{formatDate(assessment.date)}</p>
-                                                <span className="inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300">
-                                                    Pending
-                                                </span>
-                                            </div>
+                                            </button>
+                                            {onDeletePt051ReportMessage && (
+                                                <button
+                                                    type="button"
+                                                    onClick={(event) => {
+                                                        event.preventDefault();
+                                                        event.stopPropagation();
+                                                        void confirmDeleteReportMessage(
+                                                            assessment.flightNumber || 'report',
+                                                            () => onDeletePt051ReportMessage(assessment),
+                                                        );
+                                                    }}
+                                                    className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-red-300 hover:text-red-200"
+                                                    title="Delete message"
+                                                    aria-label={`Delete ${assessment.flightNumber || 'report'} message`}
+                                                >
+                                                    <DashboardIconTrash className="h-3.5 w-3.5" strokeWidth={2.2} />
+                                                    <span>Delete Message</span>
+                                                </button>
+                                            )}
                                         </div>
-                                    </button>
+                                        <div className="shrink-0 text-right">
+                                            <p className="text-sm text-gray-300 font-mono">{formatDate(assessment.date)}</p>
+                                            <span className="inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300">
+                                                Pending
+                                            </span>
+                                        </div>
+                                    </div>
                                 </li>
                             ))}
                             {visibleTrainingReportsToComplete.map(entry => (
                                 <li
                                     key={entry.report.id}
                                     className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors"
-                                    onContextMenu={onDeleteTrainingReportMessage ? (event) => openReportContextMenu(
-                                        event,
-                                        entry.report.eventCode || 'report',
-                                        () => onDeleteTrainingReportMessage(entry),
-                                    ) : undefined}
+                                    onContextMenu={(event) => event.preventDefault()}
                                 >
-                                    <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => onSelectTrainingReport?.(entry)}
-                                        className="min-w-0 flex-1 text-left"
-                                    >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="min-w-0">
-                                                <p className="font-semibold text-white">{entry.report.eventCode}</p>
-                                                <p className="truncate text-sm text-gray-400">Report to complete from flight {entry.report.callsign || entry.report.eventCode}</p>
-                                            </div>
-                                            <div className="flex shrink-0 items-center justify-end gap-1.5 text-right">
-                                                <span className="whitespace-nowrap text-[10px] font-mono text-gray-300">{formatDate(entry.report.date)}</span>
-                                                <span className="inline-flex h-5 items-center whitespace-nowrap rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold text-amber-300">
-                                                    Training Report
-                                                </span>
-                                            </div>
+                                    <div className="flex items-start gap-2">
+                                        <div className="min-w-0 flex-1">
+                                            <button
+                                                onClick={() => onSelectTrainingReport?.(entry)}
+                                                className="w-full min-w-0 text-left"
+                                            >
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <p className="font-semibold text-white">{entry.report.eventCode}</p>
+                                                        <p className="truncate text-sm text-gray-400">Report to complete from flight {entry.report.callsign || entry.report.eventCode}</p>
+                                                    </div>
+                                                    <div className="flex shrink-0 items-center justify-end gap-1.5 text-right">
+                                                        <span className="whitespace-nowrap text-[10px] font-mono text-gray-300">{formatDate(entry.report.date)}</span>
+                                                        <span className="inline-flex h-5 items-center whitespace-nowrap rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold text-amber-300">
+                                                            Training Report
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                            {onDeleteTrainingReportMessage && (
+                                                <button
+                                                    type="button"
+                                                    onClick={(event) => {
+                                                        event.preventDefault();
+                                                        event.stopPropagation();
+                                                        void confirmDeleteReportMessage(
+                                                            entry.report.eventCode || 'report',
+                                                            () => onDeleteTrainingReportMessage(entry),
+                                                        );
+                                                    }}
+                                                    className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-red-300 hover:text-red-200"
+                                                    title="Delete message"
+                                                    aria-label={`Delete ${entry.report.eventCode || 'report'} message`}
+                                                >
+                                                    <DashboardIconTrash className="h-3.5 w-3.5" strokeWidth={2.2} />
+                                                    <span>Delete Message</span>
+                                                </button>
+                                            )}
                                         </div>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setStaffPickerEntry({ ...entry, mode: 'reassign' })}
-                                        className={dashboardActionButtonClass}
-                                    >
-                                        Re-Assign
-                                    </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setStaffPickerEntry({ ...entry, mode: 'reassign' })}
+                                            className={dashboardActionButtonClass}
+                                        >
+                                            Re-Assign
+                                        </button>
                                     </div>
                                 </li>
                             ))}
@@ -1313,33 +1322,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                         <p className="text-gray-500 text-center italic py-4">No pending reports.</p>
                     )}
                 </div>
-                {reportContextMenu && (
-                    <div
-                        className="fixed z-[120] min-w-[172px] rounded-md border border-gray-600 bg-gray-900 py-1 shadow-2xl"
-                        style={{ left: reportContextMenu.x, top: reportContextMenu.y }}
-                        onClick={(event) => event.stopPropagation()}
-                        onContextMenu={(event) => event.preventDefault()}
-                    >
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                const menu = reportContextMenu;
-                                const confirmed = await showDarkConfirm(
-                                    `Delete ${menu.label} from Reports to be completed? This removes the dashboard message and stops it returning.`,
-                                    'Delete message?',
-                                    'warning',
-                                );
-                                if (confirmed) {
-                                    await menu.onDelete();
-                                }
-                                setReportContextMenu(null);
-                            }}
-                            className="block w-full px-3 py-2 text-left text-sm font-semibold text-red-300 hover:bg-red-500/15"
-                        >
-                            Delete Message
-                        </button>
-                    </div>
-                )}
             </div>
 
             {/* Today's Schedule */}
