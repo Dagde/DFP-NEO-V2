@@ -7447,7 +7447,7 @@ const DarkMessageModal = ({
   const handleCancel = () => {
     onCancel?.();
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: handleCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 rounded-lg shadow-xl w-full max-w-md border ${styles.borderColor}`, onClick: (e) => e.stopPropagation(), children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[10000] flex items-center justify-center animate-fade-in", onClick: handleCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 rounded-lg shadow-xl w-full max-w-md border ${styles.borderColor}`, onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-4 border-b border-gray-700 ${styles.headerBg} flex items-center space-x-3`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: styles.iconColor, children: getIcon() }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: `text-xl font-bold ${styles.titleColor}`, children: title })
@@ -41265,10 +41265,10 @@ const MyDashboard = ({
                           () => onDeletePt051ReportMessage(assessment)
                         );
                       },
-                      className: "mt-1 grid h-5 w-5 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200",
+                      className: "mt-1 grid h-6 w-6 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200",
                       title: "Delete message",
                       "aria-label": `Delete ${assessment.flightNumber || "report"} message`,
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-3.5 w-3.5", strokeWidth: 2.2 })
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-4 w-4", strokeWidth: 2.2 })
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -41321,10 +41321,10 @@ const MyDashboard = ({
                           () => onDeleteTrainingReportMessage(entry)
                         );
                       },
-                      className: "mt-1 grid h-5 w-5 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200",
+                      className: "mt-1 grid h-6 w-6 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200",
                       title: "Delete message",
                       "aria-label": `Delete ${entry.report.eventCode || "report"} message`,
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-3.5 w-3.5", strokeWidth: 2.2 })
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-4 w-4", strokeWidth: 2.2 })
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(

@@ -125,7 +125,7 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in" onClick={handleCancel}>
+    <div className="fixed inset-0 bg-black/70 z-[10000] flex items-center justify-center animate-fade-in" onClick={handleCancel}>
       <div className={`bg-gray-800 rounded-lg shadow-xl w-full max-w-md border ${styles.borderColor}`} onClick={e => e.stopPropagation()}>
         <div className={`p-4 border-b border-gray-700 ${styles.headerBg} flex items-center space-x-3`}>
           <span className={styles.iconColor}>
