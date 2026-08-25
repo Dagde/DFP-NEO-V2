@@ -1228,10 +1228,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         <div className="min-w-0">
                                             <button
                                                 onClick={() => onSelectPt051(assessment)}
-                                                className="text-left"
+                                                className="block text-left"
                                             >
                                                 <p className="font-semibold text-white">{assessment.flightNumber}</p>
-                                                <p className="text-sm text-gray-400">{assessment.trainedFullName}</p>
                                             </button>
                                             {onDeletePt051ReportMessage && (
                                                 <button
@@ -1244,14 +1243,19 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                             () => onDeletePt051ReportMessage(assessment),
                                                         );
                                                     }}
-                                                    className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-red-300 hover:text-red-200"
+                                                    className="mt-1 grid h-5 w-5 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200"
                                                     title="Delete message"
                                                     aria-label={`Delete ${assessment.flightNumber || 'report'} message`}
                                                 >
                                                     <DashboardIconTrash className="h-3.5 w-3.5" strokeWidth={2.2} />
-                                                    <span>Delete Message</span>
                                                 </button>
                                             )}
+                                            <button
+                                                onClick={() => onSelectPt051(assessment)}
+                                                className="block min-w-0 text-left"
+                                            >
+                                                <p className="text-sm text-gray-400">{assessment.trainedFullName}</p>
+                                            </button>
                                         </div>
                                         <div className="shrink-0 text-right">
                                             <p className="text-sm text-gray-300 font-mono">{formatDate(assessment.date)}</p>
@@ -1277,7 +1281,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="min-w-0">
                                                         <p className="font-semibold text-white">{entry.report.eventCode}</p>
-                                                        <p className="truncate text-sm text-gray-400">Report to complete from flight {entry.report.callsign || entry.report.eventCode}</p>
                                                     </div>
                                                     <div className="flex shrink-0 items-center justify-end gap-1.5 text-right">
                                                         <span className="whitespace-nowrap text-[10px] font-mono text-gray-300">{formatDate(entry.report.date)}</span>
@@ -1298,14 +1301,19 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                             () => onDeleteTrainingReportMessage(entry),
                                                         );
                                                     }}
-                                                    className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-red-300 hover:text-red-200"
+                                                    className="mt-1 grid h-5 w-5 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200"
                                                     title="Delete message"
                                                     aria-label={`Delete ${entry.report.eventCode || 'report'} message`}
                                                 >
                                                     <DashboardIconTrash className="h-3.5 w-3.5" strokeWidth={2.2} />
-                                                    <span>Delete Message</span>
                                                 </button>
                                             )}
+                                            <button
+                                                onClick={() => onSelectTrainingReport?.(entry)}
+                                                className="block w-full min-w-0 text-left"
+                                            >
+                                                <p className="truncate text-sm text-gray-400">Report to complete from flight {entry.report.callsign || entry.report.eventCode}</p>
+                                            </button>
                                         </div>
                                         <button
                                             type="button"

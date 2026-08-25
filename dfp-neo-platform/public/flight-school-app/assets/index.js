@@ -41245,18 +41245,15 @@ const MyDashboard = ({
               onContextMenu: (event) => event.preventDefault(),
               children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start gap-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       onClick: () => onSelectPt051(assessment),
-                      className: "text-left",
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: assessment.flightNumber }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: assessment.trainedFullName })
-                      ]
+                      className: "block text-left",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: assessment.flightNumber })
                     }
                   ),
-                  onDeletePt051ReportMessage && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  onDeletePt051ReportMessage && /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       type: "button",
@@ -41268,13 +41265,18 @@ const MyDashboard = ({
                           () => onDeletePt051ReportMessage(assessment)
                         );
                       },
-                      className: "mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-red-300 hover:text-red-200",
+                      className: "mt-1 grid h-5 w-5 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200",
                       title: "Delete message",
                       "aria-label": `Delete ${assessment.flightNumber || "report"} message`,
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-3.5 w-3.5", strokeWidth: 2.2 }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Delete Message" })
-                      ]
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-3.5 w-3.5", strokeWidth: 2.2 })
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => onSelectPt051(assessment),
+                      className: "block min-w-0 text-left",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: assessment.trainedFullName })
                     }
                   )
                 ] }),
@@ -41299,13 +41301,7 @@ const MyDashboard = ({
                       onClick: () => onSelectTrainingReport?.(entry),
                       className: "w-full min-w-0 text-left",
                       children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-sm text-gray-400", children: [
-                            "Report to complete from flight ",
-                            entry.report.callsign || entry.report.eventCode
-                          ] })
-                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center justify-end gap-1.5 text-right", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-nowrap text-[10px] font-mono text-gray-300", children: formatDate$2(entry.report.date) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-5 items-center whitespace-nowrap rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold text-amber-300", children: "Training Report" })
@@ -41313,7 +41309,7 @@ const MyDashboard = ({
                       ] })
                     }
                   ),
-                  onDeleteTrainingReportMessage && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  onDeleteTrainingReportMessage && /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       type: "button",
@@ -41325,13 +41321,21 @@ const MyDashboard = ({
                           () => onDeleteTrainingReportMessage(entry)
                         );
                       },
-                      className: "mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-red-300 hover:text-red-200",
+                      className: "mt-1 grid h-5 w-5 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200",
                       title: "Delete message",
                       "aria-label": `Delete ${entry.report.eventCode || "report"} message`,
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-3.5 w-3.5", strokeWidth: 2.2 }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Delete Message" })
-                      ]
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-3.5 w-3.5", strokeWidth: 2.2 })
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      onClick: () => onSelectTrainingReport?.(entry),
+                      className: "block w-full min-w-0 text-left",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-sm text-gray-400", children: [
+                        "Report to complete from flight ",
+                        entry.report.callsign || entry.report.eventCode
+                      ] })
                     }
                   )
                 ] }),
