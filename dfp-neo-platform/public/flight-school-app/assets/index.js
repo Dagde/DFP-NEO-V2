@@ -119831,6 +119831,14 @@ const App = () => {
       console.warn("[DASHBOARD-REPORT-DIAG] Could not persist diagnostic entry:", error, entry);
     }
   }
+  function readDashboardReportDiagEntries() {
+    try {
+      const stored = JSON.parse(localStorage.getItem("neo_dashboard_report_diag") || "[]");
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  }
   function summariseTrainingReportLmpItems(lmp) {
     const items = Array.isArray(lmp) ? lmp : [];
     const reportItems = items.filter(
@@ -119865,6 +119873,334 @@ const App = () => {
     } catch {
       return false;
     }
+  }
+  function buildDashboardReportDiagnosticReport() {
+    const postFlightAssessmentDraftTrace = readDashboardReportDiagEntries();
+    const normaliseName2 = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const normaliseCode2 = (value) => String(value || "").trim().toUpperCase();
+    const toSurnameFirst = (value) => {
+      const text = String(value || "").trim();
+      if (!text) return "";
+      if (text.includes(",")) return text;
+      const parts = text.split(/\s+/).filter(Boolean);
+      if (parts.length < 2) return text;
+      return `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(" ")}`;
+    };
+    const sessionDashboardUserName = signedInDisplayName || currentUserName;
+    const sessionDashboardNameKeys = [
+      sessionDashboardUserName,
+      authUser ? formatAuthLoginName(authUser) : "",
+      authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : "",
+      authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : "",
+      currentUserName
+    ].map(normaliseName2).filter(Boolean);
+    const sessionDashboardIdKeys = [
+      sessionUser?.userId,
+      authUser?.userId,
+      authUser?.id
+    ].map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
+    const dashboardStaff = allInstructorsData.find((staff) => {
+      const staffName = normaliseName2(staff.name);
+      const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
+      return sessionDashboardNameKeys.includes(staffName) || staffId && sessionDashboardIdKeys.includes(staffId);
+    });
+    const dashboardUserName = sessionDashboardUserName || dashboardStaff?.name || currentUserName;
+    const dashboardNameKeys = Array.from(new Set([
+      ...sessionDashboardNameKeys,
+      normaliseName2(dashboardUserName),
+      normaliseName2(dashboardStaff?.name)
+    ].filter(Boolean)));
+    const activeEvents = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
+    const dashboardActiveUnitCodes = (activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+")).map(normaliseCode2).filter(Boolean);
+    const dashboardActiveUnitSet = new Set(dashboardActiveUnitCodes);
+    const dashboardActiveLocationSet = new Set([
+      ...getDailySnapshotLocationAliases(school),
+      activeLocationSolarProfile.code,
+      school
+    ].map(normaliseCode2).filter(Boolean));
+    const reportContextDecision = (report, staff) => {
+      const reportUnitCodes = String(report?.unitCode || "").split("+").map(normaliseCode2).filter(Boolean);
+      const staffUnitCode = normaliseCode2(staff.unit);
+      const reportLocationCode = normaliseCode2(report?.locationCode);
+      const unitAccepted = dashboardActiveUnitSet.size === 0 ? true : reportUnitCodes.length > 0 ? reportUnitCodes.some((unitCode) => dashboardActiveUnitSet.has(unitCode)) : !!staffUnitCode && dashboardActiveUnitSet.has(staffUnitCode);
+      const locationAccepted = !reportLocationCode || dashboardActiveLocationSet.size === 0 || dashboardActiveLocationSet.has(reportLocationCode);
+      return {
+        accepted: unitAccepted && locationAccepted,
+        unitAccepted,
+        locationAccepted,
+        reportUnitCodes,
+        staffUnitCode,
+        reportLocationCode,
+        dashboardActiveUnitCodes,
+        dashboardActiveLocationCodes: Array.from(dashboardActiveLocationSet)
+      };
+    };
+    const reportUserDecision = (report, staff) => {
+      const explicitAssignee = normaliseName2(report?.dashboardAssigneeName);
+      const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
+      const nameCandidates = [
+        report?.dashboardAssigneeName,
+        report?.staffName,
+        staff.name,
+        report?.instructorName
+      ].map(normaliseName2).filter(Boolean);
+      const accepted = explicitAssignee ? dashboardNameKeys.includes(explicitAssignee) : nameCandidates.some((name) => dashboardNameKeys.includes(name)) || staffId && sessionDashboardIdKeys.includes(staffId);
+      return {
+        accepted,
+        explicitAssignee: report?.dashboardAssigneeName || null,
+        nameCandidates,
+        dashboardNameKeys,
+        staffId,
+        sessionDashboardIdKeys
+      };
+    };
+    const serialiseStaff = (staff) => ({
+      id: staff.id ?? null,
+      idNumber: staff.idNumber ?? null,
+      name: staff.name ?? null,
+      rank: staff.rank ?? null,
+      unit: staff.unit ?? null,
+      callsign: staff.callsign ?? null
+    });
+    const serialiseEvent = (event) => ({
+      id: event.id,
+      date: event.date,
+      type: event.type,
+      flightNumber: event.flightNumber,
+      eventCode: event.eventCode ?? null,
+      eventCategory: event.eventCategory ?? null,
+      startTime: event.startTime,
+      duration: event.duration,
+      resourceId: event.resourceId,
+      instructor: event.instructor ?? null,
+      pilot: event.pilot ?? null,
+      student: event.student ?? null,
+      crew: event.crew ?? null,
+      fixedCrewPic: event.fixedCrewPic ?? null,
+      unit: event.unit ?? null,
+      unitCode: event.unitCode ?? null,
+      personnelRefs: Array.isArray(event.personnelRefs) ? event.personnelRefs : []
+    });
+    const suppressedReportIds = new Set(suppressedDashboardPt051EventIds.map((value) => String(value || "").trim()).filter(Boolean));
+    const dashboardUserSurnameFirst = toSurnameFirst(dashboardUserName);
+    const serialisePt051Assessment = (assessment) => ({
+      id: assessment.id,
+      eventId: assessment.eventId,
+      flightNumber: assessment.flightNumber,
+      date: assessment.date,
+      traineeFullName: assessment.traineeFullName,
+      instructorName: assessment.instructorName,
+      dcoResult: assessment.dcoResult || null,
+      overallResult: assessment.overallResult || null,
+      isCompleted: assessment.isCompleted === true,
+      startsWithDashboardDue: String(assessment.id || "").startsWith("dashboard-due-"),
+      startsWithPt051: String(assessment.id || "").startsWith("pt051-"),
+      hasScores: Array.isArray(assessment.scores) && assessment.scores.length > 0,
+      scoreCount: Array.isArray(assessment.scores) ? assessment.scores.length : 0,
+      createdAt: assessment.createdAt || null,
+      updatedAt: assessment.updatedAt || null
+    });
+    const pt051AssessmentEvaluations = Array.from(pt051Assessments.values()).map((assessment) => {
+      const suppressionCandidates = [
+        assessment.eventId,
+        assessment.id,
+        `dashboard-due-${assessment.eventId}-${normaliseName2(assessment.traineeFullName)}`,
+        `pt051-${assessment.eventId}-${assessment.traineeFullName}`
+      ].map((value) => String(value || "").trim()).filter(Boolean);
+      const suppressed = suppressionCandidates.some((candidate) => suppressedReportIds.has(candidate));
+      const instructorMatchesDashboardUser = normaliseName2(assessment.instructorName) === normaliseName2(dashboardUserSurnameFirst);
+      const accepted = !assessment.isCompleted && instructorMatchesDashboardUser && !suppressed;
+      const matchingCompletion = eventCompletionsForDate.find((completion) => assessment.eventId && completion.scheduleEventId === assessment.eventId || normaliseCode2(completion.eventCode) === normaliseCode2(assessment.flightNumber) && String(completion.eventDate || completion.date || "") === String(assessment.date || "") && normaliseName2(completion.instructorName) === normaliseName2(assessment.instructorName));
+      const matchingEvent = activeEvents.find((event) => event.id === assessment.eventId || normaliseCode2(event.flightNumber || event.eventCode) === normaliseCode2(assessment.flightNumber) && String(event.date || "") === String(assessment.date || ""));
+      return {
+        accepted,
+        rejectReasons: [
+          assessment.isCompleted ? "completed" : "",
+          !instructorMatchesDashboardUser ? "instructor-user-filter" : "",
+          suppressed ? "suppressed" : ""
+        ].filter(Boolean),
+        sourceFlags: {
+          startsWithDashboardDue: String(assessment.id || "").startsWith("dashboard-due-"),
+          startsWithPt051: String(assessment.id || "").startsWith("pt051-"),
+          hasMatchingEventCompletion: Boolean(matchingCompletion),
+          matchingCompletionDcoResult: matchingCompletion?.dcoResult || null,
+          hasMatchingScheduleEvent: Boolean(matchingEvent)
+        },
+        suppressionCandidates,
+        assessment: serialisePt051Assessment(assessment),
+        matchingEvent: matchingEvent ? serialiseEvent(matchingEvent) : null,
+        matchingCompletion: matchingCompletion ? {
+          id: matchingCompletion.id || null,
+          scheduleEventId: matchingCompletion.scheduleEventId || null,
+          eventCode: matchingCompletion.eventCode || null,
+          eventDate: matchingCompletion.eventDate || null,
+          traineeFullName: matchingCompletion.traineeFullName || null,
+          instructorName: matchingCompletion.instructorName || null,
+          dcoResult: matchingCompletion.dcoResult || null,
+          createdAt: matchingCompletion.createdAt || null,
+          updatedAt: matchingCompletion.updatedAt || null
+        } : null
+      };
+    });
+    const reportEvaluations = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).map((report) => {
+      const contextDecision = reportContextDecision(report, staff);
+      const userDecision = reportUserDecision(report, staff);
+      const accepted = report.status !== "Complete" && !report.dashboardAcknowledgedAt && contextDecision.accepted && userDecision.accepted;
+      return {
+        accepted,
+        rejectReasons: [
+          report.status === "Complete" ? "status-complete" : "",
+          report.dashboardAcknowledgedAt ? "dashboard-acknowledged" : "",
+          !contextDecision.accepted ? "context-filter" : "",
+          !userDecision.accepted ? "user-filter" : ""
+        ].filter(Boolean),
+        staff: serialiseStaff(staff),
+        report: {
+          id: report.id,
+          reportName: report.reportName,
+          status: report.status,
+          dashboardAcknowledgedAt: report.dashboardAcknowledgedAt || null,
+          dashboardAssigneeName: report.dashboardAssigneeName || null,
+          staffIdNumber: report.staffIdNumber || null,
+          staffName: report.staffName || null,
+          instructorName: report.instructorName || null,
+          eventId: report.eventId || null,
+          eventCode: report.eventCode || null,
+          date: report.date || null,
+          callsign: report.callsign || null,
+          unitCode: report.unitCode || null,
+          locationCode: report.locationCode || null,
+          trainingCode: report.trainingCode || null,
+          trainingTitle: report.trainingTitle || null,
+          dcoResult: report.dcoResult || null
+        },
+        contextDecision,
+        userDecision
+      };
+    }));
+    const assessmentRequiredItems = syllabusDetails.filter((item) => item.assessmentRequired === true || ["BGF5", "BPC+IPC", "FIC"].includes(normaliseCode2(item.code || item.module || item.lmpType))).map((item) => ({
+      id: item.id,
+      code: item.code,
+      type: item.type,
+      lmpType: item.lmpType,
+      module: item.module,
+      phase: item.phase,
+      courses: item.courses || [],
+      isActive: item.isActive,
+      assessmentRequired: item.assessmentRequired
+    }));
+    const bfgOrBgfEvents = activeEvents.filter((event) => normaliseCode2(event.flightNumber || event.eventCode).includes("BGF5") || normaliseCode2(event.flightNumber || event.eventCode).includes("BGF"));
+    const eventCompletionEvaluations = eventCompletionsForDate.map((completion) => {
+      const matchedEvent = activeEvents.find((event) => event.id === completion.scheduleEventId || normaliseCode2(event.flightNumber || event.eventCode) === normaliseCode2(completion.eventCode) && String(event.date || "") === String(completion.eventDate || "") && Math.abs(Number(event.startTime || 0) - Number(completion.startTime || 0)) < 0.01);
+      return {
+        completion: {
+          id: completion.id || null,
+          scheduleEventId: completion.scheduleEventId || null,
+          eventCode: completion.eventCode || null,
+          eventDate: completion.eventDate || null,
+          startTime: completion.startTime ?? null,
+          duration: completion.duration ?? null,
+          traineeFullName: completion.traineeFullName || null,
+          instructorName: completion.instructorName || null,
+          dcoResult: completion.dcoResult || null,
+          createdAt: completion.createdAt || null,
+          updatedAt: completion.updatedAt || null
+        },
+        matchedEvent: matchedEvent ? serialiseEvent(matchedEvent) : null,
+        matchedSyllabus: matchedEvent ? syllabusDetails.filter((item) => item.isActive !== false && normaliseCode2(item.code) === normaliseCode2(matchedEvent.flightNumber || matchedEvent.eventCode)).map((item) => ({
+          id: item.id,
+          code: item.code,
+          type: item.type,
+          lmpType: item.lmpType,
+          module: item.module,
+          phase: item.phase,
+          courses: item.courses || [],
+          isActive: item.isActive,
+          assessmentRequired: item.assessmentRequired
+        })) : []
+      };
+    });
+    const matchingBgf5Syllabus = syllabusDetails.filter((item) => normaliseCode2(item.code) === "BGF5").map((item) => ({
+      id: item.id,
+      code: item.code,
+      type: item.type,
+      lmpType: item.lmpType,
+      module: item.module,
+      phase: item.phase,
+      courses: item.courses || [],
+      isActive: item.isActive,
+      assessmentRequired: item.assessmentRequired
+    }));
+    return {
+      reportType: "DFP My Home reports-to-complete diagnostics",
+      diagnosticVersion: "CCH 8.180",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      activeContext: {
+        date,
+        school,
+        activeUnitCode,
+        activeContextUnitCodes,
+        activeOperationalModel,
+        activeView,
+        signedInDisplayName,
+        currentUserName,
+        sessionDashboardUserName,
+        dashboardUserName,
+        dashboardStaff: dashboardStaff ? serialiseStaff(dashboardStaff) : null,
+        dashboardNameKeys,
+        sessionDashboardIdKeys
+      },
+      summary: {
+        activeEventCount: activeEvents.length,
+        bgfEventCount: bfgOrBgfEvents.length,
+        bgf5EventCount: bfgOrBgfEvents.filter((event) => normaliseCode2(event.flightNumber || event.eventCode) === "BGF5").length,
+        bgf5SyllabusMatches: matchingBgf5Syllabus.length,
+        assessmentRequiredItemCount: assessmentRequiredItems.length,
+        totalTrainingReportDrafts: reportEvaluations.length,
+        acceptedTrainingReportDrafts: reportEvaluations.filter((item) => item.accepted).length,
+        bgf5TrainingReportDrafts: reportEvaluations.filter((item) => normaliseCode2(item.report.eventCode) === "BGF5").length,
+        acceptedBgf5TrainingReportDrafts: reportEvaluations.filter((item) => item.accepted && normaliseCode2(item.report.eventCode) === "BGF5").length,
+        eventCompletionsForDateCount: eventCompletionsForDate.length,
+        dcoEventCompletionsForDateCount: eventCompletionsForDate.filter((completion) => completion.dcoResult === "DCO").length,
+        bgf5EventCompletionsForDateCount: eventCompletionsForDate.filter((completion) => normaliseCode2(completion.eventCode) === "BGF5").length,
+        postFlightAssessmentDraftTraceCount: postFlightAssessmentDraftTrace.length,
+        totalPt051Assessments: pt051AssessmentEvaluations.length,
+        acceptedPt051Assessments: pt051AssessmentEvaluations.filter((item) => item.accepted).length,
+        dashboardDuePt051Assessments: pt051AssessmentEvaluations.filter((item) => item.sourceFlags.startsWithDashboardDue).length,
+        acceptedDashboardDuePt051Assessments: pt051AssessmentEvaluations.filter((item) => item.accepted && item.sourceFlags.startsWithDashboardDue).length,
+        pt051AssessmentsWithoutEventCompletion: pt051AssessmentEvaluations.filter((item) => !item.sourceFlags.hasMatchingEventCompletion).length,
+        latestPostFlightAssessmentDraftTrace: postFlightAssessmentDraftTrace.slice(-12),
+        bgf5RejectReasons: reportEvaluations.filter((item) => normaliseCode2(item.report.eventCode) === "BGF5").map((item) => ({
+          reportId: item.report.id,
+          staffName: item.staff.name,
+          accepted: item.accepted,
+          rejectReasons: item.rejectReasons
+        }))
+      },
+      bgfEvents: bfgOrBgfEvents.map(serialiseEvent),
+      matchingBgf5Syllabus,
+      assessmentRequiredItems,
+      eventCompletionEvaluations,
+      pt051AssessmentEvaluations,
+      reportEvaluations,
+      postFlightAssessmentDraftTrace
+    };
+  }
+  function downloadDashboardReportTraceReport() {
+    const payload = buildDashboardReportDiagnosticReport();
+    const safeUser = String(payload?.activeContext?.dashboardUserName || currentUserName || "user").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "user";
+    const reportDate = String(date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dashboard-report-trace-${safeUser}-${reportDate}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
@@ -138283,6 +138619,46 @@ ${error instanceof Error ? error.message : String(error)}`,
           ].some((name) => dashboardNameKeys.has(normaliseDashboardName(name))) || staffId && sessionDashboardIdKeys.includes(staffId);
         };
         const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && reportMatchesDashboardContext(report, staff) && reportMatchesDashboardUser(report, staff)).map((report) => ({ report, staff })));
+        const dashboardUserSurnameFirst = (() => {
+          const text = String(dashboardUserName || "").trim();
+          if (!text || text.includes(",")) return text;
+          const parts = text.split(/\s+/).filter(Boolean);
+          return parts.length > 1 ? `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(" ")}` : text;
+        })();
+        const pt051ReportRowsForDashboard = Array.from(pt051Assessments.values()).filter((assessment) => !assessment.isCompleted && normaliseDashboardName(assessment.instructorName) === normaliseDashboardName(dashboardUserSurnameFirst)).map((assessment) => ({
+          id: assessment.id,
+          eventId: assessment.eventId,
+          flightNumber: assessment.flightNumber,
+          date: assessment.date,
+          instructorName: assessment.instructorName,
+          traineeFullName: assessment.traineeFullName,
+          dcoResult: assessment.dcoResult || null,
+          startsWithDashboardDue: String(assessment.id || "").startsWith("dashboard-due-"),
+          hasMatchingCompletion: eventCompletionsForDate.some((completion) => assessment.eventId && completion.scheduleEventId === assessment.eventId || normaliseDashboardContextCode(completion.eventCode) === normaliseDashboardContextCode(assessment.flightNumber) && String(completion.eventDate || completion.date || "") === String(assessment.date || ""))
+        }));
+        pushDashboardReportDiag("dashboard:reports-to-complete-render", {
+          dashboardUserName,
+          dashboardUserSurnameFirst,
+          activeContextUnitCodes,
+          activeUnitCode,
+          activeOperationalModel,
+          eventCompletionsForDateCount: eventCompletionsForDate.length,
+          pt051AssessmentsTotal: pt051Assessments.size,
+          pt051RowsForDashboardCount: pt051ReportRowsForDashboard.length,
+          pt051RowsForDashboard: pt051ReportRowsForDashboard.slice(0, 20),
+          pendingTrainingReportsCount: pendingTrainingReports.length,
+          pendingTrainingReports: pendingTrainingReports.slice(0, 20).map((entry) => ({
+            reportId: entry.report.id,
+            eventId: entry.report.eventId || null,
+            eventCode: entry.report.eventCode || null,
+            date: entry.report.date || null,
+            status: entry.report.status || null,
+            dcoResult: entry.report.dcoResult || null,
+            dashboardAcknowledgedAt: entry.report.dashboardAcknowledgedAt || null,
+            staffName: entry.staff.name,
+            staffIdNumber: entry.staff.idNumber
+          }))
+        });
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           MyDashboard,
           {
@@ -141290,6 +141666,16 @@ Do you want to replace the existing entry?`,
           className: "rounded border border-violet-500/40 px-1.5 py-0.5 text-violet-200 transition-colors hover:border-violet-300/70 hover:text-white",
           title: "Download locality/unit context trace",
           children: "Context Trace"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: downloadDashboardReportTraceReport,
+          className: "rounded border border-amber-500/40 px-1.5 py-0.5 text-amber-200 transition-colors hover:border-amber-300/70 hover:text-white",
+          title: "Download My Home reports-to-complete trace",
+          children: "Report Trace"
         }
       )
     ] })

@@ -27217,6 +27217,14 @@ const App: React.FC = () => {
         const normaliseCode = (value?: string | null) => String(value || '')
             .trim()
             .toUpperCase();
+        const toSurnameFirst = (value?: string | null) => {
+            const text = String(value || '').trim();
+            if (!text) return '';
+            if (text.includes(',')) return text;
+            const parts = text.split(/\s+/).filter(Boolean);
+            if (parts.length < 2) return text;
+            return `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(' ')}`;
+        };
         const sessionDashboardUserName = signedInDisplayName || currentUserName;
         const sessionDashboardNameKeys = [
             sessionDashboardUserName,
@@ -27322,6 +27330,80 @@ const App: React.FC = () => {
             unit: event.unit ?? null,
             unitCode: event.unitCode ?? null,
             personnelRefs: Array.isArray(event.personnelRefs) ? event.personnelRefs : [],
+        });
+        const suppressedReportIds = new Set(suppressedDashboardPt051EventIds.map(value => String(value || '').trim()).filter(Boolean));
+        const dashboardUserSurnameFirst = toSurnameFirst(dashboardUserName);
+        const serialisePt051Assessment = (assessment: Pt051Assessment) => ({
+            id: assessment.id,
+            eventId: assessment.eventId,
+            flightNumber: assessment.flightNumber,
+            date: assessment.date,
+            traineeFullName: assessment.traineeFullName,
+            instructorName: assessment.instructorName,
+            dcoResult: assessment.dcoResult || null,
+            overallResult: assessment.overallResult || null,
+            isCompleted: assessment.isCompleted === true,
+            startsWithDashboardDue: String(assessment.id || '').startsWith('dashboard-due-'),
+            startsWithPt051: String(assessment.id || '').startsWith('pt051-'),
+            hasScores: Array.isArray(assessment.scores) && assessment.scores.length > 0,
+            scoreCount: Array.isArray(assessment.scores) ? assessment.scores.length : 0,
+            createdAt: (assessment as any).createdAt || null,
+            updatedAt: (assessment as any).updatedAt || null,
+        });
+        const pt051AssessmentEvaluations = Array.from(pt051Assessments.values()).map(assessment => {
+            const suppressionCandidates = [
+                assessment.eventId,
+                assessment.id,
+                `dashboard-due-${assessment.eventId}-${normaliseName(assessment.traineeFullName)}`,
+                `pt051-${assessment.eventId}-${assessment.traineeFullName}`,
+            ].map(value => String(value || '').trim()).filter(Boolean);
+            const suppressed = suppressionCandidates.some(candidate => suppressedReportIds.has(candidate));
+            const instructorMatchesDashboardUser = normaliseName(assessment.instructorName) === normaliseName(dashboardUserSurnameFirst);
+            const accepted = !assessment.isCompleted && instructorMatchesDashboardUser && !suppressed;
+            const matchingCompletion = eventCompletionsForDate.find((completion: any) => (
+                (assessment.eventId && completion.scheduleEventId === assessment.eventId) ||
+                (
+                    normaliseCode(completion.eventCode) === normaliseCode(assessment.flightNumber) &&
+                    String(completion.eventDate || completion.date || '') === String(assessment.date || '') &&
+                    normaliseName(completion.instructorName) === normaliseName(assessment.instructorName)
+                )
+            ));
+            const matchingEvent = activeEvents.find(event => (
+                event.id === assessment.eventId ||
+                (
+                    normaliseCode(event.flightNumber || (event as any).eventCode) === normaliseCode(assessment.flightNumber) &&
+                    String(event.date || '') === String(assessment.date || '')
+                )
+            ));
+            return {
+                accepted,
+                rejectReasons: [
+                    assessment.isCompleted ? 'completed' : '',
+                    !instructorMatchesDashboardUser ? 'instructor-user-filter' : '',
+                    suppressed ? 'suppressed' : '',
+                ].filter(Boolean),
+                sourceFlags: {
+                    startsWithDashboardDue: String(assessment.id || '').startsWith('dashboard-due-'),
+                    startsWithPt051: String(assessment.id || '').startsWith('pt051-'),
+                    hasMatchingEventCompletion: Boolean(matchingCompletion),
+                    matchingCompletionDcoResult: matchingCompletion?.dcoResult || null,
+                    hasMatchingScheduleEvent: Boolean(matchingEvent),
+                },
+                suppressionCandidates,
+                assessment: serialisePt051Assessment(assessment),
+                matchingEvent: matchingEvent ? serialiseEvent(matchingEvent) : null,
+                matchingCompletion: matchingCompletion ? {
+                    id: matchingCompletion.id || null,
+                    scheduleEventId: matchingCompletion.scheduleEventId || null,
+                    eventCode: matchingCompletion.eventCode || null,
+                    eventDate: matchingCompletion.eventDate || null,
+                    traineeFullName: matchingCompletion.traineeFullName || null,
+                    instructorName: matchingCompletion.instructorName || null,
+                    dcoResult: matchingCompletion.dcoResult || null,
+                    createdAt: matchingCompletion.createdAt || null,
+                    updatedAt: matchingCompletion.updatedAt || null,
+                } : null,
+            };
         });
         const reportEvaluations = allInstructorsData.flatMap(staff => (
             normaliseAirCombatTrainingReports(staff.preferences).map(report => {
@@ -27471,6 +27553,11 @@ const App: React.FC = () => {
                 dcoEventCompletionsForDateCount: eventCompletionsForDate.filter((completion: any) => completion.dcoResult === 'DCO').length,
                 bgf5EventCompletionsForDateCount: eventCompletionsForDate.filter((completion: any) => normaliseCode(completion.eventCode) === 'BGF5').length,
                 postFlightAssessmentDraftTraceCount: postFlightAssessmentDraftTrace.length,
+                totalPt051Assessments: pt051AssessmentEvaluations.length,
+                acceptedPt051Assessments: pt051AssessmentEvaluations.filter(item => item.accepted).length,
+                dashboardDuePt051Assessments: pt051AssessmentEvaluations.filter(item => item.sourceFlags.startsWithDashboardDue).length,
+                acceptedDashboardDuePt051Assessments: pt051AssessmentEvaluations.filter(item => item.accepted && item.sourceFlags.startsWithDashboardDue).length,
+                pt051AssessmentsWithoutEventCompletion: pt051AssessmentEvaluations.filter(item => !item.sourceFlags.hasMatchingEventCompletion).length,
                 latestPostFlightAssessmentDraftTrace: postFlightAssessmentDraftTrace.slice(-12),
                 bgf5RejectReasons: reportEvaluations
                     .filter(item => normaliseCode(item.report.eventCode) === 'BGF5')
@@ -27485,9 +27572,28 @@ const App: React.FC = () => {
             matchingBgf5Syllabus,
             assessmentRequiredItems,
             eventCompletionEvaluations,
+            pt051AssessmentEvaluations,
             reportEvaluations,
             postFlightAssessmentDraftTrace,
         };
+    }
+
+    function downloadDashboardReportTraceReport(): void {
+        const payload = buildDashboardReportDiagnosticReport();
+        const safeUser = String(payload?.activeContext?.dashboardUserName || currentUserName || 'user')
+            .replace(/[^a-z0-9_-]+/gi, '-')
+            .replace(/^-+|-+$/g, '')
+            .toLowerCase() || 'user';
+        const reportDate = String(date || new Date().toISOString().slice(0, 10));
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `dashboard-report-trace-${safeUser}-${reportDate}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
 
     useEffect(() => {
@@ -49712,6 +49818,57 @@ appliedUpdates.forEach(update => {
                         ))
                         .map(report => ({ report, staff }))
                 ));
+                const dashboardUserSurnameFirst = (() => {
+                    const text = String(dashboardUserName || '').trim();
+                    if (!text || text.includes(',')) return text;
+                    const parts = text.split(/\s+/).filter(Boolean);
+                    return parts.length > 1 ? `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(' ')}` : text;
+                })();
+                const pt051ReportRowsForDashboard = Array.from(pt051Assessments.values())
+                    .filter(assessment => (
+                        !assessment.isCompleted &&
+                        normaliseDashboardName(assessment.instructorName) === normaliseDashboardName(dashboardUserSurnameFirst)
+                    ))
+                    .map(assessment => ({
+                        id: assessment.id,
+                        eventId: assessment.eventId,
+                        flightNumber: assessment.flightNumber,
+                        date: assessment.date,
+                        instructorName: assessment.instructorName,
+                        traineeFullName: assessment.traineeFullName,
+                        dcoResult: assessment.dcoResult || null,
+                        startsWithDashboardDue: String(assessment.id || '').startsWith('dashboard-due-'),
+                        hasMatchingCompletion: eventCompletionsForDate.some((completion: any) => (
+                            (assessment.eventId && completion.scheduleEventId === assessment.eventId) ||
+                            (
+                                normaliseDashboardContextCode(completion.eventCode) === normaliseDashboardContextCode(assessment.flightNumber) &&
+                                String(completion.eventDate || completion.date || '') === String(assessment.date || '')
+                            )
+                        )),
+                    }));
+                pushDashboardReportDiag('dashboard:reports-to-complete-render', {
+                    dashboardUserName,
+                    dashboardUserSurnameFirst,
+                    activeContextUnitCodes,
+                    activeUnitCode,
+                    activeOperationalModel,
+                    eventCompletionsForDateCount: eventCompletionsForDate.length,
+                    pt051AssessmentsTotal: pt051Assessments.size,
+                    pt051RowsForDashboardCount: pt051ReportRowsForDashboard.length,
+                    pt051RowsForDashboard: pt051ReportRowsForDashboard.slice(0, 20),
+                    pendingTrainingReportsCount: pendingTrainingReports.length,
+                    pendingTrainingReports: pendingTrainingReports.slice(0, 20).map(entry => ({
+                        reportId: entry.report.id,
+                        eventId: entry.report.eventId || null,
+                        eventCode: entry.report.eventCode || null,
+                        date: entry.report.date || null,
+                        status: entry.report.status || null,
+                        dcoResult: entry.report.dcoResult || null,
+                        dashboardAcknowledgedAt: entry.report.dashboardAcknowledgedAt || null,
+                        staffName: entry.staff.name,
+                        staffIdNumber: entry.staff.idNumber,
+                    })),
+                });
 
                 return <MyDashboard
                             userName={dashboardUserName}
@@ -52986,6 +53143,14 @@ appliedUpdates.forEach(update => {
                     title="Download locality/unit context trace"
                 >
                     Context Trace
+                </button>
+                <button
+                    type="button"
+                    onClick={downloadDashboardReportTraceReport}
+                    className="rounded border border-amber-500/40 px-1.5 py-0.5 text-amber-200 transition-colors hover:border-amber-300/70 hover:text-white"
+                    title="Download My Home reports-to-complete trace"
+                >
+                    Report Trace
                 </button>
             </div>
         )}
