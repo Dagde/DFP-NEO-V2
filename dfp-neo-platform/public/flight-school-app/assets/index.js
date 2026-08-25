@@ -41265,10 +41265,10 @@ const MyDashboard = ({
                           () => onDeletePt051ReportMessage(assessment)
                         );
                       },
-                      className: "mt-1 grid h-6 w-6 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200",
+                      className: "mt-1 grid h-7 w-7 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200",
                       title: "Delete message",
                       "aria-label": `Delete ${assessment.flightNumber || "report"} message`,
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-4 w-4", strokeWidth: 2.2 })
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-[18px] w-[18px]", strokeWidth: 2.2 })
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -41321,10 +41321,10 @@ const MyDashboard = ({
                           () => onDeleteTrainingReportMessage(entry)
                         );
                       },
-                      className: "mt-1 grid h-6 w-6 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200",
+                      className: "mt-1 grid h-7 w-7 place-items-center rounded text-red-300 hover:bg-red-500/15 hover:text-red-200",
                       title: "Delete message",
                       "aria-label": `Delete ${entry.report.eventCode || "report"} message`,
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-4 w-4", strokeWidth: 2.2 })
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-[18px] w-[18px]", strokeWidth: 2.2 })
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
