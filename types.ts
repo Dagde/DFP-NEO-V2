@@ -262,6 +262,9 @@ export interface AirCombatTrainingReport {
   eventCode: string;
   eventDescription?: string;
   eventType?: string;
+  source?: 'post-flight' | 'event-ended' | string;
+  generatedReason?: 'post-flight-completion' | 'event-ended' | string;
+  generatedAt?: string;
   date: string;
   startTime?: number;
   duration?: number;

@@ -6311,12 +6311,16 @@ const normaliseAirCombatTrainingReports = (preferences) => {
     eventCode: String(report.eventCode || report.flightNumber || ""),
     eventDescription: report.eventDescription ? String(report.eventDescription) : void 0,
     eventType: report.eventType ? String(report.eventType) : void 0,
+    source: report.source ? String(report.source) : void 0,
+    generatedReason: report.generatedReason ? String(report.generatedReason) : void 0,
+    generatedAt: report.generatedAt ? String(report.generatedAt) : void 0,
     date: String(report.date || ""),
     startTime: Number.isFinite(Number(report.startTime)) ? Number(report.startTime) : void 0,
     duration: Number.isFinite(Number(report.duration)) ? Number(report.duration) : void 0,
     resourceId: report.resourceId ? String(report.resourceId) : void 0,
     callsign: report.callsign ? String(report.callsign) : void 0,
     instructorName: report.instructorName ? String(report.instructorName) : void 0,
+    traineeFullName: report.traineeFullName ? String(report.traineeFullName) : void 0,
     dashboardAssigneeName: report.dashboardAssigneeName ? String(report.dashboardAssigneeName) : void 0,
     overallGrade: report.overallGrade ? String(report.overallGrade) : void 0,
     overallResult: report.overallResult === "P" || report.overallResult === "F" ? report.overallResult : "",
@@ -55298,7 +55302,7 @@ const dateLabel = (value) => {
   });
 };
 const normaliseRole = (value) => String(value || "Unassigned").trim() || "Unassigned";
-const normaliseName$1 = (value) => String(value || "").trim().toLowerCase();
+const normaliseName$2 = (value) => String(value || "").trim().toLowerCase();
 const isPlaceholderCrewValue = (value) => {
   const text = String(value || "").trim();
   return !text || /^TBA$/i.test(text) || /^Pooled Crew$/i.test(text) || /^Solo$/i.test(text);
@@ -55315,8 +55319,8 @@ const eventStaffNames = (event) => {
 };
 const eventPicName = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim();
 const eventPartnerNames = (event) => {
-  const picKey = normaliseName$1(eventPicName(event));
-  return eventStaffNames(event).filter((name) => normaliseName$1(name) !== picKey);
+  const picKey = normaliseName$2(eventPicName(event));
+  return eventStaffNames(event).filter((name) => normaliseName$2(name) !== picKey);
 };
 const eventCode = (event) => String(event.eventCode || event.flightNumber || event.taskingDisplayLabel || event.taskingName || "").trim().toUpperCase();
 const isTaskingEvent = (event) => Boolean(event.isTaskingRequest || event.taskingRequestId || event.taskingName);
@@ -55351,7 +55355,7 @@ const AirCombatIntelligenceTab = ({
     const scheduledRoleCounts = /* @__PURE__ */ new Map();
     const staffByName = /* @__PURE__ */ new Map();
     instructorsData.forEach((person) => {
-      staffByName.set(normaliseName$1(person.name), person);
+      staffByName.set(normaliseName$2(person.name), person);
       const role = normaliseRole(person.role);
       roleCounts.set(role, Number(roleCounts.get(role) || 0) + 1);
     });
@@ -55375,7 +55379,7 @@ const AirCombatIntelligenceTab = ({
     const soloAnomalies = isFixedCrewLike ? flightEvents.filter((event) => event.flightType === "Solo" || event.soloOrDual === "Solo" || /^Solo$/i.test(String(event.crew || "").trim()) || eventPartnerNames(event).length === 0) : [];
     const uniqueCrew = new Set(activeEvents.flatMap(eventStaffNames));
     uniqueCrew.forEach((name) => {
-      const staff = staffByName.get(normaliseName$1(name));
+      const staff = staffByName.get(normaliseName$2(name));
       if (!staff) return;
       const role = normaliseRole(staff.role);
       scheduledRoleCounts.set(role, Number(scheduledRoleCounts.get(role) || 0) + 1);
@@ -90926,7 +90930,7 @@ const isProgressEvent = (item) => {
   return (item.type === "Flight" || item.type === "FTD") && !item.isRemedial && !item.id.includes(" MB") && !item.code.includes(" MB");
 };
 const getEventCode = (item) => (item.code || item.id || "").trim();
-const normaliseName = (name) => name.replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").trim();
+const normaliseName$1 = (name) => name.replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").trim();
 const getAssessmentDate = (assessment) => {
   if (!assessment.date) return null;
   const date = /* @__PURE__ */ new Date(`${assessment.date}T00:00:00`);
@@ -90957,11 +90961,11 @@ const mergeLmpCompletedEventDates = (completed, items, validEventCodes, eventIdT
   });
 };
 const getCompletedEventDates = (trainee, individualLMP, validEventCodes, eventIdToCode, pt051Assessments) => {
-  const traineeNames = new Set([trainee.fullName, trainee.name, normaliseName(trainee.fullName), normaliseName(trainee.name)].filter(Boolean));
+  const traineeNames = new Set([trainee.fullName, trainee.name, normaliseName$1(trainee.fullName), normaliseName$1(trainee.name)].filter(Boolean));
   const completed = /* @__PURE__ */ new Map();
   pt051Assessments.forEach((assessment) => {
     if (!isCompletedTrainingReport(assessment)) return;
-    if (!traineeNames.has(assessment.traineeFullName) && !traineeNames.has(normaliseName(assessment.traineeFullName))) return;
+    if (!traineeNames.has(assessment.traineeFullName) && !traineeNames.has(normaliseName$1(assessment.traineeFullName))) return;
     const rawEventCode = getAssessmentEventCode(assessment);
     const eventCode2 = eventIdToCode.get(rawEventCode) || rawEventCode;
     if (!validEventCodes.has(eventCode2)) return;
@@ -121910,6 +121914,7 @@ const App = () => {
   const [pt051Assessments, setPt051Assessments] = reactExports.useState(/* @__PURE__ */ new Map());
   const [pt051PerformanceLoading, setPt051PerformanceLoading] = reactExports.useState(true);
   const [eventCompletionsForDate, setEventCompletionsForDate] = reactExports.useState([]);
+  const [dashboardReportMinuteTick, setDashboardReportMinuteTick] = reactExports.useState(0);
   const dashboardReportReconcileKeysRef = reactExports.useRef(/* @__PURE__ */ new Set());
   const [courses, setCourses] = reactExports.useState([]);
   const [courseColors, setCourseColors] = reactExports.useState({});
@@ -126787,7 +126792,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       `Created ${reportForSave.reportName} Air Combat training report for ${reportForSave.staffName} - Event: ${reportForSave.eventCode}`
     );
   };
-  const generateAssessmentRequiredDraftTrainingReport = async (sourceEvent, dcoResult) => {
+  const generateAssessmentRequiredDraftTrainingReport = async (sourceEvent, dcoResult = "", generationReason = "post-flight-completion") => {
     const operationalModel = normaliseOperationalModel(activeOperationalModel);
     const traceBase = {
       eventId: sourceEvent.id,
@@ -126799,7 +126804,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       pilot: sourceEvent.pilot || null,
       student: sourceEvent.student || null,
       fixedCrewPic: sourceEvent.fixedCrewPic || null,
-      personnelRefs: Array.isArray(sourceEvent.personnelRefs) ? sourceEvent.personnelRefs : []
+      personnelRefs: Array.isArray(sourceEvent.personnelRefs) ? sourceEvent.personnelRefs : [],
+      generationReason
     };
     pushDashboardReportDiag("postflight:draft-generator:invoked", traceBase);
     if (operationalModel !== "flight_school" && operationalModel !== "air_combat" && !isFixedCrewLikeOperationalModel(operationalModel)) {
@@ -126878,9 +126884,13 @@ ${error instanceof Error ? error.message : String(error)}`,
     const assignment = allAssignments.find((candidate) => candidate.trainingKey === fallbackAssignment.trainingKey || trainingCodes.has(candidate.code)) || fallbackAssignment;
     const reportTemplate = getUnitTrainingReportTemplate(platformConfig, staff.unit || activeUnitCode);
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const reportId = `air-combat-postflight-${staff.idNumber}-${sourceEvent.id || eventCode2}`;
+    const traineeNameForReport = String(sourceEvent.student || "").trim();
+    const traineeKeyForReport = traineeNameForReport.replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
+    const reportIdPrefix = generationReason === "event-ended" ? "event-ended" : "air-combat-postflight";
+    const reportId = generationReason === "event-ended" ? `${reportIdPrefix}-${staff.idNumber}-${sourceEvent.id || eventCode2}-${traineeKeyForReport || "no-trainee"}` : `${reportIdPrefix}-${staff.idNumber}-${sourceEvent.id || eventCode2}`;
     const existingReports = normaliseAirCombatTrainingReports(preferences);
-    const existingReport = existingReports.find((report2) => report2.id === reportId || report2.staffIdNumber === staff.idNumber && (report2.eventId === sourceEvent.id || report2.eventCode === eventCode2) && report2.date === sourceEvent.date);
+    const normaliseReportTraineeName = (value) => String(value || "").replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
+    const existingReport = existingReports.find((report2) => report2.id === reportId || report2.staffIdNumber === staff.idNumber && (report2.eventId === sourceEvent.id || report2.eventCode === eventCode2) && report2.date === sourceEvent.date && (generationReason !== "event-ended" || normaliseReportTraineeName(report2.traineeFullName) === traineeKeyForReport));
     const report = {
       ...existingReport || {},
       id: existingReport?.id || reportId,
@@ -126897,6 +126907,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       eventCode: eventCode2,
       eventDescription: matchingItem.eventDescription || sourceEvent.notes,
       eventType: matchingItem.type || sourceEvent.type,
+      source: generationReason === "event-ended" ? "event-ended" : "post-flight",
+      generatedReason: generationReason,
+      generatedAt: existingReport?.generatedAt || now,
       dashboardAssigneeName: existingReport?.dashboardAssigneeName || staff.name,
       date: sourceEvent.date || getLocalDateString(),
       startTime: sourceEvent.startTime,
@@ -126904,11 +126917,11 @@ ${error instanceof Error ? error.message : String(error)}`,
       resourceId: sourceEvent.resourceId,
       callsign: sourceEvent.callsign || staff.callsign,
       instructorName: sourceEvent.instructor || existingReport?.instructorName || currentUserName,
-      traineeFullName: existingReport?.traineeFullName || sourceEvent.student || "",
+      traineeFullName: existingReport?.traineeFullName || traineeNameForReport,
       overallGrade: existingReport?.overallGrade || "",
       overallResult: existingReport?.overallResult || "",
-      dcoResult,
-      notes: existingReport?.notes || "Generated from post-flight completion. Complete the training report when debrief details are ready.",
+      dcoResult: dcoResult || existingReport?.dcoResult || "",
+      notes: existingReport?.notes || (generationReason === "event-ended" ? "Generated when the Ground/CPT event ended. Complete the training report when debrief details are ready." : "Generated from post-flight completion. Complete the training report when debrief details are ready."),
       status: existingReport?.status === "Complete" ? "Complete" : "Draft",
       createdAt: existingReport?.createdAt || now,
       createdBy: existingReport?.createdBy || currentUserName,
@@ -126982,7 +126995,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     logAudit(
       "Training Reports",
       existingReport ? "Edit" : "Create",
-      `${existingReport ? "Updated" : "Generated"} draft ${report.reportName} from post-flight ${dcoResult} for ${report.staffName} - Event: ${report.eventCode}`
+      `${existingReport ? "Updated" : "Generated"} draft ${report.reportName} from ${generationReason === "event-ended" ? "ended Ground/CPT event" : `post-flight ${dcoResult}`} for ${report.staffName} - Event: ${report.eventCode}`
     );
     pushDashboardReportDiag("postflight:draft-generator:completed", {
       ...traceBase,
@@ -126992,8 +127005,16 @@ ${error instanceof Error ? error.message : String(error)}`,
       staffIdNumber: staff.idNumber,
       eventCode: eventCode2
     });
-    logRoutineAppDebug(`[PostFlight] ✅ Draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${dcoResult})`);
+    logRoutineAppDebug(`[Training Reports] ✅ Draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${generationReason}${dcoResult ? `/${dcoResult}` : ""})`);
   };
+  reactExports.useEffect(() => {
+    if (!isAuthenticated || activeView !== "MyDashboard" && !floatingDashboardWindows.MyDashboard) return;
+    setDashboardReportMinuteTick((tick) => tick + 1);
+    const interval = window.setInterval(() => {
+      setDashboardReportMinuteTick((tick) => tick + 1);
+    }, 60 * 1e3);
+    return () => window.clearInterval(interval);
+  }, [activeView, floatingDashboardWindows.MyDashboard, isAuthenticated]);
   reactExports.useEffect(() => {
     if (!isAuthenticated || activeView !== "MyDashboard" && !floatingDashboardWindows.MyDashboard) return;
     if (normaliseOperationalModel(activeOperationalModel) !== "flight_school") return;
@@ -127020,9 +127041,11 @@ ${error instanceof Error ? error.message : String(error)}`,
       const completionStart = Number(completion.startTime ?? NaN);
       return eventsForDate.find((event) => event.id === completion.scheduleEventId) || eventsForDate.find((event) => normaliseCode2(event.flightNumber || event.eventCode) === completionCode && String(event.date || date || "").trim() === completionDate && (Number.isNaN(completionStart) || Math.abs(Number(event.startTime || 0) - completionStart) < 0.01));
     };
-    const hasExistingReport = (event) => {
+    const normaliseName2 = (value) => String(value || "").replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
+    const hasExistingReport = (event, traineeName) => {
       const eventCode2 = normaliseCode2(event.flightNumber || event.eventCode);
-      return allInstructorsData.some((staff) => normaliseAirCombatTrainingReports(staff.preferences).some((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && (event.id && report.eventId === event.id || normaliseCode2(report.eventCode) === eventCode2 && String(report.date || "") === String(event.date || date || ""))));
+      const traineeKey = normaliseName2(traineeName);
+      return allInstructorsData.some((staff) => normaliseAirCombatTrainingReports(staff.preferences).some((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseName2(report.traineeFullName) === traineeKey && (event.id && report.eventId === event.id || normaliseCode2(report.eventCode) === eventCode2 && String(report.date || "") === String(event.date || date || ""))));
     };
     eventCompletionsForDate.filter((completion) => completion?.dcoResult === "DCO" || completion?.dcoResult === "DPCO").forEach((completion) => {
       const event = eventByCompletion(completion);
@@ -127090,6 +127113,132 @@ ${error instanceof Error ? error.message : String(error)}`,
     allInstructorsData,
     date,
     eventCompletionsForDate,
+    eventsForDate,
+    floatingDashboardWindows.MyDashboard,
+    isAuthenticated,
+    syllabusDetails
+  ]);
+  reactExports.useEffect(() => {
+    if (!isAuthenticated || activeView !== "MyDashboard" && !floatingDashboardWindows.MyDashboard) return;
+    if (normaliseOperationalModel(activeOperationalModel) !== "flight_school") return;
+    if (eventsForDate.length === 0 || allInstructorsData.length === 0 || syllabusDetails.length === 0) return;
+    const normaliseCode2 = (value) => String(value || "").trim().toUpperCase();
+    const activeUnitSet = new Set((activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+")).map(normaliseCode2).filter(Boolean));
+    const isEventInActiveUnitContext = (event) => {
+      if (activeUnitSet.size === 0) return true;
+      const eventUnits = [
+        event.unit,
+        event.unitCode,
+        ...Array.isArray(event.personnelRefs) ? event.personnelRefs.map((ref) => ref.unitCode || ref.unit) : []
+      ].flatMap((value) => String(value || "").split("+")).map(normaliseCode2).filter(Boolean);
+      return eventUnits.length === 0 || eventUnits.some((unitCode) => activeUnitSet.has(unitCode));
+    };
+    const findAssessmentRequiredItem = (event) => {
+      const eventCode2 = normaliseCode2(event.flightNumber || event.eventCode);
+      if (!eventCode2) return null;
+      return syllabusDetails.find((item) => item.isActive !== false && normaliseCode2(item.code) === eventCode2 && item.assessmentRequired === true && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType)) || null;
+    };
+    const getEventEndMs = (event) => {
+      const eventDate = String(event.date || date || "").trim();
+      const match = eventDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return null;
+      const startTime = Number(event.startTime);
+      const duration = Number(event.duration);
+      const endTime = Number.isFinite(Number(event.endTime)) ? Number(event.endTime) : startTime + duration;
+      if (!Number.isFinite(endTime)) return null;
+      const [, year, month, day] = match;
+      const dayStartMs = new Date(Number(year), Number(month) - 1, Number(day), 0, 0, 0, 0).getTime();
+      return dayStartMs + Math.round(endTime * 60 * 60 * 1e3);
+    };
+    const hasExistingReport = (event) => {
+      const eventCode2 = normaliseCode2(event.flightNumber || event.eventCode);
+      return allInstructorsData.some((staff) => normaliseAirCombatTrainingReports(staff.preferences).some((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && (event.id && report.eventId === event.id || normaliseCode2(report.eventCode) === eventCode2 && String(report.date || "") === String(event.date || date || ""))));
+    };
+    eventsForDate.filter((event) => event.type === "ground" || event.type === "cpt").forEach((event) => {
+      const eventCode2 = event.flightNumber || event.eventCode || "";
+      if (!isEventInActiveUnitContext(event)) {
+        pushDashboardReportDiag("dashboard:event-ended-reconcile:skipped-context", {
+          reconcileKey: `event-ended:${event.date || date}:${event.id || eventCode2}`,
+          eventId: event.id,
+          eventCode: eventCode2,
+          eventType: event.type,
+          eventUnit: event.unit || event.unitCode || null
+        });
+        return;
+      }
+      const matchingItem = findAssessmentRequiredItem(event);
+      if (!matchingItem) {
+        pushDashboardReportDiag("dashboard:event-ended-reconcile:skipped-not-assessment-required", {
+          reconcileKey: `event-ended:${event.date || date}:${event.id || eventCode2}`,
+          eventId: event.id,
+          eventCode: eventCode2,
+          eventType: event.type
+        });
+        return;
+      }
+      const eventEndMs = getEventEndMs(event);
+      if (!eventEndMs || eventEndMs > Date.now()) {
+        return;
+      }
+      const traineeNames = getGroundCptTrainees(event);
+      if (traineeNames.length === 0) {
+        pushDashboardReportDiag("dashboard:event-ended-reconcile:skipped-no-trainees", {
+          reconcileKey: `event-ended:${event.date || date}:${event.id || eventCode2}`,
+          eventId: event.id,
+          eventCode: eventCode2,
+          eventType: event.type
+        });
+        return;
+      }
+      traineeNames.forEach((traineeName) => {
+        const traineeKey = normaliseName(traineeName);
+        const reconcileKey = `event-ended:${event.date || date}:${event.id || eventCode2}:${traineeKey}`;
+        if (dashboardReportReconcileKeysRef.current.has(reconcileKey)) return;
+        if (hasExistingReport(event)) {
+          dashboardReportReconcileKeysRef.current.add(reconcileKey);
+          pushDashboardReportDiag("dashboard:event-ended-reconcile:skipped-existing-report", {
+            reconcileKey,
+            eventId: event.id,
+            eventCode: eventCode2,
+            eventType: event.type,
+            traineeFullName: traineeName
+          });
+          return;
+        }
+        dashboardReportReconcileKeysRef.current.add(reconcileKey);
+        pushDashboardReportDiag("dashboard:event-ended-reconcile:creating-draft", {
+          reconcileKey,
+          eventId: event.id,
+          eventCode: eventCode2,
+          eventType: event.type,
+          endTime: Number(event.startTime || 0) + Number(event.duration || 0),
+          instructorName: event.instructor || null,
+          traineeFullName: traineeName
+        });
+        generateAssessmentRequiredDraftTrainingReport(
+          { ...event, student: traineeName },
+          "",
+          "event-ended"
+        ).catch((error) => {
+          pushDashboardReportDiag("dashboard:event-ended-reconcile:create-draft-failed", {
+            reconcileKey,
+            eventId: event.id,
+            eventCode: eventCode2,
+            eventType: event.type,
+            traineeFullName: traineeName,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        });
+      });
+    });
+  }, [
+    activeContextUnitCodes,
+    activeUnitCode,
+    activeOperationalModel,
+    activeView,
+    allInstructorsData,
+    dashboardReportMinuteTick,
+    date,
     eventsForDate,
     floatingDashboardWindows.MyDashboard,
     isAuthenticated,
