@@ -22,6 +22,8 @@ interface MyDashboardProps {
     trainingReportsToComplete?: Array<{ report: AirCombatTrainingReport; staff: Instructor }>;
     onSelectTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
     onReassignTrainingReport?: (entry: { report: AirCombatTrainingReport; staff: Instructor }, assignee: Instructor) => void;
+    onDeletePt051ReportMessage?: (assessment: TrainingReportAssessment) => void;
+    onDeleteTrainingReportMessage?: (entry: { report: AirCombatTrainingReport; staff: Instructor }) => void;
     staffOptions?: Instructor[];
     messageContactStaffOptions?: Instructor[];
     messageContactTraineeOptions?: Trainee[];
@@ -406,6 +408,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     trainingReportsToComplete = [],
     onSelectTrainingReport,
     onReassignTrainingReport,
+    onDeletePt051ReportMessage,
+    onDeleteTrainingReportMessage,
     staffOptions = [],
     messageContactStaffOptions = staffOptions,
     messageContactTraineeOptions = [],
@@ -421,6 +425,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
     const signedInUserLabel = `${userRank || ''} ${userName}`.trim() || userName;
     const [staffPickerEntry, setStaffPickerEntry] = useState<{ report: AirCombatTrainingReport; staff: Instructor; mode: 'open' | 'reassign' } | null>(null);
+    const [reportContextMenu, setReportContextMenu] = useState<{
+        x: number;
+        y: number;
+        label: string;
+        onDelete: () => void | Promise<void>;
+    } | null>(null);
     const dashboardActionButtonClass = 'btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]';
     const [isMessagesOpen, setIsMessagesOpen] = useState(false);
     const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
@@ -729,6 +739,18 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .then(() => refreshDashboardMessages())
             .catch(error => console.warn('[Dashboard Messages] Could not mark shared messages read:', error));
     }, [dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.name, unreadMessages.length]);
+    useEffect(() => {
+        if (!reportContextMenu) return;
+        const closeMenu = () => setReportContextMenu(null);
+        window.addEventListener('click', closeMenu);
+        window.addEventListener('keydown', closeMenu);
+        window.addEventListener('scroll', closeMenu, true);
+        return () => {
+            window.removeEventListener('click', closeMenu);
+            window.removeEventListener('keydown', closeMenu);
+            window.removeEventListener('scroll', closeMenu, true);
+        };
+    }, [reportContextMenu]);
     const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
     useEffect(() => {
         if (!newestUnreadMessage) {
@@ -844,6 +866,25 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             return !staffReportCodeDates.has(codeDate);
         });
     }, [incompletePt051s, visibleTrainingReportsToComplete]);
+
+    const openReportContextMenu = (
+        event: React.MouseEvent,
+        label: string,
+        onDelete: () => void | Promise<void>,
+    ) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const menuWidth = 172;
+        const menuHeight = 46;
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        setReportContextMenu({
+            x: Math.max(8, Math.min(event.clientX, viewportWidth - menuWidth - 8)),
+            y: Math.max(8, Math.min(event.clientY, viewportHeight - menuHeight - 8)),
+            label,
+            onDelete,
+        });
+    };
 
     const EventRow: React.FC<{event: ScheduleEvent}> = ({event}) => {
         const isStby = isDashboardStandbyEvent(event);
@@ -1201,7 +1242,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     {visiblePt051ReportsToComplete.length > 0 || visibleTrainingReportsToComplete.length > 0 ? (
                         <ul className="space-y-2">
                             {visiblePt051ReportsToComplete.map(assessment => (
-                                <li key={assessment.id} className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors">
+                                <li
+                                    key={assessment.id}
+                                    className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors"
+                                    onContextMenu={onDeletePt051ReportMessage ? (event) => openReportContextMenu(
+                                        event,
+                                        assessment.flightNumber || 'report',
+                                        () => onDeletePt051ReportMessage(assessment),
+                                    ) : undefined}
+                                >
                                     <button 
                                         onClick={() => onSelectPt051(assessment)}
                                         className="w-full text-left"
@@ -1222,7 +1271,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 </li>
                             ))}
                             {visibleTrainingReportsToComplete.map(entry => (
-                                <li key={entry.report.id} className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors">
+                                <li
+                                    key={entry.report.id}
+                                    className="p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors"
+                                    onContextMenu={onDeleteTrainingReportMessage ? (event) => openReportContextMenu(
+                                        event,
+                                        entry.report.eventCode || 'report',
+                                        () => onDeleteTrainingReportMessage(entry),
+                                    ) : undefined}
+                                >
                                     <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => onSelectTrainingReport?.(entry)}
@@ -1256,6 +1313,33 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                         <p className="text-gray-500 text-center italic py-4">No pending reports.</p>
                     )}
                 </div>
+                {reportContextMenu && (
+                    <div
+                        className="fixed z-[120] min-w-[172px] rounded-md border border-gray-600 bg-gray-900 py-1 shadow-2xl"
+                        style={{ left: reportContextMenu.x, top: reportContextMenu.y }}
+                        onClick={(event) => event.stopPropagation()}
+                        onContextMenu={(event) => event.preventDefault()}
+                    >
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                const menu = reportContextMenu;
+                                const confirmed = await showDarkConfirm(
+                                    `Delete ${menu.label} from Reports to be completed? This removes the dashboard message and stops it returning.`,
+                                    'Delete message?',
+                                    'warning',
+                                );
+                                if (confirmed) {
+                                    await menu.onDelete();
+                                }
+                                setReportContextMenu(null);
+                            }}
+                            className="block w-full px-3 py-2 text-left text-sm font-semibold text-red-300 hover:bg-red-500/15"
+                        >
+                            Delete Message
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Today's Schedule */}

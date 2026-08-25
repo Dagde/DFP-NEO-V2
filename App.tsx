@@ -711,6 +711,7 @@ import {
     FlyingWindowExclusionRestriction,
     AirCombatTrainingAssignment,
     AirCombatTrainingReport,
+    TrainingReportAssessment,
     ScheduleEventPersonnelRef,
     ScheduleEventPersonnelRole,
     StandardMissionProfile
@@ -35911,6 +35912,129 @@ const App: React.FC = () => {
         syllabusDetails,
     ]);
 
+    const handleDeleteDashboardPt051ReportMessage = React.useCallback((assessment: TrainingReportAssessment) => {
+        const traineeName = String(
+            assessment.traineeFullName ||
+            (assessment as any).trainedFullName ||
+            ''
+        ).trim();
+        const normaliseDashboardReportKey = (value?: string | null) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const traineeNameKey = normaliseDashboardReportKey(traineeName);
+        const eventId = String(assessment.eventId || '').trim();
+        const candidateIds = [
+            assessment.id,
+            assessment.eventId,
+            assessment.flightNumber,
+            eventId && traineeNameKey ? `dashboard-due-${eventId}-${traineeNameKey}` : '',
+            eventId && traineeName ? `pt051-${eventId}-${traineeName}` : '',
+        ];
+        suppressDeletedPt051Report(candidateIds);
+        setPt051Assessments(prev => {
+            const cleanedCandidateIds = new Set(candidateIds.map(value => String(value || '').trim()).filter(Boolean));
+            const updated = new Map(prev);
+            Array.from(updated.entries()).forEach(([key, value]) => {
+                if (
+                    cleanedCandidateIds.has(String(key || '').trim()) ||
+                    cleanedCandidateIds.has(String(value.id || '').trim()) ||
+                    cleanedCandidateIds.has(String(value.eventId || '').trim())
+                ) {
+                    updated.delete(key);
+                }
+            });
+            return updated;
+        });
+        if (eventId && traineeName) {
+            setLoadedPt051Keys(prev => {
+                const updated = new Set(prev);
+                updated.delete(`${eventId}-${traineeName}`);
+                return updated;
+            });
+        }
+        logAudit(
+            'Reports to be completed',
+            'Delete',
+            `Deleted dashboard report message for ${assessment.flightNumber || eventId || 'report'}`
+        );
+    }, [suppressDeletedPt051Report]);
+
+    const handleDeleteDashboardTrainingReportMessage = async (
+        entry: { report: AirCombatTrainingReport; staff: Instructor },
+    ) => {
+        const sourceStaff = allInstructorsData.find(person => (
+            (entry.staff as any).id
+                ? (person as any).id === (entry.staff as any).id
+                : person.idNumber === entry.staff.idNumber
+        )) || entry.staff;
+        const preferences = { ...(sourceStaff.preferences || {}) };
+        const existingReports = normaliseAirCombatTrainingReports(preferences);
+        const acknowledgedAt = new Date().toISOString();
+        const updatedReports = existingReports.map(report => (
+            report.id === entry.report.id
+                ? {
+                    ...report,
+                    dashboardAcknowledgedAt: acknowledgedAt,
+                    updatedAt: acknowledgedAt,
+                    updatedBy: currentUserName,
+                }
+                : report
+        ));
+        const updatedStaff: Instructor = {
+            ...sourceStaff,
+            preferences: {
+                ...preferences,
+                airCombat: {
+                    ...(preferences.airCombat || {}),
+                    trainingReports: updatedReports,
+                },
+            },
+        };
+        const dbId = (updatedStaff as any).id;
+        try {
+            if (dbId) {
+                const response = await fetch(`/api/personnel/${dbId}`, {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedStaff),
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || `Failed to delete training report message (${response.status})`);
+                }
+            }
+            suppressDeletedPt051Report([
+                entry.report.id,
+                entry.report.eventId,
+                entry.report.eventCode,
+                entry.report.eventId && entry.report.traineeFullName
+                    ? `dashboard-due-${entry.report.eventId}-${String(entry.report.traineeFullName).trim().toLowerCase().replace(/\s+/g, ' ')}`
+                    : '',
+                entry.report.eventId && entry.report.traineeFullName
+                    ? `pt051-${entry.report.eventId}-${entry.report.traineeFullName}`
+                    : '',
+            ]);
+            setInstructorsData(prev => prev.map(person => (
+                dbId
+                    ? ((person as any).id === dbId ? updatedStaff : person)
+                    : (person.idNumber === updatedStaff.idNumber ? updatedStaff : person)
+            )));
+            setPendingDashboardTrainingReportContext(prev => (
+                prev?.report.id === entry.report.id ? null : prev
+            ));
+            logAudit(
+                'Reports to be completed',
+                'Delete',
+                `Deleted dashboard training report message for ${entry.report.eventCode || entry.report.id}`
+            );
+        } catch (error) {
+            await showDarkAlert(
+                `The dashboard message could not be deleted.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'Delete message failed',
+                'error'
+            );
+        }
+    };
+
     const handleReassignTrainingReportNotification = async (
         entry: { report: AirCombatTrainingReport; staff: Instructor },
         assignee: Instructor,
@@ -49725,6 +49849,8 @@ appliedUpdates.forEach(update => {
                                 handleNavigation('Instructors');
                             }}
                             onReassignTrainingReport={handleReassignTrainingReportNotification}
+                            onDeletePt051ReportMessage={handleDeleteDashboardPt051ReportMessage}
+                            onDeleteTrainingReportMessage={handleDeleteDashboardTrainingReportMessage}
                             onSelectPt051={(assessment) => {
                                 logRoutineAppDebug('🔍 Dashboard training report clicked:', assessment);
                                 logRoutineAppDebug('Looking for event ID:', assessment.eventId);

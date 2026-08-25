@@ -40554,6 +40554,8 @@ const MyDashboard = ({
   trainingReportsToComplete = [],
   onSelectTrainingReport,
   onReassignTrainingReport,
+  onDeletePt051ReportMessage,
+  onDeleteTrainingReportMessage,
   staffOptions = [],
   messageContactStaffOptions = staffOptions,
   messageContactTraineeOptions = [],
@@ -40569,6 +40571,7 @@ const MyDashboard = ({
   const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
   const signedInUserLabel = `${userRank || ""} ${userName}`.trim() || userName;
   const [staffPickerEntry, setStaffPickerEntry] = reactExports.useState(null);
+  const [reportContextMenu, setReportContextMenu] = reactExports.useState(null);
   const dashboardActionButtonClass = "btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]";
   const [isMessagesOpen, setIsMessagesOpen] = reactExports.useState(false);
   const [isContactPickerOpen, setIsContactPickerOpen] = reactExports.useState(false);
@@ -40821,6 +40824,18 @@ const MyDashboard = ({
     persistDashboardMessages((messages) => messages.map((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && normaliseDashboardContactName(message.from) === selectedKey && !message.readAt ? { ...message, readAt: now } : message));
     markDashboardConversationReadInApi(dashboardMessageUserName, selectedMessageContact.name, messageIdsToMarkRead).then(() => refreshDashboardMessages()).catch((error) => console.warn("[Dashboard Messages] Could not mark shared messages read:", error));
   }, [dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.name, unreadMessages.length]);
+  reactExports.useEffect(() => {
+    if (!reportContextMenu) return;
+    const closeMenu = () => setReportContextMenu(null);
+    window.addEventListener("click", closeMenu);
+    window.addEventListener("keydown", closeMenu);
+    window.addEventListener("scroll", closeMenu, true);
+    return () => {
+      window.removeEventListener("click", closeMenu);
+      window.removeEventListener("keydown", closeMenu);
+      window.removeEventListener("scroll", closeMenu, true);
+    };
+  }, [reportContextMenu]);
   const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
   reactExports.useEffect(() => {
     if (!newestUnreadMessage) {
@@ -40911,6 +40926,20 @@ const MyDashboard = ({
       return !staffReportCodeDates.has(codeDate);
     });
   }, [incompletePt051s, visibleTrainingReportsToComplete]);
+  const openReportContextMenu = (event, label, onDelete) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const menuWidth = 172;
+    const menuHeight = 46;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    setReportContextMenu({
+      x: Math.max(8, Math.min(event.clientX, viewportWidth - menuWidth - 8)),
+      y: Math.max(8, Math.min(event.clientY, viewportHeight - menuHeight - 8)),
+      label,
+      onDelete
+    });
+  };
   const EventRow = ({ event }) => {
     const isStby = isDashboardStandbyEvent(event);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
@@ -41226,56 +41255,109 @@ const MyDashboard = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4 text-amber-400", children: "Reports to be completed" }),
         visiblePt051ReportsToComplete.length > 0 || visibleTrainingReportsToComplete.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-2", children: [
-          visiblePt051ReportsToComplete.map((assessment) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          visiblePt051ReportsToComplete.map((assessment) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "li",
+            {
+              className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors",
+              onContextMenu: onDeletePt051ReportMessage ? (event) => openReportContextMenu(
+                event,
+                assessment.flightNumber || "report",
+                () => onDeletePt051ReportMessage(assessment)
+              ) : void 0,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => onSelectPt051(assessment),
+                  className: "w-full text-left",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: assessment.flightNumber }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: assessment.trainedFullName })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(assessment.date) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Pending" })
+                    ] })
+                  ] })
+                }
+              )
+            },
+            assessment.id
+          )),
+          visibleTrainingReportsToComplete.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "li",
+            {
+              className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors",
+              onContextMenu: onDeleteTrainingReportMessage ? (event) => openReportContextMenu(
+                event,
+                entry.report.eventCode || "report",
+                () => onDeleteTrainingReportMessage(entry)
+              ) : void 0,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: () => onSelectTrainingReport?.(entry),
+                    className: "min-w-0 flex-1 text-left",
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-sm text-gray-400", children: [
+                          "Report to complete from flight ",
+                          entry.report.callsign || entry.report.eventCode
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center justify-end gap-1.5 text-right", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-nowrap text-[10px] font-mono text-gray-300", children: formatDate$2(entry.report.date) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-5 items-center whitespace-nowrap rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold text-amber-300", children: "Training Report" })
+                      ] })
+                    ] })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => setStaffPickerEntry({ ...entry, mode: "reassign" }),
+                    className: dashboardActionButtonClass,
+                    children: "Re-Assign"
+                  }
+                )
+              ] })
+            },
+            entry.report.id
+          ))
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-4", children: "No pending reports." })
+      ] }),
+      reportContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "fixed z-[120] min-w-[172px] rounded-md border border-gray-600 bg-gray-900 py-1 shadow-2xl",
+          style: { left: reportContextMenu.x, top: reportContextMenu.y },
+          onClick: (event) => event.stopPropagation(),
+          onContextMenu: (event) => event.preventDefault(),
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
-              onClick: () => onSelectPt051(assessment),
-              className: "w-full text-left",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: assessment.flightNumber }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: assessment.trainedFullName })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(assessment.date) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Pending" })
-                ] })
-              ] })
+              type: "button",
+              onClick: async () => {
+                const menu = reportContextMenu;
+                const confirmed = await showDarkConfirm(
+                  `Delete ${menu.label} from Reports to be completed? This removes the dashboard message and stops it returning.`,
+                  "Delete message?",
+                  "warning"
+                );
+                if (confirmed) {
+                  await menu.onDelete();
+                }
+                setReportContextMenu(null);
+              },
+              className: "block w-full px-3 py-2 text-left text-sm font-semibold text-red-300 hover:bg-red-500/15",
+              children: "Delete Message"
             }
-          ) }, assessment.id)),
-          visibleTrainingReportsToComplete.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-3 bg-gray-700/50 rounded-md hover:bg-gray-700 transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => onSelectTrainingReport?.(entry),
-                className: "min-w-0 flex-1 text-left",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-sm text-gray-400", children: [
-                      "Report to complete from flight ",
-                      entry.report.callsign || entry.report.eventCode
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center justify-end gap-1.5 text-right", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-nowrap text-[10px] font-mono text-gray-300", children: formatDate$2(entry.report.date) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-5 items-center whitespace-nowrap rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold text-amber-300", children: "Training Report" })
-                  ] })
-                ] })
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => setStaffPickerEntry({ ...entry, mode: "reassign" }),
-                className: dashboardActionButtonClass,
-                children: "Re-Assign"
-              }
-            )
-          ] }) }, entry.report.id))
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-4", children: "No pending reports." })
-      ] })
+          )
+        }
+      )
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Today's Schedule" }),
@@ -126745,6 +126827,103 @@ ${error instanceof Error ? error.message : String(error)}`,
     isAuthenticated,
     syllabusDetails
   ]);
+  const handleDeleteDashboardPt051ReportMessage = React.useCallback((assessment) => {
+    const traineeName = String(
+      assessment.traineeFullName || assessment.trainedFullName || ""
+    ).trim();
+    const normaliseDashboardReportKey = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const traineeNameKey = normaliseDashboardReportKey(traineeName);
+    const eventId = String(assessment.eventId || "").trim();
+    const candidateIds = [
+      assessment.id,
+      assessment.eventId,
+      assessment.flightNumber,
+      eventId && traineeNameKey ? `dashboard-due-${eventId}-${traineeNameKey}` : "",
+      eventId && traineeName ? `pt051-${eventId}-${traineeName}` : ""
+    ];
+    suppressDeletedPt051Report(candidateIds);
+    setPt051Assessments((prev) => {
+      const cleanedCandidateIds = new Set(candidateIds.map((value) => String(value || "").trim()).filter(Boolean));
+      const updated = new Map(prev);
+      Array.from(updated.entries()).forEach(([key, value]) => {
+        if (cleanedCandidateIds.has(String(key || "").trim()) || cleanedCandidateIds.has(String(value.id || "").trim()) || cleanedCandidateIds.has(String(value.eventId || "").trim())) {
+          updated.delete(key);
+        }
+      });
+      return updated;
+    });
+    if (eventId && traineeName) {
+      setLoadedPt051Keys((prev) => {
+        const updated = new Set(prev);
+        updated.delete(`${eventId}-${traineeName}`);
+        return updated;
+      });
+    }
+    logAudit(
+      "Reports to be completed",
+      "Delete",
+      `Deleted dashboard report message for ${assessment.flightNumber || eventId || "report"}`
+    );
+  }, [suppressDeletedPt051Report]);
+  const handleDeleteDashboardTrainingReportMessage = async (entry) => {
+    const sourceStaff = allInstructorsData.find((person) => entry.staff.id ? person.id === entry.staff.id : person.idNumber === entry.staff.idNumber) || entry.staff;
+    const preferences = { ...sourceStaff.preferences || {} };
+    const existingReports = normaliseAirCombatTrainingReports(preferences);
+    const acknowledgedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const updatedReports = existingReports.map((report) => report.id === entry.report.id ? {
+      ...report,
+      dashboardAcknowledgedAt: acknowledgedAt,
+      updatedAt: acknowledgedAt,
+      updatedBy: currentUserName
+    } : report);
+    const updatedStaff = {
+      ...sourceStaff,
+      preferences: {
+        ...preferences,
+        airCombat: {
+          ...preferences.airCombat || {},
+          trainingReports: updatedReports
+        }
+      }
+    };
+    const dbId = updatedStaff.id;
+    try {
+      if (dbId) {
+        const response = await fetch(`/api/personnel/${dbId}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedStaff)
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || `Failed to delete training report message (${response.status})`);
+        }
+      }
+      suppressDeletedPt051Report([
+        entry.report.id,
+        entry.report.eventId,
+        entry.report.eventCode,
+        entry.report.eventId && entry.report.traineeFullName ? `dashboard-due-${entry.report.eventId}-${String(entry.report.traineeFullName).trim().toLowerCase().replace(/\s+/g, " ")}` : "",
+        entry.report.eventId && entry.report.traineeFullName ? `pt051-${entry.report.eventId}-${entry.report.traineeFullName}` : ""
+      ]);
+      setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
+      setPendingDashboardTrainingReportContext((prev) => prev?.report.id === entry.report.id ? null : prev);
+      logAudit(
+        "Reports to be completed",
+        "Delete",
+        `Deleted dashboard training report message for ${entry.report.eventCode || entry.report.id}`
+      );
+    } catch (error) {
+      await showDarkAlert2(
+        `The dashboard message could not be deleted.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Delete message failed",
+        "error"
+      );
+    }
+  };
   const handleReassignTrainingReportNotification = async (entry, assignee) => {
     const sourceStaff = allInstructorsData.find((person) => entry.staff.id ? person.id === entry.staff.id : person.idNumber === entry.staff.idNumber) || entry.staff;
     const preferences = { ...sourceStaff.preferences || {} };
@@ -138272,6 +138451,8 @@ ${error instanceof Error ? error.message : String(error)}`,
               handleNavigation("Instructors");
             },
             onReassignTrainingReport: handleReassignTrainingReportNotification,
+            onDeletePt051ReportMessage: handleDeleteDashboardPt051ReportMessage,
+            onDeleteTrainingReportMessage: handleDeleteDashboardTrainingReportMessage,
             onSelectPt051: (assessment) => {
               logRoutineAppDebug("🔍 Dashboard training report clicked:", assessment);
               logRoutineAppDebug("Looking for event ID:", assessment.eventId);
