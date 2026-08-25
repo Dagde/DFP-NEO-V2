@@ -40821,7 +40821,7 @@ const MyDashboard = ({
     const suppressedEventIds = new Set(suppressedPt051EventIds.map((value) => String(value || "").trim()).filter(Boolean));
     const assessments = Array.from(pt051Assessments.values());
     const storedIncomplete = assessments.filter(
-      (assessment) => !assessment.isCompleted && normaliseDashboardContactName(assessment.instructorName) === fullUserKey && ![
+      (assessment) => !assessment.isCompleted && (assessment.dcoResult === "DCO" || assessment.dcoResult === "DPCO") && normaliseDashboardContactName(assessment.instructorName) === fullUserKey && ![
         assessment.eventId,
         assessment.id,
         `dashboard-due-${assessment.eventId}-${normaliseDashboardContactName(assessment.traineeFullName)}`,
@@ -120009,19 +120009,22 @@ const App = () => {
       ].map((value) => String(value || "").trim()).filter(Boolean);
       const suppressed = suppressionCandidates.some((candidate) => suppressedReportIds.has(candidate));
       const instructorMatchesDashboardUser = normaliseName2(assessment.instructorName) === normaliseName2(dashboardUserSurnameFirst);
-      const accepted = !assessment.isCompleted && instructorMatchesDashboardUser && !suppressed;
+      const hasGeneratedCompletionResult = assessment.dcoResult === "DCO" || assessment.dcoResult === "DPCO";
+      const accepted = !assessment.isCompleted && hasGeneratedCompletionResult && instructorMatchesDashboardUser && !suppressed;
       const matchingCompletion = eventCompletionsForDate.find((completion) => assessment.eventId && completion.scheduleEventId === assessment.eventId || normaliseCode2(completion.eventCode) === normaliseCode2(assessment.flightNumber) && String(completion.eventDate || completion.date || "") === String(assessment.date || "") && normaliseName2(completion.instructorName) === normaliseName2(assessment.instructorName));
       const matchingEvent = activeEvents.find((event) => event.id === assessment.eventId || normaliseCode2(event.flightNumber || event.eventCode) === normaliseCode2(assessment.flightNumber) && String(event.date || "") === String(assessment.date || ""));
       return {
         accepted,
         rejectReasons: [
           assessment.isCompleted ? "completed" : "",
+          !hasGeneratedCompletionResult ? "missing-dco-dpco-result" : "",
           !instructorMatchesDashboardUser ? "instructor-user-filter" : "",
           suppressed ? "suppressed" : ""
         ].filter(Boolean),
         sourceFlags: {
           startsWithDashboardDue: String(assessment.id || "").startsWith("dashboard-due-"),
           startsWithPt051: String(assessment.id || "").startsWith("pt051-"),
+          hasGeneratedCompletionResult,
           hasMatchingEventCompletion: Boolean(matchingCompletion),
           matchingCompletionDcoResult: matchingCompletion?.dcoResult || null,
           hasMatchingScheduleEvent: Boolean(matchingEvent)
@@ -138625,7 +138628,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           const parts = text.split(/\s+/).filter(Boolean);
           return parts.length > 1 ? `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(" ")}` : text;
         })();
-        const pt051ReportRowsForDashboard = Array.from(pt051Assessments.values()).filter((assessment) => !assessment.isCompleted && normaliseDashboardName(assessment.instructorName) === normaliseDashboardName(dashboardUserSurnameFirst)).map((assessment) => ({
+        const pt051ReportRowsForDashboard = Array.from(pt051Assessments.values()).filter((assessment) => !assessment.isCompleted && (assessment.dcoResult === "DCO" || assessment.dcoResult === "DPCO") && normaliseDashboardName(assessment.instructorName) === normaliseDashboardName(dashboardUserSurnameFirst)).map((assessment) => ({
           id: assessment.id,
           eventId: assessment.eventId,
           flightNumber: assessment.flightNumber,

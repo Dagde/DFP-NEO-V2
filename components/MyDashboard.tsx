@@ -729,6 +729,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const storedIncomplete = assessments
             .filter(assessment =>
                 !assessment.isCompleted &&
+                (assessment.dcoResult === 'DCO' || assessment.dcoResult === 'DPCO') &&
                 normaliseDashboardContactName(assessment.instructorName) === fullUserKey &&
                 ![
                     assessment.eventId,

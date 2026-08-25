@@ -27359,7 +27359,8 @@ const App: React.FC = () => {
             ].map(value => String(value || '').trim()).filter(Boolean);
             const suppressed = suppressionCandidates.some(candidate => suppressedReportIds.has(candidate));
             const instructorMatchesDashboardUser = normaliseName(assessment.instructorName) === normaliseName(dashboardUserSurnameFirst);
-            const accepted = !assessment.isCompleted && instructorMatchesDashboardUser && !suppressed;
+            const hasGeneratedCompletionResult = assessment.dcoResult === 'DCO' || assessment.dcoResult === 'DPCO';
+            const accepted = !assessment.isCompleted && hasGeneratedCompletionResult && instructorMatchesDashboardUser && !suppressed;
             const matchingCompletion = eventCompletionsForDate.find((completion: any) => (
                 (assessment.eventId && completion.scheduleEventId === assessment.eventId) ||
                 (
@@ -27379,12 +27380,14 @@ const App: React.FC = () => {
                 accepted,
                 rejectReasons: [
                     assessment.isCompleted ? 'completed' : '',
+                    !hasGeneratedCompletionResult ? 'missing-dco-dpco-result' : '',
                     !instructorMatchesDashboardUser ? 'instructor-user-filter' : '',
                     suppressed ? 'suppressed' : '',
                 ].filter(Boolean),
                 sourceFlags: {
                     startsWithDashboardDue: String(assessment.id || '').startsWith('dashboard-due-'),
                     startsWithPt051: String(assessment.id || '').startsWith('pt051-'),
+                    hasGeneratedCompletionResult,
                     hasMatchingEventCompletion: Boolean(matchingCompletion),
                     matchingCompletionDcoResult: matchingCompletion?.dcoResult || null,
                     hasMatchingScheduleEvent: Boolean(matchingEvent),
@@ -49827,6 +49830,7 @@ appliedUpdates.forEach(update => {
                 const pt051ReportRowsForDashboard = Array.from(pt051Assessments.values())
                     .filter(assessment => (
                         !assessment.isCompleted &&
+                        (assessment.dcoResult === 'DCO' || assessment.dcoResult === 'DPCO') &&
                         normaliseDashboardName(assessment.instructorName) === normaliseDashboardName(dashboardUserSurnameFirst)
                     ))
                     .map(assessment => ({
