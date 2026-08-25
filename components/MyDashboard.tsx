@@ -170,10 +170,6 @@ const toDashboardSurnameFirstName = (value?: string | null): string => {
     return `${surname}, ${firstNames}`;
 };
 
-const normaliseDashboardCode = (value?: string | null): string => (
-    String(value || '').trim().toUpperCase()
-);
-
 const isDashboardStandbyEvent = (event: ScheduleEvent): boolean => {
     const values = [
         event.resourceId,
@@ -183,37 +179,6 @@ const isDashboardStandbyEvent = (event: ScheduleEvent): boolean => {
         (event as any).eventType,
     ].map(value => String(value || '').toUpperCase());
     return values.some(value => value.startsWith('STBY') || value.startsWith('BNF-STBY') || value.startsWith('FTD-STBY') || /\bSTBY\b/.test(value) || value.includes('STANDBY'));
-};
-
-const getDashboardEventCode = (event: ScheduleEvent): string => (
-    String(event.flightNumber || (event as any).eventCode || '').trim()
-);
-
-const findDashboardSyllabusDetail = (event: ScheduleEvent, syllabusDetails: SyllabusItemDetail[]): SyllabusItemDetail | undefined => {
-    const code = normaliseDashboardCode(getDashboardEventCode(event));
-    if (!code) return undefined;
-    return syllabusDetails.find(item => normaliseDashboardCode(item.code) === code || normaliseDashboardCode(item.id) === code);
-};
-
-const isDashboardGroundOrProceduralEvent = (event: ScheduleEvent, detail?: SyllabusItemDetail): boolean => {
-    const code = normaliseDashboardCode(getDashboardEventCode(event));
-    const eventType = normaliseDashboardCode(event.type || (event as any).eventType);
-    const detailType = normaliseDashboardCode(detail?.type);
-    if (detailType === 'FLIGHT' || detailType === 'FTD') return false;
-    if (detailType === 'GROUND SCHOOL' || detailType === 'ACADEMICS') return true;
-    return eventType === 'GROUND' || eventType === 'CPT' || code.includes('CPT') || code.includes('GND') || code.includes('GROUND');
-};
-
-const getDashboardEventFinishTime = (event: ScheduleEvent): Date | null => {
-    if (!event.date) return null;
-    const start = Number(event.startTime || 0);
-    const duration = Number(event.duration || 0);
-    if (!Number.isFinite(start) || !Number.isFinite(duration)) return null;
-    const [year, month, day] = String(event.date).split('-').map(Number);
-    if (!year || !month || !day) return null;
-    const finish = new Date(year, month - 1, day);
-    finish.setMinutes(Math.round((start + duration) * 60));
-    return finish;
 };
 
 const getDashboardTrainingReportSuppressionIds = (report: AirCombatTrainingReport): string[] => {
@@ -403,7 +368,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     sctRequests, 
     pt051Assessments, 
     onSelectPt051,
-    syllabusDetails = [],
     suppressedPt051EventIds = [],
     trainingReportsToComplete = [],
     onSelectTrainingReport,
@@ -762,12 +726,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const fullUserKey = normaliseDashboardContactName(fullUserName);
         const suppressedEventIds = new Set(suppressedPt051EventIds.map(value => String(value || '').trim()).filter(Boolean));
         const assessments = Array.from(pt051Assessments.values());
-        const existingAssessmentKeys = new Set(assessments.map(assessment => (
-            `${assessment.eventId || ''}::${normaliseDashboardContactName(assessment.traineeFullName)}`
-        )));
-        const completedAssessmentKeys = new Set(assessments
-            .filter(assessment => assessment.isCompleted)
-            .map(assessment => `${assessment.eventId || ''}::${normaliseDashboardContactName(assessment.traineeFullName)}`));
         const storedIncomplete = assessments
             .filter(assessment =>
                 !assessment.isCompleted &&
@@ -779,51 +737,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     `pt051-${assessment.eventId}-${assessment.traineeFullName}`,
                 ].map(value => String(value || '').trim()).filter(Boolean).some(candidateId => suppressedEventIds.has(candidateId))
             );
-        const dueScheduledReports = events
-            .filter(event => !isDashboardStandbyEvent(event))
-            .map(event => ({ event, detail: findDashboardSyllabusDetail(event, syllabusDetails) }))
-            .filter(({ event, detail }) => {
-                const traineeName = String(event.student || (event as any).traineeFullName || '').trim();
-                if (!traineeName) return false;
-                const derivedAssessmentId = `dashboard-due-${event.id}-${normaliseDashboardContactName(traineeName)}`;
-                if (suppressedEventIds.has(event.id) || suppressedEventIds.has(derivedAssessmentId)) return false;
-                if (!isDashboardGroundOrProceduralEvent(event, detail)) return false;
-                if (detail && detail.assessmentRequired !== true) return false;
-                if (!detail && (event as any).assessmentRequired !== true) return false;
-                const assignedInstructor = normaliseDashboardContactName(event.instructor || event.pilot || event.fixedCrewPic);
-                if (!assignedInstructor || assignedInstructor !== fullUserKey) return false;
-                const finishTime = getDashboardEventFinishTime(event);
-                if (!finishTime || finishTime.getTime() > Date.now()) return false;
-                const assessmentKey = `${event.id}::${normaliseDashboardContactName(traineeName)}`;
-                if (existingAssessmentKeys.has(assessmentKey) || completedAssessmentKeys.has(assessmentKey)) return false;
-                return true;
-            })
-            .map(({ event }) => {
-                const traineeName = String(event.student || (event as any).traineeFullName || '').trim();
-                const startTime = Number(event.startTime || 0);
-                const duration = Number(event.duration || 0);
-                return {
-                    id: `dashboard-due-${event.id}-${normaliseDashboardContactName(traineeName)}`,
-                    traineeFullName: traineeName,
-                    eventId: event.id,
-                    flightNumber: getDashboardEventCode(event),
-                    date: event.date,
-                    instructorName: fullUserName,
-                    overallGrade: null,
-                    overallResult: null,
-                    dcoResult: '',
-                    overallComments: '',
-                    startTime,
-                    duration,
-                    endTime: startTime + duration,
-                    scores: [],
-                    isCompleted: false,
-                    groundSchoolAssessment: { isAssessment: false },
-                } as TrainingReportAssessment;
-            });
-        return [...storedIncomplete, ...dueScheduledReports]
+        return storedIncomplete
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }, [events, pt051Assessments, suppressedPt051EventIds, syllabusDetails, userName]);
+    }, [pt051Assessments, suppressedPt051EventIds, userName]);
 
     const visibleTrainingReportsToComplete = React.useMemo(() => {
         const suppressedEventIds = new Set(suppressedPt051EventIds.map(value => String(value || '').trim()).filter(Boolean));
