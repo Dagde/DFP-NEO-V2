@@ -34,6 +34,7 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const http2 = require('http2');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10213,9 +10214,9 @@ app.post('/api/admin/direct-delete-user', async (req, res) => {
   });
 
   // Middleware: Verify JWT for protected mobile routes
-  function authenticateMobileJWT(req, res, next) {
-    const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
-    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+	  function authenticateMobileJWT(req, res, next) {
+	    const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
+	    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
     if (!token) {
       return res.status(401).json({ error: 'No access token provided' });
@@ -10228,12 +10229,132 @@ app.post('/api/admin/direct-delete-user', async (req, res) => {
     }
 
     req.userId = userId;
-    req.mobileUserId = userId; // kept for compatibility
-    next();
-  }
+	    req.mobileUserId = userId; // kept for compatibility
+	    next();
+	  }
 
-  // GET /api/mobile/schedule - Get user's schedule (authenticated)
-app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
+	  // POST /api/mobile/notifications/device-token - Register APNs token for the authenticated mobile user
+	  app.post('/api/mobile/notifications/device-token', authenticateMobileJWT, async (req, res) => {
+	    try {
+	      const db = await getPrisma();
+	      const jwtUserId = String(req.userId || '').trim();
+	      const {
+	        deviceToken,
+	        platform = 'ios',
+	        appBundleId = getApnsBundleId(),
+	        clientId = '',
+	        timeZone = '',
+	      } = req.body || {};
+	      const cleanDeviceToken = String(deviceToken || '').trim();
+	      const cleanPlatform = String(platform || 'ios').trim().toLowerCase();
+	      const cleanClientId = String(clientId || '').trim();
+
+	      if (!cleanDeviceToken) {
+	        return res.status(400).json({ success: false, error: 'deviceToken is required' });
+	      }
+	      if (cleanPlatform !== 'ios') {
+	        return res.status(400).json({ success: false, error: 'Only ios push device registration is supported' });
+	      }
+
+	      const users = await db.$queryRawUnsafe(
+	        `SELECT id, "userId", username, email, "isActive"
+	         FROM "User"
+	         WHERE "userId" = $1::text
+	         LIMIT 1`,
+	        jwtUserId
+	      );
+	      if (!users || users.length === 0) {
+	        return res.status(404).json({ success: false, error: 'Authenticated user not found' });
+	      }
+	      const user = users[0];
+	      if (!user.isActive) {
+	        return res.status(403).json({ success: false, error: 'Account is inactive' });
+	      }
+
+	      const existingRows = cleanClientId
+	        ? await db.$queryRawUnsafe(
+	            `SELECT id FROM "DeviceToken"
+	             WHERE "deviceToken" = $1::text
+	                OR token = $1::text
+	                OR ("userId" = $2::text AND "clientId" = $3::text)
+	             ORDER BY "updatedAt" DESC NULLS LAST, "registeredAt" DESC NULLS LAST
+	             LIMIT 1`,
+	            cleanDeviceToken,
+	            user.userId,
+	            cleanClientId
+	          )
+	        : await db.$queryRawUnsafe(
+	            `SELECT id FROM "DeviceToken"
+	             WHERE "deviceToken" = $1::text
+	                OR token = $1::text
+	             ORDER BY "updatedAt" DESC NULLS LAST, "registeredAt" DESC NULLS LAST
+	             LIMIT 1`,
+	            cleanDeviceToken
+	          );
+	      const existingId = existingRows?.[0]?.id || null;
+	      const deviceId = existingId || `dt_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+	      if (existingId) {
+	        await db.$executeRawUnsafe(
+	          `UPDATE "DeviceToken"
+	           SET "userId" = $1::text,
+	               "userDbId" = $2::text,
+	               token = $3::text,
+	               "deviceToken" = $3::text,
+	               platform = 'ios',
+	               "appBundleId" = $4::text,
+	               "clientId" = NULLIF($5::text, ''),
+	               "timeZone" = NULLIF($6::text, ''),
+	               "isActive" = TRUE,
+	               "lastSeenAt" = NOW(),
+	               "registeredAt" = NOW(),
+	               "updatedAt" = NOW()
+	           WHERE id = $7::text`,
+	          user.userId,
+	          user.id,
+	          cleanDeviceToken,
+	          String(appBundleId || getApnsBundleId()).trim(),
+	          cleanClientId,
+	          String(timeZone || '').trim(),
+	          existingId
+	        );
+	      } else {
+	        await db.$executeRawUnsafe(
+	          `INSERT INTO "DeviceToken"
+	            ("id", "userId", "userDbId", token, "deviceToken", platform, "appBundleId", "clientId", "timeZone", "isActive", "registeredAt", "lastSeenAt", "createdAt", "updatedAt")
+	           VALUES ($1::text, $2::text, $3::text, $4::text, $4::text, 'ios', $5::text, NULLIF($6::text, ''), NULLIF($7::text, ''), TRUE, NOW(), NOW(), NOW(), NOW())`,
+	          deviceId,
+	          user.userId,
+	          user.id,
+	          cleanDeviceToken,
+	          String(appBundleId || getApnsBundleId()).trim(),
+	          cleanClientId,
+	          String(timeZone || '').trim()
+	        );
+	      }
+
+	      console.log(`✅ POST /api/mobile/notifications/device-token - Registered ios token ${shortDeviceToken(cleanDeviceToken)} for ${user.userId}`);
+	      res.json({
+	        success: true,
+	        device: {
+	          id: deviceId,
+	          userId: user.userId,
+	          userDbId: user.id,
+	          platform: 'ios',
+	          appBundleId: String(appBundleId || getApnsBundleId()).trim(),
+	          clientId: cleanClientId || null,
+	          timeZone: String(timeZone || '').trim() || null,
+	          isActive: true,
+	        },
+	      });
+	    } catch (error) {
+	      console.error('❌ POST /api/mobile/notifications/device-token error:', error);
+	      res.status(500).json({ success: false, error: 'Failed to register device token', details: error.message });
+	    }
+	  });
+
+	  // GET /api/mobile/schedule - Get user's schedule (authenticated)
+	app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
   try {
     const db = await getPrisma();
       const jwtUserId = req.userId; // Human-readable user ID from the mobile token.
@@ -15565,19 +15686,75 @@ async function ensureDailySnapshotTable(db) {
       ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "aircraftConfigState" JSONB DEFAULT '{}';
     `);
     // Add device tokens table for APNs push notifications
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "DeviceToken" (
-        "id" TEXT NOT NULL,
-        "userId" TEXT NOT NULL,
-        "token" TEXT NOT NULL,
-        "platform" TEXT NOT NULL DEFAULT 'ios',
-        "registeredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "DeviceToken_pkey" PRIMARY KEY ("id")
-      );
-    `);
-    await db.$executeRawUnsafe(`
-      CREATE UNIQUE INDEX IF NOT EXISTS "DeviceToken_userId_token_key" ON "DeviceToken"("userId", "token");
-    `);
+	    await db.$executeRawUnsafe(`
+	      CREATE TABLE IF NOT EXISTS "DeviceToken" (
+	        "id" TEXT NOT NULL,
+	        "userId" TEXT NOT NULL,
+	        "token" TEXT NOT NULL,
+	        "platform" TEXT NOT NULL DEFAULT 'ios',
+	        "registeredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	        CONSTRAINT "DeviceToken_pkey" PRIMARY KEY ("id")
+	      );
+	    `);
+	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "userDbId" TEXT;
+	    `);
+	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "deviceToken" TEXT;
+	    `);
+	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "appBundleId" TEXT;
+	    `);
+	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "clientId" TEXT;
+	    `);
+	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "timeZone" TEXT;
+	    `);
+	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT TRUE;
+	    `);
+	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "lastSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+	    `);
+	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+	    `);
+	    await db.$executeRawUnsafe(`
+	      ALTER TABLE "DeviceToken" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+	    `);
+	    await db.$executeRawUnsafe(`
+	      UPDATE "DeviceToken"
+	      SET "deviceToken" = COALESCE(NULLIF("deviceToken", ''), "token"),
+	          "createdAt" = COALESCE("createdAt", "registeredAt"),
+	          "lastSeenAt" = COALESCE("lastSeenAt", "registeredAt"),
+	          "updatedAt" = COALESCE("updatedAt", "registeredAt")
+	      WHERE "deviceToken" IS NULL OR "deviceToken" = '';
+	    `);
+	    await db.$executeRawUnsafe(`
+	      DELETE FROM "DeviceToken" newer
+	      USING "DeviceToken" older
+	      WHERE newer.ctid > older.ctid
+	        AND COALESCE(NULLIF(newer."deviceToken", ''), newer."token") = COALESCE(NULLIF(older."deviceToken", ''), older."token");
+	    `);
+	    await db.$executeRawUnsafe(`
+	      CREATE UNIQUE INDEX IF NOT EXISTS "DeviceToken_deviceToken_key" ON "DeviceToken"("deviceToken");
+	    `);
+	    await db.$executeRawUnsafe(`
+	      CREATE UNIQUE INDEX IF NOT EXISTS "DeviceToken_userId_clientId_key" ON "DeviceToken"("userId", "clientId") WHERE "clientId" IS NOT NULL AND "clientId" <> '';
+	    `);
+	    await db.$executeRawUnsafe(`
+	      CREATE UNIQUE INDEX IF NOT EXISTS "DeviceToken_userId_token_key" ON "DeviceToken"("userId", "token");
+	    `);
+	    await db.$executeRawUnsafe(`
+	      CREATE INDEX IF NOT EXISTS "DeviceToken_userId_idx" ON "DeviceToken"("userId");
+	    `);
+	    await db.$executeRawUnsafe(`
+	      CREATE INDEX IF NOT EXISTS "DeviceToken_userDbId_idx" ON "DeviceToken"("userDbId");
+	    `);
+	    await db.$executeRawUnsafe(`
+	      CREATE INDEX IF NOT EXISTS "DeviceToken_isActive_idx" ON "DeviceToken"("isActive");
+	    `);
     await db.$executeRawUnsafe(`
       CREATE UNIQUE INDEX IF NOT EXISTS "DailySnapshot_date_key"
       ON "DailySnapshot"("date");
@@ -17345,6 +17522,269 @@ const getAlertRecipientStatus = (alert, aliases) => {
   };
 };
 
+const getApnsBundleId = () => process.env.APNS_BUNDLE_ID || process.env.IOS_BUNDLE_ID || 'com.danieldawe.dfpneo';
+const getApnsEnvironment = () => String(process.env.APNS_ENVIRONMENT || process.env.APNS_ENV || 'production').trim().toLowerCase();
+
+function getApnsAuthKey() {
+  const inlineKey = process.env.APNS_AUTH_KEY || process.env.APNS_PRIVATE_KEY || '';
+  if (inlineKey.trim()) return inlineKey.replace(/\\n/g, '\n');
+  const keyPath = process.env.APNS_AUTH_KEY_PATH || process.env.APNS_PRIVATE_KEY_PATH || '';
+  if (keyPath.trim()) {
+    try {
+      return fs.readFileSync(keyPath, 'utf8');
+    } catch (error) {
+      console.warn(`🔔 [APNs] Could not read APNs key file: ${error.message}`);
+    }
+  }
+  return '';
+}
+
+let cachedApnsJwt = { token: '', expiresAt: 0 };
+
+function getApnsProviderConfig() {
+  const teamId = String(process.env.APNS_TEAM_ID || '').trim();
+  const keyId = String(process.env.APNS_KEY_ID || '').trim();
+  const authKey = getApnsAuthKey();
+  const bundleId = getApnsBundleId();
+  if (!teamId || !keyId || !authKey || !bundleId) {
+    return { configured: false, reason: 'APNs credentials are not fully configured.' };
+  }
+  return {
+    configured: true,
+    teamId,
+    keyId,
+    authKey,
+    bundleId,
+    host: getApnsEnvironment() === 'sandbox' ? 'api.sandbox.push.apple.com' : 'api.push.apple.com',
+  };
+}
+
+function getApnsJwt(config) {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (cachedApnsJwt.token && cachedApnsJwt.expiresAt - nowSeconds > 60) {
+    return cachedApnsJwt.token;
+  }
+  const token = jwt.sign(
+    { iss: config.teamId, iat: nowSeconds },
+    config.authKey,
+    {
+      algorithm: 'ES256',
+      header: {
+        alg: 'ES256',
+        kid: config.keyId,
+      },
+    }
+  );
+  cachedApnsJwt = { token, expiresAt: nowSeconds + 50 * 60 };
+  return token;
+}
+
+function shortDeviceToken(deviceToken) {
+  const token = String(deviceToken || '');
+  if (token.length <= 12) return '[redacted]';
+  return `${token.slice(0, 6)}...${token.slice(-6)}`;
+}
+
+function isPendingAlertForAliases(alert, aliases) {
+  if (!alert || !alert.alertId) return false;
+  if (!alertListContainsAlias(alert.recipients, aliases)) return false;
+  if (alertListContainsAlias(alert.dismissed, aliases)) return false;
+  const { response } = getAlertRecipientStatus(alert, aliases);
+  return !response || response.status === 'pending';
+}
+
+async function countPendingAlertsForUser(db, userId) {
+  const aliases = await getAlertUserAliases(db, userId);
+  const rows = await db.$queryRawUnsafe(
+    `SELECT "alertsData" FROM "DailySnapshot"
+     WHERE "alertsData" IS NOT NULL AND "alertsData" != '{}'::jsonb
+     ORDER BY date DESC LIMIT 30`
+  );
+  let count = 0;
+  for (const row of rows || []) {
+    const alertsData = row.alertsData || {};
+    for (const alert of Object.values(alertsData)) {
+      if (isPendingAlertForAliases(alert, aliases)) count += 1;
+    }
+  }
+  return count;
+}
+
+async function getActiveIosPushDevicesForUser(db, userId) {
+  const rows = await db.$queryRawUnsafe(
+    `SELECT dt.id, dt."deviceToken", dt.token, dt."appBundleId"
+     FROM "DeviceToken" dt
+     LEFT JOIN "User" u ON u.id = dt."userDbId" OR u."userId" = dt."userId"
+     WHERE dt."isActive" = TRUE
+       AND lower(dt.platform) = 'ios'
+       AND (dt."userId" = $1::text OR u."userId" = $1::text OR u.id = $1::text)`,
+    userId
+  );
+  return (rows || [])
+    .map(row => ({
+      id: row.id,
+      deviceToken: String(row.deviceToken || row.token || '').trim(),
+      appBundleId: String(row.appBundleId || getApnsBundleId()).trim(),
+    }))
+    .filter(row => row.deviceToken);
+}
+
+async function markPushDeviceInactive(db, deviceId, reason) {
+  try {
+    await db.$executeRawUnsafe(
+      `UPDATE "DeviceToken"
+       SET "isActive" = FALSE, "updatedAt" = NOW()
+       WHERE id = $1::text`,
+      deviceId
+    );
+    console.log(`🔔 [APNs] Marked device inactive (${reason || 'invalid token'})`);
+  } catch (error) {
+    console.warn(`🔔 [APNs] Could not mark device inactive: ${error.message}`);
+  }
+}
+
+async function sendApnsNotificationToDevice(db, device, payload) {
+  const config = getApnsProviderConfig();
+  if (!config.configured) {
+    console.warn(`🔔 [APNs] Push skipped: ${config.reason}`);
+    return { success: false, skipped: true, reason: config.reason };
+  }
+
+  const apnsToken = getApnsJwt(config);
+  const topic = device.appBundleId || config.bundleId;
+  const body = JSON.stringify(payload);
+
+  return await new Promise((resolve) => {
+    const client = http2.connect(`https://${config.host}`);
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      try { client.close(); } catch {}
+      resolve(result);
+    };
+
+    client.on('error', (error) => {
+      console.warn(`🔔 [APNs] Connection failed: ${error.message}`);
+      finish({ success: false, error: error.message });
+    });
+
+    const req = client.request({
+      ':method': 'POST',
+      ':path': `/3/device/${device.deviceToken}`,
+      authorization: `bearer ${apnsToken}`,
+      'apns-topic': topic,
+      'apns-push-type': 'alert',
+      'apns-priority': '10',
+    });
+
+    let responseBody = '';
+    let statusCode = 0;
+    req.setEncoding('utf8');
+    req.on('response', (headers) => {
+      statusCode = Number(headers[':status'] || 0);
+    });
+    req.on('data', chunk => { responseBody += chunk; });
+    req.on('end', async () => {
+      let reason = '';
+      try {
+        reason = JSON.parse(responseBody || '{}').reason || '';
+      } catch {
+        reason = responseBody || '';
+      }
+      if (statusCode >= 200 && statusCode < 300) {
+        finish({ success: true, statusCode });
+        return;
+      }
+      const inactiveReasons = new Set(['BadDeviceToken', 'DeviceTokenNotForTopic', 'Unregistered']);
+      if (statusCode === 410 || inactiveReasons.has(reason)) {
+        await markPushDeviceInactive(db, device.id, reason || statusCode);
+      }
+      console.warn(`🔔 [APNs] Push failed status=${statusCode} reason=${reason || 'unknown'} token=${shortDeviceToken(device.deviceToken)}`);
+      finish({ success: false, statusCode, reason });
+    });
+    req.on('error', (error) => {
+      console.warn(`🔔 [APNs] Request failed: ${error.message}`);
+      finish({ success: false, error: error.message });
+    });
+    req.setTimeout(10000, () => {
+      req.close();
+      finish({ success: false, error: 'APNs request timed out' });
+    });
+    req.end(body);
+  });
+}
+
+function formatAlertPushTime(hoursValue) {
+  const numeric = Number(hoursValue);
+  if (!Number.isFinite(numeric)) return '';
+  const hours = Math.floor(numeric);
+  const minutes = Math.round((numeric - hours) * 60);
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function buildAlertPushBody(alertEntry) {
+  const details = alertEntry?.eventDetails || {};
+  const eventLabel = details.flightNumber || details.eventCode || alertEntry?.eventId || 'DFP tile';
+  const start = typeof details.startTime === 'number' ? ` at ${formatAlertPushTime(details.startTime)}` : '';
+  return `${eventLabel}${start} has changed.`;
+}
+
+async function sendAlertPushToUser(db, userId, alertEntry, eventId) {
+  try {
+    const pendingCount = await countPendingAlertsForUser(db, userId);
+    const devices = await getActiveIosPushDevicesForUser(db, userId);
+    if (devices.length === 0) {
+      console.log(`🔔 [APNs] No active iOS devices for ${userId}`);
+      return { sent: 0, pendingCount };
+    }
+    const payload = {
+      aps: {
+        alert: {
+          title: 'DFP-NEO Alert',
+          body: buildAlertPushBody(alertEntry),
+        },
+        badge: pendingCount,
+        sound: 'default',
+      },
+      type: 'alert',
+      alertId: alertEntry?.alertId || '',
+      eventId: eventId || alertEntry?.eventId || '',
+      date: getAlertEventDate(alertEntry?.snapshotDate, alertEntry?.date),
+    };
+    const results = await Promise.all(devices.map(device => sendApnsNotificationToDevice(db, device, payload)));
+    return {
+      sent: results.filter(result => result.success).length,
+      pendingCount,
+    };
+  } catch (error) {
+    console.warn(`🔔 [APNs] Could not send alert push to ${userId}: ${error.message}`);
+    return { sent: 0, error: error.message };
+  }
+}
+
+async function sendBadgeUpdateToUser(db, userId) {
+  try {
+    const pendingCount = await countPendingAlertsForUser(db, userId);
+    const devices = await getActiveIosPushDevicesForUser(db, userId);
+    if (devices.length === 0) return { sent: 0, pendingCount };
+    const payload = {
+      aps: {
+        badge: pendingCount,
+      },
+      type: 'badge',
+    };
+    const results = await Promise.all(devices.map(device => sendApnsNotificationToDevice(db, device, payload)));
+    return {
+      sent: results.filter(result => result.success).length,
+      pendingCount,
+    };
+  } catch (error) {
+    console.warn(`🔔 [APNs] Could not send badge update to ${userId}: ${error.message}`);
+    return { sent: 0, error: error.message };
+  }
+}
+
 // POST /api/alerts/send - Send an alert to pilots about a changed event
 app.post('/api/alerts/send', async (req, res) => {
   try {
@@ -17447,10 +17887,11 @@ app.post('/api/alerts/send', async (req, res) => {
 
     console.log(`✅ POST /api/alerts/send - Alert ${alertId} sent for event ${eventId} on ${snapshotDate} to ${resolvedRecipients.map(r => r.userId || r.reversedName || r.displayName).join(', ')}`);
 
-    // TODO: Send APNs push notification here when credentials are available
-    // For now, pilots poll GET /api/alerts/:userId
+    const pushResults = await Promise.all(
+      resolvedRecipients.map(recipient => sendAlertPushToUser(db, recipient.userId, alertEntry, eventId))
+    );
 
-    res.json({ success: true, alertId, sentAt, alertEntry });
+    res.json({ success: true, alertId, sentAt, alertEntry, pushResults });
   } catch (error) {
     console.error('❌ POST /api/alerts/send error:', error);
     res.status(500).json({ error: 'Failed to send alert', details: error.message });
@@ -17620,9 +18061,10 @@ app.post('/api/alerts/:alertId/respond', async (req, res) => {
       row.date
     );
 
-    console.log(`✅ POST /api/alerts/${alertId}/respond - ${userId} responded: ${status}`);
-    res.json({ success: true, alertId, userId, status });
-  } catch (error) {
+	    console.log(`✅ POST /api/alerts/${alertId}/respond - ${userId} responded: ${status}`);
+	    const badgeUpdate = await sendBadgeUpdateToUser(db, userId);
+	    res.json({ success: true, alertId, userId, status, badgeUpdate });
+	  } catch (error) {
     console.error('❌ POST /api/alerts/:alertId/respond error:', error);
     res.status(500).json({ error: 'Failed to record response', details: error.message });
   }
@@ -17730,10 +18172,11 @@ app.post('/api/alerts/:alertId/dismiss', async (req, res) => {
         }
         break;
       }
-    }
-    console.log(`✅ POST /api/alerts/${alertId}/dismiss - ${userId} dismissed alert`);
-    res.json({ success: true });
-  } catch (error) {
+	    }
+	    console.log(`✅ POST /api/alerts/${alertId}/dismiss - ${userId} dismissed alert`);
+	    const badgeUpdate = await sendBadgeUpdateToUser(db, userId);
+	    res.json({ success: true, badgeUpdate });
+	  } catch (error) {
     console.error('❌ POST /api/alerts/:alertId/dismiss error:', error);
     res.status(500).json({ error: 'Failed to dismiss alert', details: error.message });
   }
@@ -17810,8 +18253,15 @@ app.post('/api/alerts/clear', async (req, res) => {
       snapshotDate
     );
 
+    const clearBadgeUpdates = await Promise.all(
+      (clearedAlert.recipients || [])
+        .map(recipient => (recipient && typeof recipient === 'object') ? recipient.userId : deriveAlertNames(recipient).userId)
+        .filter(Boolean)
+        .map(userId => sendBadgeUpdateToUser(db, userId))
+    );
+
     console.log(`✅ POST /api/alerts/clear - Alert cleared for event ${eventId} on ${snapshotDate} by ${clearedBy}`);
-    res.json({ success: true, snapshotDate, alertsData });
+    res.json({ success: true, snapshotDate, alertsData, badgeUpdates: clearBadgeUpdates });
   } catch (error) {
     console.error('❌ POST /api/alerts/clear error:', error);
     res.status(500).json({ error: 'Failed to clear alert', details: error.message });
@@ -17822,21 +18272,39 @@ app.post('/api/alerts/clear', async (req, res) => {
 app.post('/api/alerts/register-device', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { userId, token, platform = 'ios' } = req.body;
+    const { userId, token, deviceToken, platform = 'ios', appBundleId = getApnsBundleId(), clientId = '', timeZone = '' } = req.body;
+    const cleanToken = String(deviceToken || token || '').trim();
 
-    if (!userId || !token) {
+    if (!userId || !cleanToken) {
       return res.status(400).json({ error: 'userId and token are required' });
     }
 
     const id = `dt_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const userRows = await db.$queryRawUnsafe(
+      `SELECT id, "userId" FROM "User" WHERE "userId" = $1::text OR id = $1::text LIMIT 1`,
+      userId
+    );
+    const resolvedUser = userRows?.[0] || null;
 
     await db.$executeRawUnsafe(`
-      INSERT INTO "DeviceToken" ("id", "userId", "token", "platform", "registeredAt")
-      VALUES ($1::text, $2::text, $3::text, $4::text, NOW())
-      ON CONFLICT ("userId", "token") DO UPDATE SET "registeredAt" = NOW()
-    `, id, userId, token, platform);
+      INSERT INTO "DeviceToken"
+        ("id", "userId", "userDbId", "token", "deviceToken", "platform", "appBundleId", "clientId", "timeZone", "isActive", "registeredAt", "lastSeenAt", "createdAt", "updatedAt")
+      VALUES ($1::text, $2::text, $3::text, $4::text, $4::text, $5::text, $6::text, NULLIF($7::text, ''), NULLIF($8::text, ''), TRUE, NOW(), NOW(), NOW(), NOW())
+      ON CONFLICT ("deviceToken") DO UPDATE SET
+        "userId" = EXCLUDED."userId",
+        "userDbId" = EXCLUDED."userDbId",
+        "token" = EXCLUDED."token",
+        "platform" = EXCLUDED."platform",
+        "appBundleId" = EXCLUDED."appBundleId",
+        "clientId" = EXCLUDED."clientId",
+        "timeZone" = EXCLUDED."timeZone",
+        "isActive" = TRUE,
+        "registeredAt" = NOW(),
+        "lastSeenAt" = NOW(),
+        "updatedAt" = NOW()
+    `, id, resolvedUser?.userId || userId, resolvedUser?.id || null, cleanToken, platform, appBundleId, clientId, timeZone);
 
-    console.log(`✅ POST /api/alerts/register-device - Registered ${platform} token for ${userId}`);
+    console.log(`✅ POST /api/alerts/register-device - Registered ${platform} token ${shortDeviceToken(cleanToken)} for ${resolvedUser?.userId || userId}`);
     res.json({ success: true });
   } catch (error) {
     console.error('❌ POST /api/alerts/register-device error:', error);
