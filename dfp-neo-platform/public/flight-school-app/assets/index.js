@@ -103578,8 +103578,6 @@ const createLmpOrderKey = (index) => String(index + 1).padStart(5, "0");
 const REMEDIAL_EARLIEST_START = 10;
 const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = "neo_remedial_force_schedule_requests";
 const ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY = "dfp_active_operational_context";
-const ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY = "neo_context_selector_diag";
-const STAFF_ROSTER_TRACE_KEY = "neo_staff_roster_trace";
 const PLATFORM_CONFIG_UPDATED_EVENT = "dfp-platform-config-updated";
 const HIGHEST_PRIORITY_EVENTS_STORAGE_PREFIX = "dfp_highest_priority_events_v1";
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
@@ -118911,89 +118909,6 @@ const App = () => {
     activeResourceSharingGroupId: "resource-sharing-1",
     resourceSharingGroups: []
   });
-  const pushContextSelectorDiag = reactExports.useCallback((stage, details = {}) => {
-    const entry = {
-      ts: (/* @__PURE__ */ new Date()).toISOString(),
-      stage,
-      school,
-      activeUnitCode,
-      settingsLoaded,
-      platformConfigLoaded,
-      fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
-      details
-    };
-    try {
-      const existing = JSON.parse(localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY) || "[]");
-      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-400);
-      localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY, JSON.stringify(next));
-      window.neoContextSelectorDiag = next;
-    } catch (error) {
-      try {
-        localStorage.removeItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY);
-        window.neoContextSelectorDiag = [entry];
-      } catch {
-      }
-    }
-  }, [activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, settingsLoaded]);
-  const previousOperationalContextRef = reactExports.useRef(null);
-  reactExports.useEffect(() => {
-    const previous = previousOperationalContextRef.current;
-    const next = { school, activeUnitCode };
-    previousOperationalContextRef.current = next;
-    pushContextSelectorDiag("state:operational-context", {
-      previous,
-      next,
-      rawStoredContext: (() => {
-        try {
-          return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
-        } catch {
-          return null;
-        }
-      })(),
-      url: typeof window !== "undefined" ? window.location.href : ""
-    });
-  }, [activeUnitCode, pushContextSelectorDiag, school]);
-  reactExports.useEffect(() => {
-    pushContextSelectorDiag("restore:init", {
-      storageKey: ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY,
-      initialOperationalContext,
-      rawStoredContext: (() => {
-        try {
-          return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
-        } catch {
-          return null;
-        }
-      })()
-    });
-  }, []);
-  const previousContextDateRef = reactExports.useRef(null);
-  reactExports.useEffect(() => {
-    const previousDate = previousContextDateRef.current;
-    previousContextDateRef.current = date;
-    if (previousDate === null || previousDate === date) return;
-    pushContextSelectorDiag("state:date-changed", {
-      previousDate,
-      nextDate: date,
-      storedContext: (() => {
-        try {
-          return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
-        } catch {
-          return null;
-        }
-      })()
-    });
-  }, [date, pushContextSelectorDiag]);
-  reactExports.useEffect(() => {
-    const handleOperationalContextStorage = (event) => {
-      if (event.key !== ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY) return;
-      pushContextSelectorDiag("storage:context-changed-by-other-window", {
-        oldValue: event.oldValue,
-        newValue: event.newValue
-      });
-    };
-    window.addEventListener("storage", handleOperationalContextStorage);
-    return () => window.removeEventListener("storage", handleOperationalContextStorage);
-  }, [pushContextSelectorDiag]);
   const [allInstructorsData, setInstructorsData] = reactExports.useState([]);
   const [archivedInstructorsData, setArchivedInstructorsData] = reactExports.useState([]);
   const [allTraineesData, setTraineesData] = reactExports.useState([]);
@@ -119289,91 +119204,41 @@ const App = () => {
     [getUnitOptionsForLocation, school]
   );
   reactExports.useEffect(() => {
-    pushContextSelectorDiag("options:active-location", {
-      optionCodes: activeLocationUnitOptions.map((unit) => unit.code),
-      sharedOptions: activeLocationUnitOptions.filter((unit) => unit.isSharedFleetContext).map((unit) => ({
-        code: unit.code,
-        name: unit.name,
-        memberUnits: unit.memberUnits
-      })),
-      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode),
-      resourceSharingGroups: organisationSettings.resourceSharingGroups,
-      selectedUnits: organisationSettings.selectedUnits
-    });
-  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
-  reactExports.useEffect(() => {
     if (!platformConfigLoaded) {
-      pushContextSelectorDiag("validate:skip-platform-loading");
       return;
     }
     if (activeLocationUnitOptions.length === 0) {
-      pushContextSelectorDiag("validate:skip-no-options");
       return;
     }
     const activeUnitOption = activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode);
     if (!activeUnitCode) {
       const preferredSharedContext = activeLocationUnitOptions.find((unit) => unit?.isSharedFleetContext === true && unit.disabled !== true);
       if (preferredSharedContext?.code) {
-        pushContextSelectorDiag("validate:restore-shared-unit-for-location-only-context", {
-          fromUnit: activeUnitCode,
-          toUnit: preferredSharedContext.code,
-          optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
-        });
         setActiveUnitCode(preferredSharedContext.code);
         return;
       }
-      pushContextSelectorDiag("validate:keep-no-unit-selected", {
-        optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
-      });
       return;
     }
     if (!activeUnitOption || activeUnitOption.disabled) {
       const matchingSharedContext = activeLocationUnitOptions.find((unit) => unit?.isSharedFleetContext === true && unit.disabled !== true && Array.isArray(unit.memberUnits) && unit.memberUnits.map((memberUnit) => String(memberUnit || "").trim().toUpperCase()).includes(String(activeUnitCode || "").trim().toUpperCase()));
       if (matchingSharedContext?.code) {
-        pushContextSelectorDiag("validate:promote-member-unit-to-shared-context", {
-          fromUnit: activeUnitCode,
-          toUnit: matchingSharedContext.code,
-          optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
-        });
         setActiveUnitCode(matchingSharedContext.code);
         return;
       }
       if (String(activeUnitCode || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
-        pushContextSelectorDiag("validate:hold-shared-until-settings", {
-          activeUnitCode,
-          optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
-        });
         return;
       }
       if (setupTestProfile && activeUnitCode) {
         const matchingLocationForActiveUnit = baseSelectableLocationCodes.find((locationCode) => String(locationCode || "").trim().toUpperCase() !== String(school || "").trim().toUpperCase() && getUnitOptionsForLocation(locationCode).some((unit) => unit.code === activeUnitCode && unit.disabled !== true));
         if (matchingLocationForActiveUnit) {
-          pushContextSelectorDiag("validate:move-location-for-setup-test-unit", {
-            activeUnitCode,
-            fromLocation: school,
-            toLocation: matchingLocationForActiveUnit,
-            currentOptionCodes: activeLocationUnitOptions.map((unit) => unit.code)
-          });
           setSchool(matchingLocationForActiveUnit);
           return;
         }
       }
       const nextUnitCode = "";
-      pushContextSelectorDiag("validate:reset-unit", {
-        fromUnit: activeUnitCode,
-        toUnit: nextUnitCode,
-        optionCodes: activeLocationUnitOptions.map((unit) => unit.code),
-        disabledOption: activeUnitOption?.disabled === true,
-        fleetSharingEnabled: organisationSettings.fleetSharingEnabled
-      });
       setActiveUnitCode(nextUnitCode);
-    } else {
-      pushContextSelectorDiag("validate:keep-unit", {
-        activeUnitCode,
-        optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
-      });
     }
-  }, [activeLocationUnitOptions, activeUnitCode, baseSelectableLocationCodes, getUnitOptionsForLocation, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag, school, setupTestProfile]);
+  }, [activeLocationUnitOptions, activeUnitCode, baseSelectableLocationCodes, getUnitOptionsForLocation, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, setupTestProfile]);
   reactExports.useEffect(() => {
     try {
       const payload = {
@@ -119381,11 +119246,9 @@ const App = () => {
         unit: activeUnitCode
       };
       localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
-      pushContextSelectorDiag("persist:context", { payload });
     } catch (error) {
-      pushContextSelectorDiag("persist:error", { error: String(error) });
     }
-  }, [school, activeUnitCode, pushContextSelectorDiag]);
+  }, [school, activeUnitCode]);
   const pushSetupTestContextDiag = reactExports.useCallback((stage, details = {}) => {
     if (!setupTestProfile) return;
     const entry = {
@@ -120302,233 +120165,6 @@ const App = () => {
       }
     }
   }
-  function summarisePersonnelUnits(records) {
-    return records.reduce((acc, record) => {
-      const unit = String(record?.unit || "NO_UNIT").trim().toUpperCase() || "NO_UNIT";
-      acc[unit] = (acc[unit] || 0) + 1;
-      return acc;
-    }, {});
-  }
-  function summarisePersonnelSources(records) {
-    return records.reduce((acc, record) => {
-      const source = String(record?._dataSource || "unknown").trim() || "unknown";
-      acc[source] = (acc[source] || 0) + 1;
-      return acc;
-    }, {});
-  }
-  function pushStaffRosterTrace(stage, details = {}) {
-    const entry = {
-      ts: (/* @__PURE__ */ new Date()).toISOString(),
-      perfMs: typeof performance !== "undefined" && typeof performance.now === "function" ? Math.round(performance.now()) : null,
-      stage,
-      browser: typeof navigator !== "undefined" ? navigator.userAgent : "",
-      activeView,
-      user: {
-        displayName: signedInDisplayName,
-        currentUserName,
-        role: sessionUser?.role || authUser?.role || ""
-      },
-      context: {
-        school,
-        activeUnitCode,
-        activeContextUnitCodes,
-        fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
-        resourceSharingGroups: organisationSettings.resourceSharingGroups,
-        platformDataScopeQuery
-      },
-      details
-    };
-    try {
-      const existing = JSON.parse(localStorage.getItem(STAFF_ROSTER_TRACE_KEY) || "[]");
-      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-240);
-      localStorage.setItem(STAFF_ROSTER_TRACE_KEY, JSON.stringify(next));
-      window.neoStaffRosterTrace = next;
-    } catch (error) {
-      try {
-        localStorage.removeItem(STAFF_ROSTER_TRACE_KEY);
-        window.neoStaffRosterTrace = [entry];
-      } catch {
-      }
-    }
-  }
-  function downloadStaffRosterTraceReport() {
-    const safeUser = String(currentUserName || signedInDisplayName || "user").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
-    const reportDate = date || getEffectiveDfpDateString();
-    let traceEntries = [];
-    let contextEntries = [];
-    try {
-      const storedTrace = JSON.parse(localStorage.getItem(STAFF_ROSTER_TRACE_KEY) || "[]");
-      traceEntries = Array.isArray(storedTrace) ? storedTrace : [];
-    } catch {
-      traceEntries = [];
-    }
-    try {
-      const storedContext = JSON.parse(localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY) || "[]");
-      contextEntries = Array.isArray(storedContext) ? storedContext : [];
-    } catch {
-      contextEntries = [];
-    }
-    const payload = {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      reportType: "staff-roster-context-trace",
-      instructions: "Generated from the DFP Sync panel after a staff roster unit list disappeared.",
-      currentState: {
-        browser: typeof navigator !== "undefined" ? navigator.userAgent : "",
-        activeView,
-        date,
-        school,
-        activeUnitCode,
-        activeContextUnitCodes,
-        currentUserName,
-        signedInDisplayName,
-        liveSyncEnabled,
-        lastPollTime,
-        platformDataScopeQuery,
-        fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
-        resourceSharingGroups: organisationSettings.resourceSharingGroups,
-        activeLocationUnitOptions: activeLocationUnitOptions.map((option) => ({
-          code: option.code,
-          name: option.name,
-          disabled: option.disabled === true,
-          isSharedFleetContext: option.isSharedFleetContext === true,
-          memberUnits: option.memberUnits || []
-        })),
-        allStaff: {
-          total: allInstructorsData.length,
-          active: allInstructorsData.filter(isRecordActive).length,
-          units: summarisePersonnelUnits(allInstructorsData.filter(isRecordActive)),
-          sources: summarisePersonnelSources(allInstructorsData)
-        },
-        visibleStaff: {
-          total: instructorsData.length,
-          units: summarisePersonnelUnits(instructorsData),
-          sources: summarisePersonnelSources(instructorsData)
-        }
-      },
-      traceEntries,
-      contextEntries
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `staff-roster-trace-${safeUser}-${reportDate}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-  function downloadContextSelectorTraceReport() {
-    const safeContext = `${String(school || "location").trim()}-${String(activeUnitCode || "unit").trim()}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "context";
-    const reportDate = date || getEffectiveDfpDateString();
-    let contextEntries = [];
-    try {
-      const storedContext = JSON.parse(localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY) || "[]");
-      contextEntries = Array.isArray(storedContext) ? storedContext : [];
-    } catch {
-      contextEntries = [];
-    }
-    const payload = {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      reportType: "operational-context-selector-trace",
-      instructions: "Generated after the locality/unit selector changed unexpectedly. Reproduce the bounce, then download this trace.",
-      currentState: {
-        browser: typeof navigator !== "undefined" ? navigator.userAgent : "",
-        activeView,
-        date,
-        school,
-        activeUnitCode,
-        activeContextUnitCodes,
-        currentUserName,
-        signedInDisplayName,
-        authUser: authUser ? {
-          id: authUser.id,
-          userId: authUser.userId,
-          username: authUser.username,
-          role: authUser.role,
-          displayName: authUser.displayName
-        } : null,
-        sessionUser,
-        liveSyncEnabled,
-        lastPollTime,
-        dfpSnapshotLoadState,
-        platformDataScopeQuery,
-        hasRuntimePlatformWideAccess,
-        platformAccessContext: {
-          isConfigured: platformAccessContext.isConfigured,
-          isPlatformAdmin: platformAccessContext.isPlatformAdmin,
-          isSuperAdmin: platformAccessContext.isSuperAdmin,
-          accessibleLocations: platformAccessContext.accessibleLocations,
-          permissionProfileIds: platformAccessContext.permissionProfileIds,
-          permissions: platformAccessContext.permissions,
-          rows: platformAccessContext.rows
-        },
-        baseSelectableLocationCodes,
-        selectableLocationCodes,
-        operationalContextOptions,
-        activeLocationUnitOptions: activeLocationUnitOptions.map((option) => ({
-          code: option.code,
-          name: option.name,
-          disabled: option.disabled === true,
-          disabledReason: option.disabledReason || "",
-          isSharedFleetContext: option.isSharedFleetContext === true,
-          memberUnits: option.memberUnits || []
-        })),
-        storedContext: (() => {
-          try {
-            return localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
-          } catch {
-            return null;
-          }
-        })(),
-        storedDiagLength: contextEntries.length
-      },
-      contextEntries
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `context-selector-trace-${safeContext}-${reportDate}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-  function pushDashboardReportDiag(stage, details = {}) {
-    const entry = {
-      ts: (/* @__PURE__ */ new Date()).toISOString(),
-      stage,
-      date,
-      school,
-      unit: activeUnitCode,
-      activeView,
-      signedInDisplayName,
-      currentUserName,
-      details
-    };
-    try {
-      const existing = JSON.parse(localStorage.getItem("neo_dashboard_report_diag") || "[]");
-      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-200);
-      localStorage.setItem("neo_dashboard_report_diag", JSON.stringify(next));
-      window.neoDashboardReportDiag = next;
-    } catch (error) {
-      try {
-        localStorage.removeItem("neo_dashboard_report_diag");
-        window.neoDashboardReportDiag = [entry];
-      } catch {
-      }
-      console.warn("[DASHBOARD-REPORT-DIAG] Could not persist diagnostic entry:", error, entry);
-    }
-  }
-  function readDashboardReportDiagEntries() {
-    try {
-      const stored = JSON.parse(localStorage.getItem("neo_dashboard_report_diag") || "[]");
-      return Array.isArray(stored) ? stored : [];
-    } catch {
-      return [];
-    }
-  }
   function summariseTrainingReportLmpItems(lmp) {
     const items = Array.isArray(lmp) ? lmp : [];
     const reportItems = items.filter(
@@ -120563,337 +120199,6 @@ const App = () => {
     } catch {
       return false;
     }
-  }
-  function buildDashboardReportDiagnosticReport() {
-    const postFlightAssessmentDraftTrace = readDashboardReportDiagEntries();
-    const normaliseName2 = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
-    const normaliseCode2 = (value) => String(value || "").trim().toUpperCase();
-    const toSurnameFirst = (value) => {
-      const text = String(value || "").trim();
-      if (!text) return "";
-      if (text.includes(",")) return text;
-      const parts = text.split(/\s+/).filter(Boolean);
-      if (parts.length < 2) return text;
-      return `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(" ")}`;
-    };
-    const sessionDashboardUserName = signedInDisplayName || currentUserName;
-    const sessionDashboardNameKeys = [
-      sessionDashboardUserName,
-      authUser ? formatAuthLoginName(authUser) : "",
-      authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : "",
-      authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : "",
-      currentUserName
-    ].map(normaliseName2).filter(Boolean);
-    const sessionDashboardIdKeys = [
-      sessionUser?.userId,
-      authUser?.userId,
-      authUser?.id
-    ].map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
-    const dashboardStaff = allInstructorsData.find((staff) => {
-      const staffName = normaliseName2(staff.name);
-      const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
-      return sessionDashboardNameKeys.includes(staffName) || staffId && sessionDashboardIdKeys.includes(staffId);
-    });
-    const dashboardUserName = sessionDashboardUserName || dashboardStaff?.name || currentUserName;
-    const dashboardNameKeys = Array.from(new Set([
-      ...sessionDashboardNameKeys,
-      normaliseName2(dashboardUserName),
-      normaliseName2(dashboardStaff?.name)
-    ].filter(Boolean)));
-    const activeEvents = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
-    const dashboardActiveUnitCodes = (activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+")).map(normaliseCode2).filter(Boolean);
-    const dashboardActiveUnitSet = new Set(dashboardActiveUnitCodes);
-    const dashboardActiveLocationSet = new Set([
-      ...getDailySnapshotLocationAliases(school),
-      activeLocationSolarProfile.code,
-      school
-    ].map(normaliseCode2).filter(Boolean));
-    const reportContextDecision = (report, staff) => {
-      const reportUnitCodes = String(report?.unitCode || "").split("+").map(normaliseCode2).filter(Boolean);
-      const staffUnitCode = normaliseCode2(staff.unit);
-      const reportLocationCode = normaliseCode2(report?.locationCode);
-      const unitAccepted = dashboardActiveUnitSet.size === 0 ? true : reportUnitCodes.length > 0 ? reportUnitCodes.some((unitCode) => dashboardActiveUnitSet.has(unitCode)) : !!staffUnitCode && dashboardActiveUnitSet.has(staffUnitCode);
-      const locationAccepted = !reportLocationCode || dashboardActiveLocationSet.size === 0 || dashboardActiveLocationSet.has(reportLocationCode);
-      return {
-        accepted: unitAccepted && locationAccepted,
-        unitAccepted,
-        locationAccepted,
-        reportUnitCodes,
-        staffUnitCode,
-        reportLocationCode,
-        dashboardActiveUnitCodes,
-        dashboardActiveLocationCodes: Array.from(dashboardActiveLocationSet)
-      };
-    };
-    const reportUserDecision = (report, staff) => {
-      const explicitAssignee = normaliseName2(report?.dashboardAssigneeName);
-      const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
-      const nameCandidates = [
-        report?.dashboardAssigneeName,
-        report?.staffName,
-        staff.name,
-        report?.instructorName
-      ].map(normaliseName2).filter(Boolean);
-      const accepted = explicitAssignee ? dashboardNameKeys.includes(explicitAssignee) : nameCandidates.some((name) => dashboardNameKeys.includes(name)) || staffId && sessionDashboardIdKeys.includes(staffId);
-      return {
-        accepted,
-        explicitAssignee: report?.dashboardAssigneeName || null,
-        nameCandidates,
-        dashboardNameKeys,
-        staffId,
-        sessionDashboardIdKeys
-      };
-    };
-    const serialiseStaff = (staff) => ({
-      id: staff.id ?? null,
-      idNumber: staff.idNumber ?? null,
-      name: staff.name ?? null,
-      rank: staff.rank ?? null,
-      unit: staff.unit ?? null,
-      callsign: staff.callsign ?? null
-    });
-    const serialiseEvent = (event) => ({
-      id: event.id,
-      date: event.date,
-      type: event.type,
-      flightNumber: event.flightNumber,
-      eventCode: event.eventCode ?? null,
-      eventCategory: event.eventCategory ?? null,
-      startTime: event.startTime,
-      duration: event.duration,
-      resourceId: event.resourceId,
-      instructor: event.instructor ?? null,
-      pilot: event.pilot ?? null,
-      student: event.student ?? null,
-      crew: event.crew ?? null,
-      fixedCrewPic: event.fixedCrewPic ?? null,
-      unit: event.unit ?? null,
-      unitCode: event.unitCode ?? null,
-      personnelRefs: Array.isArray(event.personnelRefs) ? event.personnelRefs : []
-    });
-    const suppressedReportIds = new Set(suppressedDashboardPt051EventIds.map((value) => String(value || "").trim()).filter(Boolean));
-    const dashboardUserSurnameFirst = toSurnameFirst(dashboardUserName);
-    const serialisePt051Assessment = (assessment) => ({
-      id: assessment.id,
-      eventId: assessment.eventId,
-      flightNumber: assessment.flightNumber,
-      date: assessment.date,
-      traineeFullName: assessment.traineeFullName,
-      instructorName: assessment.instructorName,
-      dcoResult: assessment.dcoResult || null,
-      overallResult: assessment.overallResult || null,
-      isCompleted: assessment.isCompleted === true,
-      startsWithDashboardDue: String(assessment.id || "").startsWith("dashboard-due-"),
-      startsWithPt051: String(assessment.id || "").startsWith("pt051-"),
-      hasScores: Array.isArray(assessment.scores) && assessment.scores.length > 0,
-      scoreCount: Array.isArray(assessment.scores) ? assessment.scores.length : 0,
-      createdAt: assessment.createdAt || null,
-      updatedAt: assessment.updatedAt || null
-    });
-    const pt051AssessmentEvaluations = Array.from(pt051Assessments.values()).map((assessment) => {
-      const suppressionCandidates = [
-        assessment.eventId,
-        assessment.id,
-        `dashboard-due-${assessment.eventId}-${normaliseName2(assessment.traineeFullName)}`,
-        `pt051-${assessment.eventId}-${assessment.traineeFullName}`
-      ].map((value) => String(value || "").trim()).filter(Boolean);
-      const suppressed = suppressionCandidates.some((candidate) => suppressedReportIds.has(candidate));
-      const instructorMatchesDashboardUser = normaliseName2(assessment.instructorName) === normaliseName2(dashboardUserSurnameFirst);
-      const hasGeneratedCompletionResult = assessment.dcoResult === "DCO" || assessment.dcoResult === "DPCO";
-      const accepted = !assessment.isCompleted && hasGeneratedCompletionResult && instructorMatchesDashboardUser && !suppressed;
-      const matchingCompletion = eventCompletionsForDate.find((completion) => assessment.eventId && completion.scheduleEventId === assessment.eventId || normaliseCode2(completion.eventCode) === normaliseCode2(assessment.flightNumber) && String(completion.eventDate || completion.date || "") === String(assessment.date || "") && normaliseName2(completion.instructorName) === normaliseName2(assessment.instructorName));
-      const matchingEvent = activeEvents.find((event) => event.id === assessment.eventId || normaliseCode2(event.flightNumber || event.eventCode) === normaliseCode2(assessment.flightNumber) && String(event.date || "") === String(assessment.date || ""));
-      return {
-        accepted,
-        rejectReasons: [
-          assessment.isCompleted ? "completed" : "",
-          !hasGeneratedCompletionResult ? "missing-dco-dpco-result" : "",
-          !instructorMatchesDashboardUser ? "instructor-user-filter" : "",
-          suppressed ? "suppressed" : ""
-        ].filter(Boolean),
-        sourceFlags: {
-          startsWithDashboardDue: String(assessment.id || "").startsWith("dashboard-due-"),
-          startsWithPt051: String(assessment.id || "").startsWith("pt051-"),
-          hasGeneratedCompletionResult,
-          hasMatchingEventCompletion: Boolean(matchingCompletion),
-          matchingCompletionDcoResult: matchingCompletion?.dcoResult || null,
-          hasMatchingScheduleEvent: Boolean(matchingEvent)
-        },
-        suppressionCandidates,
-        assessment: serialisePt051Assessment(assessment),
-        matchingEvent: matchingEvent ? serialiseEvent(matchingEvent) : null,
-        matchingCompletion: matchingCompletion ? {
-          id: matchingCompletion.id || null,
-          scheduleEventId: matchingCompletion.scheduleEventId || null,
-          eventCode: matchingCompletion.eventCode || null,
-          eventDate: matchingCompletion.eventDate || null,
-          traineeFullName: matchingCompletion.traineeFullName || null,
-          instructorName: matchingCompletion.instructorName || null,
-          dcoResult: matchingCompletion.dcoResult || null,
-          createdAt: matchingCompletion.createdAt || null,
-          updatedAt: matchingCompletion.updatedAt || null
-        } : null
-      };
-    });
-    const reportEvaluations = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).map((report) => {
-      const contextDecision = reportContextDecision(report, staff);
-      const userDecision = reportUserDecision(report, staff);
-      const accepted = report.status !== "Complete" && !report.dashboardAcknowledgedAt && contextDecision.accepted && userDecision.accepted;
-      return {
-        accepted,
-        rejectReasons: [
-          report.status === "Complete" ? "status-complete" : "",
-          report.dashboardAcknowledgedAt ? "dashboard-acknowledged" : "",
-          !contextDecision.accepted ? "context-filter" : "",
-          !userDecision.accepted ? "user-filter" : ""
-        ].filter(Boolean),
-        staff: serialiseStaff(staff),
-        report: {
-          id: report.id,
-          reportName: report.reportName,
-          status: report.status,
-          dashboardAcknowledgedAt: report.dashboardAcknowledgedAt || null,
-          dashboardAssigneeName: report.dashboardAssigneeName || null,
-          staffIdNumber: report.staffIdNumber || null,
-          staffName: report.staffName || null,
-          instructorName: report.instructorName || null,
-          eventId: report.eventId || null,
-          eventCode: report.eventCode || null,
-          date: report.date || null,
-          callsign: report.callsign || null,
-          unitCode: report.unitCode || null,
-          locationCode: report.locationCode || null,
-          trainingCode: report.trainingCode || null,
-          trainingTitle: report.trainingTitle || null,
-          dcoResult: report.dcoResult || null
-        },
-        contextDecision,
-        userDecision
-      };
-    }));
-    const assessmentRequiredItems = syllabusDetails.filter((item) => item.assessmentRequired === true || ["BGF5", "BPC+IPC", "FIC"].includes(normaliseCode2(item.code || item.module || item.lmpType))).map((item) => ({
-      id: item.id,
-      code: item.code,
-      type: item.type,
-      lmpType: item.lmpType,
-      module: item.module,
-      phase: item.phase,
-      courses: item.courses || [],
-      isActive: item.isActive,
-      assessmentRequired: item.assessmentRequired
-    }));
-    const bfgOrBgfEvents = activeEvents.filter((event) => normaliseCode2(event.flightNumber || event.eventCode).includes("BGF5") || normaliseCode2(event.flightNumber || event.eventCode).includes("BGF"));
-    const eventCompletionEvaluations = eventCompletionsForDate.map((completion) => {
-      const matchedEvent = activeEvents.find((event) => event.id === completion.scheduleEventId || normaliseCode2(event.flightNumber || event.eventCode) === normaliseCode2(completion.eventCode) && String(event.date || "") === String(completion.eventDate || "") && Math.abs(Number(event.startTime || 0) - Number(completion.startTime || 0)) < 0.01);
-      return {
-        completion: {
-          id: completion.id || null,
-          scheduleEventId: completion.scheduleEventId || null,
-          eventCode: completion.eventCode || null,
-          eventDate: completion.eventDate || null,
-          startTime: completion.startTime ?? null,
-          duration: completion.duration ?? null,
-          traineeFullName: completion.traineeFullName || null,
-          instructorName: completion.instructorName || null,
-          dcoResult: completion.dcoResult || null,
-          createdAt: completion.createdAt || null,
-          updatedAt: completion.updatedAt || null
-        },
-        matchedEvent: matchedEvent ? serialiseEvent(matchedEvent) : null,
-        matchedSyllabus: matchedEvent ? syllabusDetails.filter((item) => item.isActive !== false && normaliseCode2(item.code) === normaliseCode2(matchedEvent.flightNumber || matchedEvent.eventCode)).map((item) => ({
-          id: item.id,
-          code: item.code,
-          type: item.type,
-          lmpType: item.lmpType,
-          module: item.module,
-          phase: item.phase,
-          courses: item.courses || [],
-          isActive: item.isActive,
-          assessmentRequired: item.assessmentRequired
-        })) : []
-      };
-    });
-    const matchingBgf5Syllabus = syllabusDetails.filter((item) => normaliseCode2(item.code) === "BGF5").map((item) => ({
-      id: item.id,
-      code: item.code,
-      type: item.type,
-      lmpType: item.lmpType,
-      module: item.module,
-      phase: item.phase,
-      courses: item.courses || [],
-      isActive: item.isActive,
-      assessmentRequired: item.assessmentRequired
-    }));
-    return {
-      reportType: "DFP My Home reports-to-complete diagnostics",
-      diagnosticVersion: "CCH 8.180",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      activeContext: {
-        date,
-        school,
-        activeUnitCode,
-        activeContextUnitCodes,
-        activeOperationalModel,
-        activeView,
-        signedInDisplayName,
-        currentUserName,
-        sessionDashboardUserName,
-        dashboardUserName,
-        dashboardStaff: dashboardStaff ? serialiseStaff(dashboardStaff) : null,
-        dashboardNameKeys,
-        sessionDashboardIdKeys
-      },
-      summary: {
-        activeEventCount: activeEvents.length,
-        bgfEventCount: bfgOrBgfEvents.length,
-        bgf5EventCount: bfgOrBgfEvents.filter((event) => normaliseCode2(event.flightNumber || event.eventCode) === "BGF5").length,
-        bgf5SyllabusMatches: matchingBgf5Syllabus.length,
-        assessmentRequiredItemCount: assessmentRequiredItems.length,
-        totalTrainingReportDrafts: reportEvaluations.length,
-        acceptedTrainingReportDrafts: reportEvaluations.filter((item) => item.accepted).length,
-        bgf5TrainingReportDrafts: reportEvaluations.filter((item) => normaliseCode2(item.report.eventCode) === "BGF5").length,
-        acceptedBgf5TrainingReportDrafts: reportEvaluations.filter((item) => item.accepted && normaliseCode2(item.report.eventCode) === "BGF5").length,
-        eventCompletionsForDateCount: eventCompletionsForDate.length,
-        dcoEventCompletionsForDateCount: eventCompletionsForDate.filter((completion) => completion.dcoResult === "DCO").length,
-        bgf5EventCompletionsForDateCount: eventCompletionsForDate.filter((completion) => normaliseCode2(completion.eventCode) === "BGF5").length,
-        postFlightAssessmentDraftTraceCount: postFlightAssessmentDraftTrace.length,
-        totalPt051Assessments: pt051AssessmentEvaluations.length,
-        acceptedPt051Assessments: pt051AssessmentEvaluations.filter((item) => item.accepted).length,
-        dashboardDuePt051Assessments: pt051AssessmentEvaluations.filter((item) => item.sourceFlags.startsWithDashboardDue).length,
-        acceptedDashboardDuePt051Assessments: pt051AssessmentEvaluations.filter((item) => item.accepted && item.sourceFlags.startsWithDashboardDue).length,
-        pt051AssessmentsWithoutEventCompletion: pt051AssessmentEvaluations.filter((item) => !item.sourceFlags.hasMatchingEventCompletion).length,
-        latestPostFlightAssessmentDraftTrace: postFlightAssessmentDraftTrace.slice(-12),
-        bgf5RejectReasons: reportEvaluations.filter((item) => normaliseCode2(item.report.eventCode) === "BGF5").map((item) => ({
-          reportId: item.report.id,
-          staffName: item.staff.name,
-          accepted: item.accepted,
-          rejectReasons: item.rejectReasons
-        }))
-      },
-      bgfEvents: bfgOrBgfEvents.map(serialiseEvent),
-      matchingBgf5Syllabus,
-      assessmentRequiredItems,
-      eventCompletionEvaluations,
-      pt051AssessmentEvaluations,
-      reportEvaluations,
-      postFlightAssessmentDraftTrace
-    };
-  }
-  function downloadDashboardReportTraceReport() {
-    const payload = buildDashboardReportDiagnosticReport();
-    const safeUser = String(payload?.activeContext?.dashboardUserName || currentUserName || "user").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "user";
-    const reportDate = String(date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `dashboard-report-trace-${safeUser}-${reportDate}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
@@ -120941,31 +120246,15 @@ const App = () => {
     });
     if (aliasMatchedLocation) {
       const nextUnits = getUnitOptionsForLocation(aliasMatchedLocation);
-      pushContextSelectorDiag("access:alias-match-location", {
-        from: { school, activeUnitCode },
-        to: {
-          school: aliasMatchedLocation,
-          activeUnitCode: nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode) ? nextUnits[0].code : activeUnitCode
-        },
-        selectableLocationCodes,
-        nextUnitCodes: nextUnits.map((unit) => unit.code)
-      });
       setSchool(aliasMatchedLocation);
       if (nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode)) {
         setActiveUnitCode(nextUnits[0].code);
       }
     } else {
-      pushContextSelectorDiag("access:reset-to-first-selectable-location", {
-        from: { school, activeUnitCode },
-        toLocation: selectableLocationCodes[0],
-        selectableLocationCodes,
-        platformDataScopeQuery,
-        accessibleLocations: platformAccessContext.accessibleLocations
-      });
       changeSchool(selectableLocationCodes[0]);
       setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
     }
-  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, pushContextSelectorDiag, selectableLocationCodes, school]);
+  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformAccessContext.accessibleLocations, platformConfig, platformConfigLoaded, platformDataScopeQuery, selectableLocationCodes, school]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {
@@ -122454,14 +121743,6 @@ const App = () => {
               source: "snapshot-fallback",
               updatedAt: (/* @__PURE__ */ new Date()).toISOString()
             };
-            pushContextSelectorDiag("snapshot:adopt-admin-fallback-context", {
-              targetDate,
-              from: { school, activeUnitCode },
-              to: { school: resolvedSchool, activeUnitCode: resolvedUnit },
-              snapshotKey,
-              resolvedSnapshotKey,
-              fallbackPayload
-            });
             setSchool(resolvedSchool);
             setActiveUnitCode(resolvedUnit);
             try {
@@ -122517,7 +121798,7 @@ const App = () => {
     } finally {
       loadingSnapshotDates.current.delete(snapshotKey);
     }
-  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, hasRuntimePlatformWideAccess, pushContextSelectorDiag, school]);
+  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, hasRuntimePlatformWideAccess, school]);
   reactExports.useEffect(() => {
     if (setupTestProfile || isInitialSetupWizardActive) {
       loadingSnapshotDates.current.clear();
@@ -124578,15 +123859,9 @@ ${"=".repeat(60)}`);
           setCurrencyRequirements(activeUnitDefinitions?.currencyRequirements || merged.requirements);
         }
         if (saved.organisationSettings) {
-          pushContextSelectorDiag("settings:organisation-loaded", {
-            fleetSharingEnabled: saved.organisationSettings.fleetSharingEnabled,
-            selectedUnits: saved.organisationSettings.selectedUnits,
-            resourceSharingGroups: saved.organisationSettings.resourceSharingGroups
-          });
           setOrganisationSettings(saved.organisationSettings);
         } else {
           console.warn("[App] ⚠️ No organisationSettings found in DB data — saved.organisationSettings is:", saved.organisationSettings);
-          pushContextSelectorDiag("settings:organisation-missing");
         }
         pushDfpDataDiag("startup:settings:end", {
           durationMs: Math.round(performance.now() - startedAt),
@@ -124601,13 +123876,11 @@ ${"=".repeat(60)}`);
         });
       } catch (error) {
         console.error("[Settings] ❌ Failed to load settings from DB:", error);
-        pushContextSelectorDiag("settings:load-error", { error: String(error) });
         pushDfpDataDiag("startup:settings:error", {
           durationMs: Math.round(performance.now() - startedAt),
           error: String(error)
         });
       } finally {
-        pushContextSelectorDiag("settings:loaded-flag-true");
         pushDfpDataDiag("startup:settings:loaded-flag-true", {
           durationMs: Math.round(performance.now() - startedAt)
         });
@@ -124946,11 +124219,6 @@ ${"=".repeat(60)}`);
         });
         if (!response.ok) {
           const errorText = await response.text();
-          pushDashboardReportDiag("dashboard:event-completions-fetch-failed", {
-            date,
-            status: response.status,
-            errorText
-          });
           if (!cancelled) setEventCompletionsForDate([]);
           return;
         }
@@ -124959,39 +124227,12 @@ ${"=".repeat(60)}`);
         try {
           data = responseText ? JSON.parse(responseText) : {};
         } catch (parseError) {
-          pushDashboardReportDiag("dashboard:event-completions-non-json-response", {
-            date,
-            status: response.status,
-            url: response.url,
-            contentType: response.headers.get("content-type"),
-            bodyPreview: responseText.slice(0, 300),
-            error: parseError instanceof Error ? parseError.message : String(parseError)
-          });
           if (!cancelled) setEventCompletionsForDate([]);
           return;
         }
         const completions = Array.isArray(data?.completions) ? data.completions : [];
         if (!cancelled) setEventCompletionsForDate(completions);
-        pushDashboardReportDiag("dashboard:event-completions-fetched", {
-          date,
-          status: response.status,
-          url: response.url,
-          contentType: response.headers.get("content-type"),
-          count: completions.length,
-          sample: completions.slice(0, 10).map((completion) => ({
-            scheduleEventId: completion.scheduleEventId,
-            eventCode: completion.eventCode,
-            eventDate: completion.eventDate,
-            instructorName: completion.instructorName,
-            traineeFullName: completion.traineeFullName,
-            dcoResult: completion.dcoResult
-          }))
-        });
       } catch (error) {
-        pushDashboardReportDiag("dashboard:event-completions-fetch-error", {
-          date,
-          error: error instanceof Error ? error.message : String(error)
-        });
         if (!cancelled) setEventCompletionsForDate([]);
       }
     };
@@ -126656,53 +125897,6 @@ ${"=".repeat(60)}`);
   }, [getDailySnapshotLocationAliases, platformAccessContext, school]);
   const hasFullStaffRosterAccess = canUsePlatformPermission("staff.view") && hasPlatformModuleAccessForView("Staff");
   const hasFullTraineeRosterAccess = canUsePlatformPermission("trainee.roster.view") && hasPlatformModuleAccessForView("Trainee");
-  reactExports.useEffect(() => {
-    if (activeView !== "Staff") return;
-    const activeStaff = allInstructorsData.filter(isRecordActive);
-    const locationFilteredStaff = activeStaff.filter(personMatchesActiveLocation);
-    const contextFilteredStaff = activeContextUnitCodeSet.size > 0 ? locationFilteredStaff.filter((person) => {
-      const unitCode = normalisePersonnelUnitCode(person.unit);
-      return !unitCode || activeContextUnitCodeSet.has(unitCode);
-    }) : locationFilteredStaff;
-    pushStaffRosterTrace("render:staff-roster-filter", {
-      dataSourceSettings,
-      activeStaff: {
-        total: activeStaff.length,
-        units: summarisePersonnelUnits(activeStaff),
-        sources: summarisePersonnelSources(activeStaff)
-      },
-      locationFilteredStaff: {
-        total: locationFilteredStaff.length,
-        units: summarisePersonnelUnits(locationFilteredStaff),
-        sources: summarisePersonnelSources(locationFilteredStaff)
-      },
-      contextFilteredStaff: {
-        total: contextFilteredStaff.length,
-        units: summarisePersonnelUnits(contextFilteredStaff),
-        sources: summarisePersonnelSources(contextFilteredStaff)
-      },
-      visibleStaff: {
-        total: instructorsData.length,
-        units: summarisePersonnelUnits(instructorsData),
-        sources: summarisePersonnelSources(instructorsData)
-      },
-      activeContextUnitCodeSet: Array.from(activeContextUnitCodeSet),
-      activeLocationAliases: getDailySnapshotLocationAliases(school),
-      hasFullStaffRosterAccess,
-      selfOnlyProfile: currentUserStaffProfile ? { name: currentUserStaffProfile.name, unit: currentUserStaffProfile.unit, idNumber: currentUserStaffProfile.idNumber } : null
-    });
-  }, [
-    activeContextUnitCodeSet,
-    activeView,
-    allInstructorsData,
-    currentUserStaffProfile,
-    dataSourceSettings,
-    getDailySnapshotLocationAliases,
-    hasFullStaffRosterAccess,
-    instructorsData,
-    personMatchesActiveLocation,
-    school
-  ]);
   const canAccessView = reactExports.useCallback((view2) => {
     if (view2 === "MyDashboard") return true;
     if (view2 === "Settings") {
@@ -127480,22 +126674,17 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const generateAssessmentRequiredDraftTrainingReport = async (sourceEvent, dcoResult = "", generationReason = "post-flight-completion") => {
     const operationalModel = normaliseOperationalModel(activeOperationalModel);
-    const traceBase = {
+    ({
       eventId: sourceEvent.id,
       eventCode: sourceEvent.flightNumber || sourceEvent.eventCode || null,
       date: sourceEvent.date,
-      operationalModel,
-      dcoResult,
       instructor: sourceEvent.instructor || null,
       pilot: sourceEvent.pilot || null,
       student: sourceEvent.student || null,
       fixedCrewPic: sourceEvent.fixedCrewPic || null,
-      personnelRefs: Array.isArray(sourceEvent.personnelRefs) ? sourceEvent.personnelRefs : [],
-      generationReason
-    };
-    pushDashboardReportDiag("postflight:draft-generator:invoked", traceBase);
+      personnelRefs: Array.isArray(sourceEvent.personnelRefs) ? sourceEvent.personnelRefs : []
+    });
     if (operationalModel !== "flight_school" && operationalModel !== "air_combat" && !isFixedCrewLikeOperationalModel(operationalModel)) {
-      pushDashboardReportDiag("postflight:draft-generator:skipped-operational-model", traceBase);
       return;
     }
     const instructorRefName = sourceEvent.personnelRefs?.find((ref) => ref.personType === "staff" && ref.role === "instructor")?.name;
@@ -127503,59 +126692,21 @@ ${error instanceof Error ? error.message : String(error)}`,
     const pilotStaffRefName = sourceEvent.personnelRefs?.find((ref) => ref.personType === "staff" && ref.role === "pilot")?.name;
     const staffName = operationalModel === "flight_school" ? instructorRefName || sourceEvent.instructor || fixedCrewPicRefName || sourceEvent.fixedCrewPic || pilotStaffRefName || sourceEvent.crew || "" : isFixedCrewLikeOperationalModel(operationalModel) ? fixedCrewPicRefName || sourceEvent.fixedCrewPic || pilotStaffRefName || sourceEvent.pilot || instructorRefName || sourceEvent.instructor || sourceEvent.crew || "" : pilotStaffRefName || sourceEvent.pilot || fixedCrewPicRefName || sourceEvent.fixedCrewPic || instructorRefName || sourceEvent.instructor || sourceEvent.crew || "";
     const eventCode2 = String(sourceEvent.flightNumber || sourceEvent.eventCode || "").trim();
-    pushDashboardReportDiag("postflight:draft-generator:resolved-staff-candidate", {
-      ...traceBase,
-      instructorRefName: instructorRefName || null,
-      fixedCrewPicRefName: fixedCrewPicRefName || null,
-      pilotStaffRefName: pilotStaffRefName || null,
-      staffName: staffName || null,
-      eventCode: eventCode2
-    });
     if (!staffName || !eventCode2) {
-      pushDashboardReportDiag("postflight:draft-generator:skipped-missing-staff-or-code", {
-        ...traceBase,
-        staffName: staffName || null,
-        eventCode: eventCode2
-      });
       return;
     }
     const staff = allInstructorsData.find((person) => person.name === staffName);
     if (!staff) {
       console.warn(`[PostFlight] Training report skipped: staff not found for ${staffName}`);
-      pushDashboardReportDiag("postflight:draft-generator:skipped-staff-not-found", {
-        ...traceBase,
-        staffName,
-        availableSimilarStaff: allInstructorsData.filter((person) => String(person.name || "").toLowerCase().includes(String(staffName).split(",")[0]?.trim().toLowerCase() || "")).slice(0, 10).map((person) => ({ id: person.id || null, idNumber: person.idNumber, name: person.name, rank: person.rank, unit: person.unit }))
-      });
       return;
     }
     const matchingItem = syllabusDetails.find((item) => item.isActive !== false && String(item.code || "").trim().toUpperCase() === eventCode2.toUpperCase() && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType));
     if (!matchingItem) {
       logRoutineAppDebug(`[PostFlight] Training report skipped: ${eventCode2} is not a course/training package syllabus event`);
-      pushDashboardReportDiag("postflight:draft-generator:skipped-syllabus-not-found", {
-        ...traceBase,
-        staff: { id: staff.id || null, idNumber: staff.idNumber, name: staff.name, rank: staff.rank, unit: staff.unit },
-        eventCode: eventCode2,
-        candidateSyllabusCodes: syllabusDetails.filter((item) => String(item.code || "").trim().toUpperCase().includes(eventCode2.toUpperCase()) || eventCode2.toUpperCase().includes(String(item.code || "").trim().toUpperCase())).slice(0, 12).map((item) => ({ id: item.id, code: item.code, type: item.type, lmpType: item.lmpType, module: item.module, courses: item.courses, isActive: item.isActive, assessmentRequired: item.assessmentRequired }))
-      });
       return;
     }
     if (matchingItem.assessmentRequired !== true) {
       logRoutineAppDebug(`[PostFlight] Training report skipped: ${eventCode2} does not have Assessment required selected`);
-      pushDashboardReportDiag("postflight:draft-generator:skipped-assessment-not-required", {
-        ...traceBase,
-        staff: { id: staff.id || null, idNumber: staff.idNumber, name: staff.name, rank: staff.rank, unit: staff.unit },
-        matchingItem: {
-          id: matchingItem.id,
-          code: matchingItem.code,
-          type: matchingItem.type,
-          lmpType: matchingItem.lmpType,
-          module: matchingItem.module,
-          courses: matchingItem.courses,
-          isActive: matchingItem.isActive,
-          assessmentRequired: matchingItem.assessmentRequired
-        }
-      });
       return;
     }
     const preferences = { ...staff.preferences || {} };
@@ -127631,14 +126782,6 @@ ${error instanceof Error ? error.message : String(error)}`,
     const dbId = updatedStaff.id;
     if (dbId) {
       const sessionToken = localStorage.getItem("dfp_session_token") || "";
-      pushDashboardReportDiag("postflight:draft-generator:patch-personnel-start", {
-        ...traceBase,
-        reportId: report.id,
-        dbId,
-        staffName: staff.name,
-        staffIdNumber: staff.idNumber,
-        hasSessionToken: Boolean(sessionToken)
-      });
       const response = await fetch(`/api/personnel/${dbId}`, {
         method: "PATCH",
         credentials: "include",
@@ -127650,22 +126793,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
       if (!response.ok) {
         const errorText = await response.text();
-        pushDashboardReportDiag("postflight:draft-generator:patch-personnel-failed", {
-          ...traceBase,
-          reportId: report.id,
-          dbId,
-          staffName: staff.name,
-          status: response.status,
-          errorText
-        });
         throw new Error(errorText || `Failed to save Air Combat post-flight draft report (${response.status})`);
       }
-      pushDashboardReportDiag("postflight:draft-generator:patch-personnel-ok", {
-        ...traceBase,
-        reportId: report.id,
-        dbId,
-        staffName: staff.name
-      });
     }
     setInstructorsData((prev) => prev.map((person) => dbId ? person.id === dbId ? updatedStaff : person : person.idNumber === updatedStaff.idNumber ? updatedStaff : person));
     const traineeNameKey = String(report.traineeFullName || "").replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
@@ -127683,14 +126812,6 @@ ${error instanceof Error ? error.message : String(error)}`,
       existingReport ? "Edit" : "Create",
       `${existingReport ? "Updated" : "Generated"} draft ${report.reportName} from ${generationReason === "event-ended" ? "ended Ground/CPT event" : `post-flight ${dcoResult}`} for ${report.staffName} - Event: ${report.eventCode}`
     );
-    pushDashboardReportDiag("postflight:draft-generator:completed", {
-      ...traceBase,
-      reportId: report.id,
-      existingReport: Boolean(existingReport),
-      staffName: staff.name,
-      staffIdNumber: staff.idNumber,
-      eventCode: eventCode2
-    });
     logRoutineAppDebug(`[Training Reports] ✅ Draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${generationReason}${dcoResult ? `/${dcoResult}` : ""})`);
   };
   reactExports.useEffect(() => {
@@ -127736,57 +126857,24 @@ ${error instanceof Error ? error.message : String(error)}`,
       const reconcileKey = `${date}:${completion.scheduleEventId || completion.id || completion.eventCode || "unknown"}`;
       if (dashboardReportReconcileKeysRef.current.has(reconcileKey)) return;
       if (!event) {
-        pushDashboardReportDiag("dashboard:report-reconcile:skipped-event-not-found", {
-          reconcileKey,
-          completion
-        });
         dashboardReportReconcileKeysRef.current.add(reconcileKey);
         return;
       }
       if (!isEventInActiveUnitContext(event)) {
-        pushDashboardReportDiag("dashboard:report-reconcile:skipped-context", {
-          reconcileKey,
-          eventId: event.id,
-          eventCode: event.flightNumber || event.eventCode || null,
-          eventUnit: event.unit || event.unitCode || null
-        });
         dashboardReportReconcileKeysRef.current.add(reconcileKey);
         return;
       }
       const matchingItem = findAssessmentRequiredItem(event);
       if (!matchingItem) {
-        pushDashboardReportDiag("dashboard:report-reconcile:skipped-not-assessment-required", {
-          reconcileKey,
-          eventId: event.id,
-          eventCode: event.flightNumber || event.eventCode || null
-        });
         dashboardReportReconcileKeysRef.current.add(reconcileKey);
         return;
       }
       if (hasExistingReport(event)) {
-        pushDashboardReportDiag("dashboard:report-reconcile:skipped-existing-report", {
-          reconcileKey,
-          eventId: event.id,
-          eventCode: event.flightNumber || event.eventCode || null
-        });
         dashboardReportReconcileKeysRef.current.add(reconcileKey);
         return;
       }
       dashboardReportReconcileKeysRef.current.add(reconcileKey);
-      pushDashboardReportDiag("dashboard:report-reconcile:creating-draft", {
-        reconcileKey,
-        eventId: event.id,
-        eventCode: event.flightNumber || event.eventCode || null,
-        completionId: completion.id || null,
-        instructorName: completion.instructorName || event.instructor || null
-      });
       generateAssessmentRequiredDraftTrainingReport(event, completion.dcoResult).catch((error) => {
-        pushDashboardReportDiag("dashboard:report-reconcile:create-draft-failed", {
-          reconcileKey,
-          eventId: event.id,
-          eventCode: event.flightNumber || event.eventCode || null,
-          error: error instanceof Error ? error.message : String(error)
-        });
       });
     });
   }, [
@@ -127856,23 +126944,10 @@ ${error instanceof Error ? error.message : String(error)}`,
     eventsForDate.filter((event) => event.type === "ground" || event.type === "cpt").forEach((event) => {
       const eventCode2 = event.flightNumber || event.eventCode || "";
       if (!isEventInActiveUnitContext(event)) {
-        pushDashboardReportDiag("dashboard:event-ended-reconcile:skipped-context", {
-          reconcileKey: `event-ended:${event.date || date}:${event.id || eventCode2}`,
-          eventId: event.id,
-          eventCode: eventCode2,
-          eventType: event.type,
-          eventUnit: event.unit || event.unitCode || null
-        });
         return;
       }
       const matchingItem = findAssessmentRequiredItem(event);
       if (!matchingItem) {
-        pushDashboardReportDiag("dashboard:event-ended-reconcile:skipped-not-assessment-required", {
-          reconcileKey: `event-ended:${event.date || date}:${event.id || eventCode2}`,
-          eventId: event.id,
-          eventCode: eventCode2,
-          eventType: event.type
-        });
         return;
       }
       const eventEndMs = getEventEndMs(event);
@@ -127881,12 +126956,6 @@ ${error instanceof Error ? error.message : String(error)}`,
       }
       const traineeNames = getGroundCptTrainees(event);
       if (traineeNames.length === 0) {
-        pushDashboardReportDiag("dashboard:event-ended-reconcile:skipped-no-trainees", {
-          reconcileKey: `event-ended:${event.date || date}:${event.id || eventCode2}`,
-          eventId: event.id,
-          eventCode: eventCode2,
-          eventType: event.type
-        });
         return;
       }
       traineeNames.forEach((traineeName) => {
@@ -127895,38 +126964,14 @@ ${error instanceof Error ? error.message : String(error)}`,
         if (dashboardReportReconcileKeysRef.current.has(reconcileKey)) return;
         if (hasExistingReport(event, traineeName)) {
           dashboardReportReconcileKeysRef.current.add(reconcileKey);
-          pushDashboardReportDiag("dashboard:event-ended-reconcile:skipped-existing-report", {
-            reconcileKey,
-            eventId: event.id,
-            eventCode: eventCode2,
-            eventType: event.type,
-            traineeFullName: traineeName
-          });
           return;
         }
         dashboardReportReconcileKeysRef.current.add(reconcileKey);
-        pushDashboardReportDiag("dashboard:event-ended-reconcile:creating-draft", {
-          reconcileKey,
-          eventId: event.id,
-          eventCode: eventCode2,
-          eventType: event.type,
-          endTime: Number(event.startTime || 0) + Number(event.duration || 0),
-          instructorName: event.instructor || null,
-          traineeFullName: traineeName
-        });
         generateAssessmentRequiredDraftTrainingReport(
           { ...event, student: traineeName },
           "",
           "event-ended"
         ).catch((error) => {
-          pushDashboardReportDiag("dashboard:event-ended-reconcile:create-draft-failed", {
-            reconcileKey,
-            eventId: event.id,
-            eventCode: eventCode2,
-            eventType: event.type,
-            traineeFullName: traineeName,
-            error: error instanceof Error ? error.message : String(error)
-          });
         });
       });
     });
@@ -128996,25 +128041,12 @@ ${error instanceof Error ? error.message : String(error)}`,
       };
       const previousStoredContext = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
       localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
-      pushContextSelectorDiag("persist:explicit-context-selection", { payload, source, previousStoredContext });
     } catch (error) {
-      pushContextSelectorDiag("persist:explicit-context-selection-error", { source, error: String(error) });
     }
   };
   const changeSchool = (newSchool) => {
     const nextUnit = getDefaultUnitForSchool(newSchool);
-    pushContextSelectorDiag("action:change-school", {
-      from: { school, activeUnitCode },
-      to: { school: newSchool, activeUnitCode: nextUnit },
-      availableUnits: getUnitOptionsForLocation(newSchool).map((unit) => ({
-        code: unit.code,
-        disabled: unit.disabled === true,
-        disabledReason: unit.disabledReason || "",
-        isSharedFleetContext: unit.isSharedFleetContext === true,
-        memberUnits: unit.memberUnits || []
-      }))
-    });
-    persistOperationalContextSelection(newSchool, nextUnit, "changeSchool");
+    persistOperationalContextSelection(newSchool, nextUnit);
     setSchool(newSchool);
     setActiveUnitCode(nextUnit);
     setIsLocalityChangeVisible(true);
@@ -129024,12 +128056,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool, unitOverride: nextUnit, allowAdminFallbackContext: false });
   };
   const changeOperationalContext = (newSchool, newUnit) => {
-    pushContextSelectorDiag("action:change-operational-context", {
-      from: { school, activeUnitCode },
-      to: { school: newSchool, activeUnitCode: newUnit },
-      selectedOption: getUnitOptionsForLocation(newSchool).find((unit) => unit.code === newUnit) || null
-    });
-    persistOperationalContextSelection(newSchool, newUnit, "changeOperationalContext");
+    persistOperationalContextSelection(newSchool, newUnit);
     setSchool(newSchool);
     setActiveUnitCode(newUnit);
     setIsLocalityChangeVisible(true);
@@ -135797,14 +134824,6 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         fetch(traineesUrl, { credentials: "include" })
       ]);
       logRoutineAppDebug("[Poll] Personnel response:", personnelRes.status, "Trainees response:", traineesRes.status);
-      pushStaffRosterTrace("poll:response-status", {
-        personnelUrl,
-        traineesUrl,
-        personnelStatus: personnelRes.status,
-        personnelOk: personnelRes.ok,
-        traineesStatus: traineesRes.status,
-        traineesOk: traineesRes.ok
-      });
       let pollChanged = false;
       if (personnelRes.ok) {
         const personnelData2 = await personnelRes.json();
@@ -135814,40 +134833,10 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           _dataSource: "database"
         }));
         logRoutineAppDebug("[Poll] Fetched", dbPersonnel.length, "personnel. Unavailability total:", dbPersonnel.reduce((sum, p) => sum + (p.unavailability?.length || 0), 0));
-        pushStaffRosterTrace("poll:personnel-payload", {
-          count: dbPersonnel.length,
-          units: summarisePersonnelUnits(dbPersonnel),
-          sources: summarisePersonnelSources(dbPersonnel),
-          sample: dbPersonnel.slice(0, 12).map((person) => ({
-            name: person.name,
-            unit: person.unit,
-            location: person.location,
-            role: person.role,
-            source: person._dataSource
-          }))
-        });
         setInstructorsData((prev) => {
           const nextPersonnel = mergePolledDatabasePeople(prev, dbPersonnel, dataSourceSettings.staff === true);
           const prevHash = buildPersonnelStatusHash(prev);
           const newHash = buildPersonnelStatusHash(nextPersonnel);
-          pushStaffRosterTrace("poll:personnel-merge", {
-            changed: prevHash !== newHash,
-            previous: {
-              total: prev.length,
-              units: summarisePersonnelUnits(prev),
-              sources: summarisePersonnelSources(prev)
-            },
-            polled: {
-              total: dbPersonnel.length,
-              units: summarisePersonnelUnits(dbPersonnel),
-              sources: summarisePersonnelSources(dbPersonnel)
-            },
-            next: {
-              total: nextPersonnel.length,
-              units: summarisePersonnelUnits(nextPersonnel),
-              sources: summarisePersonnelSources(nextPersonnel)
-            }
-          });
           if (prevHash === newHash) return prev;
           logRoutineAppDebug("[Poll] Personnel availability/status CHANGED - updating state");
           pollChanged = true;
@@ -135878,9 +134867,6 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       return pollChanged;
     } catch (e) {
       console.error("[Poll] Error during poll:", e);
-      pushStaffRosterTrace("poll:error", {
-        error: e instanceof Error ? e.message : String(e)
-      });
       return false;
     }
   }, [buildPersonnelStatusHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing, mergePolledDatabasePeople, scopedApiPath]);
@@ -139476,7 +138462,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           const parts = text.split(/\s+/).filter(Boolean);
           return parts.length > 1 ? `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(" ")}` : text;
         })();
-        const pt051ReportRowsForDashboard = Array.from(pt051Assessments.values()).filter((assessment) => !assessment.isCompleted && (assessment.dcoResult === "DCO" || assessment.dcoResult === "DPCO") && normaliseDashboardName(assessment.instructorName) === normaliseDashboardName(dashboardUserSurnameFirst)).map((assessment) => ({
+        Array.from(pt051Assessments.values()).filter((assessment) => !assessment.isCompleted && (assessment.dcoResult === "DCO" || assessment.dcoResult === "DPCO") && normaliseDashboardName(assessment.instructorName) === normaliseDashboardName(dashboardUserSurnameFirst)).map((assessment) => ({
           id: assessment.id,
           eventId: assessment.eventId,
           flightNumber: assessment.flightNumber,
@@ -139487,29 +138473,6 @@ ${error instanceof Error ? error.message : String(error)}`,
           startsWithDashboardDue: String(assessment.id || "").startsWith("dashboard-due-"),
           hasMatchingCompletion: eventCompletionsForDate.some((completion) => assessment.eventId && completion.scheduleEventId === assessment.eventId || normaliseDashboardContextCode(completion.eventCode) === normaliseDashboardContextCode(assessment.flightNumber) && String(completion.eventDate || completion.date || "") === String(assessment.date || ""))
         }));
-        pushDashboardReportDiag("dashboard:reports-to-complete-render", {
-          dashboardUserName,
-          dashboardUserSurnameFirst,
-          activeContextUnitCodes,
-          activeUnitCode,
-          activeOperationalModel,
-          eventCompletionsForDateCount: eventCompletionsForDate.length,
-          pt051AssessmentsTotal: pt051Assessments.size,
-          pt051RowsForDashboardCount: pt051ReportRowsForDashboard.length,
-          pt051RowsForDashboard: pt051ReportRowsForDashboard.slice(0, 20),
-          pendingTrainingReportsCount: pendingTrainingReports.length,
-          pendingTrainingReports: pendingTrainingReports.slice(0, 20).map((entry) => ({
-            reportId: entry.report.id,
-            eventId: entry.report.eventId || null,
-            eventCode: entry.report.eventCode || null,
-            date: entry.report.date || null,
-            status: entry.report.status || null,
-            dcoResult: entry.report.dcoResult || null,
-            dashboardAcknowledgedAt: entry.report.dashboardAcknowledgedAt || null,
-            staffName: entry.staff.name,
-            staffIdNumber: entry.staff.idNumber
-          }))
-        });
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           MyDashboard,
           {
@@ -139574,27 +138537,9 @@ ${error instanceof Error ? error.message : String(error)}`,
                   isCompleted: false,
                   groundSchoolAssessment: { isAssessment: false }
                 };
-                pushDashboardReportDiag("dashboard:training-report-open-direct", {
-                  reportId: dashboardReport.id,
-                  eventId: linkedEvent.id,
-                  eventCode: dashboardReport.eventCode,
-                  traineeFullName: linkedTrainee.fullName,
-                  instructorName: linkedEvent.instructor || dashboardReport.instructorName || entry.staff.name,
-                  usedExistingAssessment: Boolean(existingAssessment)
-                });
                 openPt051FromTraineeProfile(linkedTrainee, assessmentForReport);
                 return;
               }
-              pushDashboardReportDiag("dashboard:training-report-open-staff-profile-fallback", {
-                reportId: dashboardReport.id,
-                eventId: dashboardReport.eventId || null,
-                eventCode: dashboardReport.eventCode,
-                reportDate: dashboardReport.date,
-                linkedEventFound: Boolean(linkedEvent),
-                linkedTraineeName: linkedTraineeName || null,
-                linkedTraineeFound: Boolean(linkedTrainee),
-                operationalModel: activeOperationalModel
-              });
               const selectedStaff = allInstructorsData.find((staff) => entry.staff.id ? staff.id === entry.staff.id : staff.idNumber === entry.staff.idNumber) || entry.staff;
               const reportAssignee = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(entry.report.dashboardAssigneeName || dashboardUserName)) || dashboardStaff;
               const assessorName = reportAssignee ? `${reportAssignee.rank || ""} ${reportAssignee.name}`.trim() : entry.report.instructorName || entry.report.dashboardAssigneeName || dashboardUserName;
@@ -140624,17 +139569,6 @@ Do you want to replace the existing entry?`,
                       try {
                         ecData = ecResponseText ? JSON.parse(ecResponseText) : {};
                       } catch (parseError) {
-                        pushDashboardReportDiag("postflight:event-completion-non-json-response", {
-                          eventId: eventForPostFlight?.id || null,
-                          eventCode: completionPayload.eventCode,
-                          traineeFullName: completionPayload.traineeFullName,
-                          instructorName: completionPayload.instructorName || null,
-                          status: ecRes.status,
-                          url: ecRes.url,
-                          contentType: ecRes.headers.get("content-type"),
-                          bodyPreview: ecResponseText.slice(0, 300),
-                          error: parseError instanceof Error ? parseError.message : String(parseError)
-                        });
                         throw parseError;
                       }
                       logRoutineAppDebug(
@@ -140642,28 +139576,11 @@ Do you want to replace the existing entry?`,
                       );
                     } else {
                       console.warn("[PostFlight] EventCompletion save failed:", ecRes.status, ecResponseText);
-                      pushDashboardReportDiag("postflight:event-completion-save-failed", {
-                        eventId: eventForPostFlight?.id || null,
-                        eventCode: completionPayload.eventCode,
-                        traineeFullName: completionPayload.traineeFullName,
-                        instructorName: completionPayload.instructorName || null,
-                        status: ecRes.status,
-                        url: ecRes.url,
-                        contentType: ecRes.headers.get("content-type"),
-                        bodyPreview: ecResponseText.slice(0, 300)
-                      });
                     }
                   } catch (ecErr) {
                     console.warn("[PostFlight] EventCompletion fetch threw:", ecErr);
                   }
                 }
-                pushDashboardReportDiag("postflight:on-save:assessment-draft-guard", {
-                  eventId: eventForPostFlight?.id || null,
-                  eventCode: eventForPostFlight?.flightNumber || eventForPostFlight?.eventCode || null,
-                  eventDate: eventForPostFlight?.date || null,
-                  result: data.result || null,
-                  willAttempt: Boolean(eventForPostFlight && (data.result === "DCO" || data.result === "DPCO"))
-                });
                 if (eventForPostFlight && (data.result === "DCO" || data.result === "DPCO")) {
                   try {
                     await generateAssessmentRequiredDraftTrainingReport(
@@ -140672,11 +139589,6 @@ Do you want to replace the existing entry?`,
                     );
                   } catch (airCombatReportErr) {
                     console.warn("[PostFlight] Assessment-required draft training report generation failed:", airCombatReportErr);
-                    pushDashboardReportDiag("postflight:on-save:assessment-draft-error", {
-                      eventId: eventForPostFlight.id,
-                      eventCode: eventForPostFlight.flightNumber || eventForPostFlight.eventCode || null,
-                      error: airCombatReportErr instanceof Error ? airCombatReportErr.message : String(airCombatReportErr)
-                    });
                   }
                 }
                 if (data.currencyUpdates && Object.keys(data.currencyUpdates).length > 0) {
@@ -142499,36 +141411,6 @@ Do you want to replace the existing entry?`,
           className: "rounded border border-gray-600/50 px-1.5 py-0.5 text-gray-300 transition-colors hover:border-gray-500 hover:text-white disabled:cursor-wait disabled:opacity-60",
           title: "Manually refresh mobile unavailability and alert responses",
           children: isManualSyncing ? "Syncing" : "Sync Now"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: downloadStaffRosterTraceReport,
-          className: "rounded border border-cyan-500/40 px-1.5 py-0.5 text-cyan-200 transition-colors hover:border-cyan-300/70 hover:text-white",
-          title: "Download staff roster context trace",
-          children: "Staff Trace"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: downloadContextSelectorTraceReport,
-          className: "rounded border border-violet-500/40 px-1.5 py-0.5 text-violet-200 transition-colors hover:border-violet-300/70 hover:text-white",
-          title: "Download locality/unit context trace",
-          children: "Context Trace"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: downloadDashboardReportTraceReport,
-          className: "rounded border border-amber-500/40 px-1.5 py-0.5 text-amber-200 transition-colors hover:border-amber-300/70 hover:text-white",
-          title: "Download My Home reports-to-complete trace",
-          children: "Report Trace"
         }
       )
     ] })
