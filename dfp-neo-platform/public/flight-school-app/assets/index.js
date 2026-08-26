@@ -40541,16 +40541,16 @@ const fetchDashboardMessagesFromApi = async (userName, userId) => {
   const data = await response.json();
   return Array.isArray(data.messages) ? data.messages : [];
 };
-const sendDashboardMessageToApi = async (message) => {
+const sendDashboardMessagesToApi = async (messages) => {
   const response = await fetch("/api/dashboard-messages", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message })
+    body: JSON.stringify({ messages })
   });
-  if (!response.ok) throw new Error(`Dashboard message send failed: ${response.status}`);
+  if (!response.ok) throw new Error(`Dashboard messages send failed: ${response.status}`);
   const data = await response.json();
-  return data.message || message;
+  return Array.isArray(data.messages) ? data.messages : messages;
 };
 const fetchDashboardMessageGroupsFromApi = async (ownerId, userName, unitCode) => {
   const params = new URLSearchParams();
@@ -40894,6 +40894,22 @@ const MyDashboard = ({
       return message.fromId === dashboardSenderContactId && message.toId === contactKey || message.fromId === contactKey && message.toId === dashboardSenderContactId || !message.fromId && !message.toId && (from === dashboardUserKey && to === normaliseDashboardContactName(selectedMessageContact.name) || from === normaliseDashboardContactName(selectedMessageContact.name) && to === dashboardUserKey);
     }).sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
   }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey, selectedMessageContact]);
+  const visibleActiveConversationMessages = reactExports.useMemo(() => {
+    const visible = /* @__PURE__ */ new Map();
+    activeConversationMessages.forEach((message) => {
+      const key = message.groupId ? [
+        "group",
+        message.groupId,
+        message.fromId || message.from,
+        message.body,
+        message.sentAt
+      ].join("|") : message.id;
+      if (!visible.has(key)) {
+        visible.set(key, message);
+      }
+    });
+    return Array.from(visible.values()).sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+  }, [activeConversationMessages]);
   const downloadDashboardMessageTraceReport = () => {
     const now = /* @__PURE__ */ new Date();
     const trace = {
@@ -40941,7 +40957,8 @@ const MyDashboard = ({
         messages: dashboardMessages.length,
         conversations: messageConversations.length,
         unread: unreadMessages.length,
-        activeConversationMessages: activeConversationMessages.length
+        activeConversationMessages: activeConversationMessages.length,
+        visibleActiveConversationMessages: visibleActiveConversationMessages.length
       },
       groups: dashboardMessageGroups,
       conversations: messageConversations.map((conversation) => ({
@@ -40950,6 +40967,7 @@ const MyDashboard = ({
         unreadCount: conversation.unreadCount
       })),
       activeConversationMessages,
+      visibleActiveConversationMessages,
       userScopedMessages: dashboardMessages.filter((message) => messageBelongsToDashboardUser(message))
     };
     const safeUser = normaliseDashboardContactName(dashboardMessageUserName).replace(/[^a-z0-9]+/g, "-") || "user";
@@ -40963,7 +40981,7 @@ const MyDashboard = ({
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-  const latestConversationMessageId = activeConversationMessages[activeConversationMessages.length - 1]?.id || "";
+  const latestConversationMessageId = visibleActiveConversationMessages[visibleActiveConversationMessages.length - 1]?.id || "";
   reactExports.useEffect(() => {
     if (!isMessagesOpen || messageView !== "compose" || !selectedMessageContact || !activeConversationEndRef.current) return;
     const frame = window.requestAnimationFrame(() => {
@@ -41255,7 +41273,7 @@ const MyDashboard = ({
     }
     setMessageDraft("");
     try {
-      const savedMessages = await Promise.all(nextMessages.map((message) => sendDashboardMessageToApi(message)));
+      const savedMessages = await sendDashboardMessagesToApi(nextMessages);
       persistDashboardMessages((messages) => mergeDashboardMessages(messages, savedMessages));
     } catch (error) {
       console.error("[Dashboard Messages] Send failed:", error);
@@ -41679,8 +41697,8 @@ const MyDashboard = ({
               group.contacts.map((contact) => renderDashboardMessageContactButton(contact, selectMessageContact, true))
             ] }, group.title)) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? activeConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-            activeConversationMessages.map((message) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? visibleActiveConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+            visibleActiveConversationMessages.map((message) => {
               const sentDate = new Date(message.sentAt);
               const timeLabel2 = formatDashboardMessageTime(sentDate);
               const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;

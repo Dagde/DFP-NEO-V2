@@ -445,6 +445,18 @@ const sendDashboardMessageToApi = async (message: DashboardMessage): Promise<Das
     return data.message || message;
 };
 
+const sendDashboardMessagesToApi = async (messages: DashboardMessage[]): Promise<DashboardMessage[]> => {
+    const response = await fetch('/api/dashboard-messages', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages }),
+    });
+    if (!response.ok) throw new Error(`Dashboard messages send failed: ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data.messages) ? data.messages : messages;
+};
+
 const fetchDashboardMessageGroupsFromApi = async (ownerId: string, userName: string, unitCode?: string): Promise<DashboardMessageGroupRecord[]> => {
     const params = new URLSearchParams();
     if (ownerId) params.set('ownerId', ownerId);
@@ -907,6 +919,25 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             })
             .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
     }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey, selectedMessageContact]);
+    const visibleActiveConversationMessages = useMemo(() => {
+        const visible = new Map<string, DashboardMessage>();
+        activeConversationMessages.forEach(message => {
+            const key = message.groupId
+                ? [
+                    'group',
+                    message.groupId,
+                    message.fromId || message.from,
+                    message.body,
+                    message.sentAt,
+                ].join('|')
+                : message.id;
+            if (!visible.has(key)) {
+                visible.set(key, message);
+            }
+        });
+        return Array.from(visible.values())
+            .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+    }, [activeConversationMessages]);
     const downloadDashboardMessageTraceReport = () => {
         const now = new Date();
         const trace = {
@@ -955,6 +986,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 conversations: messageConversations.length,
                 unread: unreadMessages.length,
                 activeConversationMessages: activeConversationMessages.length,
+                visibleActiveConversationMessages: visibleActiveConversationMessages.length,
             },
             groups: dashboardMessageGroups,
             conversations: messageConversations.map(conversation => ({
@@ -963,6 +995,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 unreadCount: conversation.unreadCount,
             })),
             activeConversationMessages,
+            visibleActiveConversationMessages,
             userScopedMessages: dashboardMessages.filter(message => messageBelongsToDashboardUser(message)),
         };
         const safeUser = normaliseDashboardContactName(dashboardMessageUserName).replace(/[^a-z0-9]+/g, '-') || 'user';
@@ -976,7 +1009,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     };
-    const latestConversationMessageId = activeConversationMessages[activeConversationMessages.length - 1]?.id || '';
+    const latestConversationMessageId = visibleActiveConversationMessages[visibleActiveConversationMessages.length - 1]?.id || '';
     useEffect(() => {
         if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || !activeConversationEndRef.current) return;
         const frame = window.requestAnimationFrame(() => {
@@ -1331,7 +1364,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         }
         setMessageDraft('');
         try {
-            const savedMessages = await Promise.all(nextMessages.map(message => sendDashboardMessageToApi(message)));
+            const savedMessages = await sendDashboardMessagesToApi(nextMessages);
             persistDashboardMessages(messages => mergeDashboardMessages(messages, savedMessages));
         } catch (error) {
             console.error('[Dashboard Messages] Send failed:', error);
@@ -1832,9 +1865,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 </div>
                                 <div className="flex-1 overflow-y-auto px-4 py-5">
                                     {selectedMessageContact ? (
-                                        activeConversationMessages.length > 0 ? (
+                                        visibleActiveConversationMessages.length > 0 ? (
                                             <div className="space-y-3">
-                                                {activeConversationMessages.map(message => {
+                                                {visibleActiveConversationMessages.map(message => {
                                                     const sentDate = new Date(message.sentAt);
                                                     const timeLabel = formatDashboardMessageTime(sentDate);
                                                     const dateLabel = `${String(sentDate.getDate()).padStart(2, '0')}/${String(sentDate.getMonth() + 1).padStart(2, '0')}/${String(sentDate.getFullYear()).slice(-2)}`;

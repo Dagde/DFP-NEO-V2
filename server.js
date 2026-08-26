@@ -2022,6 +2022,34 @@ function normaliseDashboardStoredMessages(data) {
     }));
 }
 
+function normaliseDashboardMessageInput(messageInput) {
+  const from = String(messageInput?.from || '').trim();
+  const to = String(messageInput?.to || '').trim();
+  const body = String(messageInput?.body || '').trim();
+  if (!from || !to || !body) return null;
+  return {
+    id: String(messageInput.id || `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    from,
+    to,
+    body,
+    sentAt: messageInput.sentAt || new Date().toISOString(),
+    readAt: messageInput.readAt || undefined,
+    fromId: normaliseDashboardMessageId(messageInput.fromId) || undefined,
+    toId: normaliseDashboardMessageId(messageInput.toId) || undefined,
+    recipientIds: Array.isArray(messageInput.recipientIds)
+      ? Array.from(new Set(messageInput.recipientIds.map(normaliseDashboardMessageId).filter(Boolean)))
+      : undefined,
+    groupId: normaliseDashboardMessageId(messageInput.groupId) || undefined,
+    groupName: String(messageInput.groupName || '').trim() || undefined,
+    groupMemberIds: Array.isArray(messageInput.groupMemberIds)
+      ? Array.from(new Set(messageInput.groupMemberIds.map(normaliseDashboardMessageId).filter(Boolean)))
+      : undefined,
+    groupMemberNames: Array.isArray(messageInput.groupMemberNames)
+      ? Array.from(new Set(messageInput.groupMemberNames.map(name => String(name || '').trim()).filter(Boolean)))
+      : undefined,
+  };
+}
+
 function normaliseDashboardStoredMessageGroups(data) {
   const source = Array.isArray(data)
     ? data
@@ -2155,39 +2183,21 @@ app.get('/api/dashboard-messages', async (req, res) => {
 app.post('/api/dashboard-messages', async (req, res) => {
   try {
     const db = await getPrisma();
-    const messageInput = req.body?.message || req.body || {};
-    const from = String(messageInput.from || '').trim();
-    const to = String(messageInput.to || '').trim();
-    const body = String(messageInput.body || '').trim();
-    if (!from || !to || !body) {
+    const messageInputs = Array.isArray(req.body?.messages)
+      ? req.body.messages
+      : [req.body?.message || req.body || {}];
+    const newMessages = messageInputs
+      .map(normaliseDashboardMessageInput)
+      .filter(Boolean);
+    if (newMessages.length === 0) {
       return res.status(400).json({ error: 'Message requires from, to and body.' });
     }
     const messages = await getDashboardMessages(db);
-    const message = {
-      id: String(messageInput.id || `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
-      from,
-      to,
-      body,
-      sentAt: messageInput.sentAt || new Date().toISOString(),
-      readAt: messageInput.readAt || undefined,
-      fromId: normaliseDashboardMessageId(messageInput.fromId) || undefined,
-      toId: normaliseDashboardMessageId(messageInput.toId) || undefined,
-      recipientIds: Array.isArray(messageInput.recipientIds)
-        ? Array.from(new Set(messageInput.recipientIds.map(normaliseDashboardMessageId).filter(Boolean)))
-        : undefined,
-      groupId: normaliseDashboardMessageId(messageInput.groupId) || undefined,
-      groupName: String(messageInput.groupName || '').trim() || undefined,
-      groupMemberIds: Array.isArray(messageInput.groupMemberIds)
-        ? Array.from(new Set(messageInput.groupMemberIds.map(normaliseDashboardMessageId).filter(Boolean)))
-        : undefined,
-      groupMemberNames: Array.isArray(messageInput.groupMemberNames)
-        ? Array.from(new Set(messageInput.groupMemberNames.map(name => String(name || '').trim()).filter(Boolean)))
-        : undefined,
-    };
-    const deduped = messages.filter(existing => existing.id !== message.id);
-    const nextMessages = [...deduped, message].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+    const newMessageIds = new Set(newMessages.map(message => message.id));
+    const deduped = messages.filter(existing => !newMessageIds.has(existing.id));
+    const nextMessages = [...deduped, ...newMessages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
     await saveDashboardMessages(db, nextMessages);
-    res.json({ success: true, message });
+    res.json({ success: true, message: newMessages[0], messages: newMessages });
   } catch (error) {
     console.error('[Dashboard Messages] POST error:', error);
     res.status(500).json({ error: 'Failed to send dashboard message', details: error.message });
