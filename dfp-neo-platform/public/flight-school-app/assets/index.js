@@ -55302,7 +55302,7 @@ const dateLabel = (value) => {
   });
 };
 const normaliseRole = (value) => String(value || "Unassigned").trim() || "Unassigned";
-const normaliseName$2 = (value) => String(value || "").trim().toLowerCase();
+const normaliseName$1 = (value) => String(value || "").trim().toLowerCase();
 const isPlaceholderCrewValue = (value) => {
   const text = String(value || "").trim();
   return !text || /^TBA$/i.test(text) || /^Pooled Crew$/i.test(text) || /^Solo$/i.test(text);
@@ -55319,8 +55319,8 @@ const eventStaffNames = (event) => {
 };
 const eventPicName = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim();
 const eventPartnerNames = (event) => {
-  const picKey = normaliseName$2(eventPicName(event));
-  return eventStaffNames(event).filter((name) => normaliseName$2(name) !== picKey);
+  const picKey = normaliseName$1(eventPicName(event));
+  return eventStaffNames(event).filter((name) => normaliseName$1(name) !== picKey);
 };
 const eventCode = (event) => String(event.eventCode || event.flightNumber || event.taskingDisplayLabel || event.taskingName || "").trim().toUpperCase();
 const isTaskingEvent = (event) => Boolean(event.isTaskingRequest || event.taskingRequestId || event.taskingName);
@@ -55355,7 +55355,7 @@ const AirCombatIntelligenceTab = ({
     const scheduledRoleCounts = /* @__PURE__ */ new Map();
     const staffByName = /* @__PURE__ */ new Map();
     instructorsData.forEach((person) => {
-      staffByName.set(normaliseName$2(person.name), person);
+      staffByName.set(normaliseName$1(person.name), person);
       const role = normaliseRole(person.role);
       roleCounts.set(role, Number(roleCounts.get(role) || 0) + 1);
     });
@@ -55379,7 +55379,7 @@ const AirCombatIntelligenceTab = ({
     const soloAnomalies = isFixedCrewLike ? flightEvents.filter((event) => event.flightType === "Solo" || event.soloOrDual === "Solo" || /^Solo$/i.test(String(event.crew || "").trim()) || eventPartnerNames(event).length === 0) : [];
     const uniqueCrew = new Set(activeEvents.flatMap(eventStaffNames));
     uniqueCrew.forEach((name) => {
-      const staff = staffByName.get(normaliseName$2(name));
+      const staff = staffByName.get(normaliseName$1(name));
       if (!staff) return;
       const role = normaliseRole(staff.role);
       scheduledRoleCounts.set(role, Number(scheduledRoleCounts.get(role) || 0) + 1);
@@ -90930,7 +90930,7 @@ const isProgressEvent = (item) => {
   return (item.type === "Flight" || item.type === "FTD") && !item.isRemedial && !item.id.includes(" MB") && !item.code.includes(" MB");
 };
 const getEventCode = (item) => (item.code || item.id || "").trim();
-const normaliseName$1 = (name) => name.replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").trim();
+const normaliseName = (name) => name.replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").trim();
 const getAssessmentDate = (assessment) => {
   if (!assessment.date) return null;
   const date = /* @__PURE__ */ new Date(`${assessment.date}T00:00:00`);
@@ -90961,11 +90961,11 @@ const mergeLmpCompletedEventDates = (completed, items, validEventCodes, eventIdT
   });
 };
 const getCompletedEventDates = (trainee, individualLMP, validEventCodes, eventIdToCode, pt051Assessments) => {
-  const traineeNames = new Set([trainee.fullName, trainee.name, normaliseName$1(trainee.fullName), normaliseName$1(trainee.name)].filter(Boolean));
+  const traineeNames = new Set([trainee.fullName, trainee.name, normaliseName(trainee.fullName), normaliseName(trainee.name)].filter(Boolean));
   const completed = /* @__PURE__ */ new Map();
   pt051Assessments.forEach((assessment) => {
     if (!isCompletedTrainingReport(assessment)) return;
-    if (!traineeNames.has(assessment.traineeFullName) && !traineeNames.has(normaliseName$1(assessment.traineeFullName))) return;
+    if (!traineeNames.has(assessment.traineeFullName) && !traineeNames.has(normaliseName(assessment.traineeFullName))) return;
     const rawEventCode = getAssessmentEventCode(assessment);
     const eventCode2 = eventIdToCode.get(rawEventCode) || rawEventCode;
     if (!validEventCodes.has(eventCode2)) return;
@@ -127041,11 +127041,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       const completionStart = Number(completion.startTime ?? NaN);
       return eventsForDate.find((event) => event.id === completion.scheduleEventId) || eventsForDate.find((event) => normaliseCode2(event.flightNumber || event.eventCode) === completionCode && String(event.date || date || "").trim() === completionDate && (Number.isNaN(completionStart) || Math.abs(Number(event.startTime || 0) - completionStart) < 0.01));
     };
-    const normaliseName2 = (value) => String(value || "").replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
-    const hasExistingReport = (event, traineeName) => {
+    const hasExistingReport = (event) => {
       const eventCode2 = normaliseCode2(event.flightNumber || event.eventCode);
-      const traineeKey = normaliseName2(traineeName);
-      return allInstructorsData.some((staff) => normaliseAirCombatTrainingReports(staff.preferences).some((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseName2(report.traineeFullName) === traineeKey && (event.id && report.eventId === event.id || normaliseCode2(report.eventCode) === eventCode2 && String(report.date || "") === String(event.date || date || ""))));
+      return allInstructorsData.some((staff) => normaliseAirCombatTrainingReports(staff.preferences).some((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && (event.id && report.eventId === event.id || normaliseCode2(report.eventCode) === eventCode2 && String(report.date || "") === String(event.date || date || ""))));
     };
     eventCompletionsForDate.filter((completion) => completion?.dcoResult === "DCO" || completion?.dcoResult === "DPCO").forEach((completion) => {
       const event = eventByCompletion(completion);
@@ -127150,9 +127148,24 @@ ${error instanceof Error ? error.message : String(error)}`,
       const dayStartMs = new Date(Number(year), Number(month) - 1, Number(day), 0, 0, 0, 0).getTime();
       return dayStartMs + Math.round(endTime * 60 * 60 * 1e3);
     };
-    const hasExistingReport = (event) => {
+    const normaliseName2 = (value) => String(value || "").replace(/[‐‑‒–—]/g, "-").replace(/\s+/g, " ").trim().toLowerCase();
+    const getGroundCptTrainees = (event) => {
+      const trainees = [
+        event.student,
+        ...Array.isArray(event.attendees) ? event.attendees : []
+      ].map((value) => String(value || "").trim()).filter(Boolean);
+      const seen = /* @__PURE__ */ new Set();
+      return trainees.filter((name) => {
+        const key = normaliseName2(name);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    };
+    const hasExistingReport = (event, traineeName) => {
       const eventCode2 = normaliseCode2(event.flightNumber || event.eventCode);
-      return allInstructorsData.some((staff) => normaliseAirCombatTrainingReports(staff.preferences).some((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && (event.id && report.eventId === event.id || normaliseCode2(report.eventCode) === eventCode2 && String(report.date || "") === String(event.date || date || ""))));
+      const traineeKey = normaliseName2(traineeName);
+      return allInstructorsData.some((staff) => normaliseAirCombatTrainingReports(staff.preferences).some((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseName2(report.traineeFullName) === traineeKey && (event.id && report.eventId === event.id || normaliseCode2(report.eventCode) === eventCode2 && String(report.date || "") === String(event.date || date || ""))));
     };
     eventsForDate.filter((event) => event.type === "ground" || event.type === "cpt").forEach((event) => {
       const eventCode2 = event.flightNumber || event.eventCode || "";
@@ -127191,10 +127204,10 @@ ${error instanceof Error ? error.message : String(error)}`,
         return;
       }
       traineeNames.forEach((traineeName) => {
-        const traineeKey = normaliseName(traineeName);
+        const traineeKey = normaliseName2(traineeName);
         const reconcileKey = `event-ended:${event.date || date}:${event.id || eventCode2}:${traineeKey}`;
         if (dashboardReportReconcileKeysRef.current.has(reconcileKey)) return;
-        if (hasExistingReport(event)) {
+        if (hasExistingReport(event, traineeName)) {
           dashboardReportReconcileKeysRef.current.add(reconcileKey);
           pushDashboardReportDiag("dashboard:event-ended-reconcile:skipped-existing-report", {
             reconcileKey,

@@ -35968,33 +35968,11 @@ const App: React.FC = () => {
                     (Number.isNaN(completionStart) || Math.abs(Number(event.startTime || 0) - completionStart) < 0.01)
                 ));
         };
-        const normaliseName = (value?: string | null): string => String(value || '')
-            .replace(/[‐‑‒–—]/g, '-')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .toLowerCase();
-        const getGroundCptTrainees = (event: ScheduleEvent): string[] => {
-            const trainees = [
-                event.student,
-                ...(Array.isArray(event.attendees) ? event.attendees : []),
-            ]
-                .map(value => String(value || '').trim())
-                .filter(Boolean);
-            const seen = new Set<string>();
-            return trainees.filter(name => {
-                const key = normaliseName(name);
-                if (!key || seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
-        };
-        const hasExistingReport = (event: ScheduleEvent, traineeName: string): boolean => {
+        const hasExistingReport = (event: ScheduleEvent): boolean => {
             const eventCode = normaliseCode(event.flightNumber || (event as any).eventCode);
-            const traineeKey = normaliseName(traineeName);
             return allInstructorsData.some(staff => normaliseAirCombatTrainingReports(staff.preferences).some(report => (
                 report.status !== 'Complete' &&
                 !report.dashboardAcknowledgedAt &&
-                normaliseName(report.traineeFullName) === traineeKey &&
                 (
                     (event.id && report.eventId === event.id) ||
                     (
@@ -36126,11 +36104,33 @@ const App: React.FC = () => {
             const dayStartMs = new Date(Number(year), Number(month) - 1, Number(day), 0, 0, 0, 0).getTime();
             return dayStartMs + Math.round(endTime * 60 * 60 * 1000);
         };
-        const hasExistingReport = (event: ScheduleEvent): boolean => {
+        const normaliseName = (value?: string | null): string => String(value || '')
+            .replace(/[‐‑‒–—]/g, '-')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+        const getGroundCptTrainees = (event: ScheduleEvent): string[] => {
+            const trainees = [
+                event.student,
+                ...(Array.isArray(event.attendees) ? event.attendees : []),
+            ]
+                .map(value => String(value || '').trim())
+                .filter(Boolean);
+            const seen = new Set<string>();
+            return trainees.filter(name => {
+                const key = normaliseName(name);
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        };
+        const hasExistingReport = (event: ScheduleEvent, traineeName: string): boolean => {
             const eventCode = normaliseCode(event.flightNumber || (event as any).eventCode);
+            const traineeKey = normaliseName(traineeName);
             return allInstructorsData.some(staff => normaliseAirCombatTrainingReports(staff.preferences).some(report => (
                 report.status !== 'Complete' &&
                 !report.dashboardAcknowledgedAt &&
+                normaliseName(report.traineeFullName) === traineeKey &&
                 (
                     (event.id && report.eventId === event.id) ||
                     (
