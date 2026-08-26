@@ -40894,6 +40894,75 @@ const MyDashboard = ({
       return message.fromId === dashboardSenderContactId && message.toId === contactKey || message.fromId === contactKey && message.toId === dashboardSenderContactId || !message.fromId && !message.toId && (from === dashboardUserKey && to === normaliseDashboardContactName(selectedMessageContact.name) || from === normaliseDashboardContactName(selectedMessageContact.name) && to === dashboardUserKey);
     }).sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
   }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey, selectedMessageContact]);
+  const downloadDashboardMessageTraceReport = () => {
+    const now = /* @__PURE__ */ new Date();
+    const trace = {
+      generatedAt: now.toISOString(),
+      user: {
+        userName: dashboardMessageUserName,
+        userRank,
+        dashboardUserKey,
+        dashboardSenderContactId,
+        matchedStaff: dashboardUserStaff ? {
+          idNumber: dashboardUserStaff.idNumber,
+          name: dashboardUserStaff.name,
+          rank: dashboardUserStaff.rank,
+          unit: dashboardUserStaff.unit,
+          flight: dashboardUserStaff.flight
+        } : null,
+        matchedTrainee: dashboardUserTrainee ? {
+          idNumber: dashboardUserTrainee.idNumber,
+          name: dashboardUserTrainee.name,
+          fullName: dashboardUserTrainee.fullName,
+          rank: dashboardUserTrainee.rank,
+          unit: dashboardUserTrainee.unit,
+          course: dashboardUserTrainee.course,
+          flight: dashboardUserTrainee.flight
+        } : null,
+        unitCodes: dashboardUserUnitCodes
+      },
+      selected: {
+        messageView,
+        selectedMessageContact,
+        selectedMessageGroupContact,
+        selectedMessageContacts: selectedMessageContacts.map((contact) => ({
+          id: contact.id,
+          displayName: contact.displayName,
+          name: contact.name,
+          type: contact.type,
+          unit: contact.unit,
+          rank: contact.rank,
+          idNumber: contact.idNumber
+        }))
+      },
+      counts: {
+        peopleContacts: peopleMessageContacts.length,
+        groupContacts: dashboardMessageGroups.length,
+        messages: dashboardMessages.length,
+        conversations: messageConversations.length,
+        unread: unreadMessages.length,
+        activeConversationMessages: activeConversationMessages.length
+      },
+      groups: dashboardMessageGroups,
+      conversations: messageConversations.map((conversation) => ({
+        contact: conversation.contact,
+        lastMessage: conversation.lastMessage,
+        unreadCount: conversation.unreadCount
+      })),
+      activeConversationMessages,
+      userScopedMessages: dashboardMessages.filter((message) => messageBelongsToDashboardUser(message))
+    };
+    const safeUser = normaliseDashboardContactName(dashboardMessageUserName).replace(/[^a-z0-9]+/g, "-") || "user";
+    const blob = new Blob([JSON.stringify(trace, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dashboard-message-trace-${safeUser}-${now.toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
   const latestConversationMessageId = activeConversationMessages[activeConversationMessages.length - 1]?.id || "";
   reactExports.useEffect(() => {
     if (!isMessagesOpen || messageView !== "compose" || !selectedMessageContact || !activeConversationEndRef.current) return;
@@ -41100,6 +41169,23 @@ const MyDashboard = ({
     setIsContactPickerOpen(false);
     setMessageView("compose");
   };
+  const openDashboardMessageConversation = (contact) => {
+    setOpenGroupMemberFlyoutId(null);
+    setSelectedMessageContact(contact);
+    setMessageToText("");
+    setMessageDraft("");
+    setIsContactPickerOpen(false);
+    if (contact.type === "Group") {
+      const contactsById = new Map(peopleMessageContacts.map((person) => [person.id, person]));
+      const memberContacts = (contact.memberIds || []).map((memberId) => contactsById.get(memberId)).filter((member) => Boolean(member) && member.id !== dashboardSenderContactId);
+      setSelectedMessageGroupContact(contact);
+      setSelectedMessageContacts(memberContacts);
+    } else {
+      setSelectedMessageGroupContact(null);
+      setSelectedMessageContacts([contact]);
+    }
+    setMessageView("compose");
+  };
   const deleteDashboardConversation = async (contact) => {
     const confirmed = await showDarkConfirm(
       `Delete the conversation with ${contact.displayName}?`,
@@ -41152,6 +41238,11 @@ const MyDashboard = ({
       sentAt
     }));
     persistDashboardMessages((messages) => [...messages, ...nextMessages]);
+    if (selectedMessageGroupContact && nextMessages[0]) {
+      setSelectedMessageContact(getGroupConversationContact(nextMessages[0]) || selectedMessageGroupContact);
+    } else if (selectedMessageContacts.length === 1) {
+      setSelectedMessageContact(selectedMessageContacts[0]);
+    }
     setMessageDraft("");
     try {
       const savedMessages = await Promise.all(nextMessages.map((message) => sendDashboardMessageToApi(message)));
@@ -41169,7 +41260,7 @@ const MyDashboard = ({
     persistDashboardMessages((messages) => messages.map((message) => (message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey) && (selectedMessageContact.type === "Group" ? `group-conversation-${message.groupId || ""}` === selectedMessageContact.id : message.fromId === selectedMessageContact.id || !message.fromId && normaliseDashboardContactName(message.from) === selectedKey) && !message.readAt ? { ...message, readAt: now } : message));
     markDashboardConversationReadInApi(
       dashboardMessageUserName,
-      selectedMessageContact.name,
+      selectedMessageContact.type === "Group" ? "" : selectedMessageContact.name,
       messageIdsToMarkRead,
       dashboardSenderContactId,
       selectedMessageContact.type === "Group" ? void 0 : selectedMessageContact.id
@@ -41351,6 +41442,16 @@ const MyDashboard = ({
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-center text-2xl font-bold tracking-tight", children: messageView === "inbox" ? "Messages" : messageView === "groups" ? "Groups" : messageView === "group" ? editingMessageGroupId ? "Edit Group" : "New Group" : "New Message" }),
+          messageView === "inbox" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: downloadDashboardMessageTraceReport,
+              className: "absolute right-16 top-5 rounded-lg bg-gray-200 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-gray-600 hover:bg-gray-300 hover:text-gray-950",
+              title: "Download message delivery trace",
+              children: "Trace"
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -41376,7 +41477,7 @@ const MyDashboard = ({
                   "button",
                   {
                     type: "button",
-                    onClick: () => selectMessageContact(conversation.contact),
+                    onClick: () => openDashboardMessageConversation(conversation.contact),
                     className: "flex min-w-0 flex-1 items-start gap-3 text-left",
                     children: [
                       conversation.unreadCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500", "aria-label": "Unread message" }),
