@@ -238,6 +238,10 @@ const stripDashboardCourseFromName = (value?: string | null): string => (
         .trim()
 );
 
+const normaliseDashboardPersonName = (value?: string | null): string => (
+    normaliseDashboardContactName(stripDashboardCourseFromName(value))
+);
+
 const toDashboardSurnameFirstName = (value?: string | null): string => {
     const text = String(value || '').trim();
     if (!text) return '';
@@ -577,10 +581,21 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const dashboardUserKey = normaliseDashboardContactName(dashboardMessageUserName);
     const dashboardUserContactId = `user-${dashboardUserKey}`;
     const dashboardUserStaff = useMemo(() => (
-        messageContactStaffOptions.find(staff => normaliseDashboardContactName(staff.name) === dashboardUserKey)
+        messageContactStaffOptions.find(staff => normaliseDashboardPersonName(staff.name) === normaliseDashboardPersonName(dashboardMessageUserName))
     ), [dashboardUserKey, messageContactStaffOptions]);
+    const dashboardUserTrainee = useMemo(() => {
+        const userKey = normaliseDashboardPersonName(dashboardMessageUserName);
+        const surnameFirstKey = normaliseDashboardPersonName(toDashboardSurnameFirstName(dashboardMessageUserName));
+        return messageContactTraineeOptions.find(trainee => {
+            const traineeName = stripDashboardCourseFromName(trainee.fullName || trainee.name);
+            const traineeKey = normaliseDashboardPersonName(traineeName);
+            return traineeKey === userKey || traineeKey === surnameFirstKey;
+        });
+    }, [dashboardUserKey, messageContactTraineeOptions]);
     const dashboardSenderContactId = dashboardUserStaff
         ? `staff-${dashboardUserStaff.idNumber}-${dashboardUserStaff.name}`
+        : dashboardUserTrainee
+            ? `trainee-${dashboardUserTrainee.idNumber}-${stripDashboardCourseFromName(dashboardUserTrainee.fullName || dashboardUserTrainee.name)}`
         : dashboardUserContactId;
     const dashboardUserUnitCodes = useMemo(() => {
         const scopedUnits = messageContactUnitCodes
@@ -589,9 +604,11 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .filter(Boolean);
         if (scopedUnits.length > 0) return Array.from(new Set(scopedUnits));
         const unit = String(dashboardUserStaff?.unit || '').trim().toUpperCase();
+        const traineeUnit = String(dashboardUserTrainee?.unit || '').trim().toUpperCase();
+        if (traineeUnit) return traineeUnit.split(/[+/]/).map(code => code.trim()).filter(Boolean);
         if (unit) return unit.split(/[+/]/).map(code => code.trim()).filter(Boolean);
         return [];
-    }, [dashboardUserStaff?.unit, messageContactUnitCodes]);
+    }, [dashboardUserStaff?.unit, dashboardUserTrainee?.unit, messageContactUnitCodes]);
     const dashboardUserUnitSet = useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join('|')]);
     const peopleMessageContacts = useMemo<DashboardMessageContact[]>(() => {
         const staffContacts = messageContactStaffOptions

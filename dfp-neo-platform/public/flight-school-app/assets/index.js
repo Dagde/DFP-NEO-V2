@@ -40397,6 +40397,7 @@ const compareDashboardRank = (left, right) => {
 };
 const normaliseDashboardContactName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 const stripDashboardCourseFromName = (value) => String(value || "").replace(/\s*[‐‑‒–—-]\s*[A-Z]{2,}\d+[A-Z0-9]*\s*$/i, "").replace(/\s+/g, " ").trim();
+const normaliseDashboardPersonName = (value) => normaliseDashboardContactName(stripDashboardCourseFromName(value));
 const toDashboardSurnameFirstName = (value) => {
   const text = String(value || "").trim();
   if (!text) return "";
@@ -40674,15 +40675,26 @@ const MyDashboard = ({
   const dashboardMessageUserName = userName;
   const dashboardUserKey = normaliseDashboardContactName(dashboardMessageUserName);
   const dashboardUserContactId = `user-${dashboardUserKey}`;
-  const dashboardUserStaff = reactExports.useMemo(() => messageContactStaffOptions.find((staff) => normaliseDashboardContactName(staff.name) === dashboardUserKey), [dashboardUserKey, messageContactStaffOptions]);
-  const dashboardSenderContactId = dashboardUserStaff ? `staff-${dashboardUserStaff.idNumber}-${dashboardUserStaff.name}` : dashboardUserContactId;
+  const dashboardUserStaff = reactExports.useMemo(() => messageContactStaffOptions.find((staff) => normaliseDashboardPersonName(staff.name) === normaliseDashboardPersonName(dashboardMessageUserName)), [dashboardUserKey, messageContactStaffOptions]);
+  const dashboardUserTrainee = reactExports.useMemo(() => {
+    const userKey = normaliseDashboardPersonName(dashboardMessageUserName);
+    const surnameFirstKey = normaliseDashboardPersonName(toDashboardSurnameFirstName(dashboardMessageUserName));
+    return messageContactTraineeOptions.find((trainee) => {
+      const traineeName = stripDashboardCourseFromName(trainee.fullName || trainee.name);
+      const traineeKey = normaliseDashboardPersonName(traineeName);
+      return traineeKey === userKey || traineeKey === surnameFirstKey;
+    });
+  }, [dashboardUserKey, messageContactTraineeOptions]);
+  const dashboardSenderContactId = dashboardUserStaff ? `staff-${dashboardUserStaff.idNumber}-${dashboardUserStaff.name}` : dashboardUserTrainee ? `trainee-${dashboardUserTrainee.idNumber}-${stripDashboardCourseFromName(dashboardUserTrainee.fullName || dashboardUserTrainee.name)}` : dashboardUserContactId;
   const dashboardUserUnitCodes = reactExports.useMemo(() => {
     const scopedUnits = messageContactUnitCodes.flatMap((unitCode) => String(unitCode || "").split(/[+/]/)).map((unitCode) => unitCode.trim().toUpperCase()).filter(Boolean);
     if (scopedUnits.length > 0) return Array.from(new Set(scopedUnits));
     const unit = String(dashboardUserStaff?.unit || "").trim().toUpperCase();
+    const traineeUnit = String(dashboardUserTrainee?.unit || "").trim().toUpperCase();
+    if (traineeUnit) return traineeUnit.split(/[+/]/).map((code) => code.trim()).filter(Boolean);
     if (unit) return unit.split(/[+/]/).map((code) => code.trim()).filter(Boolean);
     return [];
-  }, [dashboardUserStaff?.unit, messageContactUnitCodes]);
+  }, [dashboardUserStaff?.unit, dashboardUserTrainee?.unit, messageContactUnitCodes]);
   const dashboardUserUnitSet = reactExports.useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join("|")]);
   const peopleMessageContacts = reactExports.useMemo(() => {
     const staffContacts = messageContactStaffOptions.filter((staff) => staff?.name).filter((staff) => {
