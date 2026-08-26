@@ -40609,6 +40609,7 @@ const MyDashboard = ({
   messageContactTraineeOptions = [],
   messageContactUnitCodes = [],
   canCreateUnitMessageGroups = false,
+  staffQualificationCatalogue: staffQualificationCatalogue2,
   onUnreadMessageCountChange,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   currentLocationCode,
@@ -40654,6 +40655,14 @@ const MyDashboard = ({
     return "text-gray-300 border-gray-600";
   };
   const formatStaffRole = (staff) => normaliseFixedCrewStaffRole(staff.role, staff.unit) || "Staff";
+  const normalisedStaffQualificationCatalogue = reactExports.useMemo(
+    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue2),
+    [staffQualificationCatalogue2]
+  );
+  const qualificationLabelById = reactExports.useMemo(() => new Map(
+    normalisedStaffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((qualification) => [qualification.id, qualification.code || qualification.name || qualification.id])
+  ), [normalisedStaffQualificationCatalogue]);
+  const formatQualificationLabels = (qualificationIds) => qualificationIds.map((id) => qualificationLabelById.get(id)).filter(Boolean).join(", ") || "None";
   const dashboardMessageUserName = userName;
   const dashboardUserKey = normaliseDashboardContactName(dashboardMessageUserName);
   const dashboardUserContactId = `user-${dashboardUserKey}`;
@@ -40673,6 +40682,7 @@ const MyDashboard = ({
       return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
     }).map((staff) => {
       const nameParts = getDashboardContactNameParts(staff.name);
+      const qualificationIds = getPersonAssignedQualificationIds(staff, normalisedStaffQualificationCatalogue, false);
       return {
         id: `staff-${staff.idNumber}-${staff.name}`,
         name: staff.name,
@@ -40681,14 +40691,8 @@ const MyDashboard = ({
         unit: staff.unit || "No Unit",
         role: formatStaffRole(staff),
         flight: staff.flight || "",
-        qualification: [
-          staff.category && staff.category !== "UnCat" ? staff.category : "",
-          staff.isTestingOfficer ? "Testing Officer" : "",
-          staff.isQFI ? "QFI" : "",
-          staff.isOFI ? "OFI" : "",
-          staff.isIRE ? "IRE" : "",
-          staff.isFlyingSupervisor ? "Flying Supervisor" : ""
-        ].filter(Boolean).join(", ") || "None",
+        qualification: formatQualificationLabels(qualificationIds),
+        qualificationIds,
         rank: staff.rank || "",
         surname: nameParts.surname,
         firstNames: nameParts.firstNames,
@@ -40701,6 +40705,7 @@ const MyDashboard = ({
     }).map((trainee) => {
       const name = stripDashboardCourseFromName(trainee.fullName || trainee.name);
       const nameParts = getDashboardContactNameParts(name);
+      const qualificationIds = getPersonAssignedQualificationIds(trainee, normalisedStaffQualificationCatalogue, false);
       return {
         id: `trainee-${trainee.idNumber}-${name}`,
         name,
@@ -40710,7 +40715,8 @@ const MyDashboard = ({
         role: "Trainee",
         course: trainee.course || "Unallocated Trainees",
         flight: trainee.flight || "",
-        qualification: [trainee.lmpType, trainee.academicLmpType].filter(Boolean).join(", ") || "None",
+        qualification: formatQualificationLabels(qualificationIds),
+        qualificationIds,
         rank: trainee.rank || "",
         surname: nameParts.surname,
         firstNames: nameParts.firstNames,
@@ -40720,7 +40726,7 @@ const MyDashboard = ({
     const unique = /* @__PURE__ */ new Map();
     [...staffContacts, ...traineeContacts].forEach((contact) => unique.set(contact.id, contact));
     return Array.from(unique.values()).sort((a, b) => a.unit.localeCompare(b.unit) || (a.type === b.type ? 0 : a.type === "Staff" ? -1 : 1) || (a.type === "Trainee" ? String(a.course || "").localeCompare(String(b.course || "")) : 0) || compareDashboardRank(a.rank, b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
-  }, [dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
+  }, [dashboardUserUnitSet, formatQualificationLabels, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions, normalisedStaffQualificationCatalogue]);
   const messageContacts = reactExports.useMemo(() => {
     const contactsById = new Map(peopleMessageContacts.map((contact) => [contact.id, contact]));
     const groupContacts = dashboardMessageGroups.map((group) => ({
@@ -40799,10 +40805,13 @@ const MyDashboard = ({
   const groupBuilderRankOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.rank).filter(Boolean))).sort(compareDashboardRank), [peopleMessageContacts]);
   const groupBuilderRoleOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.role).filter(Boolean))).sort(), [peopleMessageContacts]);
   const groupBuilderCourseOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.course).filter(Boolean))).sort(), [peopleMessageContacts]);
-  const groupBuilderQualificationOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.qualification).filter(Boolean))).sort(), [peopleMessageContacts]);
+  const groupBuilderQualificationOptions = reactExports.useMemo(() => normalisedStaffQualificationCatalogue.qualifications.filter((qualification) => String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((qualification) => ({
+    id: qualification.id,
+    label: qualification.code || qualification.name || qualification.id
+  })).sort((a, b) => a.label.localeCompare(b.label)), [normalisedStaffQualificationCatalogue]);
   const filteredGroupBuilderContacts = reactExports.useMemo(() => {
     const query = normaliseDashboardContactName(groupBuilderSearch);
-    return peopleMessageContacts.filter((contact) => contact.id !== dashboardSenderContactId).filter((contact) => groupBuilderTypeFilter === "all" || contact.type === groupBuilderTypeFilter).filter((contact) => groupBuilderUnitFilter === "all" || contact.unit === groupBuilderUnitFilter).filter((contact) => groupBuilderFlightFilter === "all" || contact.flight === groupBuilderFlightFilter).filter((contact) => groupBuilderRankFilter === "all" || contact.rank === groupBuilderRankFilter).filter((contact) => groupBuilderRoleFilter === "all" || contact.role === groupBuilderRoleFilter).filter((contact) => groupBuilderCourseFilter === "all" || contact.course === groupBuilderCourseFilter).filter((contact) => groupBuilderQualificationFilter === "all" || contact.qualification === groupBuilderQualificationFilter).filter((contact) => !query || (normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query) || normaliseDashboardContactName(contact.rank).includes(query) || normaliseDashboardContactName(contact.role).includes(query) || normaliseDashboardContactName(contact.unit).includes(query) || normaliseDashboardContactName(contact.flight).includes(query) || normaliseDashboardContactName(contact.course).includes(query) || normaliseDashboardContactName(contact.qualification).includes(query)));
+    return peopleMessageContacts.filter((contact) => contact.id !== dashboardSenderContactId).filter((contact) => groupBuilderTypeFilter === "all" || contact.type === groupBuilderTypeFilter).filter((contact) => groupBuilderUnitFilter === "all" || contact.unit === groupBuilderUnitFilter).filter((contact) => groupBuilderFlightFilter === "all" || contact.flight === groupBuilderFlightFilter).filter((contact) => groupBuilderRankFilter === "all" || contact.rank === groupBuilderRankFilter).filter((contact) => groupBuilderRoleFilter === "all" || contact.role === groupBuilderRoleFilter).filter((contact) => groupBuilderCourseFilter === "all" || contact.course === groupBuilderCourseFilter).filter((contact) => groupBuilderQualificationFilter === "all" || (contact.qualificationIds || []).includes(groupBuilderQualificationFilter)).filter((contact) => !query || (normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query) || normaliseDashboardContactName(contact.rank).includes(query) || normaliseDashboardContactName(contact.role).includes(query) || normaliseDashboardContactName(contact.unit).includes(query) || normaliseDashboardContactName(contact.flight).includes(query) || normaliseDashboardContactName(contact.course).includes(query) || normaliseDashboardContactName(contact.qualification).includes(query)));
   }, [
     dashboardSenderContactId,
     groupBuilderCourseFilter,
@@ -40967,6 +40976,7 @@ const MyDashboard = ({
         course: contact.course,
         flight: contact.flight,
         qualification: contact.qualification,
+        qualificationIds: contact.qualificationIds,
         idNumber: contact.idNumber
       })),
       createdAt: now,
@@ -41479,7 +41489,7 @@ const MyDashboard = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: groupBuilderQualificationFilter, onChange: (event) => setGroupBuilderQualificationFilter(event.target.value), className: "h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All qualifications" }),
-                groupBuilderQualificationOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+                groupBuilderQualificationOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.id, children: option.label }, option.id))
               ] })
             ] })
           ] }),
@@ -139244,6 +139254,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             messageContactTraineeOptions: traineesData,
             messageContactUnitCodes: activeContextUnitCodes,
             canCreateUnitMessageGroups: canUsePlatformPermission("messages.groups.unit.create"),
+            staffQualificationCatalogue: activeStaffQualificationCatalogue,
             onUnreadMessageCountChange: setDashboardUnreadMessageCount,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             currentLocationCode: activeLocationSolarProfile.code,

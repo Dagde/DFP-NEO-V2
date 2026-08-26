@@ -2036,6 +2036,9 @@ function normaliseDashboardStoredMessageGroups(data) {
               course: String(member.course || ''),
               flight: String(member.flight || ''),
               qualification: String(member.qualification || ''),
+              qualificationIds: Array.isArray(member.qualificationIds)
+                ? Array.from(new Set(member.qualificationIds.map(normaliseDashboardMessageId).filter(Boolean)))
+                : [],
               idNumber: String(member.idNumber || ''),
             }))
         : [];

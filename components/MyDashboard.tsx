@@ -3,6 +3,11 @@ import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Trainin
 import TafWeatherWidget from './TafWeatherWidget';
 import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
+import {
+    getPersonAssignedQualificationIds,
+    normaliseStaffQualificationCatalogue,
+    type StaffQualificationCatalogue,
+} from '../utils/staffQualifications';
 import { showDarkConfirm } from './DarkMessageModal';
 
 interface MyDashboardProps {
@@ -29,6 +34,7 @@ interface MyDashboardProps {
     messageContactTraineeOptions?: Trainee[];
     messageContactUnitCodes?: string[];
     canCreateUnitMessageGroups?: boolean;
+    staffQualificationCatalogue?: StaffQualificationCatalogue;
     onUnreadMessageCountChange?: (count: number) => void;
     sctTerminology?: SctTerminology;
     currentLocationCode?: string | null;
@@ -45,6 +51,7 @@ type DashboardMessageContact = {
     course?: string;
     flight?: string;
     qualification?: string;
+    qualificationIds?: string[];
     rank: string;
     surname: string;
     firstNames: string;
@@ -88,6 +95,7 @@ type DashboardMessageGroupRecord = {
         course?: string;
         flight?: string;
         qualification?: string;
+        qualificationIds?: string[];
         idNumber?: string;
     }>;
     createdAt?: string;
@@ -493,6 +501,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     messageContactTraineeOptions = [],
     messageContactUnitCodes = [],
     canCreateUnitMessageGroups = false,
+    staffQualificationCatalogue,
     onUnreadMessageCountChange,
     sctTerminology = DEFAULT_SCT_TERMINOLOGY,
     currentLocationCode,
@@ -540,6 +549,21 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const formatStaffRole = (staff: Instructor): string => (
         normaliseFixedCrewStaffRole(staff.role, staff.unit) || 'Staff'
     );
+    const normalisedStaffQualificationCatalogue = useMemo(
+        () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
+        [staffQualificationCatalogue],
+    );
+    const qualificationLabelById = useMemo(() => new Map(
+        normalisedStaffQualificationCatalogue.qualifications
+            .filter(qualification => String(qualification.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+            .map(qualification => [qualification.id, qualification.code || qualification.name || qualification.id]),
+    ), [normalisedStaffQualificationCatalogue]);
+    const formatQualificationLabels = (qualificationIds: string[]): string => (
+        qualificationIds
+            .map(id => qualificationLabelById.get(id))
+            .filter(Boolean)
+            .join(', ') || 'None'
+    );
     const dashboardMessageUserName = userName;
     const dashboardUserKey = normaliseDashboardContactName(dashboardMessageUserName);
     const dashboardUserContactId = `user-${dashboardUserKey}`;
@@ -569,25 +593,20 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             })
             .map(staff => {
                 const nameParts = getDashboardContactNameParts(staff.name);
+                const qualificationIds = getPersonAssignedQualificationIds(staff, normalisedStaffQualificationCatalogue, false);
                 return {
                     id: `staff-${staff.idNumber}-${staff.name}`,
                     name: staff.name,
                     displayName: toDashboardContactDisplayName(staff.name, staff.rank),
                     idNumber: String(staff.idNumber || ''),
-                unit: staff.unit || 'No Unit',
-                role: formatStaffRole(staff),
-                flight: staff.flight || '',
-                qualification: [
-                    staff.category && staff.category !== 'UnCat' ? staff.category : '',
-                    staff.isTestingOfficer ? 'Testing Officer' : '',
-                    staff.isQFI ? 'QFI' : '',
-                    staff.isOFI ? 'OFI' : '',
-                    staff.isIRE ? 'IRE' : '',
-                    staff.isFlyingSupervisor ? 'Flying Supervisor' : '',
-                ].filter(Boolean).join(', ') || 'None',
-                rank: staff.rank || '',
-                surname: nameParts.surname,
-                firstNames: nameParts.firstNames,
+                    unit: staff.unit || 'No Unit',
+                    role: formatStaffRole(staff),
+                    flight: staff.flight || '',
+                    qualification: formatQualificationLabels(qualificationIds),
+                    qualificationIds,
+                    rank: staff.rank || '',
+                    surname: nameParts.surname,
+                    firstNames: nameParts.firstNames,
                     type: 'Staff' as const,
                 };
             });
@@ -600,19 +619,21 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .map(trainee => {
                 const name = stripDashboardCourseFromName(trainee.fullName || trainee.name);
                 const nameParts = getDashboardContactNameParts(name);
+                const qualificationIds = getPersonAssignedQualificationIds(trainee, normalisedStaffQualificationCatalogue, false);
                 return {
                     id: `trainee-${trainee.idNumber}-${name}`,
                     name,
                     displayName: toDashboardContactDisplayName(name, trainee.rank),
                     idNumber: String(trainee.idNumber || ''),
-                unit: trainee.unit || 'No Unit',
-                role: 'Trainee',
-                course: trainee.course || 'Unallocated Trainees',
-                flight: trainee.flight || '',
-                qualification: [trainee.lmpType, trainee.academicLmpType].filter(Boolean).join(', ') || 'None',
-                rank: trainee.rank || '',
-                surname: nameParts.surname,
-                firstNames: nameParts.firstNames,
+                    unit: trainee.unit || 'No Unit',
+                    role: 'Trainee',
+                    course: trainee.course || 'Unallocated Trainees',
+                    flight: trainee.flight || '',
+                    qualification: formatQualificationLabels(qualificationIds),
+                    qualificationIds,
+                    rank: trainee.rank || '',
+                    surname: nameParts.surname,
+                    firstNames: nameParts.firstNames,
                     type: 'Trainee' as const,
                 };
             });
@@ -628,7 +649,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             a.firstNames.localeCompare(b.firstNames) ||
             a.displayName.localeCompare(b.displayName)
         ));
-    }, [dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
+    }, [dashboardUserUnitSet, formatQualificationLabels, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions, normalisedStaffQualificationCatalogue]);
     const messageContacts = useMemo<DashboardMessageContact[]>(() => {
         const contactsById = new Map(peopleMessageContacts.map(contact => [contact.id, contact]));
         const groupContacts = dashboardMessageGroups.map(group => ({
@@ -739,8 +760,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         Array.from(new Set(peopleMessageContacts.map(contact => contact.course).filter(Boolean) as string[])).sort()
     ), [peopleMessageContacts]);
     const groupBuilderQualificationOptions = useMemo(() => (
-        Array.from(new Set(peopleMessageContacts.map(contact => contact.qualification).filter(Boolean) as string[])).sort()
-    ), [peopleMessageContacts]);
+        normalisedStaffQualificationCatalogue.qualifications
+            .filter(qualification => String(qualification.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+            .map(qualification => ({
+                id: qualification.id,
+                label: qualification.code || qualification.name || qualification.id,
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+    ), [normalisedStaffQualificationCatalogue]);
     const filteredGroupBuilderContacts = useMemo(() => {
         const query = normaliseDashboardContactName(groupBuilderSearch);
         return peopleMessageContacts
@@ -751,7 +778,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .filter(contact => groupBuilderRankFilter === 'all' || contact.rank === groupBuilderRankFilter)
             .filter(contact => groupBuilderRoleFilter === 'all' || contact.role === groupBuilderRoleFilter)
             .filter(contact => groupBuilderCourseFilter === 'all' || contact.course === groupBuilderCourseFilter)
-            .filter(contact => groupBuilderQualificationFilter === 'all' || contact.qualification === groupBuilderQualificationFilter)
+            .filter(contact => groupBuilderQualificationFilter === 'all' || (contact.qualificationIds || []).includes(groupBuilderQualificationFilter))
             .filter(contact => !query || (
                 normaliseDashboardContactName(contact.displayName).includes(query) ||
                 normaliseDashboardContactName(contact.name).includes(query) ||
@@ -947,6 +974,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 course: contact.course,
                 flight: contact.flight,
                 qualification: contact.qualification,
+                qualificationIds: contact.qualificationIds,
                 idNumber: contact.idNumber,
             })),
             createdAt: now,
@@ -986,6 +1014,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 course: contact.course,
                 flight: contact.flight,
                 qualification: contact.qualification,
+                qualificationIds: contact.qualificationIds,
                 idNumber: contact.idNumber,
             })),
             createdAt: now,
@@ -1546,7 +1575,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         </select>
                                         <select value={groupBuilderQualificationFilter} onChange={(event) => setGroupBuilderQualificationFilter(event.target.value)} className="h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm">
                                             <option value="all">All qualifications</option>
-                                            {groupBuilderQualificationOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                                            {groupBuilderQualificationOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
                                         </select>
                                     </div>
                                 </div>
