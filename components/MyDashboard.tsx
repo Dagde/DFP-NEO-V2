@@ -41,6 +41,7 @@ type DashboardMessageContact = {
     displayName: string;
     unit: string;
     role: string;
+    course?: string;
     rank: string;
     surname: string;
     firstNames: string;
@@ -145,9 +146,31 @@ const formatDate = (dateString: string | undefined): string => {
     }
 };
 
-const compareDashboardRank = (left?: string, right?: string): number => (
-    String(left || '').localeCompare(String(right || ''), undefined, { sensitivity: 'base' })
-);
+const DASHBOARD_RANK_ORDER = [
+    'AIRCDRE', 'AIR COMMODORE',
+    'GPCAPT', 'GROUP CAPTAIN',
+    'WGCDR', 'WING COMMANDER',
+    'SQNLDR', 'SQUADRON LEADER',
+    'FLTLT', 'FLIGHT LIEUTENANT',
+    'FLGOFF', 'FLYING OFFICER',
+    'PLTOFF', 'PILOT OFFICER',
+    'OCDT', 'MIDN', 'SBLT', '2LT',
+    'WOFF', 'FSGT', 'SGT', 'CPL', 'LAC', 'AC',
+];
+
+const normaliseDashboardRank = (value?: string): string => String(value || '').trim().toUpperCase();
+
+const compareDashboardRank = (left?: string, right?: string): number => {
+    const leftRank = normaliseDashboardRank(left);
+    const rightRank = normaliseDashboardRank(right);
+    const leftIndex = DASHBOARD_RANK_ORDER.indexOf(leftRank);
+    const rightIndex = DASHBOARD_RANK_ORDER.indexOf(rightRank);
+    if (leftIndex !== -1 || rightIndex !== -1) {
+        return (leftIndex === -1 ? DASHBOARD_RANK_ORDER.length : leftIndex) -
+            (rightIndex === -1 ? DASHBOARD_RANK_ORDER.length : rightIndex);
+    }
+    return leftRank.localeCompare(rightRank, undefined, { sensitivity: 'base' });
+};
 
 const formatDashboardStaffName = (staff: Instructor): string => {
     const [lastName, firstName] = String(staff.name || '').split(',').map(part => part.trim());
@@ -157,6 +180,13 @@ const formatDashboardStaffName = (staff: Instructor): string => {
 
 const normaliseDashboardContactName = (value?: string | null): string => (
     String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+);
+
+const stripDashboardCourseFromName = (value?: string | null): string => (
+    String(value || '')
+        .replace(/\s*[‐‑‒–—-]\s*[A-Z]{2,}\d+[A-Z0-9]*\s*$/i, '')
+        .replace(/\s+/g, ' ')
+        .trim()
 );
 
 const toDashboardSurnameFirstName = (value?: string | null): string => {
@@ -253,7 +283,7 @@ const groupDashboardMessageContacts = (contacts: DashboardMessageContact[]): Das
             unitContacts
                 .filter(contact => contact.type === 'Trainee')
                 .forEach(contact => {
-                    const course = contact.role || 'Unallocated Trainees';
+                    const course = contact.course || 'Unallocated Trainees';
                     traineeCourses.set(course, [...(traineeCourses.get(course) || []), contact]);
                 });
 
@@ -283,7 +313,9 @@ const renderDashboardMessageContactButton = (
     >
         <span>
             <span className="block text-sm font-semibold text-gray-950">{contact.displayName}</span>
-            <span className="block text-xs text-gray-500">{contact.unit} - {contact.role}</span>
+            <span className="block text-xs text-gray-500">
+                {contact.type === 'Trainee' ? contact.unit : `${contact.unit} - ${contact.role}`}
+            </span>
         </span>
         <span className={`${compact ? 'text-gray-400' : 'rounded-full bg-gray-100 px-2 py-1 text-gray-500'} text-[10px] font-bold uppercase`}>{contact.type}</span>
     </button>
@@ -455,14 +487,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
             })
             .map(trainee => {
-                const name = trainee.fullName || trainee.name;
+                const name = stripDashboardCourseFromName(trainee.fullName || trainee.name);
                 const nameParts = getDashboardContactNameParts(name);
                 return {
                     id: `trainee-${trainee.idNumber}-${name}`,
                     name,
                     displayName: toDashboardContactDisplayName(name, trainee.rank),
                     unit: trainee.unit || 'No Unit',
-                    role: trainee.course || 'Trainee',
+                    role: 'Trainee',
+                    course: trainee.course || 'Unallocated Trainees',
                     rank: trainee.rank || '',
                     surname: nameParts.surname,
                     firstNames: nameParts.firstNames,
@@ -471,11 +504,11 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             });
         const unique = new Map<string, DashboardMessageContact>();
         [...staffContacts, ...traineeContacts]
-            .forEach(contact => unique.set(normaliseDashboardContactName(contact.name), contact));
+            .forEach(contact => unique.set(contact.id, contact));
         return Array.from(unique.values()).sort((a, b) => (
             a.unit.localeCompare(b.unit) ||
             (a.type === b.type ? 0 : a.type === 'Staff' ? -1 : 1) ||
-            (a.type === 'Trainee' ? a.role.localeCompare(b.role) : 0) ||
+            (a.type === 'Trainee' ? String(a.course || '').localeCompare(String(b.course || '')) : 0) ||
             compareDashboardRank(a.rank, b.rank) ||
             a.surname.localeCompare(b.surname) ||
             a.firstNames.localeCompare(b.firstNames) ||
