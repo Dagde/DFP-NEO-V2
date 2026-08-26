@@ -40627,6 +40627,7 @@ const MyDashboard = ({
   const [messageToText, setMessageToText] = reactExports.useState("");
   const [selectedMessageContact, setSelectedMessageContact] = reactExports.useState(null);
   const [selectedMessageContacts, setSelectedMessageContacts] = reactExports.useState([]);
+  const [selectedMessageGroupContact, setSelectedMessageGroupContact] = reactExports.useState(null);
   const [messageDraft, setMessageDraft] = reactExports.useState("");
   const [dashboardMessages, setDashboardMessages] = reactExports.useState(() => readDashboardMessages());
   const [dashboardMessageGroups, setDashboardMessageGroups] = reactExports.useState([]);
@@ -40825,6 +40826,13 @@ const MyDashboard = ({
     peopleMessageContacts
   ]);
   const groupBuilderSelectedContacts = reactExports.useMemo(() => peopleMessageContacts.filter((contact) => groupBuilderSelectedIds.has(contact.id)), [groupBuilderSelectedIds, peopleMessageContacts]);
+  const displayMessageRecipients = reactExports.useMemo(() => {
+    const groupMemberIds = new Set(selectedMessageGroupContact?.memberIds || []);
+    return [
+      ...selectedMessageGroupContact ? [selectedMessageGroupContact] : [],
+      ...selectedMessageContacts.filter((contact) => !groupMemberIds.has(contact.id))
+    ];
+  }, [selectedMessageContacts, selectedMessageGroupContact]);
   const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => (message.toId === dashboardSenderContactId || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey) && !message.readAt), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
   reactExports.useEffect(() => {
     onUnreadMessageCountChange?.(unreadMessages.length);
@@ -40914,6 +40922,13 @@ const MyDashboard = ({
   const addMessageContactRecipient = (contact) => {
     const contactsById = new Map(peopleMessageContacts.map((person) => [person.id, person]));
     const contactsToAdd = contact.type === "Group" ? (contact.memberIds || []).map((memberId) => contactsById.get(memberId)).filter((member) => Boolean(member) && member.id !== dashboardSenderContactId) : [contact];
+    if (contact.type === "Group") {
+      setSelectedMessageGroupContact(contact);
+      setSelectedMessageContacts(contactsToAdd);
+      setSelectedMessageContact(null);
+      setMessageToText("");
+      return;
+    }
     setSelectedMessageContacts((prev) => {
       const merged = new Map(prev.map((item) => [item.id, item]));
       contactsToAdd.forEach((item) => merged.set(item.id, item));
@@ -40924,6 +40939,16 @@ const MyDashboard = ({
     });
   };
   const removeMessageContactRecipient = (contactId) => {
+    if (selectedMessageGroupContact?.id === contactId) {
+      const groupMemberIds = new Set(selectedMessageGroupContact.memberIds || []);
+      setSelectedMessageGroupContact(null);
+      setSelectedMessageContacts((prev) => {
+        const next = prev.filter((contact) => !groupMemberIds.has(contact.id));
+        setSelectedMessageContact(next.length === 1 ? next[0] : null);
+        return next;
+      });
+      return;
+    }
     setSelectedMessageContacts((prev) => {
       const next = prev.filter((contact) => contact.id !== contactId);
       setSelectedMessageContact(next.length === 1 ? next[0] : null);
@@ -41033,6 +41058,7 @@ const MyDashboard = ({
     if (selectedMessageContact && normaliseDashboardContactName(selectedMessageContact.name) === contactKey) {
       setSelectedMessageContact(null);
       setSelectedMessageContacts([]);
+      setSelectedMessageGroupContact(null);
       setMessageToText("");
       setMessageDraft("");
       setMessageView("inbox");
@@ -41327,6 +41353,7 @@ const MyDashboard = ({
                   setMessageView("compose");
                   setSelectedMessageContact(null);
                   setSelectedMessageContacts([]);
+                  setSelectedMessageGroupContact(null);
                   setMessageToText("");
                   setMessageDraft("");
                   setGroupNameDraft("");
@@ -41339,10 +41366,10 @@ const MyDashboard = ({
             )
           ] })
         ] }) : messageView === "compose" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-14 flex-wrap items-center gap-2 px-4 py-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mx-3 shrink-0 rounded-[28px] border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[126px] min-h-14 flex-wrap items-center gap-2 overflow-y-auto px-4 py-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-xl text-gray-500", children: "To:" }),
-              selectedMessageContacts.map((contact) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex max-w-[190px] shrink-0 items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-sm font-semibold text-sky-800 ring-1 ring-sky-100", children: [
+              displayMessageRecipients.map((contact) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex max-w-[190px] shrink-0 items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-sm font-semibold text-sky-800 ring-1 ring-sky-100", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: contact.displayName }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
@@ -41365,8 +41392,8 @@ const MyDashboard = ({
                       setSelectedMessageContact(null);
                     }
                   },
-                  placeholder: selectedMessageContacts.length > 0 ? "Add another recipient" : "Add recipient",
-                  className: "min-w-0 flex-1 bg-transparent text-xl text-gray-950 outline-none",
+                  placeholder: displayMessageRecipients.length > 0 ? "Add another recipient" : "Add recipient",
+                  className: "min-w-[120px] flex-1 bg-transparent text-xl text-gray-950 outline-none",
                   autoComplete: "off"
                 }
               ),
@@ -41405,7 +41432,12 @@ const MyDashboard = ({
               ] }) }, message.id);
             }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: activeConversationEndRef })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "No messages yet." }) : selectedMessageContacts.length > 1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "pt-20 text-center text-sm text-gray-400", children: [
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "No messages yet." }) : selectedMessageGroupContact ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "pt-20 text-center text-sm text-gray-400", children: [
+            selectedMessageGroupContact.displayName,
+            " selected. ",
+            selectedMessageContacts.length,
+            " recipients."
+          ] }) : selectedMessageContacts.length > 1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "pt-20 text-center text-sm text-gray-400", children: [
             selectedMessageContacts.length,
             " recipients selected."
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "Choose someone to message." }) }),
