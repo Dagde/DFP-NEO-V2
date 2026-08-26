@@ -40501,6 +40501,12 @@ const renderDashboardMessageContactButton = (contact, onSelect, compact = false)
   },
   contact.id
 );
+const formatDashboardGroupScope = (scopeType) => {
+  if (scopeType === "personal") return "Personal Group";
+  if (scopeType === "unit") return "Unit Group";
+  if (scopeType === "combined_unit") return "Combined Unit Group";
+  return "Organisation Group";
+};
 const readDashboardMessages = () => {
   if (typeof window === "undefined") return [];
   try {
@@ -40644,6 +40650,7 @@ const MyDashboard = ({
   const [groupBuilderCourseFilter, setGroupBuilderCourseFilter] = reactExports.useState("all");
   const [groupBuilderQualificationFilter, setGroupBuilderQualificationFilter] = reactExports.useState("all");
   const [groupBuilderSelectedIds, setGroupBuilderSelectedIds] = reactExports.useState(() => /* @__PURE__ */ new Set());
+  const [editingMessageGroupId, setEditingMessageGroupId] = reactExports.useState(null);
   const [isCreatingGroup, setIsCreatingGroup] = reactExports.useState(false);
   const [incomingToast, setIncomingToast] = reactExports.useState(null);
   const shownIncomingToastIds = reactExports.useRef(/* @__PURE__ */ new Set());
@@ -40983,6 +40990,7 @@ const MyDashboard = ({
     });
   };
   const resetGroupBuilder = () => {
+    setEditingMessageGroupId(null);
     setGroupNameDraft("");
     setGroupBuilderSearch("");
     setGroupBuilderScope("personal");
@@ -40995,13 +41003,24 @@ const MyDashboard = ({
     setGroupBuilderQualificationFilter("all");
     setGroupBuilderSelectedIds(/* @__PURE__ */ new Set());
   };
+  const openMessageGroupBuilder = (group) => {
+    resetGroupBuilder();
+    if (group) {
+      setEditingMessageGroupId(group.id);
+      setGroupNameDraft(group.name);
+      setGroupBuilderScope(group.scopeType === "personal" ? "personal" : "unit");
+      setGroupBuilderSelectedIds(new Set(group.members.map((member) => member.id).filter(Boolean)));
+    }
+    setMessageView("group");
+  };
   const saveGroupFromContacts = async (contacts, scopeType) => {
     const groupName = groupNameDraft.trim();
     if (!groupName || contacts.length === 0) return;
     if (scopeType === "unit" && !canCreateUnitMessageGroups) return;
     const now = (/* @__PURE__ */ new Date()).toISOString();
+    const existingGroup = editingMessageGroupId ? dashboardMessageGroups.find((group2) => group2.id === editingMessageGroupId) : null;
     const group = {
-      id: `message-group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: existingGroup?.id || `message-group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: groupName,
       scopeType,
       ownerId: dashboardSenderContactId,
@@ -41020,14 +41039,12 @@ const MyDashboard = ({
         qualificationIds: contact.qualificationIds,
         idNumber: contact.idNumber
       })),
-      createdAt: now,
+      createdAt: existingGroup?.createdAt || now,
       updatedAt: now
     };
     setDashboardMessageGroups((prev) => [group, ...prev.filter((existing) => existing.id !== group.id)]);
-    setGroupNameDraft("");
-    setGroupBuilderSelectedIds(/* @__PURE__ */ new Set());
-    setGroupBuilderScope("personal");
-    setMessageView("inbox");
+    resetGroupBuilder();
+    setMessageView("groups");
     try {
       const savedGroup = await saveDashboardMessageGroupToApi(group, { canCreateUnitGroup: canCreateUnitMessageGroups });
       setDashboardMessageGroups((prev) => [savedGroup, ...prev.filter((existing) => existing.id !== savedGroup.id)]);
@@ -41254,9 +41271,11 @@ const MyDashboard = ({
             {
               type: "button",
               onClick: () => {
-                setMessageView("inbox");
+                setMessageView(messageView === "group" ? "groups" : "inbox");
                 setIsContactPickerOpen(false);
-                resetGroupBuilder();
+                if (messageView === "group") {
+                  resetGroupBuilder();
+                }
               },
               className: "absolute left-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300",
               "aria-label": "Back to messages",
@@ -41268,16 +41287,15 @@ const MyDashboard = ({
             {
               type: "button",
               onClick: () => {
-                resetGroupBuilder();
-                setMessageView("group");
+                setMessageView("groups");
               },
               className: "absolute left-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300",
-              "aria-label": "Create message group",
-              title: "Create group",
+              "aria-label": "Manage message groups",
+              title: "Groups",
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconUsers, { className: "h-6 w-6", strokeWidth: 2.2 })
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-center text-2xl font-bold tracking-tight", children: messageView === "inbox" ? "Messages" : messageView === "group" ? "New Group" : "New Message" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-center text-2xl font-bold tracking-tight", children: messageView === "inbox" ? "Messages" : messageView === "groups" ? "Groups" : messageView === "group" ? editingMessageGroupId ? "Edit Group" : "New Group" : "New Message" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -41365,6 +41383,53 @@ const MyDashboard = ({
               }
             )
           ] })
+        ] }) : messageView === "groups" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-5 pb-24 pt-2", children: dashboardMessageGroups.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: dashboardMessageGroups.map((group) => {
+            const canEditGroup = group.scopeType === "personal" || canCreateUnitMessageGroups;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-gray-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-lg font-bold text-gray-950", children: group.name }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-gray-500", children: [
+                    formatDashboardGroupScope(group.scopeType),
+                    group.unitCode ? ` - ${group.unitCode}` : ""
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2 text-sm text-gray-500", children: [
+                    group.members.length,
+                    " ",
+                    group.members.length === 1 ? "recipient" : "recipients"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => canEditGroup && openMessageGroupBuilder(group),
+                    disabled: !canEditGroup,
+                    className: "h-10 shrink-0 rounded-lg bg-sky-600 px-4 text-sm font-bold text-white shadow disabled:cursor-not-allowed disabled:bg-gray-300",
+                    children: "Edit"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex max-h-16 flex-wrap gap-1.5 overflow-y-auto", children: [
+                group.members.slice(0, 12).map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[180px] truncate rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800", children: member.displayName }, `${group.id}-${member.id}`)),
+                group.members.length > 12 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500", children: [
+                  "+",
+                  group.members.length - 12,
+                  " more"
+                ] })
+              ] })
+            ] }, group.id);
+          }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "No saved groups yet." }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-4 left-4 right-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => openMessageGroupBuilder(),
+              className: "h-12 w-full rounded-xl bg-sky-600 text-sm font-bold text-white shadow-[0_10px_28px_rgba(15,23,42,0.14)] hover:bg-sky-700",
+              children: "New Group"
+            }
+          ) })
         ] }) : messageView === "compose" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mx-3 shrink-0 rounded-[28px] border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[126px] min-h-14 flex-wrap items-center gap-2 overflow-y-auto px-4 py-2", children: [
@@ -41601,7 +41666,7 @@ const MyDashboard = ({
                 onClick: () => saveGroupFromContacts(groupBuilderSelectedContacts, groupBuilderScope),
                 disabled: !groupNameDraft.trim() || groupBuilderSelectedContacts.length === 0 || groupBuilderScope === "unit" && !canCreateUnitMessageGroups,
                 className: "h-11 rounded-lg bg-sky-600 px-4 text-sm font-bold text-white shadow disabled:cursor-not-allowed disabled:bg-gray-300",
-                children: "Save Group"
+                children: editingMessageGroupId ? "Update Group" : "Save Group"
               }
             )
           ] })
