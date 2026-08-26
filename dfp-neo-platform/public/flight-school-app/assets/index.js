@@ -40941,6 +40941,22 @@ const MyDashboard = ({
       return next;
     });
   };
+  const addAllFilteredGroupBuilderContacts = () => {
+    if (filteredGroupBuilderContacts.length === 0) return;
+    setGroupBuilderSelectedIds((prev) => {
+      const next = new Set(prev);
+      filteredGroupBuilderContacts.forEach((contact) => next.add(contact.id));
+      return next;
+    });
+  };
+  const clearFilteredGroupBuilderContacts = () => {
+    if (filteredGroupBuilderContacts.length === 0) return;
+    setGroupBuilderSelectedIds((prev) => {
+      const next = new Set(prev);
+      filteredGroupBuilderContacts.forEach((contact) => next.delete(contact.id));
+      return next;
+    });
+  };
   const resetGroupBuilder = () => {
     setGroupNameDraft("");
     setGroupBuilderSearch("");
@@ -41490,6 +41506,32 @@ const MyDashboard = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: groupBuilderQualificationFilter, onChange: (event) => setGroupBuilderQualificationFilter(event.target.value), className: "h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All qualifications" }),
                 groupBuilderQualificationOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.id, children: option.label }, option.id))
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: addAllFilteredGroupBuilderContacts,
+                  disabled: filteredGroupBuilderContacts.length === 0,
+                  className: "h-9 rounded-lg bg-sky-600 px-3 text-xs font-bold text-white shadow disabled:cursor-not-allowed disabled:bg-gray-300",
+                  children: "Add All"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: clearFilteredGroupBuilderContacts,
+                  disabled: filteredGroupBuilderContacts.length === 0,
+                  className: "h-9 rounded-lg bg-white px-3 text-xs font-bold text-gray-700 shadow-sm ring-1 ring-gray-200 disabled:cursor-not-allowed disabled:text-gray-300",
+                  children: "Clear Visible"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 text-xs font-semibold text-gray-500", children: [
+                filteredGroupBuilderContacts.length,
+                " shown"
               ] })
             ] })
           ] }),

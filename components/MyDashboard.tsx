@@ -940,6 +940,22 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             return next;
         });
     };
+    const addAllFilteredGroupBuilderContacts = () => {
+        if (filteredGroupBuilderContacts.length === 0) return;
+        setGroupBuilderSelectedIds(prev => {
+            const next = new Set(prev);
+            filteredGroupBuilderContacts.forEach(contact => next.add(contact.id));
+            return next;
+        });
+    };
+    const clearFilteredGroupBuilderContacts = () => {
+        if (filteredGroupBuilderContacts.length === 0) return;
+        setGroupBuilderSelectedIds(prev => {
+            const next = new Set(prev);
+            filteredGroupBuilderContacts.forEach(contact => next.delete(contact.id));
+            return next;
+        });
+    };
     const resetGroupBuilder = () => {
         setGroupNameDraft('');
         setGroupBuilderSearch('');
@@ -1577,6 +1593,27 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                             <option value="all">All qualifications</option>
                                             {groupBuilderQualificationOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
                                         </select>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={addAllFilteredGroupBuilderContacts}
+                                            disabled={filteredGroupBuilderContacts.length === 0}
+                                            className="h-9 rounded-lg bg-sky-600 px-3 text-xs font-bold text-white shadow disabled:cursor-not-allowed disabled:bg-gray-300"
+                                        >
+                                            Add All
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={clearFilteredGroupBuilderContacts}
+                                            disabled={filteredGroupBuilderContacts.length === 0}
+                                            className="h-9 rounded-lg bg-white px-3 text-xs font-bold text-gray-700 shadow-sm ring-1 ring-gray-200 disabled:cursor-not-allowed disabled:text-gray-300"
+                                        >
+                                            Clear Visible
+                                        </button>
+                                        <span className="min-w-0 text-xs font-semibold text-gray-500">
+                                            {filteredGroupBuilderContacts.length} shown
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="mt-3 flex-1 overflow-y-auto px-4 pb-3">
