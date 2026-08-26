@@ -938,77 +938,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         return Array.from(visible.values())
             .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
     }, [activeConversationMessages]);
-    const downloadDashboardMessageTraceReport = () => {
-        const now = new Date();
-        const trace = {
-            generatedAt: now.toISOString(),
-            user: {
-                userName: dashboardMessageUserName,
-                userRank,
-                dashboardUserKey,
-                dashboardSenderContactId,
-                matchedStaff: dashboardUserStaff ? {
-                    idNumber: dashboardUserStaff.idNumber,
-                    name: dashboardUserStaff.name,
-                    rank: dashboardUserStaff.rank,
-                    unit: dashboardUserStaff.unit,
-                    flight: dashboardUserStaff.flight,
-                } : null,
-                matchedTrainee: dashboardUserTrainee ? {
-                    idNumber: dashboardUserTrainee.idNumber,
-                    name: dashboardUserTrainee.name,
-                    fullName: dashboardUserTrainee.fullName,
-                    rank: dashboardUserTrainee.rank,
-                    unit: dashboardUserTrainee.unit,
-                    course: dashboardUserTrainee.course,
-                    flight: dashboardUserTrainee.flight,
-                } : null,
-                unitCodes: dashboardUserUnitCodes,
-            },
-            selected: {
-                messageView,
-                selectedMessageContact,
-                selectedMessageGroupContact,
-                selectedMessageContacts: selectedMessageContacts.map(contact => ({
-                    id: contact.id,
-                    displayName: contact.displayName,
-                    name: contact.name,
-                    type: contact.type,
-                    unit: contact.unit,
-                    rank: contact.rank,
-                    idNumber: contact.idNumber,
-                })),
-            },
-            counts: {
-                peopleContacts: peopleMessageContacts.length,
-                groupContacts: dashboardMessageGroups.length,
-                messages: dashboardMessages.length,
-                conversations: messageConversations.length,
-                unread: unreadMessages.length,
-                activeConversationMessages: activeConversationMessages.length,
-                visibleActiveConversationMessages: visibleActiveConversationMessages.length,
-            },
-            groups: dashboardMessageGroups,
-            conversations: messageConversations.map(conversation => ({
-                contact: conversation.contact,
-                lastMessage: conversation.lastMessage,
-                unreadCount: conversation.unreadCount,
-            })),
-            activeConversationMessages,
-            visibleActiveConversationMessages,
-            userScopedMessages: dashboardMessages.filter(message => messageBelongsToDashboardUser(message)),
-        };
-        const safeUser = normaliseDashboardContactName(dashboardMessageUserName).replace(/[^a-z0-9]+/g, '-') || 'user';
-        const blob = new Blob([JSON.stringify(trace, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `dashboard-message-trace-${safeUser}-${now.toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
     const latestConversationMessageId = visibleActiveConversationMessages[visibleActiveConversationMessages.length - 1]?.id || '';
     useEffect(() => {
         if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || !activeConversationEndRef.current) return;
@@ -1613,16 +1542,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                             ? editingMessageGroupId ? 'Edit Group' : 'New Group'
                                             : 'New Message'}
                             </h2>
-                            {messageView === 'inbox' && (
-                                <button
-                                    type="button"
-                                    onClick={downloadDashboardMessageTraceReport}
-                                    className="absolute right-16 top-5 rounded-lg bg-gray-200 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-gray-600 hover:bg-gray-300 hover:text-gray-950"
-                                    title="Download message delivery trace"
-                                >
-                                    Trace
-                                </button>
-                            )}
                             <button
                                 type="button"
                                 onClick={() => {
