@@ -2239,11 +2239,17 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     const contact = normaliseDashboardMessageName(req.body?.contact);
     const participantId = normaliseDashboardMessageId(req.body?.participantId);
     const contactId = normaliseDashboardMessageId(req.body?.contactId);
-    if ((!participant && !participantId) || (!contact && !contactId)) {
+    const groupId = normaliseDashboardMessageId(req.body?.groupId);
+    if ((!participant && !participantId) || (!groupId && !contact && !contactId)) {
       return res.status(400).json({ error: 'Participant and contact are required.' });
     }
     const messages = await getDashboardMessages(db);
-    const nextMessages = messages.filter(message => !dashboardMessageMatchesConversation(message, participantId, participant, contactId, contact));
+    const nextMessages = messages.filter(message => {
+      if (groupId && message.groupId === groupId && dashboardMessageMatchesParticipant(message, participantId, participant)) {
+        return false;
+      }
+      return !dashboardMessageMatchesConversation(message, participantId, participant, contactId, contact);
+    });
     const deleted = messages.length - nextMessages.length;
     if (deleted > 0) {
       await saveDashboardMessages(db, nextMessages);

@@ -483,12 +483,18 @@ const markDashboardConversationReadInApi = async (reader: string, sender: string
     if (!response.ok) throw new Error(`Dashboard message read update failed: ${response.status}`);
 };
 
-const deleteDashboardConversationFromApi = async (participant: string, contact: string, participantId?: string, contactId?: string) => {
+const deleteDashboardConversationFromApi = async (
+    participant: string,
+    contact: string,
+    participantId?: string,
+    contactId?: string,
+    groupId?: string,
+) => {
     const response = await fetch('/api/dashboard-messages/conversation', {
         method: 'DELETE',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participant, contact, participantId, contactId }),
+        body: JSON.stringify({ participant, contact, participantId, contactId, groupId }),
     });
     if (!response.ok) throw new Error(`Dashboard conversation delete failed: ${response.status}`);
 };
@@ -1253,12 +1259,20 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         );
         if (!confirmed) return;
         const contactKey = normaliseDashboardContactName(contact.name);
+        const groupId = contact.type === 'Group'
+            ? contact.id.replace(/^group-conversation-/, '').replace(/^group-/, '')
+            : '';
         persistDashboardMessages(messages => messages.filter(message => {
             const from = normaliseDashboardContactName(message.from);
             const to = normaliseDashboardContactName(message.to);
+            if (groupId) {
+                return message.groupId !== groupId;
+            }
             return !(
                 (message.fromId === dashboardSenderContactId && message.toId === contact.id) ||
                 (message.fromId === contact.id && message.toId === dashboardSenderContactId) ||
+                (message.fromId === dashboardSenderContactId && Array.isArray(message.recipientIds) && message.recipientIds.includes(contact.id)) ||
+                (message.fromId === contact.id && Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
                 (!message.fromId && !message.toId && (
                     (from === dashboardUserKey && to === contactKey) ||
                     (from === contactKey && to === dashboardUserKey)
@@ -1274,7 +1288,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             setMessageView('inbox');
         }
         try {
-            await deleteDashboardConversationFromApi(dashboardMessageUserName, contact.name, dashboardSenderContactId, contact.id);
+            await deleteDashboardConversationFromApi(
+                dashboardMessageUserName,
+                contact.name,
+                dashboardSenderContactId,
+                groupId ? undefined : contact.id,
+                groupId || undefined,
+            );
             await refreshDashboardMessages();
         } catch (error) {
             console.error('[Dashboard Messages] Delete conversation failed:', error);
