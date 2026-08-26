@@ -2034,6 +2034,9 @@ function normaliseDashboardStoredMessageGroups(data) {
               rank: String(member.rank || ''),
               unit: String(member.unit || ''),
               course: String(member.course || ''),
+              flight: String(member.flight || ''),
+              qualification: String(member.qualification || ''),
+              idNumber: String(member.idNumber || ''),
             }))
         : [];
       return {
@@ -2240,6 +2243,7 @@ app.get('/api/dashboard-message-groups', async (req, res) => {
     const ownerName = normaliseDashboardMessageName(req.query.userName);
     const unitCode = normaliseDashboardMessageName(req.query.unitCode);
     const groups = await getDashboardMessageGroups(db);
+    const requestedUnits = new Set(String(req.query.unitCode || '').split(/[+/]/).map(value => normaliseDashboardMessageName(value)).filter(Boolean));
     const scopedGroups = groups.filter(group => {
       if (group.scopeType === 'personal') {
         return (
@@ -2248,7 +2252,9 @@ app.get('/api/dashboard-message-groups', async (req, res) => {
         );
       }
       if (group.scopeType === 'unit' || group.scopeType === 'combined_unit') {
-        return !unitCode || normaliseDashboardMessageName(group.unitCode) === unitCode;
+        if (!unitCode) return true;
+        const groupUnits = String(group.unitCode || '').split(/[+/]/).map(value => normaliseDashboardMessageName(value)).filter(Boolean);
+        return groupUnits.some(groupUnit => requestedUnits.has(groupUnit)) || normaliseDashboardMessageName(group.unitCode) === unitCode;
       }
       return group.scopeType === 'organisation';
     });
@@ -2263,6 +2269,10 @@ app.post('/api/dashboard-message-groups', async (req, res) => {
   try {
     const db = await getPrisma();
     const input = req.body?.group || req.body || {};
+    const requestedScopeType = ['unit', 'combined_unit', 'organisation'].includes(input.scopeType) ? input.scopeType : 'personal';
+    if (requestedScopeType !== 'personal' && req.body?.canCreateUnitGroup !== true) {
+      return res.status(403).json({ error: 'Permission required to create unit-level message groups.' });
+    }
     const now = new Date().toISOString();
     const [group] = normaliseDashboardStoredMessageGroups([{
       ...input,

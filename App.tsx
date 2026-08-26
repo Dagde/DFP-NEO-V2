@@ -50110,6 +50110,7 @@ appliedUpdates.forEach(update => {
                             messageContactStaffOptions={instructorsData}
                             messageContactTraineeOptions={traineesData}
                             messageContactUnitCodes={activeContextUnitCodes}
+                            canCreateUnitMessageGroups={canUsePlatformPermission('messages.groups.unit.create')}
                             onUnreadMessageCountChange={setDashboardUnreadMessageCount}
                             sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                             currentLocationCode={activeLocationSolarProfile.code}

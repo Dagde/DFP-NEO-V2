@@ -2208,6 +2208,7 @@ const PLATFORM_PERMISSION_CATALOG = [
       ["setupWizard.open", "Open Initial Setup Wizard"],
       ["dutyPilot.flyout.open", "Open Duty Pilot flyout"],
       ["myHome.flyout.open", "Open My Home flyout"],
+      ["messages.groups.unit.create", "Create unit-level message groups"],
       ["unitLocationSelector.open", "Open Unit / Location selection window"],
       ["unitLocationSelector.homeUnitCurrentDateOnly", "Restrict to home unit / current date only"]
     ]
@@ -40326,6 +40327,12 @@ const DashboardIconSquarePen = ({ className = "h-5 w-5", strokeWidth = 2 }) => /
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M18.4 2.6a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z" })
 ] });
+const DashboardIconUsers = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "9", cy: "7", r: "4" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M22 21v-2a4 4 0 0 0-3-3.87" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M16 3.13a4 4 0 0 1 0 7.75" })
+] });
 const DashboardIconTrash = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M3 6h18" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 6V4h8v2" }),
@@ -40487,7 +40494,7 @@ const renderDashboardMessageContactButton = (contact, onSelect, compact = false)
     children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-950", children: contact.displayName }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: contact.type === "Group" ? `${contact.memberIds?.length || 0} recipients` : contact.type === "Trainee" ? contact.unit : `${contact.unit} - ${contact.role}` })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: contact.type === "Group" ? `${contact.memberIds?.length || 0} recipients` : contact.type === "Trainee" ? `${contact.unit}${contact.idNumber ? ` - ID ${contact.idNumber}` : ""}` : `${contact.unit} - ${contact.role}${contact.idNumber ? ` - ID ${contact.idNumber}` : ""}` })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${compact ? "text-gray-400" : "rounded-full bg-gray-100 px-2 py-1 text-gray-500"} text-[10px] font-bold uppercase`, children: contact.type })
     ]
@@ -40538,10 +40545,11 @@ const sendDashboardMessageToApi = async (message) => {
   const data = await response.json();
   return data.message || message;
 };
-const fetchDashboardMessageGroupsFromApi = async (ownerId, userName) => {
+const fetchDashboardMessageGroupsFromApi = async (ownerId, userName, unitCode) => {
   const params = new URLSearchParams();
   if (ownerId) params.set("ownerId", ownerId);
   if (userName) params.set("userName", userName);
+  if (unitCode) params.set("unitCode", unitCode);
   const response = await fetch(`/api/dashboard-message-groups?${params.toString()}`, {
     credentials: "include"
   });
@@ -40549,12 +40557,12 @@ const fetchDashboardMessageGroupsFromApi = async (ownerId, userName) => {
   const data = await response.json();
   return Array.isArray(data.groups) ? data.groups : [];
 };
-const saveDashboardMessageGroupToApi = async (group) => {
+const saveDashboardMessageGroupToApi = async (group, options = {}) => {
   const response = await fetch("/api/dashboard-message-groups", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ group })
+    body: JSON.stringify({ group, canCreateUnitGroup: options.canCreateUnitGroup === true })
   });
   if (!response.ok) throw new Error(`Dashboard message group save failed: ${response.status}`);
   const data = await response.json();
@@ -40600,6 +40608,7 @@ const MyDashboard = ({
   messageContactStaffOptions = staffOptions,
   messageContactTraineeOptions = [],
   messageContactUnitCodes = [],
+  canCreateUnitMessageGroups = false,
   onUnreadMessageCountChange,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   currentLocationCode,
@@ -40623,6 +40632,16 @@ const MyDashboard = ({
   const [messageView, setMessageView] = reactExports.useState("inbox");
   const [messageSearchText, setMessageSearchText] = reactExports.useState("");
   const [groupNameDraft, setGroupNameDraft] = reactExports.useState("");
+  const [groupBuilderSearch, setGroupBuilderSearch] = reactExports.useState("");
+  const [groupBuilderScope, setGroupBuilderScope] = reactExports.useState("personal");
+  const [groupBuilderTypeFilter, setGroupBuilderTypeFilter] = reactExports.useState("all");
+  const [groupBuilderUnitFilter, setGroupBuilderUnitFilter] = reactExports.useState("all");
+  const [groupBuilderFlightFilter, setGroupBuilderFlightFilter] = reactExports.useState("all");
+  const [groupBuilderRankFilter, setGroupBuilderRankFilter] = reactExports.useState("all");
+  const [groupBuilderRoleFilter, setGroupBuilderRoleFilter] = reactExports.useState("all");
+  const [groupBuilderCourseFilter, setGroupBuilderCourseFilter] = reactExports.useState("all");
+  const [groupBuilderQualificationFilter, setGroupBuilderQualificationFilter] = reactExports.useState("all");
+  const [groupBuilderSelectedIds, setGroupBuilderSelectedIds] = reactExports.useState(() => /* @__PURE__ */ new Set());
   const [isCreatingGroup, setIsCreatingGroup] = reactExports.useState(false);
   const [incomingToast, setIncomingToast] = reactExports.useState(null);
   const shownIncomingToastIds = reactExports.useRef(/* @__PURE__ */ new Set());
@@ -40658,8 +40677,18 @@ const MyDashboard = ({
         id: `staff-${staff.idNumber}-${staff.name}`,
         name: staff.name,
         displayName: toDashboardContactDisplayName(staff.name, staff.rank),
+        idNumber: String(staff.idNumber || ""),
         unit: staff.unit || "No Unit",
         role: formatStaffRole(staff),
+        flight: staff.flight || "",
+        qualification: [
+          staff.category && staff.category !== "UnCat" ? staff.category : "",
+          staff.isTestingOfficer ? "Testing Officer" : "",
+          staff.isQFI ? "QFI" : "",
+          staff.isOFI ? "OFI" : "",
+          staff.isIRE ? "IRE" : "",
+          staff.isFlyingSupervisor ? "Flying Supervisor" : ""
+        ].filter(Boolean).join(", ") || "None",
         rank: staff.rank || "",
         surname: nameParts.surname,
         firstNames: nameParts.firstNames,
@@ -40676,9 +40705,12 @@ const MyDashboard = ({
         id: `trainee-${trainee.idNumber}-${name}`,
         name,
         displayName: toDashboardContactDisplayName(name, trainee.rank),
+        idNumber: String(trainee.idNumber || ""),
         unit: trainee.unit || "No Unit",
         role: "Trainee",
         course: trainee.course || "Unallocated Trainees",
+        flight: trainee.flight || "",
+        qualification: [trainee.lmpType, trainee.academicLmpType].filter(Boolean).join(", ") || "None",
         rank: trainee.rank || "",
         surname: nameParts.surname,
         firstNames: nameParts.firstNames,
@@ -40702,7 +40734,8 @@ const MyDashboard = ({
       firstNames: "",
       type: "Group",
       memberIds: group.members.map((member) => member.id).filter(Boolean),
-      memberNames: group.members.map((member) => member.name).filter(Boolean)
+      memberNames: group.members.map((member) => member.name).filter(Boolean),
+      idNumber: ""
     }));
     return [
       ...groupContacts,
@@ -40761,6 +40794,28 @@ const MyDashboard = ({
   }, [messageConversations, messageSearchText]);
   const messageSuggestionGroups = reactExports.useMemo(() => groupDashboardMessageContacts(messageSuggestions), [messageSuggestions]);
   const messageContactGroups = reactExports.useMemo(() => groupDashboardMessageContacts(messageContacts), [messageContacts]);
+  const groupBuilderUnitOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.unit).filter(Boolean))).sort(), [peopleMessageContacts]);
+  const groupBuilderFlightOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.flight).filter(Boolean))).sort(), [peopleMessageContacts]);
+  const groupBuilderRankOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.rank).filter(Boolean))).sort(compareDashboardRank), [peopleMessageContacts]);
+  const groupBuilderRoleOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.role).filter(Boolean))).sort(), [peopleMessageContacts]);
+  const groupBuilderCourseOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.course).filter(Boolean))).sort(), [peopleMessageContacts]);
+  const groupBuilderQualificationOptions = reactExports.useMemo(() => Array.from(new Set(peopleMessageContacts.map((contact) => contact.qualification).filter(Boolean))).sort(), [peopleMessageContacts]);
+  const filteredGroupBuilderContacts = reactExports.useMemo(() => {
+    const query = normaliseDashboardContactName(groupBuilderSearch);
+    return peopleMessageContacts.filter((contact) => contact.id !== dashboardSenderContactId).filter((contact) => groupBuilderTypeFilter === "all" || contact.type === groupBuilderTypeFilter).filter((contact) => groupBuilderUnitFilter === "all" || contact.unit === groupBuilderUnitFilter).filter((contact) => groupBuilderFlightFilter === "all" || contact.flight === groupBuilderFlightFilter).filter((contact) => groupBuilderRankFilter === "all" || contact.rank === groupBuilderRankFilter).filter((contact) => groupBuilderRoleFilter === "all" || contact.role === groupBuilderRoleFilter).filter((contact) => groupBuilderCourseFilter === "all" || contact.course === groupBuilderCourseFilter).filter((contact) => groupBuilderQualificationFilter === "all" || contact.qualification === groupBuilderQualificationFilter).filter((contact) => !query || (normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query) || normaliseDashboardContactName(contact.rank).includes(query) || normaliseDashboardContactName(contact.role).includes(query) || normaliseDashboardContactName(contact.unit).includes(query) || normaliseDashboardContactName(contact.flight).includes(query) || normaliseDashboardContactName(contact.course).includes(query) || normaliseDashboardContactName(contact.qualification).includes(query)));
+  }, [
+    dashboardSenderContactId,
+    groupBuilderCourseFilter,
+    groupBuilderFlightFilter,
+    groupBuilderQualificationFilter,
+    groupBuilderRankFilter,
+    groupBuilderRoleFilter,
+    groupBuilderSearch,
+    groupBuilderTypeFilter,
+    groupBuilderUnitFilter,
+    peopleMessageContacts
+  ]);
+  const groupBuilderSelectedContacts = reactExports.useMemo(() => peopleMessageContacts.filter((contact) => groupBuilderSelectedIds.has(contact.id)), [groupBuilderSelectedIds, peopleMessageContacts]);
   const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => (message.toId === dashboardSenderContactId || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey) && !message.readAt), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
   reactExports.useEffect(() => {
     onUnreadMessageCountChange?.(unreadMessages.length);
@@ -40824,7 +40879,7 @@ const MyDashboard = ({
   }, [dashboardUserKey, dashboardSenderContactId]);
   const refreshDashboardMessageGroups = async () => {
     try {
-      const groups = await fetchDashboardMessageGroupsFromApi(dashboardSenderContactId, dashboardMessageUserName);
+      const groups = await fetchDashboardMessageGroupsFromApi(dashboardSenderContactId, dashboardMessageUserName, dashboardUserUnitCodes.join("+"));
       setDashboardMessageGroups(groups);
     } catch (error) {
       console.warn("[Dashboard Messages] Could not refresh message groups:", error);
@@ -40832,7 +40887,7 @@ const MyDashboard = ({
   };
   reactExports.useEffect(() => {
     refreshDashboardMessageGroups();
-  }, [dashboardSenderContactId, dashboardMessageUserName]);
+  }, [dashboardSenderContactId, dashboardMessageUserName, dashboardUserUnitCodes.join("+")]);
   reactExports.useEffect(() => {
     if (!dashboardUserKey) return;
     let cancelled = false;
@@ -40866,34 +40921,64 @@ const MyDashboard = ({
       return next;
     });
   };
-  const saveSelectedRecipientsAsGroup = async () => {
+  const toggleGroupBuilderContact = (contactId) => {
+    setGroupBuilderSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(contactId)) {
+        next.delete(contactId);
+      } else {
+        next.add(contactId);
+      }
+      return next;
+    });
+  };
+  const resetGroupBuilder = () => {
+    setGroupNameDraft("");
+    setGroupBuilderSearch("");
+    setGroupBuilderScope("personal");
+    setGroupBuilderTypeFilter("all");
+    setGroupBuilderUnitFilter("all");
+    setGroupBuilderFlightFilter("all");
+    setGroupBuilderRankFilter("all");
+    setGroupBuilderRoleFilter("all");
+    setGroupBuilderCourseFilter("all");
+    setGroupBuilderQualificationFilter("all");
+    setGroupBuilderSelectedIds(/* @__PURE__ */ new Set());
+  };
+  const saveGroupFromContacts = async (contacts, scopeType) => {
     const groupName = groupNameDraft.trim();
-    if (!groupName || selectedMessageContacts.length === 0) return;
+    if (!groupName || contacts.length === 0) return;
+    if (scopeType === "unit" && !canCreateUnitMessageGroups) return;
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const group = {
       id: `message-group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: groupName,
-      scopeType: "personal",
+      scopeType,
       ownerId: dashboardSenderContactId,
       ownerName: dashboardMessageUserName,
       unitCode: dashboardUserUnitCodes.join("+") || dashboardUserStaff?.unit || void 0,
-      members: selectedMessageContacts.map((contact) => ({
+      members: contacts.map((contact) => ({
         id: contact.id,
         name: contact.name,
         displayName: contact.displayName,
         type: contact.type === "Trainee" ? "Trainee" : "Staff",
         rank: contact.rank,
         unit: contact.unit,
-        course: contact.course
+        course: contact.course,
+        flight: contact.flight,
+        qualification: contact.qualification,
+        idNumber: contact.idNumber
       })),
       createdAt: now,
       updatedAt: now
     };
-    setIsCreatingGroup(false);
-    setGroupNameDraft("");
     setDashboardMessageGroups((prev) => [group, ...prev.filter((existing) => existing.id !== group.id)]);
+    setGroupNameDraft("");
+    setGroupBuilderSelectedIds(/* @__PURE__ */ new Set());
+    setGroupBuilderScope("personal");
+    setMessageView("inbox");
     try {
-      const savedGroup = await saveDashboardMessageGroupToApi(group);
+      const savedGroup = await saveDashboardMessageGroupToApi(group, { canCreateUnitGroup: canCreateUnitMessageGroups });
       setDashboardMessageGroups((prev) => [savedGroup, ...prev.filter((existing) => existing.id !== savedGroup.id)]);
       await refreshDashboardMessageGroups();
     } catch (error) {
@@ -41112,20 +41197,35 @@ const MyDashboard = ({
     isMessagesOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex h-[78vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[28px] bg-[#f7f7f8] text-gray-950 shadow-2xl ring-1 ring-black/10", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative px-5 pb-3 pt-5", children: [
-          messageView === "compose" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          messageView !== "inbox" && /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
               onClick: () => {
                 setMessageView("inbox");
                 setIsContactPickerOpen(false);
+                resetGroupBuilder();
               },
               className: "absolute left-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300",
               "aria-label": "Back to messages",
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconArrowLeft, { className: "h-6 w-6", strokeWidth: 2.4 })
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-center text-2xl font-bold tracking-tight", children: messageView === "inbox" ? "Messages" : "New Message" }),
+          messageView === "inbox" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => {
+                resetGroupBuilder();
+                setMessageView("group");
+              },
+              className: "absolute left-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-gray-200 text-gray-950 shadow-inner hover:bg-gray-300",
+              "aria-label": "Create message group",
+              title: "Create group",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconUsers, { className: "h-6 w-6", strokeWidth: 2.2 })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-center text-2xl font-bold tracking-tight", children: messageView === "inbox" ? "Messages" : messageView === "group" ? "New Group" : "New Message" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -41212,10 +41312,23 @@ const MyDashboard = ({
               }
             )
           ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        ] }) : messageView === "compose" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative mx-3 rounded-full border border-white bg-white/80 shadow-[0_18px_30px_rgba(15,23,42,0.12)]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-14 items-center gap-2 px-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xl text-gray-500", children: "To:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-14 flex-wrap items-center gap-2 px-4 py-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-xl text-gray-500", children: "To:" }),
+              selectedMessageContacts.map((contact) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex max-w-[190px] shrink-0 items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-sm font-semibold text-sky-800 ring-1 ring-sky-100", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: contact.displayName }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => removeMessageContactRecipient(contact.id),
+                    className: "grid h-5 w-5 place-items-center rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200",
+                    "aria-label": `Remove ${contact.displayName}`,
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconX, { className: "h-3.5 w-3.5", strokeWidth: 2.4 })
+                  }
+                )
+              ] }, contact.id)),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -41226,7 +41339,7 @@ const MyDashboard = ({
                       setSelectedMessageContact(null);
                     }
                   },
-                  placeholder: selectedMessageContacts.length > 0 ? "Add another recipient" : "",
+                  placeholder: selectedMessageContacts.length > 0 ? "Add another recipient" : "Add recipient",
                   className: "min-w-0 flex-1 bg-transparent text-xl text-gray-950 outline-none",
                   autoComplete: "off"
                 }
@@ -41246,71 +41359,6 @@ const MyDashboard = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-50 px-4 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400", children: group.title }),
               group.contacts.map((contact) => renderDashboardMessageContactButton(contact, selectMessageContact, true))
             ] }, group.title)) })
-          ] }),
-          selectedMessageContacts.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mt-3 rounded-2xl bg-white/75 p-3 shadow-sm ring-1 ring-black/5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: selectedMessageContacts.map((contact) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex max-w-full items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-sm font-semibold text-sky-800 ring-1 ring-sky-100", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[220px] truncate", children: contact.displayName }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => removeMessageContactRecipient(contact.id),
-                  className: "grid h-5 w-5 place-items-center rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200",
-                  "aria-label": `Remove ${contact.displayName}`,
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconX, { className: "h-3.5 w-3.5", strokeWidth: 2.4 })
-                }
-              )
-            ] }, contact.id)) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap items-center gap-2", children: [
-              isCreatingGroup ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    value: groupNameDraft,
-                    onChange: (event) => setGroupNameDraft(event.target.value),
-                    placeholder: "Group name",
-                    className: "h-9 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-950 outline-none focus:ring-2 focus:ring-sky-400"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: saveSelectedRecipientsAsGroup,
-                    disabled: !groupNameDraft.trim(),
-                    className: "h-9 rounded-lg bg-sky-600 px-3 text-xs font-bold text-white shadow disabled:cursor-not-allowed disabled:bg-gray-300",
-                    children: "Save"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => {
-                      setIsCreatingGroup(false);
-                      setGroupNameDraft("");
-                    },
-                    className: "h-9 rounded-lg bg-gray-100 px-3 text-xs font-bold text-gray-700 hover:bg-gray-200",
-                    children: "Cancel"
-                  }
-                )
-              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => setIsCreatingGroup(true),
-                  disabled: selectedMessageContacts.length < 2,
-                  className: "h-9 rounded-lg bg-white px-3 text-xs font-bold text-sky-700 shadow-sm ring-1 ring-sky-100 disabled:cursor-not-allowed disabled:text-gray-300 disabled:ring-gray-100",
-                  children: "Save as Group"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-500", children: [
-                selectedMessageContacts.length,
-                " recipient",
-                selectedMessageContacts.length === 1 ? "" : "s",
-                " selected"
-              ] })
-            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? activeConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
             activeConversationMessages.map((message) => {
@@ -41359,6 +41407,117 @@ const MyDashboard = ({
                 disabled: selectedMessageContacts.length === 0 || !messageDraft.trim(),
                 className: "flex h-12 w-14 items-center justify-center rounded-md bg-white text-sm font-bold text-sky-600 shadow disabled:cursor-not-allowed disabled:text-gray-300",
                 children: "Send"
+              }
+            )
+          ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 space-y-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                value: groupNameDraft,
+                onChange: (event) => setGroupNameDraft(event.target.value),
+                placeholder: "Group name",
+                className: "h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-base font-semibold text-gray-950 shadow-sm outline-none focus:ring-2 focus:ring-sky-400"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setGroupBuilderScope("personal"),
+                  className: `h-10 rounded-lg text-sm font-bold ${groupBuilderScope === "personal" ? "bg-sky-600 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200"}`,
+                  children: "Personal Group"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => canCreateUnitMessageGroups && setGroupBuilderScope("unit"),
+                  disabled: !canCreateUnitMessageGroups,
+                  className: `h-10 rounded-lg text-sm font-bold ${groupBuilderScope === "unit" ? "bg-sky-600 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200"} disabled:cursor-not-allowed disabled:text-gray-300`,
+                  children: "Unit Group"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                value: groupBuilderSearch,
+                onChange: (event) => setGroupBuilderSearch(event.target.value),
+                placeholder: "Search name, rank, role, unit, flight or qualification",
+                className: "h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-950 shadow-sm outline-none focus:ring-2 focus:ring-sky-400"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: groupBuilderTypeFilter, onChange: (event) => setGroupBuilderTypeFilter(event.target.value), className: "h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All people" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Staff", children: "Staff" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Trainee", children: "Trainees" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: groupBuilderUnitFilter, onChange: (event) => setGroupBuilderUnitFilter(event.target.value), className: "h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All units" }),
+                groupBuilderUnitOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: groupBuilderFlightFilter, onChange: (event) => setGroupBuilderFlightFilter(event.target.value), className: "h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All flights" }),
+                groupBuilderFlightOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: groupBuilderRankFilter, onChange: (event) => setGroupBuilderRankFilter(event.target.value), className: "h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All ranks" }),
+                groupBuilderRankOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: groupBuilderRoleFilter, onChange: (event) => setGroupBuilderRoleFilter(event.target.value), className: "h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All roles" }),
+                groupBuilderRoleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: groupBuilderCourseFilter, onChange: (event) => setGroupBuilderCourseFilter(event.target.value), className: "h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All courses" }),
+                groupBuilderCourseOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: groupBuilderQualificationFilter, onChange: (event) => setGroupBuilderQualificationFilter(event.target.value), className: "h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All qualifications" }),
+                groupBuilderQualificationOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex-1 overflow-y-auto px-4 pb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+            filteredGroupBuilderContacts.map((contact) => {
+              const isSelected = groupBuilderSelectedIds.has(contact.id);
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => toggleGroupBuilderContact(contact.id),
+                  className: `flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left ${isSelected ? "bg-sky-50 ring-1 ring-sky-200" : "bg-white hover:bg-gray-50"}`,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-semibold text-gray-950", children: contact.displayName }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-xs text-gray-500", children: [contact.unit, contact.flight, contact.type === "Trainee" ? contact.course : contact.role, contact.qualification, contact.idNumber ? `ID ${contact.idNumber}` : ""].filter(Boolean).join(" - ") })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${isSelected ? "bg-sky-600 text-white" : "bg-gray-100 text-gray-400"}`, children: isSelected ? "On" : "+" })
+                  ]
+                },
+                contact.id
+              );
+            }),
+            filteredGroupBuilderContacts.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-8 text-center text-sm text-gray-500", children: "No matching contacts." })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 border-t border-gray-200 bg-white/70 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1 text-sm font-semibold text-gray-500", children: [
+              groupBuilderSelectedContacts.length,
+              " selected"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => saveGroupFromContacts(groupBuilderSelectedContacts, groupBuilderScope),
+                disabled: !groupNameDraft.trim() || groupBuilderSelectedContacts.length === 0 || groupBuilderScope === "unit" && !canCreateUnitMessageGroups,
+                className: "h-11 rounded-lg bg-sky-600 px-4 text-sm font-bold text-white shadow disabled:cursor-not-allowed disabled:bg-gray-300",
+                children: "Save Group"
               }
             )
           ] })
@@ -139084,6 +139243,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             messageContactStaffOptions: instructorsData,
             messageContactTraineeOptions: traineesData,
             messageContactUnitCodes: activeContextUnitCodes,
+            canCreateUnitMessageGroups: canUsePlatformPermission("messages.groups.unit.create"),
             onUnreadMessageCountChange: setDashboardUnreadMessageCount,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             currentLocationCode: activeLocationSolarProfile.code,

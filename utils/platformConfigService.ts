@@ -273,6 +273,7 @@ export const PLATFORM_PERMISSION_CATALOG: PlatformPermissionCatalogGroup[] = [
       ['setupWizard.open', 'Open Initial Setup Wizard'],
       ['dutyPilot.flyout.open', 'Open Duty Pilot flyout'],
       ['myHome.flyout.open', 'Open My Home flyout'],
+      ['messages.groups.unit.create', 'Create unit-level message groups'],
       ['unitLocationSelector.open', 'Open Unit / Location selection window'],
       ['unitLocationSelector.homeUnitCurrentDateOnly', 'Restrict to home unit / current date only'],
     ],
