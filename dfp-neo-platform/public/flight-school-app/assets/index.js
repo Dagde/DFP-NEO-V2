@@ -41496,10 +41496,10 @@ const MyDashboard = ({
           )
         ] }),
         messageView === "inbox" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-5 pb-24 pt-2", children: filteredMessageConversations.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-gray-200", children: filteredMessageConversations.map((conversation, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-4 flex-1 overflow-y-auto rounded-3xl bg-slate-200/70 px-3 pb-24 pt-3 ring-1 ring-slate-300/50", children: filteredMessageConversations.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: filteredMessageConversations.map((conversation, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
-              className: `relative flex w-full items-start gap-3 rounded-2xl px-3 py-4 pr-11 text-left transition-colors ${conversation.unreadCount > 0 ? "bg-sky-50/80 hover:bg-sky-50" : index % 2 === 0 ? "bg-white/55 hover:bg-white/80" : "bg-gray-100/55 hover:bg-gray-100/80"}`,
+              className: `relative flex w-full items-start gap-3 rounded-2xl border px-3 py-4 pr-11 text-left shadow-sm transition-colors ${conversation.unreadCount > 0 ? "border-sky-200 bg-sky-100 hover:bg-sky-50" : index % 2 === 0 ? "border-white bg-white hover:bg-white/90" : "border-slate-200 bg-slate-100 hover:bg-slate-50"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "button",
