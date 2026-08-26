@@ -1981,9 +1981,14 @@ app.put('/api/emergency-freeze', async (req, res) => {
 // ============================================================
 
 const DASHBOARD_MESSAGES_BACKUP_TYPE = 'dashboard_messages_v1';
+const DASHBOARD_MESSAGE_GROUPS_BACKUP_TYPE = 'dashboard_message_groups_v1';
 
 function normaliseDashboardMessageName(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function normaliseDashboardMessageId(value) {
+  return String(value || '').trim();
 }
 
 function normaliseDashboardStoredMessages(data) {
@@ -2001,7 +2006,84 @@ function normaliseDashboardStoredMessages(data) {
       body: String(message.body || ''),
       sentAt: message.sentAt || new Date().toISOString(),
       readAt: message.readAt || undefined,
+      fromId: normaliseDashboardMessageId(message.fromId) || undefined,
+      toId: normaliseDashboardMessageId(message.toId) || undefined,
+      recipientIds: Array.isArray(message.recipientIds)
+        ? Array.from(new Set(message.recipientIds.map(normaliseDashboardMessageId).filter(Boolean)))
+        : undefined,
     }));
+}
+
+function normaliseDashboardStoredMessageGroups(data) {
+  const source = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.groups)
+      ? data.groups
+      : [];
+  return source
+    .filter(group => group && group.id && group.name)
+    .map(group => {
+      const members = Array.isArray(group.members)
+        ? group.members
+            .filter(member => member && member.id && member.name)
+            .map(member => ({
+              id: normaliseDashboardMessageId(member.id),
+              name: String(member.name || ''),
+              displayName: String(member.displayName || member.name || ''),
+              type: member.type === 'Trainee' ? 'Trainee' : 'Staff',
+              rank: String(member.rank || ''),
+              unit: String(member.unit || ''),
+              course: String(member.course || ''),
+            }))
+        : [];
+      return {
+        id: normaliseDashboardMessageId(group.id),
+        name: String(group.name || '').trim(),
+        scopeType: ['unit', 'combined_unit', 'organisation'].includes(group.scopeType) ? group.scopeType : 'personal',
+        ownerId: normaliseDashboardMessageId(group.ownerId) || undefined,
+        ownerName: String(group.ownerName || '').trim() || undefined,
+        unitCode: String(group.unitCode || '').trim() || undefined,
+        members,
+        createdAt: group.createdAt || new Date().toISOString(),
+        updatedAt: group.updatedAt || group.createdAt || new Date().toISOString(),
+      };
+    })
+    .filter(group => group.name && group.members.length > 0);
+}
+
+function dashboardMessageMatchesParticipant(message, participantId, participantName) {
+  const participantKey = normaliseDashboardMessageName(participantName);
+  const id = normaliseDashboardMessageId(participantId);
+  if (id && (
+    message.fromId === id ||
+    message.toId === id ||
+    (Array.isArray(message.recipientIds) && message.recipientIds.includes(id))
+  )) {
+    return true;
+  }
+  if (!message.fromId && normaliseDashboardMessageName(message.from) === participantKey) return true;
+  if (!message.toId && normaliseDashboardMessageName(message.to) === participantKey) return true;
+  return false;
+}
+
+function dashboardMessageMatchesConversation(message, participantId, participantName, contactId, contactName) {
+  const participantKey = normaliseDashboardMessageName(participantName);
+  const contactKey = normaliseDashboardMessageName(contactName);
+  const participantStableId = normaliseDashboardMessageId(participantId);
+  const contactStableId = normaliseDashboardMessageId(contactId);
+  const matchesIds = participantStableId && contactStableId && (
+    (message.fromId === participantStableId && message.toId === contactStableId) ||
+    (message.fromId === contactStableId && message.toId === participantStableId)
+  );
+  if (matchesIds) return true;
+  return (
+    !message.fromId &&
+    !message.toId &&
+    (
+      (normaliseDashboardMessageName(message.from) === participantKey && normaliseDashboardMessageName(message.to) === contactKey) ||
+      (normaliseDashboardMessageName(message.from) === contactKey && normaliseDashboardMessageName(message.to) === participantKey)
+    )
+  );
 }
 
 async function getDashboardMessages(db) {
@@ -2022,16 +2104,32 @@ async function saveDashboardMessages(db, messages) {
   });
 }
 
+async function getDashboardMessageGroups(db) {
+  const backup = await db.dataBackup.findFirst({
+    where: { type: DASHBOARD_MESSAGE_GROUPS_BACKUP_TYPE },
+    orderBy: { createdAt: 'desc' },
+  });
+  return normaliseDashboardStoredMessageGroups(backup?.data);
+}
+
+async function saveDashboardMessageGroups(db, groups) {
+  await db.dataBackup.deleteMany({ where: { type: DASHBOARD_MESSAGE_GROUPS_BACKUP_TYPE } });
+  await db.dataBackup.create({
+    data: {
+      type: DASHBOARD_MESSAGE_GROUPS_BACKUP_TYPE,
+      data: { groups },
+    },
+  });
+}
+
 app.get('/api/dashboard-messages', async (req, res) => {
   try {
     const db = await getPrisma();
     const userName = normaliseDashboardMessageName(req.query.userName);
+    const userId = normaliseDashboardMessageId(req.query.userId);
     const messages = await getDashboardMessages(db);
-    const scopedMessages = userName
-      ? messages.filter(message => (
-          normaliseDashboardMessageName(message.from) === userName ||
-          normaliseDashboardMessageName(message.to) === userName
-        ))
+    const scopedMessages = userName || userId
+      ? messages.filter(message => dashboardMessageMatchesParticipant(message, userId, userName))
       : messages;
     res.json({ messages: scopedMessages });
   } catch (error) {
@@ -2058,6 +2156,11 @@ app.post('/api/dashboard-messages', async (req, res) => {
       body,
       sentAt: messageInput.sentAt || new Date().toISOString(),
       readAt: messageInput.readAt || undefined,
+      fromId: normaliseDashboardMessageId(messageInput.fromId) || undefined,
+      toId: normaliseDashboardMessageId(messageInput.toId) || undefined,
+      recipientIds: Array.isArray(messageInput.recipientIds)
+        ? Array.from(new Set(messageInput.recipientIds.map(normaliseDashboardMessageId).filter(Boolean)))
+        : undefined,
     };
     const deduped = messages.filter(existing => existing.id !== message.id);
     const nextMessages = [...deduped, message].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
@@ -2074,16 +2177,22 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
     const db = await getPrisma();
     const reader = normaliseDashboardMessageName(req.body?.reader);
     const sender = normaliseDashboardMessageName(req.body?.sender);
+    const readerId = normaliseDashboardMessageId(req.body?.readerId);
+    const senderId = normaliseDashboardMessageId(req.body?.senderId);
     const messageIds = new Set(Array.isArray(req.body?.messageIds) ? req.body.messageIds.map(id => String(id)) : []);
-    if (!reader) {
+    if (!reader && !readerId) {
       return res.status(400).json({ error: 'Reader is required.' });
     }
     const now = new Date().toISOString();
     let updated = 0;
     const messages = await getDashboardMessages(db);
     const nextMessages = messages.map(message => {
-      const matchesReader = normaliseDashboardMessageName(message.to) === reader;
-      const matchesSender = !sender || normaliseDashboardMessageName(message.from) === sender;
+      const matchesReader = readerId
+        ? message.toId === readerId || (Array.isArray(message.recipientIds) && message.recipientIds.includes(readerId))
+        : normaliseDashboardMessageName(message.to) === reader;
+      const matchesSender = senderId
+        ? message.fromId === senderId
+        : (!sender || normaliseDashboardMessageName(message.from) === sender);
       const matchesId = messageIds.size === 0 || messageIds.has(message.id);
       if (matchesReader && matchesSender && matchesId && !message.readAt) {
         updated++;
@@ -2106,18 +2215,13 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     const db = await getPrisma();
     const participant = normaliseDashboardMessageName(req.body?.participant);
     const contact = normaliseDashboardMessageName(req.body?.contact);
-    if (!participant || !contact) {
+    const participantId = normaliseDashboardMessageId(req.body?.participantId);
+    const contactId = normaliseDashboardMessageId(req.body?.contactId);
+    if ((!participant && !participantId) || (!contact && !contactId)) {
       return res.status(400).json({ error: 'Participant and contact are required.' });
     }
     const messages = await getDashboardMessages(db);
-    const nextMessages = messages.filter(message => {
-      const from = normaliseDashboardMessageName(message.from);
-      const to = normaliseDashboardMessageName(message.to);
-      return !(
-        (from === participant && to === contact) ||
-        (from === contact && to === participant)
-      );
-    });
+    const nextMessages = messages.filter(message => !dashboardMessageMatchesConversation(message, participantId, participant, contactId, contact));
     const deleted = messages.length - nextMessages.length;
     if (deleted > 0) {
       await saveDashboardMessages(db, nextMessages);
@@ -2126,6 +2230,58 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
   } catch (error) {
     console.error('[Dashboard Messages] DELETE conversation error:', error);
     res.status(500).json({ error: 'Failed to delete dashboard conversation', details: error.message });
+  }
+});
+
+app.get('/api/dashboard-message-groups', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const ownerId = normaliseDashboardMessageId(req.query.ownerId);
+    const ownerName = normaliseDashboardMessageName(req.query.userName);
+    const unitCode = normaliseDashboardMessageName(req.query.unitCode);
+    const groups = await getDashboardMessageGroups(db);
+    const scopedGroups = groups.filter(group => {
+      if (group.scopeType === 'personal') {
+        return (
+          (ownerId && group.ownerId === ownerId) ||
+          (!group.ownerId && ownerName && normaliseDashboardMessageName(group.ownerName) === ownerName)
+        );
+      }
+      if (group.scopeType === 'unit' || group.scopeType === 'combined_unit') {
+        return !unitCode || normaliseDashboardMessageName(group.unitCode) === unitCode;
+      }
+      return group.scopeType === 'organisation';
+    });
+    res.json({ groups: scopedGroups });
+  } catch (error) {
+    console.error('[Dashboard Message Groups] GET error:', error);
+    res.status(500).json({ error: 'Failed to load dashboard message groups', details: error.message });
+  }
+});
+
+app.post('/api/dashboard-message-groups', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const input = req.body?.group || req.body || {};
+    const now = new Date().toISOString();
+    const [group] = normaliseDashboardStoredMessageGroups([{
+      ...input,
+      id: input.id || `message-group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      scopeType: input.scopeType || 'personal',
+      createdAt: input.createdAt || now,
+      updatedAt: now,
+    }]);
+    if (!group) {
+      return res.status(400).json({ error: 'Message group requires a name and at least one member.' });
+    }
+    const groups = await getDashboardMessageGroups(db);
+    const nextGroups = [group, ...groups.filter(existing => existing.id !== group.id)]
+      .sort((a, b) => a.name.localeCompare(b.name));
+    await saveDashboardMessageGroups(db, nextGroups);
+    res.json({ success: true, group });
+  } catch (error) {
+    console.error('[Dashboard Message Groups] POST error:', error);
+    res.status(500).json({ error: 'Failed to save dashboard message group', details: error.message });
   }
 });
 

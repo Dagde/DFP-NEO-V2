@@ -45,7 +45,9 @@ type DashboardMessageContact = {
     rank: string;
     surname: string;
     firstNames: string;
-    type: 'Staff' | 'Trainee';
+    type: 'Staff' | 'Trainee' | 'Group';
+    memberIds?: string[];
+    memberNames?: string[];
 };
 
 type DashboardMessage = {
@@ -55,11 +57,34 @@ type DashboardMessage = {
     body: string;
     sentAt: string;
     readAt?: string;
+    fromId?: string;
+    toId?: string;
+    recipientIds?: string[];
 };
 
 type DashboardMessageContactGroup = {
     title: string;
     contacts: DashboardMessageContact[];
+};
+
+type DashboardMessageGroupRecord = {
+    id: string;
+    name: string;
+    scopeType: 'personal' | 'unit' | 'combined_unit' | 'organisation';
+    ownerId?: string;
+    ownerName?: string;
+    unitCode?: string;
+    members: Array<{
+        id: string;
+        name: string;
+        displayName: string;
+        type: 'Staff' | 'Trainee';
+        rank?: string;
+        unit?: string;
+        course?: string;
+    }>;
+    createdAt?: string;
+    updatedAt?: string;
 };
 
 type DashboardConversation = {
@@ -264,13 +289,14 @@ const sortDashboardContacts = (contacts: DashboardMessageContact[]): DashboardMe
 );
 
 const groupDashboardMessageContacts = (contacts: DashboardMessageContact[]): DashboardMessageContactGroup[] => {
+    const groupContacts = sortDashboardContacts(contacts.filter(contact => contact.type === 'Group'));
     const byUnit = new Map<string, DashboardMessageContact[]>();
-    contacts.forEach(contact => {
+    contacts.filter(contact => contact.type !== 'Group').forEach(contact => {
         const unit = contact.unit || 'No Unit';
         byUnit.set(unit, [...(byUnit.get(unit) || []), contact]);
     });
 
-    return Array.from(byUnit.entries())
+    const groupedPeople = Array.from(byUnit.entries())
         .sort(([unitA], [unitB]) => unitA.localeCompare(unitB))
         .flatMap(([unit, unitContacts]) => {
             const groups: DashboardMessageContactGroup[] = [];
@@ -298,6 +324,11 @@ const groupDashboardMessageContacts = (contacts: DashboardMessageContact[]): Das
 
             return groups;
         });
+
+    return [
+        ...(groupContacts.length > 0 ? [{ title: 'Groups', contacts: groupContacts }] : []),
+        ...groupedPeople,
+    ];
 };
 
 const renderDashboardMessageContactButton = (
@@ -314,7 +345,11 @@ const renderDashboardMessageContactButton = (
         <span>
             <span className="block text-sm font-semibold text-gray-950">{contact.displayName}</span>
             <span className="block text-xs text-gray-500">
-                {contact.type === 'Trainee' ? contact.unit : `${contact.unit} - ${contact.role}`}
+                {contact.type === 'Group'
+                    ? `${contact.memberIds?.length || 0} recipients`
+                    : contact.type === 'Trainee'
+                        ? contact.unit
+                        : `${contact.unit} - ${contact.role}`}
             </span>
         </span>
         <span className={`${compact ? 'text-gray-400' : 'rounded-full bg-gray-100 px-2 py-1 text-gray-500'} text-[10px] font-bold uppercase`}>{contact.type}</span>
@@ -347,8 +382,11 @@ const mergeDashboardMessages = (current: DashboardMessage[], incoming: Dashboard
         .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
 };
 
-const fetchDashboardMessagesFromApi = async (userName: string): Promise<DashboardMessage[]> => {
-    const response = await fetch(`/api/dashboard-messages?userName=${encodeURIComponent(userName)}`, {
+const fetchDashboardMessagesFromApi = async (userName: string, userId?: string): Promise<DashboardMessage[]> => {
+    const params = new URLSearchParams();
+    if (userName) params.set('userName', userName);
+    if (userId) params.set('userId', userId);
+    const response = await fetch(`/api/dashboard-messages?${params.toString()}`, {
         credentials: 'include',
     });
     if (!response.ok) throw new Error(`Dashboard messages fetch failed: ${response.status}`);
@@ -368,22 +406,46 @@ const sendDashboardMessageToApi = async (message: DashboardMessage): Promise<Das
     return data.message || message;
 };
 
-const markDashboardConversationReadInApi = async (reader: string, sender: string, messageIds: string[]) => {
+const fetchDashboardMessageGroupsFromApi = async (ownerId: string, userName: string): Promise<DashboardMessageGroupRecord[]> => {
+    const params = new URLSearchParams();
+    if (ownerId) params.set('ownerId', ownerId);
+    if (userName) params.set('userName', userName);
+    const response = await fetch(`/api/dashboard-message-groups?${params.toString()}`, {
+        credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`Dashboard message groups fetch failed: ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data.groups) ? data.groups : [];
+};
+
+const saveDashboardMessageGroupToApi = async (group: DashboardMessageGroupRecord): Promise<DashboardMessageGroupRecord> => {
+    const response = await fetch('/api/dashboard-message-groups', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ group }),
+    });
+    if (!response.ok) throw new Error(`Dashboard message group save failed: ${response.status}`);
+    const data = await response.json();
+    return data.group || group;
+};
+
+const markDashboardConversationReadInApi = async (reader: string, sender: string, messageIds: string[], readerId?: string, senderId?: string) => {
     const response = await fetch('/api/dashboard-messages/read', {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reader, sender, messageIds }),
+        body: JSON.stringify({ reader, sender, messageIds, readerId, senderId }),
     });
     if (!response.ok) throw new Error(`Dashboard message read update failed: ${response.status}`);
 };
 
-const deleteDashboardConversationFromApi = async (participant: string, contact: string) => {
+const deleteDashboardConversationFromApi = async (participant: string, contact: string, participantId?: string, contactId?: string) => {
     const response = await fetch('/api/dashboard-messages/conversation', {
         method: 'DELETE',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participant, contact }),
+        body: JSON.stringify({ participant, contact, participantId, contactId }),
     });
     if (!response.ok) throw new Error(`Dashboard conversation delete failed: ${response.status}`);
 };
@@ -426,10 +488,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
     const [messageToText, setMessageToText] = useState('');
     const [selectedMessageContact, setSelectedMessageContact] = useState<DashboardMessageContact | null>(null);
+    const [selectedMessageContacts, setSelectedMessageContacts] = useState<DashboardMessageContact[]>([]);
     const [messageDraft, setMessageDraft] = useState('');
     const [dashboardMessages, setDashboardMessages] = useState<DashboardMessage[]>(() => readDashboardMessages());
+    const [dashboardMessageGroups, setDashboardMessageGroups] = useState<DashboardMessageGroupRecord[]>([]);
     const [messageView, setMessageView] = useState<'inbox' | 'compose'>('inbox');
     const [messageSearchText, setMessageSearchText] = useState('');
+    const [groupNameDraft, setGroupNameDraft] = useState('');
+    const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [incomingToast, setIncomingToast] = useState<DashboardMessage | null>(null);
     const shownIncomingToastIds = useRef<Set<string>>(new Set());
     const activeConversationEndRef = useRef<HTMLDivElement | null>(null);
@@ -445,9 +511,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     );
     const dashboardMessageUserName = userName;
     const dashboardUserKey = normaliseDashboardContactName(dashboardMessageUserName);
+    const dashboardUserContactId = `user-${dashboardUserKey}`;
     const dashboardUserStaff = useMemo(() => (
         messageContactStaffOptions.find(staff => normaliseDashboardContactName(staff.name) === dashboardUserKey)
     ), [dashboardUserKey, messageContactStaffOptions]);
+    const dashboardSenderContactId = dashboardUserStaff
+        ? `staff-${dashboardUserStaff.idNumber}-${dashboardUserStaff.name}`
+        : dashboardUserContactId;
     const dashboardUserUnitCodes = useMemo(() => {
         const scopedUnits = messageContactUnitCodes
             .flatMap(unitCode => String(unitCode || '').split(/[+/]/))
@@ -459,7 +529,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         return [];
     }, [dashboardUserStaff?.unit, messageContactUnitCodes]);
     const dashboardUserUnitSet = useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join('|')]);
-    const messageContacts = useMemo<DashboardMessageContact[]>(() => {
+    const peopleMessageContacts = useMemo<DashboardMessageContact[]>(() => {
         const staffContacts = messageContactStaffOptions
             .filter(staff => staff?.name)
             .filter(staff => {
@@ -515,6 +585,29 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             a.displayName.localeCompare(b.displayName)
         ));
     }, [dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
+    const messageContacts = useMemo<DashboardMessageContact[]>(() => {
+        const contactsById = new Map(peopleMessageContacts.map(contact => [contact.id, contact]));
+        const groupContacts = dashboardMessageGroups.map(group => ({
+            id: `group-${group.id}`,
+            name: group.name,
+            displayName: group.name,
+            unit: group.unitCode || 'Groups',
+            role: group.scopeType === 'personal' ? 'Personal Group' : 'Shared Group',
+            rank: '',
+            surname: group.name,
+            firstNames: '',
+            type: 'Group' as const,
+            memberIds: group.members.map(member => member.id).filter(Boolean),
+            memberNames: group.members.map(member => member.name).filter(Boolean),
+        }));
+        return [
+            ...groupContacts,
+            ...peopleMessageContacts.filter(contact => contact.id !== dashboardSenderContactId),
+        ].filter(contact => (
+            contact.type !== 'Group' ||
+            (contact.memberIds || []).some(memberId => contactsById.has(memberId) && memberId !== dashboardSenderContactId)
+        ));
+    }, [dashboardMessageGroups, dashboardSenderContactId, peopleMessageContacts]);
     const messageSuggestions = useMemo(() => {
         const query = normaliseDashboardContactName(messageToText);
         if (!query) return [];
@@ -538,25 +631,38 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             type: 'Staff',
         };
     };
+    const messageContactsById = useMemo(() => new Map(
+        peopleMessageContacts.map(contact => [contact.id, contact])
+    ), [peopleMessageContacts]);
+    const messageBelongsToDashboardUser = (message: DashboardMessage): boolean => (
+        message.fromId === dashboardSenderContactId ||
+        message.toId === dashboardSenderContactId ||
+        (!message.fromId && normaliseDashboardContactName(message.from) === dashboardUserKey) ||
+        (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)
+    );
     const messageConversations = useMemo<DashboardConversation[]>(() => {
         const conversations = new Map<string, DashboardConversation>();
         dashboardMessages.forEach(message => {
+            if (!messageBelongsToDashboardUser(message)) return;
             const fromKey = normaliseDashboardContactName(message.from);
             const toKey = normaliseDashboardContactName(message.to);
-            if (fromKey !== dashboardUserKey && toKey !== dashboardUserKey) return;
-            const otherName = fromKey === dashboardUserKey ? message.to : message.from;
-            const otherKey = normaliseDashboardContactName(otherName);
+            const mineById = message.fromId === dashboardSenderContactId || (!message.fromId && fromKey === dashboardUserKey);
+            const otherId = mineById ? message.toId : message.fromId;
+            const otherName = mineById ? message.to : message.from;
+            const otherKey = otherId || normaliseDashboardContactName(otherName);
             const existing = conversations.get(otherKey);
             const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
             conversations.set(otherKey, {
-                contact: existing?.contact || getMessageContactForName(otherName),
+                contact: existing?.contact || (otherId ? messageContactsById.get(otherId) : null) || getMessageContactForName(otherName),
                 lastMessage: isNewer ? message : existing.lastMessage,
-                unreadCount: (existing?.unreadCount || 0) + (toKey === dashboardUserKey && !message.readAt ? 1 : 0),
+                unreadCount: (existing?.unreadCount || 0) + (
+                    (message.toId === dashboardSenderContactId || (!message.toId && toKey === dashboardUserKey)) && !message.readAt ? 1 : 0
+                ),
             });
         });
         return Array.from(conversations.values())
             .sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
-    }, [dashboardMessages, dashboardUserKey, messageContacts]);
+    }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey, messageContacts, messageContactsById]);
     const filteredMessageConversations = useMemo(() => {
         const query = normaliseDashboardContactName(messageSearchText);
         if (!query) return messageConversations;
@@ -574,24 +680,28 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     ), [messageContacts]);
     const unreadMessages = useMemo(() => (
         dashboardMessages.filter(message => (
-            normaliseDashboardContactName(message.to) === dashboardUserKey &&
+            (message.toId === dashboardSenderContactId || (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)) &&
             !message.readAt
         ))
-    ), [dashboardMessages, dashboardUserKey]);
+    ), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
     useEffect(() => {
         onUnreadMessageCountChange?.(unreadMessages.length);
     }, [onUnreadMessageCountChange, unreadMessages.length]);
     const activeConversationMessages = useMemo(() => {
         if (!selectedMessageContact) return [];
-        const contactKey = normaliseDashboardContactName(selectedMessageContact.name);
+        const contactKey = selectedMessageContact.id || normaliseDashboardContactName(selectedMessageContact.name);
         return dashboardMessages
             .filter(message => {
                 const from = normaliseDashboardContactName(message.from);
                 const to = normaliseDashboardContactName(message.to);
-                return (from === dashboardUserKey && to === contactKey) || (from === contactKey && to === dashboardUserKey);
+                return (
+                    (message.fromId === dashboardSenderContactId && message.toId === contactKey) ||
+                    (message.fromId === contactKey && message.toId === dashboardSenderContactId) ||
+                    (!message.fromId && !message.toId && ((from === dashboardUserKey && to === normaliseDashboardContactName(selectedMessageContact.name)) || (from === normaliseDashboardContactName(selectedMessageContact.name) && to === dashboardUserKey)))
+                );
             })
             .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
-    }, [dashboardMessages, dashboardUserKey, selectedMessageContact]);
+    }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey, selectedMessageContact]);
     const latestConversationMessageId = activeConversationMessages[activeConversationMessages.length - 1]?.id || '';
     useEffect(() => {
         if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || !activeConversationEndRef.current) return;
@@ -610,10 +720,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const refreshDashboardMessages = async () => {
         if (!dashboardMessageUserName) return;
         try {
-            const apiMessages = await fetchDashboardMessagesFromApi(dashboardMessageUserName);
+            const apiMessages = await fetchDashboardMessagesFromApi(dashboardMessageUserName, dashboardSenderContactId);
             const selectedKey = normaliseDashboardContactName(dashboardMessageUserName);
             setDashboardMessages(prev => {
                 const messagesForOtherUsers = prev.filter(message => (
+                    message.fromId !== dashboardSenderContactId &&
+                    message.toId !== dashboardSenderContactId &&
                     normaliseDashboardContactName(message.from) !== selectedKey &&
                     normaliseDashboardContactName(message.to) !== selectedKey
                 ));
@@ -642,7 +754,18 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     useEffect(() => {
         setDashboardMessages(readDashboardMessages());
         refreshDashboardMessages();
-    }, [dashboardUserKey]);
+    }, [dashboardUserKey, dashboardSenderContactId]);
+    const refreshDashboardMessageGroups = async () => {
+        try {
+            const groups = await fetchDashboardMessageGroupsFromApi(dashboardSenderContactId, dashboardMessageUserName);
+            setDashboardMessageGroups(groups);
+        } catch (error) {
+            console.warn('[Dashboard Messages] Could not refresh message groups:', error);
+        }
+    };
+    useEffect(() => {
+        refreshDashboardMessageGroups();
+    }, [dashboardSenderContactId, dashboardMessageUserName]);
     useEffect(() => {
         if (!dashboardUserKey) return;
         let cancelled = false;
@@ -656,10 +779,67 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             cancelled = true;
             window.clearInterval(interval);
         };
-    }, [dashboardUserKey]);
+    }, [dashboardSenderContactId, dashboardUserKey]);
+    const addMessageContactRecipient = (contact: DashboardMessageContact) => {
+        const contactsById = new Map(peopleMessageContacts.map(person => [person.id, person]));
+        const contactsToAdd = contact.type === 'Group'
+            ? (contact.memberIds || [])
+                .map(memberId => contactsById.get(memberId))
+                .filter((member): member is DashboardMessageContact => Boolean(member) && member.id !== dashboardSenderContactId)
+            : [contact];
+        setSelectedMessageContacts(prev => {
+            const merged = new Map(prev.map(item => [item.id, item]));
+            contactsToAdd.forEach(item => merged.set(item.id, item));
+            const next = Array.from(merged.values());
+            setSelectedMessageContact(next.length === 1 ? next[0] : null);
+            setMessageToText('');
+            return next;
+        });
+    };
+    const removeMessageContactRecipient = (contactId: string) => {
+        setSelectedMessageContacts(prev => {
+            const next = prev.filter(contact => contact.id !== contactId);
+            setSelectedMessageContact(next.length === 1 ? next[0] : null);
+            return next;
+        });
+    };
+    const saveSelectedRecipientsAsGroup = async () => {
+        const groupName = groupNameDraft.trim();
+        if (!groupName || selectedMessageContacts.length === 0) return;
+        const now = new Date().toISOString();
+        const group: DashboardMessageGroupRecord = {
+            id: `message-group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            name: groupName,
+            scopeType: 'personal',
+            ownerId: dashboardSenderContactId,
+            ownerName: dashboardMessageUserName,
+            unitCode: dashboardUserUnitCodes.join('+') || dashboardUserStaff?.unit || undefined,
+            members: selectedMessageContacts.map(contact => ({
+                id: contact.id,
+                name: contact.name,
+                displayName: contact.displayName,
+                type: contact.type === 'Trainee' ? 'Trainee' : 'Staff',
+                rank: contact.rank,
+                unit: contact.unit,
+                course: contact.course,
+            })),
+            createdAt: now,
+            updatedAt: now,
+        };
+        setIsCreatingGroup(false);
+        setGroupNameDraft('');
+        setDashboardMessageGroups(prev => [group, ...prev.filter(existing => existing.id !== group.id)]);
+        try {
+            const savedGroup = await saveDashboardMessageGroupToApi(group);
+            setDashboardMessageGroups(prev => [savedGroup, ...prev.filter(existing => existing.id !== savedGroup.id)]);
+            await refreshDashboardMessageGroups();
+        } catch (error) {
+            console.error('[Dashboard Messages] Group save failed:', error);
+            await refreshDashboardMessageGroups();
+        }
+    };
     const selectMessageContact = (contact: DashboardMessageContact) => {
-        setSelectedMessageContact(contact);
-        setMessageToText(contact.displayName);
+        addMessageContactRecipient(contact);
         setIsContactPickerOpen(false);
         setMessageView('compose');
     };
@@ -675,18 +855,23 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             const from = normaliseDashboardContactName(message.from);
             const to = normaliseDashboardContactName(message.to);
             return !(
-                (from === dashboardUserKey && to === contactKey) ||
-                (from === contactKey && to === dashboardUserKey)
+                (message.fromId === dashboardSenderContactId && message.toId === contact.id) ||
+                (message.fromId === contact.id && message.toId === dashboardSenderContactId) ||
+                (!message.fromId && !message.toId && (
+                    (from === dashboardUserKey && to === contactKey) ||
+                    (from === contactKey && to === dashboardUserKey)
+                ))
             );
         }));
         if (selectedMessageContact && normaliseDashboardContactName(selectedMessageContact.name) === contactKey) {
             setSelectedMessageContact(null);
+            setSelectedMessageContacts([]);
             setMessageToText('');
             setMessageDraft('');
             setMessageView('inbox');
         }
         try {
-            await deleteDashboardConversationFromApi(dashboardMessageUserName, contact.name);
+            await deleteDashboardConversationFromApi(dashboardMessageUserName, contact.name, dashboardSenderContactId, contact.id);
             await refreshDashboardMessages();
         } catch (error) {
             console.error('[Dashboard Messages] Delete conversation failed:', error);
@@ -694,19 +879,24 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         }
     };
     const sendDashboardMessage = async () => {
-        if (!selectedMessageContact || !messageDraft.trim()) return;
-        const nextMessage: DashboardMessage = {
-            id: `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        if (selectedMessageContacts.length === 0 || !messageDraft.trim()) return;
+        const sentAt = new Date().toISOString();
+        const messageBody = messageDraft.trim();
+        const nextMessages: DashboardMessage[] = selectedMessageContacts.map(contact => ({
+            id: `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${contact.id.replace(/[^a-z0-9]/gi, '').slice(0, 12)}`,
             from: dashboardMessageUserName,
-            to: selectedMessageContact.name,
-            body: messageDraft.trim(),
-            sentAt: new Date().toISOString(),
-        };
-        persistDashboardMessages(messages => [...messages, nextMessage]);
+            fromId: dashboardSenderContactId,
+            to: contact.name,
+            toId: contact.id,
+            recipientIds: [contact.id],
+            body: messageBody,
+            sentAt,
+        }));
+        persistDashboardMessages(messages => [...messages, ...nextMessages]);
         setMessageDraft('');
         try {
-            const savedMessage = await sendDashboardMessageToApi(nextMessage);
-            persistDashboardMessages(messages => mergeDashboardMessages(messages, [savedMessage]));
+            const savedMessages = await Promise.all(nextMessages.map(message => sendDashboardMessageToApi(message)));
+            persistDashboardMessages(messages => mergeDashboardMessages(messages, savedMessages));
         } catch (error) {
             console.error('[Dashboard Messages] Send failed:', error);
         }
@@ -715,21 +905,21 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || unreadMessages.length === 0) return;
         const selectedKey = normaliseDashboardContactName(selectedMessageContact.name);
         const messageIdsToMarkRead = unreadMessages
-            .filter(message => normaliseDashboardContactName(message.from) === selectedKey)
+            .filter(message => message.fromId === selectedMessageContact.id || (!message.fromId && normaliseDashboardContactName(message.from) === selectedKey))
             .map(message => message.id);
         if (messageIdsToMarkRead.length === 0) return;
         const now = new Date().toISOString();
         persistDashboardMessages(messages => messages.map(message => (
-            normaliseDashboardContactName(message.to) === dashboardUserKey &&
-            normaliseDashboardContactName(message.from) === selectedKey &&
+            (message.toId === dashboardSenderContactId || (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)) &&
+            (message.fromId === selectedMessageContact.id || (!message.fromId && normaliseDashboardContactName(message.from) === selectedKey)) &&
             !message.readAt
                 ? { ...message, readAt: now }
                 : message
         )));
-        markDashboardConversationReadInApi(dashboardMessageUserName, selectedMessageContact.name, messageIdsToMarkRead)
+        markDashboardConversationReadInApi(dashboardMessageUserName, selectedMessageContact.name, messageIdsToMarkRead, dashboardSenderContactId, selectedMessageContact.id)
             .then(() => refreshDashboardMessages())
             .catch(error => console.warn('[Dashboard Messages] Could not mark shared messages read:', error));
-    }, [dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.name, unreadMessages.length]);
+    }, [dashboardSenderContactId, dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.id, selectedMessageContact?.name, unreadMessages.length]);
     const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
     useEffect(() => {
         if (!newestUnreadMessage) {
@@ -990,8 +1180,11 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         onClick={() => {
                                             setMessageView('compose');
                                             setSelectedMessageContact(null);
+                                            setSelectedMessageContacts([]);
                                             setMessageToText('');
                                             setMessageDraft('');
+                                            setGroupNameDraft('');
+                                            setIsCreatingGroup(false);
                                         }}
                                         className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white text-black shadow-[0_10px_28px_rgba(15,23,42,0.16)] ring-1 ring-black/5 hover:bg-gray-100"
                                         aria-label="New message"
@@ -1009,8 +1202,11 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                             value={messageToText}
                                             onChange={(event) => {
                                                 setMessageToText(event.target.value);
-                                                setSelectedMessageContact(null);
+                                                if (selectedMessageContacts.length === 0) {
+                                                    setSelectedMessageContact(null);
+                                                }
                                             }}
+                                            placeholder={selectedMessageContacts.length > 0 ? 'Add another recipient' : ''}
                                             className="min-w-0 flex-1 bg-transparent text-xl text-gray-950 outline-none"
                                             autoComplete="off"
                                         />
@@ -1034,15 +1230,76 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         </div>
                                     )}
                                 </div>
+                                {selectedMessageContacts.length > 0 && (
+                                    <div className="mx-4 mt-3 rounded-2xl bg-white/75 p-3 shadow-sm ring-1 ring-black/5">
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedMessageContacts.map(contact => (
+                                                <span key={contact.id} className="inline-flex max-w-full items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-sm font-semibold text-sky-800 ring-1 ring-sky-100">
+                                                    <span className="max-w-[220px] truncate">{contact.displayName}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeMessageContactRecipient(contact.id)}
+                                                        className="grid h-5 w-5 place-items-center rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200"
+                                                        aria-label={`Remove ${contact.displayName}`}
+                                                    >
+                                                        <DashboardIconX className="h-3.5 w-3.5" strokeWidth={2.4} />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                                            {isCreatingGroup ? (
+                                                <>
+                                                    <input
+                                                        value={groupNameDraft}
+                                                        onChange={(event) => setGroupNameDraft(event.target.value)}
+                                                        placeholder="Group name"
+                                                        className="h-9 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-950 outline-none focus:ring-2 focus:ring-sky-400"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={saveSelectedRecipientsAsGroup}
+                                                        disabled={!groupNameDraft.trim()}
+                                                        className="h-9 rounded-lg bg-sky-600 px-3 text-xs font-bold text-white shadow disabled:cursor-not-allowed disabled:bg-gray-300"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setIsCreatingGroup(false);
+                                                            setGroupNameDraft('');
+                                                        }}
+                                                        className="h-9 rounded-lg bg-gray-100 px-3 text-xs font-bold text-gray-700 hover:bg-gray-200"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsCreatingGroup(true)}
+                                                    disabled={selectedMessageContacts.length < 2}
+                                                    className="h-9 rounded-lg bg-white px-3 text-xs font-bold text-sky-700 shadow-sm ring-1 ring-sky-100 disabled:cursor-not-allowed disabled:text-gray-300 disabled:ring-gray-100"
+                                                >
+                                                    Save as Group
+                                                </button>
+                                            )}
+                                            <span className="text-xs text-gray-500">
+                                                {selectedMessageContacts.length} recipient{selectedMessageContacts.length === 1 ? '' : 's'} selected
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="flex-1 overflow-y-auto px-4 py-5">
                                     {selectedMessageContact ? (
                                         activeConversationMessages.length > 0 ? (
                                             <div className="space-y-3">
                                                 {activeConversationMessages.map(message => {
-                                                    const mine = normaliseDashboardContactName(message.from) === dashboardUserKey;
                                                     const sentDate = new Date(message.sentAt);
                                                     const timeLabel = formatDashboardMessageTime(sentDate);
                                                     const dateLabel = `${String(sentDate.getDate()).padStart(2, '0')}/${String(sentDate.getMonth() + 1).padStart(2, '0')}/${String(sentDate.getFullYear()).slice(-2)}`;
+                                                    const mine = message.fromId === dashboardSenderContactId || (!message.fromId && normaliseDashboardContactName(message.from) === dashboardUserKey);
                                                     return (
                                                         <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                                                             <div className={`flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
@@ -1062,6 +1319,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         ) : (
                                             <p className="pt-20 text-center text-sm text-gray-400">No messages yet.</p>
                                         )
+                                    ) : selectedMessageContacts.length > 1 ? (
+                                        <p className="pt-20 text-center text-sm text-gray-400">
+                                            {selectedMessageContacts.length} recipients selected.
+                                        </p>
                                     ) : (
                                         <p className="pt-20 text-center text-sm text-gray-400">Choose someone to message.</p>
                                     )}
@@ -1082,7 +1343,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     <button
                                         type="button"
                                         onClick={sendDashboardMessage}
-                                        disabled={!selectedMessageContact || !messageDraft.trim()}
+                                        disabled={selectedMessageContacts.length === 0 || !messageDraft.trim()}
                                         className="flex h-12 w-14 items-center justify-center rounded-md bg-white text-sm font-bold text-sky-600 shadow disabled:cursor-not-allowed disabled:text-gray-300"
                                     >
                                         Send
