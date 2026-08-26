@@ -71,6 +71,10 @@ type DashboardMessage = {
     fromId?: string;
     toId?: string;
     recipientIds?: string[];
+    groupId?: string;
+    groupName?: string;
+    groupMemberIds?: string[];
+    groupMemberNames?: string[];
 };
 
 type DashboardMessageContactGroup = {
@@ -549,6 +553,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const [groupBuilderSelectedIds, setGroupBuilderSelectedIds] = useState<Set<string>>(() => new Set());
     const [editingMessageGroupId, setEditingMessageGroupId] = useState<string | null>(null);
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+    const [openGroupMemberFlyoutId, setOpenGroupMemberFlyoutId] = useState<string | null>(null);
     const [incomingToast, setIncomingToast] = useState<DashboardMessage | null>(null);
     const shownIncomingToastIds = useRef<Set<string>>(new Set());
     const activeConversationEndRef = useRef<HTMLDivElement | null>(null);
@@ -729,9 +734,29 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const messageBelongsToDashboardUser = (message: DashboardMessage): boolean => (
         message.fromId === dashboardSenderContactId ||
         message.toId === dashboardSenderContactId ||
+        (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
         (!message.fromId && normaliseDashboardContactName(message.from) === dashboardUserKey) ||
         (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)
     );
+    const getGroupConversationContact = (message: DashboardMessage): DashboardMessageContact | null => {
+        if (!message.groupId || !message.groupName) return null;
+        const storedGroup = dashboardMessageGroups.find(group => group.id === message.groupId);
+        const memberIds = storedGroup?.members.map(member => member.id).filter(Boolean) || message.groupMemberIds || message.recipientIds || [];
+        const memberNames = storedGroup?.members.map(member => member.displayName || member.name).filter(Boolean) || message.groupMemberNames || [];
+        return {
+            id: `group-conversation-${message.groupId}`,
+            name: message.groupName,
+            displayName: message.groupName,
+            unit: storedGroup?.unitCode || 'Groups',
+            role: storedGroup ? formatDashboardGroupScope(storedGroup.scopeType) : 'Group',
+            rank: '',
+            surname: message.groupName,
+            firstNames: '',
+            type: 'Group',
+            memberIds,
+            memberNames,
+        };
+    };
     const messageConversations = useMemo<DashboardConversation[]>(() => {
         const conversations = new Map<string, DashboardConversation>();
         dashboardMessages.forEach(message => {
@@ -739,22 +764,23 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             const fromKey = normaliseDashboardContactName(message.from);
             const toKey = normaliseDashboardContactName(message.to);
             const mineById = message.fromId === dashboardSenderContactId || (!message.fromId && fromKey === dashboardUserKey);
-            const otherId = mineById ? message.toId : message.fromId;
-            const otherName = mineById ? message.to : message.from;
-            const otherKey = otherId || normaliseDashboardContactName(otherName);
+            const groupContact = getGroupConversationContact(message);
+            const otherId = groupContact?.id || (mineById ? message.toId : message.fromId);
+            const otherName = groupContact?.name || (mineById ? message.to : message.from);
+            const otherKey = message.groupId ? `group-${message.groupId}` : otherId || normaliseDashboardContactName(otherName);
             const existing = conversations.get(otherKey);
             const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
             conversations.set(otherKey, {
-                contact: existing?.contact || (otherId ? messageContactsById.get(otherId) : null) || getMessageContactForName(otherName),
+                contact: groupContact || existing?.contact || (otherId ? messageContactsById.get(otherId) : null) || getMessageContactForName(otherName),
                 lastMessage: isNewer ? message : existing.lastMessage,
                 unreadCount: (existing?.unreadCount || 0) + (
-                    (message.toId === dashboardSenderContactId || (!message.toId && toKey === dashboardUserKey)) && !message.readAt ? 1 : 0
+                    (message.toId === dashboardSenderContactId || (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) || (!message.toId && toKey === dashboardUserKey)) && !message.readAt ? 1 : 0
                 ),
             });
         });
         return Array.from(conversations.values())
             .sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
-    }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey, messageContacts, messageContactsById]);
+    }, [dashboardMessageGroups, dashboardMessages, dashboardSenderContactId, dashboardUserKey, messageContacts, messageContactsById]);
     const filteredMessageConversations = useMemo(() => {
         const query = normaliseDashboardContactName(messageSearchText);
         if (!query) return messageConversations;
@@ -837,9 +863,19 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             ...selectedMessageContacts.filter(contact => !groupMemberIds.has(contact.id)),
         ];
     }, [selectedMessageContacts, selectedMessageGroupContact]);
+    const getGroupMemberDisplayNames = (contact: DashboardMessageContact): string[] => {
+        if (contact.memberNames?.length) return contact.memberNames;
+        return (contact.memberIds || [])
+            .map(memberId => messageContactsById.get(memberId)?.displayName || memberId)
+            .filter(Boolean);
+    };
     const unreadMessages = useMemo(() => (
         dashboardMessages.filter(message => (
-            (message.toId === dashboardSenderContactId || (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)) &&
+            (
+                message.toId === dashboardSenderContactId ||
+                (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
+                (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)
+            ) &&
             !message.readAt
         ))
     ), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
@@ -853,6 +889,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .filter(message => {
                 const from = normaliseDashboardContactName(message.from);
                 const to = normaliseDashboardContactName(message.to);
+                if (selectedMessageContact.type === 'Group') {
+                    const groupId = message.groupId ? `group-conversation-${message.groupId}` : '';
+                    return groupId === selectedMessageContact.id || message.groupId === selectedMessageContact.id.replace(/^group-conversation-/, '');
+                }
                 return (
                     (message.fromId === dashboardSenderContactId && message.toId === contactKey) ||
                     (message.fromId === contactKey && message.toId === dashboardSenderContactId) ||
@@ -1157,6 +1197,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         if (selectedMessageContacts.length === 0 || !messageDraft.trim()) return;
         const sentAt = new Date().toISOString();
         const messageBody = messageDraft.trim();
+        const groupId = selectedMessageGroupContact?.id.replace(/^group-/, '');
+        const groupName = selectedMessageGroupContact?.displayName;
+        const groupMemberIds = selectedMessageGroupContact ? selectedMessageContacts.map(contact => contact.id) : undefined;
+        const groupMemberNames = selectedMessageGroupContact ? selectedMessageContacts.map(contact => contact.displayName) : undefined;
         const nextMessages: DashboardMessage[] = selectedMessageContacts.map(contact => ({
             id: `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${contact.id.replace(/[^a-z0-9]/gi, '').slice(0, 12)}`,
             from: dashboardMessageUserName,
@@ -1164,6 +1208,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             to: contact.name,
             toId: contact.id,
             recipientIds: [contact.id],
+            groupId,
+            groupName,
+            groupMemberIds,
+            groupMemberNames,
             body: messageBody,
             sentAt,
         }));
@@ -1180,18 +1228,36 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || unreadMessages.length === 0) return;
         const selectedKey = normaliseDashboardContactName(selectedMessageContact.name);
         const messageIdsToMarkRead = unreadMessages
-            .filter(message => message.fromId === selectedMessageContact.id || (!message.fromId && normaliseDashboardContactName(message.from) === selectedKey))
+            .filter(message => (
+                selectedMessageContact.type === 'Group'
+                    ? `group-conversation-${message.groupId || ''}` === selectedMessageContact.id
+                    : message.fromId === selectedMessageContact.id || (!message.fromId && normaliseDashboardContactName(message.from) === selectedKey)
+            ))
             .map(message => message.id);
         if (messageIdsToMarkRead.length === 0) return;
         const now = new Date().toISOString();
         persistDashboardMessages(messages => messages.map(message => (
-            (message.toId === dashboardSenderContactId || (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)) &&
-            (message.fromId === selectedMessageContact.id || (!message.fromId && normaliseDashboardContactName(message.from) === selectedKey)) &&
+            (
+                message.toId === dashboardSenderContactId ||
+                (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
+                (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)
+            ) &&
+            (
+                selectedMessageContact.type === 'Group'
+                    ? `group-conversation-${message.groupId || ''}` === selectedMessageContact.id
+                    : message.fromId === selectedMessageContact.id || (!message.fromId && normaliseDashboardContactName(message.from) === selectedKey)
+            ) &&
             !message.readAt
                 ? { ...message, readAt: now }
                 : message
         )));
-        markDashboardConversationReadInApi(dashboardMessageUserName, selectedMessageContact.name, messageIdsToMarkRead, dashboardSenderContactId, selectedMessageContact.id)
+        markDashboardConversationReadInApi(
+            dashboardMessageUserName,
+            selectedMessageContact.name,
+            messageIdsToMarkRead,
+            dashboardSenderContactId,
+            selectedMessageContact.type === 'Group' ? undefined : selectedMessageContact.id
+        )
             .then(() => refreshDashboardMessages())
             .catch(error => console.warn('[Dashboard Messages] Could not mark shared messages read:', error));
     }, [dashboardSenderContactId, dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.id, selectedMessageContact?.name, unreadMessages.length]);
@@ -1433,10 +1499,49 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                             <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500" aria-label="Unread message" />
                                                         )}
                                                         <div className={`min-w-0 flex-1 ${conversation.unreadCount > 0 ? '' : 'pl-5'}`}>
-                                                            <div className="flex items-baseline gap-2">
-                                                                <p className="min-w-0 flex-1 truncate text-[22px] font-bold leading-tight text-black">
-                                                                    {conversation.contact.displayName}
-                                                                </p>
+                                                            <div className="relative flex items-baseline gap-2">
+                                                                {conversation.contact.type === 'Group' ? (
+                                                                    <span className="min-w-0 flex-1">
+                                                                        <span
+                                                                            role="button"
+                                                                            tabIndex={0}
+                                                                            onClick={(event) => {
+                                                                                event.preventDefault();
+                                                                                event.stopPropagation();
+                                                                                setOpenGroupMemberFlyoutId(prev => prev === conversation.contact.id ? null : conversation.contact.id);
+                                                                            }}
+                                                                            onKeyDown={(event) => {
+                                                                                if (event.key !== 'Enter' && event.key !== ' ') return;
+                                                                                event.preventDefault();
+                                                                                event.stopPropagation();
+                                                                                setOpenGroupMemberFlyoutId(prev => prev === conversation.contact.id ? null : conversation.contact.id);
+                                                                            }}
+                                                                            className="block truncate text-[22px] font-bold leading-tight text-black underline decoration-gray-300 underline-offset-4 hover:text-sky-700"
+                                                                        >
+                                                                            {conversation.contact.displayName}
+                                                                        </span>
+                                                                        {openGroupMemberFlyoutId === conversation.contact.id && (
+                                                                            <span
+                                                                                className="absolute left-0 top-8 z-20 block max-h-44 w-72 overflow-y-auto rounded-xl bg-white p-3 text-left shadow-2xl ring-1 ring-gray-200"
+                                                                                onClick={(event) => {
+                                                                                    event.preventDefault();
+                                                                                    event.stopPropagation();
+                                                                                }}
+                                                                            >
+                                                                                <span className="mb-2 block text-xs font-bold uppercase tracking-[0.1em] text-gray-400">Group Members</span>
+                                                                                {getGroupMemberDisplayNames(conversation.contact).map(memberName => (
+                                                                                    <span key={memberName} className="block truncate py-1 text-sm font-semibold text-gray-700">
+                                                                                        {memberName}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </span>
+                                                                        )}
+                                                                    </span>
+                                                                ) : (
+                                                                    <p className="min-w-0 flex-1 truncate text-[22px] font-bold leading-tight text-black">
+                                                                        {conversation.contact.displayName}
+                                                                    </p>
+                                                                )}
                                                                 <span className="shrink-0 text-lg text-gray-500">
                                                                     {formatDashboardConversationDate(conversation.lastMessage.sentAt)}
                                                                 </span>

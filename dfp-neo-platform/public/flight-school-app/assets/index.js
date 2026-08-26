@@ -40653,6 +40653,7 @@ const MyDashboard = ({
   const [groupBuilderSelectedIds, setGroupBuilderSelectedIds] = reactExports.useState(() => /* @__PURE__ */ new Set());
   const [editingMessageGroupId, setEditingMessageGroupId] = reactExports.useState(null);
   const [isCreatingGroup, setIsCreatingGroup] = reactExports.useState(false);
+  const [openGroupMemberFlyoutId, setOpenGroupMemberFlyoutId] = reactExports.useState(null);
   const [incomingToast, setIncomingToast] = reactExports.useState(null);
   const shownIncomingToastIds = reactExports.useRef(/* @__PURE__ */ new Set());
   const activeConversationEndRef = reactExports.useRef(null);
@@ -40792,7 +40793,26 @@ const MyDashboard = ({
   const messageContactsById = reactExports.useMemo(() => new Map(
     peopleMessageContacts.map((contact) => [contact.id, contact])
   ), [peopleMessageContacts]);
-  const messageBelongsToDashboardUser = (message) => message.fromId === dashboardSenderContactId || message.toId === dashboardSenderContactId || !message.fromId && normaliseDashboardContactName(message.from) === dashboardUserKey || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey;
+  const messageBelongsToDashboardUser = (message) => message.fromId === dashboardSenderContactId || message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || !message.fromId && normaliseDashboardContactName(message.from) === dashboardUserKey || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey;
+  const getGroupConversationContact = (message) => {
+    if (!message.groupId || !message.groupName) return null;
+    const storedGroup = dashboardMessageGroups.find((group) => group.id === message.groupId);
+    const memberIds = storedGroup?.members.map((member) => member.id).filter(Boolean) || message.groupMemberIds || message.recipientIds || [];
+    const memberNames = storedGroup?.members.map((member) => member.displayName || member.name).filter(Boolean) || message.groupMemberNames || [];
+    return {
+      id: `group-conversation-${message.groupId}`,
+      name: message.groupName,
+      displayName: message.groupName,
+      unit: storedGroup?.unitCode || "Groups",
+      role: storedGroup ? formatDashboardGroupScope(storedGroup.scopeType) : "Group",
+      rank: "",
+      surname: message.groupName,
+      firstNames: "",
+      type: "Group",
+      memberIds,
+      memberNames
+    };
+  };
   const messageConversations = reactExports.useMemo(() => {
     const conversations = /* @__PURE__ */ new Map();
     dashboardMessages.forEach((message) => {
@@ -40800,19 +40820,20 @@ const MyDashboard = ({
       const fromKey = normaliseDashboardContactName(message.from);
       const toKey = normaliseDashboardContactName(message.to);
       const mineById = message.fromId === dashboardSenderContactId || !message.fromId && fromKey === dashboardUserKey;
-      const otherId = mineById ? message.toId : message.fromId;
-      const otherName = mineById ? message.to : message.from;
-      const otherKey = otherId || normaliseDashboardContactName(otherName);
+      const groupContact = getGroupConversationContact(message);
+      const otherId = groupContact?.id || (mineById ? message.toId : message.fromId);
+      const otherName = groupContact?.name || (mineById ? message.to : message.from);
+      const otherKey = message.groupId ? `group-${message.groupId}` : otherId || normaliseDashboardContactName(otherName);
       const existing = conversations.get(otherKey);
       const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
       conversations.set(otherKey, {
-        contact: existing?.contact || (otherId ? messageContactsById.get(otherId) : null) || getMessageContactForName(otherName),
+        contact: groupContact || existing?.contact || (otherId ? messageContactsById.get(otherId) : null) || getMessageContactForName(otherName),
         lastMessage: isNewer ? message : existing.lastMessage,
-        unreadCount: (existing?.unreadCount || 0) + ((message.toId === dashboardSenderContactId || !message.toId && toKey === dashboardUserKey) && !message.readAt ? 1 : 0)
+        unreadCount: (existing?.unreadCount || 0) + ((message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || !message.toId && toKey === dashboardUserKey) && !message.readAt ? 1 : 0)
       });
     });
     return Array.from(conversations.values()).sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
-  }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey, messageContacts, messageContactsById]);
+  }, [dashboardMessageGroups, dashboardMessages, dashboardSenderContactId, dashboardUserKey, messageContacts, messageContactsById]);
   const filteredMessageConversations = reactExports.useMemo(() => {
     const query = normaliseDashboardContactName(messageSearchText);
     if (!query) return messageConversations;
@@ -40852,7 +40873,11 @@ const MyDashboard = ({
       ...selectedMessageContacts.filter((contact) => !groupMemberIds.has(contact.id))
     ];
   }, [selectedMessageContacts, selectedMessageGroupContact]);
-  const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => (message.toId === dashboardSenderContactId || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey) && !message.readAt), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
+  const getGroupMemberDisplayNames = (contact) => {
+    if (contact.memberNames?.length) return contact.memberNames;
+    return (contact.memberIds || []).map((memberId) => messageContactsById.get(memberId)?.displayName || memberId).filter(Boolean);
+  };
+  const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => (message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey) && !message.readAt), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
   reactExports.useEffect(() => {
     onUnreadMessageCountChange?.(unreadMessages.length);
   }, [onUnreadMessageCountChange, unreadMessages.length]);
@@ -40862,6 +40887,10 @@ const MyDashboard = ({
     return dashboardMessages.filter((message) => {
       const from = normaliseDashboardContactName(message.from);
       const to = normaliseDashboardContactName(message.to);
+      if (selectedMessageContact.type === "Group") {
+        const groupId = message.groupId ? `group-conversation-${message.groupId}` : "";
+        return groupId === selectedMessageContact.id || message.groupId === selectedMessageContact.id.replace(/^group-conversation-/, "");
+      }
       return message.fromId === dashboardSenderContactId && message.toId === contactKey || message.fromId === contactKey && message.toId === dashboardSenderContactId || !message.fromId && !message.toId && (from === dashboardUserKey && to === normaliseDashboardContactName(selectedMessageContact.name) || from === normaliseDashboardContactName(selectedMessageContact.name) && to === dashboardUserKey);
     }).sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
   }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey, selectedMessageContact]);
@@ -41104,6 +41133,10 @@ const MyDashboard = ({
     if (selectedMessageContacts.length === 0 || !messageDraft.trim()) return;
     const sentAt = (/* @__PURE__ */ new Date()).toISOString();
     const messageBody = messageDraft.trim();
+    const groupId = selectedMessageGroupContact?.id.replace(/^group-/, "");
+    const groupName = selectedMessageGroupContact?.displayName;
+    const groupMemberIds = selectedMessageGroupContact ? selectedMessageContacts.map((contact) => contact.id) : void 0;
+    const groupMemberNames = selectedMessageGroupContact ? selectedMessageContacts.map((contact) => contact.displayName) : void 0;
     const nextMessages = selectedMessageContacts.map((contact) => ({
       id: `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${contact.id.replace(/[^a-z0-9]/gi, "").slice(0, 12)}`,
       from: dashboardMessageUserName,
@@ -41111,6 +41144,10 @@ const MyDashboard = ({
       to: contact.name,
       toId: contact.id,
       recipientIds: [contact.id],
+      groupId,
+      groupName,
+      groupMemberIds,
+      groupMemberNames,
       body: messageBody,
       sentAt
     }));
@@ -41126,11 +41163,17 @@ const MyDashboard = ({
   reactExports.useEffect(() => {
     if (!isMessagesOpen || messageView !== "compose" || !selectedMessageContact || unreadMessages.length === 0) return;
     const selectedKey = normaliseDashboardContactName(selectedMessageContact.name);
-    const messageIdsToMarkRead = unreadMessages.filter((message) => message.fromId === selectedMessageContact.id || !message.fromId && normaliseDashboardContactName(message.from) === selectedKey).map((message) => message.id);
+    const messageIdsToMarkRead = unreadMessages.filter((message) => selectedMessageContact.type === "Group" ? `group-conversation-${message.groupId || ""}` === selectedMessageContact.id : message.fromId === selectedMessageContact.id || !message.fromId && normaliseDashboardContactName(message.from) === selectedKey).map((message) => message.id);
     if (messageIdsToMarkRead.length === 0) return;
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    persistDashboardMessages((messages) => messages.map((message) => (message.toId === dashboardSenderContactId || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey) && (message.fromId === selectedMessageContact.id || !message.fromId && normaliseDashboardContactName(message.from) === selectedKey) && !message.readAt ? { ...message, readAt: now } : message));
-    markDashboardConversationReadInApi(dashboardMessageUserName, selectedMessageContact.name, messageIdsToMarkRead, dashboardSenderContactId, selectedMessageContact.id).then(() => refreshDashboardMessages()).catch((error) => console.warn("[Dashboard Messages] Could not mark shared messages read:", error));
+    persistDashboardMessages((messages) => messages.map((message) => (message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey) && (selectedMessageContact.type === "Group" ? `group-conversation-${message.groupId || ""}` === selectedMessageContact.id : message.fromId === selectedMessageContact.id || !message.fromId && normaliseDashboardContactName(message.from) === selectedKey) && !message.readAt ? { ...message, readAt: now } : message));
+    markDashboardConversationReadInApi(
+      dashboardMessageUserName,
+      selectedMessageContact.name,
+      messageIdsToMarkRead,
+      dashboardSenderContactId,
+      selectedMessageContact.type === "Group" ? void 0 : selectedMessageContact.id
+    ).then(() => refreshDashboardMessages()).catch((error) => console.warn("[Dashboard Messages] Could not mark shared messages read:", error));
   }, [dashboardSenderContactId, dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.id, selectedMessageContact?.name, unreadMessages.length]);
   const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
   reactExports.useEffect(() => {
@@ -41338,8 +41381,43 @@ const MyDashboard = ({
                     children: [
                       conversation.unreadCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500", "aria-label": "Unread message" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 flex-1 ${conversation.unreadCount > 0 ? "" : "pl-5"}`, children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-baseline gap-2", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "min-w-0 flex-1 truncate text-[22px] font-bold leading-tight text-black", children: conversation.contact.displayName }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex items-baseline gap-2", children: [
+                          conversation.contact.type === "Group" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "span",
+                              {
+                                role: "button",
+                                tabIndex: 0,
+                                onClick: (event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  setOpenGroupMemberFlyoutId((prev) => prev === conversation.contact.id ? null : conversation.contact.id);
+                                },
+                                onKeyDown: (event) => {
+                                  if (event.key !== "Enter" && event.key !== " ") return;
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  setOpenGroupMemberFlyoutId((prev) => prev === conversation.contact.id ? null : conversation.contact.id);
+                                },
+                                className: "block truncate text-[22px] font-bold leading-tight text-black underline decoration-gray-300 underline-offset-4 hover:text-sky-700",
+                                children: conversation.contact.displayName
+                              }
+                            ),
+                            openGroupMemberFlyoutId === conversation.contact.id && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                              "span",
+                              {
+                                className: "absolute left-0 top-8 z-20 block max-h-44 w-72 overflow-y-auto rounded-xl bg-white p-3 text-left shadow-2xl ring-1 ring-gray-200",
+                                onClick: (event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                },
+                                children: [
+                                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-xs font-bold uppercase tracking-[0.1em] text-gray-400", children: "Group Members" }),
+                                  getGroupMemberDisplayNames(conversation.contact).map((memberName) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate py-1 text-sm font-semibold text-gray-700", children: memberName }, memberName))
+                                ]
+                              }
+                            )
+                          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "min-w-0 flex-1 truncate text-[22px] font-bold leading-tight text-black", children: conversation.contact.displayName }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-lg text-gray-500", children: formatDashboardConversationDate(conversation.lastMessage.sentAt) })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 line-clamp-2 text-[20px] leading-snug text-gray-500", children: conversation.lastMessage.body })

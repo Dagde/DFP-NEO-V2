@@ -2011,6 +2011,14 @@ function normaliseDashboardStoredMessages(data) {
       recipientIds: Array.isArray(message.recipientIds)
         ? Array.from(new Set(message.recipientIds.map(normaliseDashboardMessageId).filter(Boolean)))
         : undefined,
+      groupId: normaliseDashboardMessageId(message.groupId) || undefined,
+      groupName: String(message.groupName || '').trim() || undefined,
+      groupMemberIds: Array.isArray(message.groupMemberIds)
+        ? Array.from(new Set(message.groupMemberIds.map(normaliseDashboardMessageId).filter(Boolean)))
+        : undefined,
+      groupMemberNames: Array.isArray(message.groupMemberNames)
+        ? Array.from(new Set(message.groupMemberNames.map(name => String(name || '').trim()).filter(Boolean)))
+        : undefined,
     }));
 }
 
@@ -2166,6 +2174,14 @@ app.post('/api/dashboard-messages', async (req, res) => {
       toId: normaliseDashboardMessageId(messageInput.toId) || undefined,
       recipientIds: Array.isArray(messageInput.recipientIds)
         ? Array.from(new Set(messageInput.recipientIds.map(normaliseDashboardMessageId).filter(Boolean)))
+        : undefined,
+      groupId: normaliseDashboardMessageId(messageInput.groupId) || undefined,
+      groupName: String(messageInput.groupName || '').trim() || undefined,
+      groupMemberIds: Array.isArray(messageInput.groupMemberIds)
+        ? Array.from(new Set(messageInput.groupMemberIds.map(normaliseDashboardMessageId).filter(Boolean)))
+        : undefined,
+      groupMemberNames: Array.isArray(messageInput.groupMemberNames)
+        ? Array.from(new Set(messageInput.groupMemberNames.map(name => String(name || '').trim()).filter(Boolean)))
         : undefined,
     };
     const deduped = messages.filter(existing => existing.id !== message.id);
