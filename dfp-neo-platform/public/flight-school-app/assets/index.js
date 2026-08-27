@@ -40396,8 +40396,29 @@ const compareDashboardRank = (left, right) => {
   return leftRank.localeCompare(rightRank, void 0, { sensitivity: "base" });
 };
 const normaliseDashboardContactName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+const stripDashboardRankFromName = (value) => {
+  let text = String(value || "").trim();
+  if (!text) return "";
+  const sortedRanks = [...DASHBOARD_RANK_ORDER].sort((a, b) => b.length - a.length);
+  for (const rank of sortedRanks) {
+    const rankPattern = rank.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+    const next = text.replace(new RegExp(`^${rankPattern}\\s+`, "i"), "").trim();
+    if (next !== text) {
+      text = next;
+      break;
+    }
+  }
+  return text;
+};
 const stripDashboardCourseFromName = (value) => String(value || "").replace(/\s*[‐‑‒–—-]\s*[A-Z]{2,}\d+[A-Z0-9]*\s*$/i, "").replace(/\s+/g, " ").trim();
-const normaliseDashboardPersonName = (value) => normaliseDashboardContactName(stripDashboardCourseFromName(value));
+const normaliseDashboardPersonName = (value) => normaliseDashboardContactName(stripDashboardRankFromName(stripDashboardCourseFromName(value)));
+const dashboardPersonNameKeys = (value) => {
+  const base = stripDashboardRankFromName(stripDashboardCourseFromName(value));
+  return new Set([
+    normaliseDashboardPersonName(base),
+    normaliseDashboardPersonName(toDashboardSurnameFirstName(base))
+  ].filter(Boolean));
+};
 const toDashboardSurnameFirstName = (value) => {
   const text = String(value || "").trim();
   if (!text) return "";
@@ -40793,8 +40814,8 @@ const MyDashboard = ({
   const messageContactsById = reactExports.useMemo(() => new Map(
     peopleMessageContacts.map((contact) => [contact.id, contact])
   ), [peopleMessageContacts]);
-  const messageFromDashboardUser = (message) => message.fromId === dashboardSenderContactId || normaliseDashboardContactName(message.from) === dashboardUserKey;
-  const messageDeletedForDashboardUser = (message) => Array.isArray(message.deletedForIds) && message.deletedForIds.includes(dashboardSenderContactId) || Array.isArray(message.deletedForNames) && message.deletedForNames.includes(dashboardUserKey);
+  const messageFromDashboardUser = (message) => message.fromId === dashboardSenderContactId || dashboardPersonNameKeys(message.from).has(normaliseDashboardPersonName(dashboardMessageUserName));
+  const messageDeletedForDashboardUser = (message) => Array.isArray(message.deletedForIds) && message.deletedForIds.includes(dashboardSenderContactId) || Array.isArray(message.deletedForNames) && message.deletedForNames.some((name) => dashboardPersonNameKeys(name).has(normaliseDashboardPersonName(dashboardMessageUserName)));
   const messageBelongsToDashboardUser = (message) => !messageDeletedForDashboardUser(message) && (messageFromDashboardUser(message) || message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId) || normaliseDashboardContactName(message.to) === dashboardUserKey);
   const getGroupConversationContact = (message) => {
     if (!message.groupId || !message.groupName) return null;
@@ -41152,7 +41173,7 @@ const MyDashboard = ({
       return {
         ...message,
         deletedForIds: Array.from(/* @__PURE__ */ new Set([...message.deletedForIds || [], dashboardSenderContactId])),
-        deletedForNames: Array.from(/* @__PURE__ */ new Set([...message.deletedForNames || [], dashboardUserKey]))
+        deletedForNames: Array.from(/* @__PURE__ */ new Set([...message.deletedForNames || [], normaliseDashboardPersonName(dashboardMessageUserName)]))
       };
     }));
     if (selectedMessageContact && normaliseDashboardContactName(selectedMessageContact.name) === contactKey) {

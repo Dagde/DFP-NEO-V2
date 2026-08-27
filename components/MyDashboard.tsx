@@ -237,6 +237,21 @@ const normaliseDashboardContactName = (value?: string | null): string => (
     String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
 );
 
+const stripDashboardRankFromName = (value?: string | null): string => {
+    let text = String(value || '').trim();
+    if (!text) return '';
+    const sortedRanks = [...DASHBOARD_RANK_ORDER].sort((a, b) => b.length - a.length);
+    for (const rank of sortedRanks) {
+        const rankPattern = rank.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+        const next = text.replace(new RegExp(`^${rankPattern}\\s+`, 'i'), '').trim();
+        if (next !== text) {
+            text = next;
+            break;
+        }
+    }
+    return text;
+};
+
 const stripDashboardCourseFromName = (value?: string | null): string => (
     String(value || '')
         .replace(/\s*[‐‑‒–—-]\s*[A-Z]{2,}\d+[A-Z0-9]*\s*$/i, '')
@@ -245,8 +260,16 @@ const stripDashboardCourseFromName = (value?: string | null): string => (
 );
 
 const normaliseDashboardPersonName = (value?: string | null): string => (
-    normaliseDashboardContactName(stripDashboardCourseFromName(value))
+    normaliseDashboardContactName(stripDashboardRankFromName(stripDashboardCourseFromName(value)))
 );
+
+const dashboardPersonNameKeys = (value?: string | null): Set<string> => {
+    const base = stripDashboardRankFromName(stripDashboardCourseFromName(value));
+    return new Set([
+        normaliseDashboardPersonName(base),
+        normaliseDashboardPersonName(toDashboardSurnameFirstName(base)),
+    ].filter(Boolean));
+};
 
 const toDashboardSurnameFirstName = (value?: string | null): string => {
     const text = String(value || '').trim();
@@ -753,11 +776,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     ), [peopleMessageContacts]);
     const messageFromDashboardUser = (message: DashboardMessage): boolean => (
         message.fromId === dashboardSenderContactId ||
-        normaliseDashboardContactName(message.from) === dashboardUserKey
+        dashboardPersonNameKeys(message.from).has(normaliseDashboardPersonName(dashboardMessageUserName))
     );
     const messageDeletedForDashboardUser = (message: DashboardMessage): boolean => (
         (Array.isArray(message.deletedForIds) && message.deletedForIds.includes(dashboardSenderContactId)) ||
-        (Array.isArray(message.deletedForNames) && message.deletedForNames.includes(dashboardUserKey))
+        (Array.isArray(message.deletedForNames) && message.deletedForNames.some(name => (
+            dashboardPersonNameKeys(name).has(normaliseDashboardPersonName(dashboardMessageUserName))
+        )))
     );
     const messageBelongsToDashboardUser = (message: DashboardMessage): boolean => (
         !messageDeletedForDashboardUser(message) && (
@@ -1261,7 +1286,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             return {
                 ...message,
                 deletedForIds: Array.from(new Set([...(message.deletedForIds || []), dashboardSenderContactId])),
-                deletedForNames: Array.from(new Set([...(message.deletedForNames || []), dashboardUserKey])),
+                deletedForNames: Array.from(new Set([...(message.deletedForNames || []), normaliseDashboardPersonName(dashboardMessageUserName)])),
             };
         }));
         if (selectedMessageContact && normaliseDashboardContactName(selectedMessageContact.name) === contactKey) {

@@ -1987,6 +1987,67 @@ function normaliseDashboardMessageName(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+const DASHBOARD_MESSAGE_RANKS = [
+  'AIRCDRE', 'AIR COMMODORE',
+  'GPCAPT', 'GROUP CAPTAIN',
+  'WGCDR', 'WING COMMANDER',
+  'SQNLDR', 'SQUADRON LEADER',
+  'FLTLT', 'FLIGHT LIEUTENANT',
+  'FLGOFF', 'FLYING OFFICER',
+  'PLTOFF', 'PILOT OFFICER',
+  'OCDT', 'MIDN', 'SBLT', '2LT',
+  'WOFF', 'FSGT', 'SGT', 'CPL', 'LAC', 'AC',
+];
+
+function stripDashboardMessageRank(value) {
+  let text = String(value || '').trim();
+  if (!text) return '';
+  const sortedRanks = [...DASHBOARD_MESSAGE_RANKS].sort((a, b) => b.length - a.length);
+  for (const rank of sortedRanks) {
+    const rankPattern = rank.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    const next = text.replace(new RegExp(`^${rankPattern}\\s+`, 'i'), '').trim();
+    if (next !== text) {
+      text = next;
+      break;
+    }
+  }
+  return text;
+}
+
+function stripDashboardMessageCourse(value) {
+  return String(value || '')
+    .replace(/\s*[‐‑‒–—-]\s*[A-Z]{2,}\d+[A-Z0-9]*\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function toDashboardMessageSurnameFirstName(value) {
+  const text = String(value || '').trim();
+  if (!text || text.includes(',')) return text;
+  const parts = text.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return text;
+  const surname = parts[parts.length - 1];
+  const firstNames = parts.slice(0, -1).join(' ');
+  return `${surname}, ${firstNames}`;
+}
+
+function normaliseDashboardMessagePersonName(value) {
+  return normaliseDashboardMessageName(stripDashboardMessageRank(stripDashboardMessageCourse(value)));
+}
+
+function dashboardMessagePersonNameKeys(value) {
+  const base = stripDashboardMessageRank(stripDashboardMessageCourse(value));
+  return new Set([
+    normaliseDashboardMessagePersonName(base),
+    normaliseDashboardMessagePersonName(toDashboardMessageSurnameFirstName(base)),
+  ].filter(Boolean));
+}
+
+function dashboardMessageNamesMatch(left, right) {
+  const rightKeys = dashboardMessagePersonNameKeys(right);
+  return Array.from(dashboardMessagePersonNameKeys(left)).some(key => rightKeys.has(key));
+}
+
 function normaliseDashboardMessageId(value) {
   return String(value || '').trim();
 }
@@ -2023,7 +2084,7 @@ function normaliseDashboardStoredMessages(data) {
         ? Array.from(new Set(message.deletedForIds.map(normaliseDashboardMessageId).filter(Boolean)))
         : undefined,
       deletedForNames: Array.isArray(message.deletedForNames)
-        ? Array.from(new Set(message.deletedForNames.map(normaliseDashboardMessageName).filter(Boolean)))
+        ? Array.from(new Set(message.deletedForNames.map(normaliseDashboardMessagePersonName).filter(Boolean)))
         : undefined,
     }));
 }
@@ -2057,7 +2118,7 @@ function normaliseDashboardMessageInput(messageInput) {
       ? Array.from(new Set(messageInput.deletedForIds.map(normaliseDashboardMessageId).filter(Boolean)))
       : undefined,
     deletedForNames: Array.isArray(messageInput.deletedForNames)
-      ? Array.from(new Set(messageInput.deletedForNames.map(normaliseDashboardMessageName).filter(Boolean)))
+      ? Array.from(new Set(messageInput.deletedForNames.map(normaliseDashboardMessagePersonName).filter(Boolean)))
       : undefined,
   };
 }
@@ -2106,7 +2167,7 @@ function normaliseDashboardStoredMessageGroups(data) {
 }
 
 function dashboardMessageMatchesParticipant(message, participantId, participantName) {
-  const participantKey = normaliseDashboardMessageName(participantName);
+  const participantKey = normaliseDashboardMessagePersonName(participantName);
   const id = normaliseDashboardMessageId(participantId);
   if (id && (
     message.fromId === id ||
@@ -2116,43 +2177,46 @@ function dashboardMessageMatchesParticipant(message, participantId, participantN
   )) {
     return true;
   }
-  if (!message.fromId && normaliseDashboardMessageName(message.from) === participantKey) return true;
-  if (!message.toId && normaliseDashboardMessageName(message.to) === participantKey) return true;
+  if (!message.fromId && dashboardMessageNamesMatch(message.from, participantKey)) return true;
+  if (!message.toId && dashboardMessageNamesMatch(message.to, participantKey)) return true;
   return false;
 }
 
 function dashboardMessageDeletedForParticipant(message, participantId, participantName) {
-  const participantKey = normaliseDashboardMessageName(participantName);
+  const participantKey = normaliseDashboardMessagePersonName(participantName);
   const id = normaliseDashboardMessageId(participantId);
+  const deletedNameKeys = Array.isArray(message.deletedForNames)
+    ? message.deletedForNames.flatMap(name => Array.from(dashboardMessagePersonNameKeys(name)))
+    : [];
   return (
     (id && Array.isArray(message.deletedForIds) && message.deletedForIds.includes(id)) ||
-    (participantKey && Array.isArray(message.deletedForNames) && message.deletedForNames.includes(participantKey))
+    (participantKey && deletedNameKeys.includes(participantKey))
   );
 }
 
 function dashboardMessageMatchesConversation(message, participantId, participantName, contactId, contactName) {
-  const participantKey = normaliseDashboardMessageName(participantName);
-  const contactKey = normaliseDashboardMessageName(contactName);
+  const participantKey = normaliseDashboardMessagePersonName(participantName);
+  const contactKey = normaliseDashboardMessagePersonName(contactName);
   const participantStableId = normaliseDashboardMessageId(participantId);
   const contactStableId = normaliseDashboardMessageId(contactId);
   const recipientIds = Array.isArray(message.recipientIds) ? message.recipientIds : [];
-  const fromKey = normaliseDashboardMessageName(message.from);
-  const toKey = normaliseDashboardMessageName(message.to);
+  const fromKey = normaliseDashboardMessagePersonName(message.from);
+  const toKey = normaliseDashboardMessagePersonName(message.to);
 
   const participantSentToContact = (
     (participantStableId && message.fromId === participantStableId) ||
-    (!message.fromId && fromKey === participantKey)
+    (!message.fromId && dashboardMessageNamesMatch(message.from, participantKey))
   ) && (
     (contactStableId && (message.toId === contactStableId || recipientIds.includes(contactStableId))) ||
-    (!message.toId && toKey === contactKey)
+    (!message.toId && dashboardMessageNamesMatch(message.to, contactKey))
   );
 
   const contactSentToParticipant = (
     (contactStableId && message.fromId === contactStableId) ||
-    (!message.fromId && fromKey === contactKey)
+    (!message.fromId && dashboardMessageNamesMatch(message.from, contactKey))
   ) && (
     (participantStableId && (message.toId === participantStableId || recipientIds.includes(participantStableId))) ||
-    (!message.toId && toKey === participantKey)
+    (!message.toId && dashboardMessageNamesMatch(message.to, participantKey))
   );
 
   if (participantSentToContact || contactSentToParticipant) return true;
