@@ -40852,9 +40852,8 @@ const MyDashboard = ({
   })).sort((a, b) => a.label.localeCompare(b.label)), [normalisedStaffQualificationCatalogue]);
   const filteredGroupBuilderContacts = reactExports.useMemo(() => {
     const query = normaliseDashboardContactName(groupBuilderSearch);
-    return peopleMessageContacts.filter((contact) => contact.id !== dashboardSenderContactId).filter((contact) => groupBuilderTypeFilter === "all" || contact.type === groupBuilderTypeFilter).filter((contact) => groupBuilderUnitFilter === "all" || contact.unit === groupBuilderUnitFilter).filter((contact) => groupBuilderFlightFilter === "all" || contact.flight === groupBuilderFlightFilter).filter((contact) => groupBuilderRankFilter === "all" || contact.rank === groupBuilderRankFilter).filter((contact) => groupBuilderRoleFilter === "all" || contact.role === groupBuilderRoleFilter).filter((contact) => groupBuilderCourseFilter === "all" || contact.course === groupBuilderCourseFilter).filter((contact) => groupBuilderQualificationFilter === "all" || (contact.qualificationIds || []).includes(groupBuilderQualificationFilter)).filter((contact) => !query || (normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query) || normaliseDashboardContactName(contact.rank).includes(query) || normaliseDashboardContactName(contact.role).includes(query) || normaliseDashboardContactName(contact.unit).includes(query) || normaliseDashboardContactName(contact.flight).includes(query) || normaliseDashboardContactName(contact.course).includes(query) || normaliseDashboardContactName(contact.qualification).includes(query)));
+    return peopleMessageContacts.filter((contact) => groupBuilderTypeFilter === "all" || contact.type === groupBuilderTypeFilter).filter((contact) => groupBuilderUnitFilter === "all" || contact.unit === groupBuilderUnitFilter).filter((contact) => groupBuilderFlightFilter === "all" || contact.flight === groupBuilderFlightFilter).filter((contact) => groupBuilderRankFilter === "all" || contact.rank === groupBuilderRankFilter).filter((contact) => groupBuilderRoleFilter === "all" || contact.role === groupBuilderRoleFilter).filter((contact) => groupBuilderCourseFilter === "all" || contact.course === groupBuilderCourseFilter).filter((contact) => groupBuilderQualificationFilter === "all" || (contact.qualificationIds || []).includes(groupBuilderQualificationFilter)).filter((contact) => !query || (normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query) || normaliseDashboardContactName(contact.rank).includes(query) || normaliseDashboardContactName(contact.role).includes(query) || normaliseDashboardContactName(contact.unit).includes(query) || normaliseDashboardContactName(contact.flight).includes(query) || normaliseDashboardContactName(contact.course).includes(query) || normaliseDashboardContactName(contact.qualification).includes(query)));
   }, [
-    dashboardSenderContactId,
     groupBuilderCourseFilter,
     groupBuilderFlightFilter,
     groupBuilderQualificationFilter,
@@ -41176,10 +41175,17 @@ const MyDashboard = ({
     if (selectedMessageContacts.length === 0 || !messageDraft.trim()) return;
     const sentAt = (/* @__PURE__ */ new Date()).toISOString();
     const messageBody = messageDraft.trim();
-    const groupId = selectedMessageGroupContact?.id.replace(/^group-/, "");
+    const groupId = selectedMessageGroupContact?.id.replace(/^group-conversation-/, "").replace(/^group-/, "");
     const groupName = selectedMessageGroupContact?.displayName;
-    const groupMemberIds = selectedMessageGroupContact ? selectedMessageContacts.map((contact) => contact.id) : void 0;
-    const groupMemberNames = selectedMessageGroupContact ? selectedMessageContacts.map((contact) => contact.displayName) : void 0;
+    const groupMemberIds = selectedMessageGroupContact ? Array.from(new Set([
+      ...selectedMessageGroupContact.memberIds || [],
+      ...selectedMessageContacts.map((contact) => contact.id),
+      dashboardSenderContactId
+    ].filter(Boolean))) : void 0;
+    const groupMemberNames = selectedMessageGroupContact ? Array.from(new Set([
+      ...selectedMessageGroupContact.memberNames || [],
+      ...(groupMemberIds || []).map((memberId) => messageContactsById.get(memberId)?.displayName || (memberId === dashboardSenderContactId ? signedInUserLabel : "")).filter(Boolean)
+    ].filter(Boolean))) : void 0;
     const nextMessages = selectedMessageContacts.map((contact) => ({
       id: `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${contact.id.replace(/[^a-z0-9]/gi, "").slice(0, 12)}`,
       from: dashboardMessageUserName,

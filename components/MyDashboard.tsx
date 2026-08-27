@@ -841,7 +841,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const filteredGroupBuilderContacts = useMemo(() => {
         const query = normaliseDashboardContactName(groupBuilderSearch);
         return peopleMessageContacts
-            .filter(contact => contact.id !== dashboardSenderContactId)
             .filter(contact => groupBuilderTypeFilter === 'all' || contact.type === groupBuilderTypeFilter)
             .filter(contact => groupBuilderUnitFilter === 'all' || contact.unit === groupBuilderUnitFilter)
             .filter(contact => groupBuilderFlightFilter === 'all' || contact.flight === groupBuilderFlightFilter)
@@ -860,7 +859,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 normaliseDashboardContactName(contact.qualification).includes(query)
             ));
     }, [
-        dashboardSenderContactId,
         groupBuilderCourseFilter,
         groupBuilderFlightFilter,
         groupBuilderQualificationFilter,
@@ -1267,10 +1265,26 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         if (selectedMessageContacts.length === 0 || !messageDraft.trim()) return;
         const sentAt = new Date().toISOString();
         const messageBody = messageDraft.trim();
-        const groupId = selectedMessageGroupContact?.id.replace(/^group-/, '');
+        const groupId = selectedMessageGroupContact?.id.replace(/^group-conversation-/, '').replace(/^group-/, '');
         const groupName = selectedMessageGroupContact?.displayName;
-        const groupMemberIds = selectedMessageGroupContact ? selectedMessageContacts.map(contact => contact.id) : undefined;
-        const groupMemberNames = selectedMessageGroupContact ? selectedMessageContacts.map(contact => contact.displayName) : undefined;
+        const groupMemberIds = selectedMessageGroupContact
+            ? Array.from(new Set([
+                ...(selectedMessageGroupContact.memberIds || []),
+                ...selectedMessageContacts.map(contact => contact.id),
+                dashboardSenderContactId,
+            ].filter(Boolean)))
+            : undefined;
+        const groupMemberNames = selectedMessageGroupContact
+            ? Array.from(new Set([
+                ...(selectedMessageGroupContact.memberNames || []),
+                ...(groupMemberIds || [])
+                    .map(memberId => (
+                        messageContactsById.get(memberId)?.displayName ||
+                        (memberId === dashboardSenderContactId ? signedInUserLabel : '')
+                    ))
+                    .filter(Boolean),
+            ].filter(Boolean)))
+            : undefined;
         const nextMessages: DashboardMessage[] = selectedMessageContacts.map(contact => ({
             id: `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${contact.id.replace(/[^a-z0-9]/gi, '').slice(0, 12)}`,
             from: dashboardMessageUserName,
