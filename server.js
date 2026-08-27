@@ -2099,7 +2099,8 @@ function dashboardMessageMatchesParticipant(message, participantId, participantN
   if (id && (
     message.fromId === id ||
     message.toId === id ||
-    (Array.isArray(message.recipientIds) && message.recipientIds.includes(id))
+    (Array.isArray(message.recipientIds) && message.recipientIds.includes(id)) ||
+    (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(id))
   )) {
     return true;
   }
@@ -2236,7 +2237,11 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
     const messages = await getDashboardMessages(db);
     const nextMessages = messages.map(message => {
       const matchesReader = readerId
-        ? message.toId === readerId || (Array.isArray(message.recipientIds) && message.recipientIds.includes(readerId))
+        ? (
+          message.toId === readerId ||
+          (Array.isArray(message.recipientIds) && message.recipientIds.includes(readerId)) ||
+          (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(readerId))
+        )
         : normaliseDashboardMessageName(message.to) === reader;
       const matchesSender = senderId
         ? message.fromId === senderId

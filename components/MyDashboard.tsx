@@ -753,6 +753,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         message.fromId === dashboardSenderContactId ||
         message.toId === dashboardSenderContactId ||
         (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
+        (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)) ||
         (!message.fromId && normaliseDashboardContactName(message.from) === dashboardUserKey) ||
         (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)
     );
@@ -792,7 +793,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 contact: groupContact || existing?.contact || (otherId ? messageContactsById.get(otherId) : null) || getMessageContactForName(otherName),
                 lastMessage: isNewer ? message : existing.lastMessage,
                 unreadCount: (existing?.unreadCount || 0) + (
-                    (message.toId === dashboardSenderContactId || (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) || (!message.toId && toKey === dashboardUserKey)) && !message.readAt ? 1 : 0
+                    (
+                        message.toId === dashboardSenderContactId ||
+                        (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
+                        (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)) ||
+                        (!message.toId && toKey === dashboardUserKey)
+                    ) && !message.readAt ? 1 : 0
                 ),
             });
         });
@@ -890,6 +896,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             (
                 message.toId === dashboardSenderContactId ||
                 (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
+                (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)) ||
                 (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)
             ) &&
             !message.readAt
@@ -906,8 +913,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 const from = normaliseDashboardContactName(message.from);
                 const to = normaliseDashboardContactName(message.to);
                 if (selectedMessageContact.type === 'Group') {
-                    const groupId = message.groupId ? `group-conversation-${message.groupId}` : '';
-                    return groupId === selectedMessageContact.id || message.groupId === selectedMessageContact.id.replace(/^group-conversation-/, '');
+                    const selectedGroupId = selectedMessageContact.id.replace(/^group-conversation-/, '').replace(/^group-/, '');
+                    return !!message.groupId && message.groupId === selectedGroupId;
                 }
                 return (
                     (message.fromId === dashboardSenderContactId && message.toId === contactKey) ||
@@ -960,6 +967,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 const messagesForOtherUsers = prev.filter(message => (
                     message.fromId !== dashboardSenderContactId &&
                     message.toId !== dashboardSenderContactId &&
+                    !(Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) &&
+                    !(Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)) &&
                     normaliseDashboardContactName(message.from) !== selectedKey &&
                     normaliseDashboardContactName(message.to) !== selectedKey
                 ));
@@ -1316,10 +1325,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     useEffect(() => {
         if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || unreadMessages.length === 0) return;
         const selectedKey = normaliseDashboardContactName(selectedMessageContact.name);
+        const selectedGroupId = selectedMessageContact.type === 'Group'
+            ? selectedMessageContact.id.replace(/^group-conversation-/, '').replace(/^group-/, '')
+            : '';
         const messageIdsToMarkRead = unreadMessages
             .filter(message => (
                 selectedMessageContact.type === 'Group'
-                    ? `group-conversation-${message.groupId || ''}` === selectedMessageContact.id
+                    ? message.groupId === selectedGroupId
                     : message.fromId === selectedMessageContact.id || (!message.fromId && normaliseDashboardContactName(message.from) === selectedKey)
             ))
             .map(message => message.id);
@@ -1329,6 +1341,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             (
                 message.toId === dashboardSenderContactId ||
                 (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
+                (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)) ||
                 (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)
             ) &&
             (
