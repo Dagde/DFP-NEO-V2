@@ -2312,8 +2312,8 @@ app.post('/api/dashboard-messages', async (req, res) => {
 app.patch('/api/dashboard-messages/read', async (req, res) => {
   try {
     const db = await getPrisma();
-    const reader = normaliseDashboardMessageName(req.body?.reader);
-    const sender = normaliseDashboardMessageName(req.body?.sender);
+    const reader = normaliseDashboardMessagePersonName(req.body?.reader);
+    const sender = normaliseDashboardMessagePersonName(req.body?.sender);
     const readerId = normaliseDashboardMessageId(req.body?.readerId);
     const senderId = normaliseDashboardMessageId(req.body?.senderId);
     const messageIds = new Set(Array.isArray(req.body?.messageIds) ? req.body.messageIds.map(id => String(id)) : []);
@@ -2324,17 +2324,13 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
     let updated = 0;
     const messages = await getDashboardMessages(db);
     const nextMessages = messages.map(message => {
-      const matchesReader = readerId
-        ? (
-          message.toId === readerId ||
-          (Array.isArray(message.recipientIds) && message.recipientIds.includes(readerId)) ||
-          (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(readerId))
-        )
-        : normaliseDashboardMessageName(message.to) === reader;
-      const matchesSender = senderId
-        ? message.fromId === senderId
-        : (!sender || normaliseDashboardMessageName(message.from) === sender);
       const matchesId = messageIds.size === 0 || messageIds.has(message.id);
+      const matchesReader = dashboardMessageMatchesParticipant(message, readerId, reader);
+      const matchesSender = messageIds.size > 0 || (
+        senderId
+          ? message.fromId === senderId
+          : (!sender || dashboardMessageNamesMatch(message.from, sender))
+      );
       if (matchesReader && matchesSender && matchesId && !message.readAt) {
         updated++;
         return { ...message, readAt: now };
@@ -2354,8 +2350,8 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
 app.delete('/api/dashboard-messages/conversation', async (req, res) => {
   try {
     const db = await getPrisma();
-    const participant = normaliseDashboardMessageName(req.body?.participant);
-    const contact = normaliseDashboardMessageName(req.body?.contact);
+    const participant = normaliseDashboardMessagePersonName(req.body?.participant);
+    const contact = normaliseDashboardMessagePersonName(req.body?.contact);
     const participantId = normaliseDashboardMessageId(req.body?.participantId);
     const contactId = normaliseDashboardMessageId(req.body?.contactId);
     const groupId = normaliseDashboardMessageId(req.body?.groupId);

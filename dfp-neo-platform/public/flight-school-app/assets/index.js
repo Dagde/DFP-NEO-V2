@@ -40800,7 +40800,7 @@ const MyDashboard = ({
     return messageContacts.filter((contact) => normaliseDashboardContactName(contact.displayName).includes(query) || normaliseDashboardContactName(contact.name).includes(query)).slice(0, 6);
   }, [messageContacts, messageToText]);
   const getMessageContactForName = (name) => {
-    const contact = messageContacts.find((candidate) => normaliseDashboardContactName(candidate.name) === normaliseDashboardContactName(name));
+    const contact = messageContacts.find((candidate) => dashboardPersonNamesMatch(candidate.name, name) || dashboardPersonNamesMatch(candidate.displayName, name));
     if (contact) return contact;
     const nameParts = getDashboardContactNameParts(name);
     return {
@@ -40823,6 +40823,10 @@ const MyDashboard = ({
   const messageAddressedToDashboardUser = (message) => message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId) || dashboardPersonNamesMatch(message.to, dashboardMessageUserName);
   const messageMatchesContact = (message, contact) => message.fromId === contact.id || message.toId === contact.id || Array.isArray(message.recipientIds) && message.recipientIds.includes(contact.id) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(contact.id) || dashboardPersonNamesMatch(message.from, contact.name) || dashboardPersonNamesMatch(message.from, contact.displayName) || dashboardPersonNamesMatch(message.to, contact.name) || dashboardPersonNamesMatch(message.to, contact.displayName);
   const messageBelongsToDashboardUser = (message) => !messageDeletedForDashboardUser(message) && (messageFromDashboardUser(message) || messageAddressedToDashboardUser(message));
+  const resolveMessageContact = (id, name) => {
+    if (id && messageContactsById.has(id)) return messageContactsById.get(id) || null;
+    return messageContacts.find((contact) => dashboardPersonNamesMatch(contact.name, name) || dashboardPersonNamesMatch(contact.displayName, name)) || null;
+  };
   const getGroupConversationContact = (message) => {
     if (!message.groupId || !message.groupName) return null;
     const storedGroup = dashboardMessageGroups.find((group) => group.id === message.groupId);
@@ -40846,19 +40850,18 @@ const MyDashboard = ({
     const conversations = /* @__PURE__ */ new Map();
     dashboardMessages.forEach((message) => {
       if (!messageBelongsToDashboardUser(message)) return;
-      normaliseDashboardContactName(message.from);
-      const toKey = normaliseDashboardContactName(message.to);
       const mineById = messageFromDashboardUser(message);
       const groupContact = getGroupConversationContact(message);
       const otherId = groupContact?.id || (mineById ? message.toId : message.fromId);
       const otherName = groupContact?.name || (mineById ? message.to : message.from);
-      const otherKey = message.groupId ? `group-${message.groupId}` : otherId || normaliseDashboardContactName(otherName);
+      const resolvedContact = groupContact || resolveMessageContact(otherId, otherName);
+      const otherKey = message.groupId ? `group-${message.groupId}` : resolvedContact?.id || `person-${normaliseDashboardPersonName(otherName)}`;
       const existing = conversations.get(otherKey);
       const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
       conversations.set(otherKey, {
-        contact: groupContact || existing?.contact || (otherId ? messageContactsById.get(otherId) : null) || getMessageContactForName(otherName),
+        contact: resolvedContact || existing?.contact || getMessageContactForName(otherName),
         lastMessage: isNewer ? message : existing.lastMessage,
-        unreadCount: (existing?.unreadCount || 0) + ((message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId) || !message.toId && toKey === dashboardUserKey) && !message.readAt ? 1 : 0)
+        unreadCount: (existing?.unreadCount || 0) + (messageAddressedToDashboardUser(message) && !message.readAt ? 1 : 0)
       });
     });
     return Array.from(conversations.values()).sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
