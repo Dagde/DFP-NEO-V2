@@ -41657,7 +41657,9 @@ const MyDashboard = ({
               const timeLabel2 = formatDashboardMessageTime(sentDate);
               const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;
               const mine = messageFromDashboardUser(message);
+              const showGroupSender = selectedMessageContact?.type === "Group" && !mine && !!message.from;
               return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`, children: [
+                showGroupSender && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 max-w-full truncate pl-2 text-[11px] font-semibold text-gray-500", children: message.from }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [

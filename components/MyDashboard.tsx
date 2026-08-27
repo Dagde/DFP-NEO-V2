@@ -1858,9 +1858,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                     const timeLabel = formatDashboardMessageTime(sentDate);
                                                     const dateLabel = `${String(sentDate.getDate()).padStart(2, '0')}/${String(sentDate.getMonth() + 1).padStart(2, '0')}/${String(sentDate.getFullYear()).slice(-2)}`;
                                                     const mine = messageFromDashboardUser(message);
+                                                    const showGroupSender = selectedMessageContact?.type === 'Group' && !mine && !!message.from;
                                                     return (
                                                         <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                                                             <div className={`flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
+                                                                {showGroupSender && (
+                                                                    <p className="mb-1 max-w-full truncate pl-2 text-[11px] font-semibold text-gray-500">
+                                                                        {message.from}
+                                                                    </p>
+                                                                )}
                                                                 <div className={`rounded-2xl px-4 py-2 shadow-sm ${mine ? 'bg-sky-500 text-white' : 'bg-white text-gray-950'}`}>
                                                                     <p className="whitespace-pre-wrap text-sm">{message.body}</p>
                                                                 </div>
