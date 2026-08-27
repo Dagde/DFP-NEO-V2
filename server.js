@@ -2113,18 +2113,34 @@ function dashboardMessageMatchesConversation(message, participantId, participant
   const contactKey = normaliseDashboardMessageName(contactName);
   const participantStableId = normaliseDashboardMessageId(participantId);
   const contactStableId = normaliseDashboardMessageId(contactId);
-  const matchesIds = participantStableId && contactStableId && (
-    (message.fromId === participantStableId && message.toId === contactStableId) ||
-    (message.fromId === contactStableId && message.toId === participantStableId)
+  const recipientIds = Array.isArray(message.recipientIds) ? message.recipientIds : [];
+  const fromKey = normaliseDashboardMessageName(message.from);
+  const toKey = normaliseDashboardMessageName(message.to);
+
+  const participantSentToContact = (
+    (participantStableId && message.fromId === participantStableId) ||
+    (!message.fromId && fromKey === participantKey)
+  ) && (
+    (contactStableId && (message.toId === contactStableId || recipientIds.includes(contactStableId))) ||
+    (!message.toId && toKey === contactKey)
   );
-  if (matchesIds) return true;
+
+  const contactSentToParticipant = (
+    (contactStableId && message.fromId === contactStableId) ||
+    (!message.fromId && fromKey === contactKey)
+  ) && (
+    (participantStableId && (message.toId === participantStableId || recipientIds.includes(participantStableId))) ||
+    (!message.toId && toKey === participantKey)
+  );
+
+  if (participantSentToContact || contactSentToParticipant) return true;
+
+  // Legacy/mobile records have not always used the same stable id format as the
+  // web contact list. Use name matching as a last resort so those records can
+  // still be deleted instead of reappearing after refresh.
   return (
-    !message.fromId &&
-    !message.toId &&
-    (
-      (normaliseDashboardMessageName(message.from) === participantKey && normaliseDashboardMessageName(message.to) === contactKey) ||
-      (normaliseDashboardMessageName(message.from) === contactKey && normaliseDashboardMessageName(message.to) === participantKey)
-    )
+    (fromKey === participantKey && toKey === contactKey) ||
+    (fromKey === contactKey && toKey === participantKey)
   );
 }
 
