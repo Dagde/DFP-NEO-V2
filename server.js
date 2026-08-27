@@ -2019,6 +2019,12 @@ function normaliseDashboardStoredMessages(data) {
       groupMemberNames: Array.isArray(message.groupMemberNames)
         ? Array.from(new Set(message.groupMemberNames.map(name => String(name || '').trim()).filter(Boolean)))
         : undefined,
+      deletedForIds: Array.isArray(message.deletedForIds)
+        ? Array.from(new Set(message.deletedForIds.map(normaliseDashboardMessageId).filter(Boolean)))
+        : undefined,
+      deletedForNames: Array.isArray(message.deletedForNames)
+        ? Array.from(new Set(message.deletedForNames.map(normaliseDashboardMessageName).filter(Boolean)))
+        : undefined,
     }));
 }
 
@@ -2046,6 +2052,12 @@ function normaliseDashboardMessageInput(messageInput) {
       : undefined,
     groupMemberNames: Array.isArray(messageInput.groupMemberNames)
       ? Array.from(new Set(messageInput.groupMemberNames.map(name => String(name || '').trim()).filter(Boolean)))
+      : undefined,
+    deletedForIds: Array.isArray(messageInput.deletedForIds)
+      ? Array.from(new Set(messageInput.deletedForIds.map(normaliseDashboardMessageId).filter(Boolean)))
+      : undefined,
+    deletedForNames: Array.isArray(messageInput.deletedForNames)
+      ? Array.from(new Set(messageInput.deletedForNames.map(normaliseDashboardMessageName).filter(Boolean)))
       : undefined,
   };
 }
@@ -2107,6 +2119,15 @@ function dashboardMessageMatchesParticipant(message, participantId, participantN
   if (!message.fromId && normaliseDashboardMessageName(message.from) === participantKey) return true;
   if (!message.toId && normaliseDashboardMessageName(message.to) === participantKey) return true;
   return false;
+}
+
+function dashboardMessageDeletedForParticipant(message, participantId, participantName) {
+  const participantKey = normaliseDashboardMessageName(participantName);
+  const id = normaliseDashboardMessageId(participantId);
+  return (
+    (id && Array.isArray(message.deletedForIds) && message.deletedForIds.includes(id)) ||
+    (participantKey && Array.isArray(message.deletedForNames) && message.deletedForNames.includes(participantKey))
+  );
 }
 
 function dashboardMessageMatchesConversation(message, participantId, participantName, contactId, contactName) {
@@ -2188,7 +2209,10 @@ app.get('/api/dashboard-messages', async (req, res) => {
     const userId = normaliseDashboardMessageId(req.query.userId);
     const messages = await getDashboardMessages(db);
     const scopedMessages = userName || userId
-      ? messages.filter(message => dashboardMessageMatchesParticipant(message, userId, userName))
+      ? messages.filter(message => (
+        dashboardMessageMatchesParticipant(message, userId, userName) &&
+        !dashboardMessageDeletedForParticipant(message, userId, userName)
+      ))
       : messages;
     res.json({ messages: scopedMessages });
   } catch (error) {
@@ -2275,13 +2299,27 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
       return res.status(400).json({ error: 'Participant and contact are required.' });
     }
     const messages = await getDashboardMessages(db);
-    const nextMessages = messages.filter(message => {
-      if (groupId && message.groupId === groupId && dashboardMessageMatchesParticipant(message, participantId, participant)) {
-        return false;
+    let deleted = 0;
+    const nextMessages = messages.map(message => {
+      const matchesConversation = groupId
+        ? message.groupId === groupId && dashboardMessageMatchesParticipant(message, participantId, participant)
+        : dashboardMessageMatchesConversation(message, participantId, participant, contactId, contact);
+      if (!matchesConversation || dashboardMessageDeletedForParticipant(message, participantId, participant)) {
+        return message;
       }
-      return !dashboardMessageMatchesConversation(message, participantId, participant, contactId, contact);
+      deleted++;
+      const deletedForIds = participantId
+        ? Array.from(new Set([...(message.deletedForIds || []), participantId]))
+        : message.deletedForIds;
+      const deletedForNames = participant
+        ? Array.from(new Set([...(message.deletedForNames || []), participant]))
+        : message.deletedForNames;
+      return {
+        ...message,
+        deletedForIds,
+        deletedForNames,
+      };
     });
-    const deleted = messages.length - nextMessages.length;
     if (deleted > 0) {
       await saveDashboardMessages(db, nextMessages);
     }

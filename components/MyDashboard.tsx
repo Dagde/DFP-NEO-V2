@@ -75,6 +75,8 @@ type DashboardMessage = {
     groupName?: string;
     groupMemberIds?: string[];
     groupMemberNames?: string[];
+    deletedForIds?: string[];
+    deletedForNames?: string[];
 };
 
 type DashboardMessageContactGroup = {
@@ -749,13 +751,22 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const messageContactsById = useMemo(() => new Map(
         peopleMessageContacts.map(contact => [contact.id, contact])
     ), [peopleMessageContacts]);
-    const messageBelongsToDashboardUser = (message: DashboardMessage): boolean => (
+    const messageFromDashboardUser = (message: DashboardMessage): boolean => (
         message.fromId === dashboardSenderContactId ||
-        message.toId === dashboardSenderContactId ||
-        (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
-        (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)) ||
-        (!message.fromId && normaliseDashboardContactName(message.from) === dashboardUserKey) ||
-        (!message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey)
+        normaliseDashboardContactName(message.from) === dashboardUserKey
+    );
+    const messageDeletedForDashboardUser = (message: DashboardMessage): boolean => (
+        (Array.isArray(message.deletedForIds) && message.deletedForIds.includes(dashboardSenderContactId)) ||
+        (Array.isArray(message.deletedForNames) && message.deletedForNames.includes(dashboardUserKey))
+    );
+    const messageBelongsToDashboardUser = (message: DashboardMessage): boolean => (
+        !messageDeletedForDashboardUser(message) && (
+            messageFromDashboardUser(message) ||
+            message.toId === dashboardSenderContactId ||
+            (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
+            (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)) ||
+            normaliseDashboardContactName(message.to) === dashboardUserKey
+        )
     );
     const getGroupConversationContact = (message: DashboardMessage): DashboardMessageContact | null => {
         if (!message.groupId || !message.groupName) return null;
@@ -782,7 +793,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             if (!messageBelongsToDashboardUser(message)) return;
             const fromKey = normaliseDashboardContactName(message.from);
             const toKey = normaliseDashboardContactName(message.to);
-            const mineById = message.fromId === dashboardSenderContactId || (!message.fromId && fromKey === dashboardUserKey);
+            const mineById = messageFromDashboardUser(message);
             const groupContact = getGroupConversationContact(message);
             const otherId = groupContact?.id || (mineById ? message.toId : message.fromId);
             const otherName = groupContact?.name || (mineById ? message.to : message.from);
@@ -893,6 +904,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     };
     const unreadMessages = useMemo(() => (
         dashboardMessages.filter(message => (
+            !messageDeletedForDashboardUser(message) &&
             (
                 message.toId === dashboardSenderContactId ||
                 (Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
@@ -910,6 +922,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const contactKey = selectedMessageContact.id || normaliseDashboardContactName(selectedMessageContact.name);
         return dashboardMessages
             .filter(message => {
+                if (messageDeletedForDashboardUser(message)) return false;
                 const from = normaliseDashboardContactName(message.from);
                 const to = normaliseDashboardContactName(message.to);
                 if (selectedMessageContact.type === 'Group') {
@@ -967,10 +980,10 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 const messagesForOtherUsers = prev.filter(message => (
                     message.fromId !== dashboardSenderContactId &&
                     message.toId !== dashboardSenderContactId &&
-                    !(Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) &&
-                    !(Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)) &&
                     normaliseDashboardContactName(message.from) !== selectedKey &&
-                    normaliseDashboardContactName(message.to) !== selectedKey
+                    normaliseDashboardContactName(message.to) !== selectedKey &&
+                    !(Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) &&
+                    !(Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId))
                 ));
                 const next = mergeDashboardMessages(messagesForOtherUsers, apiMessages);
                 writeDashboardMessages(next);
@@ -1231,22 +1244,25 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const groupId = contact.type === 'Group'
             ? contact.id.replace(/^group-conversation-/, '').replace(/^group-/, '')
             : '';
-        persistDashboardMessages(messages => messages.filter(message => {
+        persistDashboardMessages(messages => messages.map(message => {
             const from = normaliseDashboardContactName(message.from);
             const to = normaliseDashboardContactName(message.to);
-            if (groupId) {
-                return message.groupId !== groupId;
-            }
-            return !(
-                (message.fromId === dashboardSenderContactId && message.toId === contact.id) ||
-                (message.fromId === contact.id && message.toId === dashboardSenderContactId) ||
-                (message.fromId === dashboardSenderContactId && Array.isArray(message.recipientIds) && message.recipientIds.includes(contact.id)) ||
-                (message.fromId === contact.id && Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
-                (!message.fromId && !message.toId && (
+            const matches = groupId
+                ? message.groupId === groupId
+                : (
+                    (message.fromId === dashboardSenderContactId && message.toId === contact.id) ||
+                    (message.fromId === contact.id && message.toId === dashboardSenderContactId) ||
+                    (message.fromId === dashboardSenderContactId && Array.isArray(message.recipientIds) && message.recipientIds.includes(contact.id)) ||
+                    (message.fromId === contact.id && Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) ||
                     (from === dashboardUserKey && to === contactKey) ||
                     (from === contactKey && to === dashboardUserKey)
-                ))
-            );
+                );
+            if (!matches || messageDeletedForDashboardUser(message)) return message;
+            return {
+                ...message,
+                deletedForIds: Array.from(new Set([...(message.deletedForIds || []), dashboardSenderContactId])),
+                deletedForNames: Array.from(new Set([...(message.deletedForNames || []), dashboardUserKey])),
+            };
         }));
         if (selectedMessageContact && normaliseDashboardContactName(selectedMessageContact.name) === contactKey) {
             setSelectedMessageContact(null);
@@ -1823,7 +1839,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                     const sentDate = new Date(message.sentAt);
                                                     const timeLabel = formatDashboardMessageTime(sentDate);
                                                     const dateLabel = `${String(sentDate.getDate()).padStart(2, '0')}/${String(sentDate.getMonth() + 1).padStart(2, '0')}/${String(sentDate.getFullYear()).slice(-2)}`;
-                                                    const mine = message.fromId === dashboardSenderContactId || (!message.fromId && normaliseDashboardContactName(message.from) === dashboardUserKey);
+                                                    const mine = messageFromDashboardUser(message);
                                                     return (
                                                         <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                                                             <div className={`flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}`}>

@@ -40793,7 +40793,9 @@ const MyDashboard = ({
   const messageContactsById = reactExports.useMemo(() => new Map(
     peopleMessageContacts.map((contact) => [contact.id, contact])
   ), [peopleMessageContacts]);
-  const messageBelongsToDashboardUser = (message) => message.fromId === dashboardSenderContactId || message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId) || !message.fromId && normaliseDashboardContactName(message.from) === dashboardUserKey || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey;
+  const messageFromDashboardUser = (message) => message.fromId === dashboardSenderContactId || normaliseDashboardContactName(message.from) === dashboardUserKey;
+  const messageDeletedForDashboardUser = (message) => Array.isArray(message.deletedForIds) && message.deletedForIds.includes(dashboardSenderContactId) || Array.isArray(message.deletedForNames) && message.deletedForNames.includes(dashboardUserKey);
+  const messageBelongsToDashboardUser = (message) => !messageDeletedForDashboardUser(message) && (messageFromDashboardUser(message) || message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId) || normaliseDashboardContactName(message.to) === dashboardUserKey);
   const getGroupConversationContact = (message) => {
     if (!message.groupId || !message.groupName) return null;
     const storedGroup = dashboardMessageGroups.find((group) => group.id === message.groupId);
@@ -40817,9 +40819,9 @@ const MyDashboard = ({
     const conversations = /* @__PURE__ */ new Map();
     dashboardMessages.forEach((message) => {
       if (!messageBelongsToDashboardUser(message)) return;
-      const fromKey = normaliseDashboardContactName(message.from);
+      normaliseDashboardContactName(message.from);
       const toKey = normaliseDashboardContactName(message.to);
-      const mineById = message.fromId === dashboardSenderContactId || !message.fromId && fromKey === dashboardUserKey;
+      const mineById = messageFromDashboardUser(message);
       const groupContact = getGroupConversationContact(message);
       const otherId = groupContact?.id || (mineById ? message.toId : message.fromId);
       const otherName = groupContact?.name || (mineById ? message.to : message.from);
@@ -40876,7 +40878,7 @@ const MyDashboard = ({
     if (contact.memberNames?.length) return contact.memberNames;
     return (contact.memberIds || []).map((memberId) => messageContactsById.get(memberId)?.displayName || memberId).filter(Boolean);
   };
-  const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => (message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId) || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey) && !message.readAt), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
+  const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => !messageDeletedForDashboardUser(message) && (message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId) || !message.toId && normaliseDashboardContactName(message.to) === dashboardUserKey) && !message.readAt), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
   reactExports.useEffect(() => {
     onUnreadMessageCountChange?.(unreadMessages.length);
   }, [onUnreadMessageCountChange, unreadMessages.length]);
@@ -40884,6 +40886,7 @@ const MyDashboard = ({
     if (!selectedMessageContact) return [];
     const contactKey = selectedMessageContact.id || normaliseDashboardContactName(selectedMessageContact.name);
     return dashboardMessages.filter((message) => {
+      if (messageDeletedForDashboardUser(message)) return false;
       const from = normaliseDashboardContactName(message.from);
       const to = normaliseDashboardContactName(message.to);
       if (selectedMessageContact.type === "Group") {
@@ -40930,7 +40933,7 @@ const MyDashboard = ({
       const apiMessages = await fetchDashboardMessagesFromApi(dashboardMessageUserName, dashboardSenderContactId);
       const selectedKey = normaliseDashboardContactName(dashboardMessageUserName);
       setDashboardMessages((prev) => {
-        const messagesForOtherUsers = prev.filter((message) => message.fromId !== dashboardSenderContactId && message.toId !== dashboardSenderContactId && !(Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) && !(Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)) && normaliseDashboardContactName(message.from) !== selectedKey && normaliseDashboardContactName(message.to) !== selectedKey);
+        const messagesForOtherUsers = prev.filter((message) => message.fromId !== dashboardSenderContactId && message.toId !== dashboardSenderContactId && normaliseDashboardContactName(message.from) !== selectedKey && normaliseDashboardContactName(message.to) !== selectedKey && !(Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId)) && !(Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)));
         const next = mergeDashboardMessages(messagesForOtherUsers, apiMessages);
         writeDashboardMessages(next);
         return next;
@@ -41141,13 +41144,16 @@ const MyDashboard = ({
     if (!confirmed) return;
     const contactKey = normaliseDashboardContactName(contact.name);
     const groupId = contact.type === "Group" ? contact.id.replace(/^group-conversation-/, "").replace(/^group-/, "") : "";
-    persistDashboardMessages((messages) => messages.filter((message) => {
+    persistDashboardMessages((messages) => messages.map((message) => {
       const from = normaliseDashboardContactName(message.from);
       const to = normaliseDashboardContactName(message.to);
-      if (groupId) {
-        return message.groupId !== groupId;
-      }
-      return !(message.fromId === dashboardSenderContactId && message.toId === contact.id || message.fromId === contact.id && message.toId === dashboardSenderContactId || message.fromId === dashboardSenderContactId && Array.isArray(message.recipientIds) && message.recipientIds.includes(contact.id) || message.fromId === contact.id && Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || !message.fromId && !message.toId && (from === dashboardUserKey && to === contactKey || from === contactKey && to === dashboardUserKey));
+      const matches = groupId ? message.groupId === groupId : message.fromId === dashboardSenderContactId && message.toId === contact.id || message.fromId === contact.id && message.toId === dashboardSenderContactId || message.fromId === dashboardSenderContactId && Array.isArray(message.recipientIds) && message.recipientIds.includes(contact.id) || message.fromId === contact.id && Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || from === dashboardUserKey && to === contactKey || from === contactKey && to === dashboardUserKey;
+      if (!matches || messageDeletedForDashboardUser(message)) return message;
+      return {
+        ...message,
+        deletedForIds: Array.from(/* @__PURE__ */ new Set([...message.deletedForIds || [], dashboardSenderContactId])),
+        deletedForNames: Array.from(/* @__PURE__ */ new Set([...message.deletedForNames || [], dashboardUserKey]))
+      };
     }));
     if (selectedMessageContact && normaliseDashboardContactName(selectedMessageContact.name) === contactKey) {
       setSelectedMessageContact(null);
@@ -41628,7 +41634,7 @@ const MyDashboard = ({
               const sentDate = new Date(message.sentAt);
               const timeLabel2 = formatDashboardMessageTime(sentDate);
               const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;
-              const mine = message.fromId === dashboardSenderContactId || !message.fromId && normaliseDashboardContactName(message.from) === dashboardUserKey;
+              const mine = messageFromDashboardUser(message);
               return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500", children: [
