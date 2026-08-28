@@ -2390,6 +2390,26 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
   }
 });
 
+app.delete('/api/dashboard-messages/:messageId', async (req, res) => {
+  try {
+    const messageId = normaliseDashboardMessageId(req.params?.messageId);
+    if (!messageId) {
+      return res.status(400).json({ error: 'Message id is required.' });
+    }
+    const db = await getPrisma();
+    const messages = await getDashboardMessages(db);
+    const nextMessages = messages.filter(message => message.id !== messageId);
+    const deleted = messages.length - nextMessages.length;
+    if (deleted > 0) {
+      await saveDashboardMessages(db, nextMessages);
+    }
+    res.json({ success: true, deleted });
+  } catch (error) {
+    console.error('[Dashboard Messages] DELETE message error:', error);
+    res.status(500).json({ error: 'Failed to delete dashboard message', details: error.message });
+  }
+});
+
 app.get('/api/dashboard-message-groups', async (req, res) => {
   try {
     const db = await getPrisma();

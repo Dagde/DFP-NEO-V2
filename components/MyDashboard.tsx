@@ -341,6 +341,40 @@ const formatDashboardConversationDate = (dateString: string): string => {
     return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(-2)}`;
 };
 
+const formatDashboardMessageDaySeparator = (dateString: string): string => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const messageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const dayDiff = Math.round((today - messageDay) / 86400000);
+    if (dayDiff === 0) return `Today ${formatDashboardMessageTime(date)}`;
+    if (dayDiff === 1) return 'Yesterday';
+    if (dayDiff > 1 && dayDiff < 7) return date.toLocaleDateString('en-AU', { weekday: 'long' });
+    return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const shouldShowDashboardMessageDaySeparator = (message: DashboardMessage, previous?: DashboardMessage): boolean => {
+    if (!previous) return true;
+    const messageDate = new Date(message.sentAt);
+    const previousDate = new Date(previous.sentAt);
+    if (isNaN(messageDate.getTime()) || isNaN(previousDate.getTime())) return false;
+    return (
+        messageDate.getFullYear() !== previousDate.getFullYear() ||
+        messageDate.getMonth() !== previousDate.getMonth() ||
+        messageDate.getDate() !== previousDate.getDate()
+    );
+};
+
+const getDashboardMessageInitials = (value?: string | null): string => {
+    const cleanName = stripDashboardRankFromName(stripDashboardCourseFromName(value));
+    const [surname, firstNames] = cleanName.includes(',')
+        ? cleanName.split(',').map(part => part.trim())
+        : ['', cleanName];
+    const parts = [firstNames, surname].join(' ').split(/\s+/).filter(Boolean);
+    return parts.slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || '?';
+};
+
 const sortDashboardContacts = (contacts: DashboardMessageContact[]): DashboardMessageContact[] => (
     [...contacts].sort((a, b) => (
         compareDashboardRank(a.rank, b.rank) ||
@@ -541,6 +575,14 @@ const deleteDashboardConversationFromApi = async (
     if (!response.ok) throw new Error(`Dashboard conversation delete failed: ${response.status}`);
 };
 
+const deleteDashboardMessageFromApi = async (messageId: string) => {
+    const response = await fetch(`/api/dashboard-messages/${encodeURIComponent(messageId)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`Dashboard message delete failed: ${response.status}`);
+};
+
 const MyDashboard: React.FC<MyDashboardProps> = ({ 
     userName, 
     userRank, 
@@ -603,8 +645,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [openGroupMemberFlyoutId, setOpenGroupMemberFlyoutId] = useState<string | null>(null);
     const [incomingToast, setIncomingToast] = useState<DashboardMessage | null>(null);
+    const [messageSendError, setMessageSendError] = useState('');
+    const [failedMessageIds, setFailedMessageIds] = useState<Set<string>>(() => new Set());
+    const [hasNewConversationMessages, setHasNewConversationMessages] = useState(false);
     const shownIncomingToastIds = useRef<Set<string>>(new Set());
+    const activeConversationScrollRef = useRef<HTMLDivElement | null>(null);
     const activeConversationEndRef = useRef<HTMLDivElement | null>(null);
+    const activeConversationKeyRef = useRef('');
     const roleTone = (role?: string) => {
         const value = String(role || '').toLowerCase();
         if (value.includes('pilot')) return 'text-sky-300 border-sky-500/30';
@@ -995,8 +1042,19 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const latestConversationMessageId = visibleActiveConversationMessages[visibleActiveConversationMessages.length - 1]?.id || '';
     useEffect(() => {
         if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || !activeConversationEndRef.current) return;
+        const scroller = activeConversationScrollRef.current;
+        const activeKey = selectedMessageContact.id;
+        const changedConversation = activeConversationKeyRef.current !== activeKey;
+        activeConversationKeyRef.current = activeKey;
+        const distanceFromBottom = scroller ? scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight : 0;
+        const nearBottom = !scroller || distanceFromBottom < 96;
+        if (!changedConversation && !nearBottom) {
+            setHasNewConversationMessages(true);
+            return;
+        }
         const frame = window.requestAnimationFrame(() => {
             activeConversationEndRef.current?.scrollIntoView({ block: 'end' });
+            setHasNewConversationMessages(false);
         });
         return () => window.cancelAnimationFrame(frame);
     }, [isMessagesOpen, latestConversationMessageId, messageView, selectedMessageContact?.id]);
@@ -1061,7 +1119,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             await refreshDashboardMessages();
         };
         pollMessages();
-        const interval = window.setInterval(pollMessages, 8000);
+        const interval = window.setInterval(pollMessages, 3000);
         return () => {
             cancelled = true;
             window.clearInterval(interval);
@@ -1250,6 +1308,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         setSelectedMessageContact(contact);
         setMessageToText('');
         setMessageDraft('');
+        setMessageSendError('');
+        setHasNewConversationMessages(false);
         setIsContactPickerOpen(false);
         if (contact.type === 'Group') {
             const contactsById = new Map(peopleMessageContacts.map(person => [person.id, person]));
@@ -1264,10 +1324,26 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         }
         setMessageView('compose');
     };
+    const deleteDashboardMessage = async (message: DashboardMessage) => {
+        const confirmed = await showDarkConfirm(
+            'This message will be permanently deleted.',
+            'Delete Message?',
+            'warning',
+        );
+        if (!confirmed) return;
+        persistDashboardMessages(messages => messages.filter(candidate => candidate.id !== message.id));
+        try {
+            await deleteDashboardMessageFromApi(message.id);
+            await refreshDashboardMessages();
+        } catch (error) {
+            console.error('[Dashboard Messages] Delete message failed:', error);
+            await refreshDashboardMessages();
+        }
+    };
     const deleteDashboardConversation = async (contact: DashboardMessageContact) => {
         const confirmed = await showDarkConfirm(
-            `Delete the conversation with ${contact.displayName}?`,
-            'Delete Conversation',
+            'This will permanently delete this conversation and its messages from your Messenger.',
+            'Delete Conversation?',
             'warning'
         );
         if (!confirmed) return;
@@ -1312,6 +1388,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     };
     const sendDashboardMessage = async () => {
         if (selectedMessageContacts.length === 0 || !messageDraft.trim()) return;
+        setMessageSendError('');
         const sentAt = new Date().toISOString();
         const messageBody = messageDraft.trim();
         const groupId = selectedMessageGroupContact?.id.replace(/^group-conversation-/, '').replace(/^group-/, '');
@@ -1357,9 +1434,35 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         setMessageDraft('');
         try {
             const savedMessages = await sendDashboardMessagesToApi(nextMessages);
+            setFailedMessageIds(prev => {
+                const next = new Set(prev);
+                nextMessages.forEach(message => next.delete(message.id));
+                return next;
+            });
             persistDashboardMessages(messages => mergeDashboardMessages(messages, savedMessages));
         } catch (error) {
             console.error('[Dashboard Messages] Send failed:', error);
+            setFailedMessageIds(prev => {
+                const next = new Set(prev);
+                nextMessages.forEach(message => next.add(message.id));
+                return next;
+            });
+            setMessageSendError('Message failed to send. Check the connection and try again.');
+        }
+    };
+    const retryDashboardMessage = async (message: DashboardMessage) => {
+        setMessageSendError('');
+        try {
+            const savedMessages = await sendDashboardMessagesToApi([message]);
+            setFailedMessageIds(prev => {
+                const next = new Set(prev);
+                next.delete(message.id);
+                return next;
+            });
+            persistDashboardMessages(messages => mergeDashboardMessages(messages, savedMessages));
+        } catch (error) {
+            console.error('[Dashboard Messages] Retry failed:', error);
+            setMessageSendError('Retry failed. Check the connection and try again.');
         }
     };
     useEffect(() => {
@@ -1637,10 +1740,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                         onClick={() => openDashboardMessageConversation(conversation.contact)}
                                                         className="flex min-w-0 flex-1 items-start gap-3 text-left"
                                                     >
-                                                        {conversation.unreadCount > 0 && (
-                                                            <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500" aria-label="Unread message" />
-                                                        )}
-                                                        <div className={`min-w-0 flex-1 ${conversation.unreadCount > 0 ? '' : 'pl-5'}`}>
+                                                        <div className="relative shrink-0">
+                                                            <div className="grid h-11 w-11 place-items-center rounded-full bg-slate-700 text-sm font-bold text-white shadow-inner">
+                                                                {getDashboardMessageInitials(conversation.contact.displayName)}
+                                                            </div>
+                                                            {conversation.unreadCount > 0 && (
+                                                                <span className="absolute -left-1 -top-1 h-3 w-3 rounded-full bg-sky-500 ring-2 ring-white" aria-label="Unread message" />
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
                                                             <div className="relative flex items-baseline gap-2">
                                                                 {conversation.contact.type === 'Group' ? (
                                                                     <span className="min-w-0 flex-1">
@@ -1688,9 +1796,16 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                                     {formatDashboardConversationDate(conversation.lastMessage.sentAt)}
                                                                 </span>
                                                             </div>
-                                                            <p className="mt-1 line-clamp-2 text-[20px] leading-snug text-gray-500">
-                                                                {conversation.lastMessage.body}
-                                                            </p>
+                                                            <div className="mt-1 flex items-center gap-2">
+                                                                <p className="line-clamp-2 min-w-0 flex-1 text-[20px] leading-snug text-gray-500">
+                                                                    {conversation.lastMessage.body}
+                                                                </p>
+                                                                {conversation.unreadCount > 0 && (
+                                                                    <span className="grid h-6 min-w-6 shrink-0 place-items-center rounded-full bg-sky-500 px-1.5 text-xs font-bold text-white">
+                                                                        {Math.min(conversation.unreadCount, 99)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         <DashboardIconChevronRight className="mt-2 h-7 w-7 shrink-0 text-gray-500" strokeWidth={2.6} />
                                                     </button>
@@ -1849,33 +1964,87 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex-1 overflow-y-auto px-4 py-5">
+                                <div
+                                    ref={activeConversationScrollRef}
+                                    onScroll={(event) => {
+                                        const target = event.currentTarget;
+                                        const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+                                        if (distanceFromBottom < 96) {
+                                            setHasNewConversationMessages(false);
+                                        }
+                                    }}
+                                    className="relative flex-1 overflow-y-auto px-4 py-5"
+                                >
                                     {selectedMessageContact ? (
                                         visibleActiveConversationMessages.length > 0 ? (
-                                            <div className="space-y-3">
-                                                {visibleActiveConversationMessages.map(message => {
+                                            <div>
+                                                {visibleActiveConversationMessages.map((message, index) => {
+                                                    const previousMessage = visibleActiveConversationMessages[index - 1];
                                                     const sentDate = new Date(message.sentAt);
                                                     const timeLabel = formatDashboardMessageTime(sentDate);
                                                     const dateLabel = `${String(sentDate.getDate()).padStart(2, '0')}/${String(sentDate.getMonth() + 1).padStart(2, '0')}/${String(sentDate.getFullYear()).slice(-2)}`;
                                                     const mine = messageFromDashboardUser(message);
-                                                    const showGroupSender = selectedMessageContact?.type === 'Group' && !mine && !!message.from;
+                                                    const failed = failedMessageIds.has(message.id);
+                                                    const previousMine = previousMessage ? messageFromDashboardUser(previousMessage) : false;
+                                                    const sameSenderCluster = !!previousMessage && previousMine === mine && dashboardPersonNamesMatch(previousMessage.from, message.from);
+                                                    const showGroupSender = selectedMessageContact?.type === 'Group' && !mine && !!message.from && !sameSenderCluster;
+                                                    const showDateSeparator = shouldShowDashboardMessageDaySeparator(message, previousMessage);
                                                     return (
-                                                        <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                                                            <div className={`flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
-                                                                {showGroupSender && (
-                                                                    <p className="mb-1 max-w-full truncate pl-2 text-[11px] font-semibold text-gray-500">
-                                                                        {message.from}
-                                                                    </p>
-                                                                )}
-                                                                <div className={`rounded-2xl px-4 py-2 shadow-sm ${mine ? 'bg-sky-500 text-white' : 'bg-white text-gray-950'}`}>
-                                                                    <p className="whitespace-pre-wrap text-sm">{message.body}</p>
+                                                        <React.Fragment key={message.id}>
+                                                            {showDateSeparator && (
+                                                                <div className="my-4 text-center text-[11px] font-semibold text-gray-400">
+                                                                    {formatDashboardMessageDaySeparator(message.sentAt)}
                                                                 </div>
-                                                                <div className="mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500">
-                                                                    <span>{timeLabel} {dateLabel}</span>
-                                                                    {mine && <span>{message.readAt ? 'Read' : 'Sent'}</span>}
+                                                            )}
+                                                            <div className={`group flex ${sameSenderCluster ? 'mt-1' : 'mt-3'} ${mine ? 'justify-end' : 'justify-start'}`}>
+                                                                {!mine && (
+                                                                    <div className={`${showGroupSender ? 'opacity-100' : 'opacity-0'} mr-2 mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-300 text-[10px] font-bold text-slate-700`}>
+                                                                        {getDashboardMessageInitials(message.from)}
+                                                                    </div>
+                                                                )}
+                                                                <div className={`flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
+                                                                    {showGroupSender && (
+                                                                        <p className="mb-1 max-w-full truncate pl-2 text-[11px] font-semibold text-gray-500">
+                                                                            {message.from}
+                                                                        </p>
+                                                                    )}
+                                                                    <div
+                                                                        className={`relative rounded-2xl px-4 py-2 shadow-sm ${
+                                                                            mine ? 'rounded-br-md bg-sky-500 text-white' : 'rounded-bl-md bg-white text-gray-950'
+                                                                        }`}
+                                                                        title={`${timeLabel} ${dateLabel}`}
+                                                                    >
+                                                                        <p className="whitespace-pre-wrap break-words text-sm">{message.body}</p>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => deleteDashboardMessage(message)}
+                                                                            className={`absolute ${mine ? '-left-9' : '-right-9'} top-1/2 hidden h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white text-gray-400 shadow ring-1 ring-gray-200 hover:text-red-600 group-hover:grid`}
+                                                                            aria-label="Delete message"
+                                                                        >
+                                                                            <DashboardIconTrash className="h-4 w-4" strokeWidth={2.2} />
+                                                                        </button>
+                                                                    </div>
+                                                                    {mine && (failed || index === visibleActiveConversationMessages.length - 1) && (
+                                                                        <div className="mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500">
+                                                                            {failed ? (
+                                                                                <>
+                                                                                    <span className="font-bold text-red-600">Not sent</span>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => retryDashboardMessage(message)}
+                                                                                        className="font-bold text-sky-600 hover:text-sky-700"
+                                                                                    >
+                                                                                        Retry
+                                                                                    </button>
+                                                                                </>
+                                                                            ) : (
+                                                                                <span>{message.readAt ? 'Read' : 'Sent'}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
-                                                        </div>
+                                                        </React.Fragment>
                                                     );
                                                 })}
                                                 <div ref={activeConversationEndRef} />
@@ -1894,9 +2063,26 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                     ) : (
                                         <p className="pt-20 text-center text-sm text-gray-400">Choose someone to message.</p>
                                     )}
+                                    {hasNewConversationMessages && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                activeConversationEndRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+                                                setHasNewConversationMessages(false);
+                                            }}
+                                            className="sticky bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-lg"
+                                        >
+                                            ↓ New Message
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="flex items-center gap-2 border-t border-gray-200 bg-white/70 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]">
-                                    <input
+                                {messageSendError && (
+                                    <p className="border-t border-red-100 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700">
+                                        {messageSendError}
+                                    </p>
+                                )}
+                                <div className="flex items-end gap-2 border-t border-gray-200 bg-white/80 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]">
+                                    <textarea
                                         value={messageDraft}
                                         onChange={(event) => setMessageDraft(event.target.value)}
                                         onKeyDown={(event) => {
@@ -1906,7 +2092,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                             }
                                         }}
                                         placeholder="Message"
-                                        className="h-12 min-w-0 flex-1 rounded-full border border-white bg-white px-4 text-base text-gray-950 shadow-inner outline-none focus:ring-2 focus:ring-sky-400"
+                                        rows={1}
+                                        className="max-h-32 min-h-12 min-w-0 flex-1 resize-none rounded-3xl border border-white bg-white px-4 py-3 text-base text-gray-950 shadow-inner outline-none focus:ring-2 focus:ring-sky-400"
                                     />
                                     <button
                                         type="button"

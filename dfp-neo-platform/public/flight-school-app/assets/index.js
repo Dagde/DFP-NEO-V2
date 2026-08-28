@@ -40479,6 +40479,31 @@ const formatDashboardConversationDate = (dateString) => {
   }
   return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getFullYear()).slice(-2)}`;
 };
+const formatDashboardMessageDaySeparator = (dateString) => {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "";
+  const now = /* @__PURE__ */ new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const messageDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const dayDiff = Math.round((today - messageDay) / 864e5);
+  if (dayDiff === 0) return `Today ${formatDashboardMessageTime(date)}`;
+  if (dayDiff === 1) return "Yesterday";
+  if (dayDiff > 1 && dayDiff < 7) return date.toLocaleDateString("en-AU", { weekday: "long" });
+  return date.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+};
+const shouldShowDashboardMessageDaySeparator = (message, previous) => {
+  if (!previous) return true;
+  const messageDate = new Date(message.sentAt);
+  const previousDate = new Date(previous.sentAt);
+  if (isNaN(messageDate.getTime()) || isNaN(previousDate.getTime())) return false;
+  return messageDate.getFullYear() !== previousDate.getFullYear() || messageDate.getMonth() !== previousDate.getMonth() || messageDate.getDate() !== previousDate.getDate();
+};
+const getDashboardMessageInitials = (value) => {
+  const cleanName = stripDashboardRankFromName(stripDashboardCourseFromName(value));
+  const [surname, firstNames] = cleanName.includes(",") ? cleanName.split(",").map((part) => part.trim()) : ["", cleanName];
+  const parts = [firstNames, surname].join(" ").split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
+};
 const sortDashboardContacts = (contacts) => [...contacts].sort((a, b) => compareDashboardRank(a.rank, b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
 const groupDashboardMessageContacts = (contacts) => {
   const groupContacts = sortDashboardContacts(contacts.filter((contact) => contact.type === "Group"));
@@ -40618,6 +40643,13 @@ const deleteDashboardConversationFromApi = async (participant, contact, particip
   });
   if (!response.ok) throw new Error(`Dashboard conversation delete failed: ${response.status}`);
 };
+const deleteDashboardMessageFromApi = async (messageId) => {
+  const response = await fetch(`/api/dashboard-messages/${encodeURIComponent(messageId)}`, {
+    method: "DELETE",
+    credentials: "include"
+  });
+  if (!response.ok) throw new Error(`Dashboard message delete failed: ${response.status}`);
+};
 const MyDashboard = ({
   userName,
   userRank,
@@ -40680,8 +40712,13 @@ const MyDashboard = ({
   const [isCreatingGroup, setIsCreatingGroup] = reactExports.useState(false);
   const [openGroupMemberFlyoutId, setOpenGroupMemberFlyoutId] = reactExports.useState(null);
   const [incomingToast, setIncomingToast] = reactExports.useState(null);
+  const [messageSendError, setMessageSendError] = reactExports.useState("");
+  const [failedMessageIds, setFailedMessageIds] = reactExports.useState(() => /* @__PURE__ */ new Set());
+  const [hasNewConversationMessages, setHasNewConversationMessages] = reactExports.useState(false);
   const shownIncomingToastIds = reactExports.useRef(/* @__PURE__ */ new Set());
+  const activeConversationScrollRef = reactExports.useRef(null);
   const activeConversationEndRef = reactExports.useRef(null);
+  const activeConversationKeyRef = reactExports.useRef("");
   const roleTone = (role) => {
     const value = String(role).toLowerCase();
     if (value.includes("pilot")) return "text-sky-300 border-sky-500/30";
@@ -40942,8 +40979,19 @@ const MyDashboard = ({
   const latestConversationMessageId = visibleActiveConversationMessages[visibleActiveConversationMessages.length - 1]?.id || "";
   reactExports.useEffect(() => {
     if (!isMessagesOpen || messageView !== "compose" || !selectedMessageContact || !activeConversationEndRef.current) return;
+    const scroller = activeConversationScrollRef.current;
+    const activeKey = selectedMessageContact.id;
+    const changedConversation = activeConversationKeyRef.current !== activeKey;
+    activeConversationKeyRef.current = activeKey;
+    const distanceFromBottom = scroller ? scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight : 0;
+    const nearBottom = !scroller || distanceFromBottom < 96;
+    if (!changedConversation && !nearBottom) {
+      setHasNewConversationMessages(true);
+      return;
+    }
     const frame = window.requestAnimationFrame(() => {
       activeConversationEndRef.current?.scrollIntoView({ block: "end" });
+      setHasNewConversationMessages(false);
     });
     return () => window.cancelAnimationFrame(frame);
   }, [isMessagesOpen, latestConversationMessageId, messageView, selectedMessageContact?.id]);
@@ -41005,7 +41053,7 @@ const MyDashboard = ({
       await refreshDashboardMessages();
     };
     pollMessages();
-    const interval = window.setInterval(pollMessages, 8e3);
+    const interval = window.setInterval(pollMessages, 3e3);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
@@ -41149,6 +41197,8 @@ const MyDashboard = ({
     setSelectedMessageContact(contact);
     setMessageToText("");
     setMessageDraft("");
+    setMessageSendError("");
+    setHasNewConversationMessages(false);
     setIsContactPickerOpen(false);
     if (contact.type === "Group") {
       const contactsById = new Map(peopleMessageContacts.map((person) => [person.id, person]));
@@ -41161,10 +41211,26 @@ const MyDashboard = ({
     }
     setMessageView("compose");
   };
+  const deleteDashboardMessage = async (message) => {
+    const confirmed = await showDarkConfirm(
+      "This message will be permanently deleted.",
+      "Delete Message?",
+      "warning"
+    );
+    if (!confirmed) return;
+    persistDashboardMessages((messages) => messages.filter((candidate) => candidate.id !== message.id));
+    try {
+      await deleteDashboardMessageFromApi(message.id);
+      await refreshDashboardMessages();
+    } catch (error) {
+      console.error("[Dashboard Messages] Delete message failed:", error);
+      await refreshDashboardMessages();
+    }
+  };
   const deleteDashboardConversation = async (contact) => {
     const confirmed = await showDarkConfirm(
-      `Delete the conversation with ${contact.displayName}?`,
-      "Delete Conversation",
+      "This will permanently delete this conversation and its messages from your Messenger.",
+      "Delete Conversation?",
       "warning"
     );
     if (!confirmed) return;
@@ -41202,6 +41268,7 @@ const MyDashboard = ({
   };
   const sendDashboardMessage = async () => {
     if (selectedMessageContacts.length === 0 || !messageDraft.trim()) return;
+    setMessageSendError("");
     const sentAt = (/* @__PURE__ */ new Date()).toISOString();
     const messageBody = messageDraft.trim();
     const groupId = selectedMessageGroupContact?.id.replace(/^group-conversation-/, "").replace(/^group-/, "");
@@ -41238,9 +41305,35 @@ const MyDashboard = ({
     setMessageDraft("");
     try {
       const savedMessages = await sendDashboardMessagesToApi(nextMessages);
+      setFailedMessageIds((prev) => {
+        const next = new Set(prev);
+        nextMessages.forEach((message) => next.delete(message.id));
+        return next;
+      });
       persistDashboardMessages((messages) => mergeDashboardMessages(messages, savedMessages));
     } catch (error) {
       console.error("[Dashboard Messages] Send failed:", error);
+      setFailedMessageIds((prev) => {
+        const next = new Set(prev);
+        nextMessages.forEach((message) => next.add(message.id));
+        return next;
+      });
+      setMessageSendError("Message failed to send. Check the connection and try again.");
+    }
+  };
+  const retryDashboardMessage = async (message) => {
+    setMessageSendError("");
+    try {
+      const savedMessages = await sendDashboardMessagesToApi([message]);
+      setFailedMessageIds((prev) => {
+        const next = new Set(prev);
+        next.delete(message.id);
+        return next;
+      });
+      persistDashboardMessages((messages) => mergeDashboardMessages(messages, savedMessages));
+    } catch (error) {
+      console.error("[Dashboard Messages] Retry failed:", error);
+      setMessageSendError("Retry failed. Check the connection and try again.");
     }
   };
   reactExports.useEffect(() => {
@@ -41462,8 +41555,11 @@ const MyDashboard = ({
                     onClick: () => openDashboardMessageConversation(conversation.contact),
                     className: "flex min-w-0 flex-1 items-start gap-3 text-left",
                     children: [
-                      conversation.unreadCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500", "aria-label": "Unread message" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 flex-1 ${conversation.unreadCount > 0 ? "" : "pl-5"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative shrink-0", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid h-11 w-11 place-items-center rounded-full bg-slate-700 text-sm font-bold text-white shadow-inner", children: getDashboardMessageInitials(conversation.contact.displayName) }),
+                        conversation.unreadCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -left-1 -top-1 h-3 w-3 rounded-full bg-sky-500 ring-2 ring-white", "aria-label": "Unread message" })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex items-baseline gap-2", children: [
                           conversation.contact.type === "Group" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -41503,7 +41599,10 @@ const MyDashboard = ({
                           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "min-w-0 flex-1 truncate text-[22px] font-bold leading-tight text-black", children: conversation.contact.displayName }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-lg text-gray-500", children: formatDashboardConversationDate(conversation.lastMessage.sentAt) })
                         ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 line-clamp-2 text-[20px] leading-snug text-gray-500", children: conversation.lastMessage.body })
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center gap-2", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "line-clamp-2 min-w-0 flex-1 text-[20px] leading-snug text-gray-500", children: conversation.lastMessage.body }),
+                          conversation.unreadCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "grid h-6 min-w-6 shrink-0 place-items-center rounded-full bg-sky-500 px-1.5 text-xs font-bold text-white", children: Math.min(conversation.unreadCount, 99) })
+                        ] })
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconChevronRight, { className: "mt-2 h-7 w-7 shrink-0 text-gray-500", strokeWidth: 2.6 })
                     ]
@@ -41651,39 +41750,102 @@ const MyDashboard = ({
               group.contacts.map((contact) => renderDashboardMessageContactButton(contact, selectMessageContact, true))
             ] }, group.title)) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto px-4 py-5", children: selectedMessageContact ? visibleActiveConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-            visibleActiveConversationMessages.map((message) => {
-              const sentDate = new Date(message.sentAt);
-              const timeLabel2 = formatDashboardMessageTime(sentDate);
-              const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;
-              const mine = messageFromDashboardUser(message);
-              const showGroupSender = selectedMessageContact?.type === "Group" && !mine && !!message.from;
-              return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex ${mine ? "justify-end" : "justify-start"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`, children: [
-                showGroupSender && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 max-w-full truncate pl-2 text-[11px] font-semibold text-gray-500", children: message.from }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-2xl px-4 py-2 shadow-sm ${mine ? "bg-sky-500 text-white" : "bg-white text-gray-950"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: message.body }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                    timeLabel2,
-                    " ",
-                    dateLabel2
-                  ] }),
-                  mine && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: message.readAt ? "Read" : "Sent" })
-                ] })
-              ] }) }, message.id);
-            }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: activeConversationEndRef })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "No messages yet." }) : selectedMessageGroupContact ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "pt-20 text-center text-sm text-gray-400", children: [
-            selectedMessageGroupContact.displayName,
-            " selected. ",
-            selectedMessageContacts.length,
-            " recipients."
-          ] }) : selectedMessageContacts.length > 1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "pt-20 text-center text-sm text-gray-400", children: [
-            selectedMessageContacts.length,
-            " recipients selected."
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "Choose someone to message." }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 border-t border-gray-200 bg-white/70 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              ref: activeConversationScrollRef,
+              onScroll: (event) => {
+                const target = event.currentTarget;
+                const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+                if (distanceFromBottom < 96) {
+                  setHasNewConversationMessages(false);
+                }
+              },
+              className: "relative flex-1 overflow-y-auto px-4 py-5",
+              children: [
+                selectedMessageContact ? visibleActiveConversationMessages.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  visibleActiveConversationMessages.map((message, index) => {
+                    const previousMessage = visibleActiveConversationMessages[index - 1];
+                    const sentDate = new Date(message.sentAt);
+                    const timeLabel2 = formatDashboardMessageTime(sentDate);
+                    const dateLabel2 = `${String(sentDate.getDate()).padStart(2, "0")}/${String(sentDate.getMonth() + 1).padStart(2, "0")}/${String(sentDate.getFullYear()).slice(-2)}`;
+                    const mine = messageFromDashboardUser(message);
+                    const failed = failedMessageIds.has(message.id);
+                    const previousMine = previousMessage ? messageFromDashboardUser(previousMessage) : false;
+                    const sameSenderCluster = !!previousMessage && previousMine === mine && dashboardPersonNamesMatch(previousMessage.from, message.from);
+                    const showGroupSender = selectedMessageContact?.type === "Group" && !mine && !!message.from && !sameSenderCluster;
+                    const showDateSeparator = shouldShowDashboardMessageDaySeparator(message, previousMessage);
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
+                      showDateSeparator && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "my-4 text-center text-[11px] font-semibold text-gray-400", children: formatDashboardMessageDaySeparator(message.sentAt) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `group flex ${sameSenderCluster ? "mt-1" : "mt-3"} ${mine ? "justify-end" : "justify-start"}`, children: [
+                        !mine && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${showGroupSender ? "opacity-100" : "opacity-0"} mr-2 mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-300 text-[10px] font-bold text-slate-700`, children: getDashboardMessageInitials(message.from) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}`, children: [
+                          showGroupSender && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 max-w-full truncate pl-2 text-[11px] font-semibold text-gray-500", children: message.from }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                            "div",
+                            {
+                              className: `relative rounded-2xl px-4 py-2 shadow-sm ${mine ? "rounded-br-md bg-sky-500 text-white" : "rounded-bl-md bg-white text-gray-950"}`,
+                              title: `${timeLabel2} ${dateLabel2}`,
+                              children: [
+                                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap break-words text-sm", children: message.body }),
+                                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                                  "button",
+                                  {
+                                    type: "button",
+                                    onClick: () => deleteDashboardMessage(message),
+                                    className: `absolute ${mine ? "-left-9" : "-right-9"} top-1/2 hidden h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white text-gray-400 shadow ring-1 ring-gray-200 hover:text-red-600 group-hover:grid`,
+                                    "aria-label": "Delete message",
+                                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-4 w-4", strokeWidth: 2.2 })
+                                  }
+                                )
+                              ]
+                            }
+                          ),
+                          mine && (failed || index === visibleActiveConversationMessages.length - 1) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 flex items-center justify-end gap-2 pr-1 text-[10px] text-gray-500", children: failed ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-red-600", children: "Not sent" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "button",
+                              {
+                                type: "button",
+                                onClick: () => retryDashboardMessage(message),
+                                className: "font-bold text-sky-600 hover:text-sky-700",
+                                children: "Retry"
+                              }
+                            )
+                          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: message.readAt ? "Read" : "Sent" }) })
+                        ] })
+                      ] })
+                    ] }, message.id);
+                  }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: activeConversationEndRef })
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "No messages yet." }) : selectedMessageGroupContact ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "pt-20 text-center text-sm text-gray-400", children: [
+                  selectedMessageGroupContact.displayName,
+                  " selected. ",
+                  selectedMessageContacts.length,
+                  " recipients."
+                ] }) : selectedMessageContacts.length > 1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "pt-20 text-center text-sm text-gray-400", children: [
+                  selectedMessageContacts.length,
+                  " recipients selected."
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: "Choose someone to message." }),
+                hasNewConversationMessages && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => {
+                      activeConversationEndRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+                      setHasNewConversationMessages(false);
+                    },
+                    className: "sticky bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-lg",
+                    children: "↓ New Message"
+                  }
+                )
+              ]
+            }
+          ),
+          messageSendError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "border-t border-red-100 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700", children: messageSendError }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end gap-2 border-t border-gray-200 bg-white/80 px-3 py-3 shadow-[0_-8px_22px_rgba(15,23,42,0.08)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
+              "textarea",
               {
                 value: messageDraft,
                 onChange: (event) => setMessageDraft(event.target.value),
@@ -41694,7 +41856,8 @@ const MyDashboard = ({
                   }
                 },
                 placeholder: "Message",
-                className: "h-12 min-w-0 flex-1 rounded-full border border-white bg-white px-4 text-base text-gray-950 shadow-inner outline-none focus:ring-2 focus:ring-sky-400"
+                rows: 1,
+                className: "max-h-32 min-h-12 min-w-0 flex-1 resize-none rounded-3xl border border-white bg-white px-4 py-3 text-base text-gray-950 shadow-inner outline-none focus:ring-2 focus:ring-sky-400"
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
