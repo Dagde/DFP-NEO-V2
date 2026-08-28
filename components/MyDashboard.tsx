@@ -499,6 +499,15 @@ const fetchDashboardMessagesFromApi = async (userName: string, userId?: string):
     return Array.isArray(data.messages) ? data.messages : [];
 };
 
+const fetchAllDashboardMessagesForTrace = async (): Promise<DashboardMessage[]> => {
+    const response = await fetch('/api/dashboard-messages', {
+        credentials: 'include',
+    });
+    if (!response.ok) throw new Error(`Dashboard messages trace fetch failed: ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data.messages) ? data.messages : [];
+};
+
 const sendDashboardMessageToApi = async (message: DashboardMessage): Promise<DashboardMessage> => {
     const response = await fetch('/api/dashboard-messages', {
         method: 'POST',
@@ -1011,9 +1020,90 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             !messageReadByDashboardUser(message)
         ))
     ), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
+    const buildDashboardMessageBadgeTrace = (allMessages?: DashboardMessage[], scopedMessages?: DashboardMessage[]) => ({
+        generatedAt: new Date().toISOString(),
+        view: 'MyDashboard',
+        dashboardMessageUserName,
+        dashboardSenderContactId,
+        dashboardUserKey,
+        signedInUserLabel,
+        localMessageCount: dashboardMessages.length,
+        scopedApiMessageCount: scopedMessages?.length ?? null,
+        allApiMessageCount: allMessages?.length ?? null,
+        unreadCount: unreadMessages.length,
+        selectedMessageContact: selectedMessageContact ? {
+            id: selectedMessageContact.id,
+            name: selectedMessageContact.name,
+            displayName: selectedMessageContact.displayName,
+            type: selectedMessageContact.type,
+        } : null,
+        localMessages: dashboardMessages.slice(-120).map(message => ({
+            id: message.id,
+            from: message.from,
+            to: message.to,
+            fromId: message.fromId,
+            toId: message.toId,
+            recipientIds: message.recipientIds,
+            groupId: message.groupId,
+            groupName: message.groupName,
+            groupMemberIds: message.groupMemberIds,
+            body: message.body,
+            sentAt: message.sentAt,
+            readAt: message.readAt,
+            readByIds: message.readByIds,
+            readByNames: message.readByNames,
+            deletedForIds: message.deletedForIds,
+            deletedForNames: message.deletedForNames,
+            matched: {
+                deletedForDashboardUser: messageDeletedForDashboardUser(message),
+                fromDashboardUser: messageFromDashboardUser(message),
+                addressedToDashboardUser: messageAddressedToDashboardUser(message),
+                readByDashboardUser: messageReadByDashboardUser(message),
+                countedUnread: !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message),
+            },
+        })),
+        scopedApiMessages: scopedMessages?.slice(-120) ?? null,
+        allApiMessages: allMessages?.slice(-160) ?? null,
+        sidebarTrace: typeof window !== 'undefined' ? (window as any).__dfpSidebarUnreadTrace || null : null,
+    });
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        (window as any).__dfpDashboardMessageBadgeTrace = buildDashboardMessageBadgeTrace();
+    }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey, unreadMessages.length, selectedMessageContact?.id]);
     useEffect(() => {
         onUnreadMessageCountChange?.(unreadMessages.length);
     }, [onUnreadMessageCountChange, unreadMessages.length]);
+    const downloadDashboardMessageBadgeTrace = async () => {
+        let scopedMessages: DashboardMessage[] | undefined;
+        let allMessages: DashboardMessage[] | undefined;
+        let fetchError = '';
+        try {
+            scopedMessages = await fetchDashboardMessagesFromApi(dashboardMessageUserName, dashboardSenderContactId);
+        } catch (error) {
+            fetchError = `Scoped fetch: ${error instanceof Error ? error.message : String(error)}`;
+        }
+        try {
+            allMessages = await fetchAllDashboardMessagesForTrace();
+        } catch (error) {
+            fetchError = [fetchError, `All fetch: ${error instanceof Error ? error.message : String(error)}`].filter(Boolean).join(' | ');
+        }
+        const trace = {
+            ...buildDashboardMessageBadgeTrace(allMessages, scopedMessages),
+            fetchError: fetchError || null,
+        };
+        if (typeof window !== 'undefined') {
+            (window as any).__dfpDashboardMessageBadgeTrace = trace;
+        }
+        const blob = new Blob([JSON.stringify(trace, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `dashboard-message-badge-trace-${normaliseDashboardContactName(dashboardMessageUserName).replace(/[^a-z0-9]+/g, '-') || 'user'}-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+    };
     const activeConversationMessages = useMemo(() => {
         if (!selectedMessageContact) return [];
         return dashboardMessages
@@ -1654,6 +1744,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                             </span>
                         )}
                         Messages
+                    </button>
+                    <button
+                        type="button"
+                        onClick={downloadDashboardMessageBadgeTrace}
+                        className={dashboardActionButtonClass}
+                        title="Download Messenger unread badge diagnostic trace"
+                    >
+                        Badge<br />Trace
                     </button>
                     <button
                         type="button"

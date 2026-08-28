@@ -26374,9 +26374,52 @@ const App: React.FC = () => {
                     !fromUser(message) &&
                     addressedToUser(message)
                 )).length;
+                (window as any).__dfpSidebarUnreadTrace = {
+                    generatedAt: new Date().toISOString(),
+                    dashboardNotificationUserName,
+                    dashboardNotificationContactId,
+                    signedInDisplayName,
+                    currentUserName,
+                    userNameKeys,
+                    fetchedMessageCount: messages.length,
+                    unreadCount,
+                    messages: messages.slice(-80).map((message: any) => ({
+                        id: message?.id,
+                        from: message?.from,
+                        to: message?.to,
+                        fromId: message?.fromId,
+                        toId: message?.toId,
+                        recipientIds: message?.recipientIds,
+                        groupId: message?.groupId,
+                        groupName: message?.groupName,
+                        groupMemberIds: message?.groupMemberIds,
+                        body: message?.body,
+                        sentAt: message?.sentAt,
+                        readAt: message?.readAt,
+                        readByIds: message?.readByIds,
+                        readByNames: message?.readByNames,
+                        deletedForIds: message?.deletedForIds,
+                        deletedForNames: message?.deletedForNames,
+                        matched: {
+                            deletedForUser: deletedForUser(message),
+                            fromUser: fromUser(message),
+                            addressedToUser: addressedToUser(message),
+                            readByUser: readByUser(message),
+                            countedUnread: !readByUser(message) && !deletedForUser(message) && !fromUser(message) && addressedToUser(message),
+                        },
+                    })),
+                };
                 if (!cancelled) setDashboardUnreadMessageCount(unreadCount);
             } catch (error) {
                 console.warn('[Dashboard Messages] Could not load sidebar unread count:', error);
+                (window as any).__dfpSidebarUnreadTrace = {
+                    generatedAt: new Date().toISOString(),
+                    dashboardNotificationUserName,
+                    dashboardNotificationContactId,
+                    signedInDisplayName,
+                    currentUserName,
+                    error: error instanceof Error ? error.message : String(error),
+                };
             }
         };
         loadUnreadMessages();
