@@ -75,6 +75,8 @@ type DashboardMessage = {
     groupName?: string;
     groupMemberIds?: string[];
     groupMemberNames?: string[];
+    readByIds?: string[];
+    readByNames?: string[];
     deletedForIds?: string[];
     deletedForNames?: string[];
 };
@@ -843,6 +845,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId)) ||
         dashboardPersonNamesMatch(message.to, dashboardMessageUserName)
     );
+    const messageReadByDashboardUser = (message: DashboardMessage): boolean => {
+        if (Array.isArray(message.readByIds) && message.readByIds.includes(dashboardSenderContactId)) return true;
+        if (Array.isArray(message.readByNames) && message.readByNames.some(name => dashboardPersonNamesMatch(name, dashboardMessageUserName))) return true;
+        const isMultiRecipient = Boolean(message.groupId) ||
+            (Array.isArray(message.recipientIds) && message.recipientIds.length > 1) ||
+            (Array.isArray(message.groupMemberIds) && message.groupMemberIds.length > 1);
+        return Boolean(message.readAt && !isMultiRecipient);
+    };
     const messageMatchesContact = (message: DashboardMessage, contact: DashboardMessageContact): boolean => (
         message.fromId === contact.id ||
         message.toId === contact.id ||
@@ -902,7 +912,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             conversations.set(otherKey, {
                 contact: resolvedContact || existing?.contact || getMessageContactForName(otherName),
                 lastMessage: isNewer ? message : existing.lastMessage,
-                unreadCount: (existing?.unreadCount || 0) + (messageAddressedToDashboardUser(message) && !message.readAt ? 1 : 0),
+                unreadCount: (existing?.unreadCount || 0) + (messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message) ? 1 : 0),
             });
         });
         return Array.from(conversations.values())
@@ -998,7 +1008,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         dashboardMessages.filter(message => (
             !messageDeletedForDashboardUser(message) &&
             messageAddressedToDashboardUser(message) &&
-            !message.readAt
+            !messageReadByDashboardUser(message)
         ))
     ), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
     useEffect(() => {
@@ -1486,8 +1496,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     ? `group-conversation-${message.groupId || ''}` === selectedMessageContact.id
                     : messageMatchesContact(message, selectedMessageContact)
             ) &&
-            !message.readAt
-                ? { ...message, readAt: now }
+            !messageReadByDashboardUser(message)
+                ? {
+                    ...message,
+                    readAt: message.groupId ? message.readAt : now,
+                    readByIds: Array.from(new Set([...(message.readByIds || []), dashboardSenderContactId])),
+                    readByNames: Array.from(new Set([...(message.readByNames || []), dashboardMessageUserName])),
+                }
                 : message
         )));
         markDashboardConversationReadInApi(

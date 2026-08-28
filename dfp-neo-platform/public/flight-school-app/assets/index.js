@@ -40858,6 +40858,12 @@ const MyDashboard = ({
   const messageFromDashboardUser = (message) => message.fromId === dashboardSenderContactId || dashboardPersonNamesMatch(message.from, dashboardMessageUserName);
   const messageDeletedForDashboardUser = (message) => Array.isArray(message.deletedForIds) && message.deletedForIds.includes(dashboardSenderContactId) || Array.isArray(message.deletedForNames) && message.deletedForNames.some((name) => dashboardPersonNamesMatch(name, dashboardMessageUserName));
   const messageAddressedToDashboardUser = (message) => message.toId === dashboardSenderContactId || Array.isArray(message.recipientIds) && message.recipientIds.includes(dashboardSenderContactId) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(dashboardSenderContactId) || dashboardPersonNamesMatch(message.to, dashboardMessageUserName);
+  const messageReadByDashboardUser = (message) => {
+    if (Array.isArray(message.readByIds) && message.readByIds.includes(dashboardSenderContactId)) return true;
+    if (Array.isArray(message.readByNames) && message.readByNames.some((name) => dashboardPersonNamesMatch(name, dashboardMessageUserName))) return true;
+    const isMultiRecipient = Boolean(message.groupId) || Array.isArray(message.recipientIds) && message.recipientIds.length > 1 || Array.isArray(message.groupMemberIds) && message.groupMemberIds.length > 1;
+    return Boolean(message.readAt && !isMultiRecipient);
+  };
   const messageMatchesContact = (message, contact) => message.fromId === contact.id || message.toId === contact.id || Array.isArray(message.recipientIds) && message.recipientIds.includes(contact.id) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(contact.id) || dashboardPersonNamesMatch(message.from, contact.name) || dashboardPersonNamesMatch(message.from, contact.displayName) || dashboardPersonNamesMatch(message.to, contact.name) || dashboardPersonNamesMatch(message.to, contact.displayName);
   const messageBelongsToDashboardUser = (message) => !messageDeletedForDashboardUser(message) && (messageFromDashboardUser(message) || messageAddressedToDashboardUser(message));
   const resolveMessageContact = (id, name) => {
@@ -40898,7 +40904,7 @@ const MyDashboard = ({
       conversations.set(otherKey, {
         contact: resolvedContact || existing?.contact || getMessageContactForName(otherName),
         lastMessage: isNewer ? message : existing.lastMessage,
-        unreadCount: (existing?.unreadCount || 0) + (messageAddressedToDashboardUser(message) && !message.readAt ? 1 : 0)
+        unreadCount: (existing?.unreadCount || 0) + (messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message) ? 1 : 0)
       });
     });
     return Array.from(conversations.values()).sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
@@ -40945,7 +40951,7 @@ const MyDashboard = ({
     if (contact.memberNames?.length) return contact.memberNames;
     return (contact.memberIds || []).map((memberId) => messageContactsById.get(memberId)?.displayName || memberId).filter(Boolean);
   };
-  const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !message.readAt), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
+  const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
   reactExports.useEffect(() => {
     onUnreadMessageCountChange?.(unreadMessages.length);
   }, [onUnreadMessageCountChange, unreadMessages.length]);
@@ -41342,7 +41348,12 @@ const MyDashboard = ({
     const messageIdsToMarkRead = unreadMessages.filter((message) => selectedMessageContact.type === "Group" ? message.groupId === selectedGroupId : messageMatchesContact(message, selectedMessageContact)).map((message) => message.id);
     if (messageIdsToMarkRead.length === 0) return;
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    persistDashboardMessages((messages) => messages.map((message) => messageAddressedToDashboardUser(message) && (selectedMessageContact.type === "Group" ? `group-conversation-${message.groupId || ""}` === selectedMessageContact.id : messageMatchesContact(message, selectedMessageContact)) && !message.readAt ? { ...message, readAt: now } : message));
+    persistDashboardMessages((messages) => messages.map((message) => messageAddressedToDashboardUser(message) && (selectedMessageContact.type === "Group" ? `group-conversation-${message.groupId || ""}` === selectedMessageContact.id : messageMatchesContact(message, selectedMessageContact)) && !messageReadByDashboardUser(message) ? {
+      ...message,
+      readAt: message.groupId ? message.readAt : now,
+      readByIds: Array.from(/* @__PURE__ */ new Set([...message.readByIds || [], dashboardSenderContactId])),
+      readByNames: Array.from(/* @__PURE__ */ new Set([...message.readByNames || [], dashboardMessageUserName]))
+    } : message));
     markDashboardConversationReadInApi(
       dashboardMessageUserName,
       selectedMessageContact.type === "Group" ? "" : selectedMessageContact.name,
@@ -120247,7 +120258,13 @@ const App = () => {
         const deletedForUser = (message) => dashboardNotificationContactId && Array.isArray(message?.deletedForIds) && message.deletedForIds.includes(dashboardNotificationContactId) || Array.isArray(message?.deletedForNames) && message.deletedForNames.some((name) => userNameKeys.includes(normaliseDashboardNotificationPersonName(name)));
         const fromUser = (message) => dashboardNotificationContactId && message?.fromId === dashboardNotificationContactId || userNameKeys.includes(normaliseDashboardNotificationPersonName(message?.from));
         const addressedToUser = (message) => dashboardNotificationContactId && (message?.toId === dashboardNotificationContactId || Array.isArray(message?.recipientIds) && message.recipientIds.includes(dashboardNotificationContactId) || Array.isArray(message?.groupMemberIds) && message.groupMemberIds.includes(dashboardNotificationContactId)) || userNameKeys.includes(normaliseDashboardNotificationPersonName(message?.to));
-        const unreadCount = messages.filter((message) => !message?.readAt && !deletedForUser(message) && !fromUser(message) && addressedToUser(message)).length;
+        const readByUser = (message) => {
+          if (dashboardNotificationContactId && Array.isArray(message?.readByIds) && message.readByIds.includes(dashboardNotificationContactId)) return true;
+          if (Array.isArray(message?.readByNames) && message.readByNames.some((name) => userNameKeys.includes(normaliseDashboardNotificationPersonName(name)))) return true;
+          const isMultiRecipient = Boolean(message?.groupId) || Array.isArray(message?.recipientIds) && message.recipientIds.length > 1 || Array.isArray(message?.groupMemberIds) && message.groupMemberIds.length > 1;
+          return Boolean(message?.readAt && !isMultiRecipient);
+        };
+        const unreadCount = messages.filter((message) => !readByUser(message) && !deletedForUser(message) && !fromUser(message) && addressedToUser(message)).length;
         if (!cancelled) setDashboardUnreadMessageCount(unreadCount);
       } catch (error) {
         console.warn("[Dashboard Messages] Could not load sidebar unread count:", error);

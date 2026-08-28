@@ -26360,8 +26360,16 @@ const App: React.FC = () => {
                     )) ||
                     userNameKeys.includes(normaliseDashboardNotificationPersonName(message?.to))
                 );
+                const readByUser = (message: any) => {
+                    if (dashboardNotificationContactId && Array.isArray(message?.readByIds) && message.readByIds.includes(dashboardNotificationContactId)) return true;
+                    if (Array.isArray(message?.readByNames) && message.readByNames.some((name: string) => userNameKeys.includes(normaliseDashboardNotificationPersonName(name)))) return true;
+                    const isMultiRecipient = Boolean(message?.groupId) ||
+                        (Array.isArray(message?.recipientIds) && message.recipientIds.length > 1) ||
+                        (Array.isArray(message?.groupMemberIds) && message.groupMemberIds.length > 1);
+                    return Boolean(message?.readAt && !isMultiRecipient);
+                };
                 const unreadCount = messages.filter((message: any) => (
-                    !message?.readAt &&
+                    !readByUser(message) &&
                     !deletedForUser(message) &&
                     !fromUser(message) &&
                     addressedToUser(message)

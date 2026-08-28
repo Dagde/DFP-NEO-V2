@@ -2080,6 +2080,12 @@ function normaliseDashboardStoredMessages(data) {
       groupMemberNames: Array.isArray(message.groupMemberNames)
         ? Array.from(new Set(message.groupMemberNames.map(name => String(name || '').trim()).filter(Boolean)))
         : undefined,
+      readByIds: Array.isArray(message.readByIds)
+        ? Array.from(new Set(message.readByIds.map(normaliseDashboardMessageId).filter(Boolean)))
+        : undefined,
+      readByNames: Array.isArray(message.readByNames)
+        ? Array.from(new Set(message.readByNames.map(normaliseDashboardMessagePersonName).filter(Boolean)))
+        : undefined,
       deletedForIds: Array.isArray(message.deletedForIds)
         ? Array.from(new Set(message.deletedForIds.map(normaliseDashboardMessageId).filter(Boolean)))
         : undefined,
@@ -2113,6 +2119,12 @@ function normaliseDashboardMessageInput(messageInput) {
       : undefined,
     groupMemberNames: Array.isArray(messageInput.groupMemberNames)
       ? Array.from(new Set(messageInput.groupMemberNames.map(name => String(name || '').trim()).filter(Boolean)))
+      : undefined,
+    readByIds: Array.isArray(messageInput.readByIds)
+      ? Array.from(new Set(messageInput.readByIds.map(normaliseDashboardMessageId).filter(Boolean)))
+      : undefined,
+    readByNames: Array.isArray(messageInput.readByNames)
+      ? Array.from(new Set(messageInput.readByNames.map(normaliseDashboardMessagePersonName).filter(Boolean)))
       : undefined,
     deletedForIds: Array.isArray(messageInput.deletedForIds)
       ? Array.from(new Set(messageInput.deletedForIds.map(normaliseDashboardMessageId).filter(Boolean)))
@@ -2331,9 +2343,28 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
           ? message.fromId === senderId
           : (!sender || dashboardMessageNamesMatch(message.from, sender))
       );
-      if (matchesReader && matchesSender && matchesId && !message.readAt) {
+      if (matchesReader && matchesSender && matchesId) {
+        const readByIds = readerId
+          ? Array.from(new Set([...(message.readByIds || []), readerId]))
+          : message.readByIds;
+        const readByNames = reader
+          ? Array.from(new Set([...(message.readByNames || []), reader]))
+          : message.readByNames;
+        const alreadyRead = (
+          (readerId && Array.isArray(message.readByIds) && message.readByIds.includes(readerId)) ||
+          (reader && Array.isArray(message.readByNames) && message.readByNames.includes(reader))
+        );
+        if (alreadyRead) return message;
+        const isMultiRecipient = Boolean(message.groupId) ||
+          (Array.isArray(message.recipientIds) && message.recipientIds.length > 1) ||
+          (Array.isArray(message.groupMemberIds) && message.groupMemberIds.length > 1);
         updated++;
-        return { ...message, readAt: now };
+        return {
+          ...message,
+          readAt: isMultiRecipient ? message.readAt : (message.readAt || now),
+          readByIds,
+          readByNames,
+        };
       }
       return message;
     });
