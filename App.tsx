@@ -26258,6 +26258,9 @@ const App: React.FC = () => {
         .trim()
         .toLowerCase()
         .replace(/\s+/g, ' ');
+    const normaliseDashboardNotificationPersonName = (value?: string | null) => (
+        normaliseDashboardNotificationName(stripCourseDetailsFromLoginName(value).replace(PERSONNEL_RANK_PREFIX_RE, ''))
+    );
     const dashboardNotificationUserName = useMemo(() => {
         const sessionDashboardUserName = signedInDisplayName || currentUserName;
         const sessionNameKeys = [
@@ -26279,6 +26282,45 @@ const App: React.FC = () => {
         });
         return sessionDashboardUserName || sessionStaff?.name || currentUserName;
     }, [allInstructorsData, authUser, currentUserName, sessionUser]);
+    const dashboardNotificationContactId = useMemo(() => {
+        const nameKeys = [
+            dashboardNotificationUserName,
+            signedInDisplayName,
+            currentUserName,
+            authUser ? formatAuthLoginName(authUser) : '',
+            authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
+            authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
+            sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : '',
+            sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : '',
+        ].filter(Boolean);
+        const idKeys = [
+            authUser?.id,
+            authUser?.userId,
+            sessionUser?.userId,
+            sessionUser?.username,
+        ].map(value => String(value || '').trim().toLowerCase()).filter(Boolean);
+        const staff = allInstructorsData.find((candidate: any) => {
+            const candidateIds = [candidate?.idNumber, candidate?.id, candidate?.personnelId]
+                .map(value => String(value || '').trim().toLowerCase())
+                .filter(Boolean);
+            return candidateIds.some(id => idKeys.includes(id)) ||
+                nameKeys.some(name => personnelNamesMatch(candidate?.name, name));
+        });
+        if (staff) return `staff-${staff.idNumber}-${staff.name}`;
+        const trainee = allTraineesData.find((candidate: any) => {
+            const candidateIds = [candidate?.idNumber, candidate?.id, candidate?.personnelId]
+                .map(value => String(value || '').trim().toLowerCase())
+                .filter(Boolean);
+            return candidateIds.some(id => idKeys.includes(id)) ||
+                nameKeys.some(name => (
+                    personnelNamesMatch(candidate?.fullName, name) ||
+                    personnelNamesMatch(candidate?.name, name)
+                ));
+        });
+        if (trainee) return `trainee-${trainee.idNumber}-${stripCourseDetailsFromLoginName(trainee.fullName || trainee.name)}`;
+        const fallbackKey = normaliseDashboardNotificationName(dashboardNotificationUserName);
+        return fallbackKey ? `user-${fallbackKey}` : '';
+    }, [allInstructorsData, allTraineesData, authUser, currentUserName, dashboardNotificationUserName, sessionUser, signedInDisplayName]);
     useEffect(() => {
         if (!dashboardNotificationUserName || !isAuthenticated) {
             setDashboardUnreadMessageCount(0);
@@ -26287,16 +26329,42 @@ const App: React.FC = () => {
         let cancelled = false;
         const loadUnreadMessages = async () => {
             try {
-                const response = await fetch(`/api/dashboard-messages?userName=${encodeURIComponent(dashboardNotificationUserName)}`, {
+                const params = new URLSearchParams();
+                params.set('userName', dashboardNotificationUserName);
+                if (dashboardNotificationContactId) params.set('userId', dashboardNotificationContactId);
+                const response = await fetch(`/api/dashboard-messages?${params.toString()}`, {
                     credentials: 'include',
                 });
                 if (!response.ok) throw new Error(`Dashboard messages fetch failed: ${response.status}`);
                 const data = await response.json();
                 const messages = Array.isArray(data.messages) ? data.messages : [];
-                const userKey = normaliseDashboardNotificationName(dashboardNotificationUserName);
+                const userNameKeys = [
+                    dashboardNotificationUserName,
+                    signedInDisplayName,
+                    currentUserName,
+                    authUser ? formatAuthLoginName(authUser) : '',
+                ].map(normaliseDashboardNotificationPersonName).filter(Boolean);
+                const deletedForUser = (message: any) => (
+                    (dashboardNotificationContactId && Array.isArray(message?.deletedForIds) && message.deletedForIds.includes(dashboardNotificationContactId)) ||
+                    (Array.isArray(message?.deletedForNames) && message.deletedForNames.some((name: string) => userNameKeys.includes(normaliseDashboardNotificationPersonName(name))))
+                );
+                const fromUser = (message: any) => (
+                    (dashboardNotificationContactId && message?.fromId === dashboardNotificationContactId) ||
+                    userNameKeys.includes(normaliseDashboardNotificationPersonName(message?.from))
+                );
+                const addressedToUser = (message: any) => (
+                    (dashboardNotificationContactId && (
+                        message?.toId === dashboardNotificationContactId ||
+                        (Array.isArray(message?.recipientIds) && message.recipientIds.includes(dashboardNotificationContactId)) ||
+                        (Array.isArray(message?.groupMemberIds) && message.groupMemberIds.includes(dashboardNotificationContactId))
+                    )) ||
+                    userNameKeys.includes(normaliseDashboardNotificationPersonName(message?.to))
+                );
                 const unreadCount = messages.filter((message: any) => (
-                    normaliseDashboardNotificationName(message?.to) === userKey &&
-                    !message?.readAt
+                    !message?.readAt &&
+                    !deletedForUser(message) &&
+                    !fromUser(message) &&
+                    addressedToUser(message)
                 )).length;
                 if (!cancelled) setDashboardUnreadMessageCount(unreadCount);
             } catch (error) {
@@ -26309,7 +26377,7 @@ const App: React.FC = () => {
             cancelled = true;
             window.clearInterval(interval);
         };
-    }, [dashboardNotificationUserName, isAuthenticated]);
+    }, [authUser, currentUserName, dashboardNotificationContactId, dashboardNotificationUserName, isAuthenticated, signedInDisplayName]);
     const platformAccessContext = useMemo(() => getPlatformAccessContext(platformConfig, [
         authUser?.id,
         authUser?.userId,

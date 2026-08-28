@@ -120169,6 +120169,7 @@ const App = () => {
     return getPersonAssignedQualificationIds(matchingPerson, activeStaffQualificationCatalogue, false);
   }, [activeStaffQualificationCatalogue, allInstructorsData, allTraineesData, authUser, currentUser2, currentUserName, sessionUser]);
   const normaliseDashboardNotificationName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const normaliseDashboardNotificationPersonName = (value) => normaliseDashboardNotificationName(stripCourseDetailsFromLoginName(value).replace(PERSONNEL_RANK_PREFIX_RE, ""));
   const dashboardNotificationUserName = reactExports.useMemo(() => {
     const sessionDashboardUserName = signedInDisplayName || currentUserName;
     const sessionNameKeys = [
@@ -120190,6 +120191,36 @@ const App = () => {
     });
     return sessionDashboardUserName || sessionStaff?.name || currentUserName;
   }, [allInstructorsData, authUser, currentUserName, sessionUser]);
+  const dashboardNotificationContactId = reactExports.useMemo(() => {
+    const nameKeys = [
+      dashboardNotificationUserName,
+      signedInDisplayName,
+      currentUserName,
+      authUser ? formatAuthLoginName(authUser) : "",
+      authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
+      authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
+      sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : "",
+      sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : ""
+    ].filter(Boolean);
+    const idKeys = [
+      authUser?.id,
+      authUser?.userId,
+      sessionUser?.userId,
+      sessionUser?.username
+    ].map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
+    const staff = allInstructorsData.find((candidate) => {
+      const candidateIds = [candidate?.idNumber, candidate?.id, candidate?.personnelId].map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
+      return candidateIds.some((id) => idKeys.includes(id)) || nameKeys.some((name) => personnelNamesMatch(candidate?.name, name));
+    });
+    if (staff) return `staff-${staff.idNumber}-${staff.name}`;
+    const trainee = allTraineesData.find((candidate) => {
+      const candidateIds = [candidate?.idNumber, candidate?.id, candidate?.personnelId].map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
+      return candidateIds.some((id) => idKeys.includes(id)) || nameKeys.some((name) => personnelNamesMatch(candidate?.fullName, name) || personnelNamesMatch(candidate?.name, name));
+    });
+    if (trainee) return `trainee-${trainee.idNumber}-${stripCourseDetailsFromLoginName(trainee.fullName || trainee.name)}`;
+    const fallbackKey = normaliseDashboardNotificationName(dashboardNotificationUserName);
+    return fallbackKey ? `user-${fallbackKey}` : "";
+  }, [allInstructorsData, allTraineesData, authUser, currentUserName, dashboardNotificationUserName, sessionUser, signedInDisplayName]);
   reactExports.useEffect(() => {
     if (!dashboardNotificationUserName || !isAuthenticated) {
       setDashboardUnreadMessageCount(0);
@@ -120198,14 +120229,25 @@ const App = () => {
     let cancelled = false;
     const loadUnreadMessages = async () => {
       try {
-        const response = await fetch(`/api/dashboard-messages?userName=${encodeURIComponent(dashboardNotificationUserName)}`, {
+        const params = new URLSearchParams();
+        params.set("userName", dashboardNotificationUserName);
+        if (dashboardNotificationContactId) params.set("userId", dashboardNotificationContactId);
+        const response = await fetch(`/api/dashboard-messages?${params.toString()}`, {
           credentials: "include"
         });
         if (!response.ok) throw new Error(`Dashboard messages fetch failed: ${response.status}`);
         const data = await response.json();
         const messages = Array.isArray(data.messages) ? data.messages : [];
-        const userKey = normaliseDashboardNotificationName(dashboardNotificationUserName);
-        const unreadCount = messages.filter((message) => normaliseDashboardNotificationName(message?.to) === userKey && !message?.readAt).length;
+        const userNameKeys = [
+          dashboardNotificationUserName,
+          signedInDisplayName,
+          currentUserName,
+          authUser ? formatAuthLoginName(authUser) : ""
+        ].map(normaliseDashboardNotificationPersonName).filter(Boolean);
+        const deletedForUser = (message) => dashboardNotificationContactId && Array.isArray(message?.deletedForIds) && message.deletedForIds.includes(dashboardNotificationContactId) || Array.isArray(message?.deletedForNames) && message.deletedForNames.some((name) => userNameKeys.includes(normaliseDashboardNotificationPersonName(name)));
+        const fromUser = (message) => dashboardNotificationContactId && message?.fromId === dashboardNotificationContactId || userNameKeys.includes(normaliseDashboardNotificationPersonName(message?.from));
+        const addressedToUser = (message) => dashboardNotificationContactId && (message?.toId === dashboardNotificationContactId || Array.isArray(message?.recipientIds) && message.recipientIds.includes(dashboardNotificationContactId) || Array.isArray(message?.groupMemberIds) && message.groupMemberIds.includes(dashboardNotificationContactId)) || userNameKeys.includes(normaliseDashboardNotificationPersonName(message?.to));
+        const unreadCount = messages.filter((message) => !message?.readAt && !deletedForUser(message) && !fromUser(message) && addressedToUser(message)).length;
         if (!cancelled) setDashboardUnreadMessageCount(unreadCount);
       } catch (error) {
         console.warn("[Dashboard Messages] Could not load sidebar unread count:", error);
@@ -120217,7 +120259,7 @@ const App = () => {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [dashboardNotificationUserName, isAuthenticated]);
+  }, [authUser, currentUserName, dashboardNotificationContactId, dashboardNotificationUserName, isAuthenticated, signedInDisplayName]);
   const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
     authUser?.id,
     authUser?.userId,
