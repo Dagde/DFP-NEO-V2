@@ -40911,7 +40911,7 @@ const MyDashboard = ({
       const otherKey = message.groupId ? `group-${message.groupId}` : resolvedContact?.id || `person-${normaliseDashboardPersonName(otherName)}`;
       const existing = conversations.get(otherKey);
       const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
-      if (messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)) {
+      if (!messageFromDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)) {
         const unreadKeys = unreadKeysByConversation.get(otherKey) || /* @__PURE__ */ new Set();
         unreadKeys.add(getDashboardUnreadMessageKey(message));
         unreadKeysByConversation.set(otherKey, unreadKeys);
@@ -40968,7 +40968,7 @@ const MyDashboard = ({
   };
   const unreadMessages = reactExports.useMemo(() => {
     const unreadByKey = /* @__PURE__ */ new Map();
-    dashboardMessages.filter((message) => !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)).forEach((message) => {
+    dashboardMessages.filter((message) => !messageDeletedForDashboardUser(message) && !messageFromDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)).forEach((message) => {
       const key = getDashboardUnreadMessageKey(message);
       if (!unreadByKey.has(key)) unreadByKey.set(key, message);
     });
@@ -41013,7 +41013,7 @@ const MyDashboard = ({
         fromDashboardUser: messageFromDashboardUser(message),
         addressedToDashboardUser: messageAddressedToDashboardUser(message),
         readByDashboardUser: messageReadByDashboardUser(message),
-        countedUnread: !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message),
+        countedUnread: !messageDeletedForDashboardUser(message) && !messageFromDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message),
         unreadMessageKey: getDashboardUnreadMessageKey(message)
       }
     })),
@@ -41449,7 +41449,7 @@ const MyDashboard = ({
   reactExports.useEffect(() => {
     if (!isMessagesOpen || messageView !== "compose" || !selectedMessageContact || unreadMessages.length === 0) return;
     const selectedGroupId = selectedMessageContact.type === "Group" ? selectedMessageContact.id.replace(/^group-conversation-/, "").replace(/^group-/, "") : "";
-    const messageIdsToMarkRead = unreadMessages.filter((message) => selectedMessageContact.type === "Group" ? message.groupId === selectedGroupId : messageMatchesContact(message, selectedMessageContact)).map((message) => message.id);
+    const messageIdsToMarkRead = dashboardMessages.filter((message) => !messageDeletedForDashboardUser(message) && !messageFromDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message) && (selectedMessageContact.type === "Group" ? message.groupId === selectedGroupId : messageMatchesContact(message, selectedMessageContact))).map((message) => message.id);
     if (messageIdsToMarkRead.length === 0) return;
     const now = (/* @__PURE__ */ new Date()).toISOString();
     persistDashboardMessages((messages) => messages.map((message) => messageAddressedToDashboardUser(message) && (selectedMessageContact.type === "Group" ? `group-conversation-${message.groupId || ""}` === selectedMessageContact.id : messageMatchesContact(message, selectedMessageContact)) && !messageReadByDashboardUser(message) ? {

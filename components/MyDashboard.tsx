@@ -924,7 +924,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 : resolvedContact?.id || `person-${normaliseDashboardPersonName(otherName)}`;
             const existing = conversations.get(otherKey);
             const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
-            if (messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)) {
+            if (!messageFromDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)) {
                 const unreadKeys = unreadKeysByConversation.get(otherKey) || new Set<string>();
                 unreadKeys.add(getDashboardUnreadMessageKey(message));
                 unreadKeysByConversation.set(otherKey, unreadKeys);
@@ -1028,6 +1028,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const unreadByKey = new Map<string, DashboardMessage>();
         dashboardMessages.filter(message => (
             !messageDeletedForDashboardUser(message) &&
+            !messageFromDashboardUser(message) &&
             messageAddressedToDashboardUser(message) &&
             !messageReadByDashboardUser(message)
         )).forEach(message => {
@@ -1075,7 +1076,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 fromDashboardUser: messageFromDashboardUser(message),
                 addressedToDashboardUser: messageAddressedToDashboardUser(message),
                 readByDashboardUser: messageReadByDashboardUser(message),
-                countedUnread: !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message),
+                countedUnread: !messageDeletedForDashboardUser(message) && !messageFromDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message),
                 unreadMessageKey: getDashboardUnreadMessageKey(message),
             },
         })),
@@ -1587,11 +1588,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const selectedGroupId = selectedMessageContact.type === 'Group'
             ? selectedMessageContact.id.replace(/^group-conversation-/, '').replace(/^group-/, '')
             : '';
-        const messageIdsToMarkRead = unreadMessages
+        const messageIdsToMarkRead = dashboardMessages
             .filter(message => (
-                selectedMessageContact.type === 'Group'
+                !messageDeletedForDashboardUser(message) &&
+                !messageFromDashboardUser(message) &&
+                messageAddressedToDashboardUser(message) &&
+                !messageReadByDashboardUser(message) &&
+                (selectedMessageContact.type === 'Group'
                     ? message.groupId === selectedGroupId
-                    : messageMatchesContact(message, selectedMessageContact)
+                    : messageMatchesContact(message, selectedMessageContact))
             ))
             .map(message => message.id);
         if (messageIdsToMarkRead.length === 0) return;
