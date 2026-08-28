@@ -8752,7 +8752,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           className: `relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active" : ""}`,
           "aria-current": activeView === "MyDashboard" ? "page" : void 0,
           children: [
-            unreadMessageCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "translate-x-px", children: Math.min(unreadMessageCount, 9) }) }),
+            unreadMessageCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "translate-x-px", children: Math.min(unreadMessageCount, 99) }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
               "My",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -40874,6 +40874,7 @@ const MyDashboard = ({
   };
   const messageMatchesContact = (message, contact) => message.fromId === contact.id || message.toId === contact.id || Array.isArray(message.recipientIds) && message.recipientIds.includes(contact.id) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(contact.id) || dashboardPersonNamesMatch(message.from, contact.name) || dashboardPersonNamesMatch(message.from, contact.displayName) || dashboardPersonNamesMatch(message.to, contact.name) || dashboardPersonNamesMatch(message.to, contact.displayName);
   const messageBelongsToDashboardUser = (message) => !messageDeletedForDashboardUser(message) && (messageFromDashboardUser(message) || messageAddressedToDashboardUser(message));
+  const getDashboardUnreadMessageKey = (message) => message.groupId ? ["group", message.groupId, message.fromId || message.from, message.body, message.sentAt].join("|") : message.id;
   const resolveMessageContact = (id, name) => {
     if (id && messageContactsById.has(id)) return messageContactsById.get(id) || null;
     return messageContacts.find((contact) => dashboardPersonNamesMatch(contact.name, name) || dashboardPersonNamesMatch(contact.displayName, name)) || null;
@@ -40899,6 +40900,7 @@ const MyDashboard = ({
   };
   const messageConversations = reactExports.useMemo(() => {
     const conversations = /* @__PURE__ */ new Map();
+    const unreadKeysByConversation = /* @__PURE__ */ new Map();
     dashboardMessages.forEach((message) => {
       if (!messageBelongsToDashboardUser(message)) return;
       const mineById = messageFromDashboardUser(message);
@@ -40909,10 +40911,15 @@ const MyDashboard = ({
       const otherKey = message.groupId ? `group-${message.groupId}` : resolvedContact?.id || `person-${normaliseDashboardPersonName(otherName)}`;
       const existing = conversations.get(otherKey);
       const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
+      if (messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)) {
+        const unreadKeys = unreadKeysByConversation.get(otherKey) || /* @__PURE__ */ new Set();
+        unreadKeys.add(getDashboardUnreadMessageKey(message));
+        unreadKeysByConversation.set(otherKey, unreadKeys);
+      }
       conversations.set(otherKey, {
         contact: resolvedContact || existing?.contact || getMessageContactForName(otherName),
         lastMessage: isNewer ? message : existing.lastMessage,
-        unreadCount: (existing?.unreadCount || 0) + (messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message) ? 1 : 0)
+        unreadCount: unreadKeysByConversation.get(otherKey)?.size || 0
       });
     });
     return Array.from(conversations.values()).sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
@@ -40959,7 +40966,14 @@ const MyDashboard = ({
     if (contact.memberNames?.length) return contact.memberNames;
     return (contact.memberIds || []).map((memberId) => messageContactsById.get(memberId)?.displayName || memberId).filter(Boolean);
   };
-  const unreadMessages = reactExports.useMemo(() => dashboardMessages.filter((message) => !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
+  const unreadMessages = reactExports.useMemo(() => {
+    const unreadByKey = /* @__PURE__ */ new Map();
+    dashboardMessages.filter((message) => !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)).forEach((message) => {
+      const key = getDashboardUnreadMessageKey(message);
+      if (!unreadByKey.has(key)) unreadByKey.set(key, message);
+    });
+    return Array.from(unreadByKey.values());
+  }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
   const buildDashboardMessageBadgeTrace = (allMessages, scopedMessages) => ({
     generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
     view: "MyDashboard",
@@ -40999,7 +41013,8 @@ const MyDashboard = ({
         fromDashboardUser: messageFromDashboardUser(message),
         addressedToDashboardUser: messageAddressedToDashboardUser(message),
         readByDashboardUser: messageReadByDashboardUser(message),
-        countedUnread: !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)
+        countedUnread: !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message),
+        unreadMessageKey: getDashboardUnreadMessageKey(message)
       }
     })),
     scopedApiMessages: scopedMessages?.slice(-120) ?? null,
@@ -41554,7 +41569,7 @@ const MyDashboard = ({
             },
             className: dashboardActionButtonClass,
             children: [
-              unreadMessages.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -left-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-px", children: Math.min(unreadMessages.length, 9) }) }),
+              unreadMessages.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -left-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-px", children: Math.min(unreadMessages.length, 99) }) }),
               "Messages"
             ]
           }
@@ -120367,7 +120382,13 @@ const App = () => {
           const isMultiRecipient = Boolean(message?.groupId) || Array.isArray(message?.recipientIds) && message.recipientIds.length > 1 || Array.isArray(message?.groupMemberIds) && message.groupMemberIds.length > 1;
           return Boolean(message?.readAt && !isMultiRecipient);
         };
-        const unreadCount = messages.filter((message) => !readByUser(message) && !deletedForUser(message) && !fromUser(message) && addressedToUser(message)).length;
+        const getUnreadMessageKey = (message) => message?.groupId ? ["group", message.groupId, message.fromId || message.from, message.body, message.sentAt].join("|") : String(message?.id || "");
+        const unreadMessageKeys = /* @__PURE__ */ new Set();
+        messages.filter((message) => !readByUser(message) && !deletedForUser(message) && !fromUser(message) && addressedToUser(message)).forEach((message) => {
+          const key = getUnreadMessageKey(message);
+          if (key) unreadMessageKeys.add(key);
+        });
+        const unreadCount = unreadMessageKeys.size;
         window.__dfpSidebarUnreadTrace = {
           generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
           dashboardNotificationUserName,
@@ -120377,6 +120398,7 @@ const App = () => {
           userNameKeys,
           fetchedMessageCount: messages.length,
           unreadCount,
+          unreadMessageKeys: Array.from(unreadMessageKeys),
           messages: messages.slice(-80).map((message) => ({
             id: message?.id,
             from: message?.from,
@@ -120399,7 +120421,8 @@ const App = () => {
               fromUser: fromUser(message),
               addressedToUser: addressedToUser(message),
               readByUser: readByUser(message),
-              countedUnread: !readByUser(message) && !deletedForUser(message) && !fromUser(message) && addressedToUser(message)
+              countedUnread: !readByUser(message) && !deletedForUser(message) && !fromUser(message) && addressedToUser(message),
+              unreadMessageKey: getUnreadMessageKey(message)
             }
           }))
         };

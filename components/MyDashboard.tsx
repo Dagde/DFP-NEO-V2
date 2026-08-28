@@ -878,6 +878,11 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             messageAddressedToDashboardUser(message)
         )
     );
+    const getDashboardUnreadMessageKey = (message: DashboardMessage): string => (
+        message.groupId
+            ? ['group', message.groupId, message.fromId || message.from, message.body, message.sentAt].join('|')
+            : message.id
+    );
     const resolveMessageContact = (id?: string, name?: string): DashboardMessageContact | null => {
         if (id && messageContactsById.has(id)) return messageContactsById.get(id) || null;
         return messageContacts.find(contact => (
@@ -906,6 +911,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     };
     const messageConversations = useMemo<DashboardConversation[]>(() => {
         const conversations = new Map<string, DashboardConversation>();
+        const unreadKeysByConversation = new Map<string, Set<string>>();
         dashboardMessages.forEach(message => {
             if (!messageBelongsToDashboardUser(message)) return;
             const mineById = messageFromDashboardUser(message);
@@ -918,10 +924,15 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 : resolvedContact?.id || `person-${normaliseDashboardPersonName(otherName)}`;
             const existing = conversations.get(otherKey);
             const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
+            if (messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)) {
+                const unreadKeys = unreadKeysByConversation.get(otherKey) || new Set<string>();
+                unreadKeys.add(getDashboardUnreadMessageKey(message));
+                unreadKeysByConversation.set(otherKey, unreadKeys);
+            }
             conversations.set(otherKey, {
                 contact: resolvedContact || existing?.contact || getMessageContactForName(otherName),
                 lastMessage: isNewer ? message : existing.lastMessage,
-                unreadCount: (existing?.unreadCount || 0) + (messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message) ? 1 : 0),
+                unreadCount: unreadKeysByConversation.get(otherKey)?.size || 0,
             });
         });
         return Array.from(conversations.values())
@@ -1013,13 +1024,18 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .map(memberId => messageContactsById.get(memberId)?.displayName || memberId)
             .filter(Boolean);
     };
-    const unreadMessages = useMemo(() => (
+    const unreadMessages = useMemo(() => {
+        const unreadByKey = new Map<string, DashboardMessage>();
         dashboardMessages.filter(message => (
             !messageDeletedForDashboardUser(message) &&
             messageAddressedToDashboardUser(message) &&
             !messageReadByDashboardUser(message)
-        ))
-    ), [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
+        )).forEach(message => {
+            const key = getDashboardUnreadMessageKey(message);
+            if (!unreadByKey.has(key)) unreadByKey.set(key, message);
+        });
+        return Array.from(unreadByKey.values());
+    }, [dashboardMessages, dashboardSenderContactId, dashboardUserKey]);
     const buildDashboardMessageBadgeTrace = (allMessages?: DashboardMessage[], scopedMessages?: DashboardMessage[]) => ({
         generatedAt: new Date().toISOString(),
         view: 'MyDashboard',
@@ -1060,6 +1076,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 addressedToDashboardUser: messageAddressedToDashboardUser(message),
                 readByDashboardUser: messageReadByDashboardUser(message),
                 countedUnread: !messageDeletedForDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message),
+                unreadMessageKey: getDashboardUnreadMessageKey(message),
             },
         })),
         scopedApiMessages: scopedMessages?.slice(-120) ?? null,
@@ -1740,7 +1757,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     >
                         {unreadMessages.length > 0 && (
                             <span className="absolute -left-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg">
-                                <span className="-translate-x-px">{Math.min(unreadMessages.length, 9)}</span>
+                                <span className="-translate-x-px">{Math.min(unreadMessages.length, 99)}</span>
                             </span>
                         )}
                         Messages

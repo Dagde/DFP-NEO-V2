@@ -26368,12 +26368,22 @@ const App: React.FC = () => {
                         (Array.isArray(message?.groupMemberIds) && message.groupMemberIds.length > 1);
                     return Boolean(message?.readAt && !isMultiRecipient);
                 };
-                const unreadCount = messages.filter((message: any) => (
+                const getUnreadMessageKey = (message: any) => (
+                    message?.groupId
+                        ? ['group', message.groupId, message.fromId || message.from, message.body, message.sentAt].join('|')
+                        : String(message?.id || '')
+                );
+                const unreadMessageKeys = new Set<string>();
+                messages.filter((message: any) => (
                     !readByUser(message) &&
                     !deletedForUser(message) &&
                     !fromUser(message) &&
                     addressedToUser(message)
-                )).length;
+                )).forEach((message: any) => {
+                    const key = getUnreadMessageKey(message);
+                    if (key) unreadMessageKeys.add(key);
+                });
+                const unreadCount = unreadMessageKeys.size;
                 (window as any).__dfpSidebarUnreadTrace = {
                     generatedAt: new Date().toISOString(),
                     dashboardNotificationUserName,
@@ -26383,6 +26393,7 @@ const App: React.FC = () => {
                     userNameKeys,
                     fetchedMessageCount: messages.length,
                     unreadCount,
+                    unreadMessageKeys: Array.from(unreadMessageKeys),
                     messages: messages.slice(-80).map((message: any) => ({
                         id: message?.id,
                         from: message?.from,
@@ -26406,6 +26417,7 @@ const App: React.FC = () => {
                             addressedToUser: addressedToUser(message),
                             readByUser: readByUser(message),
                             countedUnread: !readByUser(message) && !deletedForUser(message) && !fromUser(message) && addressedToUser(message),
+                            unreadMessageKey: getUnreadMessageKey(message),
                         },
                     })),
                 };

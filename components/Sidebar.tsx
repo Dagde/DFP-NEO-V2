@@ -183,7 +183,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           >
             {unreadMessageCount > 0 && (
               <span className="absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg">
-                <span className="translate-x-px">{Math.min(unreadMessageCount, 9)}</span>
+                <span className="translate-x-px">{Math.min(unreadMessageCount, 99)}</span>
               </span>
             )}
             <span className="leading-tight">My<br/>Home</span>
