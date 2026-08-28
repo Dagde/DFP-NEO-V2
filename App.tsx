@@ -29470,10 +29470,15 @@ const App: React.FC = () => {
                     ...existingMessages.filter((existing: any) => existing?.id !== message.id),
                     message,
                 ].sort((a: any, b: any) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
-                window.localStorage.setItem(storageKey, JSON.stringify(nextMessages));
+                window.localStorage.setItem(storageKey, JSON.stringify(nextMessages.slice(-200)));
                 window.dispatchEvent(new Event('dfp-dashboard-messages-updated'));
             } catch (error) {
                 console.warn('[Training Report Auto Notify] Could not update local dashboard messages:', error);
+                try {
+                    window.localStorage.removeItem('dfp_dashboard_messages_v1');
+                } catch {
+                    // Ignore cache cleanup failures; dashboard messages are still posted to the API below.
+                }
             }
         }
         const response = await fetch('/api/dashboard-messages', {

@@ -117,6 +117,7 @@ type DashboardConversation = {
 };
 
 const DASHBOARD_MESSAGES_STORAGE_KEY = 'dfp_dashboard_messages_v1';
+const DASHBOARD_MESSAGES_LOCAL_CACHE_LIMIT = 200;
 
 type DashboardIconProps = {
     className?: string;
@@ -473,8 +474,17 @@ const readDashboardMessages = (): DashboardMessage[] => {
 
 const writeDashboardMessages = (messages: DashboardMessage[]) => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(DASHBOARD_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
-    window.dispatchEvent(new Event('dfp-dashboard-messages-updated'));
+    const cachedMessages = messages.slice(-DASHBOARD_MESSAGES_LOCAL_CACHE_LIMIT);
+    try {
+        window.localStorage.setItem(DASHBOARD_MESSAGES_STORAGE_KEY, JSON.stringify(cachedMessages));
+    } catch (error) {
+        console.warn('[Dashboard Messages] Browser message cache quota exceeded; continuing with server-backed state only.', error);
+        try {
+            window.localStorage.removeItem(DASHBOARD_MESSAGES_STORAGE_KEY);
+        } catch {
+            // Ignore cache cleanup failures; the API remains the message source of truth.
+        }
+    }
 };
 
 const mergeDashboardMessages = (current: DashboardMessage[], incoming: DashboardMessage[]): DashboardMessage[] => {

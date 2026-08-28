@@ -40569,8 +40569,16 @@ const readDashboardMessages = () => {
 };
 const writeDashboardMessages = (messages) => {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(DASHBOARD_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
-  window.dispatchEvent(new Event("dfp-dashboard-messages-updated"));
+  const cachedMessages = messages.slice(-200);
+  try {
+    window.localStorage.setItem(DASHBOARD_MESSAGES_STORAGE_KEY, JSON.stringify(cachedMessages));
+  } catch (error) {
+    console.warn("[Dashboard Messages] Browser message cache quota exceeded; continuing with server-backed state only.", error);
+    try {
+      window.localStorage.removeItem(DASHBOARD_MESSAGES_STORAGE_KEY);
+    } catch {
+    }
+  }
 };
 const mergeDashboardMessages = (current, incoming) => {
   const merged = /* @__PURE__ */ new Map();
@@ -122735,10 +122743,14 @@ const App = () => {
           ...existingMessages.filter((existing) => existing?.id !== message.id),
           message
         ].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
-        window.localStorage.setItem(storageKey, JSON.stringify(nextMessages));
+        window.localStorage.setItem(storageKey, JSON.stringify(nextMessages.slice(-200)));
         window.dispatchEvent(new Event("dfp-dashboard-messages-updated"));
       } catch (error) {
         console.warn("[Training Report Auto Notify] Could not update local dashboard messages:", error);
+        try {
+          window.localStorage.removeItem("dfp_dashboard_messages_v1");
+        } catch {
+        }
       }
     }
     const response = await fetch("/api/dashboard-messages", {
