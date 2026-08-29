@@ -1089,7 +1089,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         if (!cutoff) return false;
         const hidden = new Date(message.sentAt).getTime() <= new Date(cutoff.deletedAt).getTime();
         if (hidden) {
-            console.info('MSG_MESSAGE_REJECTED_DELETED_HISTORY', {
+            logDashboardMessageTracking('MSG_MESSAGE_REJECTED_DELETED_HISTORY', {
                 messageID: message.id,
                 conversationID: cutoff.conversationId || conversationId,
                 currentUserID: dashboardSenderContactId,
@@ -1426,6 +1426,20 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 displayName: selectedMessageContact.displayName,
                 type: selectedMessageContact.type,
             } : null,
+            activeVisibleMessageCount: visibleActiveConversationMessages.length,
+            activeVisibleMessages: visibleActiveConversationMessages.map(message => ({
+                id: message.id,
+                from: message.from,
+                to: message.to,
+                fromId: message.fromId,
+                toId: message.toId,
+                recipientIds: message.recipientIds,
+                groupId: message.groupId,
+                groupName: message.groupName,
+                groupMemberIds: message.groupMemberIds,
+                sentAt: message.sentAt,
+                body: message.body,
+            })),
             trackingEvents,
             deletionCutoffs: dashboardMessageDeletionCutoffs,
             conversations: messageConversations.map(conversation => ({
@@ -1464,6 +1478,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     const selectedGroupId = selectedMessageContact.id.replace(/^group-conversation-/, '').replace(/^group-/, '');
                     return !!message.groupId && message.groupId === selectedGroupId;
                 }
+                if (message.groupId) return false;
                 return (
                     (messageFromDashboardUser(message) && messageMatchesContact(message, selectedMessageContact)) ||
                     (messageMatchesContact(message, selectedMessageContact) && messageAddressedToDashboardUser(message))
@@ -2066,7 +2081,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 !messageReadByDashboardUser(message) &&
                 (selectedMessageContact.type === 'Group'
                     ? message.groupId === selectedGroupId
-                    : messageMatchesContact(message, selectedMessageContact))
+                    : !message.groupId && messageMatchesContact(message, selectedMessageContact))
             ))
             .map(message => message.id);
         if (messageIdsToMarkRead.length === 0) return;
@@ -2076,7 +2091,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             (
                 selectedMessageContact.type === 'Group'
                     ? `group-conversation-${message.groupId || ''}` === selectedMessageContact.id
-                    : messageMatchesContact(message, selectedMessageContact)
+                    : !message.groupId && messageMatchesContact(message, selectedMessageContact)
             ) &&
             !messageReadByDashboardUser(message)
                 ? {
