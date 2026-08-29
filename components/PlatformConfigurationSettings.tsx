@@ -10375,10 +10375,26 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div id="platform-currency-profile-records" className={resourceSectionPanelClass}>
             <div className={resourceSectionPanelHeaderClass}>
               <div>
-                <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">{continuationCurrencyEventsLabel}</h4>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">{continuationCurrencyEventsLabel}</h4>
+                  <InfoHint text="The Currency field links a completed event to the currency requirement it should satisfy or refresh. Currencies are configured in Training & Standards > Currency Requirements." />
+                </div>
                 <p className={resourceSectionPanelHintClass}>These events prefill {continuationCurrencyShortLabel} and currency requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode}.</p>
               </div>
               <div className="flex flex-wrap justify-end gap-[1px]">
+                {onNavigateToSettingsSection ? (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToSettingsSection({
+                      section: 'currencies',
+                      label: 'Currency Requirements',
+                      focusUnitCode: activeUnitCode,
+                    })}
+                    className={platformActionButtonClass}
+                  >
+                    <span className="text-[9px] leading-tight">Currency<br />Setup</span>
+                  </button>
+                ) : null}
                 <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !displayCrewCompositionAircraftCode} className={platformActionButtonClass}>
                   <span className="text-[9px] leading-tight">Add<br />Event</span>
                 </button>
@@ -10473,19 +10489,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <span className="mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
                         <span>Currency</span>
                         <InfoHint text="Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh." />
-                        {onNavigateToSettingsSection ? (
-                          <button
-                            type="button"
-                            onClick={() => onNavigateToSettingsSection({
-                              section: 'currencies',
-                              label: 'Currency Requirements',
-                              focusUnitCode: activeUnitCode,
-                            })}
-                            className="ml-auto rounded border border-cyan-400/35 px-1.5 py-0.5 text-[9px] font-black normal-case tracking-normal text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-400/10"
-                          >
-                            Set up
-                          </button>
-                        ) : null}
                       </span>
                       <div className="max-w-full overflow-x-auto">
                         <select

@@ -83404,7 +83404,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             displayCrewCompositionAircraftCode && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-currency-profile-records", className: resourceSectionPanelClass, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "The Currency field links a completed event to the currency requirement it should satisfy or refresh. Currencies are configured in Training & Standards > Currency Requirements." })
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
                     "These events prefill ",
                     continuationCurrencyShortLabel,
@@ -83413,11 +83416,30 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     "."
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCurrencyProfile, disabled: !canEditCrewComposition || !displayCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                  "Add",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "Event"
-                ] }) }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+                  onNavigateToSettingsSection ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => onNavigateToSettingsSection({
+                        section: "currencies",
+                        label: "Currency Requirements",
+                        focusUnitCode: activeUnitCode
+                      }),
+                      className: platformActionButtonClass,
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                        "Currency",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                        "Setup"
+                      ] })
+                    }
+                  ) : null,
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCurrencyProfile, disabled: !canEditCrewComposition || !displayCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                    "Add",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                    "Event"
+                  ] }) })
+                ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: [
                 "No ",
@@ -83502,20 +83524,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "block min-w-0", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh." }),
-                      onNavigateToSettingsSection ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "button",
-                        {
-                          type: "button",
-                          onClick: () => onNavigateToSettingsSection({
-                            section: "currencies",
-                            label: "Currency Requirements",
-                            focusUnitCode: activeUnitCode
-                          }),
-                          className: "ml-auto rounded border border-cyan-400/35 px-1.5 py-0.5 text-[9px] font-black normal-case tracking-normal text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-400/10",
-                          children: "Set up"
-                        }
-                      ) : null
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh." })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "select",
