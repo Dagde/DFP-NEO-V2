@@ -33841,55 +33841,104 @@ const App: React.FC = () => {
             .replace(/[^a-z0-9]/g, '')
     ), []);
 
-    const isOwnTraineeRecord = useCallback((trainee?: Trainee | null): boolean => {
-        if (!trainee) return false;
-        const traineeKeys = [
+    const makePersonKeyList = useCallback((values: Array<string | number | null | undefined>) => (
+        Array.from(new Set(values.map(normalizePersonKey).filter(Boolean)))
+    ), [normalizePersonKey]);
+
+    const currentUserStableKeys = useMemo(() => makePersonKeyList([
+        authUser?.id,
+        authUser?.userId,
+        authUser?.username,
+        (authUser as any)?.staffRecordId,
+        (authUser as any)?.traineeRecordId,
+        (authUser as any)?.personnelId,
+        (authUser as any)?.staffId,
+        (authUser as any)?.traineeId,
+        sessionUser?.userId,
+        sessionUser?.username,
+        (sessionUser as any)?.staffRecordId,
+        (sessionUser as any)?.traineeRecordId,
+        (sessionUser as any)?.personnelId,
+        (sessionUser as any)?.staffId,
+        (sessionUser as any)?.traineeId,
+    ]), [authUser, makePersonKeyList, sessionUser]);
+
+    const currentUserNameKeys = useMemo(() => makePersonKeyList([
+        authUser?.displayName,
+        authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
+        authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
+        sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : '',
+        sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : '',
+        currentUserName,
+    ]), [authUser, currentUserName, makePersonKeyList, sessionUser]);
+
+    const keysOverlap = useCallback((left: string[], right: string[]): boolean => (
+        left.some(key => right.includes(key))
+    ), []);
+
+    const getTraineeStableKeys = useCallback((trainee?: Trainee | null): string[] => (
+        trainee ? makePersonKeyList([
+            (trainee as any).id,
             trainee.idNumber,
+            (trainee as any).userId,
+            (trainee as any).username,
+            (trainee as any).staffRecordId,
+            (trainee as any).traineeRecordId,
+            (trainee as any).personnelId,
+        ]) : []
+    ), [makePersonKeyList]);
+
+    const getTraineeNameKeys = useCallback((trainee?: Trainee | null): string[] => (
+        trainee ? makePersonKeyList([
             trainee.fullName,
             trainee.name,
-            (trainee as any).username,
-            (trainee as any).userId,
-        ].map(normalizePersonKey).filter(Boolean);
-        const userKeys = [
-            authUser?.id,
-            authUser?.userId,
-            authUser?.username,
-            authUser?.displayName,
-            authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
-            authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
-            sessionUser?.userId,
-            sessionUser?.username,
-            sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : '',
-            sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : '',
-            currentUserName,
-        ].map(normalizePersonKey).filter(Boolean);
-        return traineeKeys.some(key => userKeys.includes(key));
-    }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
+        ]) : []
+    ), [makePersonKeyList]);
+
+    const getStaffStableKeys = useCallback((staff?: Instructor | null): string[] => (
+        staff ? makePersonKeyList([
+            (staff as any).id,
+            staff.idNumber,
+            (staff as any).userId,
+            (staff as any).username,
+            (staff as any).staffRecordId,
+            (staff as any).traineeRecordId,
+            (staff as any).personnelId,
+        ]) : []
+    ), [makePersonKeyList]);
+
+    const getStaffNameKeys = useCallback((staff?: Instructor | null): string[] => (
+        staff ? makePersonKeyList([
+            staff.name,
+            (staff as any).fullName,
+        ]) : []
+    ), [makePersonKeyList]);
+
+    const isUniqueTraineeNameMatch = useCallback((trainee?: Trainee | null): boolean => {
+        const traineeNameKeys = getTraineeNameKeys(trainee);
+        if (traineeNameKeys.length === 0) return false;
+        const roster = allTraineesData.length > 0 ? allTraineesData : traineesData;
+        return roster.filter(candidate => keysOverlap(getTraineeNameKeys(candidate), traineeNameKeys)).length === 1;
+    }, [allTraineesData, getTraineeNameKeys, keysOverlap, traineesData]);
+
+    const isUniqueStaffNameMatch = useCallback((staff?: Instructor | null): boolean => {
+        const staffNameKeys = getStaffNameKeys(staff);
+        if (staffNameKeys.length === 0) return false;
+        const roster = allInstructorsData.length > 0 ? allInstructorsData : instructorsData;
+        return roster.filter(candidate => keysOverlap(getStaffNameKeys(candidate), staffNameKeys)).length === 1;
+    }, [allInstructorsData, getStaffNameKeys, instructorsData, keysOverlap]);
+
+    const isOwnTraineeRecord = useCallback((trainee?: Trainee | null): boolean => {
+        if (!trainee) return false;
+        if (keysOverlap(getTraineeStableKeys(trainee), currentUserStableKeys)) return true;
+        return isUniqueTraineeNameMatch(trainee) && keysOverlap(getTraineeNameKeys(trainee), currentUserNameKeys);
+    }, [currentUserNameKeys, currentUserStableKeys, getTraineeNameKeys, getTraineeStableKeys, isUniqueTraineeNameMatch, keysOverlap]);
 
     const isOwnStaffRecord = useCallback((staff?: Instructor | null): boolean => {
         if (!staff) return false;
-        const staffKeys = [
-            staff.idNumber,
-            staff.name,
-            (staff as any).fullName,
-            (staff as any).username,
-            (staff as any).userId,
-        ].map(normalizePersonKey).filter(Boolean);
-        const userKeys = [
-            authUser?.id,
-            authUser?.userId,
-            authUser?.username,
-            authUser?.displayName,
-            authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
-            authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
-            sessionUser?.userId,
-            sessionUser?.username,
-            sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : '',
-            sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : '',
-            currentUserName,
-        ].map(normalizePersonKey).filter(Boolean);
-        return staffKeys.some(key => userKeys.includes(key));
-    }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
+        if (keysOverlap(getStaffStableKeys(staff), currentUserStableKeys)) return true;
+        return isUniqueStaffNameMatch(staff) && keysOverlap(getStaffNameKeys(staff), currentUserNameKeys);
+    }, [currentUserNameKeys, currentUserStableKeys, getStaffNameKeys, getStaffStableKeys, isUniqueStaffNameMatch, keysOverlap]);
 
     const currentUserStaffProfile = useMemo(() => (
         instructorsData.find(isOwnStaffRecord)

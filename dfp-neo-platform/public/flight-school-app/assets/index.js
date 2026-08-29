@@ -9053,10 +9053,16 @@ const RightSidebar = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => isSupervisor && onNavigate("SupervisorDashboard"),
-          disabled: !isSupervisor || !canOpen("SupervisorDashboard"),
+          onClick: (event) => {
+            if (isSupervisor && canOpen("SupervisorDashboard")) {
+              onNavigate("SupervisorDashboard");
+              return;
+            }
+            showPermissionNotice(event.currentTarget);
+          },
+          "aria-disabled": !isSupervisor || !canOpen("SupervisorDashboard"),
           title: !isSupervisor ? "Access denied: Requires Flying Supervisor qualification." : "View Supervisor Dashboard",
-          className: `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "SupervisorDashboard" ? "active" : ""} ${!isSupervisor || !canOpen("SupervisorDashboard") ? "opacity-50 cursor-not-allowed" : ""}`,
+          className: `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "SupervisorDashboard" ? "active" : ""} ${!isSupervisor || !canOpen("SupervisorDashboard") ? "cursor-not-allowed" : ""}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
             "Duty",
             /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -9214,7 +9220,7 @@ const Header = ({
   const disabledActionClass = "cursor-not-allowed";
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeModelLabel);
   const headerButtonClass = "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md";
-  const unavailableActionClass = isFixedCrewModel ? "" : disabledActionClass;
+  const unavailableActionClass = disabledActionClass;
   const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ""}`;
   const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
   const hoveredContext = contextOptions.find((option) => option.location === hoveredContextLocation) || contextOptions[0];
@@ -126263,54 +126269,81 @@ ${"=".repeat(60)}`);
   const canViewOtherLmp = canUsePlatformPermission("trainee.lmp.others");
   const canAddRemedialPackage = canUsePlatformPermission("trainee.remedial.add");
   const normalizePersonKey = reactExports.useCallback((value) => String(value ?? "").toLowerCase().replace(/[^a-z0-9]/g, ""), []);
+  const makePersonKeyList = reactExports.useCallback((values) => Array.from(new Set(values.map(normalizePersonKey).filter(Boolean))), [normalizePersonKey]);
+  const currentUserStableKeys = reactExports.useMemo(() => makePersonKeyList([
+    authUser?.id,
+    authUser?.userId,
+    authUser?.username,
+    authUser?.staffRecordId,
+    authUser?.traineeRecordId,
+    authUser?.personnelId,
+    authUser?.staffId,
+    authUser?.traineeId,
+    sessionUser?.userId,
+    sessionUser?.username,
+    sessionUser?.staffRecordId,
+    sessionUser?.traineeRecordId,
+    sessionUser?.personnelId,
+    sessionUser?.staffId,
+    sessionUser?.traineeId
+  ]), [authUser, makePersonKeyList, sessionUser]);
+  const currentUserNameKeys = reactExports.useMemo(() => makePersonKeyList([
+    authUser?.displayName,
+    authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
+    authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
+    sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : "",
+    sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : "",
+    currentUserName
+  ]), [authUser, currentUserName, makePersonKeyList, sessionUser]);
+  const keysOverlap = reactExports.useCallback((left, right) => left.some((key) => right.includes(key)), []);
+  const getTraineeStableKeys = reactExports.useCallback((trainee) => trainee ? makePersonKeyList([
+    trainee.id,
+    trainee.idNumber,
+    trainee.userId,
+    trainee.username,
+    trainee.staffRecordId,
+    trainee.traineeRecordId,
+    trainee.personnelId
+  ]) : [], [makePersonKeyList]);
+  const getTraineeNameKeys = reactExports.useCallback((trainee) => trainee ? makePersonKeyList([
+    trainee.fullName,
+    trainee.name
+  ]) : [], [makePersonKeyList]);
+  const getStaffStableKeys = reactExports.useCallback((staff) => staff ? makePersonKeyList([
+    staff.id,
+    staff.idNumber,
+    staff.userId,
+    staff.username,
+    staff.staffRecordId,
+    staff.traineeRecordId,
+    staff.personnelId
+  ]) : [], [makePersonKeyList]);
+  const getStaffNameKeys = reactExports.useCallback((staff) => staff ? makePersonKeyList([
+    staff.name,
+    staff.fullName
+  ]) : [], [makePersonKeyList]);
+  const isUniqueTraineeNameMatch = reactExports.useCallback((trainee) => {
+    const traineeNameKeys = getTraineeNameKeys(trainee);
+    if (traineeNameKeys.length === 0) return false;
+    const roster = allTraineesData.length > 0 ? allTraineesData : traineesData;
+    return roster.filter((candidate) => keysOverlap(getTraineeNameKeys(candidate), traineeNameKeys)).length === 1;
+  }, [allTraineesData, getTraineeNameKeys, keysOverlap, traineesData]);
+  const isUniqueStaffNameMatch = reactExports.useCallback((staff) => {
+    const staffNameKeys = getStaffNameKeys(staff);
+    if (staffNameKeys.length === 0) return false;
+    const roster = allInstructorsData.length > 0 ? allInstructorsData : instructorsData;
+    return roster.filter((candidate) => keysOverlap(getStaffNameKeys(candidate), staffNameKeys)).length === 1;
+  }, [allInstructorsData, getStaffNameKeys, instructorsData, keysOverlap]);
   const isOwnTraineeRecord = reactExports.useCallback((trainee) => {
     if (!trainee) return false;
-    const traineeKeys = [
-      trainee.idNumber,
-      trainee.fullName,
-      trainee.name,
-      trainee.username,
-      trainee.userId
-    ].map(normalizePersonKey).filter(Boolean);
-    const userKeys = [
-      authUser?.id,
-      authUser?.userId,
-      authUser?.username,
-      authUser?.displayName,
-      authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
-      authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
-      sessionUser?.userId,
-      sessionUser?.username,
-      sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : "",
-      sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : "",
-      currentUserName
-    ].map(normalizePersonKey).filter(Boolean);
-    return traineeKeys.some((key) => userKeys.includes(key));
-  }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
+    if (keysOverlap(getTraineeStableKeys(trainee), currentUserStableKeys)) return true;
+    return isUniqueTraineeNameMatch(trainee) && keysOverlap(getTraineeNameKeys(trainee), currentUserNameKeys);
+  }, [currentUserNameKeys, currentUserStableKeys, getTraineeNameKeys, getTraineeStableKeys, isUniqueTraineeNameMatch, keysOverlap]);
   const isOwnStaffRecord = reactExports.useCallback((staff) => {
     if (!staff) return false;
-    const staffKeys = [
-      staff.idNumber,
-      staff.name,
-      staff.fullName,
-      staff.username,
-      staff.userId
-    ].map(normalizePersonKey).filter(Boolean);
-    const userKeys = [
-      authUser?.id,
-      authUser?.userId,
-      authUser?.username,
-      authUser?.displayName,
-      authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
-      authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
-      sessionUser?.userId,
-      sessionUser?.username,
-      sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : "",
-      sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : "",
-      currentUserName
-    ].map(normalizePersonKey).filter(Boolean);
-    return staffKeys.some((key) => userKeys.includes(key));
-  }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
+    if (keysOverlap(getStaffStableKeys(staff), currentUserStableKeys)) return true;
+    return isUniqueStaffNameMatch(staff) && keysOverlap(getStaffNameKeys(staff), currentUserNameKeys);
+  }, [currentUserNameKeys, currentUserStableKeys, getStaffNameKeys, getStaffStableKeys, isUniqueStaffNameMatch, keysOverlap]);
   const currentUserStaffProfile = reactExports.useMemo(() => instructorsData.find(isOwnStaffRecord) || allInstructorsData.find(isOwnStaffRecord) || null, [allInstructorsData, instructorsData, isOwnStaffRecord]);
   const currentUserTraineeProfile = reactExports.useMemo(() => traineesData.find(isOwnTraineeRecord) || allTraineesData.find(isOwnTraineeRecord) || null, [allTraineesData, traineesData, isOwnTraineeRecord]);
   const canViewTraineeProfile = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnTraineeProfile : canViewOtherTraineeProfiles, [isOwnTraineeRecord, canViewOwnTraineeProfile, canViewOtherTraineeProfiles]);

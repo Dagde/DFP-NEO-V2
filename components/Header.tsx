@@ -125,7 +125,7 @@ const Header: React.FC<HeaderProps> = ({
     const disabledActionClass = 'cursor-not-allowed';
     const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeModelLabel);
     const headerButtonClass = 'w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md';
-    const unavailableActionClass = isFixedCrewModel ? '' : disabledActionClass;
+    const unavailableActionClass = disabledActionClass;
     const activeContextLabel = `${activeLocation}${activeUnit ? ` - ${activeUnit}` : ''}`;
     const activeContextFontSize = activeContextLabel.length > 15 ? 9 : activeContextLabel.length > 12 ? 10 : 12;
     const hoveredContext = contextOptions.find(option => option.location === hoveredContextLocation) || contextOptions[0];
