@@ -40882,7 +40882,8 @@ const MyDashboard = ({
   };
   const messageMatchesContact = (message, contact) => message.fromId === contact.id || message.toId === contact.id || Array.isArray(message.recipientIds) && message.recipientIds.includes(contact.id) || Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(contact.id) || dashboardPersonNamesMatch(message.from, contact.name) || dashboardPersonNamesMatch(message.from, contact.displayName) || dashboardPersonNamesMatch(message.to, contact.name) || dashboardPersonNamesMatch(message.to, contact.displayName);
   const messageBelongsToDashboardUser = (message) => !messageDeletedForDashboardUser(message) && (messageFromDashboardUser(message) || messageAddressedToDashboardUser(message));
-  const getDashboardUnreadMessageKey = (message) => message.groupId ? ["group", message.groupId, message.fromId || message.from, message.body, message.sentAt].join("|") : message.id;
+  const getDashboardMessageLogicalKey = (message) => message.groupId ? ["group", message.groupId, message.fromId || message.from, message.body, message.sentAt].join("|") : message.id;
+  const getDashboardUnreadMessageKey = (message) => getDashboardMessageLogicalKey(message);
   const resolveMessageContact = (id, name) => {
     if (id && messageContactsById.has(id)) return messageContactsById.get(id) || null;
     return messageContacts.find((contact) => dashboardPersonNamesMatch(contact.name, name) || dashboardPersonNamesMatch(contact.displayName, name)) || null;
@@ -41081,19 +41082,26 @@ const MyDashboard = ({
   const visibleActiveConversationMessages = reactExports.useMemo(() => {
     const visible = /* @__PURE__ */ new Map();
     activeConversationMessages.forEach((message) => {
-      const key = message.groupId ? [
-        "group",
-        message.groupId,
-        message.fromId || message.from,
-        message.body,
-        message.sentAt
-      ].join("|") : message.id;
+      const key = getDashboardMessageLogicalKey(message);
       if (!visible.has(key)) {
         visible.set(key, message);
       }
     });
     return Array.from(visible.values()).sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
   }, [activeConversationMessages]);
+  const getDashboardOutgoingStatusLabel = (message) => {
+    const relatedMessages = activeConversationMessages.filter((candidate) => getDashboardMessageLogicalKey(candidate) === getDashboardMessageLogicalKey(message));
+    const statusRows = relatedMessages.length > 0 ? relatedMessages : [message];
+    const readCount = statusRows.filter((candidate) => candidate.messageStatus?.isRead || candidate.deliveryStatus?.isRead || Boolean(candidate.readAt) || Array.isArray(candidate.readByIds) && candidate.readByIds.length > 0 || Array.isArray(candidate.readByNames) && candidate.readByNames.length > 0).length;
+    if (readCount > 0) {
+      return statusRows.length > 1 ? `Read by ${readCount}` : "Read";
+    }
+    const deliveredCount = statusRows.filter((candidate) => candidate.messageStatus?.isDelivered || candidate.deliveryStatus?.isDelivered || Boolean(candidate.deliveredAt) || Array.isArray(candidate.deliveredByIds) && candidate.deliveredByIds.length > 0 || Array.isArray(candidate.deliveredByNames) && candidate.deliveredByNames.length > 0).length;
+    if (deliveredCount > 0) {
+      return statusRows.length > 1 ? `Delivered to ${deliveredCount}` : "Delivered";
+    }
+    return "Sent";
+  };
   const latestConversationMessageId = visibleActiveConversationMessages[visibleActiveConversationMessages.length - 1]?.id || "";
   reactExports.useEffect(() => {
     if (!isMessagesOpen || messageView !== "compose" || !selectedMessageContact || !activeConversationEndRef.current) return;
@@ -41949,7 +41957,7 @@ const MyDashboard = ({
                                 children: "Retry"
                               }
                             )
-                          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: message.readAt ? "Read" : "Sent" }) })
+                          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: getDashboardOutgoingStatusLabel(message) }) })
                         ] })
                       ] })
                     ] }, message.id);

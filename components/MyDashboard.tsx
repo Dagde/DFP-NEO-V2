@@ -61,12 +61,24 @@ type DashboardMessageContact = {
     idNumber?: string;
 };
 
+type DashboardMessageDeliveryStatus = {
+    state?: 'sent' | 'delivered' | 'read';
+    deliveredCount?: number;
+    readCount?: number;
+    recipientCount?: number;
+    isDelivered?: boolean;
+    isRead?: boolean;
+    isFullyDelivered?: boolean;
+    isFullyRead?: boolean;
+};
+
 type DashboardMessage = {
     id: string;
     from: string;
     to: string;
     body: string;
     sentAt: string;
+    deliveredAt?: string;
     readAt?: string;
     fromId?: string;
     toId?: string;
@@ -75,10 +87,14 @@ type DashboardMessage = {
     groupName?: string;
     groupMemberIds?: string[];
     groupMemberNames?: string[];
+    deliveredByIds?: string[];
+    deliveredByNames?: string[];
     readByIds?: string[];
     readByNames?: string[];
     deletedForIds?: string[];
     deletedForNames?: string[];
+    deliveryStatus?: DashboardMessageDeliveryStatus;
+    messageStatus?: DashboardMessageDeliveryStatus;
 };
 
 type DashboardMessageContactGroup = {
@@ -888,11 +904,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             messageAddressedToDashboardUser(message)
         )
     );
-    const getDashboardUnreadMessageKey = (message: DashboardMessage): string => (
+    const getDashboardMessageLogicalKey = (message: DashboardMessage): string => (
         message.groupId
             ? ['group', message.groupId, message.fromId || message.from, message.body, message.sentAt].join('|')
             : message.id
     );
+    const getDashboardUnreadMessageKey = (message: DashboardMessage): string => getDashboardMessageLogicalKey(message);
     const resolveMessageContact = (id?: string, name?: string): DashboardMessageContact | null => {
         if (id && messageContactsById.has(id)) return messageContactsById.get(id) || null;
         return messageContacts.find(contact => (
@@ -1151,15 +1168,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const visibleActiveConversationMessages = useMemo(() => {
         const visible = new Map<string, DashboardMessage>();
         activeConversationMessages.forEach(message => {
-            const key = message.groupId
-                ? [
-                    'group',
-                    message.groupId,
-                    message.fromId || message.from,
-                    message.body,
-                    message.sentAt,
-                ].join('|')
-                : message.id;
+            const key = getDashboardMessageLogicalKey(message);
             if (!visible.has(key)) {
                 visible.set(key, message);
             }
@@ -1167,6 +1176,33 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         return Array.from(visible.values())
             .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
     }, [activeConversationMessages]);
+    const getDashboardOutgoingStatusLabel = (message: DashboardMessage): string => {
+        const relatedMessages = activeConversationMessages.filter(candidate => (
+            getDashboardMessageLogicalKey(candidate) === getDashboardMessageLogicalKey(message)
+        ));
+        const statusRows = relatedMessages.length > 0 ? relatedMessages : [message];
+        const readCount = statusRows.filter(candidate => (
+            candidate.messageStatus?.isRead ||
+            candidate.deliveryStatus?.isRead ||
+            Boolean(candidate.readAt) ||
+            (Array.isArray(candidate.readByIds) && candidate.readByIds.length > 0) ||
+            (Array.isArray(candidate.readByNames) && candidate.readByNames.length > 0)
+        )).length;
+        if (readCount > 0) {
+            return statusRows.length > 1 ? `Read by ${readCount}` : 'Read';
+        }
+        const deliveredCount = statusRows.filter(candidate => (
+            candidate.messageStatus?.isDelivered ||
+            candidate.deliveryStatus?.isDelivered ||
+            Boolean(candidate.deliveredAt) ||
+            (Array.isArray(candidate.deliveredByIds) && candidate.deliveredByIds.length > 0) ||
+            (Array.isArray(candidate.deliveredByNames) && candidate.deliveredByNames.length > 0)
+        )).length;
+        if (deliveredCount > 0) {
+            return statusRows.length > 1 ? `Delivered to ${deliveredCount}` : 'Delivered';
+        }
+        return 'Sent';
+    };
     const latestConversationMessageId = visibleActiveConversationMessages[visibleActiveConversationMessages.length - 1]?.id || '';
     useEffect(() => {
         if (!isMessagesOpen || messageView !== 'compose' || !selectedMessageContact || !activeConversationEndRef.current) return;
@@ -2183,7 +2219,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                                                     </button>
                                                                                 </>
                                                                             ) : (
-                                                                                <span>{message.readAt ? 'Read' : 'Sent'}</span>
+                                                                                <span>{getDashboardOutgoingStatusLabel(message)}</span>
                                                                             )}
                                                                         </div>
                                                                     )}

@@ -2066,6 +2066,7 @@ function normaliseDashboardStoredMessages(data) {
       to: String(message.to || ''),
       body: String(message.body || ''),
       sentAt: message.sentAt || new Date().toISOString(),
+      deliveredAt: message.deliveredAt || undefined,
       readAt: message.readAt || undefined,
       fromId: normaliseDashboardMessageId(message.fromId) || undefined,
       toId: normaliseDashboardMessageId(message.toId) || undefined,
@@ -2085,6 +2086,12 @@ function normaliseDashboardStoredMessages(data) {
         : undefined,
       readByNames: Array.isArray(message.readByNames)
         ? Array.from(new Set(message.readByNames.map(normaliseDashboardMessagePersonName).filter(Boolean)))
+        : undefined,
+      deliveredByIds: Array.isArray(message.deliveredByIds)
+        ? Array.from(new Set(message.deliveredByIds.map(normaliseDashboardMessageId).filter(Boolean)))
+        : undefined,
+      deliveredByNames: Array.isArray(message.deliveredByNames)
+        ? Array.from(new Set(message.deliveredByNames.map(normaliseDashboardMessagePersonName).filter(Boolean)))
         : undefined,
       deletedForIds: Array.isArray(message.deletedForIds)
         ? Array.from(new Set(message.deletedForIds.map(normaliseDashboardMessageId).filter(Boolean)))
@@ -2106,6 +2113,7 @@ function normaliseDashboardMessageInput(messageInput) {
     to,
     body,
     sentAt: messageInput.sentAt || new Date().toISOString(),
+    deliveredAt: messageInput.deliveredAt || undefined,
     readAt: messageInput.readAt || undefined,
     fromId: normaliseDashboardMessageId(messageInput.fromId) || undefined,
     toId: normaliseDashboardMessageId(messageInput.toId) || undefined,
@@ -2125,6 +2133,12 @@ function normaliseDashboardMessageInput(messageInput) {
       : undefined,
     readByNames: Array.isArray(messageInput.readByNames)
       ? Array.from(new Set(messageInput.readByNames.map(normaliseDashboardMessagePersonName).filter(Boolean)))
+      : undefined,
+    deliveredByIds: Array.isArray(messageInput.deliveredByIds)
+      ? Array.from(new Set(messageInput.deliveredByIds.map(normaliseDashboardMessageId).filter(Boolean)))
+      : undefined,
+    deliveredByNames: Array.isArray(messageInput.deliveredByNames)
+      ? Array.from(new Set(messageInput.deliveredByNames.map(normaliseDashboardMessagePersonName).filter(Boolean)))
       : undefined,
     deletedForIds: Array.isArray(messageInput.deletedForIds)
       ? Array.from(new Set(messageInput.deletedForIds.map(normaliseDashboardMessageId).filter(Boolean)))
@@ -2206,6 +2220,125 @@ function dashboardMessageDeletedForParticipant(message, participantId, participa
   );
 }
 
+function dashboardMessageFromParticipant(message, participantId, participantName) {
+  const participantKey = normaliseDashboardMessagePersonName(participantName);
+  const id = normaliseDashboardMessageId(participantId);
+  return Boolean(
+    (id && message.fromId === id) ||
+    (!message.fromId && participantKey && dashboardMessageNamesMatch(message.from, participantKey))
+  );
+}
+
+function dashboardMessageRecipientIds(message) {
+  const ids = new Set();
+  if (message.toId) ids.add(message.toId);
+  if (Array.isArray(message.recipientIds)) {
+    message.recipientIds.forEach(id => id && ids.add(id));
+  }
+  if (Array.isArray(message.groupMemberIds)) {
+    message.groupMemberIds.forEach(id => id && ids.add(id));
+  }
+  if (message.fromId) ids.delete(message.fromId);
+  return Array.from(ids);
+}
+
+function dashboardMessageRecipientNames(message) {
+  const names = new Set();
+  const addName = (name) => {
+    const normalised = normaliseDashboardMessagePersonName(name);
+    if (normalised) names.add(normalised);
+  };
+  addName(message.to);
+  if (Array.isArray(message.groupMemberNames)) {
+    message.groupMemberNames.forEach(addName);
+  }
+  Array.from(dashboardMessagePersonNameKeys(message.from)).forEach(name => names.delete(name));
+  return Array.from(names);
+}
+
+function dashboardMessageStatusFor(message) {
+  const recipientIds = dashboardMessageRecipientIds(message);
+  const recipientNames = dashboardMessageRecipientNames(message);
+  const deliveredByIds = Array.isArray(message.deliveredByIds) ? message.deliveredByIds : [];
+  const deliveredByNames = Array.isArray(message.deliveredByNames) ? message.deliveredByNames : [];
+  const readByIds = Array.isArray(message.readByIds) ? message.readByIds : [];
+  const readByNames = Array.isArray(message.readByNames) ? message.readByNames : [];
+  const recipientCount = Math.max(recipientIds.length || 0, recipientNames.length || 0, 1);
+  const deliveredCount = Math.max(
+    deliveredByIds.filter(id => recipientIds.length === 0 || recipientIds.includes(id)).length,
+    deliveredByNames.filter(name => recipientNames.length === 0 || recipientNames.includes(name)).length,
+    message.deliveredAt ? 1 : 0,
+  );
+  const readCount = Math.max(
+    readByIds.filter(id => recipientIds.length === 0 || recipientIds.includes(id)).length,
+    readByNames.filter(name => recipientNames.length === 0 || recipientNames.includes(name)).length,
+    message.readAt ? 1 : 0,
+  );
+  const state = readCount > 0
+    ? 'read'
+    : deliveredCount > 0
+      ? 'delivered'
+      : 'sent';
+  return {
+    state,
+    sentAt: message.sentAt || null,
+    deliveredAt: message.deliveredAt || null,
+    readAt: message.readAt || null,
+    deliveredByIds,
+    deliveredByNames,
+    readByIds,
+    readByNames,
+    recipientIds,
+    recipientNames,
+    recipientCount,
+    deliveredCount,
+    readCount,
+    isSent: true,
+    isDelivered: deliveredCount > 0,
+    isRead: readCount > 0,
+    isFullyDelivered: deliveredCount >= recipientCount,
+    isFullyRead: readCount >= recipientCount,
+  };
+}
+
+function dashboardMessageWithStatus(message) {
+  const status = dashboardMessageStatusFor(message);
+  return {
+    ...message,
+    deliveryStatus: status,
+    messageStatus: status,
+  };
+}
+
+function markDashboardMessageDeliveredForParticipant(message, participantId, participantName, deliveredAt) {
+  if (!dashboardMessageMatchesParticipant(message, participantId, participantName)) return { message, updated: false };
+  if (dashboardMessageFromParticipant(message, participantId, participantName)) return { message, updated: false };
+  if (dashboardMessageDeletedForParticipant(message, participantId, participantName)) return { message, updated: false };
+  const deliveredByIds = participantId
+    ? Array.from(new Set([...(message.deliveredByIds || []), participantId]))
+    : message.deliveredByIds;
+  const deliveredByNames = participantName
+    ? Array.from(new Set([...(message.deliveredByNames || []), normaliseDashboardMessagePersonName(participantName)]))
+    : message.deliveredByNames;
+  const alreadyDelivered = (
+    (participantId && Array.isArray(message.deliveredByIds) && message.deliveredByIds.includes(participantId)) ||
+    (participantName && Array.isArray(message.deliveredByNames) && message.deliveredByNames.includes(normaliseDashboardMessagePersonName(participantName)))
+  );
+  if (alreadyDelivered) return { message, updated: false };
+  const isMultiRecipient = Boolean(message.groupId) ||
+    (Array.isArray(message.recipientIds) && message.recipientIds.length > 1) ||
+    (Array.isArray(message.groupMemberIds) && message.groupMemberIds.length > 1);
+  return {
+    message: {
+      ...message,
+      deliveredAt: isMultiRecipient ? message.deliveredAt : (message.deliveredAt || deliveredAt),
+      deliveredByIds,
+      deliveredByNames,
+    },
+    updated: true,
+  };
+}
+
 function dashboardMessageMatchesConversation(message, participantId, participantName, contactId, contactName) {
   const participantKey = normaliseDashboardMessagePersonName(participantName);
   const contactKey = normaliseDashboardMessagePersonName(contactName);
@@ -2284,13 +2417,26 @@ app.get('/api/dashboard-messages', async (req, res) => {
     const userName = normaliseDashboardMessageName(req.query.userName);
     const userId = normaliseDashboardMessageId(req.query.userId);
     const messages = await getDashboardMessages(db);
+    let nextMessages = messages;
+    if (userName || userId) {
+      const deliveredAt = new Date().toISOString();
+      let deliveredUpdates = 0;
+      nextMessages = messages.map(message => {
+        const result = markDashboardMessageDeliveredForParticipant(message, userId, userName, deliveredAt);
+        if (result.updated) deliveredUpdates++;
+        return result.message;
+      });
+      if (deliveredUpdates > 0) {
+        await saveDashboardMessages(db, nextMessages);
+      }
+    }
     const scopedMessages = userName || userId
-      ? messages.filter(message => (
+      ? nextMessages.filter(message => (
         dashboardMessageMatchesParticipant(message, userId, userName) &&
         !dashboardMessageDeletedForParticipant(message, userId, userName)
       ))
-      : messages;
-    res.json({ messages: scopedMessages });
+      : nextMessages;
+    res.json({ messages: scopedMessages.map(dashboardMessageWithStatus) });
   } catch (error) {
     console.error('[Dashboard Messages] GET error:', error);
     res.status(500).json({ error: 'Failed to load dashboard messages', details: error.message });
@@ -2314,7 +2460,8 @@ app.post('/api/dashboard-messages', async (req, res) => {
     const deduped = messages.filter(existing => !newMessageIds.has(existing.id));
     const nextMessages = [...deduped, ...newMessages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
     await saveDashboardMessages(db, nextMessages);
-    res.json({ success: true, message: newMessages[0], messages: newMessages });
+    const messagesWithStatus = newMessages.map(dashboardMessageWithStatus);
+    res.json({ success: true, message: messagesWithStatus[0], messages: messagesWithStatus });
   } catch (error) {
     console.error('[Dashboard Messages] POST error:', error);
     res.status(500).json({ error: 'Failed to send dashboard message', details: error.message });
@@ -2344,6 +2491,12 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
           : (!sender || dashboardMessageNamesMatch(message.from, sender))
       );
       if (matchesReader && matchesSender && matchesId) {
+        const deliveredByIds = readerId
+          ? Array.from(new Set([...(message.deliveredByIds || []), readerId]))
+          : message.deliveredByIds;
+        const deliveredByNames = reader
+          ? Array.from(new Set([...(message.deliveredByNames || []), reader]))
+          : message.deliveredByNames;
         const readByIds = readerId
           ? Array.from(new Set([...(message.readByIds || []), readerId]))
           : message.readByIds;
@@ -2361,7 +2514,10 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
         updated++;
         return {
           ...message,
+          deliveredAt: isMultiRecipient ? message.deliveredAt : (message.deliveredAt || now),
           readAt: isMultiRecipient ? message.readAt : (message.readAt || now),
+          deliveredByIds,
+          deliveredByNames,
           readByIds,
           readByNames,
         };
@@ -2371,7 +2527,10 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
     if (updated > 0) {
       await saveDashboardMessages(db, nextMessages);
     }
-    res.json({ success: true, updated, readAt: now });
+    const updatedMessages = nextMessages
+      .filter(message => messageIds.size === 0 || messageIds.has(message.id))
+      .map(dashboardMessageWithStatus);
+    res.json({ success: true, updated, readAt: now, messages: updatedMessages });
   } catch (error) {
     console.error('[Dashboard Messages] PATCH read error:', error);
     res.status(500).json({ error: 'Failed to update dashboard messages', details: error.message });
