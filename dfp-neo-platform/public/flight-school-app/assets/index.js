@@ -71194,6 +71194,7 @@ const SettingsView = ({
   onUpdatePhraseBank,
   onNavigate,
   onOpenCurrencyBuilder,
+  onOpenCurrencyRequirements,
   masterCurrencies,
   currencyRequirements,
   sctEvents,
@@ -71640,23 +71641,47 @@ const SettingsView = ({
       ),
       shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl min-h-[600px] flex flex-col", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-gray-200", children: [
-            sctShortLabel,
-            " / Currency Events"
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-gray-200", children: [
+              sctShortLabel,
+              " / Currency Events"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                role: "img",
+                "aria-label": "Currency events information",
+                title: "The Currency field links a completed event to the currency requirement it should satisfy or refresh. Set up currencies in Training & Standards > Currency Requirements.",
+                className: "inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/70",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-serif text-[11px] font-bold italic leading-none", children: "i" })
+              }
+            )
           ] }),
           isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+            onOpenCurrencyRequirements && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onOpenCurrencyRequirements, className: standardSettingsButtonClass, children: [
+              "Currency",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Setup"
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSaveSctEvents, className: standardSettingsButtonClass, children: "Save" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleCancelSctEvents, className: standardSettingsButtonClass, children: "Cancel" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: handleEditSctEvents,
-              disabled: !canEditSettings,
-              className: standardSettingsButtonClass,
-              children: "Edit"
-            }
-          )
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+            onOpenCurrencyRequirements && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onOpenCurrencyRequirements, className: standardSettingsButtonClass, children: [
+              "Currency",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Setup"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: handleEditSctEvents,
+                disabled: !canEditSettings,
+                className: standardSettingsButtonClass,
+                children: "Edit"
+              }
+            )
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4 flex min-h-0 flex-1 flex-col", children: isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage the configured event choices and their request/build settings." }),
@@ -71724,7 +71749,19 @@ const SettingsView = ({
                   )
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-                  "Currency",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "span",
+                      {
+                        role: "img",
+                        "aria-label": "Currency field information",
+                        title: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh.",
+                        className: "inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/70",
+                        children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-serif text-[11px] font-bold italic leading-none normal-case", children: "i" })
+                      }
+                    )
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "select",
                     {
@@ -90332,7 +90369,8 @@ const SettingsViewWithMenu = (props) => {
           SettingsView,
           {
             ...props,
-            activeSection: "sct-events"
+            activeSection: "sct-events",
+            onOpenCurrencyRequirements: () => changeActiveSection("currencies")
           }
         ),
         activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "trainee-reallocation" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "email-activation" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -90357,7 +90395,8 @@ const SettingsViewWithMenu = (props) => {
           {
             ...props,
             activeSection,
-            onOpenCurrencyBuilder: () => setEmbeddedCurrencyBuilderOpen(true)
+            onOpenCurrencyBuilder: () => setEmbeddedCurrencyBuilderOpen(true),
+            onOpenCurrencyRequirements: () => changeActiveSection("currencies")
           }
         )),
         activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(

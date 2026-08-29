@@ -117,6 +117,7 @@ interface SettingsViewProps {
     onUpdatePhraseBank: (newBank: PhraseBank) => void;
     onNavigate: (view: string) => void;
     onOpenCurrencyBuilder?: () => void;
+    onOpenCurrencyRequirements?: () => void;
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
     sctEvents: any[];
@@ -596,6 +597,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     phraseBank, onUpdatePhraseBank,
     onNavigate,
     onOpenCurrencyBuilder,
+    onOpenCurrencyRequirements,
     masterCurrencies,
     currencyRequirements,
     sctEvents,
@@ -1133,26 +1135,48 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    )}
 
                           {/* Continuation and currency events window */}
-                   {shouldShowSection('sct-events') && (
-                       <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl min-h-[600px] flex flex-col">
-                           <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                               <h2 className="text-lg font-semibold text-gray-200">{sctShortLabel} / Currency Events</h2>
-                               {isEditingSctEvents ? (
-                                   <div className="flex gap-[1px]">
-                                       <button type="button" onClick={handleSaveSctEvents} className={standardSettingsButtonClass}>Save</button>
-                                       <button type="button" onClick={handleCancelSctEvents} className={standardSettingsButtonClass}>Cancel</button>
-                                   </div>
-                               ) : (
-                                   <button 
-                                   type="button"
-                                   onClick={handleEditSctEvents} 
-                                   disabled={!canEditSettings}
-                                   className={standardSettingsButtonClass}
-                               >
-                                   Edit
-                               </button>
-                               )}
-                           </div>
+	                   {shouldShowSection('sct-events') && (
+	                       <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl min-h-[600px] flex flex-col">
+	                           <div className="p-4 flex justify-between items-center border-b border-gray-700">
+	                               <div className="flex items-center gap-2">
+	                                   <h2 className="text-lg font-semibold text-gray-200">{sctShortLabel} / Currency Events</h2>
+	                                   <span
+	                                       role="img"
+	                                       aria-label="Currency events information"
+	                                       title="The Currency field links a completed event to the currency requirement it should satisfy or refresh. Set up currencies in Training & Standards > Currency Requirements."
+	                                       className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/70"
+	                                   >
+	                                       <span className="font-serif text-[11px] font-bold italic leading-none">i</span>
+	                                   </span>
+	                               </div>
+	                               {isEditingSctEvents ? (
+	                                   <div className="flex gap-[1px]">
+	                                       {onOpenCurrencyRequirements && (
+	                                           <button type="button" onClick={onOpenCurrencyRequirements} className={standardSettingsButtonClass}>
+	                                               Currency<br />Setup
+	                                           </button>
+	                                       )}
+	                                       <button type="button" onClick={handleSaveSctEvents} className={standardSettingsButtonClass}>Save</button>
+	                                       <button type="button" onClick={handleCancelSctEvents} className={standardSettingsButtonClass}>Cancel</button>
+	                                   </div>
+	                               ) : (
+	                                   <div className="flex gap-[1px]">
+	                                       {onOpenCurrencyRequirements && (
+	                                           <button type="button" onClick={onOpenCurrencyRequirements} className={standardSettingsButtonClass}>
+	                                               Currency<br />Setup
+	                                           </button>
+	                                       )}
+	                                       <button
+	                                       type="button"
+	                                       onClick={handleEditSctEvents}
+	                                       disabled={!canEditSettings}
+	                                       className={standardSettingsButtonClass}
+	                                   >
+	                                       Edit
+	                                   </button>
+	                                   </div>
+	                               )}
+	                           </div>
                            <div className="p-4 space-y-4 flex min-h-0 flex-1 flex-col">
                                {isEditingSctEvents ? (
                                    <>
@@ -1209,11 +1233,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                                    <option>Dual</option>
                                                                    <option>Solo</option>
                                                                </select>
-                                                           </label>
-                                                           <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
-                                                               Currency
-                                                               <select
-                                                                   value={evt.currency || ''}
+	                                                           </label>
+	                                                           <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
+	                                                               <span className="flex items-center gap-1.5">
+	                                                                   <span>Currency</span>
+	                                                                   <span
+	                                                                       role="img"
+	                                                                       aria-label="Currency field information"
+	                                                                       title="Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh."
+	                                                                       className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/70"
+	                                                                   >
+	                                                                       <span className="font-serif text-[11px] font-bold italic leading-none normal-case">i</span>
+	                                                                   </span>
+	                                                               </span>
+	                                                               <select
+	                                                                   value={evt.currency || ''}
                                                                    onChange={e => updateTempSctEvent(eventKey, { currency: e.target.value })}
                                                                    className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
                                                                >

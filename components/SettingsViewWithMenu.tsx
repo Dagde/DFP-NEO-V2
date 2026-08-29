@@ -2156,6 +2156,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         <SettingsView
                             {...props}
                             activeSection="sct-events"
+                            onOpenCurrencyRequirements={() => changeActiveSection('currencies')}
                         />
                     )}
 
@@ -2196,6 +2197,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 {...props}
                                 activeSection={activeSection as SettingsSection}
                                 onOpenCurrencyBuilder={() => setEmbeddedCurrencyBuilderOpen(true)}
+                                onOpenCurrencyRequirements={() => changeActiveSection('currencies')}
                             />
                         )
                     )}
