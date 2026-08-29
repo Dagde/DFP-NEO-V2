@@ -643,12 +643,14 @@ const deleteDashboardConversationFromApi = async (
     participantId?: string,
     contactId?: string,
     groupId?: string,
+    conversationKey?: string,
+    conversationIds?: string[],
 ) => {
     const response = await fetch('/api/dashboard-messages/conversation', {
         method: 'DELETE',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...getDashboardMessageAuthHeaders() },
-        body: JSON.stringify({ participant, contact, participantId, contactId, groupId }),
+        body: JSON.stringify({ participant, contact, participantId, contactId, groupId, conversationKey, conversationIds }),
     });
     if (!response.ok) throw new Error(`Dashboard conversation delete failed: ${response.status}`);
     return response.json();
@@ -959,6 +961,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const toId = String(message.toId || '').trim();
         if (fromId && toId) ids.add(`direct:${[fromId, toId].sort().join('|')}`);
         if (contact?.id && dashboardSenderContactId) ids.add(`direct:${[dashboardSenderContactId, contact.id].sort().join('|')}`);
+        if (fromId && toId) return Array.from(ids);
 
         const fromNames = Array.from(dashboardPersonNameKeys(message.from));
         const toNames = Array.from(dashboardPersonNameKeys(message.to));
@@ -1073,6 +1076,26 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             memberNames,
         };
     };
+    const getDashboardConversationListKeyForMessage = (message: DashboardMessage): string => {
+        if (message.groupId) return `group-${message.groupId}`;
+        const mineById = messageFromDashboardUser(message);
+        const otherId = mineById ? message.toId : message.fromId;
+        const otherName = mineById ? message.to : message.from;
+        const resolvedContact = resolveMessageContact(otherId, otherName);
+        return resolvedContact?.id || `person-${normaliseDashboardPersonName(otherName)}`;
+    };
+    const getDashboardConversationListKeysForContact = (contact: DashboardMessageContact): Set<string> => {
+        if (contact.type === 'Group') {
+            const groupId = contact.id.replace(/^group-conversation-/, '').replace(/^group-/, '');
+            return new Set([`group-${groupId}`]);
+        }
+        const keys = new Set<string>([contact.id]);
+        if (contact.id.startsWith('stored-')) {
+            keys.add(`person-${normaliseDashboardPersonName(contact.name)}`);
+            keys.add(`person-${normaliseDashboardPersonName(contact.displayName)}`);
+        }
+        return keys;
+    };
     const messageConversations = useMemo<DashboardConversation[]>(() => {
         const conversations = new Map<string, DashboardConversation>();
         const unreadKeysByConversation = new Map<string, Set<string>>();
@@ -1083,9 +1106,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             const otherId = groupContact?.id || (mineById ? message.toId : message.fromId);
             const otherName = groupContact?.name || (mineById ? message.to : message.from);
             const resolvedContact = groupContact || resolveMessageContact(otherId, otherName);
-            const otherKey = message.groupId
-                ? `group-${message.groupId}`
-                : resolvedContact?.id || `person-${normaliseDashboardPersonName(otherName)}`;
+            const otherKey = getDashboardConversationListKeyForMessage(message);
             const existing = conversations.get(otherKey);
             const isNewer = !existing || new Date(message.sentAt).getTime() >= new Date(existing.lastMessage.sentAt).getTime();
             if (!messageFromDashboardUser(message) && messageAddressedToDashboardUser(message) && !messageReadByDashboardUser(message)) {
@@ -1678,16 +1699,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const groupId = contact.type === 'Group'
             ? contact.id.replace(/^group-conversation-/, '').replace(/^group-/, '')
             : '';
+        const selectedConversationKeys = getDashboardConversationListKeysForContact(contact);
+        const selectedConversationKey = Array.from(selectedConversationKeys)[0] || contact.id;
         const conversationId = getDashboardConversationIdForContact(contact);
         const localDeletedAt = new Date().toISOString();
         const localConversationIds = new Set<string>([conversationId]);
         dashboardMessages.forEach(message => {
-            const matches = groupId
-                ? message.groupId === groupId
-                : (
-                    (messageFromDashboardUser(message) && messageMatchesContact(message, contact)) ||
-                    (messageMatchesContact(message, contact) && messageAddressedToDashboardUser(message))
-                );
+            const matches = selectedConversationKeys.has(getDashboardConversationListKeyForMessage(message));
             if (!matches) return;
             getDashboardConversationIdsForMessage(message, contact).forEach(id => localConversationIds.add(id));
         });
@@ -1706,12 +1724,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             })),
         ]);
         persistDashboardMessages(messages => messages.filter(message => {
-            const matches = groupId
-                ? message.groupId === groupId
-                : (
-                    (messageFromDashboardUser(message) && messageMatchesContact(message, contact)) ||
-                    (messageMatchesContact(message, contact) && messageAddressedToDashboardUser(message))
-                );
+            const matches = selectedConversationKeys.has(getDashboardConversationListKeyForMessage(message));
             return !matches;
         }));
         if (selectedMessageContact && selectedMessageContact.id === contact.id) {
@@ -1734,6 +1747,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 dashboardSenderContactId,
                 groupId ? undefined : contact.id,
                 groupId || undefined,
+                selectedConversationKey,
+                Array.from(localConversationIds),
             );
             const serverCutoffs = Array.isArray(result?.deletionCutoffs) && result.deletionCutoffs.length > 0
                 ? result.deletionCutoffs

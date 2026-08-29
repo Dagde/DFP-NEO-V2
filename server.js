@@ -2253,6 +2253,7 @@ function getDashboardMessageConversationIds(message, participantId = '', partici
   const rightId = normaliseDashboardMessageId(contactId) || toId;
   if (leftId && rightId) ids.add(`direct:${[leftId, rightId].sort().join('|')}`);
   if (fromId && toId) ids.add(`direct:${[fromId, toId].sort().join('|')}`);
+  if (fromId && toId) return Array.from(ids);
 
   const fromName = normaliseDashboardMessagePersonName(message?.from);
   const toName = normaliseDashboardMessagePersonName(message?.to);
@@ -2488,6 +2489,37 @@ function dashboardMessageMatchesConversation(message, participantId, participant
     (fromKey === participantKey && toKey === contactKey) ||
     (fromKey === contactKey && toKey === participantKey)
   );
+}
+
+function dashboardMessageConversationListKey(message, participantId, participantName, contactId, contactName) {
+  if (message.groupId) return `group-${message.groupId}`;
+  const participantSent = dashboardMessageFromParticipant(message, participantId, participantName);
+  const otherId = participantSent ? message.toId : message.fromId;
+  const otherName = participantSent ? message.to : message.from;
+  const requestedContactId = normaliseDashboardMessageId(contactId);
+  if (requestedContactId && otherId === requestedContactId) return requestedContactId;
+  if (otherId) return otherId;
+  return `person-${normaliseDashboardMessagePersonName(otherName || contactName)}`;
+}
+
+function dashboardMessageMatchesConversationKey(message, participantId, participantName, contactId, contactName, conversationKey) {
+  const key = String(conversationKey || '').trim();
+  if (!key) return dashboardMessageMatchesConversation(message, participantId, participantName, contactId, contactName);
+  if (!dashboardMessageMatchesParticipant(message, participantId, participantName)) return false;
+  if (key.startsWith('group-')) return message.groupId && key === `group-${message.groupId}`;
+  if (key.startsWith('person-')) {
+    return dashboardMessageConversationListKey(message, participantId, participantName, contactId, contactName) === key;
+  }
+  const contactStableId = normaliseDashboardMessageId(contactId);
+  if (contactStableId && key === contactStableId) {
+    return (
+      message.fromId === contactStableId ||
+      message.toId === contactStableId ||
+      (Array.isArray(message.recipientIds) && message.recipientIds.includes(contactStableId)) ||
+      (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(contactStableId))
+    );
+  }
+  return dashboardMessageConversationListKey(message, participantId, participantName, contactId, contactName) === key;
 }
 
 async function getDashboardMessages(db) {
@@ -2733,6 +2765,10 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     const participantId = normaliseDashboardMessageId(req.body?.participantId);
     const contactId = normaliseDashboardMessageId(req.body?.contactId);
     const groupId = normaliseDashboardMessageId(req.body?.groupId);
+    const conversationKey = String(req.body?.conversationKey || '').trim();
+    const requestedConversationIds = Array.isArray(req.body?.conversationIds)
+      ? req.body.conversationIds.map(id => String(id || '').trim()).filter(Boolean)
+      : [];
     if ((!participant && !participantId) || (!groupId && !contact && !contactId)) {
       return res.status(400).json({ error: 'Participant and contact are required.' });
     }
@@ -2749,11 +2785,11 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     });
     const messages = await getDashboardMessages(db);
     const deletionCutoffs = await getDashboardMessageDeletionCutoffs(db);
-    const conversationIds = new Set([conversationId]);
+    const conversationIds = new Set([conversationId, ...requestedConversationIds]);
     messages.forEach(message => {
       const matchesConversation = groupId
         ? message.groupId === groupId && dashboardMessageMatchesParticipant(message, participantId, participant)
-        : dashboardMessageMatchesConversation(message, participantId, participant, contactId, contact);
+        : dashboardMessageMatchesConversationKey(message, participantId, participant, contactId, contact, conversationKey);
       if (!matchesConversation) return;
       getDashboardMessageConversationIds(message, participantId, participant, contactId, contact)
         .forEach(id => conversationIds.add(id));
@@ -2775,7 +2811,7 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     const nextMessages = messages.map(message => {
       const matchesConversation = groupId
         ? message.groupId === groupId && dashboardMessageMatchesParticipant(message, participantId, participant)
-        : dashboardMessageMatchesConversation(message, participantId, participant, contactId, contact);
+        : dashboardMessageMatchesConversationKey(message, participantId, participant, contactId, contact, conversationKey);
       if (!matchesConversation || dashboardMessageDeletedForParticipant(message, participantId, participant)) {
         return message;
       }
