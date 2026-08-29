@@ -97,6 +97,7 @@ import {
   type UnitCallsignPolicy,
 } from '../utils/unitCallsigns';
 import FormationCallsignsSection from './FormationCallsignsSection';
+import ContinuationCurrencyEventsSettings from './ContinuationCurrencyEventsSettings';
 import { getAppApiBase } from '../utils/externalDataControls';
 import {
   isSetupTestMode,
@@ -106,7 +107,7 @@ import {
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
-import type { CurrencyRequirement, FormationCallsign, Instructor, MasterCurrency, PhraseBank, SyllabusItemDetail, Trainee } from '../types';
+import type { ContinuationEventSetting, CurrencyRequirement, FormationCallsign, Instructor, MasterCurrency, PhraseBank, SyllabusItemDetail, Trainee } from '../types';
 import {
   INSERT_EVENT_LABEL_MAX_LENGTH,
   normaliseInsertEventTypes,
@@ -2324,6 +2325,8 @@ interface PlatformConfigurationSettingsProps {
   phraseBank?: Record<string, any>;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
+  sctEvents?: ContinuationEventSetting[];
+  onUpdateSctEvents?: (events: ContinuationEventSetting[]) => void;
   syllabusDetails?: SyllabusItemDetail[];
   instructorsData?: Instructor[];
   traineesData?: Trainee[];
@@ -2355,6 +2358,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
+  sctEvents = [],
+  onUpdateSctEvents,
   syllabusDetails = [],
   instructorsData = [],
   traineesData = [],
@@ -10311,218 +10316,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       )}
 
       {shouldRenderSection('platform-currency-profiles') && (
-
-      <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
-        <SectionHeader
-          title={continuationCurrencyEventsLabel}
-          subtitle={`${continuationCurrencyShortLabel} and currency event settings. Each event stores crew, CONFIG and currency against the selected aircraft.`}
-          action={canEdit ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (crewCompositionUnlocked) {
-                  void saveCurrencyProfilesAndExitEdit();
-                  return;
-                }
-                setCrewCompositionUnlocked(true);
-              }}
-              disabled={crewCompositionUnlocked && (saving || applyingChanges)}
-              className={platformActionButtonClass}
-            >
-              {crewCompositionUnlocked ? 'Save' : 'Edit'}
-            </button>
-          ) : null}
-        />
-        <div className="space-y-4 p-4">
-          <div className="flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2">
-            {visibleCrewCompositionAircraftTypes.map((aircraft) => {
-              const code = String(aircraft.code || '').trim().toUpperCase();
-              const isActive = code === displayCrewCompositionAircraftCode;
-              return (
-                <button
-                  key={`currency-profile-aircraft-tab-${code || aircraft.name}`}
-                  type="button"
-                  onClick={() => setCrewCompositionAircraftCode(code)}
-                  className={`rounded-md border px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition-colors ${
-                    isActive
-                      ? 'border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]'
-                      : 'border-gray-800 bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200'
-                  }`}
-                >
-                  <span className="block">{code || 'Aircraft'}</span>
-                  <span className="mt-0.5 block max-w-[180px] truncate text-[10px] font-semibold normal-case tracking-normal text-gray-500">{aircraft.name || 'Unnamed aircraft type'}</span>
-                </button>
-              );
+        <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
+          <ContinuationCurrencyEventsSettings
+            sctShortLabel={continuationCurrencyShortLabel}
+            sctLongLabel={sctTerminology.longLabel}
+            sctEvents={sctEvents}
+            onUpdateSctEvents={onUpdateSctEvents || (() => {})}
+            masterCurrencies={masterCurrencies}
+            currencyRequirements={currencyRequirements}
+            canEditSettings={canEdit}
+            onOpenCurrencyRequirements={() => onNavigateToSettingsSection?.({
+              section: 'currencies',
+              label: 'Currency Requirements',
+              focusUnitCode: activeUnitCode,
             })}
-            {visibleCrewCompositionAircraftTypes.length === 0 && (
-              <div className="w-full rounded-md border border-dashed border-gray-700 bg-gray-900/70 p-4 text-sm text-gray-400">
-                <div className="font-bold text-gray-200">No aircraft types configured.</div>
-                <div className="mt-1 text-xs leading-relaxed">
-                  Add an aircraft type in Settings &gt; Platform &amp; Deployment &gt; Aircraft Setup before setting {continuationCurrencyEventsLabel}.
-                </div>
-                <button
-                  type="button"
-                  onClick={() => openAircraftResourceSettings('aircraftTypes')}
-                  className={`${platformActionButtonClass} mt-3`}
-                >
-                  Open Aircraft Setup
-                </button>
-              </div>
-            )}
-          </div>
-
-          {displayCrewCompositionAircraftCode && (
-          <div id="platform-currency-profile-records" className={resourceSectionPanelClass}>
-            <div className={resourceSectionPanelHeaderClass}>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">{continuationCurrencyEventsLabel}</h4>
-                  <InfoHint text="The Currency field links a completed event to the currency requirement it should satisfy or refresh. Currencies are configured in Training & Standards > Currency Requirements." />
-                </div>
-                <p className={resourceSectionPanelHintClass}>These events prefill {continuationCurrencyShortLabel} and currency requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode}.</p>
-              </div>
-              <div className="flex flex-wrap justify-end gap-[1px]">
-                {onNavigateToSettingsSection ? (
-                  <button
-                    type="button"
-                    onClick={() => onNavigateToSettingsSection({
-                      section: 'currencies',
-                      label: 'Currency Requirements',
-                      focusUnitCode: activeUnitCode,
-                    })}
-                    className={platformActionButtonClass}
-                  >
-                    <span className="text-[9px] leading-tight">Currency<br />Setup</span>
-                  </button>
-                ) : null}
-                <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !displayCrewCompositionAircraftCode} className={platformActionButtonClass}>
-                  <span className="text-[9px] leading-tight">Add<br />Event</span>
-                </button>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {displayCurrencyProfiles.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No {continuationCurrencyEventsLabel} configured.</div>
-              ) : displayCurrencyProfiles.map((profile) => {
-                const crewOptions = Array.from(new Set([
-                  ...currencyProfileCrewOptions,
-                ].map((option) => String(option || '').trim()).filter(Boolean)));
-                const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || displayCrewCompositionAircraftCode);
-                const acceptableConfigs = Array.from(new Set(
-                  (Array.isArray(profile.acceptableAircraftConfigs) && profile.acceptableAircraftConfigs.length > 0
-                    ? profile.acceptableAircraftConfigs
-                    : [profile.config || 'ANY'])
-                    .map((configId) => String(configId || '').trim())
-                    .filter(Boolean),
-                ));
-                const configOptions = Array.from(new Set([
-                  ...acceptableConfigs,
-                  ...profileConfigOptions,
-                ].filter(Boolean)));
-                const toggleCurrencyProfileConfig = (configId: string) => {
-                  const selected = new Set(acceptableConfigs);
-                  if (selected.has(configId)) {
-                    selected.delete(configId);
-                  } else {
-                    selected.add(configId);
-                  }
-                  const nextConfigs = Array.from(selected);
-                  const safeConfigs = nextConfigs.length > 0 ? nextConfigs : ['ANY'];
-                  updateCurrencyProfile(profile.id, {
-                    acceptableAircraftConfigs: safeConfigs,
-                    config: safeConfigs[0] || 'ANY',
-                  });
-                };
-                const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency)
-                  ? activeCurrencyDefinitionNames
-                  : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
-                return (
-                <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.55fr)_auto]">
-                  <OffsetField label="Event Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { name: value })} />
-                  <OffsetField
-                    label="Code"
-                    value={profile.code}
-                    disabled={!canEditCrewComposition}
-                    maxLength={8}
-                    onChange={(value) => updateCurrencyProfile(profile.id, { code: value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) })}
-                  />
-                  <div className="[&_select]:mt-[15px]">
-                    <SelectField label="Crew" value={profile.crew} disabled={!canEditCrewComposition || crewOptions.length === 0} options={crewOptions} onChange={(value) => updateCurrencyProfile(profile.id, { crew: value })} />
-                  </div>
-                  <div className="[&_select]:mt-[15px]">
-                    <SelectField
-                      label="Day/Night"
-                      value={profile.dayNight || 'Day'}
-                      disabled={!canEditCrewComposition}
-                      options={['Day', 'Night', 'Day/Night']}
-                      onChange={(value) => updateCurrencyProfile(profile.id, { dayNight: (value || 'Day') as CurrencyProfile['dayNight'] })}
-                    />
-                  </div>
-                  <div className="[&_select]:mt-[15px]">
-                    <SelectField
-                      label="Dual/Solo"
-                      value={profile.flightType || 'Dual'}
-                      disabled={!canEditCrewComposition}
-                      options={['Dual', 'Solo']}
-                      onChange={(value) => updateCurrencyProfile(profile.id, { flightType: (value || 'Dual') as CurrencyProfile['flightType'] })}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="mb-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">CONFIG</div>
-                    <div className="max-h-[78px] overflow-y-auto rounded border border-gray-700 bg-gray-950/60 p-2">
-                      {configOptions.map((configId) => (
-                        <label key={`${profile.id}-config-${configId}`} className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-gray-200 last:mb-0">
-                          <input
-                            type="checkbox"
-                            checked={acceptableConfigs.includes(configId)}
-                            disabled={!canEditCrewComposition}
-                            onChange={() => toggleCurrencyProfileConfig(configId)}
-                            className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-cyan-500 focus:ring-cyan-500"
-                          />
-                          <span className="min-w-0 truncate">{configId}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="[&_select]:mt-[15px]">
-                    <div className="block min-w-0">
-                      <span className="mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                        <span>Currency</span>
-                        <InfoHint text="Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh." />
-                      </span>
-                      <div className="max-w-full overflow-x-auto">
-                        <select
-                          className={`${fieldClass} block max-w-full whitespace-nowrap`}
-                          value={profile.currency || ''}
-                          disabled={!canEditCrewComposition || currencyOptions.length === 0}
-                          title={profile.currency || (currencyOptions.length === 0 ? 'No unit currencies configured' : 'None')}
-                          onChange={(event) => updateCurrencyProfile(profile.id, { currency: event.target.value })}
-                          aria-label="Currency"
-                        >
-                          {currencyOptions.map((option) => <option key={option} value={option}>{option || 'None'}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                  <OffsetField
-                    label="No. of A/C"
-                    value={String(Math.max(1, Number(profile.aircraftCount) || 1))}
-                    disabled={!canEditCrewComposition}
-                    onChange={(value) => updateCurrencyProfile(profile.id, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(value) || 1))) })}
-                  />
-                  <div className="flex items-end">
-                    <button type="button" onClick={() => removeCurrencyProfile(profile.id)} disabled={!canEditCrewComposition} className={platformActionButtonClass}>
-                      <span className="text-[9px] leading-tight text-red-600">Delete</span>
-                    </button>
-                  </div>
-                </div>
-              )})}
-            </div>
-          </div>
-          )}
-        </div>
-      </section>
-
+            activeUnitCode={activeUnitCode}
+            activeUnitCodes={activeUnitCodes}
+            activeCompositeUnitCode={activeCompositeUnitCode}
+          />
+        </section>
       )}
 
       {shouldRenderSection('platform-aircraft-setup') && (

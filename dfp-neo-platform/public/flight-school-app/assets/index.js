@@ -70171,7 +70171,7 @@ const DutyTurnaroundSection = ({
   const [openTurnaroundMenu, setOpenTurnaroundMenu] = reactExports.useState(null);
   const turnaroundOptions = reactExports.useMemo(() => Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 0.1).toFixed(1))), []);
   const taxiGroundOptions = reactExports.useMemo(() => Array.from({ length: 10 }, (_, i) => parseFloat((i * 0.1).toFixed(1))), []);
-  const standardSettingsButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+  const standardSettingsButtonClass2 = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
   reactExports.useEffect(() => {
     if (isEditing) return;
     setDraftPreferredDutyPeriod(preferredDutyPeriod);
@@ -70296,9 +70296,9 @@ const DutyTurnaroundSection = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Duty & Turnaround" }),
       isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: standardSettingsButtonClass, children: "Save" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: standardSettingsButtonClass, children: "Cancel" })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleEdit, disabled: !canEdit, className: standardSettingsButtonClass, children: "Edit" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: standardSettingsButtonClass2, children: "Save" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: standardSettingsButtonClass2, children: "Cancel" })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleEdit, disabled: !canEdit, className: standardSettingsButtonClass2, children: "Edit" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 space-y-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -70805,6 +70805,368 @@ const EmergencyPage = ({
     ] }) })
   ] });
 };
+const standardSettingsButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+const InfoBadge = ({ title, ariaLabel }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  "span",
+  {
+    role: "img",
+    "aria-label": ariaLabel,
+    title,
+    className: "inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/70",
+    children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-serif text-[11px] font-bold italic leading-none normal-case", children: "i" })
+  }
+);
+const ContinuationCurrencyEventsSettings = ({
+  sctShortLabel,
+  sctLongLabel,
+  sctEvents,
+  onUpdateSctEvents,
+  masterCurrencies,
+  currencyRequirements,
+  canEditSettings,
+  onOpenCurrencyRequirements,
+  aircraftConfigurationDefinitions = [],
+  activeUnitCode = "",
+  activeUnitCodes = [],
+  activeCompositeUnitCode = "",
+  activeAircraftTypeCode = ""
+}) => {
+  const [isEditingSctEvents, setIsEditingSctEvents] = reactExports.useState(false);
+  const [tempSctEvents, setTempSctEvents] = reactExports.useState([]);
+  const [newSctEvent, setNewSctEvent] = reactExports.useState("");
+  const configuredSctEvents = reactExports.useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
+  const activeCurrencyNames = reactExports.useMemo(() => Array.from(new Set(
+    [...masterCurrencies, ...currencyRequirements].filter((currency) => currency.isVisible).map((currency) => String(currency.name || "").trim()).filter(Boolean)
+  )), [masterCurrencies, currencyRequirements]);
+  const aircraftConfigOptions = reactExports.useMemo(() => {
+    const definitions = Array.isArray(aircraftConfigurationDefinitions) && aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
+    return Array.from(new Map([
+      ["ANY", { id: "ANY", label: "ANY" }],
+      ...definitions.map((definition) => [definition.id, { id: definition.id, label: definition.label || definition.id }])
+    ]).values());
+  }, [aircraftConfigurationDefinitions]);
+  const activeUnitCodeList = reactExports.useMemo(() => Array.from(new Set([
+    activeUnitCode,
+    ...Array.isArray(activeUnitCodes) ? activeUnitCodes : []
+  ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean))), [activeUnitCode, activeUnitCodes]);
+  const activeContinuationAircraftTypeCode = reactExports.useMemo(() => String(activeAircraftTypeCode || "").trim().toUpperCase(), [activeAircraftTypeCode]);
+  const applyContinuationEventDefaults = (event) => ({
+    ...event,
+    aircraftTypeCode: String(event.aircraftTypeCode || "").trim().toUpperCase() || activeContinuationAircraftTypeCode
+  });
+  const updateTempSctEvent = (eventId, updates) => {
+    setTempSctEvents((current) => current.map((event) => (event.id || event.name) === eventId ? { ...event, ...updates } : event));
+  };
+  const toggleTempSctConfig = (eventId, configId) => {
+    setTempSctEvents((current) => current.map((event) => {
+      if ((event.id || event.name) !== eventId) return event;
+      const currentConfigs = Array.isArray(event.acceptableAircraftConfigs) && event.acceptableAircraftConfigs.length > 0 ? event.acceptableAircraftConfigs : [event.config || "ANY"];
+      const selected = new Set(currentConfigs);
+      if (selected.has(configId)) selected.delete(configId);
+      else selected.add(configId);
+      const nextConfigs = Array.from(selected);
+      const safeConfigs = nextConfigs.length > 0 ? nextConfigs : ["ANY"];
+      return { ...event, acceptableAircraftConfigs: safeConfigs, config: safeConfigs[0] || "ANY" };
+    }));
+  };
+  const handleEditSctEvents = () => {
+    setTempSctEvents(normaliseContinuationEventSettings(sctEvents).map(applyContinuationEventDefaults));
+    setIsEditingSctEvents(true);
+  };
+  const handleSaveSctEvents = () => {
+    const cleanedEvents = normaliseContinuationEventSettings(tempSctEvents);
+    const oldEvents = configuredSctEvents.map((event) => event.name).join(", ");
+    const newEvents = cleanedEvents.map((event) => event.name).join(", ");
+    onUpdateSctEvents(cleanedEvents);
+    setIsEditingSctEvents(false);
+    logAudit({
+      page: `Settings - ${sctShortLabel} Events`,
+      action: "update",
+      description: `Updated ${sctLongLabel} event types`,
+      changes: `From: [${oldEvents}] To: [${newEvents}]`
+    });
+  };
+  const handleCancelSctEvents = () => {
+    setNewSctEvent("");
+    setIsEditingSctEvents(false);
+  };
+  const handleAddSctEvent = () => {
+    const name = newSctEvent.trim();
+    if (name && !tempSctEvents.some((event) => event.name.toUpperCase() === name.toUpperCase())) {
+      setTempSctEvents([
+        ...tempSctEvents,
+        {
+          id: `continuation-event-${Date.now()}`,
+          name,
+          code: name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT",
+          unitCode: activeUnitCodeList[0] || "",
+          compositeUnitCode: activeCompositeUnitCode || "",
+          aircraftTypeCode: activeContinuationAircraftTypeCode,
+          crew: "",
+          config: "ANY",
+          acceptableAircraftConfigs: ["ANY"],
+          currency: activeCurrencyNames[0] || name,
+          dayNight: "Day",
+          flightType: "Dual",
+          aircraftCount: 1,
+          status: "ACTIVE"
+        }
+      ]);
+      setNewSctEvent("");
+    }
+  };
+  const handleRemoveSctEvent = (eventToRemove) => {
+    setTempSctEvents(tempSctEvents.filter((evt) => (evt.id || evt.name) !== eventToRemove));
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl min-h-[600px] flex flex-col", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-gray-200", children: [
+          sctShortLabel,
+          " / Currency Events"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          InfoBadge,
+          {
+            ariaLabel: "Currency events information",
+            title: "The Currency field links a completed event to the currency requirement it should satisfy or refresh. Set up currencies in Training & Standards > Currency Requirements."
+          }
+        )
+      ] }),
+      isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+        onOpenCurrencyRequirements && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onOpenCurrencyRequirements, className: standardSettingsButtonClass, children: [
+          "Currency",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+          "Setup"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSaveSctEvents, className: standardSettingsButtonClass, children: "Save" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleCancelSctEvents, className: standardSettingsButtonClass, children: "Cancel" })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+        onOpenCurrencyRequirements && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onOpenCurrencyRequirements, className: standardSettingsButtonClass, children: [
+          "Currency",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+          "Setup"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleEditSctEvents,
+            disabled: !canEditSettings,
+            className: standardSettingsButtonClass,
+            children: "Edit"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4 flex min-h-0 flex-1 flex-col", children: isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage the configured event choices and their request/build settings." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 space-y-3 overflow-y-auto pr-1", children: tempSctEvents.map((evt) => {
+        const eventKey = evt.id || evt.name;
+        const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/70 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_minmax(0,1fr)_minmax(0,0.9fr)_auto]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+              "Event",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: evt.name,
+                  onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateTempSctEvent(eventKey, { name: value })),
+                  onChange: (event) => updateTempSctEvent(eventKey, { name: event.target.value }),
+                  onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateTempSctEvent(eventKey, { name: value })),
+                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+              "Code",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: evt.code || "",
+                  maxLength: 8,
+                  onChange: (event) => updateTempSctEvent(eventKey, { code: event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) }),
+                  onKeyDownCapture: stopEditableKeyPropagation,
+                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+              "Day/Night",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: evt.dayNight || "Day",
+                  onChange: (event) => updateTempSctEvent(eventKey, { dayNight: event.target.value }),
+                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Night" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day/Night" })
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+              "Dual/Solo",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: evt.flightType || "Dual",
+                  onChange: (event) => updateTempSctEvent(eventKey, { flightType: event.target.value }),
+                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Dual" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Solo" })
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  InfoBadge,
+                  {
+                    ariaLabel: "Currency field information",
+                    title: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh."
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: evt.currency || "",
+                  onChange: (event) => updateTempSctEvent(eventKey, { currency: event.target.value }),
+                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
+                    activeCurrencyNames.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: currency, children: currency }, currency))
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+              "Crew",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: evt.crew || "",
+                  onChange: (event) => updateTempSctEvent(eventKey, { crew: event.target.value }),
+                  onKeyDownCapture: stopEditableKeyPropagation,
+                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => handleRemoveSctEvent(eventKey), className: "mt-[18px] flex h-[34px] items-center justify-center rounded border border-red-500/30 bg-red-950/40 px-3 text-xs font-bold text-red-200 hover:bg-red-900/50", children: "Delete" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[180px_minmax(0,0.9fr)_minmax(0,1.7fr)_90px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+              "Unit",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: evt.unitCode || "",
+                  onChange: (event) => updateTempSctEvent(eventKey, { unitCode: event.target.value }),
+                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All applicable units" }),
+                    activeUnitCodeList.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+              "Aircraft Type",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: evt.aircraftTypeCode || "",
+                  onChange: (event) => updateTempSctEvent(eventKey, { aircraftTypeCode: event.target.value.toUpperCase() }),
+                  onKeyDownCapture: stopEditableKeyPropagation,
+                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-black uppercase tracking-wide text-gray-400", children: "Acceptable CONFIG" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded border border-gray-700 bg-gray-950/60 p-2", children: aircraftConfigOptions.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-w-[70px] items-center gap-2 text-xs font-semibold text-gray-200", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: selectedConfigs.includes(config.id),
+                    onChange: () => toggleTempSctConfig(eventKey, config.id),
+                    className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: config.label })
+              ] }, `${eventKey}-${config.id}`)) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+              "A/C",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "number",
+                  min: 1,
+                  max: 24,
+                  value: Math.max(1, Number(evt.aircraftCount) || 1),
+                  onChange: (event) => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(event.target.value) || 1))) }),
+                  onKeyDownCapture: stopEditableKeyPropagation,
+                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                }
+              )
+            ] })
+          ] })
+        ] }, eventKey);
+      }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            value: newSctEvent,
+            onChange: (event) => setNewSctEvent(event.target.value),
+            onKeyDownCapture: stopEditableKeyPropagation,
+            onKeyDown: (event) => {
+              stopEditableKeyPropagation(event);
+              if (event.key === "Enter") handleAddSctEvent();
+            },
+            placeholder: `New ${sctShortLabel} event name`,
+            className: "flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleAddSctEvent, className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "+" })
+      ] })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
+        "Configured ",
+        sctShortLabel,
+        " and currency event settings."
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: configuredSctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "w-[40%] min-w-[260px] rounded bg-gray-700/50 p-3 text-white", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: evt.name }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-900/70 px-2 py-0.5 text-[11px] text-gray-300", children: evt.dayNight || "Day" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-900/70 px-2 py-0.5 text-[11px] text-gray-300", children: evt.flightType || "Dual" }),
+          evt.currency && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-sky-950/60 px-2 py-0.5 text-[11px] text-sky-100", children: evt.currency })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
+          "CONFIG ",
+          (evt.acceptableAircraftConfigs?.length ? evt.acceptableAircraftConfigs : [evt.config || "ANY"]).join(", "),
+          " · A/C ",
+          Math.max(1, Number(evt.aircraftCount) || 1)
+        ] })
+      ] }, evt.id || evt.name)) })
+    ] }) })
+  ] });
+};
 const TEMPLATE_OVERRIDE_FOLDER_ID = "template_overrides";
 const formatCurrencyExpiryCalculation = (value) => {
   const normalised = String(value || "").trim().toUpperCase();
@@ -71283,9 +71645,6 @@ const SettingsView = ({
     }));
   };
   const handleTileStatusMinutesChange = (key, value) => handleTileStatusSettingsChange({ [key]: value });
-  const [isEditingSctEvents, setIsEditingSctEvents] = reactExports.useState(false);
-  const [tempSctEvents, setTempSctEvents] = reactExports.useState([]);
-  const [newSctEvent, setNewSctEvent] = reactExports.useState("");
   const [selectedCurrency, setSelectedCurrency] = reactExports.useState(null);
   const [isEditingLimits, setIsEditingLimits] = reactExports.useState(false);
   const [tempLimits, setTempLimits] = reactExports.useState(eventLimits);
@@ -71295,7 +71654,7 @@ const SettingsView = ({
   const [repoFiles, setRepoFiles] = reactExports.useState([]);
   const [pendingTemplateOverride, setPendingTemplateOverride] = reactExports.useState(null);
   const templateOverrideInputRef = reactExports.useRef(null);
-  const standardSettingsButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+  const standardSettingsButtonClass2 = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
   const safeNameSort = (a, b) => {
     const nameA = a.name || "";
     const nameB = b.name || "";
@@ -71304,41 +71663,6 @@ const SettingsView = ({
   const visibleCurrencies = reactExports.useMemo(() => {
     return [...masterCurrencies, ...currencyRequirements].filter((c) => c.isVisible).sort(safeNameSort);
   }, [masterCurrencies, currencyRequirements]);
-  const configuredSctEvents = reactExports.useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
-  const activeCurrencyNames = reactExports.useMemo(() => Array.from(new Set(
-    visibleCurrencies.map((currency) => String(currency.name || "").trim()).filter(Boolean)
-  )), [visibleCurrencies]);
-  const aircraftConfigOptions = reactExports.useMemo(() => {
-    const definitions = Array.isArray(aircraftConfigurationDefinitions) && aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
-    return Array.from(new Map([
-      ["ANY", { id: "ANY", label: "ANY" }],
-      ...definitions.map((definition) => [definition.id, { id: definition.id, label: definition.label || definition.id }])
-    ]).values());
-  }, [aircraftConfigurationDefinitions]);
-  const activeUnitCodeList = reactExports.useMemo(() => Array.from(new Set([
-    activeUnitCode,
-    ...Array.isArray(activeUnitCodes) ? activeUnitCodes : []
-  ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean))), [activeUnitCode, activeUnitCodes]);
-  const activeContinuationAircraftTypeCode = reactExports.useMemo(() => String(activeAircraftTypeCode || "").trim().toUpperCase(), [activeAircraftTypeCode]);
-  const applyContinuationEventDefaults = (event) => ({
-    ...event,
-    aircraftTypeCode: String(event.aircraftTypeCode || "").trim().toUpperCase() || activeContinuationAircraftTypeCode
-  });
-  const updateTempSctEvent = (eventId, updates) => {
-    setTempSctEvents((current) => current.map((event) => (event.id || event.name) === eventId ? { ...event, ...updates } : event));
-  };
-  const toggleTempSctConfig = (eventId, configId) => {
-    setTempSctEvents((current) => current.map((event) => {
-      if ((event.id || event.name) !== eventId) return event;
-      const currentConfigs = Array.isArray(event.acceptableAircraftConfigs) && event.acceptableAircraftConfigs.length > 0 ? event.acceptableAircraftConfigs : [event.config || "ANY"];
-      const selected = new Set(currentConfigs);
-      if (selected.has(configId)) selected.delete(configId);
-      else selected.add(configId);
-      const nextConfigs = Array.from(selected);
-      const safeConfigs = nextConfigs.length > 0 ? nextConfigs : ["ANY"];
-      return { ...event, acceptableAircraftConfigs: safeConfigs, config: safeConfigs[0] || "ANY" };
-    }));
-  };
   reactExports.useEffect(() => {
     if (activeSection && activeSection !== "data-loaders") return;
     const initAndFetch = async () => {
@@ -71482,55 +71806,6 @@ const SettingsView = ({
     setTempTileStatusSettings(resolvedTileStatusSettings);
     setIsEditingBusinessRules(false);
   };
-  const handleEditSctEvents = () => {
-    setTempSctEvents(normaliseContinuationEventSettings(sctEvents).map(applyContinuationEventDefaults));
-    setIsEditingSctEvents(true);
-  };
-  const handleSaveSctEvents = () => {
-    const cleanedEvents = normaliseContinuationEventSettings(tempSctEvents);
-    const oldEvents = configuredSctEvents.map((event) => event.name).join(", ");
-    const newEvents = cleanedEvents.map((event) => event.name).join(", ");
-    onUpdateSctEvents(cleanedEvents);
-    setIsEditingSctEvents(false);
-    logAudit({
-      page: `Settings - ${sctShortLabel} Events`,
-      action: "update",
-      description: `Updated ${sctLongLabel} event types`,
-      changes: `From: [${oldEvents}] To: [${newEvents}]`
-    });
-  };
-  const handleCancelSctEvents = () => {
-    setNewSctEvent("");
-    setIsEditingSctEvents(false);
-  };
-  const handleAddSctEvent = () => {
-    const name = newSctEvent.trim();
-    if (name && !tempSctEvents.some((event) => event.name.toUpperCase() === name.toUpperCase())) {
-      setTempSctEvents([
-        ...tempSctEvents,
-        {
-          id: `continuation-event-${Date.now()}`,
-          name,
-          code: name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT",
-          unitCode: activeUnitCodeList[0] || "",
-          compositeUnitCode: activeCompositeUnitCode || "",
-          aircraftTypeCode: activeContinuationAircraftTypeCode,
-          crew: "",
-          config: "ANY",
-          acceptableAircraftConfigs: ["ANY"],
-          currency: activeCurrencyNames[0] || name,
-          dayNight: "Day",
-          flightType: "Dual",
-          aircraftCount: 1,
-          status: "ACTIVE"
-        }
-      ]);
-      setNewSctEvent("");
-    }
-  };
-  const handleRemoveSctEvent = (eventToRemove) => {
-    setTempSctEvents(tempSctEvents.filter((evt) => (evt.id || evt.name) !== eventToRemove));
-  };
   const handleEditLimits = () => {
     setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
     setIsEditingLimits(true);
@@ -71639,259 +71914,24 @@ const SettingsView = ({
           resourceDisplayNames
         }
       ),
-      shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl min-h-[600px] flex flex-col", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-gray-200", children: [
-              sctShortLabel,
-              " / Currency Events"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "span",
-              {
-                role: "img",
-                "aria-label": "Currency events information",
-                title: "The Currency field links a completed event to the currency requirement it should satisfy or refresh. Set up currencies in Training & Standards > Currency Requirements.",
-                className: "inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/70",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-serif text-[11px] font-bold italic leading-none", children: "i" })
-              }
-            )
-          ] }),
-          isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-            onOpenCurrencyRequirements && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onOpenCurrencyRequirements, className: standardSettingsButtonClass, children: [
-              "Currency",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Setup"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSaveSctEvents, className: standardSettingsButtonClass, children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleCancelSctEvents, className: standardSettingsButtonClass, children: "Cancel" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-            onOpenCurrencyRequirements && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onOpenCurrencyRequirements, className: standardSettingsButtonClass, children: [
-              "Currency",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Setup"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: handleEditSctEvents,
-                disabled: !canEditSettings,
-                className: standardSettingsButtonClass,
-                children: "Edit"
-              }
-            )
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4 flex min-h-0 flex-1 flex-col", children: isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage the configured event choices and their request/build settings." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 space-y-3 overflow-y-auto pr-1", children: tempSctEvents.map((evt) => {
-            const eventKey = evt.id || evt.name;
-            const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/70 p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_minmax(0,1fr)_minmax(0,0.9fr)_auto]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-                  "Event",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "text",
-                      value: evt.name,
-                      onChange: (e) => updateTempSctEvent(eventKey, { name: e.target.value }),
-                      onKeyDownCapture: stopEditableKeyPropagation,
-                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-                  "Code",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "text",
-                      value: evt.code || "",
-                      maxLength: 8,
-                      onChange: (e) => updateTempSctEvent(eventKey, { code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) }),
-                      onKeyDownCapture: stopEditableKeyPropagation,
-                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-                  "Day/Night",
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      value: evt.dayNight || "Day",
-                      onChange: (e) => updateTempSctEvent(eventKey, { dayNight: e.target.value }),
-                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Night" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day/Night" })
-                      ]
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-                  "Dual/Solo",
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      value: evt.flightType || "Dual",
-                      onChange: (e) => updateTempSctEvent(eventKey, { flightType: e.target.value }),
-                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Dual" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Solo" })
-                      ]
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "span",
-                      {
-                        role: "img",
-                        "aria-label": "Currency field information",
-                        title: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh.",
-                        className: "inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/70",
-                        children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-serif text-[11px] font-bold italic leading-none normal-case", children: "i" })
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      value: evt.currency || "",
-                      onChange: (e) => updateTempSctEvent(eventKey, { currency: e.target.value }),
-                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
-                        activeCurrencyNames.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: currency, children: currency }, currency))
-                      ]
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-                  "Crew",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "text",
-                      value: evt.crew || "",
-                      onChange: (e) => updateTempSctEvent(eventKey, { crew: e.target.value }),
-                      onKeyDownCapture: stopEditableKeyPropagation,
-                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveSctEvent(eventKey), className: "mt-[18px] flex h-[34px] items-center justify-center rounded border border-red-500/30 bg-red-950/40 px-3 text-xs font-bold text-red-200 hover:bg-red-900/50", children: "Delete" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[180px_minmax(0,0.9fr)_minmax(0,1.7fr)_90px]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-                  "Unit",
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      value: evt.unitCode || "",
-                      onChange: (e) => updateTempSctEvent(eventKey, { unitCode: e.target.value }),
-                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All applicable units" }),
-                        activeUnitCodeList.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
-                      ]
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-                  "Aircraft Type",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "text",
-                      value: evt.aircraftTypeCode || "",
-                      onChange: (e) => updateTempSctEvent(eventKey, { aircraftTypeCode: e.target.value.toUpperCase() }),
-                      onKeyDownCapture: stopEditableKeyPropagation,
-                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-black uppercase tracking-wide text-gray-400", children: "Acceptable CONFIG" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded border border-gray-700 bg-gray-950/60 p-2", children: aircraftConfigOptions.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-w-[70px] items-center gap-2 text-xs font-semibold text-gray-200", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        checked: selectedConfigs.includes(config.id),
-                        onChange: () => toggleTempSctConfig(eventKey, config.id),
-                        className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: config.label })
-                  ] }, `${eventKey}-${config.id}`)) })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-                  "A/C",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "number",
-                      min: 1,
-                      max: 24,
-                      value: Math.max(1, Number(evt.aircraftCount) || 1),
-                      onChange: (e) => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(e.target.value) || 1))) }),
-                      onKeyDownCapture: stopEditableKeyPropagation,
-                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                    }
-                  )
-                ] })
-              ] })
-            ] }, eventKey);
-          }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: newSctEvent,
-                onChange: (e) => setNewSctEvent(e.target.value),
-                onKeyDownCapture: stopEditableKeyPropagation,
-                onKeyDown: (e) => {
-                  stopEditableKeyPropagation(e);
-                  if (e.key === "Enter") handleAddSctEvent();
-                },
-                placeholder: `New ${sctShortLabel} event name`,
-                className: "flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleAddSctEvent, className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "+" })
-          ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
-            "Configured ",
-            sctShortLabel,
-            " and currency event settings."
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: configuredSctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "w-[40%] min-w-[260px] rounded bg-gray-700/50 p-3 text-white", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: evt.name }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-900/70 px-2 py-0.5 text-[11px] text-gray-300", children: evt.dayNight || "Day" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-900/70 px-2 py-0.5 text-[11px] text-gray-300", children: evt.flightType || "Dual" }),
-              evt.currency && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-sky-950/60 px-2 py-0.5 text-[11px] text-sky-100", children: evt.currency })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
-              "CONFIG ",
-              (evt.acceptableAircraftConfigs?.length ? evt.acceptableAircraftConfigs : [evt.config || "ANY"]).join(", "),
-              " · A/C ",
-              Math.max(1, Number(evt.aircraftCount) || 1)
-            ] })
-          ] }, evt.id || evt.name)) })
-        ] }) })
-      ] }),
+      shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ContinuationCurrencyEventsSettings,
+        {
+          sctShortLabel,
+          sctLongLabel,
+          sctEvents,
+          onUpdateSctEvents,
+          masterCurrencies,
+          currencyRequirements,
+          canEditSettings,
+          onOpenCurrencyRequirements,
+          aircraftConfigurationDefinitions,
+          activeUnitCode,
+          activeUnitCodes,
+          activeCompositeUnitCode,
+          activeAircraftTypeCode
+        }
+      ),
       shouldShowSection("currencies") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Currency Requirements" }) }),
@@ -71994,14 +72034,14 @@ const SettingsView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Business Rules" }),
           isEditingBusinessRules ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveBusinessRules, className: standardSettingsButtonClass, children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelBusinessRules, className: standardSettingsButtonClass, children: "Cancel" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveBusinessRules, className: standardSettingsButtonClass2, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelBusinessRules, className: standardSettingsButtonClass2, children: "Cancel" })
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: handleEditBusinessRules,
               disabled: !canEditSettings,
-              className: standardSettingsButtonClass,
+              className: standardSettingsButtonClass2,
               children: "Edit"
             }
           )
@@ -72256,14 +72296,14 @@ const SettingsView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Daily Event Limits" }),
           isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLimits, className: standardSettingsButtonClass, children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelLimits, className: standardSettingsButtonClass, children: "Cancel" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLimits, className: standardSettingsButtonClass2, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelLimits, className: standardSettingsButtonClass2, children: "Cancel" })
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: handleEditLimits,
               disabled: !canEditSettings,
-              className: standardSettingsButtonClass,
+              className: standardSettingsButtonClass2,
               children: "Edit"
             }
           )
@@ -76691,6 +76731,8 @@ const PlatformConfigurationSettings = ({
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
+  sctEvents = [],
+  onUpdateSctEvents,
   syllabusDetails = [],
   instructorsData = [],
   traineesData = [],
@@ -77263,7 +77305,6 @@ const PlatformConfigurationSettings = ({
     primaryOrganisationSettings.sctTerminology || null
   );
   const continuationCurrencyShortLabel = String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || "ContT").trim() || "ContT";
-  const continuationCurrencyEventsLabel = `${continuationCurrencyShortLabel} / Currency Events`;
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
@@ -77988,9 +78029,6 @@ This permanently removes the organisation record from platform configuration and
       crewCompositionSettings: normaliseCrewCompositionSettings({ alternateCompositions, currencyProfiles })
     }));
   };
-  const updateCurrencyProfiles = (currencyProfiles) => {
-    updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions, currencyProfiles);
-  };
   const addAlternateCrewComposition = (aircraftTypeCode) => {
     const role = crewCompositionRoleOptions[0] || "";
     if (!role) return;
@@ -78075,50 +78113,6 @@ This permanently removes the organisation record from platform configuration and
   const getVisibleCurrencyProfiles = () => uniqueProfilesByCompositeGroup(
     crewCompositionSettings.currencyProfiles.filter((profile) => (!profile.aircraftTypeCode || String(profile.aircraftTypeCode || "").trim().toUpperCase() === activeCrewCompositionAircraftCode) && isProfileInActiveUnitContext(profile))
   );
-  const addCurrencyProfile = () => {
-    const visibleProfiles = displayCurrencyProfiles;
-    const profileIndex = visibleProfiles.length + 1;
-    const baseId = createClientRecordId("currency-profile");
-    const targetUnitCodes = getActiveScopedUnitCodes();
-    const combinedContext = targetUnitCodes.length > 1;
-    const createProfileForUnit = (unitCode) => ({
-      id: combinedContext ? `${baseId}-${unitCode.toLowerCase()}` : baseId,
-      unitCode,
-      compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : "",
-      compositeProfileId: combinedContext ? baseId : "",
-      aircraftTypeCode: displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode,
-      name: `Profile ${profileIndex}`,
-      code: `CURR${profileIndex}`.slice(0, 8).toUpperCase(),
-      crew: currencyProfileCrewOptions[0] || "",
-      config: "ANY",
-      acceptableAircraftConfigs: ["ANY"],
-      currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
-      dayNight: "Day",
-      flightType: "Dual",
-      aircraftCount: 1,
-      status: "ACTIVE"
-    });
-    updateCurrencyProfiles([
-      ...crewCompositionSettings.currencyProfiles,
-      ...targetUnitCodes.map(createProfileForUnit)
-    ]);
-  };
-  const updateCurrencyProfile = (profileId, changes) => {
-    const targetProfile = crewCompositionSettings.currencyProfiles.find((profile) => profile.id === profileId);
-    const compositeProfileId = targetProfile?.compositeProfileId || "";
-    updateCurrencyProfiles(crewCompositionSettings.currencyProfiles.map((profile) => profile.id === profileId || compositeProfileId && profile.compositeProfileId === compositeProfileId ? {
-      ...profile,
-      ...changes,
-      unitCode: profile.unitCode,
-      compositeUnitCode: profile.compositeUnitCode,
-      compositeProfileId: profile.compositeProfileId
-    } : profile));
-  };
-  const removeCurrencyProfile = (profileId) => {
-    const targetProfile = crewCompositionSettings.currencyProfiles.find((profile) => profile.id === profileId);
-    const compositeProfileId = targetProfile?.compositeProfileId || "";
-    updateCurrencyProfiles(crewCompositionSettings.currencyProfiles.filter((profile) => profile.id !== profileId && (!compositeProfileId || profile.compositeProfileId !== compositeProfileId)));
-  };
   const updateTrainingReportTemplate = (updater) => {
     if (activeTrainingReportUnitIndex < 0) return;
     setConfig((prev) => {
@@ -80798,10 +80792,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       setTaskProfileAbbreviationDrafts({});
     }
   };
-  const saveCurrencyProfilesAndExitEdit = async () => {
-    const saved = await save(void 0, "platform-currency-profiles");
-    if (saved) setCrewCompositionUnlocked(false);
-  };
   const isSectionEditActive = (sectionId) => !sectionOnly || sectionEditUnlocked[sectionId] === true;
   const getRequiredSettingsEditPermission = (sectionId) => {
     if (sectionId === "platform-user-access" || sectionId === "platform-permission-profiles") return "settings.userAccess.edit";
@@ -81425,7 +81415,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const displayAircraftAlternateCompositions = uniqueProfilesByCompositeGroup(
     crewCompositionSettings.alternateCompositions.filter((profile) => normaliseUnitCode2(profile.aircraftTypeCode) === displayCrewCompositionAircraftCode && isProfileInActiveUnitContext(profile))
   );
-  const displayCurrencyProfiles = uniqueProfilesByCompositeGroup(
+  uniqueProfilesByCompositeGroup(
     crewCompositionSettings.currencyProfiles.filter((profile) => (!profile.aircraftTypeCode || normaliseUnitCode2(profile.aircraftTypeCode) === displayCrewCompositionAircraftCode) && isProfileInActiveUnitContext(profile))
   );
   const displayCrewRoleKeys = new Set(
@@ -81531,7 +81521,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       configAircraftTypes.find((aircraft) => String(aircraft.code || "").trim().toUpperCase() === String(aircraftTypeCode || "").trim().toUpperCase())
     ).map((item) => String(item.label || item.definition || item.id || "").trim()).filter(Boolean)
   ]));
-  const currencyProfileCrewOptions = Array.from(new Set([
+  Array.from(new Set([
     ...activeUnitAircraftTypeCodes.map((aircraftCode) => `Standard ${aircraftCode} Crew`),
     ...uniqueProfilesByCompositeGroup(
       crewCompositionSettings.alternateCompositions.filter((profile) => isProfileInActiveUnitContext(profile) && activeUnitAircraftTypeCodes.includes(String(profile.aircraftTypeCode || "").trim().toUpperCase()))
@@ -81541,7 +81531,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       return aircraftCode ? `${profileName} - ${aircraftCode}` : profileName;
     })
   ].map((option) => String(option || "").trim()).filter(Boolean)));
-  const activeCurrencyDefinitionNames = Array.from(/* @__PURE__ */ new Set([
+  Array.from(/* @__PURE__ */ new Set([
     ...getActiveScopedUnitCodes().flatMap((unitCode) => {
       const definitions = unitCurrencyDefinitions[String(unitCode || "").trim().toUpperCase()];
       return [
@@ -83377,220 +83367,27 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             ] })
           ] })
         ] }),
-        shouldRenderSection("platform-currency-profiles") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-currency-profiles", className: getSectionClass("platform-currency-profiles"), children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            SectionHeader,
-            {
-              title: continuationCurrencyEventsLabel,
-              subtitle: `${continuationCurrencyShortLabel} and currency event settings. Each event stores crew, CONFIG and currency against the selected aircraft.`,
-              action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    if (crewCompositionUnlocked) {
-                      void saveCurrencyProfilesAndExitEdit();
-                      return;
-                    }
-                    setCrewCompositionUnlocked(true);
-                  },
-                  disabled: crewCompositionUnlocked && (saving || applyingChanges),
-                  className: platformActionButtonClass,
-                  children: crewCompositionUnlocked ? "Save" : "Edit"
-                }
-              ) : null
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: [
-              visibleCrewCompositionAircraftTypes.map((aircraft) => {
-                const code = String(aircraft.code || "").trim().toUpperCase();
-                const isActive = code === displayCrewCompositionAircraftCode;
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setCrewCompositionAircraftCode(code),
-                    className: `rounded-md border px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition-colors ${isActive ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-gray-800 bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: code || "Aircraft" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block max-w-[180px] truncate text-[10px] font-semibold normal-case tracking-normal text-gray-500", children: aircraft.name || "Unnamed aircraft type" })
-                    ]
-                  },
-                  `currency-profile-aircraft-tab-${code || aircraft.name}`
-                );
-              }),
-              visibleCrewCompositionAircraftTypes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full rounded-md border border-dashed border-gray-700 bg-gray-900/70 p-4 text-sm text-gray-400", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold text-gray-200", children: "No aircraft types configured." }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs leading-relaxed", children: [
-                  "Add an aircraft type in Settings > Platform & Deployment > Aircraft Setup before setting ",
-                  continuationCurrencyEventsLabel,
-                  "."
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => openAircraftResourceSettings("aircraftTypes"),
-                    className: `${platformActionButtonClass} mt-3`,
-                    children: "Open Aircraft Setup"
-                  }
-                )
-              ] })
-            ] }),
-            displayCrewCompositionAircraftCode && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-currency-profile-records", className: resourceSectionPanelClass, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "The Currency field links a completed event to the currency requirement it should satisfy or refresh. Currencies are configured in Training & Standards > Currency Requirements." })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
-                    "These events prefill ",
-                    continuationCurrencyShortLabel,
-                    " and currency requests with crew, aircraft CONFIG and currency for ",
-                    displayCrewCompositionAircraftCode,
-                    "."
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
-                  onNavigateToSettingsSection ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => onNavigateToSettingsSection({
-                        section: "currencies",
-                        label: "Currency Requirements",
-                        focusUnitCode: activeUnitCode
-                      }),
-                      className: platformActionButtonClass,
-                      children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                        "Currency",
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                        "Setup"
-                      ] })
-                    }
-                  ) : null,
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addCurrencyProfile, disabled: !canEditCrewComposition || !displayCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                    "Add",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                    "Event"
-                  ] }) })
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: [
-                "No ",
-                continuationCurrencyEventsLabel,
-                " configured."
-              ] }) : displayCurrencyProfiles.map((profile) => {
-                const crewOptions = Array.from(new Set([
-                  ...currencyProfileCrewOptions
-                ].map((option) => String(option || "").trim()).filter(Boolean)));
-                const profileConfigOptions = getAircraftConfigOptions(profile.aircraftTypeCode || displayCrewCompositionAircraftCode);
-                const acceptableConfigs = Array.from(new Set(
-                  (Array.isArray(profile.acceptableAircraftConfigs) && profile.acceptableAircraftConfigs.length > 0 ? profile.acceptableAircraftConfigs : [profile.config || "ANY"]).map((configId) => String(configId || "").trim()).filter(Boolean)
-                ));
-                const configOptions = Array.from(new Set([
-                  ...acceptableConfigs,
-                  ...profileConfigOptions
-                ].filter(Boolean)));
-                const toggleCurrencyProfileConfig = (configId) => {
-                  const selected = new Set(acceptableConfigs);
-                  if (selected.has(configId)) {
-                    selected.delete(configId);
-                  } else {
-                    selected.add(configId);
-                  }
-                  const nextConfigs = Array.from(selected);
-                  const safeConfigs = nextConfigs.length > 0 ? nextConfigs : ["ANY"];
-                  updateCurrencyProfile(profile.id, {
-                    acceptableAircraftConfigs: safeConfigs,
-                    config: safeConfigs[0] || "ANY"
-                  });
-                };
-                const currencyOptions = activeCurrencyDefinitionNames.includes(profile.currency) ? activeCurrencyDefinitionNames : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.55fr)_auto]", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Event Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateCurrencyProfile(profile.id, { name: value }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    OffsetField,
-                    {
-                      label: "Code",
-                      value: profile.code,
-                      disabled: !canEditCrewComposition,
-                      maxLength: 8,
-                      onChange: (value) => updateCurrencyProfile(profile.id, { code: value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) })
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Crew", value: profile.crew, disabled: !canEditCrewComposition || crewOptions.length === 0, options: crewOptions, onChange: (value) => updateCurrencyProfile(profile.id, { crew: value }) }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    SelectField,
-                    {
-                      label: "Day/Night",
-                      value: profile.dayNight || "Day",
-                      disabled: !canEditCrewComposition,
-                      options: ["Day", "Night", "Day/Night"],
-                      onChange: (value) => updateCurrencyProfile(profile.id, { dayNight: value || "Day" })
-                    }
-                  ) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    SelectField,
-                    {
-                      label: "Dual/Solo",
-                      value: profile.flightType || "Dual",
-                      disabled: !canEditCrewComposition,
-                      options: ["Dual", "Solo"],
-                      onChange: (value) => updateCurrencyProfile(profile.id, { flightType: value || "Dual" })
-                    }
-                  ) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400", children: "CONFIG" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[78px] overflow-y-auto rounded border border-gray-700 bg-gray-950/60 p-2", children: configOptions.map((configId) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-1 flex items-center gap-2 text-[11px] font-semibold text-gray-200 last:mb-0", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "checkbox",
-                          checked: acceptableConfigs.includes(configId),
-                          disabled: !canEditCrewComposition,
-                          onChange: () => toggleCurrencyProfileConfig(configId),
-                          className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-cyan-500 focus:ring-cyan-500"
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate", children: configId })
-                    ] }, `${profile.id}-config-${configId}`)) })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "block min-w-0", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh." })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "select",
-                      {
-                        className: `${fieldClass} block max-w-full whitespace-nowrap`,
-                        value: profile.currency || "",
-                        disabled: !canEditCrewComposition || currencyOptions.length === 0,
-                        title: profile.currency || (currencyOptions.length === 0 ? "No unit currencies configured" : "None"),
-                        onChange: (event) => updateCurrencyProfile(profile.id, { currency: event.target.value }),
-                        "aria-label": "Currency",
-                        children: currencyOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option || "None" }, option))
-                      }
-                    ) })
-                  ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    OffsetField,
-                    {
-                      label: "No. of A/C",
-                      value: String(Math.max(1, Number(profile.aircraftCount) || 1)),
-                      disabled: !canEditCrewComposition,
-                      onChange: (value) => updateCurrencyProfile(profile.id, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(value) || 1))) })
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeCurrencyProfile(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
-                ] }, profile.id);
-              }) })
-            ] })
-          ] })
-        ] }),
+        shouldRenderSection("platform-currency-profiles") && /* @__PURE__ */ jsxRuntimeExports.jsx("section", { id: "platform-currency-profiles", className: getSectionClass("platform-currency-profiles"), children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ContinuationCurrencyEventsSettings,
+          {
+            sctShortLabel: continuationCurrencyShortLabel,
+            sctLongLabel: sctTerminology.longLabel,
+            sctEvents,
+            onUpdateSctEvents: onUpdateSctEvents || (() => {
+            }),
+            masterCurrencies,
+            currencyRequirements,
+            canEditSettings: canEdit,
+            onOpenCurrencyRequirements: () => onNavigateToSettingsSection?.({
+              section: "currencies",
+              label: "Currency Requirements",
+              focusUnitCode: activeUnitCode
+            }),
+            activeUnitCode,
+            activeUnitCodes,
+            activeCompositeUnitCode
+          }
+        ) }),
         shouldRenderSection("platform-aircraft-setup") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-aircraft-setup", className: getSectionClass("platform-aircraft-setup"), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             SectionHeader,
@@ -90275,6 +90072,8 @@ const SettingsViewWithMenu = (props) => {
               phraseBank: props.phraseBank,
               masterCurrencies: props.masterCurrencies,
               currencyRequirements: props.currencyRequirements,
+              sctEvents: props.sctEvents,
+              onUpdateSctEvents: props.onUpdateSctEvents,
               syllabusDetails: props.syllabusDetails,
               instructorsData: props.instructorsData,
               traineesData: props.traineesData,
@@ -90303,6 +90102,8 @@ const SettingsViewWithMenu = (props) => {
             phraseBank: props.phraseBank,
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
+            sctEvents: props.sctEvents,
+            onUpdateSctEvents: props.onUpdateSctEvents,
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
             traineesData: props.traineesData,
@@ -90331,6 +90132,8 @@ const SettingsViewWithMenu = (props) => {
             phraseBank: props.phraseBank,
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
+            sctEvents: props.sctEvents,
+            onUpdateSctEvents: props.onUpdateSctEvents,
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
             traineesData: props.traineesData,
@@ -90359,6 +90162,8 @@ const SettingsViewWithMenu = (props) => {
             phraseBank: props.phraseBank,
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
+            sctEvents: props.sctEvents,
+            onUpdateSctEvents: props.onUpdateSctEvents,
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
             traineesData: props.traineesData,
@@ -90466,6 +90271,8 @@ const SettingsViewWithMenu = (props) => {
             phraseBank: props.phraseBank,
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
+            sctEvents: props.sctEvents,
+            onUpdateSctEvents: props.onUpdateSctEvents,
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
             traineesData: props.traineesData,
