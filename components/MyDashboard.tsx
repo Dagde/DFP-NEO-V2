@@ -101,6 +101,10 @@ type DashboardMessageDeletionCutoff = {
     userId?: string;
     userName?: string;
     conversationId: string;
+    conversationKey?: string;
+    contactId?: string;
+    contactName?: string;
+    groupId?: string;
     deletedAt: string;
 };
 
@@ -1052,12 +1056,30 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const getDeletionCutoffForMessage = (
         message: DashboardMessage,
         cutoffs: DashboardMessageDeletionCutoff[] = dashboardMessageDeletionCutoffs,
-    ): DashboardMessageDeletionCutoff | null => (
-        [...getDashboardConversationIdsForMessage(message), getDashboardConversationListKeyForMessage(message)]
-            .map(conversationId => getDeletionCutoffForConversationId(conversationId, cutoffs))
-            .filter((cutoff): cutoff is DashboardMessageDeletionCutoff => Boolean(cutoff))
+    ): DashboardMessageDeletionCutoff | null => {
+        const messageConversationIds = new Set([...getDashboardConversationIdsForMessage(message), getDashboardConversationListKeyForMessage(message)]);
+        return cutoffs
+            .filter(cutoff => {
+                if (messageConversationIds.has(cutoff.conversationId) || (cutoff.conversationKey && messageConversationIds.has(cutoff.conversationKey))) {
+                    return true;
+                }
+                if (cutoff.groupId) return message.groupId === cutoff.groupId;
+                if (message.groupId) return false;
+                if (!cutoff.contactId && !cutoff.contactName) return false;
+                const contactIdMatches = Boolean(cutoff.contactId && (
+                    message.fromId === cutoff.contactId ||
+                    message.toId === cutoff.contactId ||
+                    (Array.isArray(message.recipientIds) && message.recipientIds.includes(cutoff.contactId)) ||
+                    (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(cutoff.contactId))
+                ));
+                const legacyNameMatches = Boolean(cutoff.contactName && (
+                    dashboardPersonNamesMatch(message.from, cutoff.contactName) ||
+                    dashboardPersonNamesMatch(message.to, cutoff.contactName)
+                ));
+                return contactIdMatches || legacyNameMatches;
+            })
             .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null
-    );
+    };
     const messageOlderThanDeletionCutoff = (
         message: DashboardMessage,
         cutoffs: DashboardMessageDeletionCutoff[] = dashboardMessageDeletionCutoffs,
@@ -1872,19 +1894,23 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             selectedMessageCount: selectedMessageIds.length,
             localMessageCountBefore: dashboardMessages.length,
         });
+        const localCutoffs = Array.from(localConversationIds).map(id => ({
+            userId: dashboardSenderContactId,
+            userName: normaliseDashboardPersonName(dashboardMessageUserName),
+            conversationId: id,
+            conversationKey: selectedKey,
+            contactId: groupId ? undefined : contact.id,
+            contactName: contact.name,
+            groupId: groupId || undefined,
+            deletedAt: localDeletedAt,
+        }));
         persistDashboardMessageDeletionCutoffs(cutoffs => [
             ...cutoffs.filter(cutoff => !localConversationIds.has(cutoff.conversationId)),
-            ...Array.from(localConversationIds).map(id => ({
-                userId: dashboardSenderContactId,
-                userName: normaliseDashboardPersonName(dashboardMessageUserName),
-                conversationId: id,
-                deletedAt: localDeletedAt,
-            })),
+            ...localCutoffs,
         ]);
-        persistDashboardMessages(messages => messages.filter(message => {
-            const matches = selectedConversationKeys.has(getDashboardConversationListKeyForMessage(message));
-            return !matches;
-        }));
+        persistDashboardMessages(messages => (
+            filterDeletedDashboardHistory(messages, mergeDashboardMessageDeletionCutoffList(dashboardMessageDeletionCutoffs, localCutoffs))
+        ));
         if (selectedMessageContact && selectedMessageContact.id === contact.id) {
             setSelectedMessageContact(null);
             setSelectedMessageContacts([]);

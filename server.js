@@ -2292,10 +2292,23 @@ function normaliseDashboardMessageDeletionCutoffs(data) {
       const userId = normaliseDashboardMessageId(cutoff?.userId);
       const userName = normaliseDashboardMessagePersonName(cutoff?.userName);
       const conversationId = String(cutoff?.conversationId || '').trim();
+      const conversationKey = String(cutoff?.conversationKey || '').trim();
+      const contactId = normaliseDashboardMessageId(cutoff?.contactId);
+      const contactName = normaliseDashboardMessagePersonName(cutoff?.contactName);
+      const groupId = normaliseDashboardMessageId(cutoff?.groupId);
       const deletedAtTime = cutoff?.deletedAt ? new Date(cutoff.deletedAt).getTime() : NaN;
       const deletedAt = Number.isFinite(deletedAtTime) ? new Date(deletedAtTime).toISOString() : '';
       if ((!userId && !userName) || !conversationId || !deletedAt) return null;
-      return { userId: userId || undefined, userName: userName || undefined, conversationId, deletedAt };
+      return {
+        userId: userId || undefined,
+        userName: userName || undefined,
+        conversationId,
+        conversationKey: conversationKey || undefined,
+        contactId: contactId || undefined,
+        contactName: contactName || undefined,
+        groupId: groupId || undefined,
+        deletedAt,
+      };
     })
     .filter(Boolean);
 }
@@ -2312,7 +2325,24 @@ function dashboardCutoffMatchesParticipant(cutoff, participantId, participantNam
 function getDashboardDeletionCutoffForMessage(cutoffs, message, participantId, participantName) {
   const ids = new Set(getDashboardMessageConversationIds(message, participantId, participantName));
   return cutoffs
-    .filter(cutoff => dashboardCutoffMatchesParticipant(cutoff, participantId, participantName) && ids.has(cutoff.conversationId))
+    .filter(cutoff => {
+      if (!dashboardCutoffMatchesParticipant(cutoff, participantId, participantName)) return false;
+      if (ids.has(cutoff.conversationId) || (cutoff.conversationKey && ids.has(cutoff.conversationKey))) return true;
+      if (cutoff.groupId) return message.groupId === cutoff.groupId;
+      if (message.groupId) return false;
+      if (!cutoff.contactId && !cutoff.contactName) return false;
+      const contactIdMatches = Boolean(cutoff.contactId && (
+        message.fromId === cutoff.contactId ||
+        message.toId === cutoff.contactId ||
+        (Array.isArray(message.recipientIds) && message.recipientIds.includes(cutoff.contactId)) ||
+        (Array.isArray(message.groupMemberIds) && message.groupMemberIds.includes(cutoff.contactId))
+      ));
+      const legacyNameMatches = Boolean(cutoff.contactName && (
+        dashboardMessageNamesMatch(message.from, cutoff.contactName) ||
+        dashboardMessageNamesMatch(message.to, cutoff.contactName)
+      ));
+      return contactIdMatches || legacyNameMatches;
+    })
     .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null;
 }
 
@@ -2822,6 +2852,10 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
       userId: participantId || undefined,
       userName: participant || undefined,
       conversationId: id,
+      conversationKey: conversationKey || undefined,
+      contactId: groupId ? undefined : contactId || undefined,
+      contactName: contact || undefined,
+      groupId: groupId || undefined,
       deletedAt,
     }));
     const nextDeletionCutoffs = [
