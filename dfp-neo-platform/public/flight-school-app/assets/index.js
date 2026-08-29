@@ -41002,11 +41002,11 @@ const MyDashboard = ({
     }
     return `direct-name:${[normaliseDashboardPersonName(dashboardMessageUserName), normaliseDashboardPersonName(contact.name)].filter(Boolean).sort().join("|")}`;
   };
-  const getDeletionCutoffForConversationId = (conversationId) => dashboardMessageDeletionCutoffs.filter((cutoff) => cutoff.conversationId === conversationId).sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null;
-  const getDeletionCutoffForMessage = (message) => getDashboardConversationIdsForMessage(message).map(getDeletionCutoffForConversationId).filter((cutoff) => Boolean(cutoff)).sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null;
-  const messageOlderThanDeletionCutoff = (message) => {
+  const getDeletionCutoffForConversationId = (conversationId, cutoffs = dashboardMessageDeletionCutoffs) => cutoffs.filter((cutoff) => cutoff.conversationId === conversationId).sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null;
+  const getDeletionCutoffForMessage = (message, cutoffs = dashboardMessageDeletionCutoffs) => [...getDashboardConversationIdsForMessage(message), getDashboardConversationListKeyForMessage(message)].map((conversationId) => getDeletionCutoffForConversationId(conversationId, cutoffs)).filter((cutoff) => Boolean(cutoff)).sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null;
+  const messageOlderThanDeletionCutoff = (message, cutoffs = dashboardMessageDeletionCutoffs) => {
     const conversationId = getDashboardConversationIdForMessage(message);
-    const cutoff = getDeletionCutoffForMessage(message);
+    const cutoff = getDeletionCutoffForMessage(message, cutoffs);
     if (!cutoff) return false;
     const hidden = new Date(message.sentAt).getTime() <= new Date(cutoff.deletedAt).getTime();
     if (hidden) {
@@ -41021,7 +41021,7 @@ const MyDashboard = ({
     }
     return hidden;
   };
-  const filterDeletedDashboardHistory = (messages) => messages.filter((message) => !messageOlderThanDeletionCutoff(message));
+  const filterDeletedDashboardHistory = (messages, cutoffs = dashboardMessageDeletionCutoffs) => messages.filter((message) => !messageOlderThanDeletionCutoff(message, cutoffs));
   const logConversationsRecreatedAfterDelete = (messages) => {
     messages.forEach((message) => {
       const conversationId = getDashboardConversationIdForMessage(message);
@@ -41374,16 +41374,28 @@ const MyDashboard = ({
       return Array.from(merged.values());
     });
   };
+  const mergeDashboardMessageDeletionCutoffList = (existing, incoming) => {
+    const merged = /* @__PURE__ */ new Map();
+    [...existing, ...incoming].forEach((cutoff) => {
+      if (!cutoff?.conversationId || !cutoff?.deletedAt) return;
+      const existingCutoff = merged.get(cutoff.conversationId);
+      if (!existingCutoff || new Date(cutoff.deletedAt).getTime() >= new Date(existingCutoff.deletedAt).getTime()) {
+        merged.set(cutoff.conversationId, cutoff);
+      }
+    });
+    return Array.from(merged.values());
+  };
   const refreshDashboardMessages = async () => {
     if (!dashboardMessageUserName) return;
     const startedAt = getDashboardMessagePerfTime();
     try {
       const payload = await fetchDashboardMessagesPayloadFromApi(dashboardMessageUserName, dashboardSenderContactId);
+      const effectiveCutoffs = mergeDashboardMessageDeletionCutoffList(dashboardMessageDeletionCutoffs, payload.deletionCutoffs);
       mergeDashboardMessageDeletionCutoffs(payload.deletionCutoffs);
       setDashboardMessages((prev) => {
         const beforeCount = prev.length;
         const messagesForOtherUsers = prev.filter((message) => !(messageFromDashboardUser(message) || messageAddressedToDashboardUser(message)));
-        const next = filterDeletedDashboardHistory(mergeDashboardMessages(messagesForOtherUsers, payload.messages));
+        const next = filterDeletedDashboardHistory(mergeDashboardMessages(messagesForOtherUsers, payload.messages), effectiveCutoffs);
         logConversationsRecreatedAfterDelete(next);
         writeDashboardMessages(next);
         logDashboardMessageTracking("MSG_REFRESH_MERGE_TIMING", {
@@ -41626,7 +41638,7 @@ const MyDashboard = ({
     const selectedConversationKeys = /* @__PURE__ */ new Set([selectedKey]);
     const conversationId = getDashboardConversationIdForContact(contact);
     const localDeletedAt = (/* @__PURE__ */ new Date()).toISOString();
-    const localConversationIds = /* @__PURE__ */ new Set([conversationId]);
+    const localConversationIds = /* @__PURE__ */ new Set([conversationId, selectedKey]);
     const selectedMessageIds = [];
     const selectedMessageKeys = /* @__PURE__ */ new Set();
     dashboardMessages.forEach((message) => {

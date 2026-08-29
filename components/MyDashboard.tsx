@@ -1041,20 +1041,29 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         }
         return `direct-name:${[normaliseDashboardPersonName(dashboardMessageUserName), normaliseDashboardPersonName(contact.name)].filter(Boolean).sort().join('|')}`;
     };
-    const getDeletionCutoffForConversationId = (conversationId: string): DashboardMessageDeletionCutoff | null => (
-        dashboardMessageDeletionCutoffs
+    const getDeletionCutoffForConversationId = (
+        conversationId: string,
+        cutoffs: DashboardMessageDeletionCutoff[] = dashboardMessageDeletionCutoffs,
+    ): DashboardMessageDeletionCutoff | null => (
+        cutoffs
             .filter(cutoff => cutoff.conversationId === conversationId)
             .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null
     );
-    const getDeletionCutoffForMessage = (message: DashboardMessage): DashboardMessageDeletionCutoff | null => (
-        getDashboardConversationIdsForMessage(message)
-            .map(getDeletionCutoffForConversationId)
+    const getDeletionCutoffForMessage = (
+        message: DashboardMessage,
+        cutoffs: DashboardMessageDeletionCutoff[] = dashboardMessageDeletionCutoffs,
+    ): DashboardMessageDeletionCutoff | null => (
+        [...getDashboardConversationIdsForMessage(message), getDashboardConversationListKeyForMessage(message)]
+            .map(conversationId => getDeletionCutoffForConversationId(conversationId, cutoffs))
             .filter((cutoff): cutoff is DashboardMessageDeletionCutoff => Boolean(cutoff))
             .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null
     );
-    const messageOlderThanDeletionCutoff = (message: DashboardMessage): boolean => {
+    const messageOlderThanDeletionCutoff = (
+        message: DashboardMessage,
+        cutoffs: DashboardMessageDeletionCutoff[] = dashboardMessageDeletionCutoffs,
+    ): boolean => {
         const conversationId = getDashboardConversationIdForMessage(message);
-        const cutoff = getDeletionCutoffForMessage(message);
+        const cutoff = getDeletionCutoffForMessage(message, cutoffs);
         if (!cutoff) return false;
         const hidden = new Date(message.sentAt).getTime() <= new Date(cutoff.deletedAt).getTime();
         if (hidden) {
@@ -1069,8 +1078,11 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         }
         return hidden;
     };
-    const filterDeletedDashboardHistory = (messages: DashboardMessage[]): DashboardMessage[] => (
-        messages.filter(message => !messageOlderThanDeletionCutoff(message))
+    const filterDeletedDashboardHistory = (
+        messages: DashboardMessage[],
+        cutoffs: DashboardMessageDeletionCutoff[] = dashboardMessageDeletionCutoffs,
+    ): DashboardMessage[] => (
+        messages.filter(message => !messageOlderThanDeletionCutoff(message, cutoffs))
     );
     const logConversationsRecreatedAfterDelete = (messages: DashboardMessage[]) => {
         messages.forEach(message => {
@@ -1522,11 +1534,26 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             return Array.from(merged.values());
         });
     };
+    const mergeDashboardMessageDeletionCutoffList = (
+        existing: DashboardMessageDeletionCutoff[],
+        incoming: DashboardMessageDeletionCutoff[],
+    ): DashboardMessageDeletionCutoff[] => {
+        const merged = new Map<string, DashboardMessageDeletionCutoff>();
+        [...existing, ...incoming].forEach(cutoff => {
+            if (!cutoff?.conversationId || !cutoff?.deletedAt) return;
+            const existingCutoff = merged.get(cutoff.conversationId);
+            if (!existingCutoff || new Date(cutoff.deletedAt).getTime() >= new Date(existingCutoff.deletedAt).getTime()) {
+                merged.set(cutoff.conversationId, cutoff);
+            }
+        });
+        return Array.from(merged.values());
+    };
     const refreshDashboardMessages = async () => {
         if (!dashboardMessageUserName) return;
         const startedAt = getDashboardMessagePerfTime();
         try {
             const payload = await fetchDashboardMessagesPayloadFromApi(dashboardMessageUserName, dashboardSenderContactId);
+            const effectiveCutoffs = mergeDashboardMessageDeletionCutoffList(dashboardMessageDeletionCutoffs, payload.deletionCutoffs);
             mergeDashboardMessageDeletionCutoffs(payload.deletionCutoffs);
             setDashboardMessages(prev => {
                 const beforeCount = prev.length;
@@ -1534,7 +1561,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     messageFromDashboardUser(message) ||
                     messageAddressedToDashboardUser(message)
                 ));
-                const next = filterDeletedDashboardHistory(mergeDashboardMessages(messagesForOtherUsers, payload.messages));
+                const next = filterDeletedDashboardHistory(mergeDashboardMessages(messagesForOtherUsers, payload.messages), effectiveCutoffs);
                 logConversationsRecreatedAfterDelete(next);
                 writeDashboardMessages(next);
                 logDashboardMessageTracking('MSG_REFRESH_MERGE_TIMING', {
@@ -1826,7 +1853,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const selectedConversationKeys = new Set<string>([selectedKey]);
         const conversationId = getDashboardConversationIdForContact(contact);
         const localDeletedAt = new Date().toISOString();
-        const localConversationIds = new Set<string>([conversationId]);
+        const localConversationIds = new Set<string>([conversationId, selectedKey]);
         const selectedMessageIds: string[] = [];
         const selectedMessageKeys = new Set<string>();
         dashboardMessages.forEach(message => {

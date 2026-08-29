@@ -2809,6 +2809,7 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     const messages = await getDashboardMessages(db);
     const deletionCutoffs = await getDashboardMessageDeletionCutoffs(db);
     const conversationIds = new Set([conversationId, ...requestedConversationIds]);
+    if (conversationKey) conversationIds.add(conversationKey);
     const messageMatchesSelectedDelete = (message) => {
       if (requestedMessageIds.size > 0) {
         return requestedMessageIds.has(message.id) && dashboardMessageMatchesParticipant(message, participantId, participant);
