@@ -1982,6 +1982,7 @@ app.put('/api/emergency-freeze', async (req, res) => {
 
 const DASHBOARD_MESSAGES_BACKUP_TYPE = 'dashboard_messages_v1';
 const DASHBOARD_MESSAGE_GROUPS_BACKUP_TYPE = 'dashboard_message_groups_v1';
+const DASHBOARD_MESSAGE_DELETION_CUTOFFS_BACKUP_TYPE = 'dashboard_message_deletion_cutoffs_v1';
 
 function normaliseDashboardMessageName(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -2050,6 +2051,14 @@ function dashboardMessageNamesMatch(left, right) {
 
 function normaliseDashboardMessageId(value) {
   return String(value || '').trim();
+}
+
+function dashboardMessageDeletionDiag(event, details = {}) {
+  try {
+    console.log(`[${event}] ${JSON.stringify(details)}`);
+  } catch {
+    console.log(`[${event}]`);
+  }
 }
 
 function normaliseDashboardStoredMessages(data) {
@@ -2218,6 +2227,89 @@ function dashboardMessageDeletedForParticipant(message, participantId, participa
     (id && Array.isArray(message.deletedForIds) && message.deletedForIds.includes(id)) ||
     (participantKey && deletedNameKeys.includes(participantKey))
   );
+}
+
+function getDashboardMessageConversationId(message, participantId = '', participantName = '', contactId = '', contactName = '') {
+  const groupId = normaliseDashboardMessageId(message?.groupId);
+  if (groupId) return `group:${groupId}`;
+  const leftId = normaliseDashboardMessageId(participantId) || normaliseDashboardMessageId(message?.fromId);
+  const rightId = normaliseDashboardMessageId(contactId) || normaliseDashboardMessageId(message?.toId);
+  if (leftId && rightId) return `direct:${[leftId, rightId].sort().join('|')}`;
+
+  const messageFromName = normaliseDashboardMessagePersonName(message?.from);
+  const messageToName = normaliseDashboardMessagePersonName(message?.to);
+  const leftName = normaliseDashboardMessagePersonName(participantName) || messageFromName;
+  const rightName = normaliseDashboardMessagePersonName(contactName) || messageToName;
+  return `direct-name:${[leftName, rightName].filter(Boolean).sort().join('|')}`;
+}
+
+function getDashboardConversationIdFromRequest({ participantId, participant, contactId, contact, groupId }) {
+  const stableGroupId = normaliseDashboardMessageId(groupId);
+  if (stableGroupId) return `group:${stableGroupId}`;
+  const leftId = normaliseDashboardMessageId(participantId);
+  const rightId = normaliseDashboardMessageId(contactId);
+  if (leftId && rightId) return `direct:${[leftId, rightId].sort().join('|')}`;
+  const leftName = normaliseDashboardMessagePersonName(participant);
+  const rightName = normaliseDashboardMessagePersonName(contact);
+  return `direct-name:${[leftName, rightName].filter(Boolean).sort().join('|')}`;
+}
+
+function normaliseDashboardMessageDeletionCutoffs(data) {
+  const source = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.cutoffs)
+      ? data.cutoffs
+    : [];
+  return source
+    .map(cutoff => {
+      const userId = normaliseDashboardMessageId(cutoff?.userId);
+      const userName = normaliseDashboardMessagePersonName(cutoff?.userName);
+      const conversationId = String(cutoff?.conversationId || '').trim();
+      const deletedAtTime = cutoff?.deletedAt ? new Date(cutoff.deletedAt).getTime() : NaN;
+      const deletedAt = Number.isFinite(deletedAtTime) ? new Date(deletedAtTime).toISOString() : '';
+      if ((!userId && !userName) || !conversationId || !deletedAt) return null;
+      return { userId: userId || undefined, userName: userName || undefined, conversationId, deletedAt };
+    })
+    .filter(Boolean);
+}
+
+function dashboardCutoffMatchesParticipant(cutoff, participantId, participantName) {
+  const participantKey = normaliseDashboardMessagePersonName(participantName);
+  const id = normaliseDashboardMessageId(participantId);
+  return Boolean(
+    (id && cutoff.userId === id) ||
+    (participantKey && cutoff.userName && dashboardMessageNamesMatch(cutoff.userName, participantKey))
+  );
+}
+
+function getDashboardDeletionCutoffForMessage(cutoffs, message, participantId, participantName) {
+  const ids = new Set([
+    getDashboardMessageConversationId(message),
+    getDashboardMessageConversationId(message, participantId, participantName),
+  ].filter(Boolean));
+  return cutoffs
+    .filter(cutoff => dashboardCutoffMatchesParticipant(cutoff, participantId, participantName) && ids.has(cutoff.conversationId))
+    .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null;
+}
+
+function dashboardMessageOlderThanDeletionCutoff(message, cutoff) {
+  if (!cutoff?.deletedAt) return false;
+  return new Date(message.sentAt).getTime() <= new Date(cutoff.deletedAt).getTime();
+}
+
+function dashboardMessageHiddenForParticipant(message, participantId, participantName, cutoffs = []) {
+  if (dashboardMessageDeletedForParticipant(message, participantId, participantName)) return true;
+  const cutoff = getDashboardDeletionCutoffForMessage(cutoffs, message, participantId, participantName);
+  if (!dashboardMessageOlderThanDeletionCutoff(message, cutoff)) return false;
+  dashboardMessageDeletionDiag('MSG_MESSAGE_REJECTED_DELETED_HISTORY', {
+    messageID: message.id,
+    conversationID: cutoff.conversationId,
+    currentUserID: normaliseDashboardMessageId(participantId) || normaliseDashboardMessagePersonName(participantName),
+    messageSentAt: message.sentAt,
+    deletedAt: cutoff.deletedAt,
+    reason: 'olderThanDeletionCutoff',
+  });
+  return true;
 }
 
 function dashboardMessageFromParticipant(message, participantId, participantName) {
@@ -2411,17 +2503,81 @@ async function saveDashboardMessageGroups(db, groups) {
   });
 }
 
+async function getDashboardMessageDeletionCutoffs(db) {
+  const backup = await db.dataBackup.findFirst({
+    where: { type: DASHBOARD_MESSAGE_DELETION_CUTOFFS_BACKUP_TYPE },
+    orderBy: { createdAt: 'desc' },
+  });
+  return normaliseDashboardMessageDeletionCutoffs(backup?.data);
+}
+
+async function saveDashboardMessageDeletionCutoffs(db, cutoffs) {
+  await db.dataBackup.deleteMany({ where: { type: DASHBOARD_MESSAGE_DELETION_CUTOFFS_BACKUP_TYPE } });
+  await db.dataBackup.create({
+    data: {
+      type: DASHBOARD_MESSAGE_DELETION_CUTOFFS_BACKUP_TYPE,
+      data: { cutoffs },
+    },
+  });
+}
+
+function getDashboardMessageDeletionCutoffsForParticipant(cutoffs, participantId, participantName) {
+  return cutoffs.filter(cutoff => dashboardCutoffMatchesParticipant(cutoff, participantId, participantName));
+}
+
+async function resolveDashboardAuthenticatedUser(db, req) {
+  const authHeader = req.headers.authorization || '';
+  const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  if (!sessionToken) return null;
+  const sessions = await db.$queryRawUnsafe(
+    `SELECT u.id, u."userId", u.username, u."firstName", u."lastName", u.email, u.role, u."isActive"
+     FROM "Session" s
+     JOIN "User" u ON u.id = s."userId"
+     WHERE s."sessionToken" = $1
+       AND s.expires > NOW()
+       AND u."isActive" = true
+     LIMIT 1`,
+    sessionToken
+  );
+  return sessions?.[0] || null;
+}
+
+function dashboardDeleteRequestMatchesAuthenticatedUser(authUser, participantId, participantName) {
+  if (!authUser) return true;
+  const participantStableId = normaliseDashboardMessageId(participantId);
+  const participantKey = normaliseDashboardMessagePersonName(participantName);
+  const stableIds = [
+    authUser.id,
+    authUser.userId,
+    authUser.username,
+    authUser.email,
+  ].map(normaliseDashboardMessageId).filter(Boolean);
+  if (participantStableId && stableIds.includes(participantStableId)) return true;
+  const displayName = `${authUser.firstName || ''} ${authUser.lastName || ''}`.trim() || authUser.username || authUser.userId || authUser.email || '';
+  const authNameKeys = [
+    displayName,
+    authUser.username,
+    authUser.userId,
+    authUser.email,
+  ].flatMap(value => Array.from(dashboardMessagePersonNameKeys(value)));
+  return Boolean(participantKey && authNameKeys.includes(participantKey));
+}
+
 app.get('/api/dashboard-messages', async (req, res) => {
   try {
     const db = await getPrisma();
     const userName = normaliseDashboardMessageName(req.query.userName);
     const userId = normaliseDashboardMessageId(req.query.userId);
     const messages = await getDashboardMessages(db);
+    const deletionCutoffs = await getDashboardMessageDeletionCutoffs(db);
     let nextMessages = messages;
     if (userName || userId) {
       const deliveredAt = new Date().toISOString();
       let deliveredUpdates = 0;
       nextMessages = messages.map(message => {
+        if (dashboardMessageHiddenForParticipant(message, userId, userName, deletionCutoffs)) {
+          return message;
+        }
         const result = markDashboardMessageDeliveredForParticipant(message, userId, userName, deliveredAt);
         if (result.updated) deliveredUpdates++;
         return result.message;
@@ -2433,10 +2589,15 @@ app.get('/api/dashboard-messages', async (req, res) => {
     const scopedMessages = userName || userId
       ? nextMessages.filter(message => (
         dashboardMessageMatchesParticipant(message, userId, userName) &&
-        !dashboardMessageDeletedForParticipant(message, userId, userName)
+        !dashboardMessageHiddenForParticipant(message, userId, userName, deletionCutoffs)
       ))
       : nextMessages;
-    res.json({ messages: scopedMessages.map(dashboardMessageWithStatus) });
+    res.json({
+      messages: scopedMessages.map(dashboardMessageWithStatus),
+      deletionCutoffs: userName || userId
+        ? getDashboardMessageDeletionCutoffsForParticipant(deletionCutoffs, userId, userName)
+        : [],
+    });
   } catch (error) {
     console.error('[Dashboard Messages] GET error:', error);
     res.status(500).json({ error: 'Failed to load dashboard messages', details: error.message });
@@ -2482,9 +2643,13 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
     const now = new Date().toISOString();
     let updated = 0;
     const messages = await getDashboardMessages(db);
+    const deletionCutoffs = await getDashboardMessageDeletionCutoffs(db);
     const nextMessages = messages.map(message => {
       const matchesId = messageIds.size === 0 || messageIds.has(message.id);
       const matchesReader = dashboardMessageMatchesParticipant(message, readerId, reader);
+      if (matchesReader && dashboardMessageHiddenForParticipant(message, readerId, reader, deletionCutoffs)) {
+        return message;
+      }
       const matchesSender = messageIds.size > 0 || (
         senderId
           ? message.fromId === senderId
@@ -2548,7 +2713,32 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     if ((!participant && !participantId) || (!groupId && !contact && !contactId)) {
       return res.status(400).json({ error: 'Participant and contact are required.' });
     }
+    const authUser = await resolveDashboardAuthenticatedUser(db, req);
+    if (!dashboardDeleteRequestMatchesAuthenticatedUser(authUser, participantId, participant)) {
+      return res.status(403).json({ error: 'Not permitted to delete another user dashboard conversation.' });
+    }
+    const deletedAt = new Date().toISOString();
+    const conversationId = getDashboardConversationIdFromRequest({ participantId, participant, contactId, contact, groupId });
+    dashboardMessageDeletionDiag('MSG_CONVERSATION_DELETE_REQUEST', {
+      conversationID: conversationId,
+      currentUserID: participantId || participant,
+      deletedAt,
+    });
     const messages = await getDashboardMessages(db);
+    const deletionCutoffs = await getDashboardMessageDeletionCutoffs(db);
+    const nextCutoff = {
+      userId: participantId || undefined,
+      userName: participant || undefined,
+      conversationId,
+      deletedAt,
+    };
+    const nextDeletionCutoffs = [
+      ...deletionCutoffs.filter(cutoff => !(
+        dashboardCutoffMatchesParticipant(cutoff, participantId, participant) &&
+        cutoff.conversationId === conversationId
+      )),
+      nextCutoff,
+    ];
     let deleted = 0;
     const nextMessages = messages.map(message => {
       const matchesConversation = groupId
@@ -2573,7 +2763,19 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     if (deleted > 0) {
       await saveDashboardMessages(db, nextMessages);
     }
-    res.json({ success: true, deleted });
+    await saveDashboardMessageDeletionCutoffs(db, nextDeletionCutoffs);
+    dashboardMessageDeletionDiag('MSG_CONVERSATION_DELETE_CUTOFF_SET', {
+      conversationID: conversationId,
+      currentUserID: participantId || participant,
+      deletedAt,
+    });
+    dashboardMessageDeletionDiag('MSG_CONVERSATION_DELETE_RESPONSE', {
+      conversationID: conversationId,
+      currentUserID: participantId || participant,
+      deletedAt,
+      deleted,
+    });
+    res.json({ success: true, deleted, conversationId, deletedAt, deletionCutoff: nextCutoff });
   } catch (error) {
     console.error('[Dashboard Messages] DELETE conversation error:', error);
     res.status(500).json({ error: 'Failed to delete dashboard conversation', details: error.message });
