@@ -40313,6 +40313,22 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
 };
 const DASHBOARD_MESSAGES_STORAGE_KEY = "dfp_dashboard_messages_v1";
 const DASHBOARD_MESSAGE_DELETION_CUTOFFS_STORAGE_KEY = "dfp_dashboard_message_deletion_cutoffs_v1";
+const getDashboardMessagePerfTime = () => typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+const logDashboardMessageTracking = (event, details = {}) => {
+  const entry = {
+    event,
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    ...details
+  };
+  if (typeof window !== "undefined") {
+    const existing = Array.isArray(window.__dfpDashboardMessageTracking) ? window.__dfpDashboardMessageTracking : [];
+    window.__dfpDashboardMessageTracking = [...existing, entry].slice(-200);
+  }
+  const durationMs = typeof details.durationMs === "number" ? details.durationMs : 0;
+  if (event.includes("DELETE") || durationMs >= 25) {
+    console.info(event, entry);
+  }
+};
 const DashboardIconX = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M18 6 6 18" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "m6 6 12 12" })
@@ -40685,15 +40701,25 @@ const markDashboardConversationReadInApi = async (reader, sender, messageIds, re
   });
   if (!response.ok) throw new Error(`Dashboard message read update failed: ${response.status}`);
 };
-const deleteDashboardConversationFromApi = async (participant, contact, participantId, contactId, groupId, conversationKey, conversationIds) => {
+const deleteDashboardConversationFromApi = async (participant, contact, participantId, contactId, groupId, conversationKey, conversationIds, messageIds) => {
+  const startedAt = getDashboardMessagePerfTime();
   const response = await fetch("/api/dashboard-messages/conversation", {
     method: "DELETE",
     credentials: "include",
     headers: { "Content-Type": "application/json", ...getDashboardMessageAuthHeaders() },
-    body: JSON.stringify({ participant, contact, participantId, contactId, groupId, conversationKey, conversationIds })
+    body: JSON.stringify({ participant, contact, participantId, contactId, groupId, conversationKey, conversationIds, messageIds })
   });
   if (!response.ok) throw new Error(`Dashboard conversation delete failed: ${response.status}`);
-  return response.json();
+  const result = await response.json();
+  logDashboardMessageTracking("MSG_CONVERSATION_DELETE_API_TIMING", {
+    conversationID: result?.conversationId,
+    currentUserID: participantId || participant,
+    selectedConversationKey: conversationKey,
+    requestedMessageCount: messageIds?.length || 0,
+    deleted: result?.deleted ?? null,
+    durationMs: Math.round(getDashboardMessagePerfTime() - startedAt)
+  });
+  return result;
 };
 const deleteDashboardMessageFromApi = async (messageId) => {
   const response = await fetch(`/api/dashboard-messages/${encodeURIComponent(messageId)}`, {
@@ -40815,6 +40841,7 @@ const MyDashboard = ({
   }, [dashboardUserStaff?.unit, dashboardUserTrainee?.unit, messageContactUnitCodes]);
   const dashboardUserUnitSet = reactExports.useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join("|")]);
   const peopleMessageContacts = reactExports.useMemo(() => {
+    const startedAt = getDashboardMessagePerfTime();
     const contactMatchesDashboardUnitScope = (unitValue) => {
       if (dashboardUserUnitSet.size === 0) return true;
       const contactUnits = String(unitValue || "").split(/[+/,&]/).map((unit) => unit.trim().toUpperCase()).filter(Boolean);
@@ -40868,8 +40895,19 @@ const MyDashboard = ({
     });
     const unique = /* @__PURE__ */ new Map();
     [...staffContacts, ...traineeContacts].forEach((contact) => unique.set(contact.id, contact));
-    return Array.from(unique.values()).sort((a, b) => a.unit.localeCompare(b.unit) || (a.type === b.type ? 0 : a.type === "Staff" ? -1 : 1) || (a.type === "Trainee" ? String(a.course || "").localeCompare(String(b.course || "")) : 0) || compareDashboardRank(a.rank, b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
-  }, [dashboardUserUnitSet, formatQualificationLabels, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions, normalisedStaffQualificationCatalogue]);
+    const contacts = Array.from(unique.values()).sort((a, b) => a.unit.localeCompare(b.unit) || (a.type === b.type ? 0 : a.type === "Staff" ? -1 : 1) || (a.type === "Trainee" ? String(a.course || "").localeCompare(String(b.course || "")) : 0) || compareDashboardRank(a.rank, b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
+    logDashboardMessageTracking("MSG_CONTACTS_BUILD_TIMING", {
+      currentUserID: dashboardSenderContactId,
+      unitCodes: dashboardUserUnitCodes,
+      staffSourceCount: staffSource.length,
+      traineeSourceCount: traineeSource.length,
+      scopedStaffCount: scopedStaffSource.length,
+      scopedTraineeCount: scopedTraineeSource.length,
+      contactCount: contacts.length,
+      durationMs: Math.round(getDashboardMessagePerfTime() - startedAt)
+    });
+    return contacts;
+  }, [dashboardSenderContactId, dashboardUserUnitCodes, dashboardUserUnitSet, formatQualificationLabels, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions, normalisedStaffQualificationCatalogue]);
   const messageContacts = reactExports.useMemo(() => {
     const contactsById = new Map(peopleMessageContacts.map((contact) => [contact.id, contact]));
     const groupContacts = dashboardMessageGroups.map((group) => ({
@@ -40940,15 +40978,11 @@ const MyDashboard = ({
     const fromId = String(message.fromId || "").trim();
     const toId = String(message.toId || "").trim();
     if (fromId && toId) ids.add(`direct:${[fromId, toId].sort().join("|")}`);
-    if (contact?.id && dashboardSenderContactId) ids.add(`direct:${[dashboardSenderContactId, contact.id].sort().join("|")}`);
     if (fromId && toId) return Array.from(ids);
     const fromNames = Array.from(dashboardPersonNameKeys(message.from));
     const toNames = Array.from(dashboardPersonNameKeys(message.to));
     const userNames = Array.from(dashboardPersonNameKeys(dashboardMessageUserName));
-    const contactNames = contact ? [
-      ...Array.from(dashboardPersonNameKeys(contact.name)),
-      ...Array.from(dashboardPersonNameKeys(contact.displayName))
-    ] : [];
+    const contactNames = [];
     [
       ...fromNames.flatMap((fromName) => toNames.map((toName) => [fromName, toName])),
       ...userNames.flatMap((userName2) => contactNames.map((contactName) => [userName2, contactName]))
@@ -41039,19 +41073,8 @@ const MyDashboard = ({
     const resolvedContact = resolveMessageContact(otherId, otherName);
     return resolvedContact?.id || `person-${normaliseDashboardPersonName(otherName)}`;
   };
-  const getDashboardConversationListKeysForContact = (contact) => {
-    if (contact.type === "Group") {
-      const groupId = contact.id.replace(/^group-conversation-/, "").replace(/^group-/, "");
-      return /* @__PURE__ */ new Set([`group-${groupId}`]);
-    }
-    const keys = /* @__PURE__ */ new Set([contact.id]);
-    if (contact.id.startsWith("stored-")) {
-      keys.add(`person-${normaliseDashboardPersonName(contact.name)}`);
-      keys.add(`person-${normaliseDashboardPersonName(contact.displayName)}`);
-    }
-    return keys;
-  };
   const messageConversations = reactExports.useMemo(() => {
+    const startedAt = getDashboardMessagePerfTime();
     const conversations = /* @__PURE__ */ new Map();
     const unreadKeysByConversation = /* @__PURE__ */ new Map();
     dashboardMessages.forEach((message) => {
@@ -41070,12 +41093,20 @@ const MyDashboard = ({
         unreadKeysByConversation.set(otherKey, unreadKeys);
       }
       conversations.set(otherKey, {
+        conversationKey: otherKey,
         contact: resolvedContact || existing?.contact || getMessageContactForName(otherName),
         lastMessage: isNewer ? message : existing.lastMessage,
         unreadCount: unreadKeysByConversation.get(otherKey)?.size || 0
       });
     });
-    return Array.from(conversations.values()).sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
+    const nextConversations = Array.from(conversations.values()).sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
+    logDashboardMessageTracking("MSG_CONVERSATION_LIST_BUILD_TIMING", {
+      currentUserID: dashboardSenderContactId,
+      sourceMessageCount: dashboardMessages.length,
+      conversationCount: nextConversations.length,
+      durationMs: Math.round(getDashboardMessagePerfTime() - startedAt)
+    });
+    return nextConversations;
   }, [dashboardMessageGroups, dashboardMessages, dashboardSenderContactId, dashboardUserKey, messageContacts, messageContactsById]);
   const filteredMessageConversations = reactExports.useMemo(() => {
     const query = normaliseDashboardContactName(messageSearchText);
@@ -41296,14 +41327,24 @@ const MyDashboard = ({
   };
   const refreshDashboardMessages = async () => {
     if (!dashboardMessageUserName) return;
+    const startedAt = getDashboardMessagePerfTime();
     try {
       const payload = await fetchDashboardMessagesPayloadFromApi(dashboardMessageUserName, dashboardSenderContactId);
       mergeDashboardMessageDeletionCutoffs(payload.deletionCutoffs);
       setDashboardMessages((prev) => {
+        const beforeCount = prev.length;
         const messagesForOtherUsers = prev.filter((message) => !(messageFromDashboardUser(message) || messageAddressedToDashboardUser(message)));
         const next = filterDeletedDashboardHistory(mergeDashboardMessages(messagesForOtherUsers, payload.messages));
         logConversationsRecreatedAfterDelete(next);
         writeDashboardMessages(next);
+        logDashboardMessageTracking("MSG_REFRESH_MERGE_TIMING", {
+          currentUserID: dashboardSenderContactId,
+          previousMessageCount: beforeCount,
+          apiMessageCount: payload.messages.length,
+          deletionCutoffCount: payload.deletionCutoffs.length,
+          nextMessageCount: next.length,
+          durationMs: Math.round(getDashboardMessagePerfTime() - startedAt)
+        });
         return next;
       });
     } catch (error) {
@@ -41523,28 +41564,37 @@ const MyDashboard = ({
       await refreshDashboardMessages();
     }
   };
-  const deleteDashboardConversation = async (contact) => {
+  const deleteDashboardConversation = async (contact, selectedConversationKey) => {
     const confirmed = await showDarkConfirm(
       "This will permanently delete this conversation and its messages from your Messenger.",
       "Delete Conversation?",
       "warning"
     );
     if (!confirmed) return;
+    const startedAt = getDashboardMessagePerfTime();
     const groupId = contact.type === "Group" ? contact.id.replace(/^group-conversation-/, "").replace(/^group-/, "") : "";
-    const selectedConversationKeys = getDashboardConversationListKeysForContact(contact);
-    const selectedConversationKey = Array.from(selectedConversationKeys)[0] || contact.id;
+    const selectedKey = selectedConversationKey || contact.id;
+    const selectedConversationKeys = /* @__PURE__ */ new Set([selectedKey]);
     const conversationId = getDashboardConversationIdForContact(contact);
     const localDeletedAt = (/* @__PURE__ */ new Date()).toISOString();
     const localConversationIds = /* @__PURE__ */ new Set([conversationId]);
+    const selectedMessageIds = [];
+    const selectedMessageKeys = /* @__PURE__ */ new Set();
     dashboardMessages.forEach((message) => {
-      const matches = selectedConversationKeys.has(getDashboardConversationListKeyForMessage(message));
+      const messageKey = getDashboardConversationListKeyForMessage(message);
+      const matches = selectedConversationKeys.has(messageKey);
       if (!matches) return;
-      getDashboardConversationIdsForMessage(message, contact).forEach((id) => localConversationIds.add(id));
+      selectedMessageIds.push(message.id);
+      selectedMessageKeys.add(messageKey);
     });
-    console.info("MSG_CONVERSATION_DELETE_LOCAL_CLEAR", {
+    logDashboardMessageTracking("MSG_CONVERSATION_DELETE_LOCAL_CLEAR", {
       conversationID: conversationId,
       currentUserID: dashboardSenderContactId,
-      deletedAt: localDeletedAt
+      deletedAt: localDeletedAt,
+      selectedConversationKey: selectedKey,
+      matchedConversationKeys: Array.from(selectedMessageKeys),
+      selectedMessageCount: selectedMessageIds.length,
+      localMessageCountBefore: dashboardMessages.length
     });
     persistDashboardMessageDeletionCutoffs((cutoffs) => [
       ...cutoffs.filter((cutoff) => !localConversationIds.has(cutoff.conversationId)),
@@ -41568,10 +41618,12 @@ const MyDashboard = ({
       setMessageView("inbox");
     }
     try {
-      console.info("MSG_CONVERSATION_DELETE_REQUEST", {
+      logDashboardMessageTracking("MSG_CONVERSATION_DELETE_REQUEST", {
         conversationID: conversationId,
         currentUserID: dashboardSenderContactId,
-        deletedAt: localDeletedAt
+        deletedAt: localDeletedAt,
+        selectedConversationKey: selectedKey,
+        selectedMessageCount: selectedMessageIds.length
       });
       const result = await deleteDashboardConversationFromApi(
         dashboardMessageUserName,
@@ -41579,8 +41631,9 @@ const MyDashboard = ({
         dashboardSenderContactId,
         groupId ? void 0 : contact.id,
         groupId || void 0,
-        selectedConversationKey,
-        Array.from(localConversationIds)
+        selectedKey,
+        Array.from(localConversationIds),
+        selectedMessageIds
       );
       const serverCutoffs = Array.isArray(result?.deletionCutoffs) && result.deletionCutoffs.length > 0 ? result.deletionCutoffs : result?.deletionCutoff ? [result.deletionCutoff] : result?.conversationId && result?.deletedAt ? [{
         userId: dashboardSenderContactId,
@@ -41594,17 +41647,20 @@ const MyDashboard = ({
           ...serverCutoffs
         ]);
         const primaryCutoff = serverCutoffs[0];
-        console.info("MSG_CONVERSATION_DELETE_CUTOFF_SET", {
+        logDashboardMessageTracking("MSG_CONVERSATION_DELETE_CUTOFF_SET", {
           conversationID: primaryCutoff.conversationId,
           currentUserID: dashboardSenderContactId,
           deletedAt: primaryCutoff.deletedAt
         });
       }
-      console.info("MSG_CONVERSATION_DELETE_RESPONSE", {
+      logDashboardMessageTracking("MSG_CONVERSATION_DELETE_RESPONSE", {
         conversationID: result?.conversationId || conversationId,
         currentUserID: dashboardSenderContactId,
         deletedAt: result?.deletedAt || localDeletedAt,
-        deleted: result?.deleted ?? null
+        deleted: result?.deleted ?? null,
+        selectedConversationKey: selectedKey,
+        serverConversationIds: result?.conversationIds || [],
+        durationMs: Math.round(getDashboardMessagePerfTime() - startedAt)
       });
       await refreshDashboardMessages();
     } catch (error) {
@@ -41977,7 +42033,7 @@ const MyDashboard = ({
                   "button",
                   {
                     type: "button",
-                    onClick: () => deleteDashboardConversation(conversation.contact),
+                    onClick: () => deleteDashboardConversation(conversation.contact, conversation.conversationKey),
                     className: "absolute bottom-3 right-1 grid h-8 w-8 place-items-center rounded-full text-gray-400 hover:bg-red-50 hover:text-red-600",
                     "aria-label": `Delete conversation with ${conversation.contact.displayName}`,
                     children: /* @__PURE__ */ jsxRuntimeExports.jsx(DashboardIconTrash, { className: "h-[18px] w-[18px]", strokeWidth: 2.1 })
@@ -41985,7 +42041,7 @@ const MyDashboard = ({
                 )
               ]
             },
-            conversation.contact.id
+            conversation.conversationKey
           )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "pt-20 text-center text-sm text-gray-400", children: messageSearchText ? "No messages match your search." : "No messages yet." }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-4 left-4 right-4 flex items-center gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-14 min-w-0 flex-1 items-center rounded-full bg-white/90 px-4 shadow-[0_10px_28px_rgba(15,23,42,0.14)] ring-1 ring-black/5", children: [

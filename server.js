@@ -2619,6 +2619,7 @@ function dashboardDeleteRequestMatchesAuthenticatedUser(authUser, participantId,
 }
 
 app.get('/api/dashboard-messages', async (req, res) => {
+  const startedAt = Date.now();
   try {
     const db = await getPrisma();
     const userName = normaliseDashboardMessageName(req.query.userName);
@@ -2647,6 +2648,15 @@ app.get('/api/dashboard-messages', async (req, res) => {
         !dashboardMessageHiddenForParticipant(message, userId, userName, deletionCutoffs)
       ))
       : nextMessages;
+    dashboardMessageDeletionDiag('MSG_MESSAGES_GET_TIMING', {
+      currentUserID: userId || userName,
+      sourceMessageCount: messages.length,
+      returnedMessageCount: scopedMessages.length,
+      deletionCutoffCount: userName || userId
+        ? getDashboardMessageDeletionCutoffsForParticipant(deletionCutoffs, userId, userName).length
+        : 0,
+      durationMs: Date.now() - startedAt,
+    });
     res.json({
       messages: scopedMessages.map(dashboardMessageWithStatus),
       deletionCutoffs: userName || userId
@@ -2660,6 +2670,7 @@ app.get('/api/dashboard-messages', async (req, res) => {
 });
 
 app.post('/api/dashboard-messages', async (req, res) => {
+  const startedAt = Date.now();
   try {
     const db = await getPrisma();
     const messageInputs = Array.isArray(req.body?.messages)
@@ -2677,6 +2688,11 @@ app.post('/api/dashboard-messages', async (req, res) => {
     const nextMessages = [...deduped, ...newMessages].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
     await saveDashboardMessages(db, nextMessages);
     const messagesWithStatus = newMessages.map(dashboardMessageWithStatus);
+    dashboardMessageDeletionDiag('MSG_MESSAGES_POST_TIMING', {
+      messageCount: newMessages.length,
+      storedMessageCount: nextMessages.length,
+      durationMs: Date.now() - startedAt,
+    });
     res.json({ success: true, message: messagesWithStatus[0], messages: messagesWithStatus });
   } catch (error) {
     console.error('[Dashboard Messages] POST error:', error);
@@ -2758,6 +2774,7 @@ app.patch('/api/dashboard-messages/read', async (req, res) => {
 });
 
 app.delete('/api/dashboard-messages/conversation', async (req, res) => {
+  const startedAt = Date.now();
   try {
     const db = await getPrisma();
     const participant = normaliseDashboardMessagePersonName(req.body?.participant);
@@ -2769,6 +2786,9 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     const requestedConversationIds = Array.isArray(req.body?.conversationIds)
       ? req.body.conversationIds.map(id => String(id || '').trim()).filter(Boolean)
       : [];
+    const requestedMessageIds = new Set(Array.isArray(req.body?.messageIds)
+      ? req.body.messageIds.map(id => normaliseDashboardMessageId(id)).filter(Boolean)
+      : []);
     if ((!participant && !participantId) || (!groupId && !contact && !contactId)) {
       return res.status(400).json({ error: 'Participant and contact are required.' });
     }
@@ -2782,18 +2802,21 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
       conversationID: conversationId,
       currentUserID: participantId || participant,
       deletedAt,
+      selectedConversationKey: conversationKey,
+      requestedConversationIds,
+      requestedMessageCount: requestedMessageIds.size,
     });
     const messages = await getDashboardMessages(db);
     const deletionCutoffs = await getDashboardMessageDeletionCutoffs(db);
     const conversationIds = new Set([conversationId, ...requestedConversationIds]);
-    messages.forEach(message => {
-      const matchesConversation = groupId
+    const messageMatchesSelectedDelete = (message) => {
+      if (requestedMessageIds.size > 0) {
+        return requestedMessageIds.has(message.id) && dashboardMessageMatchesParticipant(message, participantId, participant);
+      }
+      return groupId
         ? message.groupId === groupId && dashboardMessageMatchesParticipant(message, participantId, participant)
         : dashboardMessageMatchesConversationKey(message, participantId, participant, contactId, contact, conversationKey);
-      if (!matchesConversation) return;
-      getDashboardMessageConversationIds(message, participantId, participant, contactId, contact)
-        .forEach(id => conversationIds.add(id));
-    });
+    };
     const nextCutoffs = Array.from(conversationIds).map(id => ({
       userId: participantId || undefined,
       userName: participant || undefined,
@@ -2809,9 +2832,7 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     ];
     let deleted = 0;
     const nextMessages = messages.map(message => {
-      const matchesConversation = groupId
-        ? message.groupId === groupId && dashboardMessageMatchesParticipant(message, participantId, participant)
-        : dashboardMessageMatchesConversationKey(message, participantId, participant, contactId, contact, conversationKey);
+      const matchesConversation = messageMatchesSelectedDelete(message);
       if (!matchesConversation || dashboardMessageDeletedForParticipant(message, participantId, participant)) {
         return message;
       }
@@ -2836,12 +2857,17 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
       conversationID: conversationId,
       currentUserID: participantId || participant,
       deletedAt,
+      cutoffCount: nextCutoffs.length,
     });
     dashboardMessageDeletionDiag('MSG_CONVERSATION_DELETE_RESPONSE', {
       conversationID: conversationId,
       currentUserID: participantId || participant,
       deletedAt,
       deleted,
+      selectedConversationKey: conversationKey,
+      requestedMessageCount: requestedMessageIds.size,
+      conversationIds: Array.from(conversationIds),
+      durationMs: Date.now() - startedAt,
     });
     res.json({ success: true, deleted, conversationId, conversationIds: Array.from(conversationIds), deletedAt, deletionCutoff: nextCutoffs[0], deletionCutoffs: nextCutoffs });
   } catch (error) {

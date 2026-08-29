@@ -134,6 +134,7 @@ type DashboardMessageGroupRecord = {
 };
 
 type DashboardConversation = {
+    conversationKey: string;
     contact: DashboardMessageContact;
     lastMessage: DashboardMessage;
     unreadCount: number;
@@ -142,6 +143,30 @@ type DashboardConversation = {
 const DASHBOARD_MESSAGES_STORAGE_KEY = 'dfp_dashboard_messages_v1';
 const DASHBOARD_MESSAGE_DELETION_CUTOFFS_STORAGE_KEY = 'dfp_dashboard_message_deletion_cutoffs_v1';
 const DASHBOARD_MESSAGES_LOCAL_CACHE_LIMIT = 200;
+
+const getDashboardMessagePerfTime = (): number => (
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now()
+);
+
+const logDashboardMessageTracking = (event: string, details: Record<string, unknown> = {}) => {
+    const entry = {
+        event,
+        generatedAt: new Date().toISOString(),
+        ...details,
+    };
+    if (typeof window !== 'undefined') {
+        const existing = Array.isArray((window as any).__dfpDashboardMessageTracking)
+            ? (window as any).__dfpDashboardMessageTracking
+            : [];
+        (window as any).__dfpDashboardMessageTracking = [...existing, entry].slice(-200);
+    }
+    const durationMs = typeof details.durationMs === 'number' ? details.durationMs : 0;
+    if (event.includes('DELETE') || durationMs >= 25) {
+        console.info(event, entry);
+    }
+};
 
 type DashboardIconProps = {
     className?: string;
@@ -645,15 +670,26 @@ const deleteDashboardConversationFromApi = async (
     groupId?: string,
     conversationKey?: string,
     conversationIds?: string[],
+    messageIds?: string[],
 ) => {
+    const startedAt = getDashboardMessagePerfTime();
     const response = await fetch('/api/dashboard-messages/conversation', {
         method: 'DELETE',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...getDashboardMessageAuthHeaders() },
-        body: JSON.stringify({ participant, contact, participantId, contactId, groupId, conversationKey, conversationIds }),
+        body: JSON.stringify({ participant, contact, participantId, contactId, groupId, conversationKey, conversationIds, messageIds }),
     });
     if (!response.ok) throw new Error(`Dashboard conversation delete failed: ${response.status}`);
-    return response.json();
+    const result = await response.json();
+    logDashboardMessageTracking('MSG_CONVERSATION_DELETE_API_TIMING', {
+        conversationID: result?.conversationId,
+        currentUserID: participantId || participant,
+        selectedConversationKey: conversationKey,
+        requestedMessageCount: messageIds?.length || 0,
+        deleted: result?.deleted ?? null,
+        durationMs: Math.round(getDashboardMessagePerfTime() - startedAt),
+    });
+    return result;
 };
 
 const deleteDashboardMessageFromApi = async (messageId: string) => {
@@ -795,6 +831,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     }, [dashboardUserStaff?.unit, dashboardUserTrainee?.unit, messageContactUnitCodes]);
     const dashboardUserUnitSet = useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join('|')]);
     const peopleMessageContacts = useMemo<DashboardMessageContact[]>(() => {
+        const startedAt = getDashboardMessagePerfTime();
         const contactMatchesDashboardUnitScope = (unitValue?: string | null): boolean => {
             if (dashboardUserUnitSet.size === 0) return true;
             const contactUnits = String(unitValue || '')
@@ -854,7 +891,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const unique = new Map<string, DashboardMessageContact>();
         [...staffContacts, ...traineeContacts]
             .forEach(contact => unique.set(contact.id, contact));
-        return Array.from(unique.values()).sort((a, b) => (
+        const contacts = Array.from(unique.values()).sort((a, b) => (
             a.unit.localeCompare(b.unit) ||
             (a.type === b.type ? 0 : a.type === 'Staff' ? -1 : 1) ||
             (a.type === 'Trainee' ? String(a.course || '').localeCompare(String(b.course || '')) : 0) ||
@@ -863,7 +900,18 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             a.firstNames.localeCompare(b.firstNames) ||
             a.displayName.localeCompare(b.displayName)
         ));
-    }, [dashboardUserUnitSet, formatQualificationLabels, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions, normalisedStaffQualificationCatalogue]);
+        logDashboardMessageTracking('MSG_CONTACTS_BUILD_TIMING', {
+            currentUserID: dashboardSenderContactId,
+            unitCodes: dashboardUserUnitCodes,
+            staffSourceCount: staffSource.length,
+            traineeSourceCount: traineeSource.length,
+            scopedStaffCount: scopedStaffSource.length,
+            scopedTraineeCount: scopedTraineeSource.length,
+            contactCount: contacts.length,
+            durationMs: Math.round(getDashboardMessagePerfTime() - startedAt),
+        });
+        return contacts;
+    }, [dashboardSenderContactId, dashboardUserUnitCodes, dashboardUserUnitSet, formatQualificationLabels, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions, normalisedStaffQualificationCatalogue]);
     const messageContacts = useMemo<DashboardMessageContact[]>(() => {
         const contactsById = new Map(peopleMessageContacts.map(contact => [contact.id, contact]));
         const groupContacts = dashboardMessageGroups.map(group => ({
@@ -1101,6 +1149,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         return keys;
     };
     const messageConversations = useMemo<DashboardConversation[]>(() => {
+        const startedAt = getDashboardMessagePerfTime();
         const conversations = new Map<string, DashboardConversation>();
         const unreadKeysByConversation = new Map<string, Set<string>>();
         dashboardMessages.forEach(message => {
@@ -1119,13 +1168,21 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 unreadKeysByConversation.set(otherKey, unreadKeys);
             }
             conversations.set(otherKey, {
+                conversationKey: otherKey,
                 contact: resolvedContact || existing?.contact || getMessageContactForName(otherName),
                 lastMessage: isNewer ? message : existing.lastMessage,
                 unreadCount: unreadKeysByConversation.get(otherKey)?.size || 0,
             });
         });
-        return Array.from(conversations.values())
+        const nextConversations = Array.from(conversations.values())
             .sort((a, b) => new Date(b.lastMessage.sentAt).getTime() - new Date(a.lastMessage.sentAt).getTime());
+        logDashboardMessageTracking('MSG_CONVERSATION_LIST_BUILD_TIMING', {
+            currentUserID: dashboardSenderContactId,
+            sourceMessageCount: dashboardMessages.length,
+            conversationCount: nextConversations.length,
+            durationMs: Math.round(getDashboardMessagePerfTime() - startedAt),
+        });
+        return nextConversations;
     }, [dashboardMessageGroups, dashboardMessages, dashboardSenderContactId, dashboardUserKey, messageContacts, messageContactsById]);
     const filteredMessageConversations = useMemo(() => {
         const query = normaliseDashboardContactName(messageSearchText);
@@ -1416,10 +1473,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     };
     const refreshDashboardMessages = async () => {
         if (!dashboardMessageUserName) return;
+        const startedAt = getDashboardMessagePerfTime();
         try {
             const payload = await fetchDashboardMessagesPayloadFromApi(dashboardMessageUserName, dashboardSenderContactId);
             mergeDashboardMessageDeletionCutoffs(payload.deletionCutoffs);
             setDashboardMessages(prev => {
+                const beforeCount = prev.length;
                 const messagesForOtherUsers = prev.filter(message => !(
                     messageFromDashboardUser(message) ||
                     messageAddressedToDashboardUser(message)
@@ -1427,6 +1486,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 const next = filterDeletedDashboardHistory(mergeDashboardMessages(messagesForOtherUsers, payload.messages));
                 logConversationsRecreatedAfterDelete(next);
                 writeDashboardMessages(next);
+                logDashboardMessageTracking('MSG_REFRESH_MERGE_TIMING', {
+                    currentUserID: dashboardSenderContactId,
+                    previousMessageCount: beforeCount,
+                    apiMessageCount: payload.messages.length,
+                    deletionCutoffCount: payload.deletionCutoffs.length,
+                    nextMessageCount: next.length,
+                    durationMs: Math.round(getDashboardMessagePerfTime() - startedAt),
+                });
                 return next;
             });
         } catch (error) {
@@ -1693,30 +1760,39 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             await refreshDashboardMessages();
         }
     };
-    const deleteDashboardConversation = async (contact: DashboardMessageContact) => {
+    const deleteDashboardConversation = async (contact: DashboardMessageContact, selectedConversationKey?: string) => {
         const confirmed = await showDarkConfirm(
             'This will permanently delete this conversation and its messages from your Messenger.',
             'Delete Conversation?',
             'warning'
         );
         if (!confirmed) return;
+        const startedAt = getDashboardMessagePerfTime();
         const groupId = contact.type === 'Group'
             ? contact.id.replace(/^group-conversation-/, '').replace(/^group-/, '')
             : '';
-        const selectedConversationKeys = getDashboardConversationListKeysForContact(contact);
-        const selectedConversationKey = Array.from(selectedConversationKeys)[0] || contact.id;
+        const selectedKey = selectedConversationKey || contact.id;
+        const selectedConversationKeys = new Set<string>([selectedKey]);
         const conversationId = getDashboardConversationIdForContact(contact);
         const localDeletedAt = new Date().toISOString();
         const localConversationIds = new Set<string>([conversationId]);
+        const selectedMessageIds: string[] = [];
+        const selectedMessageKeys = new Set<string>();
         dashboardMessages.forEach(message => {
-            const matches = selectedConversationKeys.has(getDashboardConversationListKeyForMessage(message));
+            const messageKey = getDashboardConversationListKeyForMessage(message);
+            const matches = selectedConversationKeys.has(messageKey);
             if (!matches) return;
-            getDashboardConversationIdsForMessage(message, contact).forEach(id => localConversationIds.add(id));
+            selectedMessageIds.push(message.id);
+            selectedMessageKeys.add(messageKey);
         });
-        console.info('MSG_CONVERSATION_DELETE_LOCAL_CLEAR', {
+        logDashboardMessageTracking('MSG_CONVERSATION_DELETE_LOCAL_CLEAR', {
             conversationID: conversationId,
             currentUserID: dashboardSenderContactId,
             deletedAt: localDeletedAt,
+            selectedConversationKey: selectedKey,
+            matchedConversationKeys: Array.from(selectedMessageKeys),
+            selectedMessageCount: selectedMessageIds.length,
+            localMessageCountBefore: dashboardMessages.length,
         });
         persistDashboardMessageDeletionCutoffs(cutoffs => [
             ...cutoffs.filter(cutoff => !localConversationIds.has(cutoff.conversationId)),
@@ -1740,10 +1816,12 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             setMessageView('inbox');
         }
         try {
-            console.info('MSG_CONVERSATION_DELETE_REQUEST', {
+            logDashboardMessageTracking('MSG_CONVERSATION_DELETE_REQUEST', {
                 conversationID: conversationId,
                 currentUserID: dashboardSenderContactId,
                 deletedAt: localDeletedAt,
+                selectedConversationKey: selectedKey,
+                selectedMessageCount: selectedMessageIds.length,
             });
             const result = await deleteDashboardConversationFromApi(
                 dashboardMessageUserName,
@@ -1751,8 +1829,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                 dashboardSenderContactId,
                 groupId ? undefined : contact.id,
                 groupId || undefined,
-                selectedConversationKey,
+                selectedKey,
                 Array.from(localConversationIds),
+                selectedMessageIds,
             );
             const serverCutoffs = Array.isArray(result?.deletionCutoffs) && result.deletionCutoffs.length > 0
                 ? result.deletionCutoffs
@@ -1770,17 +1849,20 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     ...serverCutoffs,
                 ]);
                 const primaryCutoff = serverCutoffs[0];
-                console.info('MSG_CONVERSATION_DELETE_CUTOFF_SET', {
+                logDashboardMessageTracking('MSG_CONVERSATION_DELETE_CUTOFF_SET', {
                     conversationID: primaryCutoff.conversationId,
                     currentUserID: dashboardSenderContactId,
                     deletedAt: primaryCutoff.deletedAt,
                 });
             }
-            console.info('MSG_CONVERSATION_DELETE_RESPONSE', {
+            logDashboardMessageTracking('MSG_CONVERSATION_DELETE_RESPONSE', {
                 conversationID: result?.conversationId || conversationId,
                 currentUserID: dashboardSenderContactId,
                 deletedAt: result?.deletedAt || localDeletedAt,
                 deleted: result?.deleted ?? null,
+                selectedConversationKey: selectedKey,
+                serverConversationIds: result?.conversationIds || [],
+                durationMs: Math.round(getDashboardMessagePerfTime() - startedAt),
             });
             await refreshDashboardMessages();
         } catch (error) {
@@ -2145,7 +2227,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                         <div className="space-y-2">
                                             {filteredMessageConversations.map((conversation, index) => (
                                                 <div
-                                                    key={conversation.contact.id}
+                                                    key={conversation.conversationKey}
                                                     className={`relative flex w-full items-start gap-3 rounded-2xl border px-3 py-4 pr-11 text-left shadow-sm transition-colors ${
                                                         conversation.unreadCount > 0
                                                             ? 'border-sky-200 bg-sky-100 hover:bg-sky-50'
@@ -2230,7 +2312,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => deleteDashboardConversation(conversation.contact)}
+                                                        onClick={() => deleteDashboardConversation(conversation.contact, conversation.conversationKey)}
                                                         className="absolute bottom-3 right-1 grid h-8 w-8 place-items-center rounded-full text-gray-400 hover:bg-red-50 hover:text-red-600"
                                                         aria-label={`Delete conversation with ${conversation.contact.displayName}`}
                                                     >
