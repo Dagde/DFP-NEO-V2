@@ -795,12 +795,21 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     }, [dashboardUserStaff?.unit, dashboardUserTrainee?.unit, messageContactUnitCodes]);
     const dashboardUserUnitSet = useMemo(() => new Set(dashboardUserUnitCodes), [dashboardUserUnitCodes.join('|')]);
     const peopleMessageContacts = useMemo<DashboardMessageContact[]>(() => {
-        const staffContacts = messageContactStaffOptions
-            .filter(staff => staff?.name)
-            .filter(staff => {
-                const unit = String(staff.unit || '').trim().toUpperCase();
-                return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
-            })
+        const contactMatchesDashboardUnitScope = (unitValue?: string | null): boolean => {
+            if (dashboardUserUnitSet.size === 0) return true;
+            const contactUnits = String(unitValue || '')
+                .split(/[+/,&]/)
+                .map(unit => unit.trim().toUpperCase())
+                .filter(Boolean);
+            if (contactUnits.length === 0) return true;
+            return contactUnits.some(unit => dashboardUserUnitSet.has(unit));
+        };
+        const staffSource = messageContactStaffOptions.filter(staff => staff?.name);
+        const traineeSource = messageContactTraineeOptions.filter(trainee => trainee?.fullName || trainee?.name);
+        const scopedStaffSource = staffSource.filter(staff => contactMatchesDashboardUnitScope(staff.unit));
+        const scopedTraineeSource = traineeSource.filter(trainee => contactMatchesDashboardUnitScope(trainee.unit));
+        const useScopedPeople = scopedStaffSource.length + scopedTraineeSource.length > 0;
+        const staffContacts = (useScopedPeople ? scopedStaffSource : staffSource)
             .map(staff => {
                 const nameParts = getDashboardContactNameParts(staff.name);
                 const qualificationIds = getPersonAssignedQualificationIds(staff, normalisedStaffQualificationCatalogue, false);
@@ -820,12 +829,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     type: 'Staff' as const,
                 };
             });
-        const traineeContacts = messageContactTraineeOptions
-            .filter(trainee => trainee?.fullName || trainee?.name)
-            .filter(trainee => {
-                const unit = String(trainee.unit || '').trim().toUpperCase();
-                return dashboardUserUnitSet.size === 0 || !unit || dashboardUserUnitSet.has(unit);
-            })
+        const traineeContacts = (useScopedPeople ? scopedTraineeSource : traineeSource)
             .map(trainee => {
                 const name = stripDashboardCourseFromName(trainee.fullName || trainee.name);
                 const nameParts = getDashboardContactNameParts(name);
