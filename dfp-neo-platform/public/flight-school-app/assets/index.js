@@ -41243,6 +41243,55 @@ const MyDashboard = ({
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
   };
+  const downloadDashboardMessageTrackingReport = () => {
+    const trackingEvents = typeof window !== "undefined" && Array.isArray(window.__dfpDashboardMessageTracking) ? window.__dfpDashboardMessageTracking : [];
+    const report = {
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      view: "MyDashboard",
+      reportType: "dashboard-message-tracking",
+      dashboardMessageUserName,
+      dashboardSenderContactId,
+      dashboardUserKey,
+      signedInUserLabel,
+      trackingEventCount: trackingEvents.length,
+      localMessageCount: dashboardMessages.length,
+      deletionCutoffCount: dashboardMessageDeletionCutoffs.length,
+      conversationCount: messageConversations.length,
+      unreadCount: unreadMessages.length,
+      selectedMessageContact: selectedMessageContact ? {
+        id: selectedMessageContact.id,
+        name: selectedMessageContact.name,
+        displayName: selectedMessageContact.displayName,
+        type: selectedMessageContact.type
+      } : null,
+      trackingEvents,
+      deletionCutoffs: dashboardMessageDeletionCutoffs,
+      conversations: messageConversations.map((conversation) => ({
+        conversationKey: conversation.conversationKey,
+        contactId: conversation.contact.id,
+        contactName: conversation.contact.name,
+        contactDisplayName: conversation.contact.displayName,
+        contactType: conversation.contact.type,
+        lastMessageId: conversation.lastMessage.id,
+        lastMessageFromId: conversation.lastMessage.fromId,
+        lastMessageToId: conversation.lastMessage.toId,
+        lastMessageSentAt: conversation.lastMessage.sentAt,
+        unreadCount: conversation.unreadCount
+      }))
+    };
+    if (typeof window !== "undefined") {
+      window.__dfpDashboardMessageTrackingReport = report;
+    }
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `dashboard-message-tracking-${normaliseDashboardContactName(dashboardMessageUserName).replace(/[^a-z0-9]+/g, "-") || "user"}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
   const activeConversationMessages = reactExports.useMemo(() => {
     if (!selectedMessageContact) return [];
     return dashboardMessages.filter((message) => {
@@ -41875,6 +41924,20 @@ const MyDashboard = ({
             title: "Download Messenger unread badge diagnostic trace",
             children: [
               "Badge",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Trace"
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: downloadDashboardMessageTrackingReport,
+            className: dashboardActionButtonClass,
+            title: "Download Messenger timing and delete tracking JSON report",
+            children: [
+              "Msg",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Trace"
             ]
