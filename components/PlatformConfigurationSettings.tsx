@@ -10469,14 +10469,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </div>
                   </div>
                   <div className="[&_select]:mt-[15px]">
-                    <SelectField
-                      label="Currency"
-                      value={profile.currency}
-                      disabled={!canEditCrewComposition || currencyOptions.length === 0}
-                      options={currencyOptions}
-                      onChange={(value) => updateCurrencyProfile(profile.id, { currency: value })}
-                      emptyLabel={currencyOptions.length === 0 ? 'No unit currencies configured' : undefined}
-                    />
+                    <div className="block min-w-0">
+                      <span className="mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                        <span>Currency</span>
+                        <InfoHint text="Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh." />
+                        {onNavigateToSettingsSection ? (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToSettingsSection({
+                              section: 'currencies',
+                              label: 'Currency Requirements',
+                              focusUnitCode: activeUnitCode,
+                            })}
+                            className="ml-auto rounded border border-cyan-400/35 px-1.5 py-0.5 text-[9px] font-black normal-case tracking-normal text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-400/10"
+                          >
+                            Set up
+                          </button>
+                        ) : null}
+                      </span>
+                      <div className="max-w-full overflow-x-auto">
+                        <select
+                          className={`${fieldClass} block max-w-full whitespace-nowrap`}
+                          value={profile.currency || ''}
+                          disabled={!canEditCrewComposition || currencyOptions.length === 0}
+                          title={profile.currency || (currencyOptions.length === 0 ? 'No unit currencies configured' : 'None')}
+                          onChange={(event) => updateCurrencyProfile(profile.id, { currency: event.target.value })}
+                          aria-label="Currency"
+                        >
+                          {currencyOptions.map((option) => <option key={option} value={option}>{option || 'None'}</option>)}
+                        </select>
+                      </div>
+                    </div>
                   </div>
                   <OffsetField
                     label="No. of A/C"

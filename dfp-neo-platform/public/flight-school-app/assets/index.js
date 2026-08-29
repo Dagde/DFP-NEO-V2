@@ -83499,17 +83499,37 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate", children: configId })
                     ] }, `${profile.id}-config-${configId}`)) })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    SelectField,
-                    {
-                      label: "Currency",
-                      value: profile.currency,
-                      disabled: !canEditCrewComposition || currencyOptions.length === 0,
-                      options: currencyOptions,
-                      onChange: (value) => updateCurrencyProfile(profile.id, { currency: value }),
-                      emptyLabel: currencyOptions.length === 0 ? "No unit currencies configured" : void 0
-                    }
-                  ) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:mt-[15px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "block min-w-0", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh." }),
+                      onNavigateToSettingsSection ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: () => onNavigateToSettingsSection({
+                            section: "currencies",
+                            label: "Currency Requirements",
+                            focusUnitCode: activeUnitCode
+                          }),
+                          className: "ml-auto rounded border border-cyan-400/35 px-1.5 py-0.5 text-[9px] font-black normal-case tracking-normal text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-400/10",
+                          children: "Set up"
+                        }
+                      ) : null
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "select",
+                      {
+                        className: `${fieldClass} block max-w-full whitespace-nowrap`,
+                        value: profile.currency || "",
+                        disabled: !canEditCrewComposition || currencyOptions.length === 0,
+                        title: profile.currency || (currencyOptions.length === 0 ? "No unit currencies configured" : "None"),
+                        onChange: (event) => updateCurrencyProfile(profile.id, { currency: event.target.value }),
+                        "aria-label": "Currency",
+                        children: currencyOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option || "None" }, option))
+                      }
+                    ) })
+                  ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     OffsetField,
                     {
