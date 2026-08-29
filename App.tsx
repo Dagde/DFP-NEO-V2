@@ -912,6 +912,7 @@ const DfpSidePanelTimeline: React.FC<{
     unitCallsignSettings?: UnitCallsignSettings;
     scheduleZoomLevel?: number;
     onRunNeoBuild?: () => void;
+    onNavigateToCurrencySettings?: () => void;
 }> = ({
     flyingStartTime,
     flyingEndTime,
@@ -979,6 +980,7 @@ const DfpSidePanelTimeline: React.FC<{
     unitCallsignSettings,
     scheduleZoomLevel = 1,
     onRunNeoBuild,
+    onNavigateToCurrencySettings,
 }) => {
     const timelineStartHour = 6;
     const timelineEndHour = 25;
@@ -992,6 +994,7 @@ const DfpSidePanelTimeline: React.FC<{
     const wizardRepeatRef = useRef<number | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
     const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('details');
+    const [showAssistCurrencyInfo, setShowAssistCurrencyInfo] = useState(false);
     const filteredEventOptions = useMemo(() => (
         syllabusDetails
             .filter(item => !isSyllabusCourseShell(item))
@@ -4491,6 +4494,34 @@ const DfpSidePanelTimeline: React.FC<{
             const rows = [...buildPriorityRows, ...visibleRemoteRows.map(row => ({ ...row, ignored: false, source: 'remote' as const }))];
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
+                    <div className="relative flex items-center gap-1.5">
+                        <span className="font-semibold uppercase tracking-[0.1em] text-slate-400">Currency</span>
+                        <button
+                            type="button"
+                            aria-label="Currency information"
+                            onClick={() => setShowAssistCurrencyInfo(value => !value)}
+                            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-cyan-300/60 bg-cyan-400/10 text-[10px] font-black leading-none text-cyan-100 hover:bg-cyan-300/20"
+                        >
+                            i
+                        </button>
+                        {showAssistCurrencyInfo && (
+                            <div className="absolute left-0 top-5 z-50 w-72 max-w-[calc(100vw-2rem)] rounded border border-cyan-300/30 bg-slate-950 p-2 text-[10px] font-medium normal-case leading-snug tracking-normal text-slate-100 shadow-xl shadow-black/40">
+                                <p>An event required to maintain or regain a qualification or currency.</p>
+                                {onNavigateToCurrencySettings && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowAssistCurrencyInfo(false);
+                                            onNavigateToCurrencySettings();
+                                        }}
+                                        className="mt-2 rounded border border-cyan-300/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-400/10"
+                                    >
+                                        Open currency settings
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
                     <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
                         {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No currency requests entered.</p>}
                         {rows.map(row => (
@@ -51327,6 +51358,7 @@ appliedUpdates.forEach(update => {
                                     unitCallsignSettings={activeUnitCallsignSettings}
                                     scheduleZoomLevel={zoomLevel}
                                     onRunNeoBuild={handleBuildDfp}
+                                    onNavigateToCurrencySettings={() => handleNavigateToSettingsSection({ sectionId: 'sct-events', unitCode: activeUnitCode })}
                                     onOpenPrioritiesExclusions={() => {
                                         try {
                                             localStorage.setItem('neo_open_departure_arrival_exclusions', '1');
