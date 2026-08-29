@@ -2243,6 +2243,32 @@ function getDashboardMessageConversationId(message, participantId = '', particip
   return `direct-name:${[leftName, rightName].filter(Boolean).sort().join('|')}`;
 }
 
+function getDashboardMessageConversationIds(message, participantId = '', participantName = '', contactId = '', contactName = '') {
+  const groupId = normaliseDashboardMessageId(message?.groupId);
+  if (groupId) return [`group:${groupId}`];
+  const ids = new Set();
+  const fromId = normaliseDashboardMessageId(message?.fromId);
+  const toId = normaliseDashboardMessageId(message?.toId);
+  const leftId = normaliseDashboardMessageId(participantId) || fromId;
+  const rightId = normaliseDashboardMessageId(contactId) || toId;
+  if (leftId && rightId) ids.add(`direct:${[leftId, rightId].sort().join('|')}`);
+  if (fromId && toId) ids.add(`direct:${[fromId, toId].sort().join('|')}`);
+
+  const fromName = normaliseDashboardMessagePersonName(message?.from);
+  const toName = normaliseDashboardMessagePersonName(message?.to);
+  const leftNames = Array.from(dashboardMessagePersonNameKeys(participantName || message?.from));
+  const rightNames = Array.from(dashboardMessagePersonNameKeys(contactName || message?.to));
+  const messageNamePairs = [
+    [fromName, toName],
+    ...leftNames.flatMap(leftName => rightNames.map(rightName => [leftName, rightName])),
+  ];
+  messageNamePairs.forEach(([leftName, rightName]) => {
+    const key = [leftName, rightName].filter(Boolean).sort().join('|');
+    if (key) ids.add(`direct-name:${key}`);
+  });
+  return Array.from(ids);
+}
+
 function getDashboardConversationIdFromRequest({ participantId, participant, contactId, contact, groupId }) {
   const stableGroupId = normaliseDashboardMessageId(groupId);
   if (stableGroupId) return `group:${stableGroupId}`;
@@ -2283,10 +2309,7 @@ function dashboardCutoffMatchesParticipant(cutoff, participantId, participantNam
 }
 
 function getDashboardDeletionCutoffForMessage(cutoffs, message, participantId, participantName) {
-  const ids = new Set([
-    getDashboardMessageConversationId(message),
-    getDashboardMessageConversationId(message, participantId, participantName),
-  ].filter(Boolean));
+  const ids = new Set(getDashboardMessageConversationIds(message, participantId, participantName));
   return cutoffs
     .filter(cutoff => dashboardCutoffMatchesParticipant(cutoff, participantId, participantName) && ids.has(cutoff.conversationId))
     .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null;
@@ -2726,18 +2749,27 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
     });
     const messages = await getDashboardMessages(db);
     const deletionCutoffs = await getDashboardMessageDeletionCutoffs(db);
-    const nextCutoff = {
+    const conversationIds = new Set([conversationId]);
+    messages.forEach(message => {
+      const matchesConversation = groupId
+        ? message.groupId === groupId && dashboardMessageMatchesParticipant(message, participantId, participant)
+        : dashboardMessageMatchesConversation(message, participantId, participant, contactId, contact);
+      if (!matchesConversation) return;
+      getDashboardMessageConversationIds(message, participantId, participant, contactId, contact)
+        .forEach(id => conversationIds.add(id));
+    });
+    const nextCutoffs = Array.from(conversationIds).map(id => ({
       userId: participantId || undefined,
       userName: participant || undefined,
-      conversationId,
+      conversationId: id,
       deletedAt,
-    };
+    }));
     const nextDeletionCutoffs = [
       ...deletionCutoffs.filter(cutoff => !(
         dashboardCutoffMatchesParticipant(cutoff, participantId, participant) &&
-        cutoff.conversationId === conversationId
+        conversationIds.has(cutoff.conversationId)
       )),
-      nextCutoff,
+      ...nextCutoffs,
     ];
     let deleted = 0;
     const nextMessages = messages.map(message => {
@@ -2775,7 +2807,7 @@ app.delete('/api/dashboard-messages/conversation', async (req, res) => {
       deletedAt,
       deleted,
     });
-    res.json({ success: true, deleted, conversationId, deletedAt, deletionCutoff: nextCutoff });
+    res.json({ success: true, deleted, conversationId, conversationIds: Array.from(conversationIds), deletedAt, deletionCutoff: nextCutoffs[0], deletionCutoffs: nextCutoffs });
   } catch (error) {
     console.error('[Dashboard Messages] DELETE conversation error:', error);
     res.status(500).json({ error: 'Failed to delete dashboard conversation', details: error.message });

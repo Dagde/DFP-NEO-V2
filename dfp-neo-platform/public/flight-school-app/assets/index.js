@@ -40929,6 +40929,29 @@ const MyDashboard = ({
     const toName = normaliseDashboardPersonName(message.to);
     return `direct-name:${[fromName, toName].filter(Boolean).sort().join("|")}`;
   };
+  const getDashboardConversationIdsForMessage = (message, contact) => {
+    if (message.groupId) return [`group:${message.groupId}`];
+    const ids = /* @__PURE__ */ new Set();
+    const fromId = String(message.fromId || "").trim();
+    const toId = String(message.toId || "").trim();
+    if (fromId && toId) ids.add(`direct:${[fromId, toId].sort().join("|")}`);
+    if (contact?.id && dashboardSenderContactId) ids.add(`direct:${[dashboardSenderContactId, contact.id].sort().join("|")}`);
+    const fromNames = Array.from(dashboardPersonNameKeys(message.from));
+    const toNames = Array.from(dashboardPersonNameKeys(message.to));
+    const userNames = Array.from(dashboardPersonNameKeys(dashboardMessageUserName));
+    const contactNames = contact ? [
+      ...Array.from(dashboardPersonNameKeys(contact.name)),
+      ...Array.from(dashboardPersonNameKeys(contact.displayName))
+    ] : [];
+    [
+      ...fromNames.flatMap((fromName) => toNames.map((toName) => [fromName, toName])),
+      ...userNames.flatMap((userName2) => contactNames.map((contactName) => [userName2, contactName]))
+    ].forEach(([leftName, rightName]) => {
+      const key = [leftName, rightName].filter(Boolean).sort().join("|");
+      if (key) ids.add(`direct-name:${key}`);
+    });
+    return Array.from(ids);
+  };
   const getDashboardConversationIdForContact = (contact) => {
     if (contact.type === "Group") {
       const groupId = contact.id.replace(/^group-conversation-/, "").replace(/^group-/, "");
@@ -40940,15 +40963,16 @@ const MyDashboard = ({
     return `direct-name:${[normaliseDashboardPersonName(dashboardMessageUserName), normaliseDashboardPersonName(contact.name)].filter(Boolean).sort().join("|")}`;
   };
   const getDeletionCutoffForConversationId = (conversationId) => dashboardMessageDeletionCutoffs.filter((cutoff) => cutoff.conversationId === conversationId).sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null;
+  const getDeletionCutoffForMessage = (message) => getDashboardConversationIdsForMessage(message).map(getDeletionCutoffForConversationId).filter((cutoff) => Boolean(cutoff)).sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime())[0] || null;
   const messageOlderThanDeletionCutoff = (message) => {
     const conversationId = getDashboardConversationIdForMessage(message);
-    const cutoff = getDeletionCutoffForConversationId(conversationId);
+    const cutoff = getDeletionCutoffForMessage(message);
     if (!cutoff) return false;
     const hidden = new Date(message.sentAt).getTime() <= new Date(cutoff.deletedAt).getTime();
     if (hidden) {
       console.info("MSG_MESSAGE_REJECTED_DELETED_HISTORY", {
         messageID: message.id,
-        conversationID: conversationId,
+        conversationID: cutoff.conversationId || conversationId,
         currentUserID: dashboardSenderContactId,
         messageSentAt: message.sentAt,
         deletedAt: cutoff.deletedAt,
@@ -40961,13 +40985,13 @@ const MyDashboard = ({
   const logConversationsRecreatedAfterDelete = (messages) => {
     messages.forEach((message) => {
       const conversationId = getDashboardConversationIdForMessage(message);
-      const cutoff = getDeletionCutoffForConversationId(conversationId);
+      const cutoff = getDeletionCutoffForMessage(message);
       if (!cutoff) return;
       if (new Date(message.sentAt).getTime() <= new Date(cutoff.deletedAt).getTime()) return;
       if (recreatedAfterDeleteConversationIds.current.has(conversationId)) return;
       recreatedAfterDeleteConversationIds.current.add(conversationId);
       console.info("MSG_CONVERSATION_RECREATED_AFTER_DELETE", {
-        conversationID: conversationId,
+        conversationID: cutoff.conversationId || conversationId,
         currentUserID: dashboardSenderContactId,
         deletedAt: cutoff.deletedAt,
         messageID: message.id,
@@ -41483,19 +41507,25 @@ const MyDashboard = ({
     const groupId = contact.type === "Group" ? contact.id.replace(/^group-conversation-/, "").replace(/^group-/, "") : "";
     const conversationId = getDashboardConversationIdForContact(contact);
     const localDeletedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const localConversationIds = /* @__PURE__ */ new Set([conversationId]);
+    dashboardMessages.forEach((message) => {
+      const matches = groupId ? message.groupId === groupId : messageFromDashboardUser(message) && messageMatchesContact(message, contact) || messageMatchesContact(message, contact) && messageAddressedToDashboardUser(message);
+      if (!matches) return;
+      getDashboardConversationIdsForMessage(message, contact).forEach((id) => localConversationIds.add(id));
+    });
     console.info("MSG_CONVERSATION_DELETE_LOCAL_CLEAR", {
       conversationID: conversationId,
       currentUserID: dashboardSenderContactId,
       deletedAt: localDeletedAt
     });
     persistDashboardMessageDeletionCutoffs((cutoffs) => [
-      ...cutoffs.filter((cutoff) => cutoff.conversationId !== conversationId),
-      {
+      ...cutoffs.filter((cutoff) => !localConversationIds.has(cutoff.conversationId)),
+      ...Array.from(localConversationIds).map((id) => ({
         userId: dashboardSenderContactId,
         userName: normaliseDashboardPersonName(dashboardMessageUserName),
-        conversationId,
+        conversationId: id,
         deletedAt: localDeletedAt
-      }
+      }))
     ]);
     persistDashboardMessages((messages) => messages.filter((message) => {
       const matches = groupId ? message.groupId === groupId : messageFromDashboardUser(message) && messageMatchesContact(message, contact) || messageMatchesContact(message, contact) && messageAddressedToDashboardUser(message);
@@ -41522,21 +41552,22 @@ const MyDashboard = ({
         groupId ? void 0 : contact.id,
         groupId || void 0
       );
-      const serverCutoff = result?.deletionCutoff || (result?.conversationId && result?.deletedAt ? {
+      const serverCutoffs = Array.isArray(result?.deletionCutoffs) && result.deletionCutoffs.length > 0 ? result.deletionCutoffs : result?.deletionCutoff ? [result.deletionCutoff] : result?.conversationId && result?.deletedAt ? [{
         userId: dashboardSenderContactId,
         userName: normaliseDashboardPersonName(dashboardMessageUserName),
         conversationId: result.conversationId,
         deletedAt: result.deletedAt
-      } : null);
-      if (serverCutoff?.conversationId && serverCutoff?.deletedAt) {
+      }] : [];
+      if (serverCutoffs.length > 0) {
         persistDashboardMessageDeletionCutoffs((cutoffs) => [
-          ...cutoffs.filter((cutoff) => cutoff.conversationId !== serverCutoff.conversationId),
-          serverCutoff
+          ...cutoffs.filter((cutoff) => !serverCutoffs.some((serverCutoff) => serverCutoff.conversationId === cutoff.conversationId)),
+          ...serverCutoffs
         ]);
+        const primaryCutoff = serverCutoffs[0];
         console.info("MSG_CONVERSATION_DELETE_CUTOFF_SET", {
-          conversationID: serverCutoff.conversationId,
+          conversationID: primaryCutoff.conversationId,
           currentUserID: dashboardSenderContactId,
-          deletedAt: serverCutoff.deletedAt
+          deletedAt: primaryCutoff.deletedAt
         });
       }
       console.info("MSG_CONVERSATION_DELETE_RESPONSE", {
