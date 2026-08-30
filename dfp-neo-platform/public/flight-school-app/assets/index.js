@@ -7206,7 +7206,10 @@ const CrewRequirementEditor = ({
   showSummary = true,
   showAircraftDefaultSummary = true,
   headerClassName = "",
-  aircraftDefaultOptionLabel = "Use aircraft default"
+  aircraftDefaultOptionLabel = "Use aircraft default",
+  crewHelpText,
+  crewHelpLinkLabel,
+  onCrewHelpLinkClick
 }) => {
   const normalised = normaliseCrewRequirement(value);
   const effectiveSummary = formatCrewRequirementSummary(value, aircraftCrewComposition, crewPositionTerminology);
@@ -7273,7 +7276,28 @@ const CrewRequirementEditor = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? "flex h-full min-h-[8rem] flex-col p-2" : "p-3"} text-xs text-slate-200`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${compact ? "grid" : "flex flex-wrap"} items-center justify-between gap-2`, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `font-semibold text-slate-100 ${headerClassName}`, children: "Crew Required" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex flex-wrap items-center gap-1.5 font-semibold text-slate-100 ${headerClassName}`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Crew Required" }),
+          crewHelpText ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "span",
+            {
+              className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-cyan-400 text-[10px] font-bold text-cyan-300",
+              title: crewHelpText,
+              "aria-label": crewHelpText,
+              children: "i"
+            }
+          ) : null,
+          crewHelpLinkLabel && onCrewHelpLinkClick ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              "data-help-link": "true",
+              onClick: onCrewHelpLinkClick,
+              className: "text-[11px] font-semibold text-cyan-300 underline-offset-2 hover:text-cyan-200 hover:underline",
+              children: crewHelpLinkLabel
+            }
+          ) : null
+        ] }),
         !compact && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 break-words text-slate-400", children: effectiveSummary })
       ] }),
       crewRequirementPresets.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -7657,6 +7681,7 @@ const CurrencyBuilderView = ({
   onSave,
   onDelete,
   onImportFromUnit,
+  onNavigateToAircraftDefaultCrewSettings,
   aircraftCrewComposition,
   crewPositionTerminology,
   operationalModel
@@ -7888,14 +7913,14 @@ This replaces the current ${targetLabel} currency/recency list.`, "Import Curren
         )) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-2/3 overflow-y-auto p-6 ${isEditUnlocked ? "" : "opacity-80"}`, children: selectedCurrency ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: isEditUnlocked ? "" : "pointer-events-none", children: selectedCurrency.type === "primitive" ? /* @__PURE__ */ jsxRuntimeExports.jsx(PrimitiveEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, aircraftCrewComposition, crewPositionTerminology, operationalModel }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CompositeEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: isEditUnlocked ? "" : "[&_input]:pointer-events-none [&_select]:pointer-events-none [&_button:not([data-help-link])]:pointer-events-none", children: selectedCurrency.type === "primitive" ? /* @__PURE__ */ jsxRuntimeExports.jsx(PrimitiveEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, onNavigateToAircraftDefaultCrewSettings, aircraftCrewComposition, crewPositionTerminology, operationalModel }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CompositeEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, onNavigateToAircraftDefaultCrewSettings, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UsedInSection, { currencyId: selectedCurrency.id, allCurrencies }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-6 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDeleteCurrency, disabled: !isEditUnlocked, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400", children: "Delete Currency" }) })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full text-gray-500 italic", children: "Select a currency to edit, or add a new one." }) })
     ] })
   ] });
 };
-const PrimitiveEditor = ({ currency, onUpdate, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
+const PrimitiveEditor = ({ currency, onUpdate, onNavigateToAircraftDefaultCrewSettings, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
   const handleChange = (field, value) => {
     onUpdate({ ...currency, [field]: value });
   };
@@ -7939,6 +7964,9 @@ const PrimitiveEditor = ({ currency, onUpdate, aircraftCrewComposition, crewPosi
         aircraftCrewComposition,
         crewPositionTerminology,
         operationalModel,
+        crewHelpText: "Use aircraft default to apply the standard crew seats configured for the aircraft type. Choose custom crew only when this currency needs a different crew makeup.",
+        crewHelpLinkLabel: "Aircraft default crew settings",
+        onCrewHelpLinkClick: onNavigateToAircraftDefaultCrewSettings,
         onChange: (v) => handleChange("crewRequirement", v)
       }
     ),
@@ -7999,7 +8027,7 @@ const PrimitiveEditor = ({ currency, onUpdate, aircraftCrewComposition, crewPosi
     ] })
   ] });
 };
-const CompositeEditor = ({ currency, onUpdate, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
+const CompositeEditor = ({ currency, onUpdate, onNavigateToAircraftDefaultCrewSettings, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
   const handleChange = (field, value) => {
     onUpdate({ ...currency, [field]: value });
   };
@@ -8040,6 +8068,9 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies, aircraftCrewCompos
         aircraftCrewComposition,
         crewPositionTerminology,
         operationalModel,
+        crewHelpText: "Use aircraft default to apply the standard crew seats configured for the aircraft type. Choose custom crew only when this currency needs a different crew makeup.",
+        crewHelpLinkLabel: "Aircraft default crew settings",
+        onCrewHelpLinkClick: onNavigateToAircraftDefaultCrewSettings,
         onChange: (v) => handleChange("crewRequirement", v)
       }
     ),
@@ -90250,6 +90281,12 @@ const SettingsViewWithMenu = (props) => {
             onDelete: props.onDeleteCurrency || (() => {
             }),
             onImportFromUnit: props.onImportCurrenciesFromUnit,
+            onNavigateToAircraftDefaultCrewSettings: () => navigateToSettingsSection({
+              section: "crew-composition",
+              focusUnitCode: props.activeUnitCode,
+              focusAircraftTypeCode: props.activeAircraftTypeCode,
+              focusSubsectionId: "platform-crew-composition"
+            }),
             aircraftCrewComposition: props.aircraftCrewComposition,
             crewPositionTerminology: props.crewPositionTerminology,
             operationalModel: props.activeOperationalModel
@@ -140127,6 +140164,12 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSave: handleSaveCurrencies,
             onDelete: handleDeleteCurrency,
             onImportFromUnit: importCurrencyDefinitionsFromUnit,
+            onNavigateToAircraftDefaultCrewSettings: () => handleNavigateToSettingsSection({
+              sectionId: "crew-composition",
+              unitCode: activeUnitCode,
+              aircraftTypeCode: activeRuntimeAircraftTypeCode,
+              focusSubsectionId: "platform-crew-composition"
+            }),
             aircraftCrewComposition: activeAircraftCrewComposition,
             crewPositionTerminology: activeCrewPositionTerminology,
             operationalModel: activeOperationalModel

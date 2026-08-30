@@ -23,6 +23,7 @@ interface CurrencyBuilderViewProps {
     onSave: (allCurrencies: CurrencyDefinition[]) => void;
     onDelete: (id: string) => void;
     onImportFromUnit?: (unitCode: string) => void;
+    onNavigateToAircraftDefaultCrewSettings?: () => void;
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
     operationalModel?: string;
@@ -75,6 +76,7 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     onSave,
     onDelete,
     onImportFromUnit,
+    onNavigateToAircraftDefaultCrewSettings,
     aircraftCrewComposition,
     crewPositionTerminology,
     operationalModel,
@@ -308,10 +310,10 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                 <div className={`w-2/3 overflow-y-auto p-6 ${isEditUnlocked ? '' : 'opacity-80'}`}>
                     {selectedCurrency ? (
                         <div className="space-y-6">
-                            <div className={isEditUnlocked ? '' : 'pointer-events-none'}>
+                            <div className={isEditUnlocked ? '' : '[&_input]:pointer-events-none [&_select]:pointer-events-none [&_button:not([data-help-link])]:pointer-events-none'}>
                                 {selectedCurrency.type === 'primitive'
-                                    ? <PrimitiveEditor currency={selectedCurrency as CurrencyRequirement} onUpdate={handleUpdateCurrency} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} operationalModel={operationalModel} />
-                                    : <CompositeEditor currency={selectedCurrency as MasterCurrency} onUpdate={handleUpdateCurrency} allCurrencies={allCurrencies} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} operationalModel={operationalModel} />
+                                    ? <PrimitiveEditor currency={selectedCurrency as CurrencyRequirement} onUpdate={handleUpdateCurrency} onNavigateToAircraftDefaultCrewSettings={onNavigateToAircraftDefaultCrewSettings} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} operationalModel={operationalModel} />
+                                    : <CompositeEditor currency={selectedCurrency as MasterCurrency} onUpdate={handleUpdateCurrency} onNavigateToAircraftDefaultCrewSettings={onNavigateToAircraftDefaultCrewSettings} allCurrencies={allCurrencies} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} operationalModel={operationalModel} />
                                 }
                             </div>
 
@@ -340,10 +342,11 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
 const PrimitiveEditor: React.FC<{
     currency: CurrencyRequirement;
     onUpdate: (c: CurrencyRequirement) => void;
+    onNavigateToAircraftDefaultCrewSettings?: () => void;
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
     operationalModel?: string;
-}> = ({ currency, onUpdate, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
+}> = ({ currency, onUpdate, onNavigateToAircraftDefaultCrewSettings, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
     const handleChange = (field: keyof CurrencyRequirement, value: any) => {
         onUpdate({ ...currency, [field]: value });
     };
@@ -392,6 +395,9 @@ const PrimitiveEditor: React.FC<{
                 aircraftCrewComposition={aircraftCrewComposition}
                 crewPositionTerminology={crewPositionTerminology}
                 operationalModel={operationalModel}
+                crewHelpText="Use aircraft default to apply the standard crew seats configured for the aircraft type. Choose custom crew only when this currency needs a different crew makeup."
+                crewHelpLinkLabel="Aircraft default crew settings"
+                onCrewHelpLinkClick={onNavigateToAircraftDefaultCrewSettings}
                 onChange={v => handleChange('crewRequirement', v)}
             />
 
@@ -448,11 +454,12 @@ const PrimitiveEditor: React.FC<{
 const CompositeEditor: React.FC<{
     currency: MasterCurrency;
     onUpdate: (c: MasterCurrency) => void;
+    onNavigateToAircraftDefaultCrewSettings?: () => void;
     allCurrencies: CurrencyDefinition[];
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
     operationalModel?: string;
-}> = ({ currency, onUpdate, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
+}> = ({ currency, onUpdate, onNavigateToAircraftDefaultCrewSettings, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
     const handleChange = (field: keyof MasterCurrency, value: any) => {
         onUpdate({ ...currency, [field]: value });
     };
@@ -497,6 +504,9 @@ const CompositeEditor: React.FC<{
                 aircraftCrewComposition={aircraftCrewComposition}
                 crewPositionTerminology={crewPositionTerminology}
                 operationalModel={operationalModel}
+                crewHelpText="Use aircraft default to apply the standard crew seats configured for the aircraft type. Choose custom crew only when this currency needs a different crew makeup."
+                crewHelpLinkLabel="Aircraft default crew settings"
+                onCrewHelpLinkClick={onNavigateToAircraftDefaultCrewSettings}
                 onChange={v => handleChange('crewRequirement', v)}
             />
 

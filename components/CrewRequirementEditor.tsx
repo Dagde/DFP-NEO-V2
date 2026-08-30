@@ -31,6 +31,9 @@ interface CrewRequirementEditorProps {
   showAircraftDefaultSummary?: boolean;
   headerClassName?: string;
   aircraftDefaultOptionLabel?: string;
+  crewHelpText?: string;
+  crewHelpLinkLabel?: string;
+  onCrewHelpLinkClick?: () => void;
 }
 
 const makeRoleId = (): string => `crew-role-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -85,6 +88,9 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
   showAircraftDefaultSummary = true,
   headerClassName = '',
   aircraftDefaultOptionLabel = 'Use aircraft default',
+  crewHelpText,
+  crewHelpLinkLabel,
+  onCrewHelpLinkClick,
 }) => {
   const normalised = normaliseCrewRequirement(value);
   const effectiveSummary = formatCrewRequirementSummary(value, aircraftCrewComposition, crewPositionTerminology);
@@ -171,7 +177,28 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
     <div className={`min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? 'flex h-full min-h-[8rem] flex-col p-2' : 'p-3'} text-xs text-slate-200`}>
       <div className={`${compact ? 'grid' : 'flex flex-wrap'} items-center justify-between gap-2`}>
         <div className="min-w-0">
-          <div className={`font-semibold text-slate-100 ${headerClassName}`}>Crew Required</div>
+          <div className={`flex flex-wrap items-center gap-1.5 font-semibold text-slate-100 ${headerClassName}`}>
+            <span>Crew Required</span>
+            {crewHelpText ? (
+              <span
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-cyan-400 text-[10px] font-bold text-cyan-300"
+                title={crewHelpText}
+                aria-label={crewHelpText}
+              >
+                i
+              </span>
+            ) : null}
+            {crewHelpLinkLabel && onCrewHelpLinkClick ? (
+              <button
+                type="button"
+                data-help-link="true"
+                onClick={onCrewHelpLinkClick}
+                className="text-[11px] font-semibold text-cyan-300 underline-offset-2 hover:text-cyan-200 hover:underline"
+              >
+                {crewHelpLinkLabel}
+              </button>
+            ) : null}
+          </div>
           {!compact && <div className="mt-0.5 break-words text-slate-400">{effectiveSummary}</div>}
         </div>
         {crewRequirementPresets.length > 0 ? (

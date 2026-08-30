@@ -49986,6 +49986,12 @@ appliedUpdates.forEach(update => {
                             onSave={handleSaveCurrencies}
                             onDelete={handleDeleteCurrency}
                             onImportFromUnit={importCurrencyDefinitionsFromUnit}
+                            onNavigateToAircraftDefaultCrewSettings={() => handleNavigateToSettingsSection({
+                                sectionId: 'crew-composition',
+                                unitCode: activeUnitCode,
+                                aircraftTypeCode: activeRuntimeAircraftTypeCode,
+                                focusSubsectionId: 'platform-crew-composition',
+                            })}
                             aircraftCrewComposition={activeAircraftCrewComposition}
                             crewPositionTerminology={activeCrewPositionTerminology}
                             operationalModel={activeOperationalModel}

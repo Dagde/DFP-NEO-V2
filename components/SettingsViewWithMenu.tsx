@@ -2195,6 +2195,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                     onSave={props.onSaveCurrencies || (() => {})}
                                     onDelete={props.onDeleteCurrency || (() => {})}
                                     onImportFromUnit={props.onImportCurrenciesFromUnit}
+                                    onNavigateToAircraftDefaultCrewSettings={() => navigateToSettingsSection({
+                                        section: 'crew-composition',
+                                        focusUnitCode: props.activeUnitCode,
+                                        focusAircraftTypeCode: props.activeAircraftTypeCode,
+                                        focusSubsectionId: 'platform-crew-composition',
+                                    })}
                                     aircraftCrewComposition={props.aircraftCrewComposition}
                                     crewPositionTerminology={props.crewPositionTerminology}
                                     operationalModel={props.activeOperationalModel}
