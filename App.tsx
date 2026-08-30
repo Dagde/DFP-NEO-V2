@@ -5448,7 +5448,7 @@ import { loadSyllabusFromDB, clearSyllabusCache, createSyllabusItem, updateSylla
 // --- DEFAULT PHRASE BANK (configuration data - not mock data) ---
 import { DEFAULT_PHRASE_BANK } from './config/phraseBankConfig';
 import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from './lib/api';
-import { mergeWithInitialCurrencies } from './data/currencies';
+import { buildDefault1FtsCurrencyDefinitions, mergeWithInitialCurrencies } from './data/currencies';
 
 // --- TRAINING REPORT STRUCTURE ---
 const TRAINING_REPORT_STRUCTURE = [
@@ -31329,6 +31329,21 @@ const App: React.FC = () => {
                             ];
                         })
                     ) as Record<string, { masterCurrencies: MasterCurrency[]; currencyRequirements: CurrencyRequirement[] }>;
+
+                    const hasSaved1FtsDefinition = Object.prototype.hasOwnProperty.call(mergedUnitDefinitions, '1FTS');
+                    const hasAnySavedCurrencyDefinitions = (
+                        merged.masters.length > 0 ||
+                        merged.requirements.length > 0 ||
+                        Object.values(mergedUnitDefinitions).some(definitions => (
+                            (definitions.masterCurrencies?.length || 0) > 0 ||
+                            (definitions.currencyRequirements?.length || 0) > 0
+                        ))
+                    );
+                    if (!hasSaved1FtsDefinition && !hasAnySavedCurrencyDefinitions) {
+                        mergedUnitDefinitions['1FTS'] = buildDefault1FtsCurrencyDefinitions();
+                        console.info('[Currency Setup] Restored default 1FTS currency definitions because saved settings had no currency catalogue.');
+                    }
+
                     setUnitCurrencyDefinitions(mergedUnitDefinitions);
                     const activeUnitDefinitions = activeCurrencyUnitKey ? mergedUnitDefinitions[activeCurrencyUnitKey] : null;
                     setMasterCurrencies(activeUnitDefinitions?.masterCurrencies || merged.masters);
