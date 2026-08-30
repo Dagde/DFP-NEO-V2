@@ -207,7 +207,7 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 z-[110] flex items-center justify-center animate-fade-in" onClick={onClose}>
       <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700" onClick={e => e.stopPropagation()}>
         <div className="p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
           <h2 className="text-xl font-bold text-sky-400">Request {continuationShortLabel} for {instructor.name}</h2>

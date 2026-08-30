@@ -122,7 +122,7 @@ interface InstructorProfileFlyoutProps {
   ) => Promise<void> | void;
   onAddTrainingReport?: (staff: Instructor) => void;
   onViewLogbook?: (person: Instructor) => void;
-  onRequestSct: () => void;
+  onRequestSct: (instructor: Instructor) => void;
   onNavigateToTrainee?: (trainee: Trainee) => void;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
@@ -1502,8 +1502,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      onRequestSct();
-                      setActiveTab(null);
+                      onRequestSct(instructor);
                     }}
                     className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
                   >Submit {continuationShortLabel} Request</button>

@@ -60514,8 +60514,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 onClick: (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onRequestSct();
-                  setActiveTab(null);
+                  onRequestSct(instructor);
                 },
                 className: "px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded",
                 children: [
@@ -97606,7 +97605,7 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
     };
     onSave(newRequest);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[110] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-bold text-sky-400", children: [
         "Request ",
