@@ -1136,10 +1136,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 <p className="text-gray-200">{(selectedCurrency as CurrencyRequirement).requiredCount}</p>
                                             </div>
                                             <div>
-                                                <label className="text-sm font-medium text-gray-400 block mb-1">Event Codes</label>
+                                                <label className="text-sm font-medium text-gray-400 block mb-1">Currency Short Code</label>
                                                 <p className="text-gray-300">
-                                                    {(selectedCurrency as CurrencyRequirement).eventCodes.length > 0 
-                                                        ? (selectedCurrency as CurrencyRequirement).eventCodes.join(', ') 
+                                                    {(selectedCurrency as CurrencyRequirement).shortCode || (selectedCurrency as CurrencyRequirement).eventCodes?.[0]
+                                                        ? (selectedCurrency as CurrencyRequirement).shortCode || (selectedCurrency as CurrencyRequirement).eventCodes?.[0]
                                                         : 'None'}
                                                 </p>
                                             </div>

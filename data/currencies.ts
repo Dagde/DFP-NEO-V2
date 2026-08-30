@@ -1,5 +1,16 @@
 import { CurrencyRequirement, MasterCurrency, PostFlightInputType } from '../types';
 
+const normaliseCurrencyShortCode = (value: unknown): string => String(value || '').trim().toUpperCase();
+
+const fallbackCurrencyShortCode = (currency: { id?: string; name?: string; eventCodes?: string[]; shortCode?: string; code?: string }): string => {
+    const explicit = normaliseCurrencyShortCode(currency.shortCode || currency.code || currency.eventCodes?.[0]);
+    if (explicit) return explicit;
+    return normaliseCurrencyShortCode(currency.name || currency.id)
+        .replace(/[^A-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 16);
+};
+
 export const DEFAULT_1FTS_CURRENCY_REQUIREMENTS: CurrencyRequirement[] = [
   { id: 'aircrew-medical', name: 'Aircrew Medical', description: 'Annual aircrew medical check.', type: 'primitive', isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: 'LAST_EVENT_PLUS_PERIOD', showInPostFlight: false, postFlightInputTypes: ['date'] },
   { id: 'combat-survival', name: 'Combat Survival Refresher', description: 'Annual combat survival training.', type: 'primitive', isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: 'LAST_EVENT_PLUS_PERIOD', showInPostFlight: false, postFlightInputTypes: ['date'] },
@@ -104,8 +115,8 @@ export const buildDefault1FtsCurrencyDefinitions = (): {
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
 } => ({
-    masterCurrencies: DEFAULT_1FTS_MASTER_CURRENCIES.map(currency => ({ ...currency, logicTree: JSON.parse(JSON.stringify(currency.logicTree)) })),
-    currencyRequirements: DEFAULT_1FTS_CURRENCY_REQUIREMENTS.map(currency => ({ ...currency, eventCodes: [...currency.eventCodes], postFlightInputTypes: [...(currency.postFlightInputTypes || [])] })),
+    masterCurrencies: DEFAULT_1FTS_MASTER_CURRENCIES.map(currency => ({ ...currency, shortCode: fallbackCurrencyShortCode(currency), logicTree: JSON.parse(JSON.stringify(currency.logicTree)) })),
+    currencyRequirements: DEFAULT_1FTS_CURRENCY_REQUIREMENTS.map(currency => ({ ...currency, shortCode: fallbackCurrencyShortCode(currency), eventCodes: [...currency.eventCodes], postFlightInputTypes: [...(currency.postFlightInputTypes || [])] })),
 });
 
 /**
@@ -135,6 +146,7 @@ export const mergeWithInitialCurrencies = (
         return {
             postFlightInputTypes: dbCur.expiryRule === 'ROLLING_WINDOW' ? ['count'] : ['date'],
             ...dbCur,
+            shortCode: fallbackCurrencyShortCode(dbCur as any),
             showInPostFlight,
             showInPostFlightRecency,
             ...(migratedTypes ? { postFlightInputTypes: migratedTypes } : {}),
@@ -156,6 +168,7 @@ export const mergeWithInitialCurrencies = (
         return {
             postFlightInputTypes: ['checkbox'] as PostFlightInputType[],
             ...dbCur,
+            shortCode: fallbackCurrencyShortCode(dbCur as any),
             showInPostFlight,
             showInPostFlightRecency,
             ...(migratedTypes ? { postFlightInputTypes: migratedTypes } : {}),

@@ -7616,31 +7616,12 @@ const showDarkPrompt = ({
     });
   });
 };
-const normaliseEventCode = (value) => String(value || "").trim();
-const codeMatchesUnit = (unitValue, activeUnitCode) => {
-  const unit = normaliseEventCode(unitValue).toUpperCase();
-  const activeUnit = normaliseEventCode(activeUnitCode).toUpperCase();
-  return !activeUnit || !unit || unit === activeUnit || unit.split("+").includes(activeUnit) || activeUnit.split("+").includes(unit);
-};
-const makeEventCodeOptions = (sctEvents = [], activeUnitCode) => {
-  const byKey = /* @__PURE__ */ new Map();
-  const addOption = (codeValue, labelValue, source) => {
-    const code = normaliseEventCode(codeValue);
-    if (!code) return;
-    const key = code.toUpperCase();
-    if (byKey.has(key)) return;
-    byKey.set(key, {
-      code,
-      label: normaliseEventCode(labelValue) || code,
-      source
-    });
-  };
-  sctEvents.filter((event) => codeMatchesUnit(event.unitCode || event.unit || event.compositeUnitCode, activeUnitCode)).forEach((event) => addOption(event.code || event.name, event.name || event.code, "ContT / Currency Events"));
-  return Array.from(byKey.values()).sort((a, b) => a.source.localeCompare(b.source) || a.code.localeCompare(b.code, void 0, { numeric: true }));
-};
+const normaliseShortCode = (value) => String(value || "").trim();
+const getCurrencyShortCode = (currency) => normaliseShortCode(currency.shortCode || currency.eventCodes?.[0] || "");
 const getNewPrimitive = () => ({
   id: v4(),
   name: "New Primitive Currency",
+  shortCode: "",
   description: "",
   type: "primitive",
   isVisible: true,
@@ -7656,6 +7637,7 @@ const getNewPrimitive = () => ({
 const getNewComposite = () => ({
   id: v4(),
   name: "New Composite Currency",
+  shortCode: "",
   description: "",
   type: "composite",
   isVisible: true,
@@ -7677,8 +7659,7 @@ const CurrencyBuilderView = ({
   onImportFromUnit,
   aircraftCrewComposition,
   crewPositionTerminology,
-  operationalModel,
-  sctEvents = []
+  operationalModel
 }) => {
   const [allCurrencies, setAllCurrencies] = reactExports.useState([]);
   const [selectedCurrencyId, setSelectedCurrencyId] = reactExports.useState(null);
@@ -7698,7 +7679,6 @@ const CurrencyBuilderView = ({
   const selectedCurrency = reactExports.useMemo(() => {
     return allCurrencies.find((c) => c.id === selectedCurrencyId) || null;
   }, [selectedCurrencyId, allCurrencies]);
-  const eventCodeOptions = reactExports.useMemo(() => makeEventCodeOptions(sctEvents, activeUnitCode), [activeUnitCode, sctEvents]);
   const handleUpdateCurrency = (updatedCurrency) => {
     if (!isEditUnlocked) return;
     setAllCurrencies((prev) => prev.map((c) => c.id === updatedCurrency.id ? updatedCurrency : c));
@@ -7893,7 +7873,14 @@ This replaces the current ${targetLabel} currency/recency list.`, "Import Curren
             onClick: () => setSelectedCurrencyId(c.id),
             className: `p-3 cursor-pointer border-l-4 ${selectedCurrencyId === c.id ? "bg-sky-700 border-sky-400" : "border-transparent hover:bg-gray-700/50"}`,
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `font-semibold ${c.type === "composite" ? "text-purple-300" : "text-green-300"}`, children: c.name }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: `font-semibold ${c.type === "composite" ? "text-purple-300" : "text-green-300"}`, children: [
+                c.name,
+                getCurrencyShortCode(c) && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-2 text-xs font-bold text-gray-400", children: [
+                  "[",
+                  getCurrencyShortCode(c),
+                  "]"
+                ] })
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: c.description || "No description" })
             ]
           },
@@ -7901,121 +7888,24 @@ This replaces the current ${targetLabel} currency/recency list.`, "Import Curren
         )) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-2/3 overflow-y-auto p-6 ${isEditUnlocked ? "" : "opacity-80"}`, children: selectedCurrency ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: isEditUnlocked ? "" : "pointer-events-none", children: selectedCurrency.type === "primitive" ? /* @__PURE__ */ jsxRuntimeExports.jsx(PrimitiveEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, eventCodeOptions, aircraftCrewComposition, crewPositionTerminology, operationalModel }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CompositeEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: isEditUnlocked ? "" : "pointer-events-none", children: selectedCurrency.type === "primitive" ? /* @__PURE__ */ jsxRuntimeExports.jsx(PrimitiveEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, aircraftCrewComposition, crewPositionTerminology, operationalModel }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CompositeEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UsedInSection, { currencyId: selectedCurrency.id, allCurrencies }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-6 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDeleteCurrency, disabled: !isEditUnlocked, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400", children: "Delete Currency" }) })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full text-gray-500 italic", children: "Select a currency to edit, or add a new one." }) })
     ] })
   ] });
 };
-const EventCodeChecklist = ({ selectedCodes, options, onChange }) => {
-  const [filter, setFilter] = reactExports.useState("");
-  const [customCode, setCustomCode] = reactExports.useState("");
-  const selectedKeys = new Set(selectedCodes.map((code) => code.toUpperCase()));
-  const optionKeys = new Set(options.map((option) => option.code.toUpperCase()));
-  const selectedCustomOptions = selectedCodes.filter((code) => code && !optionKeys.has(code.toUpperCase())).map((code) => ({ code, label: code, source: "Selected Custom" }));
-  const displayOptions = [...options, ...selectedCustomOptions].filter((option) => {
-    const search = filter.trim().toLowerCase();
-    if (!search) return true;
-    return option.code.toLowerCase().includes(search) || option.label.toLowerCase().includes(search);
-  });
-  const groupedOptions = displayOptions.reduce((groups, option) => {
-    groups[option.source] = [...groups[option.source] || [], option];
-    return groups;
-  }, {
-    "ContT / Currency Events": [],
-    "Selected Custom": []
-  });
-  const setSelected = (code, checked) => {
-    const next = checked ? [...selectedCodes, code] : selectedCodes.filter((selectedCode) => selectedCode.toUpperCase() !== code.toUpperCase());
-    onChange(Array.from(new Map(next.map((value) => [value.toUpperCase(), value])).values()));
-  };
-  const addCustomCode = () => {
-    const code = customCode.trim();
-    if (!code) return;
-    setSelected(code, true);
-    setCustomCode("");
-    setFilter("");
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: [
-      "Qualifying Events",
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs text-gray-500", children: "select every ContT / Currency Event that satisfies this currency" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-600 bg-gray-800/60 p-3 space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[1fr_180px] gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "text",
-            value: filter,
-            onChange: (event) => setFilter(event.target.value),
-            placeholder: "Search qualifying events...",
-            className: "w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: customCode,
-              onChange: (event) => setCustomCode(event.target.value.toUpperCase()),
-              onKeyDown: (event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  addCustomCode();
-                }
-              },
-              placeholder: "Custom code",
-              className: "min-w-0 flex-1 rounded-l border border-r-0 border-gray-600 bg-gray-900 px-2 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: addCustomCode,
-              className: "rounded-r border border-gray-600 bg-sky-700 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-600",
-              children: "Add"
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 overflow-y-auto pr-1 space-y-3", children: [
-        ["ContT / Currency Events", "Selected Custom"].map((source) => groupedOptions[source].length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide text-gray-500", children: source }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 xl:grid-cols-2 gap-1.5", children: groupedOptions[source].map((option) => {
-            const checked = selectedKeys.has(option.code.toUpperCase());
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5 text-sm text-gray-200", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked,
-                  onChange: (event) => setSelected(option.code, event.target.checked),
-                  className: "mt-0.5 h-4 w-4 rounded accent-sky-500"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: option.code }),
-                option.label && option.label !== option.code && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs text-gray-400", children: option.label })
-              ] })
-            ] }, `${source}-${option.code}`);
-          }) })
-        ] }, source)),
-        displayOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/60 px-3 py-4 text-center text-sm text-gray-400", children: "No configured ContT / Currency Events found. Add a custom code above." })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400", children: [
-        "Selected: ",
-        selectedCodes.length > 0 ? selectedCodes.join(", ") : "None"
-      ] })
-    ] })
-  ] });
-};
-const PrimitiveEditor = ({ currency, onUpdate, eventCodeOptions, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
+const PrimitiveEditor = ({ currency, onUpdate, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
   const handleChange = (field, value) => {
     onUpdate({ ...currency, [field]: value });
+  };
+  const handleShortCodeChange = (value) => {
+    const shortCode = normaliseShortCode(value).toUpperCase();
+    onUpdate({
+      ...currency,
+      shortCode,
+      eventCodes: shortCode ? [shortCode] : []
+    });
   };
   const suggestedTypes = currency.expiryRule === "ROLLING_WINDOW" ? ["count"] : ["date"];
   const activeTypes = currency.postFlightInputTypes && currency.postFlightInputTypes.length > 0 ? currency.postFlightInputTypes : suggestedTypes;
@@ -8027,6 +7917,13 @@ const PrimitiveEditor = ({ currency, onUpdate, eventCodeOptions, aircraftCrewCom
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-green-400", children: "Edit Primitive Currency" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$2, { label: "Name", value: currency.name, onChange: (v) => handleChange("name", v) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ShortCodeField,
+      {
+        value: currency.shortCode || currency.eventCodes?.[0] || "",
+        onChange: handleShortCodeChange
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$2, { label: "Description", value: currency.description, onChange: (v) => handleChange("description", v) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(CheckboxField, { label: "Visible in Main List", checked: currency.isVisible, onChange: (v) => handleChange("isVisible", v) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$2, { label: "Validity (Days)", type: "number", value: currency.validityDays, onChange: (v) => handleChange("validityDays", Number(v)) }),
@@ -8035,14 +7932,6 @@ const PrimitiveEditor = ({ currency, onUpdate, eventCodeOptions, aircraftCrewCom
       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "LAST_EVENT_PLUS_PERIOD", children: "Last Event + Period" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ROLLING_WINDOW", children: "Rolling Window" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      EventCodeChecklist,
-      {
-        selectedCodes: currency.eventCodes,
-        options: eventCodeOptions,
-        onChange: (codes) => handleChange("eventCodes", codes)
-      }
-    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       CrewRequirementEditor,
       {
@@ -8114,6 +8003,9 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies, aircraftCrewCompos
   const handleChange = (field, value) => {
     onUpdate({ ...currency, [field]: value });
   };
+  const handleShortCodeChange = (value) => {
+    handleChange("shortCode", normaliseShortCode(value).toUpperCase());
+  };
   const handleLogicTreeChange = (newLogicTree) => {
     handleChange("logicTree", newLogicTree);
   };
@@ -8127,6 +8019,13 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies, aircraftCrewCompos
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-purple-400", children: "Edit Composite Currency" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$2, { label: "Name", value: currency.name, onChange: (v) => handleChange("name", v) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ShortCodeField,
+      {
+        value: getCurrencyShortCode(currency),
+        onChange: handleShortCodeChange
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$2, { label: "Description", value: currency.description, onChange: (v) => handleChange("description", v) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(CheckboxField, { label: "Visible in Main List", checked: currency.isVisible, onChange: (v) => handleChange("isVisible", v) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(DropdownField, { label: "Expiry Calculation", value: currency.expiryCalculation, onChange: (v) => handleChange("expiryCalculation", v), children: [
@@ -8275,6 +8174,30 @@ const UsedInSection = ({ currencyId, allCurrencies }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: dependencies.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-purple-800 text-purple-200 text-xs font-medium rounded-full", children: name }, name)) })
   ] });
 };
+const ShortCodeField = ({ value, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-400", children: [
+    "Currency Short Code",
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "span",
+      {
+        className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-400 text-[10px] font-bold text-sky-300",
+        title: "Abbreviated code used to identify the currency event throughout NEO",
+        "aria-label": "Abbreviated code used to identify the currency event throughout NEO",
+        children: "i"
+      }
+    )
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      type: "text",
+      value,
+      onChange: (e) => onChange(e.target.value),
+      placeholder: "e.g. NF90",
+      className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white uppercase focus:outline-none focus:ring-sky-500"
+    }
+  )
+] });
 const InputField$2 = ({ label, value, onChange, type = "text" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type, value, onChange: (e) => onChange(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500" })
@@ -22737,15 +22660,15 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
       const eventKey = `${trainee.fullName}|||${score.event}`;
       return !visiblePt051Keys.has(exactKey) && !visiblePt051EventKeys.has(eventKey);
     }).map((score) => ({ ...score, type: "LMP Score" }));
-    const normaliseEventCode2 = (value) => String(value || "").replace(/\s+/g, "").toUpperCase();
+    const normaliseEventCode = (value) => String(value || "").replace(/\s+/g, "").toUpperCase();
     const lmpOrder = /* @__PURE__ */ new Map();
     traineeLmp.forEach((item, index) => {
-      const key = normaliseEventCode2(item.code);
+      const key = normaliseEventCode(item.code);
       if (key && !lmpOrder.has(key)) lmpOrder.set(key, index);
     });
     const getLmpOrder = (item) => {
       const eventCode2 = item.type === "LMP Score" ? item.event : item.flightNumber;
-      return lmpOrder.get(normaliseEventCode2(eventCode2));
+      return lmpOrder.get(normaliseEventCode(eventCode2));
     };
     const combined = [...lmpItems, ...pt051Items].sort((a, b) => {
       const aOrder = getLmpOrder(a);
@@ -22766,8 +22689,8 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
       const safeADate = Number.isNaN(aDate) ? 0 : aDate;
       const safeBDate = Number.isNaN(bDate) ? 0 : bDate;
       if (safeADate !== safeBDate) return safeBDate - safeADate;
-      const aCode = normaliseEventCode2(a.type === "LMP Score" ? a.event : a.flightNumber);
-      const bCode = normaliseEventCode2(b.type === "LMP Score" ? b.event : b.flightNumber);
+      const aCode = normaliseEventCode(a.type === "LMP Score" ? a.event : a.flightNumber);
+      const bCode = normaliseEventCode(b.type === "LMP Score" ? b.event : b.flightNumber);
       return aCode.localeCompare(bCode);
     });
     return combined;
@@ -72142,8 +72065,8 @@ const SettingsView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.requiredCount })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Event Codes" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: selectedCurrency.eventCodes.length > 0 ? selectedCurrency.eventCodes.join(", ") : "None" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Currency Short Code" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: selectedCurrency.shortCode || selectedCurrency.eventCodes?.[0] ? selectedCurrency.shortCode || selectedCurrency.eventCodes?.[0] : "None" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Expiry Rule" }),
@@ -90329,8 +90252,7 @@ const SettingsViewWithMenu = (props) => {
             onImportFromUnit: props.onImportCurrenciesFromUnit,
             aircraftCrewComposition: props.aircraftCrewComposition,
             crewPositionTerminology: props.crewPositionTerminology,
-            operationalModel: props.activeOperationalModel,
-            sctEvents: props.sctEvents
+            operationalModel: props.activeOperationalModel
           }
         ) }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
           SettingsView,
@@ -99573,6 +99495,12 @@ async function initializeData() {
     };
   }
 }
+const normaliseCurrencyShortCode = (value) => String(value || "").trim().toUpperCase();
+const fallbackCurrencyShortCode = (currency) => {
+  const explicit = normaliseCurrencyShortCode(currency.shortCode || currency.code || currency.eventCodes?.[0]);
+  if (explicit) return explicit;
+  return normaliseCurrencyShortCode(currency.name || currency.id).replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 16);
+};
 const DEFAULT_1FTS_CURRENCY_REQUIREMENTS = [
   { id: "aircrew-medical", name: "Aircrew Medical", description: "Annual aircrew medical check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
   { id: "combat-survival", name: "Combat Survival Refresher", description: "Annual combat survival training.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
@@ -99672,8 +99600,8 @@ const DEFAULT_1FTS_MASTER_CURRENCIES = [
   }
 ];
 const buildDefault1FtsCurrencyDefinitions = () => ({
-  masterCurrencies: DEFAULT_1FTS_MASTER_CURRENCIES.map((currency) => ({ ...currency, logicTree: JSON.parse(JSON.stringify(currency.logicTree)) })),
-  currencyRequirements: DEFAULT_1FTS_CURRENCY_REQUIREMENTS.map((currency) => ({ ...currency, eventCodes: [...currency.eventCodes], postFlightInputTypes: [...currency.postFlightInputTypes || []] }))
+  masterCurrencies: DEFAULT_1FTS_MASTER_CURRENCIES.map((currency) => ({ ...currency, shortCode: fallbackCurrencyShortCode(currency), logicTree: JSON.parse(JSON.stringify(currency.logicTree)) })),
+  currencyRequirements: DEFAULT_1FTS_CURRENCY_REQUIREMENTS.map((currency) => ({ ...currency, shortCode: fallbackCurrencyShortCode(currency), eventCodes: [...currency.eventCodes], postFlightInputTypes: [...currency.postFlightInputTypes || []] }))
 });
 const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
   const enrichedReqs = dbRequirements.map((dbCur) => {
@@ -99684,6 +99612,7 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
     return {
       postFlightInputTypes: dbCur.expiryRule === "ROLLING_WINDOW" ? ["count"] : ["date"],
       ...dbCur,
+      shortCode: fallbackCurrencyShortCode(dbCur),
       showInPostFlight,
       showInPostFlightRecency,
       ...migratedTypes ? { postFlightInputTypes: migratedTypes } : {}
@@ -99697,6 +99626,7 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
     return {
       postFlightInputTypes: ["checkbox"],
       ...dbCur,
+      shortCode: fallbackCurrencyShortCode(dbCur),
       showInPostFlight,
       showInPostFlightRecency,
       ...migratedTypes ? { postFlightInputTypes: migratedTypes } : {}
@@ -140199,8 +140129,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onImportFromUnit: importCurrencyDefinitionsFromUnit,
             aircraftCrewComposition: activeAircraftCrewComposition,
             crewPositionTerminology: activeCrewPositionTerminology,
-            operationalModel: activeOperationalModel,
-            sctEvents
+            operationalModel: activeOperationalModel
           }
         );
       case "PT051":

@@ -49989,7 +49989,6 @@ appliedUpdates.forEach(update => {
                             aircraftCrewComposition={activeAircraftCrewComposition}
                             crewPositionTerminology={activeCrewPositionTerminology}
                             operationalModel={activeOperationalModel}
-                            sctEvents={sctEvents}
                         />;
             case 'PT051':
                 logRoutineAppDebug('eventForPt051:', eventForPt051);

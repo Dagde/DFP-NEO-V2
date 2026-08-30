@@ -89,11 +89,12 @@ export interface LogicNode {
 export interface CurrencyRequirement {
   id: string;
   name: string;
+  shortCode?: string;
   description: string;
   type: 'primitive';
   isVisible: boolean;
   validityDays: number;
-  eventCodes: string[]; // syllabus codes that satisfy this
+  eventCodes: string[]; // Legacy compatibility field retained for older saved records.
   requiredCount: number; // e.g., 3 for "3 approaches in 90 days"
   expiryRule: ExpiryRuleType;
   // Post-flight integration
@@ -106,6 +107,7 @@ export interface CurrencyRequirement {
 export interface MasterCurrency {
   id: string;
   name: string;
+  shortCode?: string;
   description: string;
   type: 'composite';
   isVisible: boolean;

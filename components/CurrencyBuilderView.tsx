@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { ContinuationEventSetting, CurrencyDefinition, MasterCurrency, CurrencyRequirement, LogicNode } from '../types';
+import { CurrencyDefinition, MasterCurrency, CurrencyRequirement, LogicNode } from '../types';
 import AuditButton from './AuditButton';
 import CrewRequirementEditor from './CrewRequirementEditor';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
@@ -26,52 +26,18 @@ interface CurrencyBuilderViewProps {
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
     operationalModel?: string;
-    sctEvents?: ContinuationEventSetting[];
 }
 
-interface EventCodeOption {
-    code: string;
-    label: string;
-    source: 'ContT / Currency Events' | 'Selected Custom';
-}
+const normaliseShortCode = (value: unknown): string => String(value || '').trim();
 
-const normaliseEventCode = (value: unknown): string => String(value || '').trim();
-
-const codeMatchesUnit = (unitValue: unknown, activeUnitCode?: string): boolean => {
-    const unit = normaliseEventCode(unitValue).toUpperCase();
-    const activeUnit = normaliseEventCode(activeUnitCode).toUpperCase();
-    return !activeUnit || !unit || unit === activeUnit || unit.split('+').includes(activeUnit) || activeUnit.split('+').includes(unit);
-};
-
-const makeEventCodeOptions = (
-    sctEvents: ContinuationEventSetting[] = [],
-    activeUnitCode?: string,
-): EventCodeOption[] => {
-    const byKey = new Map<string, EventCodeOption>();
-    const addOption = (codeValue: unknown, labelValue: unknown, source: EventCodeOption['source']) => {
-        const code = normaliseEventCode(codeValue);
-        if (!code) return;
-        const key = code.toUpperCase();
-        if (byKey.has(key)) return;
-        byKey.set(key, {
-            code,
-            label: normaliseEventCode(labelValue) || code,
-            source,
-        });
-    };
-
-    sctEvents
-        .filter(event => codeMatchesUnit(event.unitCode || (event as any).unit || event.compositeUnitCode, activeUnitCode))
-        .forEach(event => addOption(event.code || event.name, event.name || event.code, 'ContT / Currency Events'));
-
-    return Array.from(byKey.values()).sort((a, b) => (
-        a.source.localeCompare(b.source) || a.code.localeCompare(b.code, undefined, { numeric: true })
-    ));
-};
+const getCurrencyShortCode = (currency: { shortCode?: string; eventCodes?: string[]; name?: string }): string => (
+    normaliseShortCode(currency.shortCode || currency.eventCodes?.[0] || '')
+);
 
 const getNewPrimitive = (): CurrencyRequirement => ({
     id: uuidv4(),
     name: 'New Primitive Currency',
+    shortCode: '',
     description: '',
     type: 'primitive',
     isVisible: true,
@@ -88,6 +54,7 @@ const getNewPrimitive = (): CurrencyRequirement => ({
 const getNewComposite = (): MasterCurrency => ({
     id: uuidv4(),
     name: 'New Composite Currency',
+    shortCode: '',
     description: '',
     type: 'composite',
     isVisible: true,
@@ -111,7 +78,6 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     aircraftCrewComposition,
     crewPositionTerminology,
     operationalModel,
-    sctEvents = [],
 }) => {
     const [allCurrencies, setAllCurrencies] = useState<CurrencyDefinition[]>([]);
     const [selectedCurrencyId, setSelectedCurrencyId] = useState<string | null>(null);
@@ -139,10 +105,6 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     const selectedCurrency = useMemo(() => {
         return allCurrencies.find(c => c.id === selectedCurrencyId) || null;
     }, [selectedCurrencyId, allCurrencies]);
-
-    const eventCodeOptions = useMemo(() => (
-        makeEventCodeOptions(sctEvents, activeUnitCode)
-    ), [activeUnitCode, sctEvents]);
 
     const handleUpdateCurrency = (updatedCurrency: CurrencyDefinition) => {
         if (!isEditUnlocked) return;
@@ -332,7 +294,10 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                                     selectedCurrencyId === c.id ? 'bg-sky-700 border-sky-400' : 'border-transparent hover:bg-gray-700/50'
                                 }`}
                             >
-                                <p className={`font-semibold ${c.type === 'composite' ? 'text-purple-300' : 'text-green-300'}`}>{c.name}</p>
+                                <p className={`font-semibold ${c.type === 'composite' ? 'text-purple-300' : 'text-green-300'}`}>
+                                    {c.name}
+                                    {getCurrencyShortCode(c) && <span className="ml-2 text-xs font-bold text-gray-400">[{getCurrencyShortCode(c)}]</span>}
+                                </p>
                                 <p className="text-xs text-gray-400">{c.description || 'No description'}</p>
                             </div>
                         ))}
@@ -345,7 +310,7 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
                         <div className="space-y-6">
                             <div className={isEditUnlocked ? '' : 'pointer-events-none'}>
                                 {selectedCurrency.type === 'primitive'
-                                    ? <PrimitiveEditor currency={selectedCurrency as CurrencyRequirement} onUpdate={handleUpdateCurrency} eventCodeOptions={eventCodeOptions} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} operationalModel={operationalModel} />
+                                    ? <PrimitiveEditor currency={selectedCurrency as CurrencyRequirement} onUpdate={handleUpdateCurrency} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} operationalModel={operationalModel} />
                                     : <CompositeEditor currency={selectedCurrency as MasterCurrency} onUpdate={handleUpdateCurrency} allCurrencies={allCurrencies} aircraftCrewComposition={aircraftCrewComposition} crewPositionTerminology={crewPositionTerminology} operationalModel={operationalModel} />
                                 }
                             </div>
@@ -372,139 +337,24 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
 
 // --- EDITOR SUB-COMPONENTS ---
 
-const EventCodeChecklist: React.FC<{
-    selectedCodes: string[];
-    options: EventCodeOption[];
-    onChange: (codes: string[]) => void;
-}> = ({ selectedCodes, options, onChange }) => {
-    const [filter, setFilter] = useState('');
-    const [customCode, setCustomCode] = useState('');
-    const selectedKeys = new Set(selectedCodes.map(code => code.toUpperCase()));
-    const optionKeys = new Set(options.map(option => option.code.toUpperCase()));
-    const selectedCustomOptions: EventCodeOption[] = selectedCodes
-        .filter(code => code && !optionKeys.has(code.toUpperCase()))
-        .map(code => ({ code, label: code, source: 'Selected Custom' }));
-    const displayOptions = [...options, ...selectedCustomOptions].filter(option => {
-        const search = filter.trim().toLowerCase();
-        if (!search) return true;
-        return option.code.toLowerCase().includes(search) || option.label.toLowerCase().includes(search);
-    });
-    const groupedOptions = displayOptions.reduce<Record<EventCodeOption['source'], EventCodeOption[]>>((groups, option) => {
-        groups[option.source] = [...(groups[option.source] || []), option];
-        return groups;
-    }, {
-        'ContT / Currency Events': [],
-        'Selected Custom': [],
-    });
-
-    const setSelected = (code: string, checked: boolean) => {
-        const next = checked
-            ? [...selectedCodes, code]
-            : selectedCodes.filter(selectedCode => selectedCode.toUpperCase() !== code.toUpperCase());
-        onChange(Array.from(new Map(next.map(value => [value.toUpperCase(), value])).values()));
-    };
-
-    const addCustomCode = () => {
-        const code = customCode.trim();
-        if (!code) return;
-        setSelected(code, true);
-        setCustomCode('');
-        setFilter('');
-    };
-
-    return (
-        <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-                Qualifying Events
-                <span className="ml-2 text-xs text-gray-500">select every ContT / Currency Event that satisfies this currency</span>
-            </label>
-            <div className="rounded-lg border border-gray-600 bg-gray-800/60 p-3 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-2">
-                    <input
-                        type="text"
-                        value={filter}
-                        onChange={event => setFilter(event.target.value)}
-                        placeholder="Search qualifying events..."
-                        className="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                    />
-                    <div className="flex">
-                        <input
-                            type="text"
-                            value={customCode}
-                            onChange={event => setCustomCode(event.target.value.toUpperCase())}
-                            onKeyDown={event => {
-                                if (event.key === 'Enter') {
-                                    event.preventDefault();
-                                    addCustomCode();
-                                }
-                            }}
-                            placeholder="Custom code"
-                            className="min-w-0 flex-1 rounded-l border border-r-0 border-gray-600 bg-gray-900 px-2 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                        />
-                        <button
-                            type="button"
-                            onClick={addCustomCode}
-                            className="rounded-r border border-gray-600 bg-sky-700 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-600"
-                        >
-                            Add
-                        </button>
-                    </div>
-                </div>
-
-                <div className="max-h-72 overflow-y-auto pr-1 space-y-3">
-                    {(['ContT / Currency Events', 'Selected Custom'] as EventCodeOption['source'][]).map(source => (
-                        groupedOptions[source].length > 0 && (
-                            <div key={source}>
-                                <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-gray-500">{source}</div>
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-1.5">
-                                    {groupedOptions[source].map(option => {
-                                        const checked = selectedKeys.has(option.code.toUpperCase());
-                                        return (
-                                            <label key={`${source}-${option.code}`} className="flex items-start gap-2 rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5 text-sm text-gray-200">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={checked}
-                                                    onChange={event => setSelected(option.code, event.target.checked)}
-                                                    className="mt-0.5 h-4 w-4 rounded accent-sky-500"
-                                                />
-                                                <span className="min-w-0">
-                                                    <span className="font-semibold text-white">{option.code}</span>
-                                                    {option.label && option.label !== option.code && (
-                                                        <span className="ml-2 text-xs text-gray-400">{option.label}</span>
-                                                    )}
-                                                </span>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )
-                    ))}
-                    {displayOptions.length === 0 && (
-                        <div className="rounded border border-gray-700 bg-gray-900/60 px-3 py-4 text-center text-sm text-gray-400">
-                            No configured ContT / Currency Events found. Add a custom code above.
-                        </div>
-                    )}
-                </div>
-
-                <div className="text-xs text-gray-400">
-                    Selected: {selectedCodes.length > 0 ? selectedCodes.join(', ') : 'None'}
-                </div>
-            </div>
-        </div>
-    );
-};
-
 const PrimitiveEditor: React.FC<{
     currency: CurrencyRequirement;
     onUpdate: (c: CurrencyRequirement) => void;
-    eventCodeOptions: EventCodeOption[];
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
     operationalModel?: string;
-}> = ({ currency, onUpdate, eventCodeOptions, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
+}> = ({ currency, onUpdate, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
     const handleChange = (field: keyof CurrencyRequirement, value: any) => {
         onUpdate({ ...currency, [field]: value });
+    };
+
+    const handleShortCodeChange = (value: string) => {
+        const shortCode = normaliseShortCode(value).toUpperCase();
+        onUpdate({
+            ...currency,
+            shortCode,
+            eventCodes: shortCode ? [shortCode] : [],
+        });
     };
 
     // Auto-suggest input types based on expiry rule
@@ -525,6 +375,10 @@ const PrimitiveEditor: React.FC<{
         <div className="space-y-4">
             <h2 className="text-2xl font-bold text-green-400">Edit Primitive Currency</h2>
             <InputField label="Name" value={currency.name} onChange={v => handleChange('name', v)} />
+            <ShortCodeField
+                value={currency.shortCode || currency.eventCodes?.[0] || ''}
+                onChange={handleShortCodeChange}
+            />
             <InputField label="Description" value={currency.description} onChange={v => handleChange('description', v)} />
             <CheckboxField label="Visible in Main List" checked={currency.isVisible} onChange={v => handleChange('isVisible', v)} />
             <InputField label="Validity (Days)" type="number" value={currency.validityDays} onChange={v => handleChange('validityDays', Number(v))} />
@@ -533,11 +387,6 @@ const PrimitiveEditor: React.FC<{
                 <option value="LAST_EVENT_PLUS_PERIOD">Last Event + Period</option>
                 <option value="ROLLING_WINDOW">Rolling Window</option>
             </DropdownField>
-            <EventCodeChecklist
-                selectedCodes={currency.eventCodes}
-                options={eventCodeOptions}
-                onChange={codes => handleChange('eventCodes', codes)}
-            />
             <CrewRequirementEditor
                 value={currency.crewRequirement}
                 aircraftCrewComposition={aircraftCrewComposition}
@@ -607,6 +456,9 @@ const CompositeEditor: React.FC<{
     const handleChange = (field: keyof MasterCurrency, value: any) => {
         onUpdate({ ...currency, [field]: value });
     };
+    const handleShortCodeChange = (value: string) => {
+        handleChange('shortCode', normaliseShortCode(value).toUpperCase());
+    };
     const handleLogicTreeChange = (newLogicTree: LogicNode) => {
         handleChange('logicTree', newLogicTree);
     };
@@ -629,6 +481,10 @@ const CompositeEditor: React.FC<{
         <div className="space-y-4">
             <h2 className="text-2xl font-bold text-purple-400">Edit Composite Currency</h2>
             <InputField label="Name" value={currency.name} onChange={v => handleChange('name', v)} />
+            <ShortCodeField
+                value={getCurrencyShortCode(currency)}
+                onChange={handleShortCodeChange}
+            />
             <InputField label="Description" value={currency.description} onChange={v => handleChange('description', v)} />
             <CheckboxField label="Visible in Main List" checked={currency.isVisible} onChange={v => handleChange('isVisible', v)} />
             <DropdownField label="Expiry Calculation" value={currency.expiryCalculation} onChange={v => handleChange('expiryCalculation', v)}>
@@ -810,6 +666,28 @@ const UsedInSection: React.FC<{ currencyId: string; allCurrencies: CurrencyDefin
 
 
 // --- FORM HELPER COMPONENTS ---
+
+const ShortCodeField: React.FC<{ value: string; onChange: (v: string) => void; }> = ({ value, onChange }) => (
+    <div>
+        <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-400">
+            Currency Short Code
+            <span
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-400 text-[10px] font-bold text-sky-300"
+                title="Abbreviated code used to identify the currency event throughout NEO"
+                aria-label="Abbreviated code used to identify the currency event throughout NEO"
+            >
+                i
+            </span>
+        </label>
+        <input
+            type="text"
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder="e.g. NF90"
+            className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white uppercase focus:outline-none focus:ring-sky-500"
+        />
+    </div>
+);
 
 const InputField: React.FC<{ label: string; value: any; onChange: (v: any) => void; type?: string; }> = ({ label, value, onChange, type = 'text' }) => (
     <div>
