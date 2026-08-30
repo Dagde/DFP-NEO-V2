@@ -71085,7 +71085,7 @@ const ContinuationCurrencyEventsSettings = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => handleRemoveSctEvent(eventKey), className: "flex h-[34px] items-center justify-center rounded border border-red-500/30 bg-red-950/40 px-3 text-xs font-bold text-red-200 hover:bg-red-900/50", children: "Delete" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_minmax(0,1fr)_minmax(0,0.9fr)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_minmax(0,0.9fr)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
           "Event",
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -71144,7 +71144,9 @@ const ContinuationCurrencyEventsSettings = ({
               ]
             }
           )
-        ] }),
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_180px_minmax(0,0.9fr)_minmax(0,0.9fr)_90px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
@@ -71169,21 +71171,6 @@ const ContinuationCurrencyEventsSettings = ({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          "Crew",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: evt.crew || "",
-              onChange: (event) => updateTempSctEvent(eventKey, { crew: event.target.value }),
-              onKeyDownCapture: stopEditableKeyPropagation,
-              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[180px_minmax(0,0.9fr)_minmax(0,1.7fr)_90px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
           "Unit",
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -71212,20 +71199,18 @@ const ContinuationCurrencyEventsSettings = ({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-black uppercase tracking-wide text-gray-400", children: "Acceptable CONFIG" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded border border-gray-700 bg-gray-950/60 p-2", children: aircraftConfigOptions.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-w-[70px] items-center gap-2 text-xs font-semibold text-gray-200", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: selectedConfigs.includes(config.id),
-                onChange: () => toggleTempSctConfig(eventKey, config.id),
-                className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: config.label })
-          ] }, `${eventKey}-${config.id}`)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Crew",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: evt.crew || "",
+              onChange: (event) => updateTempSctEvent(eventKey, { crew: event.target.value }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
           "A/C",
@@ -71242,6 +71227,21 @@ const ContinuationCurrencyEventsSettings = ({
             }
           )
         ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex min-w-0 items-center gap-3 rounded border border-gray-700 bg-gray-950/60 p-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "shrink-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: "Acceptable CONFIG" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-0 flex-1 flex-nowrap items-center gap-4 overflow-x-auto", children: aircraftConfigOptions.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex shrink-0 items-center gap-2 text-xs font-semibold text-gray-200", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: selectedConfigs.includes(config.id),
+              onChange: () => toggleTempSctConfig(eventKey, config.id),
+              className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: config.label })
+        ] }, `${eventKey}-${config.id}`)) })
       ] })
     ] });
   };

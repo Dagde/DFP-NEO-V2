@@ -230,7 +230,7 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                         Delete
                     </button>
                 </div>
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_minmax(0,1fr)_minmax(0,0.9fr)]">
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_minmax(0,0.9fr)]">
                     <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
                         Event
                         <input
@@ -276,6 +276,8 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                             <option>Solo</option>
                         </select>
                     </label>
+                </div>
+                <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_180px_minmax(0,0.9fr)_minmax(0,0.9fr)_90px]">
                     <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
                         <span className="flex items-center gap-1.5">
                             <span>Currency</span>
@@ -293,18 +295,6 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                             {activeCurrencyNames.map(currency => <option key={currency} value={currency}>{currency}</option>)}
                         </select>
                     </label>
-                    <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
-                        Crew
-                        <input
-                            type="text"
-                            value={evt.crew || ''}
-                            onChange={event => updateTempSctEvent(eventKey, { crew: event.target.value })}
-                            onKeyDownCapture={stopEditableKeyPropagation}
-                            className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                        />
-                    </label>
-                </div>
-                <div className="mt-3 grid gap-3 lg:grid-cols-[180px_minmax(0,0.9fr)_minmax(0,1.7fr)_90px]">
                     <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
                         Unit
                         <select
@@ -326,22 +316,16 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                             className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
                         />
                     </label>
-                    <div className="min-w-0">
-                        <div className="mb-1 text-[10px] font-black uppercase tracking-wide text-gray-400">Acceptable CONFIG</div>
-                        <div className="flex flex-wrap gap-2 rounded border border-gray-700 bg-gray-950/60 p-2">
-                            {aircraftConfigOptions.map(config => (
-                                <label key={`${eventKey}-${config.id}`} className="flex min-w-[70px] items-center gap-2 text-xs font-semibold text-gray-200">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedConfigs.includes(config.id)}
-                                        onChange={() => toggleTempSctConfig(eventKey, config.id)}
-                                        className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                                    />
-                                    <span className="truncate">{config.label}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
+                    <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
+                        Crew
+                        <input
+                            type="text"
+                            value={evt.crew || ''}
+                            onChange={event => updateTempSctEvent(eventKey, { crew: event.target.value })}
+                            onKeyDownCapture={stopEditableKeyPropagation}
+                            className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                        />
+                    </label>
                     <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
                         A/C
                         <input
@@ -354,6 +338,22 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                             className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
                         />
                     </label>
+                </div>
+                <div className="mt-3 flex min-w-0 items-center gap-3 rounded border border-gray-700 bg-gray-950/60 p-2">
+                    <div className="shrink-0 text-[10px] font-black uppercase tracking-wide text-gray-400">Acceptable CONFIG</div>
+                    <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-4 overflow-x-auto">
+                        {aircraftConfigOptions.map(config => (
+                            <label key={`${eventKey}-${config.id}`} className="flex shrink-0 items-center gap-2 text-xs font-semibold text-gray-200">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedConfigs.includes(config.id)}
+                                    onChange={() => toggleTempSctConfig(eventKey, config.id)}
+                                    className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                />
+                                <span>{config.label}</span>
+                            </label>
+                        ))}
+                    </div>
                 </div>
             </div>
         );
