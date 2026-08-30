@@ -7278,25 +7278,27 @@ const CrewRequirementEditor = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex flex-wrap items-center gap-1.5 font-semibold text-slate-100 ${headerClassName}`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Crew Required" }),
-          crewHelpText ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "span",
-            {
-              className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-cyan-400 text-[10px] font-bold text-cyan-300",
-              title: crewHelpText,
-              "aria-label": crewHelpText,
-              children: "i"
-            }
-          ) : null,
-          crewHelpLinkLabel && onCrewHelpLinkClick ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              "data-help-link": "true",
-              onClick: onCrewHelpLinkClick,
-              className: "text-[11px] font-semibold text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline",
-              children: crewHelpLinkLabel
-            }
-          ) : null
+          crewHelpText || crewHelpLinkLabel && onCrewHelpLinkClick ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-[10px] inline-flex items-center gap-1.5", children: [
+            crewHelpText ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-cyan-400 text-[10px] font-bold text-cyan-300",
+                title: crewHelpText,
+                "aria-label": crewHelpText,
+                children: "i"
+              }
+            ) : null,
+            crewHelpLinkLabel && onCrewHelpLinkClick ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                "data-help-link": "true",
+                onClick: onCrewHelpLinkClick,
+                className: "text-[11px] font-semibold text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline",
+                children: crewHelpLinkLabel
+              }
+            ) : null
+          ] }) : null
         ] }),
         !compact && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 break-words text-slate-400", children: effectiveSummary })
       ] }),

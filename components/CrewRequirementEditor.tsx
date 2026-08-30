@@ -179,24 +179,28 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
         <div className="min-w-0">
           <div className={`flex flex-wrap items-center gap-1.5 font-semibold text-slate-100 ${headerClassName}`}>
             <span>Crew Required</span>
-            {crewHelpText ? (
-              <span
-                className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-cyan-400 text-[10px] font-bold text-cyan-300"
-                title={crewHelpText}
-                aria-label={crewHelpText}
-              >
-                i
+            {(crewHelpText || (crewHelpLinkLabel && onCrewHelpLinkClick)) ? (
+              <span className="ml-[10px] inline-flex items-center gap-1.5">
+                {crewHelpText ? (
+                  <span
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-cyan-400 text-[10px] font-bold text-cyan-300"
+                    title={crewHelpText}
+                    aria-label={crewHelpText}
+                  >
+                    i
+                  </span>
+                ) : null}
+                {crewHelpLinkLabel && onCrewHelpLinkClick ? (
+                  <button
+                    type="button"
+                    data-help-link="true"
+                    onClick={onCrewHelpLinkClick}
+                    className="text-[11px] font-semibold text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
+                  >
+                    {crewHelpLinkLabel}
+                  </button>
+                ) : null}
               </span>
-            ) : null}
-            {crewHelpLinkLabel && onCrewHelpLinkClick ? (
-              <button
-                type="button"
-                data-help-link="true"
-                onClick={onCrewHelpLinkClick}
-                className="text-[11px] font-semibold text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
-              >
-                {crewHelpLinkLabel}
-              </button>
             ) : null}
           </div>
           {!compact && <div className="mt-0.5 break-words text-slate-400">{effectiveSummary}</div>}
