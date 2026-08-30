@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { ContinuationEventSetting, CurrencyDefinition, MasterCurrency, CurrencyRequirement, LogicNode, SyllabusItemDetail } from '../types';
+import { ContinuationEventSetting, CurrencyDefinition, MasterCurrency, CurrencyRequirement, LogicNode } from '../types';
 import AuditButton from './AuditButton';
 import CrewRequirementEditor from './CrewRequirementEditor';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
@@ -26,14 +26,13 @@ interface CurrencyBuilderViewProps {
     aircraftCrewComposition?: AircraftCrewComposition;
     crewPositionTerminology?: CrewPositionTerminology;
     operationalModel?: string;
-    syllabusDetails?: SyllabusItemDetail[];
     sctEvents?: ContinuationEventSetting[];
 }
 
 interface EventCodeOption {
     code: string;
     label: string;
-    source: 'ContT / Currency Events' | 'LMP / Syllabus' | 'Selected Custom';
+    source: 'ContT / Currency Events' | 'Selected Custom';
 }
 
 const normaliseEventCode = (value: unknown): string => String(value || '').trim();
@@ -45,7 +44,6 @@ const codeMatchesUnit = (unitValue: unknown, activeUnitCode?: string): boolean =
 };
 
 const makeEventCodeOptions = (
-    syllabusDetails: SyllabusItemDetail[] = [],
     sctEvents: ContinuationEventSetting[] = [],
     activeUnitCode?: string,
 ): EventCodeOption[] => {
@@ -65,10 +63,6 @@ const makeEventCodeOptions = (
     sctEvents
         .filter(event => codeMatchesUnit(event.unitCode || (event as any).unit || event.compositeUnitCode, activeUnitCode))
         .forEach(event => addOption(event.code || event.name, event.name || event.code, 'ContT / Currency Events'));
-
-    syllabusDetails
-        .filter(item => codeMatchesUnit((item as any).unit || (item as any).unitCode, activeUnitCode))
-        .forEach(item => addOption(item.code, item.eventDescription || item.code, 'LMP / Syllabus'));
 
     return Array.from(byKey.values()).sort((a, b) => (
         a.source.localeCompare(b.source) || a.code.localeCompare(b.code, undefined, { numeric: true })
@@ -117,7 +111,6 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     aircraftCrewComposition,
     crewPositionTerminology,
     operationalModel,
-    syllabusDetails = [],
     sctEvents = [],
 }) => {
     const [allCurrencies, setAllCurrencies] = useState<CurrencyDefinition[]>([]);
@@ -148,8 +141,8 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     }, [selectedCurrencyId, allCurrencies]);
 
     const eventCodeOptions = useMemo(() => (
-        makeEventCodeOptions(syllabusDetails, sctEvents, activeUnitCode)
-    ), [activeUnitCode, sctEvents, syllabusDetails]);
+        makeEventCodeOptions(sctEvents, activeUnitCode)
+    ), [activeUnitCode, sctEvents]);
 
     const handleUpdateCurrency = (updatedCurrency: CurrencyDefinition) => {
         if (!isEditUnlocked) return;
@@ -401,7 +394,6 @@ const EventCodeChecklist: React.FC<{
         return groups;
     }, {
         'ContT / Currency Events': [],
-        'LMP / Syllabus': [],
         'Selected Custom': [],
     });
 
@@ -423,8 +415,8 @@ const EventCodeChecklist: React.FC<{
     return (
         <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">
-                Event Codes
-                <span className="ml-2 text-xs text-gray-500">select every completed event type that satisfies this currency</span>
+                Qualifying Events
+                <span className="ml-2 text-xs text-gray-500">select every ContT / Currency Event that satisfies this currency</span>
             </label>
             <div className="rounded-lg border border-gray-600 bg-gray-800/60 p-3 space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-2">
@@ -432,7 +424,7 @@ const EventCodeChecklist: React.FC<{
                         type="text"
                         value={filter}
                         onChange={event => setFilter(event.target.value)}
-                        placeholder="Search event codes..."
+                        placeholder="Search qualifying events..."
                         className="w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                     />
                     <div className="flex">
@@ -460,7 +452,7 @@ const EventCodeChecklist: React.FC<{
                 </div>
 
                 <div className="max-h-72 overflow-y-auto pr-1 space-y-3">
-                    {(['ContT / Currency Events', 'LMP / Syllabus', 'Selected Custom'] as EventCodeOption['source'][]).map(source => (
+                    {(['ContT / Currency Events', 'Selected Custom'] as EventCodeOption['source'][]).map(source => (
                         groupedOptions[source].length > 0 && (
                             <div key={source}>
                                 <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-gray-500">{source}</div>
@@ -490,7 +482,7 @@ const EventCodeChecklist: React.FC<{
                     ))}
                     {displayOptions.length === 0 && (
                         <div className="rounded border border-gray-700 bg-gray-900/60 px-3 py-4 text-center text-sm text-gray-400">
-                            No configured event codes found. Add a custom code above.
+                            No configured ContT / Currency Events found. Add a custom code above.
                         </div>
                     )}
                 </div>

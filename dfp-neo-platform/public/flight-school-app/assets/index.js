@@ -7622,7 +7622,7 @@ const codeMatchesUnit = (unitValue, activeUnitCode) => {
   const activeUnit = normaliseEventCode(activeUnitCode).toUpperCase();
   return !activeUnit || !unit || unit === activeUnit || unit.split("+").includes(activeUnit) || activeUnit.split("+").includes(unit);
 };
-const makeEventCodeOptions = (syllabusDetails = [], sctEvents = [], activeUnitCode) => {
+const makeEventCodeOptions = (sctEvents = [], activeUnitCode) => {
   const byKey = /* @__PURE__ */ new Map();
   const addOption = (codeValue, labelValue, source) => {
     const code = normaliseEventCode(codeValue);
@@ -7636,7 +7636,6 @@ const makeEventCodeOptions = (syllabusDetails = [], sctEvents = [], activeUnitCo
     });
   };
   sctEvents.filter((event) => codeMatchesUnit(event.unitCode || event.unit || event.compositeUnitCode, activeUnitCode)).forEach((event) => addOption(event.code || event.name, event.name || event.code, "ContT / Currency Events"));
-  syllabusDetails.filter((item) => codeMatchesUnit(item.unit || item.unitCode, activeUnitCode)).forEach((item) => addOption(item.code, item.eventDescription || item.code, "LMP / Syllabus"));
   return Array.from(byKey.values()).sort((a, b) => a.source.localeCompare(b.source) || a.code.localeCompare(b.code, void 0, { numeric: true }));
 };
 const getNewPrimitive = () => ({
@@ -7679,7 +7678,6 @@ const CurrencyBuilderView = ({
   aircraftCrewComposition,
   crewPositionTerminology,
   operationalModel,
-  syllabusDetails = [],
   sctEvents = []
 }) => {
   const [allCurrencies, setAllCurrencies] = reactExports.useState([]);
@@ -7700,7 +7698,7 @@ const CurrencyBuilderView = ({
   const selectedCurrency = reactExports.useMemo(() => {
     return allCurrencies.find((c) => c.id === selectedCurrencyId) || null;
   }, [selectedCurrencyId, allCurrencies]);
-  const eventCodeOptions = reactExports.useMemo(() => makeEventCodeOptions(syllabusDetails, sctEvents, activeUnitCode), [activeUnitCode, sctEvents, syllabusDetails]);
+  const eventCodeOptions = reactExports.useMemo(() => makeEventCodeOptions(sctEvents, activeUnitCode), [activeUnitCode, sctEvents]);
   const handleUpdateCurrency = (updatedCurrency) => {
     if (!isEditUnlocked) return;
     setAllCurrencies((prev) => prev.map((c) => c.id === updatedCurrency.id ? updatedCurrency : c));
@@ -7926,7 +7924,6 @@ const EventCodeChecklist = ({ selectedCodes, options, onChange }) => {
     return groups;
   }, {
     "ContT / Currency Events": [],
-    "LMP / Syllabus": [],
     "Selected Custom": []
   });
   const setSelected = (code, checked) => {
@@ -7942,8 +7939,8 @@ const EventCodeChecklist = ({ selectedCodes, options, onChange }) => {
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: [
-      "Event Codes",
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs text-gray-500", children: "select every completed event type that satisfies this currency" })
+      "Qualifying Events",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs text-gray-500", children: "select every ContT / Currency Event that satisfies this currency" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-600 bg-gray-800/60 p-3 space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[1fr_180px] gap-2", children: [
@@ -7953,7 +7950,7 @@ const EventCodeChecklist = ({ selectedCodes, options, onChange }) => {
             type: "text",
             value: filter,
             onChange: (event) => setFilter(event.target.value),
-            placeholder: "Search event codes...",
+            placeholder: "Search qualifying events...",
             className: "w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
           }
         ),
@@ -7986,7 +7983,7 @@ const EventCodeChecklist = ({ selectedCodes, options, onChange }) => {
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 overflow-y-auto pr-1 space-y-3", children: [
-        ["ContT / Currency Events", "LMP / Syllabus", "Selected Custom"].map((source) => groupedOptions[source].length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        ["ContT / Currency Events", "Selected Custom"].map((source) => groupedOptions[source].length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide text-gray-500", children: source }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 xl:grid-cols-2 gap-1.5", children: groupedOptions[source].map((option) => {
             const checked = selectedKeys.has(option.code.toUpperCase());
@@ -8007,7 +8004,7 @@ const EventCodeChecklist = ({ selectedCodes, options, onChange }) => {
             ] }, `${source}-${option.code}`);
           }) })
         ] }, source)),
-        displayOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/60 px-3 py-4 text-center text-sm text-gray-400", children: "No configured event codes found. Add a custom code above." })
+        displayOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/60 px-3 py-4 text-center text-sm text-gray-400", children: "No configured ContT / Currency Events found. Add a custom code above." })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400", children: [
         "Selected: ",
@@ -90333,7 +90330,6 @@ const SettingsViewWithMenu = (props) => {
             aircraftCrewComposition: props.aircraftCrewComposition,
             crewPositionTerminology: props.crewPositionTerminology,
             operationalModel: props.activeOperationalModel,
-            syllabusDetails: props.syllabusDetails,
             sctEvents: props.sctEvents
           }
         ) }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -140204,7 +140200,6 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftCrewComposition: activeAircraftCrewComposition,
             crewPositionTerminology: activeCrewPositionTerminology,
             operationalModel: activeOperationalModel,
-            syllabusDetails,
             sctEvents
           }
         );

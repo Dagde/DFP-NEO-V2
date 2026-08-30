@@ -49989,7 +49989,6 @@ appliedUpdates.forEach(update => {
                             aircraftCrewComposition={activeAircraftCrewComposition}
                             crewPositionTerminology={activeCrewPositionTerminology}
                             operationalModel={activeOperationalModel}
-                            syllabusDetails={syllabusDetails}
                             sctEvents={sctEvents}
                         />;
             case 'PT051':
