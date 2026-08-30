@@ -70926,6 +70926,7 @@ const ContinuationCurrencyEventsSettings = ({
   const [isEditingSctEvents, setIsEditingSctEvents] = reactExports.useState(false);
   const [tempSctEvents, setTempSctEvents] = reactExports.useState([]);
   const [newSctEvent, setNewSctEvent] = reactExports.useState("");
+  const [selectedSctEventId, setSelectedSctEventId] = reactExports.useState(null);
   const configuredSctEvents = reactExports.useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
   const activeCurrencyNames = reactExports.useMemo(() => Array.from(new Set(
     [...masterCurrencies, ...currencyRequirements].filter((currency) => currency.isVisible).map((currency) => String(currency.name || "").trim()).filter(Boolean)
@@ -70942,6 +70943,9 @@ const ContinuationCurrencyEventsSettings = ({
     ...Array.isArray(activeUnitCodes) ? activeUnitCodes : []
   ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean))), [activeUnitCode, activeUnitCodes]);
   const activeContinuationAircraftTypeCode = reactExports.useMemo(() => String(activeAircraftTypeCode || "").trim().toUpperCase(), [activeAircraftTypeCode]);
+  const displayedSctEvents = isEditingSctEvents ? tempSctEvents : configuredSctEvents;
+  const selectedTempSctEvent = tempSctEvents.find((event) => (event.id || event.name) === selectedSctEventId) || null;
+  const selectedConfiguredSctEvent = configuredSctEvents.find((event) => (event.id || event.name) === selectedSctEventId) || null;
   const applyContinuationEventDefaults = (event) => ({
     ...event,
     aircraftTypeCode: String(event.aircraftTypeCode || "").trim().toUpperCase() || activeContinuationAircraftTypeCode
@@ -70961,8 +70965,13 @@ const ContinuationCurrencyEventsSettings = ({
       return { ...event, acceptableAircraftConfigs: safeConfigs, config: safeConfigs[0] || "ANY" };
     }));
   };
-  const handleEditSctEvents = () => {
-    setTempSctEvents(normaliseContinuationEventSettings(sctEvents).map(applyContinuationEventDefaults));
+  const handleEditSctEvents = async () => {
+    if (!selectedSctEventId || !selectedConfiguredSctEvent) {
+      await showDarkAlert("Select an event tile before editing.", "Select Event First", "warning");
+      return;
+    }
+    const editableEvents = normaliseContinuationEventSettings(sctEvents).map(applyContinuationEventDefaults);
+    setTempSctEvents(editableEvents);
     setIsEditingSctEvents(true);
   };
   const handleSaveSctEvents = () => {
@@ -70985,30 +70994,256 @@ const ContinuationCurrencyEventsSettings = ({
   const handleAddSctEvent = () => {
     const name = newSctEvent.trim();
     if (name && !tempSctEvents.some((event) => event.name.toUpperCase() === name.toUpperCase())) {
-      setTempSctEvents([
-        ...tempSctEvents,
-        {
-          id: `continuation-event-${Date.now()}`,
-          name,
-          code: name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT",
-          unitCode: activeUnitCodeList[0] || "",
-          compositeUnitCode: activeCompositeUnitCode || "",
-          aircraftTypeCode: activeContinuationAircraftTypeCode,
-          crew: "",
-          config: "ANY",
-          acceptableAircraftConfigs: ["ANY"],
-          currency: activeCurrencyNames[0] || name,
-          dayNight: "Day",
-          flightType: "Dual",
-          aircraftCount: 1,
-          status: "ACTIVE"
-        }
-      ]);
+      const newEvent = {
+        id: `continuation-event-${Date.now()}`,
+        name,
+        code: name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT",
+        unitCode: activeUnitCodeList[0] || "",
+        compositeUnitCode: activeCompositeUnitCode || "",
+        aircraftTypeCode: activeContinuationAircraftTypeCode,
+        crew: "",
+        config: "ANY",
+        acceptableAircraftConfigs: ["ANY"],
+        currency: activeCurrencyNames[0] || name,
+        dayNight: "Day",
+        flightType: "Dual",
+        aircraftCount: 1,
+        status: "ACTIVE"
+      };
+      setTempSctEvents([...tempSctEvents, newEvent]);
+      setSelectedSctEventId(newEvent.id);
       setNewSctEvent("");
     }
   };
   const handleRemoveSctEvent = (eventToRemove) => {
     setTempSctEvents(tempSctEvents.filter((evt) => (evt.id || evt.name) !== eventToRemove));
+    if (selectedSctEventId === eventToRemove) setSelectedSctEventId(null);
+  };
+  const renderEventTile = (evt) => {
+    const eventKey = evt.id || evt.name;
+    const isSelected = selectedSctEventId === eventKey;
+    const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
+    const unitLabel = evt.unitCode || activeUnitCodeList[0] || "All units";
+    const aircraftLabel = evt.aircraftTypeCode || activeContinuationAircraftTypeCode || "Aircraft type not set";
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "button",
+      {
+        type: "button",
+        onClick: () => setSelectedSctEventId(eventKey),
+        className: `w-full rounded-md border p-3 text-left transition-colors ${isSelected ? "border-sky-400/70 bg-sky-950/30 shadow-[inset_3px_0_0_rgba(56,189,248,0.75)]" : "border-gray-700/80 bg-gray-900/45 hover:border-gray-500 hover:bg-gray-900/70"}`,
+        "aria-pressed": isSelected,
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 items-start justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 flex-wrap items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-sm font-semibold text-white", children: evt.name }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-600/70 bg-gray-950/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-300", children: evt.code || "CONT" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap gap-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800/90 px-2 py-0.5 text-[11px] font-medium text-gray-300", children: evt.dayNight || "Day" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800/90 px-2 py-0.5 text-[11px] font-medium text-gray-300", children: evt.flightType || "Dual" }),
+                evt.currency && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-sky-950/50 px-2 py-0.5 text-[11px] font-medium text-sky-100", children: evt.currency })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "shrink-0 text-right text-[11px] text-gray-400", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold text-gray-300", children: [
+                "A/C ",
+                Math.max(1, Number(evt.aircraftCount) || 1)
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: selectedConfigs.join(", ") })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 border-t border-gray-700/70 pt-2 text-[11px] text-gray-400 sm:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Unit" }),
+              " ",
+              unitLabel
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Aircraft" }),
+              " ",
+              aircraftLabel
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Crew" }),
+              " ",
+              evt.crew || "Default"
+            ] })
+          ] })
+        ]
+      }
+    ) }, eventKey);
+  };
+  const renderSelectedEventEditor = (evt) => {
+    const eventKey = evt.id || evt.name;
+    const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/70 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between border-b border-gray-700 pb-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-gray-500", children: "Editing Event" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-semibold text-white", children: evt.name })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => handleRemoveSctEvent(eventKey), className: "flex h-[34px] items-center justify-center rounded border border-red-500/30 bg-red-950/40 px-3 text-xs font-bold text-red-200 hover:bg-red-900/50", children: "Delete" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_minmax(0,1fr)_minmax(0,0.9fr)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Event",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: evt.name,
+              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateTempSctEvent(eventKey, { name: value })),
+              onChange: (event) => updateTempSctEvent(eventKey, { name: event.target.value }),
+              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateTempSctEvent(eventKey, { name: value })),
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Code",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: evt.code || "",
+              maxLength: 8,
+              onChange: (event) => updateTempSctEvent(eventKey, { code: event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Day/Night",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: evt.dayNight || "Day",
+              onChange: (event) => updateTempSctEvent(eventKey, { dayNight: event.target.value }),
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Night" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day/Night" })
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Dual/Solo",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: evt.flightType || "Dual",
+              onChange: (event) => updateTempSctEvent(eventKey, { flightType: event.target.value }),
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Dual" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Solo" })
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              InfoBadge,
+              {
+                ariaLabel: "Currency field information",
+                title: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh."
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: evt.currency || "",
+              onChange: (event) => updateTempSctEvent(eventKey, { currency: event.target.value }),
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
+                activeCurrencyNames.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: currency, children: currency }, currency))
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Crew",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: evt.crew || "",
+              onChange: (event) => updateTempSctEvent(eventKey, { crew: event.target.value }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[180px_minmax(0,0.9fr)_minmax(0,1.7fr)_90px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Unit",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: evt.unitCode || "",
+              onChange: (event) => updateTempSctEvent(eventKey, { unitCode: event.target.value }),
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All applicable units" }),
+                activeUnitCodeList.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Aircraft Type",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: evt.aircraftTypeCode || "",
+              onChange: (event) => updateTempSctEvent(eventKey, { aircraftTypeCode: event.target.value.toUpperCase() }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-black uppercase tracking-wide text-gray-400", children: "Acceptable CONFIG" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded border border-gray-700 bg-gray-950/60 p-2", children: aircraftConfigOptions.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-w-[70px] items-center gap-2 text-xs font-semibold text-gray-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: selectedConfigs.includes(config.id),
+                onChange: () => toggleTempSctConfig(eventKey, config.id),
+                className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: config.label })
+          ] }, `${eventKey}-${config.id}`)) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "A/C",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              min: 1,
+              max: 24,
+              value: Math.max(1, Number(evt.aircraftCount) || 1),
+              onChange: (event) => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(event.target.value) || 1))) }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
+        ] })
+      ] })
+    ] });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl min-h-[600px] flex flex-col", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -71051,174 +71286,13 @@ const ContinuationCurrencyEventsSettings = ({
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4 flex min-h-0 flex-1 flex-col", children: isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage the configured event choices and their request/build settings." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 space-y-3 overflow-y-auto pr-1", children: tempSctEvents.map((evt) => {
-        const eventKey = evt.id || evt.name;
-        const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/70 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_minmax(0,1fr)_minmax(0,0.9fr)_auto]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-              "Event",
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: evt.name,
-                  onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateTempSctEvent(eventKey, { name: value })),
-                  onChange: (event) => updateTempSctEvent(eventKey, { name: event.target.value }),
-                  onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateTempSctEvent(eventKey, { name: value })),
-                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-              "Code",
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: evt.code || "",
-                  maxLength: 8,
-                  onChange: (event) => updateTempSctEvent(eventKey, { code: event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) }),
-                  onKeyDownCapture: stopEditableKeyPropagation,
-                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-              "Day/Night",
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  value: evt.dayNight || "Day",
-                  onChange: (event) => updateTempSctEvent(eventKey, { dayNight: event.target.value }),
-                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Night" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day/Night" })
-                  ]
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-              "Dual/Solo",
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  value: evt.flightType || "Dual",
-                  onChange: (event) => updateTempSctEvent(eventKey, { flightType: event.target.value }),
-                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Dual" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Solo" })
-                  ]
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  InfoBadge,
-                  {
-                    ariaLabel: "Currency field information",
-                    title: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh."
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  value: evt.currency || "",
-                  onChange: (event) => updateTempSctEvent(eventKey, { currency: event.target.value }),
-                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
-                    activeCurrencyNames.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: currency, children: currency }, currency))
-                  ]
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-              "Crew",
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: evt.crew || "",
-                  onChange: (event) => updateTempSctEvent(eventKey, { crew: event.target.value }),
-                  onKeyDownCapture: stopEditableKeyPropagation,
-                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => handleRemoveSctEvent(eventKey), className: "mt-[18px] flex h-[34px] items-center justify-center rounded border border-red-500/30 bg-red-950/40 px-3 text-xs font-bold text-red-200 hover:bg-red-900/50", children: "Delete" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[180px_minmax(0,0.9fr)_minmax(0,1.7fr)_90px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-              "Unit",
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  value: evt.unitCode || "",
-                  onChange: (event) => updateTempSctEvent(eventKey, { unitCode: event.target.value }),
-                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All applicable units" }),
-                    activeUnitCodeList.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
-                  ]
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-              "Aircraft Type",
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: evt.aircraftTypeCode || "",
-                  onChange: (event) => updateTempSctEvent(eventKey, { aircraftTypeCode: event.target.value.toUpperCase() }),
-                  onKeyDownCapture: stopEditableKeyPropagation,
-                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-black uppercase tracking-wide text-gray-400", children: "Acceptable CONFIG" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded border border-gray-700 bg-gray-950/60 p-2", children: aircraftConfigOptions.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-w-[70px] items-center gap-2 text-xs font-semibold text-gray-200", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "checkbox",
-                    checked: selectedConfigs.includes(config.id),
-                    onChange: () => toggleTempSctConfig(eventKey, config.id),
-                    className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: config.label })
-              ] }, `${eventKey}-${config.id}`)) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-              "A/C",
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "number",
-                  min: 1,
-                  max: 24,
-                  value: Math.max(1, Number(evt.aircraftCount) || 1),
-                  onChange: (event) => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(event.target.value) || 1))) }),
-                  onKeyDownCapture: stopEditableKeyPropagation,
-                  className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                }
-              )
-            ] })
-          ] })
-        ] }, eventKey);
-      }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-0 flex-1 flex-col space-y-4 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isEditingSctEvents ? "Edit the selected event and save when complete." : `Select a ${sctShortLabel} / currency event tile, then press Edit.` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-h-0 flex-1 gap-4 ${isEditingSctEvents ? "grid lg:grid-cols-[360px_minmax(0,1fr)]" : "block"}`, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: `min-h-0 overflow-y-auto pr-1 ${isEditingSctEvents ? "space-y-2" : "grid gap-3 md:grid-cols-2 xl:grid-cols-3"}`, children: displayedSctEvents.map(renderEventTile) }),
+        isEditingSctEvents && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-y-auto", children: selectedTempSctEvent ? renderSelectedEventEditor(selectedTempSctEvent) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full min-h-[320px] items-center justify-center rounded-md border border-dashed border-gray-700 bg-gray-900/40 p-6 text-center text-sm text-gray-400", children: "Select an event tile to edit." }) })
+      ] }),
+      isEditingSctEvents && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2 border-t border-gray-700 pt-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
@@ -71231,32 +71305,12 @@ const ContinuationCurrencyEventsSettings = ({
               if (event.key === "Enter") handleAddSctEvent();
             },
             placeholder: `New ${sctShortLabel} event name`,
-            className: "flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
+            className: "flex-grow rounded-md border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white focus:outline-none focus:ring-sky-500"
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleAddSctEvent, className: "px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "+" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleAddSctEvent, className: "rounded-md bg-green-700 px-3 py-1 text-sm font-semibold text-white hover:bg-green-600", children: "+" })
       ] })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
-        "Configured ",
-        sctShortLabel,
-        " and currency event settings."
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: configuredSctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "w-[40%] min-w-[260px] rounded bg-gray-700/50 p-3 text-white", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: evt.name }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-900/70 px-2 py-0.5 text-[11px] text-gray-300", children: evt.dayNight || "Day" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-900/70 px-2 py-0.5 text-[11px] text-gray-300", children: evt.flightType || "Dual" }),
-          evt.currency && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-sky-950/60 px-2 py-0.5 text-[11px] text-sky-100", children: evt.currency })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
-          "CONFIG ",
-          (evt.acceptableAircraftConfigs?.length ? evt.acceptableAircraftConfigs : [evt.config || "ANY"]).join(", "),
-          " · A/C ",
-          Math.max(1, Number(evt.aircraftCount) || 1)
-        ] })
-      ] }, evt.id || evt.name)) })
-    ] }) })
+    ] })
   ] });
 };
 const TEMPLATE_OVERRIDE_FOLDER_ID = "template_overrides";
