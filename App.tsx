@@ -22824,7 +22824,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     ): (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[] => {
         type BuildEvent = Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string };
         const isGeneratedRepairableTrainingEvent = (event: BuildEvent): boolean => (
-            (event.type === 'ground' || event.type === 'cpt') && event._source === 'generated'
+            (event.type === 'flight' || event.type === 'ftd' || event.type === 'ground' || event.type === 'cpt') && event._source === 'generated'
         );
         const groundResourceCount = Math.max(
             6,
@@ -22844,7 +22844,20 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 .filter(value => Number.isFinite(value))
         );
         const cptResources = Array.from({ length: cptResourceCount }, (_, index) => `CPT ${index + 1}`);
-        const getRepairResources = (event: BuildEvent): string[] => event.type === 'cpt' ? cptResources : groundResources;
+        const flightResources = Array.from({ length: availableAircraftCount }, (_, index) => `${buildAircraftResourceIdPrefix}${index + 1}`);
+        const ftdResources = Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`);
+        const getRepairResources = (event: BuildEvent): string[] => {
+            if (event.type === 'flight') {
+                return flightResources.filter(resourceId => eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId)));
+            }
+            if (event.type === 'ftd') return ftdResources;
+            if (event.type === 'cpt') return cptResources;
+            return groundResources;
+        };
+        const getRepairWindow = (event: BuildEvent): { start: number; end: number } => {
+            if (event.type === 'ftd') return { start: ftdStartTime, end: ftdEndTime };
+            return { start: flyingStartTime, end: flyingEndTime };
+        };
         const timeIncrement = 15 / 60;
 
         const eventWindow = (event: Omit<ScheduleEvent, 'date'>): { start: number; end: number } =>
@@ -22956,6 +22969,40 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         };
 
         const findGeneratedTrainingRepair = (event: BuildEvent, acceptedEvents: BuildEvent[]): BuildEvent | null => {
+            const repairWindow = getRepairWindow(event);
+            const resourceCandidates = [
+                event.resourceId,
+                ...getRepairResources(event).filter(resourceId => resourceId !== event.resourceId)
+            ].filter((resourceId): resourceId is string => !!resourceId);
+            const timeCandidates = [
+                event.startTime,
+                ...Array.from(
+                    { length: Math.max(0, Math.floor((repairWindow.end - repairWindow.start - event.duration) / timeIncrement) + 1) },
+                    (_, index) => repairWindow.start + index * timeIncrement
+                )
+            ].filter((time, index, list) => list.findIndex(value => Math.abs(value - time) < 0.001) === index);
+
+            if (event.type === 'flight' || event.type === 'ftd') {
+                for (const startTime of timeCandidates) {
+                    const candidateWindow = eventWindow({ ...event, startTime });
+                    if (candidateWindow.start < repairWindow.start - 0.001 || candidateWindow.end > repairWindow.end + 0.001) continue;
+
+                    for (const resourceId of resourceCandidates) {
+                        const candidate: BuildEvent = {
+                            ...event,
+                            startTime,
+                            resourceId,
+                            aircraftConfigId: event.type === 'flight' ? getAircraftConfigIdForResource(resourceId) : event.aircraftConfigId,
+                        };
+
+                        if (!hasBuildConflict(candidate, acceptedEvents)) {
+                            return candidate;
+                        }
+                    }
+                }
+                return null;
+            }
+
             const trainee = trainees.find(t => personnelNamesMatch(t.fullName, event._traineeName || event.student || event.pilot));
             const currentInstructor = instructors.find(instructor => instructor.name === event.instructor);
             const eligibleInstructors = instructors
@@ -22972,22 +23019,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const instructorCandidates = currentInstructor && !eligibleInstructors.some(instructor => instructor.name === currentInstructor.name)
                 ? [currentInstructor, ...eligibleInstructors]
                 : eligibleInstructors;
-            const timeCandidates = [
-                event.startTime,
-                ...Array.from(
-                    { length: Math.max(0, Math.floor((flyingEndTime - flyingStartTime - event.duration) / timeIncrement) + 1) },
-                    (_, index) => flyingStartTime + index * timeIncrement
-                )
-            ].filter((time, index, list) => list.findIndex(value => Math.abs(value - time) < 0.001) === index);
-            const resourceCandidates = [
-                event.resourceId,
-                ...getRepairResources(event).filter(resourceId => resourceId !== event.resourceId)
-            ].filter((resourceId): resourceId is string => !!resourceId);
-
             for (const instructor of instructorCandidates) {
                 for (const startTime of timeCandidates) {
                     const candidateWindow = eventWindow({ ...event, startTime });
-                    if (candidateWindow.start < flyingStartTime - 0.001 || candidateWindow.end > flyingEndTime + 0.001) continue;
+                    if (candidateWindow.start < repairWindow.start - 0.001 || candidateWindow.end > repairWindow.end + 0.001) continue;
                     if (trainee && isPersonStaticallyUnavailable(trainee, candidateWindow.start, candidateWindow.end, buildDate, 'ground')) continue;
                     if (isPersonStaticallyUnavailable(instructor, candidateWindow.start, candidateWindow.end, buildDate, 'ground')) continue;
 

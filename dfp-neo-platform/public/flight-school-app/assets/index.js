@@ -118544,7 +118544,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return events.filter((event) => !removeEventIds.has(event.id));
   };
   const repairGeneratedGroundConflicts = (events) => {
-    const isGeneratedRepairableTrainingEvent = (event) => (event.type === "ground" || event.type === "cpt") && event._source === "generated";
+    const isGeneratedRepairableTrainingEvent = (event) => (event.type === "flight" || event.type === "ftd" || event.type === "ground" || event.type === "cpt") && event._source === "generated";
     const groundResourceCount = Math.max(
       6,
       ...events.map((event) => event.resourceId?.match(/^Ground (\d+)$/)?.[1]).filter((value) => !!value).map((value) => Number(value)).filter((value) => Number.isFinite(value))
@@ -118555,7 +118555,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ...events.map((event) => event.resourceId?.match(/^CPT (\d+)$/)?.[1]).filter((value) => !!value).map((value) => Number(value)).filter((value) => Number.isFinite(value))
     );
     const cptResources = Array.from({ length: cptResourceCount }, (_, index) => `CPT ${index + 1}`);
-    const getRepairResources = (event) => event.type === "cpt" ? cptResources : groundResources;
+    const flightResources = Array.from({ length: availableAircraftCount }, (_, index) => `${buildAircraftResourceIdPrefix}${index + 1}`);
+    const ftdResources = Array.from({ length: ftdCount }, (_, index) => `FTD ${index + 1}`);
+    const getRepairResources = (event) => {
+      if (event.type === "flight") {
+        return flightResources.filter((resourceId) => eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId)));
+      }
+      if (event.type === "ftd") return ftdResources;
+      if (event.type === "cpt") return cptResources;
+      return groundResources;
+    };
+    const getRepairWindow = (event) => {
+      if (event.type === "ftd") return { start: ftdStartTime, end: ftdEndTime };
+      return { start: flyingStartTime, end: flyingEndTime };
+    };
     const timeIncrement = 15 / 60;
     const eventWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails);
     const windowsOverlap = (a, b) => a.start < b.end && a.end > b.start;
@@ -118631,6 +118644,36 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return isInstructorEligibleByUnit(instructor, trainee);
     };
     const findGeneratedTrainingRepair = (event, acceptedEvents2) => {
+      const repairWindow = getRepairWindow(event);
+      const resourceCandidates = [
+        event.resourceId,
+        ...getRepairResources(event).filter((resourceId) => resourceId !== event.resourceId)
+      ].filter((resourceId) => !!resourceId);
+      const timeCandidates = [
+        event.startTime,
+        ...Array.from(
+          { length: Math.max(0, Math.floor((repairWindow.end - repairWindow.start - event.duration) / timeIncrement) + 1) },
+          (_, index) => repairWindow.start + index * timeIncrement
+        )
+      ].filter((time, index, list) => list.findIndex((value) => Math.abs(value - time) < 1e-3) === index);
+      if (event.type === "flight" || event.type === "ftd") {
+        for (const startTime of timeCandidates) {
+          const candidateWindow = eventWindow({ ...event, startTime });
+          if (candidateWindow.start < repairWindow.start - 1e-3 || candidateWindow.end > repairWindow.end + 1e-3) continue;
+          for (const resourceId of resourceCandidates) {
+            const candidate = {
+              ...event,
+              startTime,
+              resourceId,
+              aircraftConfigId: event.type === "flight" ? getAircraftConfigIdForResource(resourceId) : event.aircraftConfigId
+            };
+            if (!hasBuildConflict(candidate, acceptedEvents2)) {
+              return candidate;
+            }
+          }
+        }
+        return null;
+      }
       const trainee = trainees.find((t) => personnelNamesMatch(t.fullName, event._traineeName || event.student || event.pilot));
       const currentInstructor = instructors.find((instructor) => instructor.name === event.instructor);
       const eligibleInstructors = instructors.filter((instructor) => canUseInstructorForGround(instructor, trainee)).sort((a, b) => {
@@ -118643,21 +118686,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return aWorkload - bWorkload || a.name.localeCompare(b.name);
       });
       const instructorCandidates = currentInstructor && !eligibleInstructors.some((instructor) => instructor.name === currentInstructor.name) ? [currentInstructor, ...eligibleInstructors] : eligibleInstructors;
-      const timeCandidates = [
-        event.startTime,
-        ...Array.from(
-          { length: Math.max(0, Math.floor((flyingEndTime - flyingStartTime - event.duration) / timeIncrement) + 1) },
-          (_, index) => flyingStartTime + index * timeIncrement
-        )
-      ].filter((time, index, list) => list.findIndex((value) => Math.abs(value - time) < 1e-3) === index);
-      const resourceCandidates = [
-        event.resourceId,
-        ...getRepairResources(event).filter((resourceId) => resourceId !== event.resourceId)
-      ].filter((resourceId) => !!resourceId);
       for (const instructor of instructorCandidates) {
         for (const startTime of timeCandidates) {
           const candidateWindow = eventWindow({ ...event, startTime });
-          if (candidateWindow.start < flyingStartTime - 1e-3 || candidateWindow.end > flyingEndTime + 1e-3) continue;
+          if (candidateWindow.start < repairWindow.start - 1e-3 || candidateWindow.end > repairWindow.end + 1e-3) continue;
           if (trainee && isPersonStaticallyUnavailable(trainee, candidateWindow.start, candidateWindow.end, buildDate, "ground")) continue;
           if (isPersonStaticallyUnavailable(instructor, candidateWindow.start, candidateWindow.end, buildDate, "ground")) continue;
           for (const resourceId of resourceCandidates) {
