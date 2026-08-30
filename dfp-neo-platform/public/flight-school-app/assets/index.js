@@ -68599,10 +68599,17 @@ function getDaysRemaining(expiryDateStr) {
   expiry.setHours(0, 0, 0, 0);
   return Math.ceil((expiry.getTime() - today.getTime()) / 864e5);
 }
+function normaliseStatusKey(value) {
+  return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "");
+}
+function getDefinitionAliases(def) {
+  return new Set([def.id, def.name, ...def.aliases].map(normaliseStatusKey).filter(Boolean));
+}
 function computeCurrencyCounts(currencyStatus, allDefs) {
   const counts = { expired: 0, approaching: 0, current: 0, grey: 0 };
   for (const def of allDefs) {
-    const record = currencyStatus?.find((s) => s.currencyName === def.name);
+    const aliases = getDefinitionAliases(def);
+    const record = currencyStatus?.find((s) => aliases.has(normaliseStatusKey(s.currencyName)));
     if (record?.isInactive) {
       counts.grey++;
       continue;
@@ -68670,6 +68677,18 @@ const InfoRow = ({ label, value }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("di
   ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: value || "N/A" })
 ] });
+function getPersonResolvedId(person) {
+  if (!person) return "";
+  const source = person.sourceRecord;
+  const own = person;
+  return String(source?.id || own.id || source?.idNumber || own.idNumber || "");
+}
+function getPersonDisplayKey(person) {
+  if (!person) return "";
+  const source = person.sourceRecord;
+  const own = person;
+  return String(source?.id || own.id || source?.idNumber || own.idNumber || own.name || own.fullName || "");
+}
 const AuthorisationFlyout = ({
   event,
   onClose,
@@ -68694,6 +68713,7 @@ const AuthorisationFlyout = ({
   const [isVerbal, setIsVerbal] = reactExports.useState(event.isVerbalAuth ?? false);
   const [showClearConfirmation, setShowClearConfirmation] = reactExports.useState(false);
   const [isClearingAuth, setIsClearingAuth] = reactExports.useState(false);
+  const [liveCurrencyStatusByPerson, setLiveCurrencyStatusByPerson] = reactExports.useState({});
   const authorisationControlsDisabled = !flightAuthorisationRequired;
   const picName = reactExports.useMemo(() => event.instructor || event.pilot, [event]);
   const currentUserDisplayName = reactExports.useMemo(() => `${currentUserRank} ${currentUserName}`, [currentUserRank, currentUserName]);
@@ -68715,12 +68735,24 @@ const AuthorisationFlyout = ({
     const defs = [];
     for (const req of currencyRequirements) {
       if (req.isVisible !== false) {
-        defs.push({ name: req.name, validityDays: req.validityDays ?? null, isRecency: !!req.showInPostFlightRecency });
+        defs.push({
+          id: req.id,
+          name: req.name,
+          aliases: [req.shortCode, ...req.eventCodes || []].filter(Boolean),
+          validityDays: req.validityDays ?? null,
+          isRecency: !!req.showInPostFlightRecency
+        });
       }
     }
     for (const master of masterCurrencies) {
       if (master.isVisible !== false) {
-        defs.push({ name: master.name, validityDays: null, isRecency: !!master.showInPostFlightRecency });
+        defs.push({
+          id: master.id,
+          name: master.name,
+          aliases: [master.shortCode].filter(Boolean),
+          validityDays: null,
+          isRecency: !!master.showInPostFlightRecency
+        });
       }
     }
     return defs;
@@ -68745,27 +68777,59 @@ const AuthorisationFlyout = ({
   const studentRecord = reactExports.useMemo(() => {
     if (!studentName) return null;
     const trainee = traineesData.find((t) => t.name === studentName || t.fullName === studentName);
-    if (trainee) return { name: trainee.name || trainee.fullName, currencyStatus: trainee.currencyStatus, isTrainee: true };
+    if (trainee) return { name: trainee.name || trainee.fullName, currencyStatus: trainee.currencyStatus, isTrainee: true, sourceRecord: trainee };
     const inst = instructorsData.find((i) => i.name === studentName);
-    if (inst) return { name: inst.name, currencyStatus: inst.currencyStatus, isTrainee: false };
+    if (inst) return { name: inst.name, currencyStatus: inst.currencyStatus, isTrainee: false, sourceRecord: inst };
     return null;
   }, [studentName, traineesData, instructorsData]);
+  reactExports.useEffect(() => {
+    const people = [
+      { record: instructorRecord, personType: "instructor" },
+      { record: studentRecord, personType: studentRecord?.isTrainee ? "trainee" : "instructor" }
+    ].filter((item) => item.record);
+    if (people.length === 0) return;
+    let cancelled = false;
+    people.forEach(({ record, personType }) => {
+      const displayKey = getPersonDisplayKey(record);
+      const resolvedId = getPersonResolvedId(record);
+      if (!displayKey || !resolvedId) return;
+      const endpoint = personType === "instructor" ? `/api/personnel/${resolvedId}/currencies` : `/api/trainees/${resolvedId}/currencies`;
+      fetch(endpoint, { credentials: "include" }).then((response) => response.ok ? response.json() : Promise.reject(response.statusText)).then((data) => {
+        if (cancelled) return;
+        const status = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
+        setLiveCurrencyStatusByPerson((prev) => ({ ...prev, [displayKey]: status }));
+      }).catch((err) => {
+        console.warn("[AuthorisationFlyout] Could not load live currency status:", err);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [instructorRecord, studentRecord]);
+  const instructorCurrencyStatus = reactExports.useMemo(() => {
+    const key = getPersonDisplayKey(instructorRecord);
+    return key && liveCurrencyStatusByPerson[key] || instructorRecord?.currencyStatus;
+  }, [instructorRecord, liveCurrencyStatusByPerson]);
+  const studentCurrencyStatus = reactExports.useMemo(() => {
+    const key = getPersonDisplayKey(studentRecord);
+    return key && liveCurrencyStatusByPerson[key] || studentRecord?.currencyStatus;
+  }, [studentRecord, liveCurrencyStatusByPerson]);
   const instructorCounts = reactExports.useMemo(
-    () => computeCurrencyCounts(instructorRecord?.currencyStatus, allCurrencyDefs),
-    [instructorRecord, allCurrencyDefs]
+    () => computeCurrencyCounts(instructorCurrencyStatus, allCurrencyDefs),
+    [instructorCurrencyStatus, allCurrencyDefs]
   );
   const studentCounts = reactExports.useMemo(
-    () => computeCurrencyCounts(studentRecord?.currencyStatus, allCurrencyDefs),
-    [studentRecord, allCurrencyDefs]
+    () => computeCurrencyCounts(studentCurrencyStatus, allCurrencyDefs),
+    [studentCurrencyStatus, allCurrencyDefs]
   );
   const hasCurrencyData = allCurrencyDefs.length > 0 && (instructorRecord !== null || studentRecord !== null);
   const instructorRecencyCounts = reactExports.useMemo(
-    () => computeCurrencyCounts(instructorRecord?.currencyStatus, allRecencyDefs),
-    [instructorRecord, allRecencyDefs]
+    () => computeCurrencyCounts(instructorCurrencyStatus, allRecencyDefs),
+    [instructorCurrencyStatus, allRecencyDefs]
   );
   const studentRecencyCounts = reactExports.useMemo(
-    () => computeCurrencyCounts(studentRecord?.currencyStatus, allRecencyDefs),
-    [studentRecord, allRecencyDefs]
+    () => computeCurrencyCounts(studentCurrencyStatus, allRecencyDefs),
+    [studentCurrencyStatus, allRecencyDefs]
   );
   const hasRecencyData = allRecencyDefs.length > 0 && (instructorRecord !== null || studentRecord !== null);
   const getAircraftType = (resourceId) => {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ScheduleEvent, PersonCurrencyStatus, MasterCurrency, CurrencyRequirement, Instructor, Trainee } from '../types';
 import AuthorisationConfirmation from './AuthorisationConfirmation';
 import PinEntryFlyout from './PinEntryFlyout';
@@ -42,19 +42,30 @@ interface CurrencyCounts {
 }
 
 interface AuthorisationStatusDefinition {
+  id: string;
   name: string;
+  aliases: string[];
   validityDays: number | null;
   isRecency: boolean;
 }
 
+function normaliseStatusKey(value: unknown): string {
+  return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '');
+}
+
+function getDefinitionAliases(def: AuthorisationStatusDefinition): Set<string> {
+  return new Set([def.id, def.name, ...def.aliases].map(normaliseStatusKey).filter(Boolean));
+}
+
 function computeCurrencyCounts(
   currencyStatus: PersonCurrencyStatus[] | undefined,
-  allDefs: Array<{ name: string; validityDays: number | null }>
+  allDefs: Array<AuthorisationStatusDefinition>
 ): CurrencyCounts {
   const counts: CurrencyCounts = { expired: 0, approaching: 0, current: 0, grey: 0 };
 
   for (const def of allDefs) {
-    const record = currencyStatus?.find(s => s.currencyName === def.name);
+    const aliases = getDefinitionAliases(def);
+    const record = currencyStatus?.find(s => aliases.has(normaliseStatusKey(s.currencyName)));
 
     // Inactive → grey
     if (record?.isInactive) {
@@ -164,6 +175,31 @@ const InfoRow: React.FC<{ label: string; value: string | undefined }> = ({ label
     </div>
 );
 
+type AuthorisationPersonRecord = {
+  id?: string;
+  idNumber?: number;
+  name?: string;
+  fullName?: string;
+  currencyStatus?: PersonCurrencyStatus[];
+  rank?: string;
+  isTrainee?: boolean;
+  sourceRecord?: Instructor | Trainee;
+};
+
+function getPersonResolvedId(person: AuthorisationPersonRecord | null): string {
+  if (!person) return '';
+  const source = person.sourceRecord as any;
+  const own = person as any;
+  return String(source?.id || own.id || source?.idNumber || own.idNumber || '');
+}
+
+function getPersonDisplayKey(person: AuthorisationPersonRecord | null): string {
+  if (!person) return '';
+  const source = person.sourceRecord as any;
+  const own = person as any;
+  return String(source?.id || own.id || source?.idNumber || own.idNumber || own.name || own.fullName || '');
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({ 
@@ -190,6 +226,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   const [isVerbal, setIsVerbal] = useState(event.isVerbalAuth ?? false);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const [isClearingAuth, setIsClearingAuth] = useState(false);
+  const [liveCurrencyStatusByPerson, setLiveCurrencyStatusByPerson] = useState<Record<string, PersonCurrencyStatus[]>>({});
   const authorisationControlsDisabled = !flightAuthorisationRequired;
   
   const picName = useMemo(() => event.instructor || event.pilot, [event]);
@@ -218,12 +255,24 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
     const defs: AuthorisationStatusDefinition[] = [];
     for (const req of currencyRequirements) {
       if (req.isVisible !== false) {
-        defs.push({ name: req.name, validityDays: req.validityDays ?? null, isRecency: !!req.showInPostFlightRecency });
+        defs.push({
+          id: req.id,
+          name: req.name,
+          aliases: [req.shortCode, ...(req.eventCodes || [])].filter(Boolean) as string[],
+          validityDays: req.validityDays ?? null,
+          isRecency: !!req.showInPostFlightRecency,
+        });
       }
     }
     for (const master of masterCurrencies) {
       if (master.isVisible !== false) {
-        defs.push({ name: master.name, validityDays: null, isRecency: !!master.showInPostFlightRecency });
+        defs.push({
+          id: master.id,
+          name: master.name,
+          aliases: [master.shortCode].filter(Boolean) as string[],
+          validityDays: null,
+          isRecency: !!master.showInPostFlightRecency,
+        });
       }
     }
     return defs;
@@ -253,32 +302,78 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   const studentRecord = useMemo(() => {
     if (!studentName) return null;
     const trainee = traineesData.find(t => t.name === studentName || t.fullName === studentName);
-    if (trainee) return { name: trainee.name || trainee.fullName, currencyStatus: trainee.currencyStatus, isTrainee: true };
+    if (trainee) return { name: trainee.name || trainee.fullName, currencyStatus: trainee.currencyStatus, isTrainee: true, sourceRecord: trainee };
     const inst = instructorsData.find(i => i.name === studentName);
-    if (inst) return { name: inst.name, currencyStatus: inst.currencyStatus, isTrainee: false };
+    if (inst) return { name: inst.name, currencyStatus: inst.currencyStatus, isTrainee: false, sourceRecord: inst };
     return null;
   }, [studentName, traineesData, instructorsData]);
 
+  useEffect(() => {
+    const people = [
+      { record: instructorRecord, personType: 'instructor' as const },
+      { record: studentRecord, personType: studentRecord?.isTrainee ? 'trainee' as const : 'instructor' as const },
+    ].filter(item => item.record);
+
+    if (people.length === 0) return;
+
+    let cancelled = false;
+
+    people.forEach(({ record, personType }) => {
+      const displayKey = getPersonDisplayKey(record);
+      const resolvedId = getPersonResolvedId(record);
+      if (!displayKey || !resolvedId) return;
+
+      const endpoint = personType === 'instructor'
+        ? `/api/personnel/${resolvedId}/currencies`
+        : `/api/trainees/${resolvedId}/currencies`;
+
+      fetch(endpoint, { credentials: 'include' })
+        .then(response => response.ok ? response.json() : Promise.reject(response.statusText))
+        .then(data => {
+          if (cancelled) return;
+          const status: PersonCurrencyStatus[] = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
+          setLiveCurrencyStatusByPerson(prev => ({ ...prev, [displayKey]: status }));
+        })
+        .catch(err => {
+          console.warn('[AuthorisationFlyout] Could not load live currency status:', err);
+        });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [instructorRecord, studentRecord]);
+
+  const instructorCurrencyStatus = useMemo(() => {
+    const key = getPersonDisplayKey(instructorRecord);
+    return (key && liveCurrencyStatusByPerson[key]) || instructorRecord?.currencyStatus;
+  }, [instructorRecord, liveCurrencyStatusByPerson]);
+
+  const studentCurrencyStatus = useMemo(() => {
+    const key = getPersonDisplayKey(studentRecord);
+    return (key && liveCurrencyStatusByPerson[key]) || studentRecord?.currencyStatus;
+  }, [studentRecord, liveCurrencyStatusByPerson]);
+
   const instructorCounts = useMemo(
-    () => computeCurrencyCounts(instructorRecord?.currencyStatus, allCurrencyDefs),
-    [instructorRecord, allCurrencyDefs]
+    () => computeCurrencyCounts(instructorCurrencyStatus, allCurrencyDefs),
+    [instructorCurrencyStatus, allCurrencyDefs]
   );
 
   const studentCounts = useMemo(
-    () => computeCurrencyCounts(studentRecord?.currencyStatus, allCurrencyDefs),
-    [studentRecord, allCurrencyDefs]
+    () => computeCurrencyCounts(studentCurrencyStatus, allCurrencyDefs),
+    [studentCurrencyStatus, allCurrencyDefs]
   );
 
   const hasCurrencyData = allCurrencyDefs.length > 0 && (instructorRecord !== null || studentRecord !== null);
 
   const instructorRecencyCounts = useMemo(
-    () => computeCurrencyCounts(instructorRecord?.currencyStatus, allRecencyDefs),
-    [instructorRecord, allRecencyDefs]
+    () => computeCurrencyCounts(instructorCurrencyStatus, allRecencyDefs),
+    [instructorCurrencyStatus, allRecencyDefs]
   );
 
   const studentRecencyCounts = useMemo(
-    () => computeCurrencyCounts(studentRecord?.currencyStatus, allRecencyDefs),
-    [studentRecord, allRecencyDefs]
+    () => computeCurrencyCounts(studentCurrencyStatus, allRecencyDefs),
+    [studentCurrencyStatus, allRecencyDefs]
   );
 
   const hasRecencyData = allRecencyDefs.length > 0 && (instructorRecord !== null || studentRecord !== null);
