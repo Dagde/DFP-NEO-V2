@@ -662,7 +662,9 @@ const sectionSearchKeywords: Partial<Record<SettingsMenuSection, string[]>> = {
   ],
   'platform-rank-terminology': [
     'rank', 'terminology', 'labels', 'instructor label', 'trainee label', 'staff sort',
-    'rank order', 'service ranks', 'people labels',
+    'rank order', 'service ranks', 'people labels', 'callsign', 'callsigns',
+    'unit callsign', 'unit callsigns', 'formation callsign', 'formation callsigns',
+    'formation call sign', 'formation call signs',
   ],
   'platform-user-access': [
     'user access', 'access scopes', 'scope', 'location access', 'unit access', 'module access',

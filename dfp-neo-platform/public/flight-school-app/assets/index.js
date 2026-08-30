@@ -89162,7 +89162,15 @@ const sectionSearchKeywords = {
     "staff sort",
     "rank order",
     "service ranks",
-    "people labels"
+    "people labels",
+    "callsign",
+    "callsigns",
+    "unit callsign",
+    "unit callsigns",
+    "formation callsign",
+    "formation callsigns",
+    "formation call sign",
+    "formation call signs"
   ],
   "platform-user-access": [
     "user access",
