@@ -41,6 +41,12 @@ interface CurrencyCounts {
   grey: number;
 }
 
+interface AuthorisationStatusDefinition {
+  name: string;
+  validityDays: number | null;
+  isRecency: boolean;
+}
+
 function computeCurrencyCounts(
   currencyStatus: PersonCurrencyStatus[] | undefined,
   allDefs: Array<{ name: string; validityDays: number | null }>
@@ -208,20 +214,30 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
 
   // ─── Currency computation ────────────────────────────────────────────────
 
-  const allCurrencyDefs = useMemo((): Array<{ name: string; validityDays: number | null }> => {
-    const defs: Array<{ name: string; validityDays: number | null }> = [];
+  const allStatusDefs = useMemo((): AuthorisationStatusDefinition[] => {
+    const defs: AuthorisationStatusDefinition[] = [];
     for (const req of currencyRequirements) {
       if (req.isVisible !== false) {
-        defs.push({ name: req.name, validityDays: req.validityDays ?? null });
+        defs.push({ name: req.name, validityDays: req.validityDays ?? null, isRecency: !!req.showInPostFlightRecency });
       }
     }
     for (const master of masterCurrencies) {
       if (master.isVisible !== false) {
-        defs.push({ name: master.name, validityDays: null });
+        defs.push({ name: master.name, validityDays: null, isRecency: !!master.showInPostFlightRecency });
       }
     }
     return defs;
   }, [currencyRequirements, masterCurrencies]);
+
+  const allCurrencyDefs = useMemo(
+    () => allStatusDefs.filter(def => !def.isRecency),
+    [allStatusDefs]
+  );
+
+  const allRecencyDefs = useMemo(
+    () => allStatusDefs.filter(def => def.isRecency),
+    [allStatusDefs]
+  );
 
   const instructorRecord = useMemo(() => {
     const name = event.instructor || event.pilot;
@@ -254,6 +270,18 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   );
 
   const hasCurrencyData = allCurrencyDefs.length > 0 && (instructorRecord !== null || studentRecord !== null);
+
+  const instructorRecencyCounts = useMemo(
+    () => computeCurrencyCounts(instructorRecord?.currencyStatus, allRecencyDefs),
+    [instructorRecord, allRecencyDefs]
+  );
+
+  const studentRecencyCounts = useMemo(
+    () => computeCurrencyCounts(studentRecord?.currencyStatus, allRecencyDefs),
+    [studentRecord, allRecencyDefs]
+  );
+
+  const hasRecencyData = allRecencyDefs.length > 0 && (instructorRecord !== null || studentRecord !== null);
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -374,25 +402,41 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
       ? getPinForStaffSelection(isVerbal && event.authoSignedBy ? (event.authoSignedOnBehalfBy || event.authoSignedBy) : selectedCaptain)
       : '1111';
 
-  // ─── Currencies Box (inline component — accesses outer scope) ────────────
+  // ─── Currency/recency status boxes (inline components — access outer scope) ───
 
-  const CurrenciesBox = () => {
-    if (!hasCurrencyData) return null;
+  const getInstructorCurrencyLabel = () => {
+    if (!instructorRecord) return null;
+    const inst = instructorsData.find(i => i.name === instructorRecord.name);
+    return inst ? `${inst.rank} ${inst.name}` : instructorRecord.name;
+  };
 
+  const getStudentCurrencyLabel = () => {
+    if (!studentRecord) return null;
+    if (studentRecord.isTrainee) {
+      const t = traineesData.find(t => t.name === studentRecord.name || t.fullName === studentRecord.name);
+      return t ? `${t.rank} ${t.name || t.fullName}` : studentRecord.name;
+    }
+    const inst = instructorsData.find(i => i.name === studentRecord.name);
+    return inst ? `${inst.rank} ${inst.name}` : studentRecord.name;
+  };
+
+  const StatusTrafficBox = ({
+    title,
+    itemCount,
+    instructorCountsForBox,
+    studentCountsForBox,
+  }: {
+    title: string;
+    itemCount: number;
+    instructorCountsForBox: CurrencyCounts;
+    studentCountsForBox: CurrencyCounts;
+  }) => {
     const getInstructorLabel = () => {
-      if (!instructorRecord) return null;
-      const inst = instructorsData.find(i => i.name === instructorRecord.name);
-      return inst ? `${inst.rank} ${inst.name}` : instructorRecord.name;
+      return getInstructorCurrencyLabel();
     };
 
     const getStudentLabel = () => {
-      if (!studentRecord) return null;
-      if (studentRecord.isTrainee) {
-        const t = traineesData.find(t => t.name === studentRecord.name || t.fullName === studentRecord.name);
-        return t ? `${t.rank} ${t.name || t.fullName}` : studentRecord.name;
-      }
-      const inst = instructorsData.find(i => i.name === studentRecord.name);
-      return inst ? `${inst.rank} ${inst.name}` : studentRecord.name;
+      return getStudentCurrencyLabel();
     };
 
     const instructorLabel = getInstructorLabel();
@@ -400,7 +444,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
 
     return (
       <fieldset className="p-4 border border-gray-600 rounded-lg">
-        <legend className="px-2 text-sm font-semibold text-gray-300">Currencies</legend>
+        <legend className="px-2 text-sm font-semibold text-gray-300">{title}</legend>
 
         {/* Column headers */}
         <div className="flex items-end justify-end gap-4 mb-1 pr-1">
@@ -417,23 +461,45 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
           {instructorLabel && (
             <PersonCurrencyRow
               label={instructorLabel}
-              counts={instructorCounts}
+              counts={instructorCountsForBox}
             />
           )}
           {studentLabel && (
             <PersonCurrencyRow
               label={studentLabel}
-              counts={studentCounts}
+              counts={studentCountsForBox}
             />
           )}
         </div>
 
         <p className="text-[9px] text-gray-600 mt-2 text-right">
-          {allCurrencyDefs.length} currencies tracked
+          {itemCount} {title.toLowerCase()} tracked
         </p>
       </fieldset>
     );
   };
+
+  const CurrenciesBox = () => (
+    hasCurrencyData ? (
+      <StatusTrafficBox
+        title="Currencies"
+        itemCount={allCurrencyDefs.length}
+        instructorCountsForBox={instructorCounts}
+        studentCountsForBox={studentCounts}
+      />
+    ) : null
+  );
+
+  const RecencyBox = () => (
+    hasRecencyData ? (
+      <StatusTrafficBox
+        title="Recency"
+        itemCount={allRecencyDefs.length}
+        instructorCountsForBox={instructorRecencyCounts}
+        studentCountsForBox={studentRecencyCounts}
+      />
+    ) : null
+  );
 
   // ─── Render: fully authorised ─────────────────────────────────────────────
 
@@ -576,6 +642,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
 
                     {/* ── Currencies box (between Flight Summary and Notes) ── */}
                     <CurrenciesBox />
+                    <RecencyBox />
 
                     {/* Notes */}
                     <div>

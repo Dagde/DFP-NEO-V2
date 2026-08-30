@@ -68711,20 +68711,28 @@ const AuthorisationFlyout = ({
   }, [event.instructor, event.pilot, instructorsList]);
   const [selectedAutho, setSelectedAutho] = reactExports.useState(() => event.authoSignedBy || defaultAutho);
   const [selectedCaptain, setSelectedCaptain] = reactExports.useState(() => event.captainSignedBy || defaultCaptain);
-  const allCurrencyDefs = reactExports.useMemo(() => {
+  const allStatusDefs = reactExports.useMemo(() => {
     const defs = [];
     for (const req of currencyRequirements) {
       if (req.isVisible !== false) {
-        defs.push({ name: req.name, validityDays: req.validityDays ?? null });
+        defs.push({ name: req.name, validityDays: req.validityDays ?? null, isRecency: !!req.showInPostFlightRecency });
       }
     }
     for (const master of masterCurrencies) {
       if (master.isVisible !== false) {
-        defs.push({ name: master.name, validityDays: null });
+        defs.push({ name: master.name, validityDays: null, isRecency: !!master.showInPostFlightRecency });
       }
     }
     return defs;
   }, [currencyRequirements, masterCurrencies]);
+  const allCurrencyDefs = reactExports.useMemo(
+    () => allStatusDefs.filter((def) => !def.isRecency),
+    [allStatusDefs]
+  );
+  const allRecencyDefs = reactExports.useMemo(
+    () => allStatusDefs.filter((def) => def.isRecency),
+    [allStatusDefs]
+  );
   const instructorRecord = reactExports.useMemo(() => {
     const name = event.instructor || event.pilot;
     if (!name) return null;
@@ -68751,6 +68759,15 @@ const AuthorisationFlyout = ({
     [studentRecord, allCurrencyDefs]
   );
   const hasCurrencyData = allCurrencyDefs.length > 0 && (instructorRecord !== null || studentRecord !== null);
+  const instructorRecencyCounts = reactExports.useMemo(
+    () => computeCurrencyCounts(instructorRecord?.currencyStatus, allRecencyDefs),
+    [instructorRecord, allRecencyDefs]
+  );
+  const studentRecencyCounts = reactExports.useMemo(
+    () => computeCurrencyCounts(studentRecord?.currencyStatus, allRecencyDefs),
+    [studentRecord, allRecencyDefs]
+  );
+  const hasRecencyData = allRecencyDefs.length > 0 && (instructorRecord !== null || studentRecord !== null);
   const getAircraftType = (resourceId) => {
     if (!resourceId) return "";
     const spaceIndex = resourceId.lastIndexOf(" ");
@@ -68856,49 +68873,79 @@ const AuthorisationFlyout = ({
     return matchingStaff?.pin || "1111";
   };
   const pinForVerification = signingRole === "autho" ? getPinForStaffSelection(isVerbal && event.captainSignedBy ? event.captainSignedOnBehalfBy || event.captainSignedBy : selectedAutho) : signingRole === "captain" ? getPinForStaffSelection(isVerbal && event.authoSignedBy ? event.authoSignedOnBehalfBy || event.authoSignedBy : selectedCaptain) : "1111";
-  const CurrenciesBox = () => {
-    if (!hasCurrencyData) return null;
+  const getInstructorCurrencyLabel = () => {
+    if (!instructorRecord) return null;
+    const inst = instructorsData.find((i) => i.name === instructorRecord.name);
+    return inst ? `${inst.rank} ${inst.name}` : instructorRecord.name;
+  };
+  const getStudentCurrencyLabel = () => {
+    if (!studentRecord) return null;
+    if (studentRecord.isTrainee) {
+      const t = traineesData.find((t2) => t2.name === studentRecord.name || t2.fullName === studentRecord.name);
+      return t ? `${t.rank} ${t.name || t.fullName}` : studentRecord.name;
+    }
+    const inst = instructorsData.find((i) => i.name === studentRecord.name);
+    return inst ? `${inst.rank} ${inst.name}` : studentRecord.name;
+  };
+  const StatusTrafficBox = ({
+    title,
+    itemCount,
+    instructorCountsForBox,
+    studentCountsForBox
+  }) => {
     const getInstructorLabel = () => {
-      if (!instructorRecord) return null;
-      const inst = instructorsData.find((i) => i.name === instructorRecord.name);
-      return inst ? `${inst.rank} ${inst.name}` : instructorRecord.name;
+      return getInstructorCurrencyLabel();
     };
     const getStudentLabel = () => {
-      if (!studentRecord) return null;
-      if (studentRecord.isTrainee) {
-        const t = traineesData.find((t2) => t2.name === studentRecord.name || t2.fullName === studentRecord.name);
-        return t ? `${t.rank} ${t.name || t.fullName}` : studentRecord.name;
-      }
-      const inst = instructorsData.find((i) => i.name === studentRecord.name);
-      return inst ? `${inst.rank} ${inst.name}` : studentRecord.name;
+      return getStudentCurrencyLabel();
     };
     const instructorLabel22 = getInstructorLabel();
     const studentLabel = getStudentLabel();
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Currencies" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: title }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-end gap-4 mb-1 pr-1", children: ["Expired", "Due", "Current", "Inactive"].map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-10 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-gray-400 leading-tight", children: label }) }, label)) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "divide-y divide-gray-700/50", children: [
         instructorLabel22 && /* @__PURE__ */ jsxRuntimeExports.jsx(
           PersonCurrencyRow,
           {
             label: instructorLabel22,
-            counts: instructorCounts
+            counts: instructorCountsForBox
           }
         ),
         studentLabel && /* @__PURE__ */ jsxRuntimeExports.jsx(
           PersonCurrencyRow,
           {
             label: studentLabel,
-            counts: studentCounts
+            counts: studentCountsForBox
           }
         )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-gray-600 mt-2 text-right", children: [
-        allCurrencyDefs.length,
-        " currencies tracked"
+        itemCount,
+        " ",
+        title.toLowerCase(),
+        " tracked"
       ] })
     ] });
   };
+  const CurrenciesBox = () => hasCurrencyData ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+    StatusTrafficBox,
+    {
+      title: "Currencies",
+      itemCount: allCurrencyDefs.length,
+      instructorCountsForBox: instructorCounts,
+      studentCountsForBox: studentCounts
+    }
+  ) : null;
+  const RecencyBox = () => hasRecencyData ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+    StatusTrafficBox,
+    {
+      title: "Recency",
+      itemCount: allRecencyDefs.length,
+      instructorCountsForBox: instructorRecencyCounts,
+      studentCountsForBox: studentRecencyCounts
+    }
+  ) : null;
   if (isFullyAuthorised) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
@@ -69034,6 +69081,7 @@ const AuthorisationFlyout = ({
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(CurrenciesBox, {}),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(RecencyBox, {}),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "auth-notes", className: "block text-sm font-medium text-gray-400", children: "Notes" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
