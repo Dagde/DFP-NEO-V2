@@ -71146,7 +71146,7 @@ const ContinuationCurrencyEventsSettings = ({
           )
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_180px_minmax(0,0.9fr)_minmax(0,0.9fr)_90px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.9fr)_90px_minmax(0,0.9fr)_minmax(0,0.9fr)_90px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
@@ -71187,7 +71187,7 @@ const ContinuationCurrencyEventsSettings = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          "Aircraft Type",
+          "A/C Type",
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
             {

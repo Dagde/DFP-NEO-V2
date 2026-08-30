@@ -277,7 +277,7 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                         </select>
                     </label>
                 </div>
-                <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_180px_minmax(0,0.9fr)_minmax(0,0.9fr)_90px]">
+                <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.9fr)_90px_minmax(0,0.9fr)_minmax(0,0.9fr)_90px]">
                     <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
                         <span className="flex items-center gap-1.5">
                             <span>Currency</span>
@@ -307,7 +307,7 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                         </select>
                     </label>
                     <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
-                        Aircraft Type
+                        A/C Type
                         <input
                             type="text"
                             value={evt.aircraftTypeCode || ''}
