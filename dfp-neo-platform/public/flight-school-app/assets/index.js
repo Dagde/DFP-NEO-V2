@@ -112457,7 +112457,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     let resourceSearchStart = 1;
     const preferredNightAircraft = getPreferredNightAircraftResource();
-    const resourceCandidates = Array.from({ length: Math.max(0, resourceCount - resourceSearchStart + 1) }, (_, index) => `${resourcePrefix}${resourceSearchStart + index}`);
+    const resourceCandidates = options.resourceCandidatesOverride?.length ? options.resourceCandidatesOverride : Array.from({ length: Math.max(0, resourceCount - resourceSearchStart + 1) }, (_, index) => `${resourcePrefix}${resourceSearchStart + index}`);
     const orderedResourceCandidates = preferredNightAircraft && resourceCandidates.includes(preferredNightAircraft) ? [
       preferredNightAircraft,
       ...requirePreferredNightAircraft ? [] : resourceCandidates.filter((id) => id !== preferredNightAircraft)
@@ -116471,143 +116471,154 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
           const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) ? [true, false] : [false];
           let placed = false;
+          const resourceCandidates = getPriorityResourceOptions(priorityEvent);
           for (const primaryOnly of passModes) {
-            const generatedEventsBeforeAttempt = generatedEvents.length;
-            let scheduleEventTrace = null;
-            traceCurrencyPriority("scheduleAttempts", {
-              phase: "attempt-start",
-              eventType,
-              time,
-              displayTime: _fmtT(time),
-              primaryOnly,
-              candidate: getCurrencyEventIdentity(priorityEvent),
-              trainee: resolved.trainee.fullName,
-              excludeInstructorNames: resolved.excludeInstructorNames,
-              traineeEventLimitOverrides: {
-                startingFlightFtdCount,
-                selectedCurrencyEventsForPerson,
-                traineeFlightFtdLimitOverride,
-                traineeTotalLimitOverride
-              },
-              generatedEventsBeforeAttempt
-            }, 3500);
-            const result = scheduleEvent(
-              resolved.trainee,
-              syllabusItem,
-              time,
-              eventType,
-              false,
-              false,
-              primaryOnly,
-              false,
-              {
-                eventId: priorityEvent.id,
-                currencyDraftId: priorityEvent.currencyDraftId,
-                currency: priorityEvent.currency,
-                priority: priorityEvent.priority,
-                excludeInstructorNames: resolved.excludeInstructorNames,
-                randomizeInstructorCandidates: resolved.excludeInstructorNames.length > 0,
-                traineeFlightFtdLimitOverride,
-                traineeTotalLimitOverride,
-                enforcePersonnelTurnaround: true,
-                traineeOverlapRole: resolved.excludeInstructorNames.length > 0 ? "trainee" : "any",
-                diagnosticTrace: (entry) => {
-                  scheduleEventTrace = entry;
-                  traceCurrencyPriority("scheduleAttempts", {
-                    ...entry,
-                    source: "scheduleEvent",
-                    eventType,
-                    priorityEventId: priorityEvent.id,
-                    currencyDraftId: priorityEvent.currencyDraftId || null,
-                    primaryOnly,
-                    generatedEventsAtTrace: generatedEvents.length
-                  }, 3500);
-                }
-              }
-            );
-            traceCurrencyPriority("scheduleAttempts", {
-              phase: "attempt-result",
-              eventType,
-              time,
-              displayTime: _fmtT(time),
-              primaryOnly,
-              candidate: getCurrencyEventIdentity(priorityEvent),
-              trainee: resolved.trainee.fullName,
-              result: result && typeof result === "object" && "id" in result ? "placed" : "rejected",
-              rejectionReason: scheduleEventTrace?.reason || null,
-              scheduleEventOutcome: scheduleEventTrace?.outcome || null,
-              generatedEventsBeforeAttempt,
-              generatedEventsAfterAttempt: generatedEvents.length,
-              resultSummary: result && typeof result === "object" && "id" in result ? {
-                id: result.id,
-                type: result.type,
-                startTime: result.startTime,
-                resourceId: result.resourceId,
-                instructor: result.instructor,
-                pilot: result.pilot,
-                student: result.student
-              } : null
-            }, 3500);
-            if (result && typeof result === "object" && "id" in result) {
-              const placementConflict = getCurrencyPlacementConflict(result, priorityEvent, resolved);
-              if (placementConflict) {
-                scheduleEventTrace = {
-                  phase: "currency-placement-final-guard",
-                  outcome: "rejected",
-                  reason: placementConflict.reason,
-                  details: placementConflict.details
-                };
-                traceCurrencyPriority("scheduleAttempts", {
-                  phase: "attempt-result",
-                  eventType,
-                  time,
-                  displayTime: _fmtT(time),
-                  primaryOnly,
-                  candidate: getCurrencyEventIdentity(priorityEvent),
-                  trainee: resolved.trainee.fullName,
-                  result: "rejected",
-                  rejectionReason: placementConflict.reason,
-                  scheduleEventOutcome: "rejected-after-placement",
-                  generatedEventsBeforeAttempt,
-                  generatedEventsAfterAttempt: generatedEvents.length,
-                  placementConflict: placementConflict.details
-                }, 3500);
-                continue;
-              }
-              pushGeneratedEvent({ ...result, _source: "highest-priority-currency", _isNext: true, _traineeName: resolved.trainee.fullName });
-              const tCounts = eventCounts.get(resolved.trainee.fullName);
-              const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
-              if (tCounts) tCounts.flightFtd++;
-              if (ipCounts) ipCounts.flightFtd++;
-              if (priorityEvent.currencyDraftId) scheduledCurrencyDraftIds.add(priorityEvent.currencyDraftId);
-              traceCurrencyPriority("placementTrace", {
-                phase: "placed",
+            for (const candidateResourceId of resourceCandidates) {
+              const generatedEventsBeforeAttempt = generatedEvents.length;
+              let scheduleEventTrace = null;
+              traceCurrencyPriority("scheduleAttempts", {
+                phase: "attempt-start",
                 eventType,
                 time,
                 displayTime: _fmtT(time),
                 primaryOnly,
+                candidateResourceId,
+                resourceCandidateCount: resourceCandidates.length,
                 candidate: getCurrencyEventIdentity(priorityEvent),
-                generatedEventsBeforePush: generatedEventsBeforeAttempt,
-                generatedEventsAfterPush: generatedEvents.length,
-                scheduledCurrencyDraftIds: Array.from(scheduledCurrencyDraftIds),
-                result: {
+                trainee: resolved.trainee.fullName,
+                excludeInstructorNames: resolved.excludeInstructorNames,
+                traineeEventLimitOverrides: {
+                  startingFlightFtdCount,
+                  selectedCurrencyEventsForPerson,
+                  traineeFlightFtdLimitOverride,
+                  traineeTotalLimitOverride
+                },
+                generatedEventsBeforeAttempt
+              }, 3500);
+              const result = scheduleEvent(
+                resolved.trainee,
+                syllabusItem,
+                time,
+                eventType,
+                false,
+                false,
+                primaryOnly,
+                false,
+                {
+                  eventId: priorityEvent.id,
+                  currencyDraftId: priorityEvent.currencyDraftId,
+                  currency: priorityEvent.currency,
+                  priority: priorityEvent.priority,
+                  excludeInstructorNames: resolved.excludeInstructorNames,
+                  randomizeInstructorCandidates: resolved.excludeInstructorNames.length > 0,
+                  traineeFlightFtdLimitOverride,
+                  traineeTotalLimitOverride,
+                  enforcePersonnelTurnaround: true,
+                  traineeOverlapRole: resolved.excludeInstructorNames.length > 0 ? "trainee" : "any",
+                  resourceCandidatesOverride: [candidateResourceId],
+                  diagnosticTrace: (entry) => {
+                    scheduleEventTrace = entry;
+                    traceCurrencyPriority("scheduleAttempts", {
+                      ...entry,
+                      source: "scheduleEvent",
+                      eventType,
+                      priorityEventId: priorityEvent.id,
+                      currencyDraftId: priorityEvent.currencyDraftId || null,
+                      primaryOnly,
+                      candidateResourceId,
+                      generatedEventsAtTrace: generatedEvents.length
+                    }, 3500);
+                  }
+                }
+              );
+              traceCurrencyPriority("scheduleAttempts", {
+                phase: "attempt-result",
+                eventType,
+                time,
+                displayTime: _fmtT(time),
+                primaryOnly,
+                candidateResourceId,
+                candidate: getCurrencyEventIdentity(priorityEvent),
+                trainee: resolved.trainee.fullName,
+                result: result && typeof result === "object" && "id" in result ? "placed" : "rejected",
+                rejectionReason: scheduleEventTrace?.reason || null,
+                scheduleEventOutcome: scheduleEventTrace?.outcome || null,
+                generatedEventsBeforeAttempt,
+                generatedEventsAfterAttempt: generatedEvents.length,
+                resultSummary: result && typeof result === "object" && "id" in result ? {
                   id: result.id,
                   type: result.type,
-                  flightNumber: result.flightNumber,
                   startTime: result.startTime,
-                  duration: result.duration,
                   resourceId: result.resourceId,
                   instructor: result.instructor,
                   pilot: result.pilot,
                   student: result.student
+                } : null
+              }, 3500);
+              if (result && typeof result === "object" && "id" in result) {
+                const placementConflict = getCurrencyPlacementConflict(result, priorityEvent, resolved);
+                if (placementConflict) {
+                  scheduleEventTrace = {
+                    phase: "currency-placement-final-guard",
+                    outcome: "rejected",
+                    reason: placementConflict.reason,
+                    details: placementConflict.details
+                  };
+                  traceCurrencyPriority("scheduleAttempts", {
+                    phase: "attempt-result",
+                    eventType,
+                    time,
+                    displayTime: _fmtT(time),
+                    primaryOnly,
+                    candidateResourceId,
+                    candidate: getCurrencyEventIdentity(priorityEvent),
+                    trainee: resolved.trainee.fullName,
+                    result: "rejected",
+                    rejectionReason: placementConflict.reason,
+                    scheduleEventOutcome: "rejected-after-placement",
+                    generatedEventsBeforeAttempt,
+                    generatedEventsAfterAttempt: generatedEvents.length,
+                    placementConflict: placementConflict.details
+                  }, 3500);
+                  continue;
                 }
-              }, 1800);
-              remaining.splice(index, 1);
-              index--;
-              placed = true;
-              buildDebugLog(`[Currency Priority] Scheduled ${resolved.trainee.fullName} ${eventType} at ${time.toFixed(2)} on ${result.resourceId}`);
-              break;
+                pushGeneratedEvent({ ...result, _source: "highest-priority-currency", _isNext: true, _traineeName: resolved.trainee.fullName });
+                const tCounts = eventCounts.get(resolved.trainee.fullName);
+                const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
+                if (tCounts) tCounts.flightFtd++;
+                if (ipCounts) ipCounts.flightFtd++;
+                if (priorityEvent.currencyDraftId) scheduledCurrencyDraftIds.add(priorityEvent.currencyDraftId);
+                traceCurrencyPriority("placementTrace", {
+                  phase: "placed",
+                  eventType,
+                  time,
+                  displayTime: _fmtT(time),
+                  primaryOnly,
+                  candidateResourceId,
+                  candidate: getCurrencyEventIdentity(priorityEvent),
+                  generatedEventsBeforePush: generatedEventsBeforeAttempt,
+                  generatedEventsAfterPush: generatedEvents.length,
+                  scheduledCurrencyDraftIds: Array.from(scheduledCurrencyDraftIds),
+                  result: {
+                    id: result.id,
+                    type: result.type,
+                    flightNumber: result.flightNumber,
+                    startTime: result.startTime,
+                    duration: result.duration,
+                    resourceId: result.resourceId,
+                    instructor: result.instructor,
+                    pilot: result.pilot,
+                    student: result.student
+                  }
+                }, 1800);
+                remaining.splice(index, 1);
+                index--;
+                placed = true;
+                buildDebugLog(`[Currency Priority] Scheduled ${resolved.trainee.fullName} ${eventType} at ${time.toFixed(2)} on ${result.resourceId}`);
+                break;
+              }
             }
+            if (placed) break;
           }
           if (placed && eventType === "flight") {
             break;
