@@ -30431,7 +30431,7 @@ const App: React.FC = () => {
                     return undefined;
                 };
                 setSctFlights(data.filter((r: any) => r.requestType === 'flight').map((r: any) => ({
-                    id: r.id, name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
+                    id: r.id, userId: r.userId, requestType: 'flight', name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
                     notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
                     dayNight: r.dayNight || undefined,
@@ -30447,7 +30447,7 @@ const App: React.FC = () => {
                     aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1)),
                 })));
                 setSctFtds(data.filter((r: any) => r.requestType === 'ftd').map((r: any) => ({
-                    id: r.id, name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
+                    id: r.id, userId: r.userId, requestType: 'ftd', name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
                     notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
                     dayNight: r.dayNight || undefined,
@@ -30468,6 +30468,52 @@ const App: React.FC = () => {
         };
         loadSctRequests();
     }, [sessionUser?.userId]);
+
+    const handlePatchCurrentUserSctRequest = async (id: string, updates: Partial<SctRequest>, type: 'flight' | 'ftd') => {
+        const currentUserId = getCurrentUserId();
+        const normalisedUpdates: Partial<SctRequest> = { ...updates };
+        delete (normalisedUpdates as any).id;
+        delete (normalisedUpdates as any).createdAt;
+        delete (normalisedUpdates as any).updatedAt;
+        delete (normalisedUpdates as any).userId;
+        delete (normalisedUpdates as any).requestType;
+        const updater = (prev: SctRequest[]) => prev.map(request => (
+            request.id === id ? { ...request, ...normalisedUpdates } : request
+        ));
+        if (type === 'ftd') setSctFtds(updater);
+        else setSctFlights(updater);
+        setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-${type}-${id}`));
+        try {
+            const response = await fetch(`/api/sct-requests/${encodeURIComponent(id)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...normalisedUpdates, userId: currentUserId })
+            });
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                console.error('[CONTINUATION] Failed to patch owned request:', response.status, error);
+            }
+        } catch (error) {
+            console.error('[CONTINUATION] Failed to patch owned request:', error);
+        }
+    };
+
+    const handleCancelCurrentUserSctRequest = async (id: string, type: 'flight' | 'ftd') => {
+        const currentUserId = getCurrentUserId();
+        if (type === 'ftd') setSctFtds(prev => prev.filter(request => request.id !== id));
+        else setSctFlights(prev => prev.filter(request => request.id !== id));
+        setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-${type}-${id}`));
+        try {
+            const query = currentUserId ? `?userId=${encodeURIComponent(currentUserId)}` : '';
+            const response = await fetch(`/api/sct-requests/${encodeURIComponent(id)}${query}`, { method: 'DELETE' });
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                console.error('[CONTINUATION] Failed to cancel owned request:', response.status, error);
+            }
+        } catch (error) {
+            console.error('[CONTINUATION] Failed to cancel owned request:', error);
+        }
+    };
 
     // ─── Aircraft Availability Event-Based Tracking ──────────────────────────────
     // Helper: format decimal hour (e.g. 8.5) to "0830"
@@ -43028,8 +43074,10 @@ const App: React.FC = () => {
             setSctFtds(prev => prev.filter(request => !publishedSctRequestIdsByType.ftd.has(request.id)));
         }
         if (publishedSctRequestIds.length > 0) {
+            const currentUserId = getCurrentUserId();
             publishedSctRequestIds.forEach(requestId => {
-                fetch(`/api/sct-requests/${requestId}`, { method: 'DELETE' })
+                const query = currentUserId ? `?userId=${encodeURIComponent(currentUserId)}` : '';
+                fetch(`/api/sct-requests/${encodeURIComponent(requestId)}${query}`, { method: 'DELETE' })
                     .catch(err => console.error('Failed to delete published continuation request:', err));
             });
         }
@@ -44235,6 +44283,7 @@ appliedUpdates.forEach(update => {
     }, []);
 
     const handleRequestSct = useCallback((instructor: Instructor) => {
+        setTraineeForSct(null);
         setInstructorForSct(instructor);
         setShowSctRequest(true);
     }, []);
@@ -48327,6 +48376,14 @@ appliedUpdates.forEach(update => {
                             onProfileOpened={handleProfileOpened}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
+                            onRequestSct={(trainee) => {
+                                setInstructorForSct(null);
+                                setTraineeForSct(trainee);
+                                setShowSctRequest(true);
+                            }}
+                            sctRequests={[...sctFlights, ...sctFtds]}
+                            onPatchSctRequest={handlePatchCurrentUserSctRequest}
+                            onCancelSctRequest={handleCancelCurrentUserSctRequest}
                             onDeleteTrainee={(trainee) => { void handleDeleteTraineeFromRoster(trainee); }}
                             onUpdateCourseNumber={(oldCourseNumber, newCourseNumber) => {
                                 logRoutineAppDebug(`[CourseEdit] 🔄 Updating course number "${oldCourseNumber}" → "${newCourseNumber}"`);
@@ -48560,6 +48617,7 @@ appliedUpdates.forEach(update => {
                             personnelDisplaySettings={personnelDisplaySettings}
                             trainingReportTerminology={trainingReportTerminology}
                             trainingReportTemplate={trainingReportTemplate}
+                            sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                             pt051Assessments={pt051Assessments}
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}
@@ -48778,6 +48836,8 @@ appliedUpdates.forEach(update => {
                       logRoutineAppDebug('[CONTINUATION] onAddSctRequest called with type:', type);
                       const newReq: SctRequest = {
                           id: uuidv4(),
+                          userId: getCurrentUserId() || undefined,
+                          requestType: type,
                           name: '',
                           event: '',
                           eventCode: '',
@@ -48818,7 +48878,7 @@ appliedUpdates.forEach(update => {
                           if (res.ok) {
                             const saved = await res.json();
                             // Update local state with DB-assigned id
-                            const updater = (prev: SctRequest[]) => prev.map(r => r.id === newReq.id ? { ...r, id: saved.id } : r);
+                            const updater = (prev: SctRequest[]) => prev.map(r => r.id === newReq.id ? { ...r, id: saved.id, userId: saved.userId || userId, requestType: saved.requestType || type } : r);
                             if (type === 'flight') setSctFlights(updater);
                             else setSctFtds(updater);
                             logRoutineAppDebug('[CONTINUATION] Saved to DB:', saved.id, 'userId:', saved.userId);
@@ -48836,7 +48896,9 @@ appliedUpdates.forEach(update => {
                       else setSctFtds(prev => prev.filter(r => r.id !== id));
                       // Delete from DB
                       try {
-                        await fetch(`/api/sct-requests/${id}`, { method: 'DELETE' });
+                        const userId = getCurrentUserId();
+                        const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+                        await fetch(`/api/sct-requests/${encodeURIComponent(id)}${query}`, { method: 'DELETE' });
                       } catch (err) { console.error('Failed to delete continuation request:', err); }
                     }}
                     onUpdateSctRequest={async (id, field, value, type) => {
@@ -48852,7 +48914,7 @@ appliedUpdates.forEach(update => {
                         await fetch(`/api/sct-requests/${id}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ [field]: effectiveValue })
+                          body: JSON.stringify({ [field]: effectiveValue, userId: getCurrentUserId() })
                         });
                       } catch (err) { console.error('Failed to update continuation request:', err); }
                       // Trigger priority sync
@@ -48878,7 +48940,7 @@ appliedUpdates.forEach(update => {
                         await fetch(`/api/sct-requests/${id}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(normalisedUpdates)
+                          body: JSON.stringify({ ...normalisedUpdates, userId: getCurrentUserId() })
                         });
                       } catch (err) { console.error('Failed to patch continuation request:', err); }
                       setTimeout(() => {
@@ -48901,7 +48963,7 @@ appliedUpdates.forEach(update => {
                         await fetch(`/api/sct-requests/${id}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ submitted: true })
+                          body: JSON.stringify({ submitted: true, userId: getCurrentUserId() })
                         });
                       } catch (err) { console.error('Failed to submit continuation request:', err); }
                     }}
@@ -48919,7 +48981,7 @@ appliedUpdates.forEach(update => {
                         await fetch(`/api/sct-requests/${id}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ includeInBuild: newValue })
+                          body: JSON.stringify({ includeInBuild: newValue, userId: getCurrentUserId() })
                         });
                       } catch (err) { console.error('Failed to update continuation includeInBuild:', err); }
                       // Trigger priority sync to include the newly selected continuation event
@@ -49207,6 +49269,7 @@ appliedUpdates.forEach(update => {
 
                 return <MyDashboard
                             userName={dashboardUserName}
+                            currentUserId={getCurrentUserId() ?? undefined}
                             userRank={dashboardStaff?.rank || dashboardTrainee?.rank || sessionUser?.militaryRank || sessionUser?.role || ''}
                             events={eventsForDate.filter(e => (
                                 [e.instructor, e.pilot, e.fixedCrewPic, e.crew]
@@ -49615,6 +49678,9 @@ appliedUpdates.forEach(update => {
                             onProfileOpened={handleProfileOpened}
                             onViewLogbook={handleViewLogbook}
                             masterCurrencies={masterCurrencies}
+                            sctRequests={[...sctFlights, ...sctFtds]}
+                            onPatchSctRequest={handlePatchCurrentUserSctRequest}
+                            onCancelSctRequest={handleCancelCurrentUserSctRequest}
                             currencyRequirements={currencyRequirements}
                             profileInitialTab={profileInitialTab}
                             onProfileTabConsumed={handleProfileTabConsumed}
@@ -49735,9 +49801,13 @@ appliedUpdates.forEach(update => {
                             onProfileTabConsumed={() => setProfileInitialTab(null)}
                             onViewLogbook={handleViewLogbook}
                             onRequestSct={(instructor) => {
+                                setTraineeForSct(null);
                                 setInstructorForSct(instructor);
                                 setShowSctRequest(true);
                             }}
+                            sctRequests={[...sctFlights, ...sctFtds]}
+                            onPatchSctRequest={handlePatchCurrentUserSctRequest}
+                            onCancelSctRequest={handleCancelCurrentUserSctRequest}
                             onNavigateToTrainee={(trainee) => {
                                 setSelectedPersonForProfile(trainee);
                             }}
@@ -51348,7 +51418,7 @@ appliedUpdates.forEach(update => {
                                             await fetch(`/api/sct-requests/${id}`, {
                                                 method: 'PUT',
                                                 headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify(updates),
+                                                body: JSON.stringify({ ...updates, userId: getCurrentUserId() }),
                                             });
                                         } catch (err) {
                                             console.error('Failed to patch NEO Assist continuation request:', err);
@@ -52009,14 +52079,20 @@ appliedUpdates.forEach(update => {
                     events={eventsForDate}
                 />
             )}
-            {showSctRequest && instructorForSct && (
+            {showSctRequest && (instructorForSct || traineeForSct) && (
                 <SctRequestFlyout
-                    instructor={instructorForSct}
-                    onClose={() => setShowSctRequest(false)}
+                    instructor={(instructorForSct || traineeForSct)!}
+                    onClose={() => {
+                        setShowSctRequest(false);
+                        setInstructorForSct(null);
+                        setTraineeForSct(null);
+                    }}
                     onSave={async (request) => {
                         logRoutineAppDebug('[CONTINUATION] SctRequestFlyout onSave called with request:', request);
                         const requestWithDefaults = {
                             ...request,
+                            userId: getCurrentUserId() || request.userId,
+                            requestType: request.event.includes('FTD') ? 'ftd' as const : 'flight' as const,
                             aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
                             aircraftCount: Math.max(1, Math.floor(Number((request as SctRequest).aircraftCount) || 1)),
                         };
@@ -52043,9 +52119,9 @@ appliedUpdates.forEach(update => {
                                     logRoutineAppDebug('[CONTINUATION] Saved from Flyout:', saved.id, 'userId:', saved.userId);
                                     // Update local state with DB-assigned id
                                     if (requestWithDefaults.event.includes('FTD')) {
-                                        setSctFtds(prev => prev.map(r => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
+                                        setSctFtds(prev => prev.map(r => r.id === requestWithDefaults.id ? { ...r, id: saved.id, userId: saved.userId || flyoutUserId, requestType: 'ftd' } : r));
                                     } else {
-                                        setSctFlights(prev => prev.map(r => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
+                                        setSctFlights(prev => prev.map(r => r.id === requestWithDefaults.id ? { ...r, id: saved.id, userId: saved.userId || flyoutUserId, requestType: 'flight' } : r));
                                     }
                                 } else {
                                     const errData = await res.json().catch(() => ({}));
@@ -52057,9 +52133,12 @@ appliedUpdates.forEach(update => {
                         } else {
                             console.warn('[CONTINUATION] No userId available from any source - Flyout request NOT saved to DB');
                         }
+                        const requestPersonName = (instructorForSct || traineeForSct)?.name || request.name;
                         setShowSctRequest(false);
+                        setInstructorForSct(null);
+                        setTraineeForSct(null);
                         // Show success message
-                        setSuccessMessage(`${getSctTerminology(platformConfig, activeUnitCode).shortLabel} request submitted for ${instructorForSct.name}`);
+                        setSuccessMessage(`${getSctTerminology(platformConfig, activeUnitCode).shortLabel} request submitted for ${requestPersonName}`);
                     }}
                     currencyNames={[]}
                     sctEvents={sctEvents}

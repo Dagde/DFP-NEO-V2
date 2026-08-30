@@ -12,6 +12,7 @@ import { showDarkConfirm } from './DarkMessageModal';
 
 interface MyDashboardProps {
     userName: string;
+    currentUserId?: string;
     userRank: string;
     events: ScheduleEvent[];
     onSelectEvent: (event: ScheduleEvent) => void;
@@ -707,6 +708,7 @@ const deleteDashboardMessageFromApi = async (messageId: string) => {
 
 const MyDashboard: React.FC<MyDashboardProps> = ({ 
     userName, 
+    currentUserId,
     userRank, 
     events, 
     onSelectEvent, 
@@ -2133,7 +2135,13 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.name || '').localeCompare(String(b.name || '')));
     }, [staffOptions, staffPickerEntry]);
     
-    const mySctRequests = sctRequests.filter(req => req.name === userName.split(' ').reverse().join(', '));
+    const mySctRequests = sctRequests.filter(req => {
+        const requestUserId = String(req.userId || '').trim();
+        const dashboardUserId = String(currentUserId || '').trim();
+        if (dashboardUserId && requestUserId) return requestUserId === dashboardUserId;
+        const normaliseName = (value: unknown) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        return normaliseName(req.name) === normaliseName(userName.split(' ').reverse().join(', '));
+    });
     
     // Get incomplete training report assessments assigned to current user.
     const incompletePt051s = React.useMemo(() => {

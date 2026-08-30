@@ -1,6 +1,6 @@
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, ScheduleEvent, SyllabusItemDetail, AirCombatTrainingAssignment, AirCombatTrainingReport } from '../types';
+import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, ScheduleEvent, SyllabusItemDetail, AirCombatTrainingAssignment, AirCombatTrainingReport, SctRequest } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import AuditButton from './AuditButton';
@@ -11,6 +11,7 @@ import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
+import MySctRequestsPanel from './MySctRequestsPanel';
 import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 import AccountAccessPanel from './AccountAccessPanel';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
@@ -123,6 +124,9 @@ interface InstructorProfileFlyoutProps {
   onAddTrainingReport?: (staff: Instructor) => void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: (instructor: Instructor) => void;
+  sctRequests?: SctRequest[];
+  onPatchSctRequest?: (id: string, updates: Partial<SctRequest>, type: 'flight' | 'ftd') => void | Promise<void>;
+  onCancelSctRequest?: (id: string, type: 'flight' | 'ftd') => void | Promise<void>;
   onNavigateToTrainee?: (trainee: Trainee) => void;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
@@ -341,7 +345,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   locations, units, instructorsData = [], traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [],
   insertEventTypes = [], aircraftConfigurations = [],
   onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport,
-  onViewLogbook, onRequestSct, onNavigateToTrainee,
+  onViewLogbook, onRequestSct, sctRequests = [], onPatchSctRequest, onCancelSctRequest, onNavigateToTrainee,
   masterCurrencies = [], currencyRequirements = [],
   profileInitialTab, onProfileTabConsumed,
   currentUserId, currentUserName, currentUserRole = '',
@@ -1506,6 +1510,17 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     }}
                     className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
                   >Submit {continuationShortLabel} Request</button>
+                  {onPatchSctRequest && onCancelSctRequest && (
+                    <MySctRequestsPanel
+                      requests={sctRequests}
+                      currentUserId={currentUserId}
+                      profileName={instructor.name}
+                      continuationShortLabel={continuationShortLabel}
+                      continuationLongLabel={continuationLongLabel}
+                      onPatchRequest={onPatchSctRequest}
+                      onCancelRequest={onCancelSctRequest}
+                    />
+                  )}
                 </div>
               )}
 

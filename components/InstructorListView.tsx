@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement, SyllabusItemDetail, AirCombatTrainingAssignment } from '../types';
+import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement, SyllabusItemDetail, AirCombatTrainingAssignment, SctRequest } from '../types';
 import FlightInfoFlyout from './FlightInfoFlyout';
 // FIX: Corrected import path for the InstructorProfileFlyout component.
 import { InstructorProfileFlyout } from './InstructorProfileFlyout';
@@ -170,6 +170,9 @@ interface InstructorListViewProps {
   onProfileOpened?: () => void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: (instructor: Instructor) => void;
+  sctRequests?: SctRequest[];
+  onPatchSctRequest?: (id: string, updates: Partial<SctRequest>, type: 'flight' | 'ftd') => void | Promise<void>;
+  onCancelSctRequest?: (id: string, type: 'flight' | 'ftd') => void | Promise<void>;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
   profileInitialTab?: 'currency' | 'trainingReports' | null;
@@ -219,6 +222,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     onProfileOpened,
     onViewLogbook,
     onRequestSct,
+    sctRequests = [],
+    onPatchSctRequest,
+    onCancelSctRequest,
     onNavigateToTrainee,
     masterCurrencies = [],
     currencyRequirements = [],
@@ -936,6 +942,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                             onRequestSct(instructorToPass);
                         }
                     }}
+                    sctRequests={sctRequests}
+                    onPatchSctRequest={onPatchSctRequest}
+                    onCancelSctRequest={onCancelSctRequest}
                     onNavigateToTrainee={onNavigateToTrainee}
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}

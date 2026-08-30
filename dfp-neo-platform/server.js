@@ -1141,6 +1141,53 @@ if (fs.existsSync(staticPath)) {
 // SCT REQUESTS API
 // ============================================================
 
+const SCT_REQUEST_UPDATE_FIELDS = new Set([
+  'requestType',
+  'name',
+  'event',
+  'eventCode',
+  'flightType',
+  'currency',
+  'currencyExpire',
+  'priority',
+  'notes',
+  'dateRequested',
+  'requestedTime',
+  'dayNight',
+  'submitted',
+  'includeInBuild',
+  'aircraftConfigId',
+  'acceptableAircraftConfigs',
+  'crewMember',
+  'crewGroup',
+  'crewGroupKey',
+  'crewUnitCode',
+  'crewDisplayLabel',
+  'crewIndividual',
+  'aircraftCount',
+]);
+
+const safeSctRequest = (row) => row ? ({
+  ...row,
+  submitted: Boolean(row.submitted),
+  includeInBuild: Boolean(row.includeInBuild),
+}) : null;
+
+const getRequestingSctUserId = (req) => {
+  const bodyUserId = req.body && typeof req.body === 'object' ? req.body.userId : '';
+  return String(req.query.userId || bodyUserId || '').trim();
+};
+
+const loadOwnedSctRequest = async (db, id, userId) => {
+  if (!userId) return null;
+  const rows = await db.$queryRawUnsafe(
+    `SELECT * FROM "SctRequest" WHERE "id" = $1 AND "userId" = $2`,
+    String(id),
+    String(userId)
+  );
+  return rows[0] || null;
+};
+
 // GET all SCT requests (diagnostic - no userId filter) - for debugging only
 app.get('/api/sct-requests-all', async (req, res) => {
   try {
@@ -1169,11 +1216,7 @@ app.get('/api/sct-requests', async (req, res) => {
     console.log(`✅ GET /api/sct-requests - found ${requests.length} records for userId: "${userId}"`);
     console.log(`📊 All userIds in SctRequest table:`, JSON.stringify(allUserIds));
     // Serialize BigInt values to regular numbers/booleans
-    const safeRequests = requests.map(r => ({
-      ...r,
-      submitted: Boolean(r.submitted),
-      includeInBuild: Boolean(r.includeInBuild),
-    }));
+    const safeRequests = requests.map(safeSctRequest);
     res.json(safeRequests);
   } catch (err) {
     console.error('❌ Error fetching SCT requests:', err);
@@ -1233,25 +1276,31 @@ app.put('/api/sct-requests/:id', async (req, res) => {
   try {
     const db = await getPrisma();
     const { id } = req.params;
-    const updates = req.body;
+    const userId = getRequestingSctUserId(req);
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const existing = await loadOwnedSctRequest(db, id, userId);
+    if (!existing) return res.status(403).json({ error: 'SCT request not found for this user' });
+    const updates = { ...req.body };
     delete updates.id;
+    delete updates.userId;
     delete updates.createdAt;
+    delete updates.updatedAt;
     if (Array.isArray(updates.acceptableAircraftConfigs)) {
       updates.acceptableAircraftConfigs = JSON.stringify(updates.acceptableAircraftConfigs);
     }
     // Build dynamic SET clause
-    const fields = Object.keys(updates);
+    const fields = Object.keys(updates).filter(field => SCT_REQUEST_UPDATE_FIELDS.has(field));
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
     const setClauses = fields.map((f, i) => f === 'acceptableAircraftConfigs' ? `"${f}" = $${i + 2}::jsonb` : `"${f}" = $${i + 2}`).join(', ');
     const values = fields.map(f => updates[f]);
     await db.$executeRawUnsafe(
-      `UPDATE "SctRequest" SET ${setClauses}, "updatedAt" = NOW() WHERE "id" = $1`,
-      id, ...values
+      `UPDATE "SctRequest" SET ${setClauses}, "updatedAt" = NOW() WHERE "id" = $1 AND "userId" = $${fields.length + 2}`,
+      id, ...values, userId
     );
-    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SctRequest" WHERE "id" = $1`, id);
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SctRequest" WHERE "id" = $1 AND "userId" = $2`, id, userId);
     console.log(`✅ PUT /api/sct-requests/${id} - updated fields: ${fields.join(', ')}`);
     const row = rows[0];
-    res.json(row ? { ...row, submitted: Boolean(row.submitted), includeInBuild: Boolean(row.includeInBuild) } : { id });
+    res.json(safeSctRequest(row) || { id });
   } catch (err) {
     console.error('❌ Error updating SCT request:', err);
     res.status(500).json({ error: err.message });
@@ -1263,7 +1312,11 @@ app.delete('/api/sct-requests/:id', async (req, res) => {
   try {
     const db = await getPrisma();
     const { id } = req.params;
-    await db.$executeRawUnsafe(`DELETE FROM "SctRequest" WHERE "id" = $1`, id);
+    const userId = getRequestingSctUserId(req);
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const existing = await loadOwnedSctRequest(db, id, userId);
+    if (!existing) return res.status(403).json({ error: 'SCT request not found for this user' });
+    await db.$executeRawUnsafe(`DELETE FROM "SctRequest" WHERE "id" = $1 AND "userId" = $2`, id, userId);
     console.log(`✅ DELETE /api/sct-requests/${id}`);
     res.json({ success: true });
   } catch (err) {

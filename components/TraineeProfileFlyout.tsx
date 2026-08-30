@@ -3,7 +3,7 @@ import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { jsPDF } from 'jspdf';
-import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, TrainingReportAssessment, PhraseBank } from '../types';
+import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, TrainingReportAssessment, PhraseBank, SctRequest } from '../types';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import PauseConfirmationFlyout from './PauseConfirmationFlyout';
 import ScheduleWarningFlyout from './ScheduleWarningFlyout';
@@ -11,6 +11,7 @@ import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
 import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
+import MySctRequestsPanel from './MySctRequestsPanel';
 import HateSheetView from './HateSheetView';
 import TraineeLmpView from './TraineeLmpView';
 import TrainingReportView from './PT051View';
@@ -67,6 +68,7 @@ import {
   type CrewPositionTerminology,
 } from '../utils/crewPositionTerminology';
 import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
+import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
 
@@ -160,6 +162,10 @@ interface TraineeProfileFlyoutProps {
   units: string[];
   individualLmp: SyllabusItemDetail[];
   onViewLogbook?: (person: Trainee) => void;
+  onRequestSct?: (trainee: Trainee) => void;
+  sctRequests?: SctRequest[];
+  onPatchSctRequest?: (id: string, updates: Partial<SctRequest>, type: 'flight' | 'ftd') => void | Promise<void>;
+  onCancelSctRequest?: (id: string, type: 'flight' | 'ftd') => void | Promise<void>;
   isCreating?: boolean;
   activeCourses?: string[];
   onOpenInstructorProfile?: (instructorName: string) => void;
@@ -172,7 +178,7 @@ interface TraineeProfileFlyoutProps {
   pt051PerformanceLoading?: boolean;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   userProfile?: any;
-  initialActiveTab?: 'unavailable' | 'currency' | 'review' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | null;
+  initialActiveTab?: 'unavailable' | 'currency' | 'review' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | 'sct' | null;
   onSelectPt051ForEvent?: (assessment: TrainingReportAssessment) => void;
   onSavePt051Assessment?: (assessment: TrainingReportAssessment) => void;
   onDeletePt051Assessment?: (assessmentId: string, eventId: string, traineeFullName: string) => void;
@@ -199,6 +205,7 @@ interface TraineeProfileFlyoutProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   operationalModel?: OperationalModelCode | string;
   crewPositionTerminology?: CrewPositionTerminology;
+  sctTerminology?: SctTerminology;
   canUsePlatformPermission?: (permissionId: string) => boolean;
 }
 
@@ -514,6 +521,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   units,
   individualLmp,
   onViewLogbook,
+  onRequestSct,
+  sctRequests = [],
+  onPatchSctRequest,
+  onCancelSctRequest,
   isCreating = false,
   activeCourses = [],
   onOpenInstructorProfile,
@@ -553,6 +564,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   staffQualificationCatalogue,
   operationalModel = 'flight_school',
   crewPositionTerminology,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   canUsePlatformPermission,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
@@ -577,7 +589,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
 
     // Tab state — null means no tab open
-    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'review' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | null>(initialActiveTab);
+    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'review' | 'logbook' | 'hatesheet' | 'lmp' | 'pt051' | 'sct' | null>(initialActiveTab);
+    const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
+    const continuationShortLabel = continuationTerminology.shortLabel;
+    const continuationLongLabel = continuationTerminology.longLabel;
     const [inlinePt051Assessment, setInlinePt051Assessment] = useState<TrainingReportAssessment | null>(null);
     const [inlinePt051Event, setInlinePt051Event] = useState<ScheduleEvent | null>(null);
     // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
@@ -637,6 +652,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         hatesheet: 'trainee.profile.trainingReport.use',
         pt051: 'trainee.profile.trainingReport.use',
         lmp: 'trainee.profile.lmp.use',
+        sct: 'trainee.profile.own',
     };
     const canOpenTraineeProfileTab = (tab: NonNullable<typeof activeTab>): boolean => {
         if ((tab === 'hatesheet' || tab === 'pt051') && !canViewPt051) return false;
@@ -2676,6 +2692,39 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       </div>
                     )}
 
+                    {activeTab === 'sct' && (
+                      <div className={card3d + " p-4"} style={card3dStyle}>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-bold text-white">Request {continuationShortLabel} — {trainee.name}</h4>
+                          <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                        </div>
+                        <p className="text-gray-400 text-xs italic mb-4">Submit a {continuationLongLabel} request for this trainee.</p>
+                        {onRequestSct && (
+                          <button
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              onRequestSct(trainee);
+                            }}
+                            className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
+                          >
+                            Submit {continuationShortLabel} Request
+                          </button>
+                        )}
+                        {onPatchSctRequest && onCancelSctRequest && (
+                          <MySctRequestsPanel
+                            requests={sctRequests}
+                            currentUserId={currentUserId}
+                            profileName={trainee.fullName || trainee.name}
+                            continuationShortLabel={continuationShortLabel}
+                            continuationLongLabel={continuationLongLabel}
+                            onPatchRequest={onPatchSctRequest}
+                            onCancelRequest={onCancelSctRequest}
+                          />
+                        )}
+                      </div>
+                    )}
+
                     {activeTab === 'logbook' && (
                       <div className={card3d + " p-3"} style={card3dStyle}>
                         <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
@@ -3437,6 +3486,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <>
                           <button onClick={(event) => handleTabClick('unavailable', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('unavailable')} className={tabBtnClass('unavailable', canOpenTraineeProfileTab('unavailable'))}>Unavail&shy;able</button>
                           <button onClick={(event) => handleTabClick('currency', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('currency')} className={tabBtnClass('currency', canOpenTraineeProfileTab('currency'))}>Currency</button>
+                          <button onClick={(event) => handleTabClick('sct', event.currentTarget)} aria-disabled={!canOpenTraineeProfileTab('sct')} className={tabBtnClass('sct', canOpenTraineeProfileTab('sct'))}>Request<br />{continuationShortLabel}</button>
                           <button
                             onClick={(event) => {
                               if (!canOpenTraineeProfileTab('hatesheet')) {

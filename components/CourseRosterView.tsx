@@ -3,7 +3,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Course, Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement, Pt051Assessment, PhraseBank } from '../types';
+import { Course, Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement, Pt051Assessment, PhraseBank, SctRequest } from '../types';
 import TraineeProfileFlyout from './TraineeProfileFlyout';
 import RestoreCourseConfirmation from './RestoreCourseConfirmation';
 import FlightInfoFlyout from './FlightInfoFlyout';
@@ -53,10 +53,14 @@ interface CourseRosterViewProps {
     locations: string[];
     units: string[];
     selectedPersonForProfile?: Trainee | null;
-    selectedProfileInitialTab?: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null;
+    selectedProfileInitialTab?: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | 'sct' | null;
     onProfileOpened?: () => void;
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     onViewLogbook?: (person: Trainee) => void;
+    onRequestSct?: (trainee: Trainee) => void;
+    sctRequests?: SctRequest[];
+    onPatchSctRequest?: (id: string, updates: Partial<SctRequest>, type: 'flight' | 'ftd') => void | Promise<void>;
+    onCancelSctRequest?: (id: string, type: 'flight' | 'ftd') => void | Promise<void>;
     onDeleteTrainee: (trainee: Trainee) => void;
     onArchiveTrainee?: (trainee: Trainee) => Promise<void> | void;
     onOpenInstructorProfile?: (instructorName: string) => void;
@@ -95,6 +99,7 @@ interface CourseRosterViewProps {
     staffQualificationCatalogue?: StaffQualificationCatalogue;
     operationalModel?: OperationalModelCode | string;
     crewPositionTerminology?: CrewPositionTerminology;
+    sctTerminology?: import('../utils/sctTerminology').SctTerminology;
     canUsePlatformPermission?: (permissionId: string) => boolean;
 }
 
@@ -161,6 +166,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onProfileOpened,
     traineeLMPs,
     onViewLogbook,
+    onRequestSct,
+    sctRequests = [],
+    onPatchSctRequest,
+    onCancelSctRequest,
     onDeleteTrainee,
     onArchiveTrainee,
     onOpenInstructorProfile,
@@ -198,12 +207,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     staffQualificationCatalogue,
     operationalModel = 'flight_school',
     crewPositionTerminology,
+    sctTerminology,
     canUsePlatformPermission,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
-    const [profileInitialTab, setProfileInitialTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null>(null);
+    const [profileInitialTab, setProfileInitialTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | 'sct' | null>(null);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [newTraineeTemplate, setNewTraineeTemplate] = useState<Trainee | null>(null);
     const [courseToRestore, setCourseToRestore] = useState<string | null>(null);
@@ -663,6 +673,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     units={units}
                     individualLmp={individualLmpForSelected || []}
                     onViewLogbook={onViewLogbook}
+                    onRequestSct={onRequestSct}
+                    sctRequests={sctRequests}
+                    onPatchSctRequest={onPatchSctRequest}
+                    onCancelSctRequest={onCancelSctRequest}
                     onOpenInstructorProfile={onOpenInstructorProfile}
                     isCreating={isCreatingNew}
                     activeCourses={activeCourseNumbers}
@@ -678,6 +692,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     staffQualificationCatalogue={staffQualificationCatalogue}
                     operationalModel={operationalModel}
                     crewPositionTerminology={crewPositionTerminology}
+                    sctTerminology={sctTerminology}
                     pt051Assessments={pt051Assessments}
                     pt051PerformanceLoading={pt051PerformanceLoading}
                     traineeLMPs={traineeLMPs}

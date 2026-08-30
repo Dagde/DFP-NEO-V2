@@ -723,6 +723,8 @@ export interface EventLimits {
 
 export interface SctRequest {
     id: string;
+    userId?: string;
+    requestType?: 'flight' | 'ftd';
     name: string;
     event: string;
     eventCode?: string;

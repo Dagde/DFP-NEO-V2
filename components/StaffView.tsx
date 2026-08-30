@@ -10,6 +10,7 @@ import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/cr
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { SctTerminology } from '../utils/sctTerminology';
 import { isFixedCrewLikeOperationalModel, type PlatformConfig } from '../utils/platformConfigService';
+import type { SctRequest } from '../types';
 
 interface StaffViewProps {
   // Props for InstructorListView
@@ -38,6 +39,9 @@ interface StaffViewProps {
   selectedPersonForProfile?: any;
   onProfileOpened?: () => void;
   onViewLogbook?: (person: any) => void;
+  sctRequests?: SctRequest[];
+  onPatchSctRequest?: (id: string, updates: Partial<SctRequest>, type: 'flight' | 'ftd') => void | Promise<void>;
+  onCancelSctRequest?: (id: string, type: 'flight' | 'ftd') => void | Promise<void>;
   masterCurrencies?: any[];
   currencyRequirements?: any[];
   profileInitialTab?: 'currency' | null;
@@ -252,6 +256,9 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onProfileOpened={props.onProfileOpened}
             onViewLogbook={props.onViewLogbook}
             masterCurrencies={props.masterCurrencies}
+            sctRequests={props.sctRequests}
+            onPatchSctRequest={props.onPatchSctRequest}
+            onCancelSctRequest={props.onCancelSctRequest}
             currencyRequirements={props.currencyRequirements}
             profileInitialTab={props.profileInitialTab}
             onProfileTabConsumed={props.onProfileTabConsumed}

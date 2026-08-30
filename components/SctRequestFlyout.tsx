@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Instructor, SctRequest } from '../types';
+import { Instructor, SctRequest, Trainee } from '../types';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import { getContinuationEventCurrencyProfiles } from '../utils/continuationEvents';
@@ -8,7 +8,7 @@ import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEd
 import { showDarkAlert } from './DarkMessageModal';
 
 interface SctRequestFlyoutProps {
-  instructor: Instructor;
+  instructor: Instructor | Trainee;
   onClose: () => void;
   onSave: (request: SctRequest) => void;
   currencyNames: string[];

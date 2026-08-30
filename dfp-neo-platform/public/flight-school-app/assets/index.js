@@ -22611,6 +22611,164 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
     }
   ) });
 };
+const normaliseName$2 = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+const inferRequestType = (request) => request.requestType === "ftd" || String(request.event || "").toUpperCase().includes("FTD") ? "ftd" : "flight";
+const formatRequestDate = (value) => {
+  if (!value) return "Not set";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString(void 0, { day: "2-digit", month: "short", year: "2-digit" });
+};
+const MySctRequestsPanel = ({
+  requests,
+  currentUserId,
+  profileName,
+  continuationShortLabel,
+  continuationLongLabel,
+  onPatchRequest,
+  onCancelRequest
+}) => {
+  const [editingId, setEditingId] = reactExports.useState(null);
+  const myRequests = reactExports.useMemo(() => {
+    const currentId = String(currentUserId || "").trim();
+    const profileKey = normaliseName$2(profileName);
+    const reversedProfileKey = normaliseName$2(profileName.split(/\s+/).reverse().join(", "));
+    return requests.filter((request) => {
+      const requestUserId = String(request.userId || "").trim();
+      if (currentId && requestUserId) return requestUserId === currentId;
+      const requestName = normaliseName$2(request.name);
+      return Boolean(profileKey) && (requestName === profileKey || requestName === reversedProfileKey);
+    }).sort((a, b) => String(b.dateRequested || "").localeCompare(String(a.dateRequested || "")));
+  }, [currentUserId, profileName, requests]);
+  const handleCancel = async (request) => {
+    const confirmed = await showDarkConfirm(
+      `Cancel this ${continuationShortLabel} / currency request?`,
+      "Cancel Request",
+      "warning"
+    );
+    if (!confirmed) return;
+    await onCancelRequest(request.id, inferRequestType(request));
+    if (editingId === request.id) setEditingId(null);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-md border border-sky-500/20 bg-gray-950/35", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-sky-500/10 px-3 py-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h5", { className: "text-xs font-bold uppercase tracking-wide text-sky-100", children: [
+          "My ",
+          continuationShortLabel,
+          " / Currency Requests"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-[11px] text-gray-400", children: "View, edit or cancel requests lodged by the logged-in user." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-sky-900/50 px-2 py-0.5 text-[11px] font-bold text-sky-200", children: myRequests.length })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-72 overflow-y-auto p-3", children: myRequests.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "rounded border border-dashed border-gray-700 bg-gray-900/30 px-3 py-4 text-center text-xs italic text-gray-500", children: [
+      "No lodged ",
+      continuationLongLabel.toLowerCase(),
+      " requests for this user."
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: myRequests.map((request) => {
+      const isEditing = editingId === request.id;
+      const type = inferRequestType(request);
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/70 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-white", children: request.event || "Untitled request" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex flex-wrap gap-1.5 text-[10px] font-semibold uppercase tracking-wide", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800 px-2 py-0.5 text-gray-300", children: type === "ftd" ? "FTD" : "Flight" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800 px-2 py-0.5 text-gray-300", children: request.priority || "Medium" }),
+              request.submitted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-emerald-900/60 px-2 py-0.5 text-emerald-200", children: "Submitted" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setEditingId(isEditing ? null : request.id), className: "rounded border border-gray-600 bg-gray-800 px-2 py-1 text-[11px] font-semibold text-gray-100 hover:border-sky-400", children: isEditing ? "Done" : "Edit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => handleCancel(request), className: "rounded border border-red-500/40 bg-red-950/40 px-2 py-1 text-[11px] font-semibold text-red-200 hover:border-red-300", children: "Cancel" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid grid-cols-2 gap-2 text-[11px] text-gray-300", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Currency:" }),
+            " ",
+            request.currency || "Not set"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Expires:" }),
+            " ",
+            formatRequestDate(request.currencyExpire)
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Requested:" }),
+            " ",
+            formatRequestDate(request.dateRequested)
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Time:" }),
+            " ",
+            request.requestedTime || "Not set"
+          ] })
+        ] }),
+        isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-2 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold text-gray-400", children: [
+            "Priority",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: request.priority || "Medium",
+                onChange: (event) => onPatchRequest(request.id, { priority: event.target.value }, type),
+                className: "mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-2 py-1.5 text-xs text-white",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold text-gray-400", children: [
+            "Requested Time",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "time",
+                value: request.requestedTime || "15:00",
+                onChange: (event) => onPatchRequest(request.id, { requestedTime: event.target.value }, type),
+                className: "mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-2 py-1.5 text-xs text-white"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold text-gray-400", children: [
+            "Currency Expires",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                value: request.currencyExpire || "",
+                onChange: (event) => onPatchRequest(request.id, { currencyExpire: event.target.value }, type),
+                className: "mt-1 block w-full rounded border border-gray-600 bg-gray-800 px-2 py-1.5 text-xs text-white",
+                style: { colorScheme: "dark" }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[11px] font-semibold text-gray-400", children: [
+            "Notes",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                defaultValue: request.notes || "",
+                onBlur: (event) => {
+                  if (event.target.value !== (request.notes || "")) {
+                    onPatchRequest(request.id, { notes: event.target.value }, type);
+                  }
+                },
+                rows: 2,
+                className: "mt-1 block w-full resize-y rounded border border-gray-600 bg-gray-800 px-2 py-1.5 text-xs text-white"
+              }
+            )
+          ] })
+        ] })
+      ] }, request.id);
+    }) }) })
+  ] });
+};
 const TRAINING_REPORT_STRUCTURE$2 = [
   { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
   { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
@@ -26742,6 +26900,10 @@ const TraineeProfileFlyout = ({
   units,
   individualLmp,
   onViewLogbook,
+  onRequestSct,
+  sctRequests = [],
+  onPatchSctRequest,
+  onCancelSctRequest,
   isCreating = false,
   activeCourses = [],
   onOpenInstructorProfile,
@@ -26782,6 +26944,7 @@ const TraineeProfileFlyout = ({
   staffQualificationCatalogue: staffQualificationCatalogue2,
   operationalModel = "flight_school",
   crewPositionTerminology,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   canUsePlatformPermission
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
@@ -26801,6 +26964,9 @@ const TraineeProfileFlyout = ({
   const card3d2 = "rounded-lg border border-gray-500/60 shadow-md";
   const card3dStyle2 = { background: "linear-gradient(180deg, #243044 0%, #1e2d42 60%)", boxShadow: "0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)" };
   const [activeTab, setActiveTab] = reactExports.useState(initialActiveTab);
+  const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
+  const continuationShortLabel = continuationTerminology.shortLabel;
+  const continuationLongLabel = continuationTerminology.longLabel;
   const [inlinePt051Assessment, setInlinePt051Assessment] = reactExports.useState(null);
   const [inlinePt051Event, setInlinePt051Event] = reactExports.useState(null);
   const [currencyEditState, setCurrencyEditState] = reactExports.useState(null);
@@ -26848,7 +27014,8 @@ const TraineeProfileFlyout = ({
     logbook: "trainee.profile.logbook.use",
     hatesheet: "trainee.profile.trainingReport.use",
     pt051: "trainee.profile.trainingReport.use",
-    lmp: "trainee.profile.lmp.use"
+    lmp: "trainee.profile.lmp.use",
+    sct: "trainee.profile.own"
   };
   const canOpenTraineeProfileTab = (tab) => {
     if ((tab === "hatesheet" || tab === "pt051") && !canViewPt051) return false;
@@ -28563,6 +28730,50 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   setActiveTab(null);
                 }, className: "mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded", children: "+ Add Unavailability" })
               ] }),
+              activeTab === "sct" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-4", style: card3dStyle2, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
+                    "Request ",
+                    continuationShortLabel,
+                    " — ",
+                    trainee.name
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-xs italic mb-4", children: [
+                  "Submit a ",
+                  continuationLongLabel,
+                  " request for this trainee."
+                ] }),
+                onRequestSct && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    onClick: (event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onRequestSct(trainee);
+                    },
+                    className: "px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded",
+                    children: [
+                      "Submit ",
+                      continuationShortLabel,
+                      " Request"
+                    ]
+                  }
+                ),
+                onPatchSctRequest && onCancelSctRequest && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  MySctRequestsPanel,
+                  {
+                    requests: sctRequests,
+                    currentUserId,
+                    profileName: trainee.fullName || trainee.name,
+                    continuationShortLabel,
+                    continuationLongLabel,
+                    onPatchRequest: onPatchSctRequest,
+                    onCancelRequest: onCancelSctRequest
+                  }
+                )
+              ] }),
               activeTab === "logbook" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2 flex-wrap gap-1", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
@@ -29312,6 +29523,11 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("unavailable", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("unavailable"), className: tabBtnClass("unavailable", canOpenTraineeProfileTab("unavailable")), children: "Unavail­able" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: (event) => handleTabClick("currency", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("currency"), className: tabBtnClass("currency", canOpenTraineeProfileTab("currency")), children: "Currency" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: (event) => handleTabClick("sct", event.currentTarget), "aria-disabled": !canOpenTraineeProfileTab("sct"), className: tabBtnClass("sct", canOpenTraineeProfileTab("sct")), children: [
+              "Request",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              continuationShortLabel
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -30843,6 +31059,10 @@ const CourseRosterView = ({
   onProfileOpened,
   traineeLMPs,
   onViewLogbook,
+  onRequestSct,
+  sctRequests = [],
+  onPatchSctRequest,
+  onCancelSctRequest,
   onDeleteTrainee,
   onArchiveTrainee,
   onOpenInstructorProfile,
@@ -30880,6 +31100,7 @@ const CourseRosterView = ({
   staffQualificationCatalogue: staffQualificationCatalogue2,
   operationalModel = "flight_school",
   crewPositionTerminology,
+  sctTerminology,
   canUsePlatformPermission
 }) => {
   const { isFrozen } = useSystemFreeze();
@@ -31258,6 +31479,10 @@ const CourseRosterView = ({
         units,
         individualLmp: individualLmpForSelected || [],
         onViewLogbook,
+        onRequestSct,
+        sctRequests,
+        onPatchSctRequest,
+        onCancelSctRequest,
         onOpenInstructorProfile,
         isCreating: isCreatingNew,
         activeCourses: activeCourseNumbers,
@@ -31273,6 +31498,7 @@ const CourseRosterView = ({
         staffQualificationCatalogue: staffQualificationCatalogue2,
         operationalModel,
         crewPositionTerminology,
+        sctTerminology,
         pt051Assessments,
         pt051PerformanceLoading,
         traineeLMPs,
@@ -40823,6 +41049,7 @@ const deleteDashboardMessageFromApi = async (messageId) => {
 };
 const MyDashboard = ({
   userName,
+  currentUserId,
   userRank,
   events,
   onSelectEvent,
@@ -41958,7 +42185,13 @@ const MyDashboard = ({
     const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || "").trim();
     return staffOptions.filter((staff) => staff?.name && (!unit || String(staff.unit || "").trim() === unit)).sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.name || "").localeCompare(String(b.name || "")));
   }, [staffOptions, staffPickerEntry]);
-  const mySctRequests = sctRequests.filter((req) => req.name === userName.split(" ").reverse().join(", "));
+  const mySctRequests = sctRequests.filter((req) => {
+    const requestUserId = String(req.userId || "").trim();
+    const dashboardUserId = String(currentUserId || "").trim();
+    if (dashboardUserId && requestUserId) return requestUserId === dashboardUserId;
+    const normaliseName2 = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    return normaliseName2(req.name) === normaliseName2(userName.split(" ").reverse().join(", "));
+  });
   const incompletePt051s = React.useMemo(() => {
     const fullUserName = toDashboardSurnameFirstName(userName);
     const fullUserKey = normaliseDashboardContactName(fullUserName);
@@ -59429,6 +59662,9 @@ const InstructorProfileFlyout = ({
   onAddTrainingReport,
   onViewLogbook,
   onRequestSct,
+  sctRequests = [],
+  onPatchSctRequest,
+  onCancelSctRequest,
   onNavigateToTrainee,
   masterCurrencies = [],
   currencyRequirements = [],
@@ -60522,6 +60758,18 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   continuationShortLabel,
                   " Request"
                 ]
+              }
+            ),
+            onPatchSctRequest && onCancelSctRequest && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              MySctRequestsPanel,
+              {
+                requests: sctRequests,
+                currentUserId,
+                profileName: instructor.name,
+                continuationShortLabel,
+                continuationLongLabel,
+                onPatchRequest: onPatchSctRequest,
+                onCancelRequest: onCancelSctRequest
               }
             )
           ] }),
@@ -62127,6 +62375,9 @@ const InstructorListView = ({
   onProfileOpened,
   onViewLogbook,
   onRequestSct,
+  sctRequests = [],
+  onPatchSctRequest,
+  onCancelSctRequest,
   onNavigateToTrainee,
   masterCurrencies = [],
   currencyRequirements = [],
@@ -62707,6 +62958,9 @@ const InstructorListView = ({
             onRequestSct(instructorToPass);
           }
         },
+        sctRequests,
+        onPatchSctRequest,
+        onCancelSctRequest,
         onNavigateToTrainee,
         masterCurrencies,
         currencyRequirements,
@@ -63236,6 +63490,9 @@ const StaffView = (props) => {
           onProfileOpened: props.onProfileOpened,
           onViewLogbook: props.onViewLogbook,
           masterCurrencies: props.masterCurrencies,
+          sctRequests: props.sctRequests,
+          onPatchSctRequest: props.onPatchSctRequest,
+          onCancelSctRequest: props.onCancelSctRequest,
           currencyRequirements: props.currencyRequirements,
           profileInitialTab: props.profileInitialTab,
           onProfileTabConsumed: props.onProfileTabConsumed,
@@ -124282,6 +124539,8 @@ const App = () => {
         };
         setSctFlights(data.filter((r) => r.requestType === "flight").map((r) => ({
           id: r.id,
+          userId: r.userId,
+          requestType: "flight",
           name: r.name,
           event: r.event,
           eventCode: r.eventCode || "",
@@ -124307,6 +124566,8 @@ const App = () => {
         })));
         setSctFtds(data.filter((r) => r.requestType === "ftd").map((r) => ({
           id: r.id,
+          userId: r.userId,
+          requestType: "ftd",
           name: r.name,
           event: r.event,
           eventCode: r.eventCode || "",
@@ -124336,6 +124597,48 @@ const App = () => {
     };
     loadSctRequests();
   }, [sessionUser?.userId]);
+  const handlePatchCurrentUserSctRequest = async (id, updates, type) => {
+    const currentUserId2 = getCurrentUserId();
+    const normalisedUpdates = { ...updates };
+    delete normalisedUpdates.id;
+    delete normalisedUpdates.createdAt;
+    delete normalisedUpdates.updatedAt;
+    delete normalisedUpdates.userId;
+    delete normalisedUpdates.requestType;
+    const updater = (prev) => prev.map((request) => request.id === id ? { ...request, ...normalisedUpdates } : request);
+    if (type === "ftd") setSctFtds(updater);
+    else setSctFlights(updater);
+    setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-${type}-${id}`));
+    try {
+      const response = await fetch(`/api/sct-requests/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...normalisedUpdates, userId: currentUserId2 })
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("[CONTINUATION] Failed to patch owned request:", response.status, error);
+      }
+    } catch (error) {
+      console.error("[CONTINUATION] Failed to patch owned request:", error);
+    }
+  };
+  const handleCancelCurrentUserSctRequest = async (id, type) => {
+    const currentUserId2 = getCurrentUserId();
+    if (type === "ftd") setSctFtds((prev) => prev.filter((request) => request.id !== id));
+    else setSctFlights((prev) => prev.filter((request) => request.id !== id));
+    setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-${type}-${id}`));
+    try {
+      const query = currentUserId2 ? `?userId=${encodeURIComponent(currentUserId2)}` : "";
+      const response = await fetch(`/api/sct-requests/${encodeURIComponent(id)}${query}`, { method: "DELETE" });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("[CONTINUATION] Failed to cancel owned request:", response.status, error);
+      }
+    } catch (error) {
+      console.error("[CONTINUATION] Failed to cancel owned request:", error);
+    }
+  };
   const formatWindowTime = (decimalHour) => {
     const h = Math.floor(decimalHour);
     const m = Math.round((decimalHour - h) * 60);
@@ -134499,8 +134802,10 @@ ${conflictLines.join("\n")}${moreText}`,
       setSctFtds((prev) => prev.filter((request) => !publishedSctRequestIdsByType.ftd.has(request.id)));
     }
     if (publishedSctRequestIds.length > 0) {
+      const currentUserId2 = getCurrentUserId();
       publishedSctRequestIds.forEach((requestId) => {
-        fetch(`/api/sct-requests/${requestId}`, { method: "DELETE" }).catch((err) => console.error("Failed to delete published continuation request:", err));
+        const query = currentUserId2 ? `?userId=${encodeURIComponent(currentUserId2)}` : "";
+        fetch(`/api/sct-requests/${encodeURIComponent(requestId)}${query}`, { method: "DELETE" }).catch((err) => console.error("Failed to delete published continuation request:", err));
       });
     }
     if (publishedPriorityEventIds.size > 0 || publishedCurrencyDraftIds.size > 0 || publishedTaskingRequestIds.size > 0 || publishedSctRequestIdsFromEvents.size > 0) {
@@ -135484,6 +135789,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     setProfileInitialTab(null);
   }, []);
   const handleRequestSct = reactExports.useCallback((instructor) => {
+    setTraineeForSct(null);
     setInstructorForSct(instructor);
     setShowSctRequest(true);
   }, []);
@@ -138852,6 +139158,14 @@ ${error instanceof Error ? error.message : String(error)}`,
             onProfileOpened: handleProfileOpened,
             traineeLMPs,
             onViewLogbook: handleViewLogbook,
+            onRequestSct: (trainee) => {
+              setInstructorForSct(null);
+              setTraineeForSct(trainee);
+              setShowSctRequest(true);
+            },
+            sctRequests: [...sctFlights, ...sctFtds],
+            onPatchSctRequest: handlePatchCurrentUserSctRequest,
+            onCancelSctRequest: handleCancelCurrentUserSctRequest,
             onDeleteTrainee: (trainee) => {
               void handleDeleteTraineeFromRoster(trainee);
             },
@@ -139070,6 +139384,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             personnelDisplaySettings,
             trainingReportTerminology,
             trainingReportTemplate,
+            sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,
@@ -139289,6 +139604,8 @@ ${error instanceof Error ? error.message : String(error)}`,
               logRoutineAppDebug("[CONTINUATION] onAddSctRequest called with type:", type);
               const newReq = {
                 id: v4(),
+                userId: getCurrentUserId() || void 0,
+                requestType: type,
                 name: "",
                 event: "",
                 eventCode: "",
@@ -139327,7 +139644,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   logRoutineAppDebug("[CONTINUATION] POST response status:", res.status);
                   if (res.ok) {
                     const saved = await res.json();
-                    const updater = (prev) => prev.map((r) => r.id === newReq.id ? { ...r, id: saved.id } : r);
+                    const updater = (prev) => prev.map((r) => r.id === newReq.id ? { ...r, id: saved.id, userId: saved.userId || userId, requestType: saved.requestType || type } : r);
                     if (type === "flight") setSctFlights(updater);
                     else setSctFtds(updater);
                     logRoutineAppDebug("[CONTINUATION] Saved to DB:", saved.id, "userId:", saved.userId);
@@ -139346,7 +139663,9 @@ ${error instanceof Error ? error.message : String(error)}`,
               if (type === "flight") setSctFlights((prev) => prev.filter((r) => r.id !== id));
               else setSctFtds((prev) => prev.filter((r) => r.id !== id));
               try {
-                await fetch(`/api/sct-requests/${id}`, { method: "DELETE" });
+                const userId = getCurrentUserId();
+                const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+                await fetch(`/api/sct-requests/${encodeURIComponent(id)}${query}`, { method: "DELETE" });
               } catch (err) {
                 console.error("Failed to delete continuation request:", err);
               }
@@ -139361,7 +139680,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 await fetch(`/api/sct-requests/${id}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ [field]: effectiveValue })
+                  body: JSON.stringify({ [field]: effectiveValue, userId: getCurrentUserId() })
                 });
               } catch (err) {
                 console.error("Failed to update continuation request:", err);
@@ -139388,7 +139707,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 await fetch(`/api/sct-requests/${id}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(normalisedUpdates)
+                  body: JSON.stringify({ ...normalisedUpdates, userId: getCurrentUserId() })
                 });
               } catch (err) {
                 console.error("Failed to patch continuation request:", err);
@@ -139412,7 +139731,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 await fetch(`/api/sct-requests/${id}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ submitted: true })
+                  body: JSON.stringify({ submitted: true, userId: getCurrentUserId() })
                 });
               } catch (err) {
                 console.error("Failed to submit continuation request:", err);
@@ -139431,7 +139750,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 await fetch(`/api/sct-requests/${id}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ includeInBuild: newValue })
+                  body: JSON.stringify({ includeInBuild: newValue, userId: getCurrentUserId() })
                 });
               } catch (err) {
                 console.error("Failed to update continuation includeInBuild:", err);
@@ -139684,6 +140003,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           MyDashboard,
           {
             userName: dashboardUserName,
+            currentUserId: getCurrentUserId() ?? void 0,
             userRank: dashboardStaff?.rank || dashboardTrainee?.rank || sessionUser?.militaryRank || sessionUser?.role || "",
             events: eventsForDate.filter((e) => [e.instructor, e.pilot, e.fixedCrewPic, e.crew].some((name) => normaliseDashboardName(name) === normaliseDashboardName(dashboardUserName))),
             onSelectEvent: handleOpenModal,
@@ -140019,6 +140339,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             onProfileOpened: handleProfileOpened,
             onViewLogbook: handleViewLogbook,
             masterCurrencies,
+            sctRequests: [...sctFlights, ...sctFtds],
+            onPatchSctRequest: handlePatchCurrentUserSctRequest,
+            onCancelSctRequest: handleCancelCurrentUserSctRequest,
             currencyRequirements,
             profileInitialTab,
             onProfileTabConsumed: handleProfileTabConsumed,
@@ -140137,9 +140460,13 @@ ${error instanceof Error ? error.message : String(error)}`,
             onProfileTabConsumed: () => setProfileInitialTab(null),
             onViewLogbook: handleViewLogbook,
             onRequestSct: (instructor) => {
+              setTraineeForSct(null);
               setInstructorForSct(instructor);
               setShowSctRequest(true);
             },
+            sctRequests: [...sctFlights, ...sctFtds],
+            onPatchSctRequest: handlePatchCurrentUserSctRequest,
+            onCancelSctRequest: handleCancelCurrentUserSctRequest,
             onNavigateToTrainee: (trainee) => {
               setSelectedPersonForProfile(trainee);
             },
@@ -141608,7 +141935,7 @@ Do you want to replace the existing entry?`,
                             await fetch(`/api/sct-requests/${id}`, {
                               method: "PUT",
                               headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify(updates)
+                              body: JSON.stringify({ ...updates, userId: getCurrentUserId() })
                             });
                           } catch (err) {
                             console.error("Failed to patch NEO Assist continuation request:", err);
@@ -142263,15 +142590,21 @@ Do you want to replace the existing entry?`,
           events: eventsForDate
         }
       ),
-      showSctRequest && instructorForSct && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      showSctRequest && (instructorForSct || traineeForSct) && /* @__PURE__ */ jsxRuntimeExports.jsx(
         SctRequestFlyout,
         {
-          instructor: instructorForSct,
-          onClose: () => setShowSctRequest(false),
+          instructor: instructorForSct || traineeForSct,
+          onClose: () => {
+            setShowSctRequest(false);
+            setInstructorForSct(null);
+            setTraineeForSct(null);
+          },
           onSave: async (request) => {
             logRoutineAppDebug("[CONTINUATION] SctRequestFlyout onSave called with request:", request);
             const requestWithDefaults = {
               ...request,
+              userId: getCurrentUserId() || request.userId,
+              requestType: request.event.includes("FTD") ? "ftd" : "flight",
               aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
               aircraftCount: Math.max(1, Math.floor(Number(request.aircraftCount) || 1))
             };
@@ -142295,9 +142628,9 @@ Do you want to replace the existing entry?`,
                   const saved = await res.json();
                   logRoutineAppDebug("[CONTINUATION] Saved from Flyout:", saved.id, "userId:", saved.userId);
                   if (requestWithDefaults.event.includes("FTD")) {
-                    setSctFtds((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
+                    setSctFtds((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved.id, userId: saved.userId || flyoutUserId, requestType: "ftd" } : r));
                   } else {
-                    setSctFlights((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
+                    setSctFlights((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved.id, userId: saved.userId || flyoutUserId, requestType: "flight" } : r));
                   }
                 } else {
                   const errData = await res.json().catch(() => ({}));
@@ -142309,8 +142642,11 @@ Do you want to replace the existing entry?`,
             } else {
               console.warn("[CONTINUATION] No userId available from any source - Flyout request NOT saved to DB");
             }
+            const requestPersonName = (instructorForSct || traineeForSct)?.name || request.name;
             setShowSctRequest(false);
-            setSuccessMessage(`${getSctTerminology(platformConfig, activeUnitCode).shortLabel} request submitted for ${instructorForSct.name}`);
+            setInstructorForSct(null);
+            setTraineeForSct(null);
+            setSuccessMessage(`${getSctTerminology(platformConfig, activeUnitCode).shortLabel} request submitted for ${requestPersonName}`);
           },
           currencyNames: [],
           sctEvents,
