@@ -116077,6 +116077,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         unavailability: staff.unavailability || [],
         location: staff.location
       },
+      staff,
       excludeInstructorNames: [staff.name]
     };
   };
@@ -116153,6 +116154,159 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const findScheduledCurrencyEvent = (priorityEvent) => generatedEvents.find((event) => event.id === priorityEvent.id) || generatedEvents.find(
       (event) => !!priorityEvent.currencyDraftId && event.currencyDraftId === priorityEvent.currencyDraftId && event.type === priorityEvent.type && isCurrencyPriorityEvent(event)
     ) || null;
+    const getCurrencyPlacementConflict = (candidate, priorityEvent, resolved) => {
+      const candidateWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
+      for (const existing of generatedEvents) {
+        if (existing.id === candidate.id) continue;
+        const resourceConflict = getPriorityResourceConflictDetail(candidate, existing);
+        if (resourceConflict) {
+          return {
+            reason: resourceConflict.reason,
+            details: { resourceConflict }
+          };
+        }
+        if (priorityPersonnelConflict(candidate, existing)) {
+          return {
+            reason: "PERSONNEL_BOOKING_WINDOW",
+            details: {
+              commonPersonnel: getCommonPersonnel(candidate, existing),
+              candidateWindow,
+              existing: {
+                id: existing.id,
+                flightNumber: existing.flightNumber,
+                type: existing.type,
+                startTime: existing.startTime,
+                endTime: existing.startTime + existing.duration,
+                resourceId: existing.resourceId,
+                source: existing._source || null
+              },
+              existingWindow: getEventBookingWindowForAlgo(existing, syllabusDetails)
+            }
+          };
+        }
+        const commonPersonnel = getCommonPersonnel(candidate, existing);
+        if (commonPersonnel.length > 0 && (candidate.type === "flight" || candidate.type === "ftd" || candidate.type === "cpt") && (existing.type === "flight" || existing.type === "ftd" || existing.type === "cpt")) {
+          const candidateAfterExisting = candidate.startTime - (existing.startTime + existing.duration);
+          if (candidate.startTime >= existing.startTime && candidateAfterExisting >= -1e-3 && candidateAfterExisting < getPriorityTurnaround(existing) - 1e-3) {
+            return {
+              reason: "PERSONNEL_TURNAROUND_AFTER_EXISTING",
+              details: {
+                commonPersonnel,
+                actualGap: candidateAfterExisting,
+                requiredGap: getPriorityTurnaround(existing),
+                existing: {
+                  id: existing.id,
+                  flightNumber: existing.flightNumber,
+                  type: existing.type,
+                  startTime: existing.startTime,
+                  endTime: existing.startTime + existing.duration,
+                  resourceId: existing.resourceId,
+                  source: existing._source || null
+                }
+              }
+            };
+          }
+          const existingAfterCandidate = existing.startTime - (candidate.startTime + candidate.duration);
+          if (existing.startTime >= candidate.startTime && existingAfterCandidate >= -1e-3 && existingAfterCandidate < getPriorityTurnaround(candidate) - 1e-3) {
+            return {
+              reason: "PERSONNEL_TURNAROUND_BEFORE_EXISTING",
+              details: {
+                commonPersonnel,
+                actualGap: existingAfterCandidate,
+                requiredGap: getPriorityTurnaround(candidate),
+                existing: {
+                  id: existing.id,
+                  flightNumber: existing.flightNumber,
+                  type: existing.type,
+                  startTime: existing.startTime,
+                  endTime: existing.startTime + existing.duration,
+                  resourceId: existing.resourceId,
+                  source: existing._source || null
+                }
+              }
+            };
+          }
+        }
+      }
+      if (resolved.staff) {
+        const staffWindowConflicts = getGeneratedEventsForPersonRecord(resolved.staff, "staff").filter((existing) => existing.id !== candidate.id && eventHasNeoBuildPersonIdentity(existing, resolved.staff, "staff")).map((existing) => ({
+          existing,
+          existingWindow: getEventBookingWindowForAlgo(existing, syllabusDetails)
+        })).filter((entry) => candidateWindow.start < entry.existingWindow.end && candidateWindow.end > entry.existingWindow.start);
+        if (staffWindowConflicts.length > 0) {
+          const entry = staffWindowConflicts[0];
+          return {
+            reason: "STAFF_REQUEST_PERSONNEL_BOOKING_WINDOW",
+            details: {
+              staff: resolved.staff.name,
+              candidateWindow,
+              existing: {
+                id: entry.existing.id,
+                flightNumber: entry.existing.flightNumber,
+                type: entry.existing.type,
+                startTime: entry.existing.startTime,
+                endTime: entry.existing.startTime + entry.existing.duration,
+                resourceId: entry.existing.resourceId,
+                source: entry.existing._source || null
+              },
+              existingWindow: entry.existingWindow
+            }
+          };
+        }
+        for (const existing of getGeneratedEventsForPersonRecord(resolved.staff, "staff")) {
+          if (existing.id === candidate.id) continue;
+          if (!eventHasNeoBuildPersonIdentity(existing, resolved.staff, "staff")) continue;
+          if (candidate.type !== "flight" && candidate.type !== "ftd" && candidate.type !== "cpt") continue;
+          if (existing.type !== "flight" && existing.type !== "ftd" && existing.type !== "cpt") continue;
+          if (candidate.startTime >= existing.startTime) {
+            const actualGap = candidate.startTime - (existing.startTime + existing.duration);
+            const requiredGap = getPriorityTurnaround(existing);
+            if (actualGap >= -1e-3 && actualGap < requiredGap - 1e-3) {
+              return {
+                reason: "STAFF_REQUEST_PERSONNEL_TURNAROUND_AFTER_EXISTING",
+                details: {
+                  staff: resolved.staff.name,
+                  actualGap,
+                  requiredGap,
+                  existing: {
+                    id: existing.id,
+                    flightNumber: existing.flightNumber,
+                    type: existing.type,
+                    startTime: existing.startTime,
+                    endTime: existing.startTime + existing.duration,
+                    resourceId: existing.resourceId,
+                    source: existing._source || null
+                  }
+                }
+              };
+            }
+          } else {
+            const actualGap = existing.startTime - (candidate.startTime + candidate.duration);
+            const requiredGap = getPriorityTurnaround(candidate);
+            if (actualGap >= -1e-3 && actualGap < requiredGap - 1e-3) {
+              return {
+                reason: "STAFF_REQUEST_PERSONNEL_TURNAROUND_BEFORE_EXISTING",
+                details: {
+                  staff: resolved.staff.name,
+                  actualGap,
+                  requiredGap,
+                  existing: {
+                    id: existing.id,
+                    flightNumber: existing.flightNumber,
+                    type: existing.type,
+                    startTime: existing.startTime,
+                    endTime: existing.startTime + existing.duration,
+                    resourceId: existing.resourceId,
+                    source: existing._source || null
+                  }
+                }
+              };
+            }
+          }
+        }
+      }
+      return null;
+    };
     traceCurrencyPriority("queueAudit", {
       phase: "input-queue",
       scheduleMode,
@@ -116395,6 +116549,31 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               } : null
             }, 3500);
             if (result && typeof result === "object" && "id" in result) {
+              const placementConflict = getCurrencyPlacementConflict(result, priorityEvent, resolved);
+              if (placementConflict) {
+                scheduleEventTrace = {
+                  phase: "currency-placement-final-guard",
+                  outcome: "rejected",
+                  reason: placementConflict.reason,
+                  details: placementConflict.details
+                };
+                traceCurrencyPriority("scheduleAttempts", {
+                  phase: "attempt-result",
+                  eventType,
+                  time,
+                  displayTime: _fmtT(time),
+                  primaryOnly,
+                  candidate: getCurrencyEventIdentity(priorityEvent),
+                  trainee: resolved.trainee.fullName,
+                  result: "rejected",
+                  rejectionReason: placementConflict.reason,
+                  scheduleEventOutcome: "rejected-after-placement",
+                  generatedEventsBeforeAttempt,
+                  generatedEventsAfterAttempt: generatedEvents.length,
+                  placementConflict: placementConflict.details
+                }, 3500);
+                continue;
+              }
               pushGeneratedEvent({ ...result, _source: "highest-priority-currency", _isNext: true, _traineeName: resolved.trainee.fullName });
               const tCounts = eventCounts.get(resolved.trainee.fullName);
               const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;

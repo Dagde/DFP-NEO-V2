@@ -19762,7 +19762,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             });
         return rows;
     };
-    const getCurrencyPriorityPerson = (event: ScheduleEvent): { trainee: Trainee; excludeInstructorNames: string[] } | null => {
+    const getCurrencyPriorityPerson = (event: ScheduleEvent): { trainee: Trainee; staff?: Instructor; excludeInstructorNames: string[] } | null => {
         const personName = event.student || event.pilot || event.instructor || '';
         if (!personName) return null;
         const trainee = trainees.find(t => t.fullName === personName || t.name === personName);
@@ -19784,6 +19784,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 unavailability: staff.unavailability || [],
                 location: staff.location,
             } as Trainee,
+            staff,
             excludeInstructorNames: [staff.name],
         };
     };
@@ -19866,6 +19867,168 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 isCurrencyPriorityEvent(event as ScheduleEvent)
             ) ||
             null;
+        const getCurrencyPlacementConflict = (
+            candidate: Omit<ScheduleEvent, 'date'>,
+            priorityEvent: ScheduleEvent,
+            resolved: { trainee: Trainee; staff?: Instructor; excludeInstructorNames: string[] }
+        ): { reason: string; details: Record<string, any> } | null => {
+            const candidateWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
+            for (const existing of generatedEvents) {
+                if (existing.id === candidate.id) continue;
+                const resourceConflict = getPriorityResourceConflictDetail(candidate, existing);
+                if (resourceConflict) {
+                    return {
+                        reason: resourceConflict.reason,
+                        details: { resourceConflict },
+                    };
+                }
+                if (priorityPersonnelConflict(candidate, existing)) {
+                    return {
+                        reason: 'PERSONNEL_BOOKING_WINDOW',
+                        details: {
+                            commonPersonnel: getCommonPersonnel(candidate, existing),
+                            candidateWindow,
+                            existing: {
+                                id: existing.id,
+                                flightNumber: existing.flightNumber,
+                                type: existing.type,
+                                startTime: existing.startTime,
+                                endTime: existing.startTime + existing.duration,
+                                resourceId: existing.resourceId,
+                                source: (existing as any)._source || null,
+                            },
+                            existingWindow: getEventBookingWindowForAlgo(existing, syllabusDetails),
+                        },
+                    };
+                }
+                const commonPersonnel = getCommonPersonnel(candidate, existing);
+                if (commonPersonnel.length > 0 && (candidate.type === 'flight' || candidate.type === 'ftd' || candidate.type === 'cpt') && (existing.type === 'flight' || existing.type === 'ftd' || existing.type === 'cpt')) {
+                    const candidateAfterExisting = candidate.startTime - (existing.startTime + existing.duration);
+                    if (candidate.startTime >= existing.startTime && candidateAfterExisting >= -0.001 && candidateAfterExisting < getPriorityTurnaround(existing) - 0.001) {
+                        return {
+                            reason: 'PERSONNEL_TURNAROUND_AFTER_EXISTING',
+                            details: {
+                                commonPersonnel,
+                                actualGap: candidateAfterExisting,
+                                requiredGap: getPriorityTurnaround(existing),
+                                existing: {
+                                    id: existing.id,
+                                    flightNumber: existing.flightNumber,
+                                    type: existing.type,
+                                    startTime: existing.startTime,
+                                    endTime: existing.startTime + existing.duration,
+                                    resourceId: existing.resourceId,
+                                    source: (existing as any)._source || null,
+                                },
+                            },
+                        };
+                    }
+                    const existingAfterCandidate = existing.startTime - (candidate.startTime + candidate.duration);
+                    if (existing.startTime >= candidate.startTime && existingAfterCandidate >= -0.001 && existingAfterCandidate < getPriorityTurnaround(candidate) - 0.001) {
+                        return {
+                            reason: 'PERSONNEL_TURNAROUND_BEFORE_EXISTING',
+                            details: {
+                                commonPersonnel,
+                                actualGap: existingAfterCandidate,
+                                requiredGap: getPriorityTurnaround(candidate),
+                                existing: {
+                                    id: existing.id,
+                                    flightNumber: existing.flightNumber,
+                                    type: existing.type,
+                                    startTime: existing.startTime,
+                                    endTime: existing.startTime + existing.duration,
+                                    resourceId: existing.resourceId,
+                                    source: (existing as any)._source || null,
+                                },
+                            },
+                        };
+                    }
+                }
+            }
+
+            if (resolved.staff) {
+                const staffWindowConflicts = getGeneratedEventsForPersonRecord(resolved.staff, 'staff')
+                    .filter(existing => existing.id !== candidate.id && eventHasNeoBuildPersonIdentity(existing, resolved.staff!, 'staff'))
+                    .map(existing => ({
+                        existing,
+                        existingWindow: getEventBookingWindowForAlgo(existing, syllabusDetails),
+                    }))
+                    .filter(entry => candidateWindow.start < entry.existingWindow.end && candidateWindow.end > entry.existingWindow.start);
+                if (staffWindowConflicts.length > 0) {
+                    const entry = staffWindowConflicts[0];
+                    return {
+                        reason: 'STAFF_REQUEST_PERSONNEL_BOOKING_WINDOW',
+                        details: {
+                            staff: resolved.staff.name,
+                            candidateWindow,
+                            existing: {
+                                id: entry.existing.id,
+                                flightNumber: entry.existing.flightNumber,
+                                type: entry.existing.type,
+                                startTime: entry.existing.startTime,
+                                endTime: entry.existing.startTime + entry.existing.duration,
+                                resourceId: entry.existing.resourceId,
+                                source: (entry.existing as any)._source || null,
+                            },
+                            existingWindow: entry.existingWindow,
+                        },
+                    };
+                }
+                for (const existing of getGeneratedEventsForPersonRecord(resolved.staff, 'staff')) {
+                    if (existing.id === candidate.id) continue;
+                    if (!eventHasNeoBuildPersonIdentity(existing, resolved.staff, 'staff')) continue;
+                    if (candidate.type !== 'flight' && candidate.type !== 'ftd' && candidate.type !== 'cpt') continue;
+                    if (existing.type !== 'flight' && existing.type !== 'ftd' && existing.type !== 'cpt') continue;
+                    if (candidate.startTime >= existing.startTime) {
+                        const actualGap = candidate.startTime - (existing.startTime + existing.duration);
+                        const requiredGap = getPriorityTurnaround(existing);
+                        if (actualGap >= -0.001 && actualGap < requiredGap - 0.001) {
+                            return {
+                                reason: 'STAFF_REQUEST_PERSONNEL_TURNAROUND_AFTER_EXISTING',
+                                details: {
+                                    staff: resolved.staff.name,
+                                    actualGap,
+                                    requiredGap,
+                                    existing: {
+                                        id: existing.id,
+                                        flightNumber: existing.flightNumber,
+                                        type: existing.type,
+                                        startTime: existing.startTime,
+                                        endTime: existing.startTime + existing.duration,
+                                        resourceId: existing.resourceId,
+                                        source: (existing as any)._source || null,
+                                    },
+                                },
+                            };
+                        }
+                    } else {
+                        const actualGap = existing.startTime - (candidate.startTime + candidate.duration);
+                        const requiredGap = getPriorityTurnaround(candidate);
+                        if (actualGap >= -0.001 && actualGap < requiredGap - 0.001) {
+                            return {
+                                reason: 'STAFF_REQUEST_PERSONNEL_TURNAROUND_BEFORE_EXISTING',
+                                details: {
+                                    staff: resolved.staff.name,
+                                    actualGap,
+                                    requiredGap,
+                                    existing: {
+                                        id: existing.id,
+                                        flightNumber: existing.flightNumber,
+                                        type: existing.type,
+                                        startTime: existing.startTime,
+                                        endTime: existing.startTime + existing.duration,
+                                        resourceId: existing.resourceId,
+                                        source: (existing as any)._source || null,
+                                    },
+                                },
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
+        };
 
         traceCurrencyPriority('queueAudit', {
             phase: 'input-queue',
@@ -20116,6 +20279,31 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                             } : null,
                         }, 3500);
                         if (result && typeof result === 'object' && 'id' in result) {
+                            const placementConflict = getCurrencyPlacementConflict(result, priorityEvent, resolved);
+                            if (placementConflict) {
+                                scheduleEventTrace = {
+                                    phase: 'currency-placement-final-guard',
+                                    outcome: 'rejected',
+                                    reason: placementConflict.reason,
+                                    details: placementConflict.details,
+                                };
+                                traceCurrencyPriority('scheduleAttempts', {
+                                    phase: 'attempt-result',
+                                    eventType,
+                                    time,
+                                    displayTime: _fmtT(time),
+                                    primaryOnly,
+                                    candidate: getCurrencyEventIdentity(priorityEvent),
+                                    trainee: resolved.trainee.fullName,
+                                    result: 'rejected',
+                                    rejectionReason: placementConflict.reason,
+                                    scheduleEventOutcome: 'rejected-after-placement',
+                                    generatedEventsBeforeAttempt,
+                                    generatedEventsAfterAttempt: generatedEvents.length,
+                                    placementConflict: placementConflict.details,
+                                }, 3500);
+                                continue;
+                            }
                             pushGeneratedEvent({ ...result, _source: 'highest-priority-currency', _isNext: true, _traineeName: resolved.trainee.fullName });
                             const tCounts = eventCounts.get(resolved.trainee.fullName);
                             const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
