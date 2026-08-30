@@ -213,6 +213,62 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
         );
     };
 
+    const renderSelectedEventDetails = (evt: ContinuationEventSetting) => {
+        const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0
+            ? evt.acceptableAircraftConfigs
+            : [evt.config || 'ANY'];
+        const unitLabel = evt.unitCode || activeUnitCodeList[0] || 'All units';
+        const aircraftLabel = evt.aircraftTypeCode || activeContinuationAircraftTypeCode || 'Aircraft type not set';
+
+        return (
+            <div className="rounded-md border border-gray-700 bg-gray-900/55 p-4">
+                <div className="mb-4 flex items-start justify-between gap-3 border-b border-gray-700 pb-3">
+                    <div className="min-w-0">
+                        <div className="text-xs font-bold uppercase tracking-wide text-gray-500">Selected Event</div>
+                        <div className="mt-1 truncate text-xl font-semibold text-white">{evt.name}</div>
+                    </div>
+                    <div className="rounded border border-gray-600/70 bg-gray-950/60 px-2 py-1 text-xs font-bold uppercase tracking-wide text-gray-300">
+                        {evt.code || 'CONT'}
+                    </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="rounded border border-gray-700/80 bg-gray-950/35 p-3">
+                        <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Currency</div>
+                        <div className="mt-1 text-sm font-semibold text-gray-200">{evt.currency || 'None'}</div>
+                    </div>
+                    <div className="rounded border border-gray-700/80 bg-gray-950/35 p-3">
+                        <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Unit</div>
+                        <div className="mt-1 text-sm font-semibold text-gray-200">{unitLabel}</div>
+                    </div>
+                    <div className="rounded border border-gray-700/80 bg-gray-950/35 p-3">
+                        <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">A/C Type</div>
+                        <div className="mt-1 text-sm font-semibold text-gray-200">{aircraftLabel}</div>
+                    </div>
+                    <div className="rounded border border-gray-700/80 bg-gray-950/35 p-3">
+                        <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Day/Night</div>
+                        <div className="mt-1 text-sm font-semibold text-gray-200">{evt.dayNight || 'Day'}</div>
+                    </div>
+                    <div className="rounded border border-gray-700/80 bg-gray-950/35 p-3">
+                        <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Dual/Solo</div>
+                        <div className="mt-1 text-sm font-semibold text-gray-200">{evt.flightType || 'Dual'}</div>
+                    </div>
+                    <div className="rounded border border-gray-700/80 bg-gray-950/35 p-3">
+                        <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">A/C</div>
+                        <div className="mt-1 text-sm font-semibold text-gray-200">{Math.max(1, Number(evt.aircraftCount) || 1)}</div>
+                    </div>
+                </div>
+                <div className="mt-3 rounded border border-gray-700/80 bg-gray-950/35 p-3">
+                    <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Acceptable CONFIG</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {selectedConfigs.map(config => (
+                            <span key={config} className="rounded bg-gray-800 px-2 py-0.5 text-xs font-semibold text-gray-200">{config}</span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const renderSelectedEventEditor = (evt: ContinuationEventSetting) => {
         const eventKey = evt.id || evt.name;
         const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0
@@ -230,7 +286,7 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                         Delete
                     </button>
                 </div>
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_minmax(0,0.9fr)]">
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_90px]">
                     <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
                         Event
                         <input
@@ -276,8 +332,20 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                             <option>Solo</option>
                         </select>
                     </label>
+                    <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
+                        A/C
+                        <input
+                            type="number"
+                            min={1}
+                            max={24}
+                            value={Math.max(1, Number(evt.aircraftCount) || 1)}
+                            onChange={event => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(event.target.value) || 1))) })}
+                            onKeyDownCapture={stopEditableKeyPropagation}
+                            className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                        />
+                    </label>
                 </div>
-                <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.9fr)_90px_minmax(0,0.9fr)_minmax(0,0.9fr)_90px]">
+                <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,2.4fr)_90px_minmax(0,0.9fr)_minmax(0,0.9fr)]">
                     <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
                         <span className="flex items-center gap-1.5">
                             <span>Currency</span>
@@ -326,18 +394,6 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                             className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
                         />
                     </label>
-                    <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
-                        A/C
-                        <input
-                            type="number"
-                            min={1}
-                            max={24}
-                            value={Math.max(1, Number(evt.aircraftCount) || 1)}
-                            onChange={event => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(event.target.value) || 1))) })}
-                            onKeyDownCapture={stopEditableKeyPropagation}
-                            className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-                        />
-                    </label>
                 </div>
                 <div className="mt-3 flex min-w-0 items-center gap-3 rounded border border-gray-700 bg-gray-950/60 p-2">
                     <div className="shrink-0 text-[10px] font-black uppercase tracking-wide text-gray-400">Acceptable CONFIG</div>
@@ -357,6 +413,25 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                 </div>
             </div>
         );
+    };
+
+    const renderSelectedEventPanel = () => {
+        if (isEditingSctEvents) {
+            return selectedTempSctEvent
+                ? renderSelectedEventEditor(selectedTempSctEvent)
+                : (
+                    <div className="flex h-full min-h-[320px] items-center justify-center rounded-md border border-dashed border-gray-700 bg-gray-900/40 p-6 text-center text-sm text-gray-400">
+                        Select an event tile to edit.
+                    </div>
+                );
+        }
+        return selectedConfiguredSctEvent
+            ? renderSelectedEventDetails(selectedConfiguredSctEvent)
+            : (
+                <div className="flex h-full min-h-[320px] items-center justify-center rounded-md border border-dashed border-gray-700 bg-gray-900/40 p-6 text-center text-sm text-gray-400">
+                    Select an event tile to view details.
+                </div>
+            );
     };
 
     return (
@@ -403,21 +478,13 @@ const ContinuationCurrencyEventsSettings: React.FC<ContinuationCurrencyEventsSet
                         ? 'Edit the selected event and save when complete.'
                         : `Select a ${sctShortLabel} / currency event tile, then press Edit.`}
                 </p>
-                <div className={`min-h-0 flex-1 gap-4 ${isEditingSctEvents ? 'grid lg:grid-cols-[360px_minmax(0,1fr)]' : 'block'}`}>
-                    <ul className={`min-h-0 overflow-y-auto pr-1 ${isEditingSctEvents ? 'space-y-2' : 'grid gap-3 md:grid-cols-2 xl:grid-cols-3'}`}>
+                <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+                    <ul className="min-h-0 space-y-2 overflow-y-auto pr-1">
                         {displayedSctEvents.map(renderEventTile)}
                     </ul>
-                    {isEditingSctEvents && (
-                        <div className="min-h-0 overflow-y-auto">
-                            {selectedTempSctEvent ? (
-                                renderSelectedEventEditor(selectedTempSctEvent)
-                            ) : (
-                                <div className="flex h-full min-h-[320px] items-center justify-center rounded-md border border-dashed border-gray-700 bg-gray-900/40 p-6 text-center text-sm text-gray-400">
-                                    Select an event tile to edit.
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    <div className="min-h-0 overflow-y-auto">
+                        {renderSelectedEventPanel()}
+                    </div>
                 </div>
                 {isEditingSctEvents && (
                     <div className="flex space-x-2 border-t border-gray-700 pt-3">
