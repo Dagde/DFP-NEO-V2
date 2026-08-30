@@ -2278,6 +2278,8 @@ const DfpSidePanelTimeline: React.FC<{
         ? (selectedAircraftNumber.trim() || 'TBA')
         : isDeploymentAssistTile ? 'DEPLOY' : 'TBA';
     const previewAreaCallsign = `${selectedAssignedArea && selectedAssignedArea !== 'TBA' ? `${selectedAssignedArea} ` : ''}${previewCallsign}`;
+    const aircraftResourceBase = String(activeAircraftType?.code || activeAircraftType?.name || activeAircraftType?.displayName || 'Aircraft').trim() || 'Aircraft';
+    const aircraftResourceLabel = formatResourceLabel(`${aircraftResourceBase} 1`).replace(/\s+1$/, '') || 'Aircraft';
     const simulatorResourceLabel = formatResourceLabel('FTD 1').replace(/\s+1$/, '');
     const proceduralTrainerResourceLabel = formatResourceLabel('CPT 1').replace(/\s+1$/, '');
     const formatCrewOptionLabel = (name: string): string => {
@@ -3269,18 +3271,18 @@ const DfpSidePanelTimeline: React.FC<{
         }
         if (wizardStep === 4) {
             return questionShell(
-                'How many aircraft are available?',
-                <p>Current aircraft available is <strong>{availableAircraftCount}</strong>.</p>,
+                `How many ${aircraftResourceLabel} are available?`,
+                <p>Current {aircraftResourceLabel} available is <strong>{availableAircraftCount}</strong>.</p>,
                 <>
                     <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Keep {availableAircraftCount}</button>
-                    {renderWizardCapacityBox('Aircraft available', availableAircraftCount, onUpdateAircraftCount)}
+                    {renderWizardCapacityBox(`${aircraftResourceLabel} available`, availableAircraftCount, onUpdateAircraftCount)}
                 </>,
             );
         }
         if (wizardStep === 5) {
             return questionShell(
                 `How many ${simulatorResourceLabel} devices are available?`,
-                <p>Current simulator capacity is <strong>{availableFtdCount}</strong>.</p>,
+                <p>Current {simulatorResourceLabel} capacity is <strong>{availableFtdCount}</strong>.</p>,
                 <>
                     <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Keep {availableFtdCount}</button>
                     {renderWizardCapacityBox(`${simulatorResourceLabel} available`, availableFtdCount, onUpdateFtdCount)}
@@ -3290,7 +3292,7 @@ const DfpSidePanelTimeline: React.FC<{
         if (wizardStep === 6) {
             return questionShell(
                 `How many ${proceduralTrainerResourceLabel} devices are available?`,
-                <p>Current procedural trainer capacity is <strong>{availableCptCount}</strong>.</p>,
+                <p>Current {proceduralTrainerResourceLabel} capacity is <strong>{availableCptCount}</strong>.</p>,
                 <>
                     <button type="button" className={wizardKeepButtonClass} onClick={advanceWizard}>Keep {availableCptCount}</button>
                     {renderWizardCapacityBox(`${proceduralTrainerResourceLabel} available`, availableCptCount, onUpdateCptCount)}
@@ -3844,7 +3846,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 />
                             </label>
                             <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                Aircraft Number
+                                {aircraftResourceLabel} Number
                                 <input
                                     value={selectedAircraftNumber}
                                     onChange={event => setSelectedAircraftNumber(event.target.value)}
@@ -3992,8 +3994,8 @@ const DfpSidePanelTimeline: React.FC<{
                 <div className="space-y-2 text-[10px] text-slate-200">
                     <div className="grid grid-cols-2 gap-2">
                         {renderWindowControl('Flight', flyingStartTime, flyingEndTime, onUpdateFlyingStartTime, onUpdateFlyingEndTime)}
-                        {renderWindowControl('Sim', ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime)}
-                        {renderWindowControl('CPT', ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime)}
+                        {renderWindowControl(simulatorResourceLabel, ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime)}
+                        {renderWindowControl(proceduralTrainerResourceLabel, ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime)}
                         <label className="flex items-center gap-2 rounded border border-slate-700 bg-slate-950/55 p-2 text-[10px] text-slate-200">
                             <input type="checkbox" checked={allowNightFlying} onChange={event => onUpdateAllowNightFlying(event.target.checked)} />
                             Night window enabled
@@ -4041,9 +4043,9 @@ const DfpSidePanelTimeline: React.FC<{
                 <div className="space-y-3 text-[10px] text-slate-200">
                     <div className="grid grid-cols-3 gap-2">
                         {[
-                            ['Aircraft', availableAircraftCount, onUpdateAircraftCount],
-                            ['Sim', availableFtdCount, onUpdateFtdCount],
-                            ['CPT', availableCptCount, onUpdateCptCount],
+                            [aircraftResourceLabel, availableAircraftCount, onUpdateAircraftCount],
+                            [simulatorResourceLabel, availableFtdCount, onUpdateFtdCount],
+                            [proceduralTrainerResourceLabel, availableCptCount, onUpdateCptCount],
                         ].map(([label, value, setter]) => (
                             <label key={label as string} className="block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                                 {label as string}
@@ -4423,7 +4425,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Arrival Point
                                 <input value={assistTaskArrivalPoint} onChange={event => setAssistTaskArrivalPoint(event.target.value.toUpperCase())} className={fieldClass} />
                             </label>
-                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">No. Aircraft
+                            <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">No. {aircraftResourceLabel}
                                 <input type="number" min={1} value={assistTaskAircraftCount} onChange={event => setAssistTaskAircraftCount(Math.max(1, Number(event.target.value) || 1))} className={fieldClass} />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">CONFIG
@@ -4455,7 +4457,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 }}
                                 className="col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100"
                             >
-                                Add Draft
+                                Add to Directed Tasks
                             </button>
                         </div>
                     )}
@@ -4611,7 +4613,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Request Type
                                 <select value={selectedResourceKind === 'ftd' ? 'ftd' : 'flight'} onChange={event => setSelectedResourceKind(event.target.value as NeoAssistResourceKind)} className={fieldClass}>
                                     <option value="flight">Flight</option>
-                                    <option value="ftd">Sim</option>
+                                    <option value="ftd">{simulatorResourceLabel}</option>
                                 </select>
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Solo/Dual
@@ -4711,7 +4713,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 }}
                                 className="col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100"
                             >
-                                Add Draft
+                                Add to Currency Requests
                             </button>
                         </div>
                     )}

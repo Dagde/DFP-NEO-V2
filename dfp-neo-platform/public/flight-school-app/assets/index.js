@@ -101374,6 +101374,8 @@ const DfpSidePanelTimeline = ({
   const previewCallsign = isDeploymentAssistTile ? "DEPLOY" : isFixedCrewNeoAssist ? fixedCrewAssistCallsign || "CSIGN" : assistCallsign.trim() || "CSIGN";
   const previewAircraftNumber = selectedResourceKind === "flight" ? selectedAircraftNumber.trim() || "TBA" : isDeploymentAssistTile ? "DEPLOY" : "TBA";
   const previewAreaCallsign = `${selectedAssignedArea && selectedAssignedArea !== "TBA" ? `${selectedAssignedArea} ` : ""}${previewCallsign}`;
+  const aircraftResourceBase = String(activeAircraftType?.code || activeAircraftType?.name || activeAircraftType?.displayName || "Aircraft").trim() || "Aircraft";
+  const aircraftResourceLabel = formatResourceLabel2(`${aircraftResourceBase} 1`).replace(/\s+1$/, "") || "Aircraft";
   const simulatorResourceLabel = formatResourceLabel2("FTD 1").replace(/\s+1$/, "");
   const proceduralTrainerResourceLabel = formatResourceLabel2("CPT 1").replace(/\s+1$/, "");
   const formatCrewOptionLabel = (name) => {
@@ -102210,9 +102212,11 @@ const DfpSidePanelTimeline = ({
     }
     if (wizardStep === 4) {
       return questionShell(
-        "How many aircraft are available?",
+        `How many ${aircraftResourceLabel} are available?`,
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Current aircraft available is ",
+          "Current ",
+          aircraftResourceLabel,
+          " available is ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: availableAircraftCount }),
           "."
         ] }),
@@ -102221,7 +102225,7 @@ const DfpSidePanelTimeline = ({
             "Keep ",
             availableAircraftCount
           ] }),
-          renderWizardCapacityBox("Aircraft available", availableAircraftCount, onUpdateAircraftCount)
+          renderWizardCapacityBox(`${aircraftResourceLabel} available`, availableAircraftCount, onUpdateAircraftCount)
         ] })
       );
     }
@@ -102229,7 +102233,9 @@ const DfpSidePanelTimeline = ({
       return questionShell(
         `How many ${simulatorResourceLabel} devices are available?`,
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Current simulator capacity is ",
+          "Current ",
+          simulatorResourceLabel,
+          " capacity is ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: availableFtdCount }),
           "."
         ] }),
@@ -102246,7 +102252,9 @@ const DfpSidePanelTimeline = ({
       return questionShell(
         `How many ${proceduralTrainerResourceLabel} devices are available?`,
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-          "Current procedural trainer capacity is ",
+          "Current ",
+          proceduralTrainerResourceLabel,
+          " capacity is ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: availableCptCount }),
           "."
         ] }),
@@ -102793,7 +102801,8 @@ const DfpSidePanelTimeline = ({
             )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Aircraft Number",
+            aircraftResourceLabel,
+            " Number",
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -102920,8 +102929,8 @@ const DfpSidePanelTimeline = ({
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
           renderWindowControl("Flight", flyingStartTime, flyingEndTime, onUpdateFlyingStartTime, onUpdateFlyingEndTime),
-          renderWindowControl("Sim", ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime),
-          renderWindowControl("CPT", ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime),
+          renderWindowControl(simulatorResourceLabel, ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime),
+          renderWindowControl(proceduralTrainerResourceLabel, ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded border border-slate-700 bg-slate-950/55 p-2 text-[10px] text-slate-200", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: allowNightFlying, onChange: (event) => onUpdateAllowNightFlying(event.target.checked) }),
             "Night window enabled"
@@ -102966,9 +102975,9 @@ const DfpSidePanelTimeline = ({
       };
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: [
-          ["Aircraft", availableAircraftCount, onUpdateAircraftCount],
-          ["Sim", availableFtdCount, onUpdateFtdCount],
-          ["CPT", availableCptCount, onUpdateCptCount]
+          [aircraftResourceLabel, availableAircraftCount, onUpdateAircraftCount],
+          [simulatorResourceLabel, availableFtdCount, onUpdateFtdCount],
+          [proceduralTrainerResourceLabel, availableCptCount, onUpdateCptCount]
         ].map(([label, value, setter]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400", children: [
           label,
           /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 0, value, onChange: (event) => updateNumber(Number(event.target.value), setter), className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] text-slate-100" })
@@ -103357,7 +103366,8 @@ const DfpSidePanelTimeline = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: assistTaskArrivalPoint, onChange: (event) => setAssistTaskArrivalPoint(event.target.value.toUpperCase()), className: fieldClass2 })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "No. Aircraft",
+            "No. ",
+            aircraftResourceLabel,
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 1, value: assistTaskAircraftCount, onChange: (event) => setAssistTaskAircraftCount(Math.max(1, Number(event.target.value) || 1)), className: fieldClass2 })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
@@ -103389,7 +103399,7 @@ const DfpSidePanelTimeline = ({
                 setShowAssistTaskForm(false);
               },
               className: "col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100",
-              children: "Add Draft"
+              children: "Add to Directed Tasks"
             }
           )
         ] })
@@ -103545,7 +103555,7 @@ const DfpSidePanelTimeline = ({
             "Request Type",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedResourceKind === "ftd" ? "ftd" : "flight", onChange: (event) => setSelectedResourceKind(event.target.value), className: fieldClass2, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "flight", children: "Flight" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ftd", children: "Sim" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ftd", children: simulatorResourceLabel })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
@@ -103626,7 +103636,7 @@ const DfpSidePanelTimeline = ({
                 setShowAssistCurrencyForm(false);
               },
               className: "col-span-2 rounded border border-emerald-400/50 px-2 py-1 text-[10px] font-semibold text-emerald-100",
-              children: "Add Draft"
+              children: "Add to Currency Requests"
             }
           )
         ] })
