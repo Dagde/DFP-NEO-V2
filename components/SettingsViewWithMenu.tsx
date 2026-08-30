@@ -2198,6 +2198,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                     aircraftCrewComposition={props.aircraftCrewComposition}
                                     crewPositionTerminology={props.crewPositionTerminology}
                                     operationalModel={props.activeOperationalModel}
+                                    syllabusDetails={props.syllabusDetails}
+                                    sctEvents={props.sctEvents}
                                 />
                             </div>
                         ) : (

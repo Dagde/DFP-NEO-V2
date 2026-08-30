@@ -7616,6 +7616,29 @@ const showDarkPrompt = ({
     });
   });
 };
+const normaliseEventCode = (value) => String(value || "").trim();
+const codeMatchesUnit = (unitValue, activeUnitCode) => {
+  const unit = normaliseEventCode(unitValue).toUpperCase();
+  const activeUnit = normaliseEventCode(activeUnitCode).toUpperCase();
+  return !activeUnit || !unit || unit === activeUnit || unit.split("+").includes(activeUnit) || activeUnit.split("+").includes(unit);
+};
+const makeEventCodeOptions = (syllabusDetails = [], sctEvents = [], activeUnitCode) => {
+  const byKey = /* @__PURE__ */ new Map();
+  const addOption = (codeValue, labelValue, source) => {
+    const code = normaliseEventCode(codeValue);
+    if (!code) return;
+    const key = code.toUpperCase();
+    if (byKey.has(key)) return;
+    byKey.set(key, {
+      code,
+      label: normaliseEventCode(labelValue) || code,
+      source
+    });
+  };
+  sctEvents.filter((event) => codeMatchesUnit(event.unitCode || event.unit || event.compositeUnitCode, activeUnitCode)).forEach((event) => addOption(event.code || event.name, event.name || event.code, "ContT / Currency Events"));
+  syllabusDetails.filter((item) => codeMatchesUnit(item.unit || item.unitCode, activeUnitCode)).forEach((item) => addOption(item.code, item.eventDescription || item.code, "LMP / Syllabus"));
+  return Array.from(byKey.values()).sort((a, b) => a.source.localeCompare(b.source) || a.code.localeCompare(b.code, void 0, { numeric: true }));
+};
 const getNewPrimitive = () => ({
   id: v4(),
   name: "New Primitive Currency",
@@ -7655,7 +7678,9 @@ const CurrencyBuilderView = ({
   onImportFromUnit,
   aircraftCrewComposition,
   crewPositionTerminology,
-  operationalModel
+  operationalModel,
+  syllabusDetails = [],
+  sctEvents = []
 }) => {
   const [allCurrencies, setAllCurrencies] = reactExports.useState([]);
   const [selectedCurrencyId, setSelectedCurrencyId] = reactExports.useState(null);
@@ -7675,6 +7700,7 @@ const CurrencyBuilderView = ({
   const selectedCurrency = reactExports.useMemo(() => {
     return allCurrencies.find((c) => c.id === selectedCurrencyId) || null;
   }, [selectedCurrencyId, allCurrencies]);
+  const eventCodeOptions = reactExports.useMemo(() => makeEventCodeOptions(syllabusDetails, sctEvents, activeUnitCode), [activeUnitCode, sctEvents, syllabusDetails]);
   const handleUpdateCurrency = (updatedCurrency) => {
     if (!isEditUnlocked) return;
     setAllCurrencies((prev) => prev.map((c) => c.id === updatedCurrency.id ? updatedCurrency : c));
@@ -7877,14 +7903,120 @@ This replaces the current ${targetLabel} currency/recency list.`, "Import Curren
         )) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-2/3 overflow-y-auto p-6 ${isEditUnlocked ? "" : "opacity-80"}`, children: selectedCurrency ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: isEditUnlocked ? "" : "pointer-events-none", children: selectedCurrency.type === "primitive" ? /* @__PURE__ */ jsxRuntimeExports.jsx(PrimitiveEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, aircraftCrewComposition, crewPositionTerminology, operationalModel }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CompositeEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: isEditUnlocked ? "" : "pointer-events-none", children: selectedCurrency.type === "primitive" ? /* @__PURE__ */ jsxRuntimeExports.jsx(PrimitiveEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, eventCodeOptions, aircraftCrewComposition, crewPositionTerminology, operationalModel }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CompositeEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, allCurrencies, aircraftCrewComposition, crewPositionTerminology, operationalModel }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UsedInSection, { currencyId: selectedCurrency.id, allCurrencies }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-6 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDeleteCurrency, disabled: !isEditUnlocked, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400", children: "Delete Currency" }) })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full text-gray-500 italic", children: "Select a currency to edit, or add a new one." }) })
     ] })
   ] });
 };
-const PrimitiveEditor = ({ currency, onUpdate, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
+const EventCodeChecklist = ({ selectedCodes, options, onChange }) => {
+  const [filter, setFilter] = reactExports.useState("");
+  const [customCode, setCustomCode] = reactExports.useState("");
+  const selectedKeys = new Set(selectedCodes.map((code) => code.toUpperCase()));
+  const optionKeys = new Set(options.map((option) => option.code.toUpperCase()));
+  const selectedCustomOptions = selectedCodes.filter((code) => code && !optionKeys.has(code.toUpperCase())).map((code) => ({ code, label: code, source: "Selected Custom" }));
+  const displayOptions = [...options, ...selectedCustomOptions].filter((option) => {
+    const search = filter.trim().toLowerCase();
+    if (!search) return true;
+    return option.code.toLowerCase().includes(search) || option.label.toLowerCase().includes(search);
+  });
+  const groupedOptions = displayOptions.reduce((groups, option) => {
+    groups[option.source] = [...groups[option.source] || [], option];
+    return groups;
+  }, {
+    "ContT / Currency Events": [],
+    "LMP / Syllabus": [],
+    "Selected Custom": []
+  });
+  const setSelected = (code, checked) => {
+    const next = checked ? [...selectedCodes, code] : selectedCodes.filter((selectedCode) => selectedCode.toUpperCase() !== code.toUpperCase());
+    onChange(Array.from(new Map(next.map((value) => [value.toUpperCase(), value])).values()));
+  };
+  const addCustomCode = () => {
+    const code = customCode.trim();
+    if (!code) return;
+    setSelected(code, true);
+    setCustomCode("");
+    setFilter("");
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: [
+      "Event Codes",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs text-gray-500", children: "select every completed event type that satisfies this currency" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-600 bg-gray-800/60 p-3 space-y-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-[1fr_180px] gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            value: filter,
+            onChange: (event) => setFilter(event.target.value),
+            placeholder: "Search event codes...",
+            className: "w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: customCode,
+              onChange: (event) => setCustomCode(event.target.value.toUpperCase()),
+              onKeyDown: (event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addCustomCode();
+                }
+              },
+              placeholder: "Custom code",
+              className: "min-w-0 flex-1 rounded-l border border-r-0 border-gray-600 bg-gray-900 px-2 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: addCustomCode,
+              className: "rounded-r border border-gray-600 bg-sky-700 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-600",
+              children: "Add"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 overflow-y-auto pr-1 space-y-3", children: [
+        ["ContT / Currency Events", "LMP / Syllabus", "Selected Custom"].map((source) => groupedOptions[source].length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-bold uppercase tracking-wide text-gray-500", children: source }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 xl:grid-cols-2 gap-1.5", children: groupedOptions[source].map((option) => {
+            const checked = selectedKeys.has(option.code.toUpperCase());
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-900/60 px-2 py-1.5 text-sm text-gray-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked,
+                  onChange: (event) => setSelected(option.code, event.target.checked),
+                  className: "mt-0.5 h-4 w-4 rounded accent-sky-500"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: option.code }),
+                option.label && option.label !== option.code && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs text-gray-400", children: option.label })
+              ] })
+            ] }, `${source}-${option.code}`);
+          }) })
+        ] }, source)),
+        displayOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-900/60 px-3 py-4 text-center text-sm text-gray-400", children: "No configured event codes found. Add a custom code above." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400", children: [
+        "Selected: ",
+        selectedCodes.length > 0 ? selectedCodes.join(", ") : "None"
+      ] })
+    ] })
+  ] });
+};
+const PrimitiveEditor = ({ currency, onUpdate, eventCodeOptions, aircraftCrewComposition, crewPositionTerminology, operationalModel }) => {
   const handleChange = (field, value) => {
     onUpdate({ ...currency, [field]: value });
   };
@@ -7906,7 +8038,14 @@ const PrimitiveEditor = ({ currency, onUpdate, aircraftCrewComposition, crewPosi
       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "LAST_EVENT_PLUS_PERIOD", children: "Last Event + Period" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ROLLING_WINDOW", children: "Rolling Window" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$2, { label: "Event Codes (comma-separated)", value: currency.eventCodes.join(", "), onChange: (v) => handleChange("eventCodes", v.split(",").map((s) => s.trim()).filter(Boolean)) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      EventCodeChecklist,
+      {
+        selectedCodes: currency.eventCodes,
+        options: eventCodeOptions,
+        onChange: (codes) => handleChange("eventCodes", codes)
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       CrewRequirementEditor,
       {
@@ -22601,15 +22740,15 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
       const eventKey = `${trainee.fullName}|||${score.event}`;
       return !visiblePt051Keys.has(exactKey) && !visiblePt051EventKeys.has(eventKey);
     }).map((score) => ({ ...score, type: "LMP Score" }));
-    const normaliseEventCode = (value) => String(value || "").replace(/\s+/g, "").toUpperCase();
+    const normaliseEventCode2 = (value) => String(value || "").replace(/\s+/g, "").toUpperCase();
     const lmpOrder = /* @__PURE__ */ new Map();
     traineeLmp.forEach((item, index) => {
-      const key = normaliseEventCode(item.code);
+      const key = normaliseEventCode2(item.code);
       if (key && !lmpOrder.has(key)) lmpOrder.set(key, index);
     });
     const getLmpOrder = (item) => {
       const eventCode2 = item.type === "LMP Score" ? item.event : item.flightNumber;
-      return lmpOrder.get(normaliseEventCode(eventCode2));
+      return lmpOrder.get(normaliseEventCode2(eventCode2));
     };
     const combined = [...lmpItems, ...pt051Items].sort((a, b) => {
       const aOrder = getLmpOrder(a);
@@ -22630,8 +22769,8 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
       const safeADate = Number.isNaN(aDate) ? 0 : aDate;
       const safeBDate = Number.isNaN(bDate) ? 0 : bDate;
       if (safeADate !== safeBDate) return safeBDate - safeADate;
-      const aCode = normaliseEventCode(a.type === "LMP Score" ? a.event : a.flightNumber);
-      const bCode = normaliseEventCode(b.type === "LMP Score" ? b.event : b.flightNumber);
+      const aCode = normaliseEventCode2(a.type === "LMP Score" ? a.event : a.flightNumber);
+      const bCode = normaliseEventCode2(b.type === "LMP Score" ? b.event : b.flightNumber);
       return aCode.localeCompare(bCode);
     });
     return combined;
@@ -90193,7 +90332,9 @@ const SettingsViewWithMenu = (props) => {
             onImportFromUnit: props.onImportCurrenciesFromUnit,
             aircraftCrewComposition: props.aircraftCrewComposition,
             crewPositionTerminology: props.crewPositionTerminology,
-            operationalModel: props.activeOperationalModel
+            operationalModel: props.activeOperationalModel,
+            syllabusDetails: props.syllabusDetails,
+            sctEvents: props.sctEvents
           }
         ) }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
           SettingsView,
@@ -140062,7 +140203,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             onImportFromUnit: importCurrencyDefinitionsFromUnit,
             aircraftCrewComposition: activeAircraftCrewComposition,
             crewPositionTerminology: activeCrewPositionTerminology,
-            operationalModel: activeOperationalModel
+            operationalModel: activeOperationalModel,
+            syllabusDetails,
+            sctEvents
           }
         );
       case "PT051":
