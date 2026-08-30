@@ -193,7 +193,7 @@ const CrewRequirementEditor: React.FC<CrewRequirementEditorProps> = ({
                 type="button"
                 data-help-link="true"
                 onClick={onCrewHelpLinkClick}
-                className="text-[11px] font-semibold text-cyan-300 underline-offset-2 hover:text-cyan-200 hover:underline"
+                className="text-[11px] font-semibold text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
               >
                 {crewHelpLinkLabel}
               </button>

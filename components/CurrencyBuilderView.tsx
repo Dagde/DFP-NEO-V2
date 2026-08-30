@@ -396,7 +396,7 @@ const PrimitiveEditor: React.FC<{
                 crewPositionTerminology={crewPositionTerminology}
                 operationalModel={operationalModel}
                 crewHelpText="Use aircraft default to apply the standard crew seats configured for the aircraft type. Choose custom crew only when this currency needs a different crew makeup."
-                crewHelpLinkLabel="Aircraft default crew settings"
+                crewHelpLinkLabel="Default Settings"
                 onCrewHelpLinkClick={onNavigateToAircraftDefaultCrewSettings}
                 onChange={v => handleChange('crewRequirement', v)}
             />
@@ -505,7 +505,7 @@ const CompositeEditor: React.FC<{
                 crewPositionTerminology={crewPositionTerminology}
                 operationalModel={operationalModel}
                 crewHelpText="Use aircraft default to apply the standard crew seats configured for the aircraft type. Choose custom crew only when this currency needs a different crew makeup."
-                crewHelpLinkLabel="Aircraft default crew settings"
+                crewHelpLinkLabel="Default Settings"
                 onCrewHelpLinkClick={onNavigateToAircraftDefaultCrewSettings}
                 onChange={v => handleChange('crewRequirement', v)}
             />

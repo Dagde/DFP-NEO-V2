@@ -7293,7 +7293,7 @@ const CrewRequirementEditor = ({
               type: "button",
               "data-help-link": "true",
               onClick: onCrewHelpLinkClick,
-              className: "text-[11px] font-semibold text-cyan-300 underline-offset-2 hover:text-cyan-200 hover:underline",
+              className: "text-[11px] font-semibold text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline",
               children: crewHelpLinkLabel
             }
           ) : null
@@ -7965,7 +7965,7 @@ const PrimitiveEditor = ({ currency, onUpdate, onNavigateToAircraftDefaultCrewSe
         crewPositionTerminology,
         operationalModel,
         crewHelpText: "Use aircraft default to apply the standard crew seats configured for the aircraft type. Choose custom crew only when this currency needs a different crew makeup.",
-        crewHelpLinkLabel: "Aircraft default crew settings",
+        crewHelpLinkLabel: "Default Settings",
         onCrewHelpLinkClick: onNavigateToAircraftDefaultCrewSettings,
         onChange: (v) => handleChange("crewRequirement", v)
       }
@@ -8069,7 +8069,7 @@ const CompositeEditor = ({ currency, onUpdate, onNavigateToAircraftDefaultCrewSe
         crewPositionTerminology,
         operationalModel,
         crewHelpText: "Use aircraft default to apply the standard crew seats configured for the aircraft type. Choose custom crew only when this currency needs a different crew makeup.",
-        crewHelpLinkLabel: "Aircraft default crew settings",
+        crewHelpLinkLabel: "Default Settings",
         onCrewHelpLinkClick: onNavigateToAircraftDefaultCrewSettings,
         onChange: (v) => handleChange("crewRequirement", v)
       }
