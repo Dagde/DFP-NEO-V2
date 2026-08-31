@@ -55,6 +55,7 @@ interface CourseRosterViewProps {
     selectedPersonForProfile?: Trainee | null;
     selectedProfileInitialTab?: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | 'sct' | null;
     onProfileOpened?: () => void;
+    onOpenCurrentProfile?: (person: Trainee) => void;
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     onViewLogbook?: (person: Trainee) => void;
     onRequestSct?: (trainee: Trainee) => void;
@@ -164,6 +165,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     selectedPersonForProfile,
     selectedProfileInitialTab = null,
     onProfileOpened,
+    onOpenCurrentProfile,
     traineeLMPs,
     onViewLogbook,
     onRequestSct,
@@ -721,6 +723,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     trainingReportTemplate={trainingReportTemplate}
                     onAccessDenied={onAccessDenied}
                     canUsePlatformPermission={canUsePlatformPermission}
+                    onOpenCurrentProfile={onOpenCurrentProfile}
                 />
             )}
             {hoveredTrainee && flyoutPosition && (

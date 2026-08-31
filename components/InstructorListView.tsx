@@ -169,6 +169,7 @@ interface InstructorListViewProps {
   onNavigateToTrainee?: (trainee: Trainee) => void;
   onProfileOpened?: () => void;
   onProfileClosed?: (instructor: Instructor | null) => void;
+  onOpenCurrentProfile?: (person: Instructor) => void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: (instructor: Instructor) => void;
   sctRequests?: SctRequest[];
@@ -222,6 +223,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     selectedPersonForProfile,
     onProfileOpened,
     onProfileClosed,
+    onOpenCurrentProfile,
     onViewLogbook,
     onRequestSct,
     sctRequests = [],
@@ -968,6 +970,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     trainingReportDisplayName={trainingReportDisplayName}
                     trainingReportStatusFieldLabel={trainingReportStatusFieldLabel}
                     canUsePlatformPermission={canUsePlatformPermission}
+                    onOpenCurrentProfile={onOpenCurrentProfile}
                 />
         )}
 

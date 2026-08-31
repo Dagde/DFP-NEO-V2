@@ -120,6 +120,7 @@ interface ScheduleViewProps {
   aircraftNumberSettings?: AircraftNumberSettings;
   flyingWindowExclusions?: FlyingWindowExclusionPeriod[];
   isReadOnly?: boolean;
+  onOpenCurrentDfp?: () => void;
   onExternalEventDrop?: (event: ScheduleEvent, placement: { startTime: number; resourceId: string }) => void;
   diagnosticHighlightedEventIds?: Set<string>;
   platformConfig?: any;
@@ -7316,6 +7317,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     aircraftNumberSettings,
     flyingWindowExclusions = [],
     isReadOnly = false,
+    onOpenCurrentDfp,
     onExternalEventDrop,
     diagnosticHighlightedEventIds = new Set<string>(),
     platformConfig,
@@ -9538,6 +9540,20 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
                 {/* Time Header (Top Row) */}
                 <div data-schedule-time-header="true" className="sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative">
+                    {isReadOnly && (
+                        <div className="absolute left-2 top-1 z-30 flex items-center gap-2 rounded border border-amber-400/30 bg-gray-900/85 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200 shadow">
+                            <span>Read-only archive</span>
+                            {onOpenCurrentDfp && (
+                                <button
+                                    type="button"
+                                    onClick={onOpenCurrentDfp}
+                                    className="normal-case tracking-normal text-sky-300/80 underline-offset-2 hover:text-sky-200 hover:underline"
+                                >
+                                    Open current DFP
+                                </button>
+                            )}
+                        </div>
+                    )}
                     {renderTimeHeaders()}
                 </div>
 

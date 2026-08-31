@@ -39,6 +39,7 @@ interface StaffViewProps {
   selectedPersonForProfile?: any;
   onProfileOpened?: () => void;
   onProfileClosed?: (instructor: any | null) => void;
+  onOpenCurrentProfile?: (person: any) => void;
   onViewLogbook?: (person: any) => void;
   sctRequests?: SctRequest[];
   onPatchSctRequest?: (id: string, updates: Partial<SctRequest>, type: 'flight' | 'ftd') => void | Promise<void>;
@@ -261,6 +262,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
                 setActiveTab('schedule');
               }
             }}
+            onOpenCurrentProfile={props.onOpenCurrentProfile}
             onViewLogbook={props.onViewLogbook}
             masterCurrencies={props.masterCurrencies}
             sctRequests={props.sctRequests}

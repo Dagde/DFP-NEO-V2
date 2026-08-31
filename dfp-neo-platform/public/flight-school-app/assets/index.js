@@ -17703,6 +17703,7 @@ const ScheduleView = ({
   aircraftNumberSettings,
   flyingWindowExclusions = [],
   isReadOnly = false,
+  onOpenCurrentDfp,
   onExternalEventDrop,
   diagnosticHighlightedEventIds = /* @__PURE__ */ new Set(),
   platformConfig,
@@ -19729,7 +19730,21 @@ const ScheduleView = ({
             ),
             isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: [
+            isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 top-1 z-30 flex items-center gap-2 rounded border border-amber-400/30 bg-gray-900/85 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200 shadow", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Read-only archive" }),
+              onOpenCurrentDfp && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: onOpenCurrentDfp,
+                  className: "normal-case tracking-normal text-sky-300/80 underline-offset-2 hover:text-sky-200 hover:underline",
+                  children: "Open current DFP"
+                }
+              )
+            ] }),
+            renderTimeHeaders()
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-resource-column": "true", className: "sticky left-0 z-[70] bg-gray-800 border-r border-gray-700", style: { width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             AirframeColumn,
             {
@@ -27026,7 +27041,8 @@ const TraineeProfileFlyout = ({
   operationalModel = "flight_school",
   crewPositionTerminology,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
-  canUsePlatformPermission
+  canUsePlatformPermission,
+  onOpenCurrentProfile
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -28475,7 +28491,16 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: isCreating ? "New Trainee" : "Trainee Profile" }),
-          isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200", children: "Read-only archive" })
+          isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200", children: "Read-only archive" }),
+          isArchiveProfile && onOpenCurrentProfile && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => onOpenCurrentProfile(trainee),
+              className: "text-[11px] font-semibold text-sky-300/80 underline-offset-2 hover:text-sky-200 hover:underline",
+              children: "Open current profile"
+            }
+          )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-xl font-bold leading-none", children: "✕" })
       ] }),
@@ -31163,6 +31188,7 @@ const CourseRosterView = ({
   selectedPersonForProfile,
   selectedProfileInitialTab = null,
   onProfileOpened,
+  onOpenCurrentProfile,
   traineeLMPs,
   onViewLogbook,
   onRequestSct,
@@ -31632,7 +31658,8 @@ const CourseRosterView = ({
         phraseBank,
         trainingReportTemplate,
         onAccessDenied,
-        canUsePlatformPermission
+        canUsePlatformPermission,
+        onOpenCurrentProfile
       }
     ),
     hoveredTrainee && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59813,7 +59840,8 @@ const InstructorProfileFlyout = ({
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   trainingReportDisplayName = "Training Report",
   trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status",
-  canUsePlatformPermission
+  canUsePlatformPermission,
+  onOpenCurrentProfile
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
@@ -60579,7 +60607,16 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: isCreating ? "New Staff" : "Staff Profile" }),
-          isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200", children: "Read-only archive" })
+          isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200", children: "Read-only archive" }),
+          isArchiveProfile && onOpenCurrentProfile && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => onOpenCurrentProfile(instructor),
+              className: "text-[11px] font-semibold text-sky-300/80 underline-offset-2 hover:text-sky-200 hover:underline",
+              children: "Open current profile"
+            }
+          )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-xl font-bold leading-none", children: "✕" })
       ] }),
@@ -62521,6 +62558,7 @@ const InstructorListView = ({
   selectedPersonForProfile,
   onProfileOpened,
   onProfileClosed,
+  onOpenCurrentProfile,
   onViewLogbook,
   onRequestSct,
   sctRequests = [],
@@ -63129,7 +63167,8 @@ const InstructorListView = ({
         sctTerminology,
         trainingReportDisplayName,
         trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2,
-        canUsePlatformPermission
+        canUsePlatformPermission,
+        onOpenCurrentProfile
       }
     ),
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -63644,6 +63683,7 @@ const StaffView = (props) => {
               setActiveTab("schedule");
             }
           },
+          onOpenCurrentProfile: props.onOpenCurrentProfile,
           onViewLogbook: props.onViewLogbook,
           masterCurrencies: props.masterCurrencies,
           sctRequests: props.sctRequests,
@@ -63799,6 +63839,7 @@ const TraineeView = (props) => {
           selectedPersonForProfile: props.selfOnlyProfile || props.selectedPersonForProfile,
           selectedProfileInitialTab: props.selectedProfileInitialTab,
           onProfileOpened: props.onProfileOpened,
+          onOpenCurrentProfile: props.onOpenCurrentProfile,
           traineeLMPs: props.traineeLMPs,
           onViewLogbook: props.onViewLogbook,
           onDeleteTrainee: props.onDeleteTrainee,
@@ -136878,6 +136919,51 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     setInstructorForSct(instructor);
     setShowSctRequest(true);
   }, []);
+  const normaliseCurrentProfileIdentity = (value) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9@.]/g, "");
+  const getProfileIdentityValues = (person) => [
+    person?.id,
+    person?.idNumber,
+    person?.personnelId,
+    person?.staffRecordId,
+    person?.traineeRecordId,
+    person?.userId,
+    person?.email
+  ].map(normaliseCurrentProfileIdentity).filter(Boolean);
+  const getProfileNameValues = (person) => [
+    person?.name,
+    person?.fullName,
+    person?.displayName
+  ].map(normaliseCurrentProfileIdentity).filter(Boolean);
+  const sameCurrentProfile = (candidate, source) => {
+    const sourceIds = getProfileIdentityValues(source);
+    const candidateIds = getProfileIdentityValues(candidate);
+    if (sourceIds.length > 0 && candidateIds.some((id) => sourceIds.includes(id))) return true;
+    if (sourceIds.length > 0 && candidateIds.length > 0) return false;
+    const sourceNames = getProfileNameValues(source);
+    return sourceNames.length > 0 && getProfileNameValues(candidate).some((name) => sourceNames.includes(name));
+  };
+  const handleOpenCurrentStaffProfile = (archivedStaff) => {
+    const currentStaff = instructorsData.find((staff) => sameCurrentProfile(staff, archivedStaff));
+    if (!currentStaff) {
+      denyPlatformAction("current staff profile");
+      return;
+    }
+    setDate(getEffectiveDfpDateString());
+    setSelectedPersonForProfile(currentStaff);
+    setProfileInitialTab(null);
+    handleNavigation("Staff");
+  };
+  const handleOpenCurrentTraineeProfile = (archivedTrainee) => {
+    const currentTrainee = allTraineesData.find((trainee) => sameCurrentProfile(trainee, archivedTrainee));
+    if (!currentTrainee) {
+      denyPlatformAction("current trainee profile");
+      return;
+    }
+    setDate(getEffectiveDfpDateString());
+    setSelectedPersonForProfile(currentTrainee);
+    setTraineeProfileInitialTab(null);
+    handleNavigation(activeView === "Trainee" ? "Trainee" : "CourseRoster");
+  };
   const handleArchiveInstructor = reactExports.useCallback(async (identifier) => {
     const identifierText = String(identifier ?? "").trim();
     const matchesArchiveIdentifier = (instructor) => {
@@ -139941,6 +140027,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftNumberSettings,
             flyingWindowExclusions,
             isReadOnly: isViewingPastDfp,
+            onOpenCurrentDfp: openTodayDfpFromContextMenu,
             onExternalEventDrop: handleProgramScheduleExternalEventDrop,
             diagnosticHighlightedEventIds: staffAvailabilityDiagnosticEventIds,
             platformConfig,
@@ -140245,6 +140332,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             selectedPersonForProfile,
             selectedProfileInitialTab: traineeProfileInitialTab,
             onProfileOpened: handleProfileOpened,
+            onOpenCurrentProfile: handleOpenCurrentTraineeProfile,
             traineeLMPs,
             onViewLogbook: handleViewLogbook,
             onRequestSct: (trainee) => {
@@ -140401,6 +140489,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             selectedPersonForProfile,
             selectedProfileInitialTab: traineeProfileInitialTab,
             onProfileOpened: handleProfileOpened,
+            onOpenCurrentProfile: handleOpenCurrentTraineeProfile,
             traineeLMPs,
             onViewLogbook: handleViewLogbook,
             onDeleteTrainee: (trainee) => {
@@ -141427,6 +141516,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             units,
             selectedPersonForProfile,
             onProfileOpened: handleProfileOpened,
+            onOpenCurrentProfile: handleOpenCurrentStaffProfile,
             onViewLogbook: handleViewLogbook,
             masterCurrencies,
             sctRequests: [...sctFlights, ...sctFtds],

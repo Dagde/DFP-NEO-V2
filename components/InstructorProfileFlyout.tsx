@@ -146,6 +146,7 @@ interface InstructorProfileFlyoutProps {
   trainingReportDisplayName?: string;
   trainingReportStatusFieldLabel?: string;
   canUsePlatformPermission?: (permissionId: string) => boolean;
+  onOpenCurrentProfile?: (person: Instructor) => void;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -390,6 +391,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   trainingReportDisplayName = 'Training Report',
   trainingReportStatusFieldLabel = 'Mission Status',
   canUsePlatformPermission,
+  onOpenCurrentProfile,
 }) => {
   const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
@@ -1283,6 +1285,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <span className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
                   Read-only archive
                 </span>
+              )}
+              {isArchiveProfile && onOpenCurrentProfile && (
+                <button
+                  type="button"
+                  onClick={() => onOpenCurrentProfile(instructor)}
+                  className="text-[11px] font-semibold text-sky-300/80 underline-offset-2 hover:text-sky-200 hover:underline"
+                >
+                  Open current profile
+                </button>
               )}
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-white text-xl font-bold leading-none">✕</button>

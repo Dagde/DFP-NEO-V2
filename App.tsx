@@ -45362,6 +45362,59 @@ appliedUpdates.forEach(update => {
         setShowSctRequest(true);
     }, []);
 
+    const normaliseCurrentProfileIdentity = (value?: string | number | null): string => (
+        String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9@.]/g, '')
+    );
+
+    const getProfileIdentityValues = (person: any): string[] => ([
+        person?.id,
+        person?.idNumber,
+        person?.personnelId,
+        person?.staffRecordId,
+        person?.traineeRecordId,
+        person?.userId,
+        person?.email,
+    ].map(normaliseCurrentProfileIdentity).filter(Boolean));
+
+    const getProfileNameValues = (person: any): string[] => ([
+        person?.name,
+        person?.fullName,
+        person?.displayName,
+    ].map(normaliseCurrentProfileIdentity).filter(Boolean));
+
+    const sameCurrentProfile = (candidate: any, source: any): boolean => {
+        const sourceIds = getProfileIdentityValues(source);
+        const candidateIds = getProfileIdentityValues(candidate);
+        if (sourceIds.length > 0 && candidateIds.some(id => sourceIds.includes(id))) return true;
+        if (sourceIds.length > 0 && candidateIds.length > 0) return false;
+        const sourceNames = getProfileNameValues(source);
+        return sourceNames.length > 0 && getProfileNameValues(candidate).some(name => sourceNames.includes(name));
+    };
+
+    const handleOpenCurrentStaffProfile = (archivedStaff: Instructor) => {
+        const currentStaff = instructorsData.find(staff => sameCurrentProfile(staff, archivedStaff));
+        if (!currentStaff) {
+            denyPlatformAction('current staff profile');
+            return;
+        }
+        setDate(getEffectiveDfpDateString());
+        setSelectedPersonForProfile(currentStaff);
+        setProfileInitialTab(null);
+        handleNavigation('Staff');
+    };
+
+    const handleOpenCurrentTraineeProfile = (archivedTrainee: Trainee) => {
+        const currentTrainee = allTraineesData.find(trainee => sameCurrentProfile(trainee, archivedTrainee));
+        if (!currentTrainee) {
+            denyPlatformAction('current trainee profile');
+            return;
+        }
+        setDate(getEffectiveDfpDateString());
+        setSelectedPersonForProfile(currentTrainee);
+        setTraineeProfileInitialTab(null);
+        handleNavigation(activeView === 'Trainee' ? 'Trainee' : 'CourseRoster');
+    };
+
     const handleArchiveInstructor = useCallback(async (identifier: string | number | null | undefined) => {
         const identifierText = String(identifier ?? '').trim();
         const matchesArchiveIdentifier = (instructor: Instructor): boolean => {
@@ -49136,6 +49189,7 @@ appliedUpdates.forEach(update => {
                            aircraftNumberSettings={aircraftNumberSettings}
                            flyingWindowExclusions={flyingWindowExclusions}
                            isReadOnly={isViewingPastDfp}
+                           onOpenCurrentDfp={openTodayDfpFromContextMenu}
                            onExternalEventDrop={handleProgramScheduleExternalEventDrop}
                            diagnosticHighlightedEventIds={staffAvailabilityDiagnosticEventIds}
                            platformConfig={platformConfig}
@@ -49452,6 +49506,7 @@ appliedUpdates.forEach(update => {
                             selectedPersonForProfile={selectedPersonForProfile as any}
                             selectedProfileInitialTab={traineeProfileInitialTab}
                             onProfileOpened={handleProfileOpened}
+                            onOpenCurrentProfile={handleOpenCurrentTraineeProfile}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
                             onRequestSct={(trainee) => {
@@ -49611,6 +49666,7 @@ appliedUpdates.forEach(update => {
                             selectedPersonForProfile={selectedPersonForProfile as Trainee | null}
                             selectedProfileInitialTab={traineeProfileInitialTab}
                             onProfileOpened={handleProfileOpened}
+                            onOpenCurrentProfile={handleOpenCurrentTraineeProfile}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
                             onDeleteTrainee={(trainee) => { void handleDeleteTraineeFromRoster(trainee); }}
@@ -50755,6 +50811,7 @@ appliedUpdates.forEach(update => {
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as any}
                             onProfileOpened={handleProfileOpened}
+                            onOpenCurrentProfile={handleOpenCurrentStaffProfile}
                             onViewLogbook={handleViewLogbook}
                             masterCurrencies={masterCurrencies}
                             sctRequests={[...sctFlights, ...sctFtds]}
