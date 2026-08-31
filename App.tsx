@@ -9120,6 +9120,7 @@ function generateDfpInternal(
                         attemptSamples: diag.attemptSamples?.slice?.(0, 30) || [],
                         searchWindowSamples: diag.searchWindowSamples?.slice?.(0, 20) || [],
                         placementExplanations: diag.placementExplanations?.slice?.(0, 160) || [],
+                        passOrderingSamples: diag.passOrderingSamples?.slice?.(0, 8) || [],
                     }
                 ])),
                 scheduleFlow: (neoBuildDiag.scheduleFlow || []).slice(-80),
@@ -13994,6 +13995,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             attemptSamples: [] as any[],
             placementExplanations: [] as any[],
             passSummaries: [] as any[],
+            passOrderingSamples: [] as any[],
             searchWindowSamples: [] as any[],
             sample: list.slice(0, 20).map(trainee => {
                 const nextEvents = traineeNextEventMap.get(getBuildTraineeKey(trainee));
@@ -14202,8 +14204,62 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const passGeneratedEventsAtStart = generatedEvents.length;
             placedThisPass = false;
             const remainingForNextPass: Trainee[] = [];
+            const passTrainees = unplacedTrainees
+                .map((trainee, originalIndex) => {
+                    const nextEvents = traineeNextEventMap.get(getBuildTraineeKey(trainee));
+                    const syllabusItem = !isPlusOne && syllabusOverrides?.has(trainee.fullName)
+                        ? syllabusOverrides.get(trainee.fullName)!
+                        : isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
+                    let effectiveSearchStartTime = startTimeBoundary;
+                    const orderingReasons: string[] = [];
+                    if (syllabusItem && isRemedialSyllabusItem(syllabusItem)) {
+                        effectiveSearchStartTime = Math.max(effectiveSearchStartTime, REMEDIAL_EARLIEST_START);
+                        orderingReasons.push('remedialEarliestStart');
+                    }
+                    if (isPlusOne) {
+                        const nextEventCodes = new Set([nextEvents?.next?.id, nextEvents?.next?.code].filter(Boolean));
+                        const nextEvent = generatedEvents.find(e =>
+                            getPersonnel(e).includes(trainee.fullName) &&
+                            nextEventCodes.has(e.flightNumber)
+                        );
+                        if (nextEvent) {
+                            effectiveSearchStartTime = Math.max(effectiveSearchStartTime, nextEvent.startTime + nextEvent.duration);
+                            orderingReasons.push('afterPrimaryEvent');
+                        } else {
+                            effectiveSearchStartTime = Number.POSITIVE_INFINITY;
+                            orderingReasons.push('waitingForPrimaryEvent');
+                        }
+                    }
+                    return {
+                        trainee,
+                        originalIndex,
+                        syllabusItem,
+                        effectiveSearchStartTime,
+                        orderingReasons,
+                    };
+                })
+                .sort((a, b) => {
+                    const aStart = Number.isFinite(a.effectiveSearchStartTime) ? a.effectiveSearchStartTime : Number.MAX_SAFE_INTEGER;
+                    const bStart = Number.isFinite(b.effectiveSearchStartTime) ? b.effectiveSearchStartTime : Number.MAX_SAFE_INTEGER;
+                    return aStart - bStart || a.originalIndex - b.originalIndex;
+                });
+            if (listDiag.passOrderingSamples.length < 12) {
+                listDiag.passOrderingSamples.push({
+                    pass: passNumber,
+                    orderedByEarliestFeasibleStart: true,
+                    sample: passTrainees.slice(0, 24).map(entry => ({
+                        trainee: entry.trainee.fullName,
+                        course: entry.trainee.course || null,
+                        event: entry.syllabusItem?.code || null,
+                        originalIndex: entry.originalIndex,
+                        effectiveSearchStartTime: Number.isFinite(entry.effectiveSearchStartTime) ? entry.effectiveSearchStartTime : null,
+                        effectiveSearchStartDisplayTime: Number.isFinite(entry.effectiveSearchStartTime) ? _fmtT(entry.effectiveSearchStartTime) : null,
+                        orderingReasons: entry.orderingReasons,
+                    })),
+                });
+            }
 
-            for (const trainee of unplacedTrainees) {
+            for (const { trainee } of passTrainees) {
                 const { next, plusOne } = traineeNextEventMap.get(getBuildTraineeKey(trainee))!;
                 const syllabusItem = !isPlusOne && syllabusOverrides?.has(trainee.fullName)
                     ? syllabusOverrides.get(trainee.fullName)!
