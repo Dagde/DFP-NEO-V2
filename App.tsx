@@ -29226,6 +29226,25 @@ const App: React.FC = () => {
             }));
         }
 
+        const snapshotEventCompletions = Array.isArray(snap.eventCompletions) ? snap.eventCompletions : [];
+        if (snapshotEventCompletions.length > 0 && targetDate === date) {
+            setEventCompletionsForDate(snapshotEventCompletions);
+            pushDfpDataDiag('snapshot:apply-event-completions', {
+                targetDate,
+                snapshotSchool,
+                snapshotUnit,
+                source,
+                completionCount: snapshotEventCompletions.length,
+                sampleCompletions: snapshotEventCompletions.slice(0, 8).map((completion: any) => ({
+                    scheduleEventId: completion?.scheduleEventId || '',
+                    eventCode: completion?.eventCode || '',
+                    eventDate: completion?.eventDate || '',
+                    traineeFullName: completion?.traineeFullName || '',
+                    dcoResult: completion?.dcoResult || '',
+                })),
+            });
+        }
+
         const snapshotAssessments = snap.pt051Assessments && typeof snap.pt051Assessments === 'object'
             ? Object.values(snap.pt051Assessments) as Pt051Assessment[]
             : [];
@@ -29256,7 +29275,7 @@ const App: React.FC = () => {
         }
 
         return events.length;
-    }, [activeUnitCode]);
+    }, [activeUnitCode, date]);
 
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
     const loadSnapshotForDate = React.useCallback(async (

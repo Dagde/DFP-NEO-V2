@@ -123569,6 +123569,24 @@ const App = () => {
         [baselineKey]: snap2.aircraftConfigState
       }));
     }
+    const snapshotEventCompletions = Array.isArray(snap2.eventCompletions) ? snap2.eventCompletions : [];
+    if (snapshotEventCompletions.length > 0 && targetDate === date) {
+      setEventCompletionsForDate(snapshotEventCompletions);
+      pushDfpDataDiag("snapshot:apply-event-completions", {
+        targetDate,
+        snapshotSchool,
+        snapshotUnit,
+        source,
+        completionCount: snapshotEventCompletions.length,
+        sampleCompletions: snapshotEventCompletions.slice(0, 8).map((completion) => ({
+          scheduleEventId: completion?.scheduleEventId || "",
+          eventCode: completion?.eventCode || "",
+          eventDate: completion?.eventDate || "",
+          traineeFullName: completion?.traineeFullName || "",
+          dcoResult: completion?.dcoResult || ""
+        }))
+      });
+    }
     const snapshotAssessments = snap2.pt051Assessments && typeof snap2.pt051Assessments === "object" ? Object.values(snap2.pt051Assessments) : [];
     if (snapshotAssessments.length > 0) {
       setPt051Assessments((prev) => {
@@ -123596,7 +123614,7 @@ const App = () => {
       });
     }
     return events2.length;
-  }, [activeUnitCode]);
+  }, [activeUnitCode, date]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
     const loadStartedAt = performance.now();
     const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = "", allowAdminFallbackContext = true, silent = false } = options;

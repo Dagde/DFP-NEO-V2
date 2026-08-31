@@ -17975,6 +17975,8 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         staffEvents: [],
         traineeEvents: [],
         pt051Assessments: trainingReportMap,
+        eventCompletions: completionRows || [],
+        flightLogEntries: flightLogRows || [],
         traineeProfiles: configContentByType.traineeRosterState || [],
         staffProfiles: configContentByType.staffRosterState || [],
         lmpCompletedIds: configContentByType.lmpCompletionState || {},
