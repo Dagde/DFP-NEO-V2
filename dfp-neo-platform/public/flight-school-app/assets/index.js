@@ -123772,7 +123772,11 @@ const App = () => {
     const snapshotStaffCurrency = snap2.staffCurrency && typeof snap2.staffCurrency === "object" ? snap2.staffCurrency : {};
     const snapshotLmpCompletedIds = snap2.lmpCompletedIds && typeof snap2.lmpCompletedIds === "object" ? snap2.lmpCompletedIds : {};
     const snapshotFlightLogEntries = Array.isArray(snap2.flightLogEntries) ? snap2.flightLogEntries : [];
-    if (snapshotStaffProfiles.length > 0 || snapshotTraineeProfiles.length > 0 || Object.keys(snapshotStaffCurrency).length > 0 || Object.keys(snapshotLmpCompletedIds).length > 0 || snapshotFlightLogEntries.length > 0) {
+    const snapshotCurrencyDefinitions = snap2.currencyDefinitions && typeof snap2.currencyDefinitions === "object" ? snap2.currencyDefinitions : {
+      masterCurrencies: Array.isArray(snap2.masterCurrencies) ? snap2.masterCurrencies : [],
+      currencyRequirements: Array.isArray(snap2.currencyRequirements) ? snap2.currencyRequirements : []
+    };
+    if (snapshotStaffProfiles.length > 0 || snapshotTraineeProfiles.length > 0 || Object.keys(snapshotStaffCurrency).length > 0 || Object.keys(snapshotLmpCompletedIds).length > 0 || snapshotFlightLogEntries.length > 0 || Array.isArray(snapshotCurrencyDefinitions.masterCurrencies) && snapshotCurrencyDefinitions.masterCurrencies.length > 0 || Array.isArray(snapshotCurrencyDefinitions.currencyRequirements) && snapshotCurrencyDefinitions.currencyRequirements.length > 0) {
       setHistoricalDfpContextByDate((prev) => ({
         ...prev,
         [targetDate]: {
@@ -123781,6 +123785,7 @@ const App = () => {
           staffCurrency: snapshotStaffCurrency,
           lmpCompletedIds: snapshotLmpCompletedIds,
           flightLogEntries: snapshotFlightLogEntries,
+          currencyDefinitions: snapshotCurrencyDefinitions,
           snapshotSource: snap2.snapshotSource || source,
           snapshotKey: snap2.date || ""
         }
@@ -123794,7 +123799,9 @@ const App = () => {
         traineeProfiles: snapshotTraineeProfiles.length,
         staffCurrencyPeople: Object.keys(snapshotStaffCurrency).length,
         lmpPeople: Object.keys(snapshotLmpCompletedIds).length,
-        flightLogEntries: snapshotFlightLogEntries.length
+        flightLogEntries: snapshotFlightLogEntries.length,
+        masterCurrencyDefinitions: Array.isArray(snapshotCurrencyDefinitions.masterCurrencies) ? snapshotCurrencyDefinitions.masterCurrencies.length : 0,
+        currencyRequirementDefinitions: Array.isArray(snapshotCurrencyDefinitions.currencyRequirements) ? snapshotCurrencyDefinitions.currencyRequirements.length : 0
       });
     }
     const snapshotEventCompletions = Array.isArray(snap2.eventCompletions) ? snap2.eventCompletions : [];
@@ -126061,6 +126068,9 @@ ${"=".repeat(60)}`);
   const [fallbackCurrencyRequirements, setFallbackCurrencyRequirements] = reactExports.useState([]);
   const [unitCurrencyDefinitions, setUnitCurrencyDefinitions] = reactExports.useState({});
   const [showCurrencySetup, setShowCurrencySetup] = reactExports.useState(false);
+  const activeHistoricalCurrencyDefinitions = activeHistoricalDfpContext?.currencyDefinitions || null;
+  const activeDateMasterCurrencies = isViewingPastDfp && Array.isArray(activeHistoricalCurrencyDefinitions?.masterCurrencies) ? activeHistoricalCurrencyDefinitions.masterCurrencies || [] : masterCurrencies;
+  const activeDateCurrencyRequirements = isViewingPastDfp && Array.isArray(activeHistoricalCurrencyDefinitions?.currencyRequirements) ? activeHistoricalCurrencyDefinitions.currencyRequirements || [] : currencyRequirements;
   const activeCurrencyUnitKey = reactExports.useMemo(() => {
     const rawUnit = activeContextUnitCodes[0] || String(activeUnitCode || "").split("+")[0] || activeUnitCode;
     return String(rawUnit || "").trim().toUpperCase();
@@ -131883,6 +131893,10 @@ ${error instanceof Error ? error.message : String(error)}`,
       staffProfiles: staffProfilesSnapshot,
       lmpCompletedIds: lmpCompletedIdsMap,
       staffCurrency: staffCurrencyMap,
+      currencyDefinitions: {
+        masterCurrencies,
+        currencyRequirements
+      },
       staffLogbook: {},
       aircraftConfigState: currentAircraftConfigState,
       savedBy
@@ -136079,6 +136093,10 @@ ${conflictLines.join("\n")}${moreText}`,
         staffProfiles: staffProfilesSnapshot,
         lmpCompletedIds: lmpCompletedIdsMap,
         staffCurrency: staffCurrencyMap,
+        currencyDefinitions: {
+          masterCurrencies,
+          currencyRequirements
+        },
         staffLogbook: staffLogbookMap,
         aircraftConfigState: currentAircraftConfigState,
         savedBy: authUser?.userId || authUser?.username || null,
@@ -140417,8 +140435,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSelectEvent: handleOpenModal,
             onUpdateEvent: handleScheduleUpdate,
             onSelectTrainee: handleSelectTraineeFromSchedule,
-            masterCurrencies,
-            currencyRequirements,
+            masterCurrencies: activeDateMasterCurrencies,
+            currencyRequirements: activeDateCurrencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
@@ -140553,8 +140571,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onBackcourseTrainee: (trainee, newCourse) => {
               void handleMoveTraineeBetweenCourses(trainee, newCourse);
             },
-            masterCurrencies,
-            currencyRequirements,
+            masterCurrencies: activeDateMasterCurrencies,
+            currencyRequirements: activeDateCurrencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
@@ -141518,11 +141536,11 @@ ${error instanceof Error ? error.message : String(error)}`,
             onProfileOpened: handleProfileOpened,
             onOpenCurrentProfile: handleOpenCurrentStaffProfile,
             onViewLogbook: handleViewLogbook,
-            masterCurrencies,
+            masterCurrencies: activeDateMasterCurrencies,
             sctRequests: [...sctFlights, ...sctFtds],
             onPatchSctRequest: handlePatchCurrentUserSctRequest,
             onCancelSctRequest: handleCancelCurrentUserSctRequest,
-            currencyRequirements,
+            currencyRequirements: activeDateCurrencyRequirements,
             profileInitialTab,
             onProfileTabConsumed: handleProfileTabConsumed,
             currentUserId: getCurrentUserId() ?? void 0,
@@ -141650,8 +141668,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             onNavigateToTrainee: (trainee) => {
               setSelectedPersonForProfile(trainee);
             },
-            masterCurrencies,
-            currencyRequirements,
+            masterCurrencies: activeDateMasterCurrencies,
+            currencyRequirements: activeDateCurrencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
             currentUserRole: sessionUser?.role || authUser?.role || "",
@@ -141764,8 +141782,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             {
               person: selectedPersonForCurrency,
               personType: selectedPersonForCurrencyType,
-              masterCurrencies,
-              currencyRequirements,
+              masterCurrencies: activeDateMasterCurrencies,
+              currencyRequirements: activeDateCurrencyRequirements,
               onClose: handleCurrencyBack,
               registerDirtyCheck
             }

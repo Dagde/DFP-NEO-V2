@@ -29270,12 +29270,20 @@ const App: React.FC = () => {
         const snapshotStaffCurrency = snap.staffCurrency && typeof snap.staffCurrency === 'object' ? snap.staffCurrency : {};
         const snapshotLmpCompletedIds = snap.lmpCompletedIds && typeof snap.lmpCompletedIds === 'object' ? snap.lmpCompletedIds : {};
         const snapshotFlightLogEntries = Array.isArray(snap.flightLogEntries) ? snap.flightLogEntries : [];
+        const snapshotCurrencyDefinitions = snap.currencyDefinitions && typeof snap.currencyDefinitions === 'object'
+            ? snap.currencyDefinitions
+            : {
+                masterCurrencies: Array.isArray(snap.masterCurrencies) ? snap.masterCurrencies : [],
+                currencyRequirements: Array.isArray(snap.currencyRequirements) ? snap.currencyRequirements : [],
+            };
         if (
             snapshotStaffProfiles.length > 0 ||
             snapshotTraineeProfiles.length > 0 ||
             Object.keys(snapshotStaffCurrency).length > 0 ||
             Object.keys(snapshotLmpCompletedIds).length > 0 ||
-            snapshotFlightLogEntries.length > 0
+            snapshotFlightLogEntries.length > 0 ||
+            (Array.isArray(snapshotCurrencyDefinitions.masterCurrencies) && snapshotCurrencyDefinitions.masterCurrencies.length > 0) ||
+            (Array.isArray(snapshotCurrencyDefinitions.currencyRequirements) && snapshotCurrencyDefinitions.currencyRequirements.length > 0)
         ) {
             setHistoricalDfpContextByDate(prev => ({
                 ...prev,
@@ -29285,6 +29293,7 @@ const App: React.FC = () => {
                     staffCurrency: snapshotStaffCurrency,
                     lmpCompletedIds: snapshotLmpCompletedIds,
                     flightLogEntries: snapshotFlightLogEntries,
+                    currencyDefinitions: snapshotCurrencyDefinitions,
                     snapshotSource: snap.snapshotSource || source,
                     snapshotKey: snap.date || '',
                 },
@@ -29299,6 +29308,8 @@ const App: React.FC = () => {
                 staffCurrencyPeople: Object.keys(snapshotStaffCurrency).length,
                 lmpPeople: Object.keys(snapshotLmpCompletedIds).length,
                 flightLogEntries: snapshotFlightLogEntries.length,
+                masterCurrencyDefinitions: Array.isArray(snapshotCurrencyDefinitions.masterCurrencies) ? snapshotCurrencyDefinitions.masterCurrencies.length : 0,
+                currencyRequirementDefinitions: Array.isArray(snapshotCurrencyDefinitions.currencyRequirements) ? snapshotCurrencyDefinitions.currencyRequirements.length : 0,
             });
         }
 
@@ -29885,6 +29896,10 @@ const App: React.FC = () => {
         staffCurrency: Record<string, any[]>;
         lmpCompletedIds: Record<string, string[]>;
         flightLogEntries: any[];
+        currencyDefinitions?: {
+            masterCurrencies?: MasterCurrency[];
+            currencyRequirements?: CurrencyRequirement[];
+        };
         snapshotSource?: string;
         snapshotKey?: string;
     }>>({});
@@ -31967,6 +31982,13 @@ const App: React.FC = () => {
         currencyRequirements: CurrencyRequirement[];
     }>>({});
     const [showCurrencySetup, setShowCurrencySetup] = useState(false);
+    const activeHistoricalCurrencyDefinitions = activeHistoricalDfpContext?.currencyDefinitions || null;
+    const activeDateMasterCurrencies = isViewingPastDfp && Array.isArray(activeHistoricalCurrencyDefinitions?.masterCurrencies)
+        ? activeHistoricalCurrencyDefinitions.masterCurrencies || []
+        : masterCurrencies;
+    const activeDateCurrencyRequirements = isViewingPastDfp && Array.isArray(activeHistoricalCurrencyDefinitions?.currencyRequirements)
+        ? activeHistoricalCurrencyDefinitions.currencyRequirements || []
+        : currencyRequirements;
 
     const activeCurrencyUnitKey = useMemo(() => {
         const rawUnit = activeContextUnitCodes[0] || String(activeUnitCode || '').split('+')[0] || activeUnitCode;
@@ -39250,6 +39272,10 @@ const App: React.FC = () => {
             staffProfiles: staffProfilesSnapshot,
             lmpCompletedIds: lmpCompletedIdsMap,
             staffCurrency: staffCurrencyMap,
+            currencyDefinitions: {
+                masterCurrencies,
+                currencyRequirements,
+            },
             staffLogbook: {},
             aircraftConfigState: currentAircraftConfigState,
             savedBy,
@@ -44343,6 +44369,10 @@ const App: React.FC = () => {
                 staffProfiles: staffProfilesSnapshot,
                 lmpCompletedIds: lmpCompletedIdsMap,
                 staffCurrency: staffCurrencyMap,
+                currencyDefinitions: {
+                    masterCurrencies,
+                    currencyRequirements,
+                },
                 staffLogbook: staffLogbookMap,
                 aircraftConfigState: currentAircraftConfigState,
                 savedBy: authUser?.userId || (authUser as any)?.username || null,
@@ -49598,8 +49628,8 @@ appliedUpdates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectTrainee={handleSelectTraineeFromSchedule}
-                            masterCurrencies={masterCurrencies}
-                            currencyRequirements={currencyRequirements}
+                            masterCurrencies={activeDateMasterCurrencies}
+                            currencyRequirements={activeDateCurrencyRequirements}
                             currentUserId={getCurrentUserId() ?? undefined}
                             currentUserName={currentUserName}
                             currentUserRole={sessionUser?.role || authUser?.role || ''}
@@ -49742,8 +49772,8 @@ appliedUpdates.forEach(update => {
                             onBackcourseTrainee={(trainee, newCourse) => {
                                 void handleMoveTraineeBetweenCourses(trainee, newCourse);
                             }}
-                            masterCurrencies={masterCurrencies}
-                            currencyRequirements={currencyRequirements}
+                            masterCurrencies={activeDateMasterCurrencies}
+                            currencyRequirements={activeDateCurrencyRequirements}
                             currentUserId={getCurrentUserId() ?? undefined}
                             currentUserName={currentUserName}
                             currentUserRole={sessionUser?.role || authUser?.role || ''}
@@ -50813,11 +50843,11 @@ appliedUpdates.forEach(update => {
                             onProfileOpened={handleProfileOpened}
                             onOpenCurrentProfile={handleOpenCurrentStaffProfile}
                             onViewLogbook={handleViewLogbook}
-                            masterCurrencies={masterCurrencies}
+                            masterCurrencies={activeDateMasterCurrencies}
                             sctRequests={[...sctFlights, ...sctFtds]}
                             onPatchSctRequest={handlePatchCurrentUserSctRequest}
                             onCancelSctRequest={handleCancelCurrentUserSctRequest}
-                            currencyRequirements={currencyRequirements}
+                            currencyRequirements={activeDateCurrencyRequirements}
                             profileInitialTab={profileInitialTab}
                             onProfileTabConsumed={handleProfileTabConsumed}
                             currentUserId={getCurrentUserId() ?? undefined}
@@ -50947,8 +50977,8 @@ appliedUpdates.forEach(update => {
                             onNavigateToTrainee={(trainee) => {
                                 setSelectedPersonForProfile(trainee);
                             }}
-                            masterCurrencies={masterCurrencies}
-                            currencyRequirements={currencyRequirements}
+                            masterCurrencies={activeDateMasterCurrencies}
+                            currencyRequirements={activeDateCurrencyRequirements}
                             currentUserId={getCurrentUserId() ?? undefined}
                             currentUserName={currentUserName}
                             currentUserRole={sessionUser?.role || authUser?.role || ''}
@@ -51056,8 +51086,8 @@ appliedUpdates.forEach(update => {
                     return <CurrencyStatusPage
                                 person={selectedPersonForCurrency}
                                 personType={selectedPersonForCurrencyType}
-                                masterCurrencies={masterCurrencies}
-                                currencyRequirements={currencyRequirements}
+                                masterCurrencies={activeDateMasterCurrencies}
+                                currencyRequirements={activeDateCurrencyRequirements}
                                 onClose={handleCurrencyBack}
                                 registerDirtyCheck={registerDirtyCheck}
                            />;

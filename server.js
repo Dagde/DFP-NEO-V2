@@ -16788,6 +16788,112 @@ function compactArchiveProfile(profile) {
   };
 }
 
+function countArchiveMapRows(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { keys: 0, rows: 0 };
+  }
+  const keys = Object.keys(value);
+  return {
+    keys: keys.length,
+    rows: keys.reduce((sum, key) => sum + (Array.isArray(value[key]) ? value[key].length : 0), 0),
+  };
+}
+
+function countArchiveProfileCurrencyRows(profiles) {
+  return (Array.isArray(profiles) ? profiles : []).reduce((sum, profile) => {
+    const directRows = Array.isArray(profile?.currencyStatus) ? profile.currencyStatus : null;
+    const nestedRows = Array.isArray(profile?.qualifications?.currencyStatus) ? profile.qualifications.currencyStatus : null;
+    return sum + (directRows || nestedRows || []).length;
+  }, 0);
+}
+
+function buildArchiveCompletenessDiagnostics({
+  source,
+  date,
+  snapshotKey,
+  scheduleEvents,
+  eventRows,
+  staffEvents,
+  traineeEvents,
+  staffProfiles,
+  traineeProfiles,
+  lmpCompletedIds,
+  staffCurrency,
+  staffLogbook,
+  aircraftConfigState,
+  trainingReports,
+  trainingReportVersions,
+  eventCompletions,
+  flightLogEntries,
+  configVersions,
+  currencyDefinitions,
+}) {
+  const staffCurrencyCounts = countArchiveMapRows(staffCurrency);
+  const lmpCompletionCounts = countArchiveMapRows(lmpCompletedIds);
+  const staffLogbookCounts = countArchiveMapRows(staffLogbook);
+  const staffProfileCurrencyRows = countArchiveProfileCurrencyRows(staffProfiles);
+  const traineeProfileCurrencyRows = countArchiveProfileCurrencyRows(traineeProfiles);
+  const masterCurrencies = Array.isArray(currencyDefinitions?.masterCurrencies) ? currencyDefinitions.masterCurrencies : [];
+  const currencyRequirements = Array.isArray(currencyDefinitions?.currencyRequirements) ? currencyDefinitions.currencyRequirements : [];
+  const currencyDefinitionRows = [...masterCurrencies, ...currencyRequirements];
+  const configTypes = (Array.isArray(configVersions) ? configVersions : [])
+    .map(row => row?.configType)
+    .filter(Boolean);
+
+  return {
+    source,
+    date,
+    snapshotKey,
+    generatedAt: new Date().toISOString(),
+    schedule: {
+      scheduleEvents: Array.isArray(scheduleEvents) ? scheduleEvents.length : 0,
+      archivedEventRows: Array.isArray(eventRows) ? eventRows.length : null,
+      staffEvents: Array.isArray(staffEvents) ? staffEvents.length : 0,
+      traineeEvents: Array.isArray(traineeEvents) ? traineeEvents.length : 0,
+    },
+    profiles: {
+      staffProfiles: Array.isArray(staffProfiles) ? staffProfiles.length : 0,
+      traineeProfiles: Array.isArray(traineeProfiles) ? traineeProfiles.length : 0,
+      staffProfileCurrencyRows,
+      traineeProfileCurrencyRows,
+    },
+    currencyAndRecency: {
+      staffCurrencyPeople: staffCurrencyCounts.keys,
+      staffCurrencyRows: staffCurrencyCounts.rows,
+      profileCurrencyRows: staffProfileCurrencyRows + traineeProfileCurrencyRows,
+      masterCurrencyDefinitions: masterCurrencies.length,
+      currencyRequirementDefinitions: currencyRequirements.length,
+      recencyDefinitionRows: currencyDefinitionRows.filter(row => row?.showInPostFlightRecency).length,
+      note: 'Recency is stored as currency status against profile records; recency display is driven by archived/current currency definitions marked showInPostFlightRecency.',
+    },
+    training: {
+      trainingReports: Array.isArray(trainingReports) ? trainingReports.length : 0,
+      trainingReportVersions: Array.isArray(trainingReportVersions) ? trainingReportVersions.length : 0,
+      eventCompletions: Array.isArray(eventCompletions) ? eventCompletions.length : 0,
+      lmpPeople: lmpCompletionCounts.keys,
+      lmpCompletionRows: lmpCompletionCounts.rows,
+    },
+    logbook: {
+      flightLogEntries: Array.isArray(flightLogEntries) ? flightLogEntries.length : 0,
+      staffLogbookPeople: staffLogbookCounts.keys,
+      staffLogbookRows: staffLogbookCounts.rows,
+    },
+    config: {
+      configVersions: Array.isArray(configVersions) ? configVersions.length : 0,
+      configTypes,
+      hasAircraftConfigState: !!aircraftConfigState && typeof aircraftConfigState === 'object' && Object.keys(aircraftConfigState).length > 0,
+    },
+  };
+}
+
+function archiveEventsByType(eventRows, typeName) {
+  const wanted = String(typeName || '').trim().toLowerCase();
+  return (Array.isArray(eventRows) ? eventRows : [])
+    .filter(row => String(row?.eventType || row?.eventData?.type || '').trim().toLowerCase() === wanted)
+    .map(row => row.eventData)
+    .filter(Boolean);
+}
+
 function getArchiveEventStableId(event, date, index) {
   const existing = String(event?.id || event?.eventId || '').trim();
   if (existing) return existing.slice(0, 220);
@@ -16915,6 +17021,10 @@ async function saveCompactPublishedDfpArchive(db, payload) {
     traineeRosterState: compactTraineeProfiles,
     lmpCompletionState: payload.lmpCompletedIds || {},
     staffCurrencyState: payload.staffCurrency || {},
+    currencyDefinitionState: payload.currencyDefinitions || {
+      masterCurrencies: payload.masterCurrencies || [],
+      currencyRequirements: payload.currencyRequirements || [],
+    },
   };
   for (const [configType, content] of Object.entries(configPayloads)) {
     configVersions[configType] = await saveArchiveConfigVersion(
@@ -17734,7 +17844,10 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
       staffLogbook,
       savedBy,
       baselineEvents,
-      aircraftConfigState
+      aircraftConfigState,
+      currencyDefinitions,
+      masterCurrencies,
+      currencyRequirements
     } = req.body;
 
     if (!date) {
@@ -17868,6 +17981,9 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
         savedBy,
         baselineEvents,
         aircraftConfigState,
+        currencyDefinitions,
+        masterCurrencies,
+        currencyRequirements,
         dailySnapshotId,
       });
     } catch (archiveError) {
@@ -17945,6 +18061,9 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       const configContentByType = Object.fromEntries((configVersions || []).map(row => [row.configType, row.content]));
       const archivedStaffProfiles = Array.isArray(configContentByType.staffRosterState) ? configContentByType.staffRosterState : [];
       const archivedTraineeProfiles = Array.isArray(configContentByType.traineeRosterState) ? configContentByType.traineeRosterState : [];
+      const archivedCurrencyDefinitions = configContentByType.currencyDefinitionState && typeof configContentByType.currencyDefinitionState === 'object'
+        ? configContentByType.currencyDefinitionState
+        : { masterCurrencies: [], currencyRequirements: [] };
       const archivedProfileRefs = [...archivedStaffProfiles, ...archivedTraineeProfiles];
       const archivedPersonIds = Array.from(new Set(archivedProfileRefs.flatMap(profile => [
         profile?.id,
@@ -18025,16 +18144,39 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         archivedEventIds
       ).catch(() => []);
       const scheduleEvents = eventRows.map(row => row.eventData);
+      const archivedStaffEvents = archiveEventsByType(eventRows, 'staff');
+      const archivedTraineeEvents = archiveEventsByType(eventRows, 'trainee');
       const trainingReports = (performanceRows || []).map(row => mapRowToAssessment(row));
       const trainingReportMap = Object.fromEntries(trainingReports.map(report => [
         `pt051-${report.eventId}-${report.traineeFullName}`,
         report,
       ]));
+      const archiveCompletenessDiagnostics = buildArchiveCompletenessDiagnostics({
+        source: 'compact-archive',
+        date: archive.date,
+        snapshotKey: archive.snapshotKey,
+        scheduleEvents,
+        eventRows,
+        staffEvents: archivedStaffEvents,
+        traineeEvents: archivedTraineeEvents,
+        staffProfiles: archivedStaffProfiles,
+        traineeProfiles: archivedTraineeProfiles,
+        lmpCompletedIds: configContentByType.lmpCompletionState || {},
+        staffCurrency: configContentByType.staffCurrencyState || {},
+        staffLogbook: {},
+        aircraftConfigState: configContentByType.aircraftConfigState || {},
+        trainingReports,
+        trainingReportVersions: trainingReportVersions || [],
+        eventCompletions: completionRows || [],
+        flightLogEntries: flightLogRows || [],
+        configVersions: configVersions || [],
+        currencyDefinitions: archivedCurrencyDefinitions,
+      });
       const snapshot = {
         date: archive.snapshotKey,
         scheduleEvents,
-        staffEvents: [],
-        traineeEvents: [],
+        staffEvents: archivedStaffEvents,
+        traineeEvents: archivedTraineeEvents,
         pt051Assessments: trainingReportMap,
         eventCompletions: completionRows || [],
         flightLogEntries: flightLogRows || [],
@@ -18042,9 +18184,13 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         staffProfiles: archivedStaffProfiles,
         lmpCompletedIds: configContentByType.lmpCompletionState || {},
         staffCurrency: configContentByType.staffCurrencyState || {},
+        currencyDefinitions: archivedCurrencyDefinitions,
+        masterCurrencies: Array.isArray(archivedCurrencyDefinitions.masterCurrencies) ? archivedCurrencyDefinitions.masterCurrencies : [],
+        currencyRequirements: Array.isArray(archivedCurrencyDefinitions.currencyRequirements) ? archivedCurrencyDefinitions.currencyRequirements : [],
         staffLogbook: {},
         aircraftConfigState: configContentByType.aircraftConfigState || {},
         archiveLogbookDiagnostics,
+        archiveCompletenessDiagnostics,
         snapshotSource: 'compact-archive',
       };
       const response = {
@@ -18074,18 +18220,25 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         eventCompletions: completionRows || [],
         flightLogEntries: flightLogRows || [],
         configVersions: configVersions || [],
+        currencyDefinitions: archivedCurrencyDefinitions,
+        masterCurrencies: Array.isArray(archivedCurrencyDefinitions.masterCurrencies) ? archivedCurrencyDefinitions.masterCurrencies : [],
+        currencyRequirements: Array.isArray(archivedCurrencyDefinitions.currencyRequirements) ? archivedCurrencyDefinitions.currencyRequirements : [],
         archiveLogbookDiagnostics,
+        archiveCompletenessDiagnostics,
         assembledAt: new Date().toISOString(),
         durationMs: Date.now() - startedAt,
       };
       await writeArchiveDiagnostic(db, 'ARCHIVE_HISTORICAL_DFP_READ', archive.snapshotKey, archive.date, 'success', {
         source: response.source,
         scheduleEvents: response.scheduleEvents.length,
+        staffEvents: response.snapshot.staffEvents.length,
+        traineeEvents: response.snapshot.traineeEvents.length,
         archivedEventIds: archivedEventIds.length,
         trainingReports: response.trainingReports.length,
         trainingReportVersions: response.trainingReportVersions.length,
         eventCompletions: response.eventCompletions.length,
         flightLogEntries: response.flightLogEntries.length,
+        archiveCompletenessDiagnostics,
       }, response.durationMs);
       return res.json(response);
     }
@@ -18175,10 +18328,44 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         scheduleEventId: row.scheduleEventId,
       })),
     };
+    const fallbackTrainingReports = Object.values(snapshot.pt051Assessments || {});
+    const fallbackStaffEvents = Array.isArray(snapshot.staffEvents) ? snapshot.staffEvents : [];
+    const fallbackTraineeEvents = Array.isArray(snapshot.traineeEvents) ? snapshot.traineeEvents : [];
+    const fallbackCurrencyDefinitions = snapshot.currencyDefinitions && typeof snapshot.currencyDefinitions === 'object'
+      ? snapshot.currencyDefinitions
+      : {
+          masterCurrencies: snapshot.masterCurrencies || [],
+          currencyRequirements: snapshot.currencyRequirements || [],
+        };
+    const fallbackCompletenessDiagnostics = buildArchiveCompletenessDiagnostics({
+      source: 'daily-snapshot-fallback',
+      date: parsed.date,
+      snapshotKey: snapshot.date,
+      scheduleEvents: fallbackScheduleEvents,
+      eventRows: null,
+      staffEvents: fallbackStaffEvents,
+      traineeEvents: fallbackTraineeEvents,
+      staffProfiles: fallbackStaffProfiles,
+      traineeProfiles: fallbackTraineeProfiles,
+      lmpCompletedIds: snapshot.lmpCompletedIds || {},
+      staffCurrency: snapshot.staffCurrency || {},
+      staffLogbook: snapshot.staffLogbook || {},
+      aircraftConfigState: snapshot.aircraftConfigState || {},
+      trainingReports: fallbackTrainingReports,
+      trainingReportVersions: [],
+      eventCompletions: snapshot.eventCompletions || [],
+      flightLogEntries: fallbackFlightLogEntries,
+      configVersions: [],
+      currencyDefinitions: fallbackCurrencyDefinitions,
+    });
     const snapshotWithArchiveLogbook = {
       ...snapshot,
       flightLogEntries: fallbackFlightLogEntries,
+      currencyDefinitions: fallbackCurrencyDefinitions,
+      masterCurrencies: Array.isArray(fallbackCurrencyDefinitions.masterCurrencies) ? fallbackCurrencyDefinitions.masterCurrencies : [],
+      currencyRequirements: Array.isArray(fallbackCurrencyDefinitions.currencyRequirements) ? fallbackCurrencyDefinitions.currencyRequirements : [],
       archiveLogbookDiagnostics: fallbackLogbookDiagnostics,
+      archiveCompletenessDiagnostics: fallbackCompletenessDiagnostics,
     };
     const fallbackResponse = {
       success: true,
@@ -18188,25 +18375,32 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       snapshot: snapshotWithArchiveLogbook,
       archive: null,
       scheduleEvents: fallbackScheduleEvents,
-      staffEvents: snapshot.staffEvents || [],
-      traineeEvents: snapshot.traineeEvents || [],
-      trainingReports: Object.values(snapshot.pt051Assessments || {}),
+      staffEvents: fallbackStaffEvents,
+      traineeEvents: fallbackTraineeEvents,
+      trainingReports: fallbackTrainingReports,
       trainingReportVersions: [],
       traineeProfiles: fallbackTraineeProfiles,
       staffProfiles: fallbackStaffProfiles,
       lmpCompletedIds: snapshot.lmpCompletedIds || {},
       staffCurrency: snapshot.staffCurrency || {},
+      currencyDefinitions: fallbackCurrencyDefinitions,
+      masterCurrencies: Array.isArray(fallbackCurrencyDefinitions.masterCurrencies) ? fallbackCurrencyDefinitions.masterCurrencies : [],
+      currencyRequirements: Array.isArray(fallbackCurrencyDefinitions.currencyRequirements) ? fallbackCurrencyDefinitions.currencyRequirements : [],
       staffLogbook: snapshot.staffLogbook || {},
       aircraftConfigState: snapshot.aircraftConfigState || {},
       flightLogEntries: fallbackFlightLogEntries,
       archiveLogbookDiagnostics: fallbackLogbookDiagnostics,
+      archiveCompletenessDiagnostics: fallbackCompletenessDiagnostics,
       assembledAt: new Date().toISOString(),
       durationMs: Date.now() - startedAt,
     };
     await writeArchiveDiagnostic(db, 'ARCHIVE_HISTORICAL_DFP_READ', snapshot.date, parsed.date, 'fallback', {
       source: fallbackResponse.source,
       scheduleEvents: fallbackResponse.scheduleEvents.length,
+      staffEvents: fallbackResponse.staffEvents.length,
+      traineeEvents: fallbackResponse.traineeEvents.length,
       trainingReports: fallbackResponse.trainingReports.length,
+      archiveCompletenessDiagnostics: fallbackCompletenessDiagnostics,
     }, fallbackResponse.durationMs);
     res.json(fallbackResponse);
   } catch (error) {
