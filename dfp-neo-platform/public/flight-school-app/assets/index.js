@@ -141311,6 +141311,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           }
         );
       case "Staff":
+      case "Instructors":
         logRoutineAppDebug(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           StaffView,
@@ -141439,7 +141440,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             selfOnlyProfile: !hasFullStaffRosterAccess ? currentUserStaffProfile : null
           }
         );
-      case "Instructors":
+      case "LegacyInstructors":
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           InstructorListView,
           {

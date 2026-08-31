@@ -50644,6 +50644,7 @@ appliedUpdates.forEach(update => {
                             }}
                         />;
             case 'Staff':
+            case 'Instructors':
                 logRoutineAppDebug(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
                 return <StaffView
                             onClose={handleCloseStaffView}
@@ -50779,7 +50780,7 @@ appliedUpdates.forEach(update => {
                             canUsePlatformPermission={canUsePlatformPermission}
                             selfOnlyProfile={!hasFullStaffRosterAccess ? currentUserStaffProfile : null}
                         />;
-            case 'Instructors':
+            case 'LegacyInstructors':
                 return <InstructorListView
                             onClose={() => handleNavigation('Program Schedule')}
                             events={events}
