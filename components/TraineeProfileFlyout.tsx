@@ -675,11 +675,22 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
       activeInstructorDisplayLabel,
     );
     const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
+    const isArchiveProfile = (trainee as any)._dataSource === 'archive';
+    const archivedLogbookEntries = useMemo(() => (
+        Array.isArray((trainee as any).archivedLogbookEntries)
+            ? [...(trainee as any).archivedLogbookEntries]
+            : []
+    ), [trainee]);
 
     useEffect(() => {
         if (activeTab !== 'review') return;
         setReviewLogbookLoading(true);
         setReviewLogbookError(null);
+        if (isArchiveProfile) {
+            setReviewLogbookEntries(archivedLogbookEntries);
+            setReviewLogbookLoading(false);
+            return;
+        }
         fetch(`/api/flight-log?personName=${encodeURIComponent(trainee.fullName)}`, { credentials: 'include' })
             .then(response => response.ok ? response.json() : Promise.reject(new Error('Failed to load logbook rows')))
             .then((json: any) => {
@@ -698,13 +709,18 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 setReviewLogbookError('Could not load post-flight logbook entries.');
                 setReviewLogbookLoading(false);
             });
-    }, [activeTab, trainee.fullName]);
+    }, [activeTab, archivedLogbookEntries, isArchiveProfile, trainee.fullName]);
 
     useEffect(() => {
         if (activeTab !== 'logbook') return;
         setLogbookLoading(true);
         setLogbookError(null);
         setLogbookMonth(new Date().toISOString().slice(0, 7));
+        if (isArchiveProfile) {
+            setLogbookEntries(archivedLogbookEntries);
+            setLogbookLoading(false);
+            return;
+        }
         fetch(`/api/flight-log?personName=${encodeURIComponent(trainee.fullName)}`, { credentials: 'include' })
             .then(response => response.ok ? response.json() : Promise.reject(new Error('Failed to load logbook rows')))
             .then((json: any) => {
@@ -723,7 +739,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 setLogbookError('Could not load logbook data.');
                 setLogbookLoading(false);
             });
-    }, [activeTab, trainee.fullName]);
+    }, [activeTab, archivedLogbookEntries, isArchiveProfile, trainee.fullName]);
 
     const reviewData = useMemo(() => {
         const traineeScores = [...(scores.get(trainee.fullName) || [])].sort((a, b) => {

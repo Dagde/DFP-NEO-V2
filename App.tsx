@@ -5342,6 +5342,45 @@ const normalisePersonnelRecord = (person: any): any => {
     };
 };
 
+const normaliseArchiveLogbookIdentity = (value: unknown): string => (
+    String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9@.]/g, '')
+);
+
+const getArchivedLogbookEntriesForProfile = (profile: any, entries: any[]): any[] => {
+    if (!profile || !Array.isArray(entries) || entries.length === 0) return [];
+    const profileIds = [
+        profile.id,
+        profile.idNumber,
+        profile.personnelId,
+        profile.staffRecordId,
+        profile.traineeRecordId,
+        profile.userId,
+    ].map(normaliseArchiveLogbookIdentity).filter(Boolean);
+    const profileNames = [
+        profile.name,
+        profile.fullName,
+        profile.displayName,
+    ].map(normaliseArchiveLogbookIdentity).filter(Boolean);
+
+    return entries
+        .filter((entry: any) => {
+            const entryIds = [
+                entry.personnelId,
+                entry.traineeId,
+                entry.userId,
+            ].map(normaliseArchiveLogbookIdentity).filter(Boolean);
+            if (entryIds.some(id => profileIds.includes(id))) return true;
+            const entryName = normaliseArchiveLogbookIdentity(entry.personName);
+            return Boolean(entryName && profileNames.includes(entryName));
+        })
+        .sort((left: any, right: any) => {
+            const leftDate = String(left?.eventDate || '');
+            const rightDate = String(right?.eventDate || '');
+            if (leftDate !== rightDate) return leftDate.localeCompare(rightDate);
+            return String(left?.eventCode || '').localeCompare(String(right?.eventCode || ''));
+        });
+};
+
 const formatApiErrorMessage = (fallback: string, status?: number, data?: any): string => {
     const source = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
     const primary = String(source.message || source.details || source.error || '').trim();
@@ -29230,11 +29269,13 @@ const App: React.FC = () => {
         const snapshotTraineeProfiles = Array.isArray(snap.traineeProfiles) ? snap.traineeProfiles : [];
         const snapshotStaffCurrency = snap.staffCurrency && typeof snap.staffCurrency === 'object' ? snap.staffCurrency : {};
         const snapshotLmpCompletedIds = snap.lmpCompletedIds && typeof snap.lmpCompletedIds === 'object' ? snap.lmpCompletedIds : {};
+        const snapshotFlightLogEntries = Array.isArray(snap.flightLogEntries) ? snap.flightLogEntries : [];
         if (
             snapshotStaffProfiles.length > 0 ||
             snapshotTraineeProfiles.length > 0 ||
             Object.keys(snapshotStaffCurrency).length > 0 ||
-            Object.keys(snapshotLmpCompletedIds).length > 0
+            Object.keys(snapshotLmpCompletedIds).length > 0 ||
+            snapshotFlightLogEntries.length > 0
         ) {
             setHistoricalDfpContextByDate(prev => ({
                 ...prev,
@@ -29243,6 +29284,7 @@ const App: React.FC = () => {
                     traineeProfiles: snapshotTraineeProfiles,
                     staffCurrency: snapshotStaffCurrency,
                     lmpCompletedIds: snapshotLmpCompletedIds,
+                    flightLogEntries: snapshotFlightLogEntries,
                     snapshotSource: snap.snapshotSource || source,
                     snapshotKey: snap.date || '',
                 },
@@ -29256,6 +29298,7 @@ const App: React.FC = () => {
                 traineeProfiles: snapshotTraineeProfiles.length,
                 staffCurrencyPeople: Object.keys(snapshotStaffCurrency).length,
                 lmpPeople: Object.keys(snapshotLmpCompletedIds).length,
+                flightLogEntries: snapshotFlightLogEntries.length,
             });
         }
 
@@ -29841,6 +29884,7 @@ const App: React.FC = () => {
         traineeProfiles: any[];
         staffCurrency: Record<string, any[]>;
         lmpCompletedIds: Record<string, string[]>;
+        flightLogEntries: any[];
         snapshotSource?: string;
         snapshotKey?: string;
     }>>({});
@@ -29851,9 +29895,13 @@ const App: React.FC = () => {
             : [];
         if (staffProfiles.length === 0) return [];
         const staffCurrency = activeHistoricalDfpContext?.staffCurrency || {};
+        const flightLogEntries = Array.isArray(activeHistoricalDfpContext?.flightLogEntries)
+            ? activeHistoricalDfpContext.flightLogEntries
+            : [];
         return staffProfiles.map((profile: any) => normalisePersonnelRecord({
             ...profile,
             _dataSource: 'archive',
+            archivedLogbookEntries: getArchivedLogbookEntriesForProfile(profile, flightLogEntries),
             currencyStatus: Array.isArray(profile.currencyStatus) && profile.currencyStatus.length > 0
                 ? profile.currencyStatus
                 : staffCurrency[profile.name] || staffCurrency[profile.fullName] || [],
@@ -29864,9 +29912,13 @@ const App: React.FC = () => {
             ? activeHistoricalDfpContext.traineeProfiles
             : [];
         if (traineeProfiles.length === 0) return [];
+        const flightLogEntries = Array.isArray(activeHistoricalDfpContext?.flightLogEntries)
+            ? activeHistoricalDfpContext.flightLogEntries
+            : [];
         return traineeProfiles.map((profile: any) => normalisePersonnelRecord({
             ...profile,
             _dataSource: 'archive',
+            archivedLogbookEntries: getArchivedLogbookEntriesForProfile(profile, flightLogEntries),
             currencyStatus: Array.isArray(profile.currencyStatus) ? profile.currencyStatus : [],
         }) as Trainee);
     }, [activeHistoricalDfpContext]);

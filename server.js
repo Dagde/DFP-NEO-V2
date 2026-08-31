@@ -17951,12 +17951,20 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         archivedEventIds
       ).catch(() => []);
       const completionRows = await db.$queryRawUnsafe(
-        `SELECT * FROM "EventCompletion" WHERE "eventDate" = $1::text ORDER BY "startTime" ASC, "traineeFullName" ASC LIMIT 5000`,
-        archive.date
+        `SELECT * FROM "EventCompletion"
+         WHERE "eventDate" = $1::text OR "scheduleEventId" = ANY($2::text[])
+         ORDER BY "startTime" ASC, "traineeFullName" ASC
+         LIMIT 5000`,
+        archive.date,
+        archivedEventIds
       ).catch(() => []);
       const flightLogRows = await db.$queryRawUnsafe(
-        `SELECT * FROM "FlightLogEntry" WHERE "eventDate" = $1::text ORDER BY "personName" ASC, "startTime" ASC NULLS LAST LIMIT 5000`,
-        archive.date
+        `SELECT * FROM "FlightLogEntry"
+         WHERE "eventDate" = $1::text OR "scheduleEventId" = ANY($2::text[])
+         ORDER BY "personName" ASC, "eventDate" ASC, "createdAt" ASC
+         LIMIT 5000`,
+        archive.date,
+        archivedEventIds
       ).catch(() => []);
       const trainingReportVersions = await db.$queryRawUnsafe(
         `SELECT "eventId", "traineeId", "traineeFullName", "reportDate", "action", "versionHash", "reportData", "changedBy", "changedAt"

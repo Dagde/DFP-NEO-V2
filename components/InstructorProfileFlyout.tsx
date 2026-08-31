@@ -1092,12 +1092,23 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [logbookError, setLogbookError] = useState<string | null>(null);
   // Month navigator: null = show all, 'YYYY-MM' for specific month
   const [logbookMonth, setLogbookMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+  const isArchiveProfile = (instructor as any)._dataSource === 'archive';
+  const archivedLogbookEntries = useMemo(() => (
+    Array.isArray((instructor as any).archivedLogbookEntries)
+      ? [...(instructor as any).archivedLogbookEntries]
+      : []
+  ), [instructor]);
 
   useEffect(() => {
     if (activeTab !== 'logbook') return;
     setLogbookLoading(true);
     setLogbookError(null);
     setLogbookMonth(new Date().toISOString().slice(0, 7)); // Reset to current month each time tab opens
+    if (isArchiveProfile) {
+      setLogbookEntries(archivedLogbookEntries);
+      setLogbookLoading(false);
+      return;
+    }
     // Use the full instructor.name as stored in personName field of FlightLogEntry
     const fullName = instructor.name;
     fetch(`/api/flight-log?personName=${encodeURIComponent(fullName)}`, { credentials: 'include' })
@@ -1113,7 +1124,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         setLogbookError('Could not load logbook data.');
         setLogbookLoading(false);
       });
-  }, [activeTab, instructor.name]);
+  }, [activeTab, archivedLogbookEntries, instructor.name, isArchiveProfile]);
 
   // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
   const [currencyEditState, setCurrencyEditState] = useState<{
@@ -1125,7 +1136,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   // Uses a ref to ensure the value persists across renders and instructor prop changes
   const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
   const localCurrencyStatusRef = useRef<PersonCurrencyStatus[] | undefined>(undefined);
-  const isArchiveCurrencyProfile = (instructor as any)._dataSource === 'archive';
+  const isArchiveCurrencyProfile = isArchiveProfile;
   // Audit flyout visibility
   const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
 

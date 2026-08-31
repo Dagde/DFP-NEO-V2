@@ -27093,10 +27093,17 @@ const TraineeProfileFlyout = ({
     activeInstructorDisplayLabel
   );
   const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
+  const isArchiveProfile = trainee._dataSource === "archive";
+  const archivedLogbookEntries = reactExports.useMemo(() => Array.isArray(trainee.archivedLogbookEntries) ? [...trainee.archivedLogbookEntries] : [], [trainee]);
   reactExports.useEffect(() => {
     if (activeTab !== "review") return;
     setReviewLogbookLoading(true);
     setReviewLogbookError(null);
+    if (isArchiveProfile) {
+      setReviewLogbookEntries(archivedLogbookEntries);
+      setReviewLogbookLoading(false);
+      return;
+    }
     fetch(`/api/flight-log?personName=${encodeURIComponent(trainee.fullName)}`, { credentials: "include" }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Failed to load logbook rows"))).then((json) => {
       const entries = Array.isArray(json?.entries) ? json.entries : [];
       entries.sort((a, b) => {
@@ -27112,12 +27119,17 @@ const TraineeProfileFlyout = ({
       setReviewLogbookError("Could not load post-flight logbook entries.");
       setReviewLogbookLoading(false);
     });
-  }, [activeTab, trainee.fullName]);
+  }, [activeTab, archivedLogbookEntries, isArchiveProfile, trainee.fullName]);
   reactExports.useEffect(() => {
     if (activeTab !== "logbook") return;
     setLogbookLoading(true);
     setLogbookError(null);
     setLogbookMonth((/* @__PURE__ */ new Date()).toISOString().slice(0, 7));
+    if (isArchiveProfile) {
+      setLogbookEntries(archivedLogbookEntries);
+      setLogbookLoading(false);
+      return;
+    }
     fetch(`/api/flight-log?personName=${encodeURIComponent(trainee.fullName)}`, { credentials: "include" }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Failed to load logbook rows"))).then((json) => {
       const entries = Array.isArray(json?.entries) ? json.entries : [];
       entries.sort((a, b) => {
@@ -27133,7 +27145,7 @@ const TraineeProfileFlyout = ({
       setLogbookError("Could not load logbook data.");
       setLogbookLoading(false);
     });
-  }, [activeTab, trainee.fullName]);
+  }, [activeTab, archivedLogbookEntries, isArchiveProfile, trainee.fullName]);
   const reviewData = reactExports.useMemo(() => {
     const traineeScores = [...scores.get(trainee.fullName) || []].sort((a, b) => {
       const dateCompare = String(a.date || "").localeCompare(String(b.date || ""));
@@ -60397,11 +60409,18 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
   const [logbookLoading, setLogbookLoading] = reactExports.useState(false);
   const [logbookError, setLogbookError] = reactExports.useState(null);
   const [logbookMonth, setLogbookMonth] = reactExports.useState((/* @__PURE__ */ new Date()).toISOString().slice(0, 7));
+  const isArchiveProfile = instructor._dataSource === "archive";
+  const archivedLogbookEntries = reactExports.useMemo(() => Array.isArray(instructor.archivedLogbookEntries) ? [...instructor.archivedLogbookEntries] : [], [instructor]);
   reactExports.useEffect(() => {
     if (activeTab !== "logbook") return;
     setLogbookLoading(true);
     setLogbookError(null);
     setLogbookMonth((/* @__PURE__ */ new Date()).toISOString().slice(0, 7));
+    if (isArchiveProfile) {
+      setLogbookEntries(archivedLogbookEntries);
+      setLogbookLoading(false);
+      return;
+    }
     const fullName = instructor.name;
     fetch(`/api/flight-log?personName=${encodeURIComponent(fullName)}`, { credentials: "include" }).then((r) => r.ok ? r.json() : Promise.reject("Failed")).then((json) => {
       const entries = (json.entries || []).sort(
@@ -60413,11 +60432,11 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
       setLogbookError("Could not load logbook data.");
       setLogbookLoading(false);
     });
-  }, [activeTab, instructor.name]);
+  }, [activeTab, archivedLogbookEntries, instructor.name, isArchiveProfile]);
   const [currencyEditState, setCurrencyEditState] = reactExports.useState(null);
   const [localCurrencyStatus, setLocalCurrencyStatus] = reactExports.useState(void 0);
   const localCurrencyStatusRef = reactExports.useRef(void 0);
-  const isArchiveCurrencyProfile = instructor._dataSource === "archive";
+  const isArchiveCurrencyProfile = isArchiveProfile;
   const [showCurrencyAudit, setShowCurrencyAudit] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (profileInitialTab) {
@@ -104500,6 +104519,38 @@ const normalisePersonnelRecord = (person) => {
     }
   };
 };
+const normaliseArchiveLogbookIdentity = (value) => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9@.]/g, "");
+const getArchivedLogbookEntriesForProfile = (profile, entries) => {
+  if (!profile || !Array.isArray(entries) || entries.length === 0) return [];
+  const profileIds = [
+    profile.id,
+    profile.idNumber,
+    profile.personnelId,
+    profile.staffRecordId,
+    profile.traineeRecordId,
+    profile.userId
+  ].map(normaliseArchiveLogbookIdentity).filter(Boolean);
+  const profileNames = [
+    profile.name,
+    profile.fullName,
+    profile.displayName
+  ].map(normaliseArchiveLogbookIdentity).filter(Boolean);
+  return entries.filter((entry) => {
+    const entryIds = [
+      entry.personnelId,
+      entry.traineeId,
+      entry.userId
+    ].map(normaliseArchiveLogbookIdentity).filter(Boolean);
+    if (entryIds.some((id) => profileIds.includes(id))) return true;
+    const entryName = normaliseArchiveLogbookIdentity(entry.personName);
+    return Boolean(entryName && profileNames.includes(entryName));
+  }).sort((left, right) => {
+    const leftDate = String(left?.eventDate || "");
+    const rightDate = String(right?.eventDate || "");
+    if (leftDate !== rightDate) return leftDate.localeCompare(rightDate);
+    return String(left?.eventCode || "").localeCompare(String(right?.eventCode || ""));
+  });
+};
 const formatApiErrorMessage = (fallback, status, data) => {
   const source = data && typeof data === "object" && !Array.isArray(data) ? data : {};
   const primary = String(source.message || source.details || source.error || "").trim();
@@ -123605,7 +123656,8 @@ const App = () => {
     const snapshotTraineeProfiles = Array.isArray(snap2.traineeProfiles) ? snap2.traineeProfiles : [];
     const snapshotStaffCurrency = snap2.staffCurrency && typeof snap2.staffCurrency === "object" ? snap2.staffCurrency : {};
     const snapshotLmpCompletedIds = snap2.lmpCompletedIds && typeof snap2.lmpCompletedIds === "object" ? snap2.lmpCompletedIds : {};
-    if (snapshotStaffProfiles.length > 0 || snapshotTraineeProfiles.length > 0 || Object.keys(snapshotStaffCurrency).length > 0 || Object.keys(snapshotLmpCompletedIds).length > 0) {
+    const snapshotFlightLogEntries = Array.isArray(snap2.flightLogEntries) ? snap2.flightLogEntries : [];
+    if (snapshotStaffProfiles.length > 0 || snapshotTraineeProfiles.length > 0 || Object.keys(snapshotStaffCurrency).length > 0 || Object.keys(snapshotLmpCompletedIds).length > 0 || snapshotFlightLogEntries.length > 0) {
       setHistoricalDfpContextByDate((prev) => ({
         ...prev,
         [targetDate]: {
@@ -123613,6 +123665,7 @@ const App = () => {
           traineeProfiles: snapshotTraineeProfiles,
           staffCurrency: snapshotStaffCurrency,
           lmpCompletedIds: snapshotLmpCompletedIds,
+          flightLogEntries: snapshotFlightLogEntries,
           snapshotSource: snap2.snapshotSource || source,
           snapshotKey: snap2.date || ""
         }
@@ -123625,7 +123678,8 @@ const App = () => {
         staffProfiles: snapshotStaffProfiles.length,
         traineeProfiles: snapshotTraineeProfiles.length,
         staffCurrencyPeople: Object.keys(snapshotStaffCurrency).length,
-        lmpPeople: Object.keys(snapshotLmpCompletedIds).length
+        lmpPeople: Object.keys(snapshotLmpCompletedIds).length,
+        flightLogEntries: snapshotFlightLogEntries.length
       });
     }
     const snapshotEventCompletions = Array.isArray(snap2.eventCompletions) ? snap2.eventCompletions : [];
@@ -124145,18 +124199,22 @@ const App = () => {
     const staffProfiles = Array.isArray(activeHistoricalDfpContext?.staffProfiles) ? activeHistoricalDfpContext.staffProfiles : [];
     if (staffProfiles.length === 0) return [];
     const staffCurrency = activeHistoricalDfpContext?.staffCurrency || {};
+    const flightLogEntries = Array.isArray(activeHistoricalDfpContext?.flightLogEntries) ? activeHistoricalDfpContext.flightLogEntries : [];
     return staffProfiles.map((profile) => normalisePersonnelRecord({
       ...profile,
       _dataSource: "archive",
+      archivedLogbookEntries: getArchivedLogbookEntriesForProfile(profile, flightLogEntries),
       currencyStatus: Array.isArray(profile.currencyStatus) && profile.currencyStatus.length > 0 ? profile.currencyStatus : staffCurrency[profile.name] || staffCurrency[profile.fullName] || []
     }));
   }, [activeHistoricalDfpContext]);
   const historicalTraineesDataForDate = reactExports.useMemo(() => {
     const traineeProfiles = Array.isArray(activeHistoricalDfpContext?.traineeProfiles) ? activeHistoricalDfpContext.traineeProfiles : [];
     if (traineeProfiles.length === 0) return [];
+    const flightLogEntries = Array.isArray(activeHistoricalDfpContext?.flightLogEntries) ? activeHistoricalDfpContext.flightLogEntries : [];
     return traineeProfiles.map((profile) => normalisePersonnelRecord({
       ...profile,
       _dataSource: "archive",
+      archivedLogbookEntries: getArchivedLogbookEntriesForProfile(profile, flightLogEntries),
       currencyStatus: Array.isArray(profile.currencyStatus) ? profile.currencyStatus : []
     }));
   }, [activeHistoricalDfpContext]);
