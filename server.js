@@ -1068,6 +1068,8 @@ async function runPrismaRuntimeMaintenance(db) {
     await migrateIndividualLmpOverlays(db);
     // Ensure DailySnapshot table exists (create if missing)
     await ensureDailySnapshotTable(db);
+    // Ensure compact archive tables exist for long-term historical reconstruction.
+    await ensureArchiveVersionTables(db);
     // Ensure instructor fields are TEXT[] arrays (migrate from String if needed)
     try {
       await ensureInstructorArrayColumns(db);
@@ -16634,6 +16636,387 @@ async function ensureDailySnapshotTable(db) {
   }
 }
 
+async function ensureArchiveVersionTables(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PublishedDfpArchive" (
+        "id" TEXT NOT NULL,
+        "snapshotKey" TEXT NOT NULL,
+        "date" TEXT NOT NULL,
+        "organisationCode" TEXT,
+        "locationCode" TEXT,
+        "unitCode" TEXT,
+        "school" TEXT,
+        "scheduleHash" TEXT NOT NULL,
+        "eventCount" INTEGER NOT NULL DEFAULT 0,
+        "configRefs" JSONB NOT NULL DEFAULT '{}',
+        "compactSnapshot" JSONB NOT NULL DEFAULT '{}',
+        "publishedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "publishedBy" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "PublishedDfpArchive_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PublishedDfpArchive_snapshotKey_key" ON "PublishedDfpArchive"("snapshotKey");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PublishedDfpArchive_date_idx" ON "PublishedDfpArchive"("date");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PublishedDfpArchive_unitCode_idx" ON "PublishedDfpArchive"("unitCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PublishedDfpArchive_locationCode_idx" ON "PublishedDfpArchive"("locationCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PublishedDfpArchive_organisationCode_idx" ON "PublishedDfpArchive"("organisationCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PublishedDfpArchive_publishedAt_idx" ON "PublishedDfpArchive"("publishedAt");`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ScheduleEventArchive" (
+        "id" TEXT NOT NULL,
+        "archiveId" TEXT NOT NULL,
+        "snapshotKey" TEXT NOT NULL,
+        "eventId" TEXT NOT NULL,
+        "date" TEXT NOT NULL,
+        "eventType" TEXT NOT NULL,
+        "eventCode" TEXT,
+        "resourceId" TEXT,
+        "startTime" DOUBLE PRECISION,
+        "duration" DOUBLE PRECISION,
+        "personnelRefs" JSONB NOT NULL DEFAULT '[]',
+        "eventData" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ScheduleEventArchive_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ScheduleEventArchive_archiveId_eventId_key" ON "ScheduleEventArchive"("archiveId", "eventId");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ScheduleEventArchive_archiveId_idx" ON "ScheduleEventArchive"("archiveId");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ScheduleEventArchive_snapshotKey_idx" ON "ScheduleEventArchive"("snapshotKey");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ScheduleEventArchive_date_idx" ON "ScheduleEventArchive"("date");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ScheduleEventArchive_eventType_idx" ON "ScheduleEventArchive"("eventType");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ScheduleEventArchive_eventCode_idx" ON "ScheduleEventArchive"("eventCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ScheduleEventArchive_resourceId_idx" ON "ScheduleEventArchive"("resourceId");`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ConfigVersionArchive" (
+        "id" TEXT NOT NULL,
+        "scopeKey" TEXT NOT NULL,
+        "configType" TEXT NOT NULL,
+        "contentHash" TEXT NOT NULL,
+        "effectiveFrom" TEXT NOT NULL,
+        "effectiveTo" TEXT,
+        "content" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "createdBy" TEXT,
+        CONSTRAINT "ConfigVersionArchive_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ConfigVersionArchive_scope_type_hash_key" ON "ConfigVersionArchive"("scopeKey", "configType", "contentHash");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ConfigVersionArchive_scopeKey_idx" ON "ConfigVersionArchive"("scopeKey");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ConfigVersionArchive_configType_idx" ON "ConfigVersionArchive"("configType");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ConfigVersionArchive_effectiveFrom_idx" ON "ConfigVersionArchive"("effectiveFrom");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ConfigVersionArchive_effectiveTo_idx" ON "ConfigVersionArchive"("effectiveTo");`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ArchiveDiagnosticLog" (
+        "id" TEXT NOT NULL,
+        "action" TEXT NOT NULL,
+        "snapshotKey" TEXT,
+        "date" TEXT,
+        "status" TEXT NOT NULL,
+        "details" JSONB NOT NULL DEFAULT '{}',
+        "durationMs" INTEGER NOT NULL DEFAULT 0,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ArchiveDiagnosticLog_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ArchiveDiagnosticLog_action_idx" ON "ArchiveDiagnosticLog"("action");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ArchiveDiagnosticLog_snapshotKey_idx" ON "ArchiveDiagnosticLog"("snapshotKey");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ArchiveDiagnosticLog_date_idx" ON "ArchiveDiagnosticLog"("date");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ArchiveDiagnosticLog_status_idx" ON "ArchiveDiagnosticLog"("status");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ArchiveDiagnosticLog_createdAt_idx" ON "ArchiveDiagnosticLog"("createdAt");`);
+    console.log('✅ Archive version tables ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure archive version tables:', err.message);
+  }
+}
+
+function hashArchiveContent(value) {
+  return crypto
+    .createHash('sha256')
+    .update(JSON.stringify(value ?? null))
+    .digest('hex');
+}
+
+function compactArchiveProfile(profile) {
+  if (!profile || typeof profile !== 'object') return null;
+  return {
+    id: profile.id || null,
+    userId: profile.userId || null,
+    idNumber: profile.idNumber ?? null,
+    name: profile.name || profile.fullName || null,
+    fullName: profile.fullName || profile.name || null,
+    rank: profile.rank || null,
+    role: profile.role || null,
+    unit: profile.unit || null,
+    flight: profile.flight || null,
+    course: profile.course || null,
+    location: profile.location || null,
+    category: profile.category || null,
+    callsign: profile.callsign || profile.traineeCallsign || profile.callsignNumber || null,
+    isActive: profile.isActive !== false,
+  };
+}
+
+function getArchiveEventStableId(event, date, index) {
+  const existing = String(event?.id || event?.eventId || '').trim();
+  if (existing) return existing.slice(0, 220);
+  return [
+    'archive-event',
+    date,
+    event?.type || 'event',
+    event?.resourceId || 'resource',
+    event?.flightNumber || event?.eventCode || 'code',
+    event?.startTime ?? 'time',
+    index,
+  ].join('-').replace(/[^a-zA-Z0-9_.:-]+/g, '-').slice(0, 220);
+}
+
+function getArchiveEventPersonnelRefs(event) {
+  if (Array.isArray(event?.personnelRefs)) return event.personnelRefs;
+  const refs = [];
+  const add = (role, label, idNumber, id) => {
+    const cleanLabel = String(label || '').trim();
+    if (!cleanLabel && !idNumber && !id) return;
+    refs.push({
+      role,
+      label: cleanLabel || null,
+      idNumber: idNumber ?? null,
+      id: id || null,
+    });
+  };
+  add('instructor', event?.instructor, event?.instructorIdNumber, event?.instructorId);
+  add('student', event?.student, event?.traineeId, event?.studentId);
+  add('pilot', event?.pilot, event?.pilotIdNumber, event?.pilotId);
+  add('crew', event?.crew, event?.crewIdNumber, event?.crewId);
+  return refs;
+}
+
+function buildArchiveScopeFromSnapshotPayload(date, payload = {}) {
+  const parsed = parseDailySnapshotDateKey(date);
+  const sampleEvents = [
+    ...(Array.isArray(payload.scheduleEvents) ? payload.scheduleEvents : []),
+    ...(Array.isArray(payload.staffEvents) ? payload.staffEvents : []),
+    ...(Array.isArray(payload.traineeEvents) ? payload.traineeEvents : []),
+  ];
+  const firstEvent = sampleEvents.find(event => event && typeof event === 'object') || {};
+  const unitCode = parsed.unit || firstEvent.unit || firstEvent.unitCode || null;
+  const locationCode = firstEvent.locationCode || firstEvent.location || null;
+  const school = parsed.school || firstEvent.origin || firstEvent.school || null;
+  return {
+    snapshotKey: String(date || '').trim(),
+    date: parsed.date || String(date || '').trim(),
+    organisationCode: firstEvent.organisationCode || firstEvent.orgId || null,
+    locationCode,
+    unitCode,
+    school,
+    scopeKey: [
+      firstEvent.organisationCode || firstEvent.orgId || 'default-org',
+      locationCode || school || 'default-location',
+      unitCode || 'default-unit',
+    ].join('|'),
+  };
+}
+
+async function writeArchiveDiagnostic(db, action, snapshotKey, date, status, details = {}, durationMs = 0) {
+  try {
+    await db.$executeRawUnsafe(`
+      INSERT INTO "ArchiveDiagnosticLog"
+        ("id", "action", "snapshotKey", "date", "status", "details", "durationMs", "createdAt")
+      VALUES ($1::text, $2::text, $3::text, $4::text, $5::text, $6::jsonb, $7::integer, NOW())
+    `,
+      crypto.randomUUID(),
+      action,
+      snapshotKey || null,
+      date || null,
+      status,
+      JSON.stringify(details || {}),
+      Math.max(0, Math.round(durationMs || 0))
+    );
+  } catch (err) {
+    console.warn('[Archive] diagnostic write failed:', err.message);
+  }
+}
+
+async function saveArchiveConfigVersion(db, scopeKey, configType, effectiveFrom, content, createdBy) {
+  const contentHash = hashArchiveContent(content);
+  const id = crypto.randomUUID();
+  await db.$executeRawUnsafe(`
+    INSERT INTO "ConfigVersionArchive"
+      ("id", "scopeKey", "configType", "contentHash", "effectiveFrom", "content", "createdBy", "createdAt")
+    VALUES ($1::text, $2::text, $3::text, $4::text, $5::text, $6::jsonb, $7::text, NOW())
+    ON CONFLICT ("scopeKey", "configType", "contentHash") DO NOTHING
+  `,
+    id,
+    scopeKey,
+    configType,
+    contentHash,
+    effectiveFrom,
+    JSON.stringify(content ?? null),
+    createdBy || null
+  );
+  const rows = await db.$queryRawUnsafe(`
+    SELECT id, "contentHash", "effectiveFrom", "createdAt"
+    FROM "ConfigVersionArchive"
+    WHERE "scopeKey" = $1::text AND "configType" = $2::text AND "contentHash" = $3::text
+    LIMIT 1
+  `, scopeKey, configType, contentHash);
+  return rows?.[0] || { id, contentHash, effectiveFrom };
+}
+
+async function saveCompactPublishedDfpArchive(db, payload) {
+  const startedAt = Date.now();
+  const context = buildArchiveScopeFromSnapshotPayload(payload.date, payload);
+  const scheduleEvents = Array.isArray(payload.scheduleEvents) ? payload.scheduleEvents : [];
+  const staffEvents = Array.isArray(payload.staffEvents) ? payload.staffEvents : [];
+  const traineeEvents = Array.isArray(payload.traineeEvents) ? payload.traineeEvents : [];
+  const scheduleHash = hashArchiveContent(scheduleEvents);
+  const compactStaffProfiles = (Array.isArray(payload.staffProfiles) ? payload.staffProfiles : [])
+    .map(compactArchiveProfile)
+    .filter(Boolean);
+  const compactTraineeProfiles = (Array.isArray(payload.traineeProfiles) ? payload.traineeProfiles : [])
+    .map(compactArchiveProfile)
+    .filter(Boolean);
+
+  const configVersions = {};
+  const configPayloads = {
+    aircraftConfigState: payload.aircraftConfigState || {},
+    staffRosterState: compactStaffProfiles,
+    traineeRosterState: compactTraineeProfiles,
+    lmpCompletionState: payload.lmpCompletedIds || {},
+    staffCurrencyState: payload.staffCurrency || {},
+  };
+  for (const [configType, content] of Object.entries(configPayloads)) {
+    configVersions[configType] = await saveArchiveConfigVersion(
+      db,
+      context.scopeKey,
+      configType,
+      context.date,
+      content,
+      payload.savedBy
+    );
+  }
+
+  const compactSnapshot = {
+    snapshotKey: context.snapshotKey,
+    date: context.date,
+    school: context.school,
+    unitCode: context.unitCode,
+    locationCode: context.locationCode,
+    eventCount: scheduleEvents.length,
+    staffEventCount: staffEvents.length,
+    traineeEventCount: traineeEvents.length,
+    trainingReportCount: payload.pt051Assessments && typeof payload.pt051Assessments === 'object'
+      ? Object.keys(payload.pt051Assessments).length
+      : 0,
+    configVersionIds: Object.fromEntries(Object.entries(configVersions).map(([key, value]) => [key, value?.id || null])),
+  };
+
+  const existing = await db.$queryRawUnsafe(
+    `SELECT id FROM "PublishedDfpArchive" WHERE "snapshotKey" = $1::text LIMIT 1`,
+    context.snapshotKey
+  );
+  const archiveId = existing?.[0]?.id || crypto.randomUUID();
+  if (existing?.length > 0) {
+    await db.$executeRawUnsafe(`
+      UPDATE "PublishedDfpArchive"
+      SET
+        "date" = $1::text,
+        "organisationCode" = $2::text,
+        "locationCode" = $3::text,
+        "unitCode" = $4::text,
+        "school" = $5::text,
+        "scheduleHash" = $6::text,
+        "eventCount" = $7::integer,
+        "configRefs" = $8::jsonb,
+        "compactSnapshot" = $9::jsonb,
+        "publishedAt" = NOW(),
+        "publishedBy" = $10::text,
+        "updatedAt" = NOW()
+      WHERE "snapshotKey" = $11::text
+    `,
+      context.date,
+      context.organisationCode,
+      context.locationCode,
+      context.unitCode,
+      context.school,
+      scheduleHash,
+      scheduleEvents.length,
+      JSON.stringify(configVersions),
+      JSON.stringify(compactSnapshot),
+      payload.savedBy || null,
+      context.snapshotKey
+    );
+  } else {
+    await db.$executeRawUnsafe(`
+      INSERT INTO "PublishedDfpArchive"
+        ("id", "snapshotKey", "date", "organisationCode", "locationCode", "unitCode", "school",
+         "scheduleHash", "eventCount", "configRefs", "compactSnapshot", "publishedAt", "publishedBy", "createdAt", "updatedAt")
+      VALUES ($1::text, $2::text, $3::text, $4::text, $5::text, $6::text, $7::text, $8::text,
+              $9::integer, $10::jsonb, $11::jsonb, NOW(), $12::text, NOW(), NOW())
+    `,
+      archiveId,
+      context.snapshotKey,
+      context.date,
+      context.organisationCode,
+      context.locationCode,
+      context.unitCode,
+      context.school,
+      scheduleHash,
+      scheduleEvents.length,
+      JSON.stringify(configVersions),
+      JSON.stringify(compactSnapshot),
+      payload.savedBy || null
+    );
+  }
+
+  await db.$executeRawUnsafe(
+    `DELETE FROM "ScheduleEventArchive" WHERE "archiveId" = $1::text`,
+    archiveId
+  );
+  for (let index = 0; index < scheduleEvents.length; index++) {
+    const event = scheduleEvents[index] || {};
+    const eventId = getArchiveEventStableId(event, context.date, index);
+    await db.$executeRawUnsafe(`
+      INSERT INTO "ScheduleEventArchive"
+        ("id", "archiveId", "snapshotKey", "eventId", "date", "eventType", "eventCode",
+         "resourceId", "startTime", "duration", "personnelRefs", "eventData", "createdAt")
+      VALUES ($1::text, $2::text, $3::text, $4::text, $5::text, $6::text, $7::text,
+              $8::text, $9, $10, $11::jsonb, $12::jsonb, NOW())
+    `,
+      crypto.randomUUID(),
+      archiveId,
+      context.snapshotKey,
+      eventId,
+      context.date,
+      String(event.type || 'event'),
+      event.flightNumber || event.eventCode || null,
+      event.resourceId || null,
+      Number.isFinite(Number(event.startTime)) ? Number(event.startTime) : null,
+      Number.isFinite(Number(event.duration)) ? Number(event.duration) : null,
+      JSON.stringify(getArchiveEventPersonnelRefs(event)),
+      JSON.stringify(event)
+    );
+  }
+
+  const result = {
+    success: true,
+    archiveId,
+    snapshotKey: context.snapshotKey,
+    date: context.date,
+    eventCount: scheduleEvents.length,
+    scheduleHash,
+    configVersionIds: compactSnapshot.configVersionIds,
+    durationMs: Date.now() - startedAt,
+  };
+  await writeArchiveDiagnostic(db, 'ARCHIVE_PUBLISHED_DFP_SAVE', context.snapshotKey, context.date, 'success', result, result.durationMs);
+  return result;
+}
+
 // ============================================================
 // INSTRUCTOR ARRAY COLUMN MIGRATION
 // ============================================================
@@ -17310,6 +17693,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 
     const { cuid } = await import('@paralleldrive/cuid2').catch(() => ({ cuid: () => Math.random().toString(36).slice(2) }));
     const id = (existing && existing.length > 0) ? existing[0].id : (typeof cuid === 'function' ? cuid() : `snap_${Date.now()}`);
+    const dailySnapshotId = id;
 
     if (existing && existing.length > 0) {
       // Only update baselineEvents if explicitly provided (preserves original published baseline)
@@ -17404,7 +17788,34 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
       console.log(`✅ POST /api/daily-snapshot/save - Created snapshot for ${date}, ${(scheduleEvents||[]).length} events`);
     }
 
-    res.json({ success: true, date, eventCount: (scheduleEvents||[]).length });
+    let archive = { success: false, warning: 'Archive write not attempted' };
+    try {
+      archive = await saveCompactPublishedDfpArchive(db, {
+        date,
+        scheduleEvents,
+        staffEvents,
+        traineeEvents,
+        pt051Assessments,
+        traineeProfiles,
+        staffProfiles,
+        lmpCompletedIds,
+        staffCurrency,
+        staffLogbook,
+        savedBy,
+        baselineEvents,
+        aircraftConfigState,
+        dailySnapshotId,
+      });
+    } catch (archiveError) {
+      archive = { success: false, warning: archiveError.message };
+      await writeArchiveDiagnostic(db, 'ARCHIVE_PUBLISHED_DFP_SAVE', date, parseDailySnapshotDateKey(date).date, 'error', {
+        error: archiveError.message,
+        eventCount: (scheduleEvents || []).length,
+      });
+      console.warn(`⚠️ POST /api/daily-snapshot/save - Compact archive write failed for ${date}:`, archiveError.message);
+    }
+
+    res.json({ success: true, date, eventCount: (scheduleEvents||[]).length, archive });
   } catch (error) {
     console.error('❌ POST /api/daily-snapshot/save error:', error);
     res.status(500).json({ error: 'Failed to save daily snapshot', details: error.message });
@@ -17419,6 +17830,194 @@ function parseDailySnapshotDateKey(rawDate) {
     unit: parts[2] || null,
   };
 }
+
+// GET /api/archive/dfp-date - Reconstruct a historical DFP date from compact archive pieces.
+app.get('/api/archive/dfp-date', async (req, res) => {
+  const startedAt = Date.now();
+  try {
+    const db = await getPrisma();
+    const requestedDate = String(req.query.date || '').slice(0, 10);
+    const requestedSnapshotKey = String(req.query.snapshotKey || '').trim();
+    if (!requestedDate && !requestedSnapshotKey) {
+      return res.status(400).json({ error: 'date or snapshotKey is required' });
+    }
+
+    let archiveRows;
+    if (requestedSnapshotKey) {
+      archiveRows = await db.$queryRawUnsafe(
+        `SELECT * FROM "PublishedDfpArchive" WHERE "snapshotKey" = $1::text LIMIT 1`,
+        requestedSnapshotKey
+      );
+    } else {
+      archiveRows = await db.$queryRawUnsafe(
+        `SELECT * FROM "PublishedDfpArchive" WHERE "date" = $1::text ORDER BY "publishedAt" DESC LIMIT 1`,
+        requestedDate
+      );
+    }
+
+    if (archiveRows?.length > 0) {
+      const archive = archiveRows[0];
+      const eventRows = await db.$queryRawUnsafe(`
+        SELECT "eventId", "date", "eventType", "eventCode", "resourceId", "startTime", "duration", "personnelRefs", "eventData", "createdAt"
+        FROM "ScheduleEventArchive"
+        WHERE "archiveId" = $1::text
+        ORDER BY COALESCE("resourceId", ''), COALESCE("startTime", 0), "eventId"
+      `, archive.id);
+      const configRefs = archive.configRefs && typeof archive.configRefs === 'object' ? archive.configRefs : {};
+      const configIds = Object.values(configRefs)
+        .map(ref => ref?.id)
+        .filter(Boolean);
+      const configVersions = configIds.length > 0
+        ? await db.$queryRawUnsafe(`
+            SELECT id, "scopeKey", "configType", "contentHash", "effectiveFrom", "effectiveTo", "content", "createdAt", "createdBy"
+            FROM "ConfigVersionArchive"
+            WHERE id = ANY($1::text[])
+            ORDER BY "configType"
+          `, configIds)
+        : [];
+      const performanceRows = await db.$queryRawUnsafe(
+        `SELECT * FROM "TraineePerformance" WHERE "date" = $1::text ORDER BY "course" ASC NULLS LAST, "traineeFullName" ASC, "eventSequence" ASC NULLS LAST LIMIT 5000`,
+        archive.date
+      ).catch(() => []);
+      const completionRows = await db.$queryRawUnsafe(
+        `SELECT * FROM "EventCompletion" WHERE "eventDate" = $1::text ORDER BY "startTime" ASC, "traineeFullName" ASC LIMIT 5000`,
+        archive.date
+      ).catch(() => []);
+      const flightLogRows = await db.$queryRawUnsafe(
+        `SELECT * FROM "FlightLogEntry" WHERE "eventDate" = $1::text ORDER BY "personName" ASC, "startTime" ASC NULLS LAST LIMIT 5000`,
+        archive.date
+      ).catch(() => []);
+      const response = {
+        success: true,
+        source: 'compact-archive',
+        date: archive.date,
+        snapshotKey: archive.snapshotKey,
+        archive: {
+          id: archive.id,
+          date: archive.date,
+          snapshotKey: archive.snapshotKey,
+          organisationCode: archive.organisationCode,
+          locationCode: archive.locationCode,
+          unitCode: archive.unitCode,
+          school: archive.school,
+          scheduleHash: archive.scheduleHash,
+          eventCount: archive.eventCount,
+          compactSnapshot: archive.compactSnapshot,
+          publishedAt: archive.publishedAt,
+          publishedBy: archive.publishedBy,
+        },
+        scheduleEvents: eventRows.map(row => row.eventData),
+        scheduleEventRows: eventRows,
+        trainingReports: (performanceRows || []).map(row => mapRowToAssessment(row)),
+        eventCompletions: completionRows || [],
+        flightLogEntries: flightLogRows || [],
+        configVersions: configVersions || [],
+        assembledAt: new Date().toISOString(),
+        durationMs: Date.now() - startedAt,
+      };
+      await writeArchiveDiagnostic(db, 'ARCHIVE_HISTORICAL_DFP_READ', archive.snapshotKey, archive.date, 'success', {
+        source: response.source,
+        scheduleEvents: response.scheduleEvents.length,
+        trainingReports: response.trainingReports.length,
+        eventCompletions: response.eventCompletions.length,
+        flightLogEntries: response.flightLogEntries.length,
+      }, response.durationMs);
+      return res.json(response);
+    }
+
+    const snapshotRows = requestedSnapshotKey
+      ? await db.$queryRawUnsafe(`SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`, requestedSnapshotKey)
+      : await db.$queryRawUnsafe(`SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`, requestedDate);
+    if (!snapshotRows || snapshotRows.length === 0) {
+      return res.status(404).json({ error: 'Historical DFP date not found' });
+    }
+    const snapshot = snapshotRows[0];
+    const parsed = parseDailySnapshotDateKey(snapshot.date);
+    const fallbackResponse = {
+      success: true,
+      source: 'daily-snapshot-fallback',
+      date: parsed.date,
+      snapshotKey: snapshot.date,
+      archive: null,
+      scheduleEvents: snapshot.scheduleEvents || [],
+      staffEvents: snapshot.staffEvents || [],
+      traineeEvents: snapshot.traineeEvents || [],
+      trainingReports: Object.values(snapshot.pt051Assessments || {}),
+      traineeProfiles: snapshot.traineeProfiles || [],
+      staffProfiles: snapshot.staffProfiles || [],
+      lmpCompletedIds: snapshot.lmpCompletedIds || {},
+      staffCurrency: snapshot.staffCurrency || {},
+      staffLogbook: snapshot.staffLogbook || {},
+      aircraftConfigState: snapshot.aircraftConfigState || {},
+      assembledAt: new Date().toISOString(),
+      durationMs: Date.now() - startedAt,
+    };
+    await writeArchiveDiagnostic(db, 'ARCHIVE_HISTORICAL_DFP_READ', snapshot.date, parsed.date, 'fallback', {
+      source: fallbackResponse.source,
+      scheduleEvents: fallbackResponse.scheduleEvents.length,
+      trainingReports: fallbackResponse.trainingReports.length,
+    }, fallbackResponse.durationMs);
+    res.json(fallbackResponse);
+  } catch (error) {
+    console.error('❌ GET /api/archive/dfp-date error:', error);
+    res.status(500).json({ error: 'Failed to assemble historical DFP date', details: error.message });
+  }
+});
+
+// GET /api/archive/diagnostics - Admin archive write/read visibility.
+app.get('/api/archive/diagnostics', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+    const snapshotKey = String(req.query.snapshotKey || '').trim();
+    const date = String(req.query.date || '').slice(0, 10);
+    const whereParts = [];
+    const params = [];
+    let idx = 1;
+    if (snapshotKey) {
+      whereParts.push(`"snapshotKey" = $${idx++}::text`);
+      params.push(snapshotKey);
+    }
+    if (date) {
+      whereParts.push(`"date" = $${idx++}::text`);
+      params.push(date);
+    }
+    const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
+    const archiveRows = await db.$queryRawUnsafe(`
+      SELECT "snapshotKey", "date", "unitCode", "school", "eventCount", "scheduleHash", "publishedAt", "publishedBy", "updatedAt"
+      FROM "PublishedDfpArchive"
+      ${whereClause}
+      ORDER BY "publishedAt" DESC
+      LIMIT ${limit}
+    `, ...params);
+    const diagnosticRows = await db.$queryRawUnsafe(`
+      SELECT "action", "snapshotKey", "date", "status", "details", "durationMs", "createdAt"
+      FROM "ArchiveDiagnosticLog"
+      ${whereClause}
+      ORDER BY "createdAt" DESC
+      LIMIT ${limit}
+    `, ...params);
+    const counts = await db.$queryRawUnsafe(`
+      SELECT
+        (SELECT COUNT(*) FROM "PublishedDfpArchive")::int AS "publishedArchiveCount",
+        (SELECT COUNT(*) FROM "ScheduleEventArchive")::int AS "scheduleEventArchiveCount",
+        (SELECT COUNT(*) FROM "ConfigVersionArchive")::int AS "configVersionCount",
+        (SELECT COUNT(*) FROM "ArchiveDiagnosticLog")::int AS "diagnosticCount"
+    `);
+    res.json({
+      success: true,
+      counts: counts?.[0] || {},
+      archives: archiveRows || [],
+      diagnostics: diagnosticRows || [],
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('❌ GET /api/archive/diagnostics error:', error);
+    res.status(500).json({ error: 'Failed to load archive diagnostics', details: error.message });
+  }
+});
 
 // GET /api/daily-snapshot/dates - Return all dates that have snapshots (for calendar dropdown)
 app.get('/api/daily-snapshot/dates', async (req, res) => {

@@ -381,6 +381,89 @@ model DailySnapshot {
   @@index([savedAt])
 }
 
+model PublishedDfpArchive {
+  id              String   @id @default(cuid())
+  snapshotKey     String   @unique
+  date            String
+  organisationCode String?
+  locationCode    String?
+  unitCode        String?
+  school          String?
+  scheduleHash    String
+  eventCount      Int      @default(0)
+  configRefs      Json     @default("{}")
+  compactSnapshot Json     @default("{}")
+  publishedAt     DateTime @default(now())
+  publishedBy     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([date])
+  @@index([unitCode])
+  @@index([locationCode])
+  @@index([organisationCode])
+  @@index([publishedAt])
+}
+
+model ScheduleEventArchive {
+  id              String   @id @default(cuid())
+  archiveId       String
+  snapshotKey     String
+  eventId         String
+  date            String
+  eventType       String
+  eventCode       String?
+  resourceId      String?
+  startTime       Float?
+  duration        Float?
+  personnelRefs   Json     @default("[]")
+  eventData       Json
+  createdAt       DateTime @default(now())
+
+  @@unique([archiveId, eventId])
+  @@index([archiveId])
+  @@index([snapshotKey])
+  @@index([date])
+  @@index([eventType])
+  @@index([eventCode])
+  @@index([resourceId])
+}
+
+model ConfigVersionArchive {
+  id              String   @id @default(cuid())
+  scopeKey        String
+  configType      String
+  contentHash     String
+  effectiveFrom   String
+  effectiveTo     String?
+  content         Json
+  createdAt       DateTime @default(now())
+  createdBy       String?
+
+  @@unique([scopeKey, configType, contentHash])
+  @@index([scopeKey])
+  @@index([configType])
+  @@index([effectiveFrom])
+  @@index([effectiveTo])
+}
+
+model ArchiveDiagnosticLog {
+  id              String   @id @default(cuid())
+  action          String
+  snapshotKey     String?
+  date            String?
+  status          String
+  details         Json     @default("{}")
+  durationMs      Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@index([action])
+  @@index([snapshotKey])
+  @@index([date])
+  @@index([status])
+  @@index([createdAt])
+}
+
 // CourseSettings: Global course-related settings
 // Stores academic LMP selection and course exclusions used by NEO Build.
 model CourseSettings {
