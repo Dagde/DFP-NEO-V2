@@ -16729,6 +16729,27 @@ async function ensureArchiveVersionTables(db) {
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ArchiveDiagnosticLog_date_idx" ON "ArchiveDiagnosticLog"("date");`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ArchiveDiagnosticLog_status_idx" ON "ArchiveDiagnosticLog"("status");`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ArchiveDiagnosticLog_createdAt_idx" ON "ArchiveDiagnosticLog"("createdAt");`);
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "TrainingReportVersionArchive" (
+        "id" TEXT NOT NULL,
+        "eventId" TEXT NOT NULL,
+        "traineeId" TEXT,
+        "traineeFullName" TEXT NOT NULL,
+        "reportDate" TEXT NOT NULL,
+        "action" TEXT NOT NULL,
+        "versionHash" TEXT NOT NULL,
+        "reportData" JSONB NOT NULL,
+        "changedBy" TEXT,
+        "changedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "TrainingReportVersionArchive_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "TrainingReportVersionArchive_eventId_idx" ON "TrainingReportVersionArchive"("eventId");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "TrainingReportVersionArchive_traineeId_idx" ON "TrainingReportVersionArchive"("traineeId");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "TrainingReportVersionArchive_traineeFullName_idx" ON "TrainingReportVersionArchive"("traineeFullName");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "TrainingReportVersionArchive_reportDate_idx" ON "TrainingReportVersionArchive"("reportDate");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "TrainingReportVersionArchive_action_idx" ON "TrainingReportVersionArchive"("action");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "TrainingReportVersionArchive_changedAt_idx" ON "TrainingReportVersionArchive"("changedAt");`);
     console.log('✅ Archive version tables ready');
   } catch (err) {
     console.error('❌ Failed to ensure archive version tables:', err.message);
@@ -17015,6 +17036,44 @@ async function saveCompactPublishedDfpArchive(db, payload) {
   };
   await writeArchiveDiagnostic(db, 'ARCHIVE_PUBLISHED_DFP_SAVE', context.snapshotKey, context.date, 'success', result, result.durationMs);
   return result;
+}
+
+async function saveTrainingReportVersionArchive(db, action, reportData, changedBy) {
+  if (!reportData || !reportData.eventId || !reportData.traineeFullName) return null;
+  const startedAt = Date.now();
+  const reportDate = String(reportData.date || reportData.eventDate || '').slice(0, 10);
+  const archiveRecord = {
+    ...reportData,
+    archivedAction: action,
+    archivedAt: new Date().toISOString(),
+  };
+  const versionHash = hashArchiveContent(archiveRecord);
+  const archiveId = crypto.randomUUID();
+  await db.$executeRawUnsafe(`
+    INSERT INTO "TrainingReportVersionArchive"
+      ("id", "eventId", "traineeId", "traineeFullName", "reportDate", "action",
+       "versionHash", "reportData", "changedBy", "changedAt")
+    VALUES ($1::text, $2::text, $3::text, $4::text, $5::text, $6::text,
+            $7::text, $8::jsonb, $9::text, NOW())
+  `,
+    archiveId,
+    String(reportData.eventId),
+    reportData.traineeId ? String(reportData.traineeId) : null,
+    String(reportData.traineeFullName),
+    reportDate,
+    action,
+    versionHash,
+    JSON.stringify(archiveRecord),
+    changedBy || reportData.updatedBy || reportData.createdBy || reportData.recordedBy || null
+  );
+  await writeArchiveDiagnostic(db, 'ARCHIVE_TRAINING_REPORT_VERSION', reportData.eventId, reportDate, 'success', {
+    action,
+    eventId: reportData.eventId,
+    traineeId: reportData.traineeId || null,
+    traineeFullName: reportData.traineeFullName,
+    versionHash,
+  }, Date.now() - startedAt);
+  return { archiveId, versionHash, action, reportDate };
 }
 
 // ============================================================
@@ -17887,6 +17946,14 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         `SELECT * FROM "FlightLogEntry" WHERE "eventDate" = $1::text ORDER BY "personName" ASC, "startTime" ASC NULLS LAST LIMIT 5000`,
         archive.date
       ).catch(() => []);
+      const trainingReportVersions = await db.$queryRawUnsafe(
+        `SELECT "eventId", "traineeId", "traineeFullName", "reportDate", "action", "versionHash", "reportData", "changedBy", "changedAt"
+         FROM "TrainingReportVersionArchive"
+         WHERE "reportDate" = $1::text
+         ORDER BY "changedAt" DESC
+         LIMIT 5000`,
+        archive.date
+      ).catch(() => []);
       const scheduleEvents = eventRows.map(row => row.eventData);
       const trainingReports = (performanceRows || []).map(row => mapRowToAssessment(row));
       const trainingReportMap = Object.fromEntries(trainingReports.map(report => [
@@ -17931,6 +17998,7 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         scheduleEvents,
         scheduleEventRows: eventRows,
         trainingReports,
+        trainingReportVersions: trainingReportVersions || [],
         eventCompletions: completionRows || [],
         flightLogEntries: flightLogRows || [],
         configVersions: configVersions || [],
@@ -17941,6 +18009,7 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         source: response.source,
         scheduleEvents: response.scheduleEvents.length,
         trainingReports: response.trainingReports.length,
+        trainingReportVersions: response.trainingReportVersions.length,
         eventCompletions: response.eventCompletions.length,
         flightLogEntries: response.flightLogEntries.length,
       }, response.durationMs);
@@ -17966,6 +18035,7 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       staffEvents: snapshot.staffEvents || [],
       traineeEvents: snapshot.traineeEvents || [],
       trainingReports: Object.values(snapshot.pt051Assessments || {}),
+      trainingReportVersions: [],
       traineeProfiles: snapshot.traineeProfiles || [],
       staffProfiles: snapshot.staffProfiles || [],
       lmpCompletedIds: snapshot.lmpCompletedIds || {},
@@ -18027,6 +18097,7 @@ app.get('/api/archive/diagnostics', async (req, res) => {
         (SELECT COUNT(*) FROM "PublishedDfpArchive")::int AS "publishedArchiveCount",
         (SELECT COUNT(*) FROM "ScheduleEventArchive")::int AS "scheduleEventArchiveCount",
         (SELECT COUNT(*) FROM "ConfigVersionArchive")::int AS "configVersionCount",
+        (SELECT COUNT(*) FROM "TrainingReportVersionArchive")::int AS "trainingReportVersionCount",
         (SELECT COUNT(*) FROM "ArchiveDiagnosticLog")::int AS "diagnosticCount"
     `);
     res.json({
@@ -20821,7 +20892,9 @@ app.post('/api/trainee-performance', async (req, res) => {
     const created = await db.$queryRawUnsafe(
       `SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, row.eventId
     );
-    res.status(201).json(mapRowToAssessment(created[0]));
+    const createdAssessment = mapRowToAssessment(created[0]);
+    await saveTrainingReportVersionArchive(db, 'upsert', createdAssessment, row.createdBy);
+    res.status(201).json(createdAssessment);
   } catch (error) {
     console.error('❌ POST /api/trainee-performance error:', error);
     res.status(500).json({ error: 'Failed to create assessment', details: error.message });
@@ -20892,7 +20965,9 @@ app.put('/api/trainee-performance/:eventId', async (req, res) => {
     const updated = await db.$queryRawUnsafe(
       `SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId
     );
-    res.json(mapRowToAssessment(updated[0]));
+    const updatedAssessment = mapRowToAssessment(updated[0]);
+    await saveTrainingReportVersionArchive(db, 'update', updatedAssessment, data.updatedBy || data.createdBy || data.recordedBy);
+    res.json(updatedAssessment);
   } catch (error) {
     console.error('❌ PUT /api/trainee-performance/:eventId error:', error);
     res.status(500).json({ error: 'Failed to update assessment', details: error.message });
@@ -20904,6 +20979,13 @@ app.delete('/api/trainee-performance/:eventId', async (req, res) => {
   try {
     const db = await getPrisma();
     const { eventId } = req.params;
+    const existing = await db.$queryRawUnsafe(
+      `SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`,
+      eventId
+    );
+    if (existing?.[0]) {
+      await saveTrainingReportVersionArchive(db, 'delete', mapRowToAssessment(existing[0]), req.body?.deletedBy || req.query?.deletedBy || null);
+    }
     await db.$executeRawUnsafe(
       `DELETE FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId
     );
@@ -20959,6 +21041,13 @@ app.post('/api/trainee-performance/bulk', async (req, res) => {
             JSON.stringify(row.elementScores), row.isCompleted, row.isGroundSchoolAssessment, row.groundSchoolResult,
             row.course, row.syllabusPhase, row.eventSequence, row.createdBy
           );
+          const saved = await db.$queryRawUnsafe(
+            `SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`,
+            row.eventId
+          );
+          if (saved?.[0]) {
+            await saveTrainingReportVersionArchive(db, 'bulk-import', mapRowToAssessment(saved[0]), row.createdBy);
+          }
           inserted++;
         } catch (rowErr) {
           skipped++;

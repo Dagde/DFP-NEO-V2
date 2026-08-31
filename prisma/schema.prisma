@@ -464,6 +464,26 @@ model ArchiveDiagnosticLog {
   @@index([createdAt])
 }
 
+model TrainingReportVersionArchive {
+  id              String   @id @default(cuid())
+  eventId         String
+  traineeId       String?
+  traineeFullName String
+  reportDate      String
+  action          String
+  versionHash     String
+  reportData      Json
+  changedBy       String?
+  changedAt       DateTime @default(now())
+
+  @@index([eventId])
+  @@index([traineeId])
+  @@index([traineeFullName])
+  @@index([reportDate])
+  @@index([action])
+  @@index([changedAt])
+}
+
 // CourseSettings: Global course-related settings
 // Stores academic LMP selection and course exclusions used by NEO Build.
 model CourseSettings {
