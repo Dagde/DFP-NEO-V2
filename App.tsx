@@ -8834,6 +8834,7 @@ function generateDfpInternal(
         noNextByCourse: {},
         scheduleLists: {},
         scheduleFlow: [] as any[],
+        phaseTimeline: [] as any[],
         finalCleanup: null,
         remedialDataMovement: {
             sourceTrace: config.remedialDataMovementTrace || [] as any[],
@@ -9047,6 +9048,54 @@ function generateDfpInternal(
         final: null,
     };
 
+    const summariseNeoBuildEventCollection = (
+        eventsToSummarise: Array<Omit<ScheduleEvent, 'date'> & { _source?: string; source?: string }>
+    ) => {
+        const countBy = (getKey: (event: Omit<ScheduleEvent, 'date'> & { _source?: string; source?: string }) => string | undefined | null): Record<string, number> => (
+            eventsToSummarise.reduce((counts: Record<string, number>, event) => {
+                const key = String(getKey(event) || 'Unspecified');
+                counts[key] = (counts[key] || 0) + 1;
+                return counts;
+            }, {})
+        );
+        return {
+            total: eventsToSummarise.length,
+            byType: countBy(event => event.type),
+            byResource: countBy(event => event.resourceId),
+            bySource: countBy(event => event._source || event.source),
+            samples: eventsToSummarise.slice(0, 80).map(event => ({
+                id: event.id,
+                type: event.type,
+                flightNumber: event.flightNumber,
+                startTime: event.startTime,
+                duration: event.duration,
+                resourceId: event.resourceId,
+                instructor: event.instructor || null,
+                pilot: event.pilot || null,
+                student: event.student || null,
+                source: event._source || event.source || null,
+                currencyDraftId: event.currencyDraftId || null,
+            })),
+        };
+    };
+
+    const recordNeoBuildPhaseSnapshot = (
+        stage: string,
+        eventsToSummarise: Array<Omit<ScheduleEvent, 'date'> & { _source?: string; source?: string }> = generatedEvents,
+        details: Record<string, any> = {}
+    ) => {
+        neoBuildDiag.phaseTimeline.push({
+            stage,
+            timestamp: new Date().toISOString(),
+            elapsedMs: timingReport?.startedAtMs !== undefined ? Math.round(performance.now() - timingReport.startedAtMs) : null,
+            summary: summariseNeoBuildEventCollection(eventsToSummarise),
+            details,
+        });
+        if (neoBuildDiag.phaseTimeline.length > getNeoBuildTraceLimit(220, 600)) {
+            neoBuildDiag.phaseTimeline = neoBuildDiag.phaseTimeline.slice(-getNeoBuildTraceLimit(220, 600));
+        }
+    };
+
     const saveNeoBuildDiag = (stage: string) => {
         if (stage !== 'build-start' && stage !== 'final' && !neoBuildLiveDiagnostics) return;
         neoBuildDiag.stage = stage;
@@ -9073,6 +9122,7 @@ function generateDfpInternal(
                     }
                 ])),
                 scheduleFlow: (neoBuildDiag.scheduleFlow || []).slice(-80),
+                phaseTimeline: (neoBuildDiag.phaseTimeline || []).slice(-220),
                 dayFlightGapDiagnostics: {
                     attempts: neoBuildDiag.dayFlightGapDiagnostics.attempts.slice(-500),
                     instructorTrace: neoBuildDiag.dayFlightGapDiagnostics.instructorTrace.slice(-500),
@@ -9181,6 +9231,9 @@ function generateDfpInternal(
     });
     neoBuildDiag.rplCompletionDiagnostics.loadedCount = Array.from(rplCompletionKeysByTrainee.values())
         .reduce((total, keySet) => total + keySet.size, 0);
+    recordNeoBuildPhaseSnapshot('build-start-initialised', generatedEvents, {
+        input: neoBuildDiag.input,
+    });
     saveNeoBuildDiag('build-start');
 
     type NeoBuildAttemptTimingBucket = {
@@ -12252,6 +12305,11 @@ function generateDfpInternal(
             exclusionReasons,
         });
     });
+    recordNeoBuildPhaseSnapshot('build-start-after-remedial-inputs', generatedEvents, {
+        remedialRequests: remedialRequests.length,
+        mandatoryRemedialFlights: mandatoryRemedialFlights.length,
+        highestPriorityEvents: highestPriorityEvents.length,
+    });
     saveNeoBuildDiag('build-start');
 
     neoBuildDiag.mandatoryRemedialFlights.remedialInstructorOverrides = Array.from(remedialInstructorOverrides.values());
@@ -13110,6 +13168,12 @@ function generateDfpInternal(
         nextEventLists: neoBuildDiag.nextEventLists,
         noNextByCourse: neoBuildDiag.noNextByCourse,
         nextSamples: neoBuildDiag.nextSamples.slice(0, 40),
+    });
+    recordNeoBuildPhaseSnapshot('category-lists-built', generatedEvents, {
+        activeTrainees: activeTrainees.length,
+        traineeLMPs: traineeLMPs.size,
+        nextEventLists: neoBuildDiag.nextEventLists,
+        noNextByCourse: neoBuildDiag.noNextByCourse,
     });
     saveNeoBuildDiag('category-lists-built');
     buildDebugLog(
@@ -23096,10 +23160,18 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     };
 
     const generatedEventsBeforeFinalCleanup = generatedEvents.length;
+    recordNeoBuildPhaseSnapshot('final-cleanup-before-guards', generatedEvents, {
+        generatedEventsBeforeFinalCleanup,
+    });
     generatedEvents
         .filter(eventMatchesTaskTrace)
         .forEach(event => traceTaskProvenance('finalCleanup', 'before-final-cleanup', event));
     const dayNightSeparatedEvents = enforceBuildDayNightSeparation(generatedEvents);
+    recordNeoBuildPhaseSnapshot('final-cleanup-after-day-night-guard', dayNightSeparatedEvents, {
+        input: generatedEventsBeforeFinalCleanup,
+        output: dayNightSeparatedEvents.length,
+        removed: generatedEventsBeforeFinalCleanup - dayNightSeparatedEvents.length,
+    });
     markBuildTiming('final-cleanup:day-night-guard-complete', {
         input: generatedEventsBeforeFinalCleanup,
         output: dayNightSeparatedEvents.length,
@@ -23108,6 +23180,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         .filter(eventMatchesTaskTrace)
         .forEach(event => traceTaskProvenance('finalCleanup', 'after-day-night-guard', event));
     const conflictSafeEvents = repairGeneratedGroundConflicts(dayNightSeparatedEvents);
+    recordNeoBuildPhaseSnapshot('final-cleanup-after-ground-repair', conflictSafeEvents, {
+        input: dayNightSeparatedEvents.length,
+        output: conflictSafeEvents.length,
+        removed: dayNightSeparatedEvents.length - conflictSafeEvents.length,
+    });
     markBuildTiming('final-cleanup:ground-repair-complete', {
         input: dayNightSeparatedEvents.length,
         output: conflictSafeEvents.length,
@@ -23174,6 +23251,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             })
             .filter((event): event is Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string } => Boolean(event))
         : conflictSafeEvents;
+    recordNeoBuildPhaseSnapshot('final-cleanup-after-crew-guard', finalCrewSafeEvents, {
+        input: conflictSafeEvents.length,
+        output: finalCrewSafeEvents.length,
+        removedByPooledCrewManifestGuard: conflictSafeEvents.length - finalCrewSafeEvents.length,
+        pooledCrewManifestGuard,
+    });
     markBuildTiming('final-cleanup:crew-guard-complete', {
         input: conflictSafeEvents.length,
         output: finalCrewSafeEvents.length,
@@ -23672,6 +23755,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return orderA - orderB; // Sort by resource order first
         }
         return a.startTime - b.startTime; // Then by start time within same resource
+    });
+    recordNeoBuildPhaseSnapshot('final-sorted-events', sortedEvents, {
+        resourceOrderCount: resourceOrder.length,
     });
     markBuildTiming('final-cleanup:resource-sort-complete', {
         events: sortedEvents.length,
@@ -41014,6 +41100,78 @@ const App: React.FC = () => {
         void startBuildProcess();
     };
 
+    const handleDownloadNeoBuildReport = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        const readJsonStorage = (key: string): any => {
+            try {
+                const raw = window.localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : null;
+            } catch (error) {
+                return {
+                    parseError: error instanceof Error ? error.message : String(error),
+                };
+            }
+        };
+        const countBy = <T,>(items: T[], getKey: (item: T) => string | undefined | null): Record<string, number> => (
+            items.reduce((counts: Record<string, number>, item) => {
+                const key = String(getKey(item) || 'Unspecified');
+                counts[key] = (counts[key] || 0) + 1;
+                return counts;
+            }, {})
+        );
+        const visibleBuildEvents = nextDayBuildEvents || [];
+        const report = {
+            reportType: 'NEO_BUILD_COMPREHENSIVE_DIAGNOSTIC',
+            generatedAt: new Date().toISOString(),
+            buildDate: buildDfpDate,
+            activeView,
+            activeOperationalModel,
+            activeUnitCode,
+            activeLocationCode: school,
+            currentUserName,
+            visibleDraftSchedule: {
+                count: visibleBuildEvents.length,
+                byType: countBy(visibleBuildEvents, event => event.type),
+                byResource: countBy(visibleBuildEvents, event => event.resourceId),
+                bySource: countBy(visibleBuildEvents, event => (event as any)._source || (event as any).source),
+                sample: visibleBuildEvents.slice(0, 80).map(event => ({
+                    id: event.id,
+                    type: event.type,
+                    flightNumber: event.flightNumber,
+                    startTime: event.startTime,
+                    duration: event.duration,
+                    resourceId: event.resourceId,
+                    instructor: event.instructor || null,
+                    pilot: event.pilot || null,
+                    student: event.student || null,
+                    source: (event as any)._source || (event as any).source || null,
+                    currencyDraftId: event.currencyDraftId || null,
+                })),
+            },
+            storedReports: {
+                neoBuildDiagnostic: readJsonStorage('neo_build_diag_report'),
+                neoBuildTiming: readJsonStorage('neo_build_timing_report'),
+                neoBuildRuntimeError: readJsonStorage('neo_build_runtime_error_report'),
+                neoBuildZeroTileTrace: readJsonStorage('neo_build_zero_tile_trace'),
+                neoBuildInputTrace: readJsonStorage('neo_build_input_trace'),
+                neoDfpDataTrace: readJsonStorage('neo_dfp_data_diag'),
+                flightSchoolPriority: readJsonStorage('flight_school_priority_diag_report'),
+            },
+        };
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const safeUser = String(currentUserName || 'user').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'user';
+        const safeDate = String(buildDfpDate || 'no-date').replace(/[^0-9-]/g, '');
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `neo-build-diagnostic-${safeUser}-${safeDate}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        setShowInfoNotification('NEO Build diagnostic JSON downloaded.');
+    }, [activeOperationalModel, activeUnitCode, activeView, buildDfpDate, currentUserName, nextDayBuildEvents, school]);
+
     const runBuildAlgorithm = async (preservedEvents?: ScheduleEvent[], buildPublishedSchedulesOverride?: Record<string, ScheduleEvent[]>) => {
         logNeoBuildUiDebug('🚀 [NEO-Build] runBuildAlgorithm called');
         logNeoBuildUiDebug('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
@@ -51779,6 +51937,7 @@ appliedUpdates.forEach(update => {
                 onBuildDfpClick={handleBuildDfp}
                 isSupervisor={true}
                 onPublish={handlePublish}
+                onDownloadNeoBuildReport={handleDownloadNeoBuildReport}
                 currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
                 currentUserName={currentUserName}
                 currentUserLocation={school}
