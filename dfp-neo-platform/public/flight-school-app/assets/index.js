@@ -111192,16 +111192,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const analysePlacementResourceRow = (result, syllabusItem, scheduledDuration, searchStartTime) => {
       if (!result || typeof result !== "object" || !("id" in result)) return null;
-      const proposedTurnaround = getResourceTurnaroundAfter({ type: result.type, flightNumber: syllabusItem.code });
+      const getDiagnosticResourceTurnaroundAfter = (event) => {
+        if (event.type === "flight") return flightTurnaround;
+        if (event.type === "ftd") return ftdTurnaround;
+        if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) return cptTurnaround;
+        return 0;
+      };
+      const proposedTurnaround = getDiagnosticResourceTurnaroundAfter({ type: result.type, flightNumber: syllabusItem.code });
       const sameResourceEvents = getGeneratedEventsForResource(result.resourceId).filter((existing) => existing.id !== result.id).sort((a, b) => a.startTime - b.startTime);
       const previousEvent = sameResourceEvents.filter((existing) => existing.startTime + existing.duration <= result.startTime + 1e-3).sort((a, b) => b.startTime + b.duration - (a.startTime + a.duration))[0] || null;
-      const previousAvailableAt = previousEvent ? previousEvent.startTime + previousEvent.duration + getResourceTurnaroundAfter(previousEvent) : searchStartTime;
+      const previousAvailableAt = previousEvent ? previousEvent.startTime + previousEvent.duration + getDiagnosticResourceTurnaroundAfter(previousEvent) : searchStartTime;
       const selectedResourceIdleBeforeStartHours = Math.max(0, result.startTime - previousAvailableAt);
       const selectedResourceIdleBeforeStartMinutes = Math.round(selectedResourceIdleBeforeStartHours * 60);
       const resultResourceNumber = Number(String(result.resourceId || "").match(/(\d+)$/)?.[1] || NaN);
       const lowerNumberResourcesFreeAtSelectedTime = !Number.isFinite(resultResourceNumber) ? [] : Array.from({ length: Math.max(0, resultResourceNumber - 1) }, (_, index) => `${result.resourceId.replace(/\s+\d+$/, "")} ${index + 1}`).filter((resourceId) => {
         const occupied = getGeneratedEventsForResource(resourceId).some((existing) => {
-          const existingTurnaround = getResourceTurnaroundAfter(existing);
+          const existingTurnaround = getDiagnosticResourceTurnaroundAfter(existing);
           const existingEnd = existing.startTime + existing.duration + existingTurnaround;
           const proposedEnd = result.startTime + scheduledDuration + proposedTurnaround;
           return result.startTime < existingEnd && proposedEnd > existing.startTime;
@@ -111957,18 +111963,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
       }
     }
-    const getResourceTurnaroundAfter2 = (event) => {
+    const getResourceTurnaroundAfter = (event) => {
       if (event.type === "flight") return flightTurnaround;
       if (event.type === "ftd") return ftdTurnaround;
       if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) return cptTurnaround;
       return 0;
     };
     const hasFtdResourceAvailableAtTime = () => {
-      const proposedTurnaround = getResourceTurnaroundAfter2({ type, flightNumber: syllabusItem.code });
+      const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
       for (let index = 1; index <= ftdCount; index++) {
         const candidateResourceId = `FTD ${index}`;
         const resourceIsOccupied = getGeneratedEventsForResource(candidateResourceId).some((e) => {
-          const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter2(e);
+          const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
           const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
           return startTime < existingEventEnd && proposedEventEnd > e.startTime;
         });
@@ -111980,7 +111986,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       let aircraftConfigMismatchCount2 = 0;
       const aircraftConfigMismatchSamples2 = [];
       let compatibleResourceCandidateCount2 = 0;
-      const proposedTurnaround = getResourceTurnaroundAfter2({ type, flightNumber: syllabusItem.code });
+      const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
       for (let index = 1; index <= availableAircraftCount; index++) {
         const candidateResourceId = `${buildAircraftResourceIdPrefix}${index}`;
         const resourceAircraftConfigId = getAircraftConfigIdForResource(candidateResourceId);
@@ -111997,7 +112003,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         compatibleResourceCandidateCount2++;
         const resourceIsOccupied = getGeneratedEventsForResource(candidateResourceId).some((e) => {
-          const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter2(e);
+          const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
           const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
           return startTime < existingEventEnd && proposedEventEnd > e.startTime;
         });
@@ -112701,7 +112707,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         compatibleResourceCandidateCount++;
       }
       const resourceIsOccupied = getGeneratedEventsForResource(id).some((e) => {
-        let existingTurnaround = getResourceTurnaroundAfter2(e);
+        let existingTurnaround = getResourceTurnaroundAfter(e);
         if (e.type === "flight") {
           const isExistingEventNight = e.flightNumber.startsWith("BNF");
           if (isNightPass && isExistingEventNight) {
@@ -112717,7 +112723,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             }
           }
         }
-        const proposedTurnaround = getResourceTurnaroundAfter2({ type, flightNumber: syllabusItem.code });
+        const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
         const existingEventEnd = e.startTime + e.duration + existingTurnaround;
         const newEventStart = startTime;
         const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;

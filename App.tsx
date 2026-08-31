@@ -14122,7 +14122,13 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             searchStartTime: number
         ) => {
             if (!result || typeof result !== 'object' || !('id' in result)) return null;
-            const proposedTurnaround = getResourceTurnaroundAfter({ type: result.type, flightNumber: syllabusItem.code });
+            const getDiagnosticResourceTurnaroundAfter = (event: Pick<ScheduleEvent, 'type' | 'flightNumber'>): number => {
+                if (event.type === 'flight') return flightTurnaround;
+                if (event.type === 'ftd') return ftdTurnaround;
+                if (event.type === 'cpt' || (event.type === 'ground' && event.flightNumber.includes('CPT'))) return cptTurnaround;
+                return 0;
+            };
+            const proposedTurnaround = getDiagnosticResourceTurnaroundAfter({ type: result.type, flightNumber: syllabusItem.code });
             const sameResourceEvents = getGeneratedEventsForResource(result.resourceId)
                 .filter(existing => existing.id !== result.id)
                 .sort((a, b) => a.startTime - b.startTime);
@@ -14130,7 +14136,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 .filter(existing => existing.startTime + existing.duration <= result.startTime + 0.001)
                 .sort((a, b) => (b.startTime + b.duration) - (a.startTime + a.duration))[0] || null;
             const previousAvailableAt = previousEvent
-                ? previousEvent.startTime + previousEvent.duration + getResourceTurnaroundAfter(previousEvent)
+                ? previousEvent.startTime + previousEvent.duration + getDiagnosticResourceTurnaroundAfter(previousEvent)
                 : searchStartTime;
             const selectedResourceIdleBeforeStartHours = Math.max(0, result.startTime - previousAvailableAt);
             const selectedResourceIdleBeforeStartMinutes = Math.round(selectedResourceIdleBeforeStartHours * 60);
@@ -14140,7 +14146,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 : Array.from({ length: Math.max(0, resultResourceNumber - 1) }, (_, index) => `${result.resourceId.replace(/\s+\d+$/, '')} ${index + 1}`)
                     .filter(resourceId => {
                         const occupied = getGeneratedEventsForResource(resourceId).some(existing => {
-                            const existingTurnaround = getResourceTurnaroundAfter(existing);
+                            const existingTurnaround = getDiagnosticResourceTurnaroundAfter(existing);
                             const existingEnd = existing.startTime + existing.duration + existingTurnaround;
                             const proposedEnd = result.startTime + scheduledDuration + proposedTurnaround;
                             return result.startTime < existingEnd && proposedEnd > existing.startTime;
