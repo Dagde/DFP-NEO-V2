@@ -17887,11 +17887,33 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         `SELECT * FROM "FlightLogEntry" WHERE "eventDate" = $1::text ORDER BY "personName" ASC, "startTime" ASC NULLS LAST LIMIT 5000`,
         archive.date
       ).catch(() => []);
+      const scheduleEvents = eventRows.map(row => row.eventData);
+      const trainingReports = (performanceRows || []).map(row => mapRowToAssessment(row));
+      const trainingReportMap = Object.fromEntries(trainingReports.map(report => [
+        `pt051-${report.eventId}-${report.traineeFullName}`,
+        report,
+      ]));
+      const configContentByType = Object.fromEntries((configVersions || []).map(row => [row.configType, row.content]));
+      const snapshot = {
+        date: archive.snapshotKey,
+        scheduleEvents,
+        staffEvents: [],
+        traineeEvents: [],
+        pt051Assessments: trainingReportMap,
+        traineeProfiles: configContentByType.traineeRosterState || [],
+        staffProfiles: configContentByType.staffRosterState || [],
+        lmpCompletedIds: configContentByType.lmpCompletionState || {},
+        staffCurrency: configContentByType.staffCurrencyState || {},
+        staffLogbook: {},
+        aircraftConfigState: configContentByType.aircraftConfigState || {},
+        snapshotSource: 'compact-archive',
+      };
       const response = {
         success: true,
         source: 'compact-archive',
         date: archive.date,
         snapshotKey: archive.snapshotKey,
+        snapshot,
         archive: {
           id: archive.id,
           date: archive.date,
@@ -17906,9 +17928,9 @@ app.get('/api/archive/dfp-date', async (req, res) => {
           publishedAt: archive.publishedAt,
           publishedBy: archive.publishedBy,
         },
-        scheduleEvents: eventRows.map(row => row.eventData),
+        scheduleEvents,
         scheduleEventRows: eventRows,
-        trainingReports: (performanceRows || []).map(row => mapRowToAssessment(row)),
+        trainingReports,
         eventCompletions: completionRows || [],
         flightLogEntries: flightLogRows || [],
         configVersions: configVersions || [],
@@ -17938,6 +17960,7 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       source: 'daily-snapshot-fallback',
       date: parsed.date,
       snapshotKey: snapshot.date,
+      snapshot,
       archive: null,
       scheduleEvents: snapshot.scheduleEvents || [],
       staffEvents: snapshot.staffEvents || [],
@@ -18026,17 +18049,24 @@ app.get('/api/daily-snapshot/dates', async (req, res) => {
     const rows = await db.$queryRawUnsafe(
       `SELECT date, "savedAt", "savedBy" FROM "DailySnapshot" ORDER BY date DESC`
     );
-    const dates = (rows || []).map(r => {
+    const archiveRows = await db.$queryRawUnsafe(
+      `SELECT "snapshotKey" AS date, "publishedAt" AS "savedAt", "publishedBy" AS "savedBy" FROM "PublishedDfpArchive" ORDER BY "publishedAt" DESC`
+    ).catch(() => []);
+    const seenSnapshotKeys = new Set();
+    const dates = [...(archiveRows || []), ...(rows || [])].map(r => {
       const parsed = parseDailySnapshotDateKey(r.date);
+      const snapshotKey = r.date;
+      if (seenSnapshotKeys.has(snapshotKey)) return null;
+      seenSnapshotKeys.add(snapshotKey);
       return {
         date: parsed.date,
-        snapshotKey: r.date,
+        snapshotKey,
         school: parsed.school,
         unit: parsed.unit,
         savedAt: r.savedAt,
         savedBy: r.savedBy
       };
-    });
+    }).filter(Boolean);
     console.log(`✅ GET /api/daily-snapshot/dates - ${dates.length} snapshot dates`);
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.set('Pragma', 'no-cache');

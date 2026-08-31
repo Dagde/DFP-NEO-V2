@@ -123689,8 +123689,8 @@ const App = () => {
               message: `Retrieving DFP data (${candidateIndex + 1}/${candidateKeys.length})`,
               progress
             });
-            const contextQuery = candidateKey === targetDate ? `?school=${encodeURIComponent(snapshotSchool)}&unit=${encodeURIComponent(snapshotUnit)}` : "";
-            const candidateUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(candidateKey)}${contextQuery}`;
+            const archiveQuery = candidateKey === targetDate ? `date=${encodeURIComponent(targetDate)}` : `snapshotKey=${encodeURIComponent(candidateKey)}`;
+            const candidateUrl = `${apiBase}/archive/dfp-date?${archiveQuery}`;
             const candidateStartedAt = performance.now();
             const candidateRes = await fetch(candidateUrl, { cache: "no-store" });
             pushDfpDataDiag("snapshot:fetch-response", {
