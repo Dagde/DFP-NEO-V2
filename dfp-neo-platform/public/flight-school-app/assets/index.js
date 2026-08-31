@@ -9088,6 +9088,8 @@ const RightSidebar = ({
   isSupervisor,
   onPublish,
   onDownloadNeoBuildReport,
+  onDownloadArchiveReport,
+  showArchiveReport = false,
   currentUserRank,
   currentUserName,
   currentUserLocation,
@@ -9243,6 +9245,19 @@ const RightSidebar = ({
           className: "w-[75px] h-[46px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md",
           children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
             "Build",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "Report"
+          ] })
+        }
+      ) }),
+      showArchiveReport && onDownloadArchiveReport && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: onDownloadArchiveReport,
+          title: "Download the archive diagnostic JSON report for this DFP date",
+          className: "w-[75px] h-[46px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
+            "Archive",
             /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
             "Report"
           ] })
@@ -134011,6 +134026,38 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     URL.revokeObjectURL(url);
     setShowInfoNotification("NEO Build diagnostic JSON downloaded.");
   }, [activeOperationalModel, activeUnitCode, activeView, buildDfpDate, currentUserName, nextDayBuildEvents, school]);
+  const handleDownloadArchiveReport = reactExports.useCallback(async () => {
+    try {
+      const apiBase = getAppApiBase();
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
+      const response = await fetch(`${apiBase}/archive/dfp-date?date=${encodeURIComponent(date)}`, {
+        cache: "no-store",
+        credentials: "include",
+        headers: {
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        }
+      });
+      const report = await response.json().catch(() => null);
+      if (!response.ok || !report) {
+        throw new Error(report?.message || report?.error || `Archive report failed with HTTP ${response.status}`);
+      }
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const safeUser = String(currentUserName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
+      const safeDate = String(date || "no-date").replace(/[^0-9-]/g, "");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `dfp-archive-diagnostic-${safeUser}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setShowInfoNotification("Archive diagnostic JSON downloaded.");
+    } catch (error) {
+      console.error("[Archive] Failed to download archive diagnostic report:", error);
+      setSuccessMessage(`Archive report failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, [currentUserName, date]);
   const runBuildAlgorithm = async (preservedEvents, buildPublishedSchedulesOverride) => {
     logNeoBuildUiDebug("🚀 [NEO-Build] runBuildAlgorithm called");
     logNeoBuildUiDebug("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
@@ -143266,6 +143313,8 @@ Do you want to replace the existing entry?`,
           isSupervisor: true,
           onPublish: handlePublish,
           onDownloadNeoBuildReport: handleDownloadNeoBuildReport,
+          onDownloadArchiveReport: handleDownloadArchiveReport,
+          showArchiveReport: isViewingPastDfp,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "",
           currentUserName,
           currentUserLocation: school,

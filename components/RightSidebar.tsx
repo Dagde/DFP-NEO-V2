@@ -11,6 +11,8 @@ interface RightSidebarProps {
     isSupervisor: boolean;
     onPublish: () => void;
     onDownloadNeoBuildReport?: () => void;
+    onDownloadArchiveReport?: () => void;
+    showArchiveReport?: boolean;
     currentUserRank: string;
     currentUserName: string;
     currentUserLocation?: string;
@@ -31,6 +33,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     isSupervisor,
     onPublish,
     onDownloadNeoBuildReport,
+    onDownloadArchiveReport,
+    showArchiveReport = false,
     currentUserRank,
     currentUserName,
     currentUserLocation,
@@ -198,6 +202,18 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
               className="w-[75px] h-[46px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md"
             >
               <span className="text-center leading-tight">Build<br/>Report</span>
+            </button>
+          </div>
+        )}
+
+        {showArchiveReport && onDownloadArchiveReport && (
+          <div className="relative mt-2">
+            <button
+              onClick={onDownloadArchiveReport}
+              title="Download the archive diagnostic JSON report for this DFP date"
+              className="w-[75px] h-[46px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md"
+            >
+              <span className="text-center leading-tight">Archive<br/>Report</span>
             </button>
           </div>
         )}
