@@ -51237,7 +51237,7 @@ appliedUpdates.forEach(update => {
                 console.error('Training Report view error - missing context:', {
                     eventForPt051,
                     selectedTraineeForHateSheet,
-                    view
+                    activeView
                 });
                 return <div className="p-8 bg-gray-900 text-white">
                     <h2 className="text-2xl font-bold text-red-500 mb-4">Error: {configuredTrainingReportDisplayName} View Context Missing</h2>

@@ -2952,7 +2952,7 @@ const buildPlatformDataScopeQuery = (scope) => {
   if (!scope.allUnits && scope.unitCodes.length > 0) params.set("units", scope.unitCodes.join(","));
   return params.toString();
 };
-const getPlatformModuleForView = (view2) => {
+const getPlatformModuleForView = (view) => {
   const viewToModule = {
     "Program Schedule": "DFP",
     "InstructorSchedule": "DFP",
@@ -2980,7 +2980,7 @@ const getPlatformModuleForView = (view2) => {
     "BuildIntelligence": "NEO_BUILD",
     "Settings": "DFP"
   };
-  return viewToModule[view2] || null;
+  return viewToModule[view] || null;
 };
 const getLocationResourcePool = (config, locationCode, unitCode) => {
   const matchingLocation = (config?.locations || []).find((location) => getConfiguredLocationAliases(location).some((alias) => locationCodesAreEquivalent(alias, locationCode)));
@@ -8800,7 +8800,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
   }));
   const dashboardViews = ["MyDashboard", "SupervisorDashboard"];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
-  const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
+  const canOpen = (view) => canAccessView ? canAccessView(view) : true;
   const canUsePermission = canUsePlatformPermission || (() => true);
   const leftNavigationPermissions = {
     "Program Schedule": "dfp.view",
@@ -8811,26 +8811,26 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
     TrainingRecords: "trainingRecords.courseManagement.view",
     Settings: "settings.view"
   };
-  const canOpenLeftView = (view2) => {
-    const permissionId = leftNavigationPermissions[view2];
-    if (!permissionId) return canOpen(view2);
-    return canOpen(view2) && (canUsePermission(permissionId) || Boolean(canOpenSelfScopedView?.(view2)));
+  const canOpenLeftView = (view) => {
+    const permissionId = leftNavigationPermissions[view];
+    if (!permissionId) return canOpen(view);
+    return canOpen(view) && (canUsePermission(permissionId) || Boolean(canOpenSelfScopedView?.(view)));
   };
-  const isModelUnavailable = (view2) => modelUnavailableViews.includes(view2);
-  const accessButtonClass = (view2) => {
-    if (isModelUnavailable(view2)) return "cursor-not-allowed";
-    return canOpenLeftView(view2) ? "" : "cursor-not-allowed";
+  const isModelUnavailable = (view) => modelUnavailableViews.includes(view);
+  const accessButtonClass = (view) => {
+    if (isModelUnavailable(view)) return "cursor-not-allowed";
+    return canOpenLeftView(view) ? "" : "cursor-not-allowed";
   };
   const showPermissionNotice = (anchor) => {
     setPermissionNoticeRect(anchor.getBoundingClientRect());
   };
-  const navigateIfAllowed = (view2, anchor) => {
-    if (isModelUnavailable(view2)) {
+  const navigateIfAllowed = (view, anchor) => {
+    if (isModelUnavailable(view)) {
       showPermissionNotice(anchor);
       return;
     }
-    if (canOpenLeftView(view2)) {
-      onNavigate(view2);
+    if (canOpenLeftView(view)) {
+      onNavigate(view);
       return;
     }
     showPermissionNotice(anchor);
@@ -9104,7 +9104,7 @@ const RightSidebar = ({
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
   const { isFrozen } = useSystemFreeze();
   const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
-  const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
+  const canOpen = (view) => canAccessView ? canAccessView(view) : true;
   const canUsePermission = canUsePlatformPermission || (() => true);
   const neoNavigationPermissions = {
     NextDayBuild: "neo.programSchedule.view",
@@ -9114,29 +9114,29 @@ const RightSidebar = ({
     Priorities: "neo.priorities",
     BuildIntelligence: "neo.intelligence"
   };
-  const canOpenNeoView = (view2) => {
-    const permissionId = neoNavigationPermissions[view2];
-    if (!permissionId) return canOpen(view2);
-    return canOpen(view2) && canUsePermission(permissionId);
+  const canOpenNeoView = (view) => {
+    const permissionId = neoNavigationPermissions[view];
+    if (!permissionId) return canOpen(view);
+    return canOpen(view) && canUsePermission(permissionId);
   };
-  const isModelUnavailable = (view2) => modelUnavailableViews.includes(view2);
+  const isModelUnavailable = (view) => modelUnavailableViews.includes(view);
   const canBuild = canRunNeoBuild && canOpenNeoView("NextDayBuild");
   const canPublish = canPublishDfp && canOpenNeoView("Publish");
-  const accessButtonClass = (view2) => {
-    if (isModelUnavailable(view2)) return "cursor-not-allowed";
-    return canOpenNeoView(view2) ? "" : "cursor-not-allowed";
+  const accessButtonClass = (view) => {
+    if (isModelUnavailable(view)) return "cursor-not-allowed";
+    return canOpenNeoView(view) ? "" : "cursor-not-allowed";
   };
   const actionButtonClass = (allowed) => allowed ? "" : "cursor-not-allowed";
   const showPermissionNotice = (anchor) => {
     setPermissionNoticeRect(anchor.getBoundingClientRect());
   };
-  const navigateIfAllowed = (view2, anchor) => {
-    if (isModelUnavailable(view2)) {
+  const navigateIfAllowed = (view, anchor) => {
+    if (isModelUnavailable(view)) {
       showPermissionNotice(anchor);
       return;
     }
-    if (canOpenNeoView(view2)) {
-      onNavigate(view2);
+    if (canOpenNeoView(view)) {
+      onNavigate(view);
       return;
     }
     showPermissionNotice(anchor);
@@ -31120,7 +31120,7 @@ const CourseRosterView = ({
   canUsePlatformPermission
 }) => {
   const { isFrozen } = useSystemFreeze();
-  const [view2, setView] = reactExports.useState("active");
+  const [view, setView] = reactExports.useState("active");
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
   const [profileInitialTab, setProfileInitialTab] = reactExports.useState(null);
   const [isCreatingNew, setIsCreatingNew] = reactExports.useState(false);
@@ -31185,8 +31185,8 @@ const CourseRosterView = ({
     return a.localeCompare(b);
   });
   const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
-  const coursesToDisplay = view2 === "active" ? activeCourseNumbers : archivedCourseNumbers;
-  const courseColorMap = view2 === "active" ? courseColors : archivedCourses;
+  const coursesToDisplay = view === "active" ? activeCourseNumbers : archivedCourseNumbers;
+  const courseColorMap = view === "active" ? courseColors : archivedCourses;
   const courseRecordsByName = reactExports.useMemo(() => {
     const records = /* @__PURE__ */ new Map();
     courses.forEach((course) => {
@@ -31299,7 +31299,7 @@ const CourseRosterView = ({
     "button",
     {
       onClick: () => setView(value),
-      className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${view2 === value ? "active" : ""}`,
+      className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${view === value ? "active" : ""}`,
       children: label
     }
   );
@@ -31372,7 +31372,7 @@ const CourseRosterView = ({
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute right-2 top-2 flex items-center gap-1", children: [
-                  view2 === "active" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  view === "active" && /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       onClick: () => !isFrozen && setCourseToEdit(courseName),
@@ -31383,7 +31383,7 @@ const CourseRosterView = ({
                       children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 group-hover:scale-110 transition-transform", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" }) })
                     }
                   ),
-                  view2 === "archived" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  view === "archived" && /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       onClick: () => setCourseToRestore(courseName),
@@ -128092,7 +128092,7 @@ ${"=".repeat(60)}`);
   const canViewTraineePt051 = reactExports.useCallback((trainee) => canEditPt051Records || (isOwnTraineeRecord(trainee) ? canViewOwnPt051 : canViewOtherPt051), [canEditPt051Records, isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
   const canEditTraineePt051 = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) || canEditPt051Records && canViewTraineePt051(trainee), [canEditPt051Records, canViewTraineePt051, isOwnTraineeRecord]);
   const canViewTraineeLmp = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnLmp : canViewOtherLmp, [isOwnTraineeRecord, canViewOwnLmp, canViewOtherLmp]);
-  const getRequiredPlatformPermissionForView = reactExports.useCallback((view2) => {
+  const getRequiredPlatformPermissionForView = reactExports.useCallback((view) => {
     const viewPermissions = {
       "Program Schedule": "dfp.view",
       Staff: "staff.view",
@@ -128106,56 +128106,56 @@ ${"=".repeat(60)}`);
       Priorities: "neo.priorities",
       BuildIntelligence: "neo.intelligence"
     };
-    return viewPermissions[view2] || null;
+    return viewPermissions[view] || null;
   }, []);
-  const canOpenSelfScopedView = reactExports.useCallback((view2) => {
-    if (view2 === "Staff") return Boolean(currentUserStaffProfile);
-    if (view2 === "Trainee" && !modelUnavailableLeftViews.includes("Trainee")) return Boolean(currentUserTraineeProfile);
+  const canOpenSelfScopedView = reactExports.useCallback((view) => {
+    if (view === "Staff") return Boolean(currentUserStaffProfile);
+    if (view === "Trainee" && !modelUnavailableLeftViews.includes("Trainee")) return Boolean(currentUserTraineeProfile);
     return false;
   }, [currentUserStaffProfile, currentUserTraineeProfile, modelUnavailableLeftViews]);
-  const hasPlatformModuleAccessForView = reactExports.useCallback((view2) => {
-    const moduleCode = getPlatformModuleForView(view2);
+  const hasPlatformModuleAccessForView = reactExports.useCallback((view) => {
+    const moduleCode = getPlatformModuleForView(view);
     if (!moduleCode) return true;
     return getDailySnapshotLocationAliases(school).some((locationAlias) => hasPlatformModuleAccess(platformAccessContext, locationAlias, moduleCode));
   }, [getDailySnapshotLocationAliases, platformAccessContext, school]);
   const hasFullStaffRosterAccess = canUsePlatformPermission("staff.view") && hasPlatformModuleAccessForView("Staff");
   const hasFullTraineeRosterAccess = canUsePlatformPermission("trainee.roster.view") && hasPlatformModuleAccessForView("Trainee");
-  const canAccessView = reactExports.useCallback((view2) => {
-    if (view2 === "MyDashboard") return true;
-    if (view2 === "Settings") {
+  const canAccessView = reactExports.useCallback((view) => {
+    if (view === "MyDashboard") return true;
+    if (view === "Settings") {
       return !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
     }
-    const requiredPermission = getRequiredPlatformPermissionForView(view2);
-    if (requiredPermission && !canUsePlatformPermission(requiredPermission) && !canOpenSelfScopedView(view2)) return false;
-    if (!hasPlatformModuleAccessForView(view2) && !canOpenSelfScopedView(view2)) return false;
+    const requiredPermission = getRequiredPlatformPermissionForView(view);
+    if (requiredPermission && !canUsePlatformPermission(requiredPermission) && !canOpenSelfScopedView(view)) return false;
+    if (!hasPlatformModuleAccessForView(view) && !canOpenSelfScopedView(view)) return false;
     return true;
   }, [canOpenSelfScopedView, canUsePlatformPermission, getRequiredPlatformPermissionForView, hasPlatformModuleAccessForView, platformAccessContext]);
-  const navigateToView = (view2) => {
-    if (!canAccessView(view2)) {
+  const navigateToView = (view) => {
+    if (!canAccessView(view)) {
       setShowInfoNotification("Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.");
       return;
     }
-    if (view2 === "MyDashboard" || view2 === "SupervisorDashboard") {
+    if (view === "MyDashboard" || view === "SupervisorDashboard") {
       setPreviousView(activeView);
-      setFloatingDashboardWindows((prev) => ({ ...prev, [view2]: true }));
+      setFloatingDashboardWindows((prev) => ({ ...prev, [view]: true }));
       return;
     }
     setPreviousView(activeView);
-    setActiveView(view2);
+    setActiveView(view);
     setShowPausePanel(false);
     setPauseCompletedEventIds(/* @__PURE__ */ new Set());
     setPausePanelPhase("configure");
   };
-  const handleNavigation = (view2) => {
-    if (view2 === "Syllabus") {
+  const handleNavigation = (view) => {
+    if (view === "Syllabus") {
       setInitialSyllabusId(null);
       setSyllabusBackTarget("Program Schedule");
     }
     if (isDirtyRef.current()) {
-      setPendingNavigation(view2);
+      setPendingNavigation(view);
       setShowUnsavedWarning(true);
     } else {
-      navigateToView(view2);
+      navigateToView(view);
     }
   };
   const handleNavigateToSettingsSection = (request) => {
@@ -141788,7 +141788,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
         console.error("Training Report view error - missing context:", {
           eventForPt051,
           selectedTraineeForHateSheet,
-          view
+          activeView
         });
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 bg-gray-900 text-white", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-2xl font-bold text-red-500 mb-4", children: [
