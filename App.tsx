@@ -23979,6 +23979,205 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         durationMs: preferredInstructorOptimisation.durationMs,
     });
 
+    const compactFlightSchoolAircraftRows = (
+        eventsToCompact: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[]
+    ) => {
+        const startedAt = performance.now();
+        const aircraftResources = Array.from(
+            { length: availableAircraftCount },
+            (_, index) => `${buildAircraftResourceIdPrefix}${index + 1}`
+        );
+        const countByResource = (events: typeof eventsToCompact) => events.reduce<Record<string, number>>((acc, event) => {
+            const resource = event.resourceId || 'none';
+            acc[resource] = (acc[resource] || 0) + 1;
+            return acc;
+        }, {});
+        const report = {
+            enabled: false,
+            reason: '',
+            inputEvents: eventsToCompact.length,
+            aircraftRows: aircraftResources.length,
+            movableFlights: 0,
+            assignments: [] as any[],
+            skipped: [] as any[],
+            moved: 0,
+            unchanged: 0,
+            beforeByResource: countByResource(eventsToCompact),
+            afterByResource: {} as Record<string, number>,
+            durationMs: 0,
+        };
+
+        if (buildOperationalModel !== 'flight_school') {
+            report.reason = `Aircraft row compaction only runs for the Flight School Model; active model is ${buildOperationalModel || 'unknown'}.`;
+            report.afterByResource = report.beforeByResource;
+            report.durationMs = Math.round(performance.now() - startedAt);
+            return { events: eventsToCompact, report };
+        }
+        if (aircraftResources.length <= 1) {
+            report.reason = 'Only one aircraft row is available.';
+            report.afterByResource = report.beforeByResource;
+            report.durationMs = Math.round(performance.now() - startedAt);
+            return { events: eventsToCompact, report };
+        }
+
+        report.enabled = true;
+        report.reason = 'Packed generated flight events into the lowest compatible aircraft rows after final scheduling.';
+
+        const compactedEvents = eventsToCompact.map(event => ({ ...event }));
+        const occupiedByResource = new Map<string, typeof compactedEvents>();
+        aircraftResources.forEach(resourceId => occupiedByResource.set(resourceId, [] as typeof compactedEvents));
+
+        const isAircraftFlight = (event: Omit<ScheduleEvent, 'date'>): boolean =>
+            event.type === 'flight' &&
+            typeof event.resourceId === 'string' &&
+            event.resourceId.startsWith(buildAircraftResourceIdPrefix) &&
+            !isStbyResource(event.resourceId);
+        const isMovableFlight = (event: Omit<ScheduleEvent, 'date'> & { _source?: string }): boolean =>
+            isAircraftFlight(event) && event.isTimeFixed !== true;
+        const eventEndWithTurnaround = (event: Omit<ScheduleEvent, 'date'>): number =>
+            event.startTime + event.duration + flightTurnaround;
+        const rowHasSpace = (resourceId: string, event: Omit<ScheduleEvent, 'date'>): boolean => {
+            const proposedEnd = eventEndWithTurnaround(event);
+            return !(occupiedByResource.get(resourceId) || []).some(existing =>
+                event.startTime < eventEndWithTurnaround(existing) && proposedEnd > existing.startTime
+            );
+        };
+        const addToRow = (resourceId: string, event: typeof compactedEvents[number]) => {
+            const row = occupiedByResource.get(resourceId);
+            if (row) row.push(event);
+        };
+        const assignResource = (event: typeof compactedEvents[number], resourceId: string, reason: string) => {
+            const from = event.resourceId;
+            const resourceConfigId = getAircraftConfigIdForResource(resourceId);
+            event.resourceId = resourceId;
+            (event as any).aircraftConfigId = resourceConfigId;
+            addToRow(resourceId, event);
+            const assignment = {
+                eventId: event.id,
+                flightNumber: event.flightNumber,
+                startTime: event.startTime,
+                displayTime: _fmtT(event.startTime),
+                duration: event.duration,
+                from,
+                to: resourceId,
+                moved: from !== resourceId,
+                reason,
+                instructor: event.instructor || null,
+                student: event.student || null,
+                pilot: event.pilot || null,
+            };
+            report.assignments.push(assignment);
+            if (assignment.moved) report.moved++;
+            else report.unchanged++;
+        };
+
+        compactedEvents.forEach(event => {
+            if (!isAircraftFlight(event) || isMovableFlight(event)) return;
+            addToRow(event.resourceId, event);
+            report.skipped.push({
+                eventId: event.id,
+                flightNumber: event.flightNumber,
+                resourceId: event.resourceId,
+                startTime: event.startTime,
+                displayTime: _fmtT(event.startTime),
+                reason: event.isTimeFixed === true ? 'TIME_FIXED_EVENT_PRESERVED' : 'NON_MOVABLE_AIRCRAFT_EVENT_PRESERVED',
+            });
+        });
+
+        const processedIds = new Set<string>();
+        const items = compactedEvents
+            .filter(isMovableFlight)
+            .map(event => {
+                const formationId = String((event as any).formationId || '').trim();
+                if (!formationId) return { kind: 'single', events: [event], startTime: event.startTime };
+                if (processedIds.has(event.id)) return null;
+                const formationEvents = compactedEvents
+                    .filter(candidate => isMovableFlight(candidate) && String((candidate as any).formationId || '').trim() === formationId)
+                    .sort((a, b) => ((a as any).formationPosition || 0) - ((b as any).formationPosition || 0));
+                formationEvents.forEach(formationEvent => processedIds.add(formationEvent.id));
+                return {
+                    kind: 'formation',
+                    formationId,
+                    events: formationEvents,
+                    startTime: Math.min(...formationEvents.map(formationEvent => formationEvent.startTime)),
+                };
+            })
+            .filter(Boolean) as Array<{ kind: string; formationId?: string; events: typeof compactedEvents; startTime: number }>;
+
+        report.movableFlights = items.reduce((sum, item) => sum + item.events.length, 0);
+        items.sort((a, b) => {
+            if (Math.abs(a.startTime - b.startTime) > 0.001) return a.startTime - b.startTime;
+            const rowA = Math.min(...a.events.map(event => resourceOrderMap.get(event.resourceId) ?? 9999));
+            const rowB = Math.min(...b.events.map(event => resourceOrderMap.get(event.resourceId) ?? 9999));
+            return rowA - rowB;
+        });
+
+        items.forEach(item => {
+            if (item.kind === 'formation') {
+                let placed = false;
+                for (let startIndex = 0; startIndex <= aircraftResources.length - item.events.length && !placed; startIndex++) {
+                    const block = aircraftResources.slice(startIndex, startIndex + item.events.length);
+                    const blockFits = item.events.every((event, index) => (
+                        eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(block[index])) &&
+                        rowHasSpace(block[index], event)
+                    ));
+                    if (!blockFits) continue;
+                    item.events.forEach((event, index) => assignResource(event, block[index], 'FORMATION_BLOCK_LOWEST_AVAILABLE_ROWS'));
+                    placed = true;
+                }
+                if (!placed) {
+                    item.events.forEach(event => {
+                        addToRow(event.resourceId, event);
+                        report.skipped.push({
+                            eventId: event.id,
+                            flightNumber: event.flightNumber,
+                            resourceId: event.resourceId,
+                            startTime: event.startTime,
+                            displayTime: _fmtT(event.startTime),
+                            reason: 'NO_COMPATIBLE_FORMATION_ROW_BLOCK',
+                        });
+                    });
+                }
+                return;
+            }
+
+            const event = item.events[0];
+            const targetResource = aircraftResources.find(resourceId =>
+                eventAcceptsResourceConfig(event, getAircraftConfigIdForResource(resourceId)) &&
+                rowHasSpace(resourceId, event)
+            );
+            if (targetResource) {
+                assignResource(event, targetResource, 'LOWEST_AVAILABLE_COMPATIBLE_ROW');
+                return;
+            }
+            addToRow(event.resourceId, event);
+            report.skipped.push({
+                eventId: event.id,
+                flightNumber: event.flightNumber,
+                resourceId: event.resourceId,
+                startTime: event.startTime,
+                displayTime: _fmtT(event.startTime),
+                reason: 'NO_COMPATIBLE_ROW_AVAILABLE',
+            });
+        });
+
+        report.assignments = report.assignments.slice(0, getNeoBuildTraceLimit(260, 900));
+        report.skipped = report.skipped.slice(0, getNeoBuildTraceLimit(120, 400));
+        report.afterByResource = countByResource(compactedEvents);
+        report.durationMs = Math.round(performance.now() - startedAt);
+        return { events: compactedEvents, report };
+    };
+
+    const aircraftRowCompaction = compactFlightSchoolAircraftRows(finalCrewSafeEvents);
+    const finalRowCompactedEvents = aircraftRowCompaction.events;
+    neoBuildDiag.aircraftRowCompaction = aircraftRowCompaction.report;
+    markBuildTiming('final-cleanup:aircraft-row-compaction-complete', {
+        events: finalRowCompactedEvents.length,
+        moved: aircraftRowCompaction.report.moved,
+        unchanged: aircraftRowCompaction.report.unchanged,
+        durationMs: aircraftRowCompaction.report.durationMs,
+    });
+
     neoBuildDiag.finalCleanup = {
         beforeDayNightGuard: generatedEventsBeforeFinalCleanup,
         afterDayNightGuard: dayNightSeparatedEvents.length,
@@ -23987,12 +24186,15 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         removedByGroundRepair: dayNightSeparatedEvents.length - conflictSafeEvents.length,
         afterPooledCrewManifestGuard: finalCrewSafeEvents.length,
         removedByPooledCrewManifestGuard: conflictSafeEvents.length - finalCrewSafeEvents.length,
+        afterAircraftRowCompaction: finalRowCompactedEvents.length,
+        movedByAircraftRowCompaction: aircraftRowCompaction.report.moved,
         pooledCrewManifestGuard,
         preferredInstructorOptimisation,
+        aircraftRowCompaction: aircraftRowCompaction.report,
     };
 
     // Sort events by resource order, then by start time
-    const sortedEvents = [...finalCrewSafeEvents].sort((a, b) => {
+    const sortedEvents = [...finalRowCompactedEvents].sort((a, b) => {
         const orderA = resourceOrderMap.get(a.resourceId) ?? 9999;
         const orderB = resourceOrderMap.get(b.resourceId) ?? 9999;
 
@@ -24757,6 +24959,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             .filter((entry: any) => entry?.eventId)
             .map((entry: any) => [entry.eventId, entry])
     );
+    const aircraftRowCompactionByEventId = new Map(
+        (neoBuildDiag.aircraftRowCompaction?.assignments || [])
+            .filter((entry: any) => entry?.eventId)
+            .map((entry: any) => [entry.eventId, entry])
+    );
 
     const finalPersonnelIdentityEvents = sortedEvents.map(event => {
         const personnelRefs = describeNeoBuildDiagnosticPersonnelRefs(event);
@@ -24855,6 +25062,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(event),
             staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(event),
             placementExplanation: finalPlacementExplanationsByEventId.get(event.id) || null,
+            aircraftRowCompaction: aircraftRowCompactionByEventId.get(event.id) || null,
         })),
         events: sortedEvents.map(event => ({
             id: event.id,
@@ -24879,6 +25087,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(event),
             staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(event),
             placementExplanation: finalPlacementExplanationsByEventId.get(event.id) || null,
+            aircraftRowCompaction: aircraftRowCompactionByEventId.get(event.id) || null,
         })),
     };
     if (sortedEvents.length === 0) {
