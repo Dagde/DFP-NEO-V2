@@ -22838,7 +22838,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     ): (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[] => {
         type BuildEvent = Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string };
         const isGeneratedRepairableTrainingEvent = (event: BuildEvent): boolean => (
-            (event.type === 'flight' || event.type === 'ftd' || event.type === 'ground' || event.type === 'cpt') && event._source === 'generated'
+            (event.type === 'ground' || event.type === 'cpt') && event._source === 'generated'
         );
         const groundResourceCount = Math.max(
             6,

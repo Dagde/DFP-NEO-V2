@@ -118555,7 +118555,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return events.filter((event) => !removeEventIds.has(event.id));
   };
   const repairGeneratedGroundConflicts = (events) => {
-    const isGeneratedRepairableTrainingEvent = (event) => (event.type === "flight" || event.type === "ftd" || event.type === "ground" || event.type === "cpt") && event._source === "generated";
+    const isGeneratedRepairableTrainingEvent = (event) => (event.type === "ground" || event.type === "cpt") && event._source === "generated";
     const groundResourceCount = Math.max(
       6,
       ...events.map((event) => event.resourceId?.match(/^Ground (\d+)$/)?.[1]).filter((value) => !!value).map((value) => Number(value)).filter((value) => Number.isFinite(value))
