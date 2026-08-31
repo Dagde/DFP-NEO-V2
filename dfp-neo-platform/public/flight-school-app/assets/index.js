@@ -123554,6 +123554,32 @@ const App = () => {
         [baselineKey]: snap2.aircraftConfigState
       }));
     }
+    const snapshotAssessments = snap2.pt051Assessments && typeof snap2.pt051Assessments === "object" ? Object.values(snap2.pt051Assessments) : [];
+    if (snapshotAssessments.length > 0) {
+      setPt051Assessments((prev) => {
+        const next = new Map(prev);
+        snapshotAssessments.forEach((assessment) => {
+          const eventId = assessment?.eventId || assessment?.id || "";
+          const traineeName = assessment?.traineeFullName || assessment?.trainedFullName || "";
+          if (!eventId || !traineeName) return;
+          next.set(`pt051-${eventId}-${traineeName}`, assessment);
+        });
+        return next;
+      });
+      pushDfpDataDiag("snapshot:apply-training-reports", {
+        targetDate,
+        snapshotSchool,
+        snapshotUnit,
+        source,
+        reportCount: snapshotAssessments.length,
+        sampleReports: snapshotAssessments.slice(0, 8).map((assessment) => ({
+          eventId: assessment?.eventId || "",
+          date: assessment?.date || "",
+          flightNumber: assessment?.flightNumber || "",
+          traineeFullName: assessment?.traineeFullName || assessment?.trainedFullName || ""
+        }))
+      });
+    }
     return events2.length;
   }, [activeUnitCode]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {

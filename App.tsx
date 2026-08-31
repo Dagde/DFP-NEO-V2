@@ -29226,6 +29226,35 @@ const App: React.FC = () => {
             }));
         }
 
+        const snapshotAssessments = snap.pt051Assessments && typeof snap.pt051Assessments === 'object'
+            ? Object.values(snap.pt051Assessments) as Pt051Assessment[]
+            : [];
+        if (snapshotAssessments.length > 0) {
+            setPt051Assessments(prev => {
+                const next = new Map(prev);
+                snapshotAssessments.forEach((assessment: any) => {
+                    const eventId = assessment?.eventId || assessment?.id || '';
+                    const traineeName = assessment?.traineeFullName || assessment?.trainedFullName || '';
+                    if (!eventId || !traineeName) return;
+                    next.set(`pt051-${eventId}-${traineeName}`, assessment as Pt051Assessment);
+                });
+                return next;
+            });
+            pushDfpDataDiag('snapshot:apply-training-reports', {
+                targetDate,
+                snapshotSchool,
+                snapshotUnit,
+                source,
+                reportCount: snapshotAssessments.length,
+                sampleReports: snapshotAssessments.slice(0, 8).map((assessment: any) => ({
+                    eventId: assessment?.eventId || '',
+                    date: assessment?.date || '',
+                    flightNumber: assessment?.flightNumber || '',
+                    traineeFullName: assessment?.traineeFullName || assessment?.trainedFullName || '',
+                })),
+            });
+        }
+
         return events.length;
     }, [activeUnitCode]);
 
