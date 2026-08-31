@@ -39124,12 +39124,26 @@ const App: React.FC = () => {
         if (!traineeId) {
             throw new Error(`Cannot save ${configuredTrainingReportDisplayName}: trainee database record not found for ${assessment.traineeFullName}`);
         }
+        const assessmentAny = assessment as any;
+        const eventAny = eventForPt051 as any;
+        const resolvedDate = String(
+            assessmentAny.date ||
+            assessmentAny.eventDate ||
+            assessmentAny.scheduleEventDate ||
+            eventAny?.date ||
+            buildDfpDate ||
+            date ||
+            ''
+        ).slice(0, 10);
 
         pushDfpDataDiag('pt051:persist:request', {
             assessmentId: assessment.id,
             eventId: assessment.eventId,
             flightNumber: assessment.flightNumber,
             traineeFullName: assessment.traineeFullName,
+            resolvedDate,
+            assessmentDate: assessmentAny.date || null,
+            eventDate: eventAny?.date || null,
             dcoResult: assessment.dcoResult,
             dpcoFollowUp: assessment.dpcoFollowUp || null,
             dncoFollowUp: assessment.dncoFollowUp || null,
@@ -39142,6 +39156,7 @@ const App: React.FC = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 ...assessment,
+                date: resolvedDate || assessmentAny.date || '',
                 traineeId,
                 course: (trainee as any)?.course || null,
                 createdBy: authUser?.userId ?? sessionUser?.userId ?? null,

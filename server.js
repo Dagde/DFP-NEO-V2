@@ -17922,6 +17922,9 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         WHERE "archiveId" = $1::text
         ORDER BY COALESCE("resourceId", ''), COALESCE("startTime", 0), "eventId"
       `, archive.id);
+      const archivedEventIds = (eventRows || [])
+        .map(row => row?.eventId)
+        .filter(Boolean);
       const configRefs = archive.configRefs && typeof archive.configRefs === 'object' ? archive.configRefs : {};
       const configIds = Object.values(configRefs)
         .map(ref => ref?.id)
@@ -17935,8 +17938,12 @@ app.get('/api/archive/dfp-date', async (req, res) => {
           `, configIds)
         : [];
       const performanceRows = await db.$queryRawUnsafe(
-        `SELECT * FROM "TraineePerformance" WHERE "date" = $1::text ORDER BY "course" ASC NULLS LAST, "traineeFullName" ASC, "eventSequence" ASC NULLS LAST LIMIT 5000`,
-        archive.date
+        `SELECT * FROM "TraineePerformance"
+         WHERE "date" = $1::text OR "eventId" = ANY($2::text[])
+         ORDER BY "course" ASC NULLS LAST, "traineeFullName" ASC, "eventSequence" ASC NULLS LAST
+         LIMIT 5000`,
+        archive.date,
+        archivedEventIds
       ).catch(() => []);
       const completionRows = await db.$queryRawUnsafe(
         `SELECT * FROM "EventCompletion" WHERE "eventDate" = $1::text ORDER BY "startTime" ASC, "traineeFullName" ASC LIMIT 5000`,
@@ -17949,10 +17956,11 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       const trainingReportVersions = await db.$queryRawUnsafe(
         `SELECT "eventId", "traineeId", "traineeFullName", "reportDate", "action", "versionHash", "reportData", "changedBy", "changedAt"
          FROM "TrainingReportVersionArchive"
-         WHERE "reportDate" = $1::text
+         WHERE "reportDate" = $1::text OR "eventId" = ANY($2::text[])
          ORDER BY "changedAt" DESC
          LIMIT 5000`,
-        archive.date
+        archive.date,
+        archivedEventIds
       ).catch(() => []);
       const scheduleEvents = eventRows.map(row => row.eventData);
       const trainingReports = (performanceRows || []).map(row => mapRowToAssessment(row));
@@ -18008,6 +18016,7 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       await writeArchiveDiagnostic(db, 'ARCHIVE_HISTORICAL_DFP_READ', archive.snapshotKey, archive.date, 'success', {
         source: response.source,
         scheduleEvents: response.scheduleEvents.length,
+        archivedEventIds: archivedEventIds.length,
         trainingReports: response.trainingReports.length,
         trainingReportVersions: response.trainingReportVersions.length,
         eventCompletions: response.eventCompletions.length,
