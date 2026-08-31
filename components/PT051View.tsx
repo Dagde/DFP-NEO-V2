@@ -277,6 +277,22 @@ const stripGeneratedFollowUpNotes = (value: string, generatedPrefix = ''): strin
     return cleanedLines.join('\n').replace(/^\s+/, '');
 };
 
+const normaliseTrainingReportElementGrade = (grade: unknown): TrainingReportGrade | null => {
+    if (grade === null || grade === undefined || grade === '') return null;
+    const text = String(grade).trim();
+    if (!text) return null;
+    if (text === 'MIN' || text === 'DEMO') return text;
+    const numericGrade = Number(text);
+    return Number.isNaN(numericGrade) ? null : numericGrade as TrainingReportGrade;
+};
+
+const normaliseTrainingReportScores = (scores: TrainingReportAssessment['scores'] = []): TrainingReportAssessment['scores'] => (
+    scores.map(score => ({
+        ...score,
+        grade: normaliseTrainingReportElementGrade(score.grade),
+    }))
+);
+
 const formatFollowUpHours = (value?: number): string => {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : '';
@@ -788,6 +804,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             return {
                 ...initialAssessment,
                 instructorName: normaliseTrainingReportInstructorValue(instructors, initialAssessment.instructorName),
+                scores: normaliseTrainingReportScores(initialAssessment.scores),
             };
         }
         return {

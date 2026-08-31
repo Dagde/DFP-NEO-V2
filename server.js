@@ -21111,6 +21111,19 @@ function mapRowToAssessment(row) {
     try { scores = JSON.parse(scores); } catch { scores = []; }
   }
   if (!Array.isArray(scores)) scores = [];
+  const normaliseElementGrade = (grade) => {
+    if (grade === null || grade === undefined || grade === '') return null;
+    const text = String(grade).trim();
+    if (!text) return null;
+    if (text === 'MIN' || text === 'DEMO') return text;
+    const numericGrade = Number(text);
+    return Number.isNaN(numericGrade) ? grade : numericGrade;
+  };
+  scores = scores.map(score => (
+    score && typeof score === 'object'
+      ? { ...score, grade: normaliseElementGrade(score.grade) }
+      : score
+  ));
   const followUpMeta = scores.find(score => score && typeof score === 'object' && score.element === '__pt051FollowUp')?.metadata || {};
   appendTrainingReportNotesServerDiag('map-row-to-assessment', {
     eventId: row.eventId,

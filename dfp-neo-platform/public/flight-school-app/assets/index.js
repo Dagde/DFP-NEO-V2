@@ -24728,6 +24728,18 @@ const stripGeneratedFollowUpNotes$1 = (value, generatedPrefix = "") => {
   });
   return cleanedLines.join("\n").replace(/^\s+/, "");
 };
+const normaliseTrainingReportElementGrade = (grade) => {
+  if (grade === null || grade === void 0 || grade === "") return null;
+  const text = String(grade).trim();
+  if (!text) return null;
+  if (text === "MIN" || text === "DEMO") return text;
+  const numericGrade = Number(text);
+  return Number.isNaN(numericGrade) ? null : numericGrade;
+};
+const normaliseTrainingReportScores = (scores = []) => scores.map((score) => ({
+  ...score,
+  grade: normaliseTrainingReportElementGrade(score.grade)
+}));
 const formatFollowUpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : "";
@@ -25124,7 +25136,8 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
     if (initialAssessment) {
       return {
         ...initialAssessment,
-        instructorName: normaliseTrainingReportInstructorValue(instructors, initialAssessment.instructorName)
+        instructorName: normaliseTrainingReportInstructorValue(instructors, initialAssessment.instructorName),
+        scores: normaliseTrainingReportScores(initialAssessment.scores)
       };
     }
     return {
