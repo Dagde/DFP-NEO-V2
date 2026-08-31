@@ -22188,10 +22188,12 @@ const CurrencyPanel = ({
   onCurrencyStatusChange,
   onEditStateChange,
   currentUserId,
-  currentUserName
+  currentUserName,
+  useLiveCurrency = true,
+  readOnly = false
 }) => {
   const resolvedId = personId || (idNumber !== void 0 ? String(idNumber) : void 0);
-  const cachedStatus = resolvedId ? savedCurrencyCache.get(resolvedId) ?? null : null;
+  const cachedStatus = useLiveCurrency && resolvedId ? savedCurrencyCache.get(resolvedId) ?? null : null;
   const [currencyStatus, setCurrencyStatus] = reactExports.useState(
     cachedStatus || initialCurrencyStatus || []
   );
@@ -22205,6 +22207,18 @@ const CurrencyPanel = ({
   const [isLoading, setIsLoading] = reactExports.useState(false);
   const [saveSuccessMessage, setSaveSuccessMessage] = reactExports.useState(null);
   reactExports.useEffect(() => {
+    if (useLiveCurrency) return;
+    setCurrencyStatus(initialCurrencyStatus || []);
+    setIsEditing(false);
+    setEditedStatuses(/* @__PURE__ */ new Map());
+    setOriginalStatuses(/* @__PURE__ */ new Map());
+    setEditedInactive(/* @__PURE__ */ new Map());
+    setOriginalInactive(/* @__PURE__ */ new Map());
+    setSaveError(null);
+    setSaveSuccessMessage(null);
+  }, [initialCurrencyStatus, useLiveCurrency]);
+  reactExports.useEffect(() => {
+    if (!useLiveCurrency) return;
     if (!resolvedId) return;
     const endpoint = personType === "instructor" ? `/api/personnel/${resolvedId}/currencies` : `/api/trainees/${resolvedId}/currencies`;
     setIsLoading(true);
@@ -22215,7 +22229,7 @@ const CurrencyPanel = ({
       console.warn("[CurrencyPanel] Could not load from API, using initial:", err);
       if (initialCurrencyStatus) setCurrencyStatus(initialCurrencyStatus);
     }).finally(() => setIsLoading(false));
-  }, [resolvedId, personType]);
+  }, [resolvedId, personType, useLiveCurrency]);
   const visibleCurrencyDefinitions = reactExports.useMemo(() => {
     const all = [...masterCurrencies.filter((c) => c.isVisible), ...currencyRequirements.filter((c) => c.isVisible)];
     return all.sort((a, b) => {
@@ -22257,6 +22271,7 @@ const CurrencyPanel = ({
     return counts;
   }, [visibleCurrencyDefinitions, currencyStatus]);
   const handleEditClick = () => {
+    if (readOnly || !useLiveCurrency) return;
     const initialMap = /* @__PURE__ */ new Map();
     const inactiveMap = /* @__PURE__ */ new Map();
     visibleCurrencyDefinitions.forEach((def) => {
@@ -22291,6 +22306,7 @@ const CurrencyPanel = ({
     setEditedStatuses((prev) => new Map(prev).set(currencyName, date));
   };
   const handleSaveClick = reactExports.useCallback(async () => {
+    if (readOnly || !useLiveCurrency) return;
     if (!resolvedId) return;
     setIsSaving(true);
     setSaveError(null);
@@ -22406,8 +22422,18 @@ const CurrencyPanel = ({
     } finally {
       setIsSaving(false);
     }
-  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, editedInactive, originalInactive, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName, originalStatuses]);
+  }, [readOnly, useLiveCurrency, resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, editedInactive, originalInactive, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName, originalStatuses]);
   reactExports.useEffect(() => {
+    if (readOnly || !useLiveCurrency) {
+      onEditStateChange?.({
+        isEditing: false,
+        isSaving: false,
+        onEdit: () => void 0,
+        onSave: () => void 0,
+        onCancel: () => void 0
+      });
+      return;
+    }
     onEditStateChange?.({
       isEditing,
       isSaving: isSaving2,
@@ -22415,7 +22441,7 @@ const CurrencyPanel = ({
       onSave: handleSaveClick,
       onCancel: handleCancelClick
     });
-  }, [isEditing, isSaving2, handleSaveClick]);
+  }, [isEditing, isSaving2, handleSaveClick, readOnly, useLiveCurrency]);
   reactExports.useEffect(() => {
     if (!saveSuccessMessage) return;
     const t = setTimeout(() => setSaveSuccessMessage(null), 4e3);
@@ -27017,6 +27043,7 @@ const TraineeProfileFlyout = ({
   );
   const [localCurrencyStatus, setLocalCurrencyStatus] = reactExports.useState(void 0);
   const localCurrencyStatusRef = reactExports.useRef(void 0);
+  const isArchiveCurrencyProfile = trainee._dataSource === "archive";
   const [showCurrencyAudit, setShowCurrencyAudit] = reactExports.useState(false);
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
   const tabBtnClass = (tab, allowed = true) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab || tab === "hatesheet" && activeTab === "pt051" ? " active" : ""}${allowed ? "" : " cursor-not-allowed"}`;
@@ -28420,7 +28447,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     trainee.name
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
-                    currencyEditState && !currencyEditState.isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    !isArchiveCurrencyProfile && currencyEditState && !currencyEditState.isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "button",
                       {
                         onClick: currencyEditState.onEdit,
@@ -28429,7 +28456,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                         children: "Edit"
                       }
                     ),
-                    currencyEditState && currencyEditState.isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                    !isArchiveCurrencyProfile && currencyEditState && currencyEditState.isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "button",
                         {
@@ -28480,7 +28507,9 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     personName: trainee.name,
                     masterCurrencies,
                     currencyRequirements,
-                    initialCurrencyStatus: localCurrencyStatusRef.current ?? localCurrencyStatus ?? trainee.currencyStatus,
+                    initialCurrencyStatus: isArchiveCurrencyProfile ? trainee.currencyStatus : localCurrencyStatusRef.current ?? localCurrencyStatus ?? trainee.currencyStatus,
+                    useLiveCurrency: !isArchiveCurrencyProfile,
+                    readOnly: isArchiveCurrencyProfile,
                     onCurrencyStatusChange: (newStatus) => {
                       localCurrencyStatusRef.current = newStatus;
                       setLocalCurrencyStatus(newStatus);
@@ -28489,7 +28518,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     currentUserId,
                     currentUserName
                   },
-                  `currency-panel-${trainee.idNumber}`
+                  `currency-panel-${trainee.idNumber}-${trainee._dataSource || "live"}`
                 )
               ] }),
               showCurrencyAudit && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60388,6 +60417,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
   const [currencyEditState, setCurrencyEditState] = reactExports.useState(null);
   const [localCurrencyStatus, setLocalCurrencyStatus] = reactExports.useState(void 0);
   const localCurrencyStatusRef = reactExports.useRef(void 0);
+  const isArchiveCurrencyProfile = instructor._dataSource === "archive";
   const [showCurrencyAudit, setShowCurrencyAudit] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (profileInitialTab) {
@@ -60477,7 +60507,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 instructor.name
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
-                currencyEditState && !currencyEditState.isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                !isArchiveCurrencyProfile && currencyEditState && !currencyEditState.isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
                     onClick: currencyEditState.onEdit,
@@ -60486,7 +60516,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                     children: "Edit"
                   }
                 ),
-                currencyEditState && currencyEditState.isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                !isArchiveCurrencyProfile && currencyEditState && currencyEditState.isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
@@ -60537,7 +60567,9 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 personName: instructor.name,
                 masterCurrencies,
                 currencyRequirements,
-                initialCurrencyStatus: localCurrencyStatusRef.current ?? localCurrencyStatus ?? instructor.currencyStatus,
+                initialCurrencyStatus: isArchiveCurrencyProfile ? instructor.currencyStatus : localCurrencyStatusRef.current ?? localCurrencyStatus ?? instructor.currencyStatus,
+                useLiveCurrency: !isArchiveCurrencyProfile,
+                readOnly: isArchiveCurrencyProfile,
                 onCurrencyStatusChange: (newStatus) => {
                   localCurrencyStatusRef.current = newStatus;
                   setLocalCurrencyStatus(newStatus);
@@ -60546,7 +60578,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 currentUserId,
                 currentUserName
               },
-              `currency-panel-${instructor.idNumber}`
+              `currency-panel-${instructor.idNumber}-${instructor._dataSource || "live"}`
             )
           ] }),
           showCurrencyAudit && /* @__PURE__ */ jsxRuntimeExports.jsx(

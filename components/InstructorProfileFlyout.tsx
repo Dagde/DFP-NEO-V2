@@ -1125,6 +1125,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   // Uses a ref to ensure the value persists across renders and instructor prop changes
   const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
   const localCurrencyStatusRef = useRef<PersonCurrencyStatus[] | undefined>(undefined);
+  const isArchiveCurrencyProfile = (instructor as any)._dataSource === 'archive';
   // Audit flyout visibility
   const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
 
@@ -1247,7 +1248,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-xs font-bold text-white">Currency &mdash; {instructor.name}</h4>
                     <div className="flex items-center gap-[1px]">
-                      {currencyEditState && !currencyEditState.isEditing && (
+                      {!isArchiveCurrencyProfile && currencyEditState && !currencyEditState.isEditing && (
                         <button
                           onClick={currencyEditState.onEdit}
                           className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
@@ -1256,7 +1257,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           Edit
                         </button>
                       )}
-                      {currencyEditState && currencyEditState.isEditing && (
+                      {!isArchiveCurrencyProfile && currencyEditState && currencyEditState.isEditing && (
                         <>
                           <button
                             onClick={currencyEditState.onCancel}
@@ -1293,14 +1294,16 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     </div>
                   </div>
                   <CurrencyPanel
-                    key={`currency-panel-${instructor.idNumber}`}
+                    key={`currency-panel-${instructor.idNumber}-${(instructor as any)._dataSource || 'live'}`}
                     personId={(instructor as any).id}
                     idNumber={instructor.idNumber}
                     personType="instructor"
                     personName={instructor.name}
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}
-                    initialCurrencyStatus={localCurrencyStatusRef.current ?? localCurrencyStatus ?? instructor.currencyStatus}
+                    initialCurrencyStatus={isArchiveCurrencyProfile ? instructor.currencyStatus : localCurrencyStatusRef.current ?? localCurrencyStatus ?? instructor.currencyStatus}
+                    useLiveCurrency={!isArchiveCurrencyProfile}
+                    readOnly={isArchiveCurrencyProfile}
                     onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
                       localCurrencyStatusRef.current = newStatus;
                       setLocalCurrencyStatus(newStatus);

@@ -22,6 +22,9 @@ interface CurrencyPanelProps {
   currentUserId?: string;
   /** Display name of current user for audit logging */
   currentUserName?: string;
+  /** Historical/archive views must use the supplied snapshot and not refresh from live data */
+  useLiveCurrency?: boolean;
+  readOnly?: boolean;
 }
 
 const AMBER_THRESHOLD_DAYS = 30;
@@ -99,13 +102,15 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   onEditStateChange,
   currentUserId,
   currentUserName,
+  useLiveCurrency = true,
+  readOnly = false,
 }) => {
   // Use UUID if available, otherwise fall back to numeric idNumber
   const resolvedId = personId || (idNumber !== undefined ? String(idNumber) : undefined);
 
   // On mount, initialise state from module-level cache (survives tab close/reopen)
   // Falls back to initialCurrencyStatus prop, then empty array
-  const cachedStatus = resolvedId ? (savedCurrencyCache.get(resolvedId) ?? null) : null;
+  const cachedStatus = useLiveCurrency && resolvedId ? (savedCurrencyCache.get(resolvedId) ?? null) : null;
 
   const [currencyStatus, setCurrencyStatus] = useState<PersonCurrencyStatus[]>(
     cachedStatus || initialCurrencyStatus || []
@@ -122,8 +127,21 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (useLiveCurrency) return;
+    setCurrencyStatus(initialCurrencyStatus || []);
+    setIsEditing(false);
+    setEditedStatuses(new Map());
+    setOriginalStatuses(new Map());
+    setEditedInactive(new Map());
+    setOriginalInactive(new Map());
+    setSaveError(null);
+    setSaveSuccessMessage(null);
+  }, [initialCurrencyStatus, useLiveCurrency]);
+
   // Load currency status from API on mount
   useEffect(() => {
+    if (!useLiveCurrency) return;
     if (!resolvedId) return;
 
     // Always fetch fresh from the API — this ensures Post Flight saves
@@ -147,7 +165,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
         if (initialCurrencyStatus) setCurrencyStatus(initialCurrencyStatus);
       })
       .finally(() => setIsLoading(false));
-  }, [resolvedId, personType]);
+  }, [resolvedId, personType, useLiveCurrency]);
 
   // All visible currency definitions (masters + primitives)
   // Sorted: active currencies alphabetically first, then inactive currencies alphabetically at the bottom
@@ -201,6 +219,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   }, [visibleCurrencyDefinitions, currencyStatus]);
 
   const handleEditClick = () => {
+    if (readOnly || !useLiveCurrency) return;
     const initialMap = new Map<string, string>();
     const inactiveMap = new Map<string, boolean>();
     visibleCurrencyDefinitions.forEach(def => {
@@ -239,6 +258,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   };
 
   const handleSaveClick = useCallback(async () => {
+    if (readOnly || !useLiveCurrency) return;
     if (!resolvedId) return;
     setIsSaving(true);
     setSaveError(null);
@@ -378,12 +398,22 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, editedInactive, originalInactive, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName, originalStatuses]);
+  }, [readOnly, useLiveCurrency, resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, editedInactive, originalInactive, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName, originalStatuses]);
 
   // Notify parent of current edit state and control handlers
   // IMPORTANT: handleSaveClick must be in deps so parent always has the latest version
   // (which captures the current editedStatuses map with user's entered dates)
   useEffect(() => {
+    if (readOnly || !useLiveCurrency) {
+      onEditStateChange?.({
+        isEditing: false,
+        isSaving: false,
+        onEdit: () => undefined,
+        onSave: () => undefined,
+        onCancel: () => undefined,
+      });
+      return;
+    }
     onEditStateChange?.({
       isEditing,
       isSaving,
@@ -391,7 +421,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       onSave: handleSaveClick,
       onCancel: handleCancelClick,
     });
-  }, [isEditing, isSaving, handleSaveClick]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isEditing, isSaving, handleSaveClick, readOnly, useLiveCurrency]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-clear success message after 4 seconds
   useEffect(() => {

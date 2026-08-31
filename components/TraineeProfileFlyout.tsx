@@ -617,6 +617,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     // Local currency status override — updated after successful save without triggering full onUpdateTrainee
     const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
     const localCurrencyStatusRef = useRef<PersonCurrencyStatus[] | undefined>(undefined);
+    const isArchiveCurrencyProfile = (trainee as any)._dataSource === 'archive';
     // Audit flyout visibility
     const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
     const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
@@ -2331,7 +2332,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-xs font-bold text-white">Currency &mdash; {trainee.name}</h4>
                           <div className="flex items-center gap-[1px]">
-                            {currencyEditState && !currencyEditState.isEditing && (
+                            {!isArchiveCurrencyProfile && currencyEditState && !currencyEditState.isEditing && (
                               <button
                                 onClick={currencyEditState.onEdit}
                                 className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
@@ -2340,7 +2341,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 Edit
                               </button>
                             )}
-                            {currencyEditState && currencyEditState.isEditing && (
+                            {!isArchiveCurrencyProfile && currencyEditState && currencyEditState.isEditing && (
                               <>
                                 <button
                                   onClick={currencyEditState.onCancel}
@@ -2377,14 +2378,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           </div>
                         </div>
                         <CurrencyPanel
-                          key={`currency-panel-${trainee.idNumber}`}
+                          key={`currency-panel-${trainee.idNumber}-${(trainee as any)._dataSource || 'live'}`}
                           personId={(trainee as any).id}
                           idNumber={trainee.idNumber}
                           personType="trainee"
                           personName={trainee.name}
                           masterCurrencies={masterCurrencies}
                           currencyRequirements={currencyRequirements}
-                          initialCurrencyStatus={localCurrencyStatusRef.current ?? localCurrencyStatus ?? trainee.currencyStatus}
+                          initialCurrencyStatus={isArchiveCurrencyProfile ? trainee.currencyStatus : localCurrencyStatusRef.current ?? localCurrencyStatus ?? trainee.currencyStatus}
+                          useLiveCurrency={!isArchiveCurrencyProfile}
+                          readOnly={isArchiveCurrencyProfile}
                           onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
                             localCurrencyStatusRef.current = newStatus;
                             setLocalCurrencyStatus(newStatus);
