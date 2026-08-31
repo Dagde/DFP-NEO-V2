@@ -27938,6 +27938,7 @@ const TraineeProfileFlyout = ({
     ] });
   };
   const handlePauseToggle = () => {
+    if (isArchiveProfile) return;
     if (!isPaused && traineeHasEventsToday) {
       setShowScheduleWarning(true);
     } else {
@@ -27964,6 +27965,7 @@ const TraineeProfileFlyout = ({
     setShowPauseConfirm(false);
   };
   const handleSuspendToggle = () => {
+    if (isArchiveProfile) return;
     const nextIsSuspended = !isSuspended;
     const nextPermissions = setTraineeSuspendedMarker(permissions, nextIsSuspended);
     const updatedTrainee = {
@@ -28128,6 +28130,7 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
     }
   };
   const handleDeleteFromProfile = () => {
+    if (isArchiveProfile) return;
     if (isCreating || !canManageTraineeRemoval || !onRequestDeleteTrainee) return;
     onRequestDeleteTrainee(trainee);
   };
@@ -28342,6 +28345,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     }, 50);
   };
   const handleAddTodayOnlyUnavailability = () => {
+    if (isArchiveProfile) return;
     const today = /* @__PURE__ */ new Date();
     const formatForInput = (date) => date.toISOString().split("T")[0];
     const todayStr = formatForInput(today);
@@ -28372,6 +28376,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     }
   };
   const handleSaveCustomUnavailability = (periodData) => {
+    if (isArchiveProfile) return;
     const newPeriod = {
       ...periodData,
       id: v4(),
@@ -28395,6 +28400,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     }
   };
   const handleRemoveUnavailabilityFromFlyout = (idToRemove) => {
+    if (isArchiveProfile) return;
     if (isCreating) {
       setUnavailability((prev) => prev.filter((p) => p.id !== idToRemove));
     } else {
@@ -28414,6 +28420,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     }
   };
   const handleRemoveUnavailability = (idToRemove) => {
+    if (isArchiveProfile) return;
     const periodToRemove = unavailability?.find((p) => p.id === idToRemove);
     if (periodToRemove) {
       const dateRange = periodToRemove.startDate === periodToRemove.endDate ? periodToRemove.startDate : `${periodToRemove.startDate} to ${periodToRemove.endDate}`;
@@ -28466,7 +28473,10 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: isCreating ? "New Trainee" : "Trainee Profile" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: isCreating ? "New Trainee" : "Trainee Profile" }),
+          isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200", children: "Read-only archive" })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-xl font-bold leading-none", children: "✕" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-1 overflow-hidden", children: [
@@ -28819,10 +28829,10 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: p.reason }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300 font-mono", children: periodDisplay }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveUnavailability(p.id), className: "text-red-400 hover:text-red-300 text-xs ml-2", children: "✕" })
+                    !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveUnavailability(p.id), className: "text-red-400 hover:text-red-300 text-xs ml-2", children: "✕" })
                   ] }, p.id);
                 }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-xs italic text-center py-4", children: "No unavailability periods scheduled." }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+                !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
                   setShowAddUnavailability(true);
                   setActiveTab(null);
                 }, className: "mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded", children: "+ Add Unavailability" })
@@ -28837,12 +28847,8 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-xs italic mb-4", children: [
-                  "Submit a ",
-                  continuationLongLabel,
-                  " request for this trainee."
-                ] }),
-                onRequestSct && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs italic mb-4", children: isArchiveProfile ? `Historical ${continuationShortLabel} requests are read-only.` : `Submit a ${continuationLongLabel} request for this trainee.` }),
+                !isArchiveProfile && onRequestSct && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "button",
                   {
                     onClick: (event) => {
@@ -28858,7 +28864,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     ]
                   }
                 ),
-                onPatchSctRequest && onCancelSctRequest && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                !isArchiveProfile && onPatchSctRequest && onCancelSctRequest && /* @__PURE__ */ jsxRuntimeExports.jsx(
                   MySctRequestsPanel,
                   {
                     requests: sctRequests,
@@ -29078,7 +29084,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     onBackToRoster: () => setActiveTab(null),
                     onInsertPt051: () => {
                     },
-                    canEditPt051,
+                    canEditPt051: !isArchiveProfile && canEditPt051,
                     isLoading: pt051PerformanceLoading,
                     trainingReportTerminology,
                     trainingReportTemplate: activeTrainingReportTemplate,
@@ -29105,8 +29111,9 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     formatResourceLabel: formatResourceDisplayLabel,
                     onBack: () => setActiveTab("hatesheet"),
                     onEventUpdate: setInlinePt051Event,
-                    onDeleteAssessment: deleteInlinePt051Assessment,
-                    onSave: persistInlinePt051Assessment,
+                    onDeleteAssessment: isArchiveProfile ? void 0 : deleteInlinePt051Assessment,
+                    onSave: isArchiveProfile ? () => {
+                    } : persistInlinePt051Assessment,
                     instructors: instructorsData,
                     pt051Assessments: pt051Assessments || /* @__PURE__ */ new Map(),
                     events,
@@ -29116,7 +29123,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     registerDirtyCheck,
                     phraseBank: activeTrainingReportPhraseBank,
                     currentUserPin: currentUserId || "1111",
-                    canEditPt051,
+                    canEditPt051: !isArchiveProfile && canEditPt051,
                     embeddedInProfile: true
                   },
                   `embedded-${inlinePt051Event.id}-${trainee.fullName}-${currentAssessment?.overallGrade ?? "none"}`
@@ -29131,10 +29138,10 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     traineeLmp: currentIndividualLMP || [],
                     scores: traineeScores,
                     onBack: () => setActiveTab(null),
-                    onDeleteRemedialItem,
-                    onGeneratePt051ForItem,
-                    onInsertCustomEvent: onInsertCustomLmpEvent,
-                    onUpdateLmpItem,
+                    onDeleteRemedialItem: isArchiveProfile ? void 0 : onDeleteRemedialItem,
+                    onGeneratePt051ForItem: isArchiveProfile ? void 0 : onGeneratePt051ForItem,
+                    onInsertCustomEvent: isArchiveProfile ? void 0 : onInsertCustomLmpEvent,
+                    onUpdateLmpItem: isArchiveProfile ? void 0 : onUpdateLmpItem,
                     insertEventTypes,
                     aircraftConfigurations,
                     aircraftCrewComposition,
@@ -29671,8 +29678,9 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                 showPermissionNoticeForElement(event.currentTarget);
                 return;
               }
+              if (isArchiveProfile) return;
               setIsEditing(true);
-            }, disabled: isFrozen, "aria-disabled": !canUseTraineeProfileAction("trainee.profile.edit"), className: `${btnClass} ${canUseTraineeProfileAction("trainee.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
+            }, disabled: isFrozen || isArchiveProfile, "aria-disabled": isArchiveProfile || !canUseTraineeProfileAction("trainee.profile.edit"), className: `${btnClass} ${!isArchiveProfile && canUseTraineeProfileAction("trainee.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -29685,7 +29693,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
         ] })
       ] })
     ] }) }),
-    showAddUnavailability && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnlyUnavailability, onSave: handleSaveCustomUnavailability, unavailabilityPeriods: unavailability, onRemove: handleRemoveUnavailabilityFromFlyout }),
+    !isArchiveProfile && showAddUnavailability && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnlyUnavailability, onSave: handleSaveCustomUnavailability, unavailabilityPeriods: unavailability, onRemove: handleRemoveUnavailabilityFromFlyout }),
     showScheduleWarning && /* @__PURE__ */ jsxRuntimeExports.jsx(ScheduleWarningFlyout, { traineeName: trainee.name, onAcknowledge: () => {
       setShowScheduleWarning(false);
       setShowPauseConfirm(true);
@@ -60220,7 +60228,10 @@ const InstructorProfileFlyout = ({
       logAudit({ action: "View", description: `Viewed staff profile for ${instructor.rank} ${instructor.name}`, changes: `Role: ${instructor.role}, Unit: ${instructor.unit}`, page: "Staff" });
     }
   }, []);
-  const handleEdit = () => setIsEditing(true);
+  const handleEdit = () => {
+    if (isArchiveProfile) return;
+    setIsEditing(true);
+  };
   const handleCancel = () => {
     if (isCreating) onClose();
     else {
@@ -60443,12 +60454,14 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
     setShowAddUnavailability(false);
   };
   const handleSaveUnavailability = (periodData) => {
+    if (isArchiveProfile) return;
     const newPeriod = { ...periodData, id: v4(), startTime: periodData.allDay ? void 0 : periodData.startTime, endTime: periodData.allDay ? void 0 : periodData.endTime };
     const updated = [...unavailabilityPeriods, newPeriod];
     setUnavailabilityPeriods(updated);
     onUpdateInstructor({ ...instructor, unavailability: updated });
   };
   const handleRemoveUnavailability = (idToRemove) => {
+    if (isArchiveProfile) return;
     const updated = unavailabilityPeriods.filter((p) => p.id !== idToRemove);
     setUnavailabilityPeriods(updated);
     onUpdateInstructor({ ...instructor, unavailability: updated });
@@ -60564,7 +60577,10 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-start justify-center overflow-hidden px-4 pb-4 pt-[7.25rem]", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-[#141e2e] rounded-lg shadow-2xl w-full md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)] max-w-[88rem] max-h-[calc(100vh-8.25rem)] flex flex-col border border-gray-600 overflow-hidden", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: isCreating ? "New Staff" : "Staff Profile" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: isCreating ? "New Staff" : "Staff Profile" }),
+          isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200", children: "Read-only archive" })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-xl font-bold leading-none", children: "✕" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-1 overflow-hidden", children: [
@@ -60858,10 +60874,10 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: p.reason }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300 font-mono", children: periodDisplay }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveUnavailability(p.id), className: "text-red-400 hover:text-red-300 text-xs ml-2", children: "✕" })
+                !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveUnavailability(p.id), className: "text-red-400 hover:text-red-300 text-xs ml-2", children: "✕" })
               ] }, p.id);
             }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-xs italic text-center py-2", children: "No unavailability periods scheduled." }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowAddUnavailability(true), className: "px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded", children: "+ Add Unavailability" })
+            !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowAddUnavailability(true), className: "px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded", children: "+ Add Unavailability" })
           ] }),
           activeTab === "sct" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-4", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
@@ -60873,12 +60889,8 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-xs italic mb-4", children: [
-              "Submit a ",
-              continuationLongLabel,
-              " request for this staff member."
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs italic mb-4", children: isArchiveProfile ? `Historical ${continuationShortLabel} requests are read-only.` : `Submit a ${continuationLongLabel} request for this staff member.` }),
+            !isArchiveProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
               {
                 onClick: (e) => {
@@ -60894,7 +60906,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 ]
               }
             ),
-            onPatchSctRequest && onCancelSctRequest && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            !isArchiveProfile && onPatchSctRequest && onCancelSctRequest && /* @__PURE__ */ jsxRuntimeExports.jsx(
               MySctRequestsPanel,
               {
                 requests: sctRequests,
@@ -61007,7 +61019,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   {
                     type: "button",
                     onClick: () => setShowAirCombatInsertEventModal(true),
-                    disabled: !selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || insertEventTypes.length === 0 || !onInsertAirCombatTrainingEvent,
+                    disabled: isArchiveProfile || !selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || insertEventTypes.length === 0 || !onInsertAirCombatTrainingEvent,
                     className: airCombatPanelButtonClass,
                     children: [
                       "Insert",
@@ -61021,7 +61033,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   {
                     type: "button",
                     onClick: () => selectedAirCombatTrainingItem && setAirCombatItemBeingEdited(selectedAirCombatTrainingItem),
-                    disabled: !selectedAirCombatTrainingItem || !onUpdateAirCombatTrainingEvent,
+                    disabled: isArchiveProfile || !selectedAirCombatTrainingItem || !onUpdateAirCombatTrainingEvent,
                     className: airCombatPanelButtonClass,
                     children: "Edit"
                   }
@@ -61806,9 +61818,10 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 showPermissionNoticeForElement(event.currentTarget);
                 return;
               }
+              if (isArchiveProfile) return;
               setActiveTab(null);
               handleEdit();
-            }, disabled: isFrozen, "aria-disabled": !canUseStaffProfileAction("staff.profile.edit"), className: `${btnClass} ${canUseStaffProfileAction("staff.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
+            }, disabled: isFrozen || isArchiveProfile, "aria-disabled": isArchiveProfile || !canUseStaffProfileAction("staff.profile.edit"), className: `${btnClass} ${!isArchiveProfile && canUseStaffProfileAction("staff.profile.edit") ? "" : "cursor-not-allowed"}`, children: "Edit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -61917,7 +61930,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
         )
       ] })
     ] }) }),
-    showAddUnavailability && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnly, onSave: handleSaveUnavailability, unavailabilityPeriods, onRemove: handleRemoveUnavailability }),
+    !isArchiveProfile && showAddUnavailability && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnly, onSave: handleSaveUnavailability, unavailabilityPeriods, onRemove: handleRemoveUnavailability }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       PermissionNotice,
       {

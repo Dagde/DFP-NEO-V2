@@ -1664,6 +1664,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handlePauseToggle = () => {
+        if (isArchiveProfile) return;
         if (!isPaused && traineeHasEventsToday) {
             setShowScheduleWarning(true);
         } else {
@@ -1692,6 +1693,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleSuspendToggle = () => {
+        if (isArchiveProfile) return;
         const nextIsSuspended = !isSuspended;
         const nextPermissions = setTraineeSuspendedMarker(permissions, nextIsSuspended);
         const updatedTrainee: Trainee = {
@@ -1920,6 +1922,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleDeleteFromProfile = () => {
+        if (isArchiveProfile) return;
         if (isCreating || !canManageTraineeRemoval || !onRequestDeleteTrainee) return;
         onRequestDeleteTrainee(trainee);
     };
@@ -2183,6 +2186,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleAddTodayOnlyUnavailability = () => {
+        if (isArchiveProfile) return;
         const today = new Date();
         const formatForInput = (date: Date) => date.toISOString().split('T')[0];
         const todayStr = formatForInput(today);
@@ -2214,6 +2218,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleSaveCustomUnavailability = (periodData: Omit<UnavailabilityPeriod, 'id'>) => {
+        if (isArchiveProfile) return;
         const newPeriod = {
             ...periodData,
             id: uuidv4(),
@@ -2242,6 +2247,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleRemoveUnavailabilityFromFlyout = (idToRemove: string) => {
+        if (isArchiveProfile) return;
         if (isCreating) {
             setUnavailability(prev => prev.filter(p => p.id !== idToRemove));
         } else {
@@ -2265,6 +2271,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleRemoveUnavailability = (idToRemove: string) => {
+        if (isArchiveProfile) return;
         const periodToRemove = unavailability?.find(p => p.id === idToRemove);
         if (periodToRemove) {
             const dateRange = periodToRemove.startDate === periodToRemove.endDate
@@ -2354,7 +2361,14 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                 {/* Header */}
                 <div className="px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0">
-                  <h2 className="text-lg font-bold text-white">{isCreating ? 'New Trainee' : 'Trainee Profile'}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-white">{isCreating ? 'New Trainee' : 'Trainee Profile'}</h2>
+                    {isArchiveProfile && (
+                      <span className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
+                        Read-only archive
+                      </span>
+                    )}
+                  </div>
                   <button onClick={onClose} className="text-gray-400 hover:text-white text-xl font-bold leading-none">✕</button>
                 </div>
 
@@ -2733,12 +2747,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
                                 <span className="text-white font-medium">{p.reason}</span>
                                 <span className="text-gray-300 font-mono">{periodDisplay}</span>
-                                <button onClick={() => handleRemoveUnavailability(p.id)} className="text-red-400 hover:text-red-300 text-xs ml-2">✕</button>
+                                {!isArchiveProfile && (
+                                  <button onClick={() => handleRemoveUnavailability(p.id)} className="text-red-400 hover:text-red-300 text-xs ml-2">✕</button>
+                                )}
                               </div>
                             );
                           }) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
                         </div>
-                        <button onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded">+ Add Unavailability</button>
+                        {!isArchiveProfile && (
+                          <button onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded">+ Add Unavailability</button>
+                        )}
                       </div>
                     )}
 
@@ -2748,8 +2766,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <h4 className="text-sm font-bold text-white">Request {continuationShortLabel} — {trainee.name}</h4>
                           <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                         </div>
-                        <p className="text-gray-400 text-xs italic mb-4">Submit a {continuationLongLabel} request for this trainee.</p>
-                        {onRequestSct && (
+                        <p className="text-gray-400 text-xs italic mb-4">
+                          {isArchiveProfile ? `Historical ${continuationShortLabel} requests are read-only.` : `Submit a ${continuationLongLabel} request for this trainee.`}
+                        </p>
+                        {!isArchiveProfile && onRequestSct && (
                           <button
                             onClick={(event) => {
                               event.preventDefault();
@@ -2761,7 +2781,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             Submit {continuationShortLabel} Request
                           </button>
                         )}
-                        {onPatchSctRequest && onCancelSctRequest && (
+                        {!isArchiveProfile && onPatchSctRequest && onCancelSctRequest && (
                           <MySctRequestsPanel
                             requests={sctRequests}
                             currentUserId={currentUserId}
@@ -2949,7 +2969,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             }}
                             onBackToRoster={() => setActiveTab(null)}
                             onInsertPt051={() => {}}
-                            canEditPt051={canEditPt051}
+                            canEditPt051={!isArchiveProfile && canEditPt051}
                             isLoading={pt051PerformanceLoading}
                             trainingReportTerminology={trainingReportTerminology}
                             trainingReportTemplate={activeTrainingReportTemplate}
@@ -2989,8 +3009,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             formatResourceLabel={formatResourceDisplayLabel}
                             onBack={() => setActiveTab('hatesheet')}
                             onEventUpdate={setInlinePt051Event}
-                            onDeleteAssessment={deleteInlinePt051Assessment}
-                            onSave={persistInlinePt051Assessment}
+                            onDeleteAssessment={isArchiveProfile ? undefined : deleteInlinePt051Assessment}
+                            onSave={isArchiveProfile ? () => {} : persistInlinePt051Assessment}
                             instructors={instructorsData}
                             pt051Assessments={pt051Assessments || new Map()}
                             events={events}
@@ -3000,7 +3020,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             registerDirtyCheck={registerDirtyCheck}
                             phraseBank={activeTrainingReportPhraseBank}
                             currentUserPin={currentUserId || '1111'}
-                            canEditPt051={canEditPt051}
+                            canEditPt051={!isArchiveProfile && canEditPt051}
                             embeddedInProfile
                           />
                         </div>
@@ -3017,10 +3037,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             traineeLmp={currentIndividualLMP || []}
                             scores={traineeScores}
                             onBack={() => setActiveTab(null)}
-                            onDeleteRemedialItem={onDeleteRemedialItem}
-                            onGeneratePt051ForItem={onGeneratePt051ForItem}
-                            onInsertCustomEvent={onInsertCustomLmpEvent}
-                            onUpdateLmpItem={onUpdateLmpItem}
+                            onDeleteRemedialItem={isArchiveProfile ? undefined : onDeleteRemedialItem}
+                            onGeneratePt051ForItem={isArchiveProfile ? undefined : onGeneratePt051ForItem}
+                            onInsertCustomEvent={isArchiveProfile ? undefined : onInsertCustomLmpEvent}
+                            onUpdateLmpItem={isArchiveProfile ? undefined : onUpdateLmpItem}
                             insertEventTypes={insertEventTypes}
                             aircraftConfigurations={aircraftConfigurations}
                             aircraftCrewComposition={aircraftCrewComposition}
@@ -3575,8 +3595,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               showPermissionNoticeForElement(event.currentTarget);
                               return;
                             }
+                            if (isArchiveProfile) return;
                             setIsEditing(true);
-                          }} disabled={isFrozen} aria-disabled={!canUseTraineeProfileAction('trainee.profile.edit')} className={`${btnClass} ${canUseTraineeProfileAction('trainee.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
+                          }} disabled={isFrozen || isArchiveProfile} aria-disabled={isArchiveProfile || !canUseTraineeProfileAction('trainee.profile.edit')} className={`${btnClass} ${!isArchiveProfile && canUseTraineeProfileAction('trainee.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
                           <button onClick={onClose} className={btnClass}>Close</button>
                         </>
                       )}
@@ -3595,7 +3616,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                   </div>
                 </div>
               </div>
-            {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={unavailability} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
+            {!isArchiveProfile && showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={unavailability} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
             {showPauseConfirm && <PauseConfirmationFlyout isPaused={isPaused} onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
             <PermissionNotice

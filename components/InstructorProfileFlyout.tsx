@@ -883,7 +883,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     }
   }, []);
 
-  const handleEdit = () => setIsEditing(true);
+  const handleEdit = () => {
+    if (isArchiveProfile) return;
+    setIsEditing(true);
+  };
   const handleCancel = () => { if (isCreating) onClose(); else { resetState(); setIsEditing(false); } };
   const handleQualificationChange = (qualificationId: string, isChecked: boolean) => {
     setAssignedQualifications(prev => (
@@ -1099,6 +1102,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   const handleSaveUnavailability = (periodData: Omit<UnavailabilityPeriod, 'id'>) => {
+    if (isArchiveProfile) return;
     const newPeriod = { ...periodData, id: uuidv4(), startTime: periodData.allDay ? undefined : periodData.startTime, endTime: periodData.allDay ? undefined : periodData.endTime };
     const updated = [...unavailabilityPeriods, newPeriod];
     setUnavailabilityPeriods(updated);
@@ -1106,6 +1110,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   const handleRemoveUnavailability = (idToRemove: string) => {
+    if (isArchiveProfile) return;
     const updated = unavailabilityPeriods.filter(p => p.id !== idToRemove);
     setUnavailabilityPeriods(updated);
     onUpdateInstructor({ ...instructor, unavailability: updated });
@@ -1272,7 +1277,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
           {/* Header */}
           <div className="px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0">
-            <h2 className="text-lg font-bold text-white">{isCreating ? 'New Staff' : 'Staff Profile'}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-white">{isCreating ? 'New Staff' : 'Staff Profile'}</h2>
+              {isArchiveProfile && (
+                <span className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200">
+                  Read-only archive
+                </span>
+              )}
+            </div>
             <button onClick={onClose} className="text-gray-400 hover:text-white text-xl font-bold leading-none">✕</button>
           </div>
 
@@ -1532,12 +1544,16 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
                           <span className="text-white font-medium">{p.reason}</span>
                           <span className="text-gray-300 font-mono">{periodDisplay}</span>
-                          <button onClick={() => handleRemoveUnavailability(p.id)} className="text-red-400 hover:text-red-300 text-xs ml-2">✕</button>
+                          {!isArchiveProfile && (
+                            <button onClick={() => handleRemoveUnavailability(p.id)} className="text-red-400 hover:text-red-300 text-xs ml-2">✕</button>
+                          )}
                         </div>
                       );
                     }) : <p className="text-gray-500 text-xs italic text-center py-2">No unavailability periods scheduled.</p>}
                   </div>
-                  <button onClick={() => setShowAddUnavailability(true)} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">+ Add Unavailability</button>
+                  {!isArchiveProfile && (
+                    <button onClick={() => setShowAddUnavailability(true)} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">+ Add Unavailability</button>
+                  )}
                 </div>
               )}
 
@@ -1547,16 +1563,20 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <h4 className="text-sm font-bold text-white">Request {continuationShortLabel} — {instructor.name}</h4>
                     <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                   </div>
-                  <p className="text-gray-400 text-xs italic mb-4">Submit a {continuationLongLabel} request for this staff member.</p>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onRequestSct(instructor);
-                    }}
-                    className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
-                  >Submit {continuationShortLabel} Request</button>
-                  {onPatchSctRequest && onCancelSctRequest && (
+                  <p className="text-gray-400 text-xs italic mb-4">
+                    {isArchiveProfile ? `Historical ${continuationShortLabel} requests are read-only.` : `Submit a ${continuationLongLabel} request for this staff member.`}
+                  </p>
+                  {!isArchiveProfile && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onRequestSct(instructor);
+                      }}
+                      className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
+                    >Submit {continuationShortLabel} Request</button>
+                  )}
+                  {!isArchiveProfile && onPatchSctRequest && onCancelSctRequest && (
                     <MySctRequestsPanel
                       requests={sctRequests}
                       currentUserId={currentUserId}
@@ -1680,7 +1700,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <button
                         type="button"
                         onClick={() => setShowAirCombatInsertEventModal(true)}
-                        disabled={!selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || insertEventTypes.length === 0 || !onInsertAirCombatTrainingEvent}
+                        disabled={isArchiveProfile || !selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || insertEventTypes.length === 0 || !onInsertAirCombatTrainingEvent}
                         className={airCombatPanelButtonClass}
                       >
                         Insert<br />Event
@@ -1688,7 +1708,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <button
                         type="button"
                         onClick={() => selectedAirCombatTrainingItem && setAirCombatItemBeingEdited(selectedAirCombatTrainingItem)}
-                        disabled={!selectedAirCombatTrainingItem || !onUpdateAirCombatTrainingEvent}
+                        disabled={isArchiveProfile || !selectedAirCombatTrainingItem || !onUpdateAirCombatTrainingEvent}
                         className={airCombatPanelButtonClass}
                       >
                         Edit
@@ -2499,9 +2519,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     showPermissionNoticeForElement(event.currentTarget);
                     return;
                   }
+                  if (isArchiveProfile) return;
                   setActiveTab(null);
                   handleEdit();
-                }} disabled={isFrozen} aria-disabled={!canUseStaffProfileAction('staff.profile.edit')} className={`${btnClass} ${canUseStaffProfileAction('staff.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
+                }} disabled={isFrozen || isArchiveProfile} aria-disabled={isArchiveProfile || !canUseStaffProfileAction('staff.profile.edit')} className={`${btnClass} ${!isArchiveProfile && canUseStaffProfileAction('staff.profile.edit') ? '' : 'cursor-not-allowed'}`}>Edit</button>
                 <button onClick={onClose} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>
@@ -2606,7 +2627,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
           </div>
         </div>
       )}
-      {showAddUnavailability && !isCreating && (
+      {!isArchiveProfile && showAddUnavailability && !isCreating && (
         <AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnly} onSave={handleSaveUnavailability} unavailabilityPeriods={unavailabilityPeriods} onRemove={handleRemoveUnavailability} />
       )}
       <PermissionNotice
