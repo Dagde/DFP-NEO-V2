@@ -9140,6 +9140,12 @@ function generateDfpInternal(
                     placementTrace: neoBuildDiag.mandatoryRemedialFlights.placementTrace.slice(-500),
                 },
                 scheduleAttemptTiming: neoBuildDiag.scheduleAttemptTiming || null,
+                final: neoBuildDiag.final ? {
+                    ...neoBuildDiag.final,
+                    firstEvents: (neoBuildDiag.final.firstEvents || []).slice(0, 80),
+                    events: (neoBuildDiag.final.events || []).slice(0, 180),
+                    placementExplanations: (neoBuildDiag.final.placementExplanations || []).slice(0, 260),
+                } : null,
                 remedialDataMovement: {
                     ...neoBuildDiag.remedialDataMovement,
                     sourceTrace: neoBuildDiag.remedialDataMovement.sourceTrace.slice(-500),
@@ -41307,6 +41313,22 @@ const App: React.FC = () => {
                 };
             }
         };
+        const getLatestNeoBuildDiagnosticReport = (): any => {
+            const liveReport = (window as any).__lastNeoBuildDiagnosticReport;
+            const storedReport = readJsonStorage('neo_build_diag_report');
+            const liveUpdatedAt = Date.parse(String(liveReport?.updatedAt || liveReport?.timestamp || ''));
+            const storedUpdatedAt = Date.parse(String(storedReport?.updatedAt || storedReport?.timestamp || ''));
+            if (liveReport && (!storedReport || !Number.isFinite(storedUpdatedAt) || liveUpdatedAt >= storedUpdatedAt)) {
+                return {
+                    ...liveReport,
+                    reportSource: 'window.__lastNeoBuildDiagnosticReport',
+                };
+            }
+            return storedReport ? {
+                ...storedReport,
+                reportSource: 'localStorage.neo_build_diag_report',
+            } : null;
+        };
         const countBy = <T,>(items: T[], getKey: (item: T) => string | undefined | null): Record<string, number> => (
             items.reduce((counts: Record<string, number>, item) => {
                 const key = String(getKey(item) || 'Unspecified');
@@ -41344,7 +41366,7 @@ const App: React.FC = () => {
                 })),
             },
             storedReports: {
-                neoBuildDiagnostic: readJsonStorage('neo_build_diag_report'),
+                neoBuildDiagnostic: getLatestNeoBuildDiagnosticReport(),
                 neoBuildTiming: readJsonStorage('neo_build_timing_report'),
                 neoBuildRuntimeError: readJsonStorage('neo_build_runtime_error_report'),
                 neoBuildZeroTileTrace: readJsonStorage('neo_build_zero_tile_trace'),
