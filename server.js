@@ -18264,6 +18264,185 @@ app.get('/api/archive/diagnostics', async (req, res) => {
   }
 });
 
+// GET /api/archive/logbook-diagnostics - Admin visibility for historical logbook matching.
+app.get('/api/archive/logbook-diagnostics', async (req, res) => {
+  const startedAt = Date.now();
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
+    const date = String(req.query.date || '').slice(0, 10);
+    const personName = String(req.query.personName || '').trim();
+    const personId = String(req.query.personId || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'date is required in YYYY-MM-DD format' });
+    }
+    if (!personName && !personId) {
+      return res.status(400).json({ error: 'personName or personId is required' });
+    }
+
+    const monthStart = `${date.slice(0, 7)}-01`;
+    const normaliseKey = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9@.]/g, '');
+    const normaliseName = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const targetNameKey = normaliseKey(personName);
+    const targetNameText = normaliseName(personName);
+    const targetNameParts = targetNameText
+      .split(/[^a-z0-9]+/i)
+      .map(part => part.trim())
+      .filter(part => part.length >= 3);
+
+    const compactArchiveRows = await db.$queryRawUnsafe(
+      `SELECT id, "snapshotKey", "date", "unitCode", "school", "configRefs", "publishedAt"
+       FROM "PublishedDfpArchive"
+       WHERE "date" = $1::text
+       ORDER BY "publishedAt" DESC
+       LIMIT 1`,
+      date
+    ).catch(() => []);
+
+    let archiveMode = 'none';
+    let snapshotKey = null;
+    let archivedProfiles = [];
+    let archivedEventIds = [];
+    if (compactArchiveRows?.length > 0) {
+      archiveMode = 'compact-archive';
+      const archive = compactArchiveRows[0];
+      snapshotKey = archive.snapshotKey;
+      const eventRows = await db.$queryRawUnsafe(
+        `SELECT "eventId" FROM "ScheduleEventArchive" WHERE "archiveId" = $1::text LIMIT 5000`,
+        archive.id
+      ).catch(() => []);
+      archivedEventIds = (eventRows || []).map(row => row?.eventId).filter(Boolean);
+      const configRefs = archive.configRefs && typeof archive.configRefs === 'object' ? archive.configRefs : {};
+      const configIds = Object.values(configRefs).map(ref => ref?.id).filter(Boolean);
+      const configVersions = configIds.length > 0
+        ? await db.$queryRawUnsafe(
+            `SELECT "configType", "content" FROM "ConfigVersionArchive" WHERE id = ANY($1::text[])`,
+            configIds
+          ).catch(() => [])
+        : [];
+      const configContentByType = Object.fromEntries((configVersions || []).map(row => [row.configType, row.content]));
+      archivedProfiles = [
+        ...(Array.isArray(configContentByType.staffRosterState) ? configContentByType.staffRosterState : []),
+        ...(Array.isArray(configContentByType.traineeRosterState) ? configContentByType.traineeRosterState : []),
+      ];
+    } else {
+      const snapshotRows = await db.$queryRawUnsafe(
+        `SELECT date, "scheduleEvents", "staffProfiles", "traineeProfiles"
+         FROM "DailySnapshot"
+         WHERE date = $1::text OR date LIKE $2::text
+         ORDER BY "savedAt" DESC NULLS LAST
+         LIMIT 1`,
+        date,
+        `${date}__%`
+      ).catch(() => []);
+      if (snapshotRows?.length > 0) {
+        archiveMode = 'daily-snapshot-fallback';
+        const snapshot = snapshotRows[0];
+        snapshotKey = snapshot.date;
+        const scheduleEvents = Array.isArray(snapshot.scheduleEvents) ? snapshot.scheduleEvents : [];
+        archivedEventIds = scheduleEvents.map(event => event?.id).filter(Boolean);
+        archivedProfiles = [
+          ...(Array.isArray(snapshot.staffProfiles) ? snapshot.staffProfiles : []),
+          ...(Array.isArray(snapshot.traineeProfiles) ? snapshot.traineeProfiles : []),
+        ];
+      }
+    }
+
+    const archivedProfileMatches = archivedProfiles
+      .map(profile => {
+        const ids = [
+          profile?.id,
+          profile?.idNumber,
+          profile?.personnelId,
+          profile?.staffRecordId,
+          profile?.traineeRecordId,
+          profile?.userId,
+        ].map(value => String(value || '').trim()).filter(Boolean);
+        const names = [
+          profile?.name,
+          profile?.fullName,
+          profile?.displayName,
+        ].map(value => String(value || '').trim()).filter(Boolean);
+        const idMatch = Boolean(personId && ids.some(id => normaliseKey(id) === normaliseKey(personId)));
+        const exactNameMatch = Boolean(targetNameKey && names.some(name => normaliseKey(name) === targetNameKey));
+        const containsNameMatch = Boolean(targetNameText && names.some(name => (
+          targetNameParts.every(part => normaliseName(name).includes(part))
+        )));
+        return {
+          id: profile?.id || null,
+          idNumber: profile?.idNumber || null,
+          personnelId: profile?.personnelId || null,
+          traineeRecordId: profile?.traineeRecordId || null,
+          name: profile?.name || null,
+          fullName: profile?.fullName || null,
+          unit: profile?.unit || null,
+          source: profile?._dataSource || null,
+          idMatch,
+          exactNameMatch,
+          containsNameMatch,
+        };
+      })
+      .filter(match => match.idMatch || match.exactNameMatch || match.containsNameMatch)
+      .slice(0, 25);
+
+    const personLike = targetNameParts.length > 0 ? `%${targetNameParts[0]}%` : `%${targetNameText}%`;
+    const rawRows = await db.$queryRawUnsafe(
+      `SELECT id, "scheduleEventId", "eventCode", "eventDate", "personName", "personRole",
+              "personnelId", "traineeId", "aircraftNumber", "totalTime", "captainTime",
+              "instructorTime", "createdAt", "updatedAt"
+       FROM "FlightLogEntry"
+       WHERE "eventDate" >= $1::text
+         AND "eventDate" <= $2::text
+         AND (
+           LOWER(TRIM(COALESCE("personName", ''))) LIKE $3::text
+           OR "personnelId" = $4::text
+           OR "traineeId" = $4::text
+         )
+       ORDER BY "eventDate" ASC, "personName" ASC, "createdAt" ASC
+       LIMIT 500`,
+      monthStart,
+      date,
+      personLike,
+      personId || '__no_person_id__'
+    ).catch(() => []);
+
+    const rawRowsWithMatch = (rawRows || []).map(row => {
+      const rowName = normaliseName(row.personName);
+      const rowNameKey = normaliseKey(row.personName);
+      return {
+        ...row,
+        match: {
+          exactRequestedName: Boolean(targetNameKey && rowNameKey === targetNameKey),
+          containsRequestedNameParts: Boolean(targetNameParts.length > 0 && targetNameParts.every(part => rowName.includes(part))),
+          matchesRequestedId: Boolean(personId && [row.personnelId, row.traineeId].map(normaliseKey).includes(normaliseKey(personId))),
+          scheduleEventInArchive: archivedEventIds.includes(row.scheduleEventId),
+        },
+      };
+    });
+
+    res.json({
+      success: true,
+      date,
+      monthStart,
+      personName,
+      personId,
+      archiveMode,
+      snapshotKey,
+      archivedProfileCount: archivedProfiles.length,
+      archivedEventCount: archivedEventIds.length,
+      archivedProfileMatches,
+      rawMonthRows: rawRowsWithMatch,
+      rawMonthRowCount: rawRowsWithMatch.length,
+      generatedAt: new Date().toISOString(),
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (error) {
+    console.error('❌ GET /api/archive/logbook-diagnostics error:', error);
+    res.status(500).json({ error: 'Failed to load archive logbook diagnostics', details: error.message });
+  }
+});
+
 // GET /api/daily-snapshot/dates - Return all dates that have snapshots (for calendar dropdown)
 app.get('/api/daily-snapshot/dates', async (req, res) => {
   try {
