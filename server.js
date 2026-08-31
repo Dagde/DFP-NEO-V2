@@ -18092,7 +18092,14 @@ app.get('/api/archive/dfp-date', async (req, res) => {
 
     const snapshotRows = requestedSnapshotKey
       ? await db.$queryRawUnsafe(`SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`, requestedSnapshotKey)
-      : await db.$queryRawUnsafe(`SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`, requestedDate);
+      : await db.$queryRawUnsafe(
+          `SELECT * FROM "DailySnapshot"
+           WHERE date = $1::text OR date LIKE $2::text
+           ORDER BY "savedAt" DESC NULLS LAST
+           LIMIT 1`,
+          requestedDate,
+          `${requestedDate}__%`
+        );
     if (!snapshotRows || snapshotRows.length === 0) {
       return res.status(404).json({ error: 'Historical DFP date not found' });
     }
