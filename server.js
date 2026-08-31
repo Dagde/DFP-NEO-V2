@@ -17942,6 +17942,23 @@ app.get('/api/archive/dfp-date', async (req, res) => {
             ORDER BY "configType"
           `, configIds)
         : [];
+      const configContentByType = Object.fromEntries((configVersions || []).map(row => [row.configType, row.content]));
+      const archivedStaffProfiles = Array.isArray(configContentByType.staffRosterState) ? configContentByType.staffRosterState : [];
+      const archivedTraineeProfiles = Array.isArray(configContentByType.traineeRosterState) ? configContentByType.traineeRosterState : [];
+      const archivedProfileRefs = [...archivedStaffProfiles, ...archivedTraineeProfiles];
+      const archivedPersonIds = Array.from(new Set(archivedProfileRefs.flatMap(profile => [
+        profile?.id,
+        profile?.idNumber,
+        profile?.personnelId,
+        profile?.staffRecordId,
+        profile?.traineeRecordId,
+        profile?.userId,
+      ]).map(value => String(value || '').trim()).filter(Boolean)));
+      const archivedPersonNames = Array.from(new Set(archivedProfileRefs.flatMap(profile => [
+        profile?.name,
+        profile?.fullName,
+        profile?.displayName,
+      ]).map(value => String(value || '').trim().toLowerCase()).filter(Boolean)));
       const performanceRows = await db.$queryRawUnsafe(
         `SELECT * FROM "TraineePerformance"
          WHERE "date" = $1::text OR "eventId" = ANY($2::text[])
@@ -17960,11 +17977,21 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       ).catch(() => []);
       const flightLogRows = await db.$queryRawUnsafe(
         `SELECT * FROM "FlightLogEntry"
-         WHERE "eventDate" = $1::text OR "scheduleEventId" = ANY($2::text[])
+         WHERE "scheduleEventId" = ANY($2::text[])
+            OR (
+              "eventDate" <= $1::text
+              AND (
+                "personnelId" = ANY($3::text[])
+                OR "traineeId" = ANY($3::text[])
+                OR LOWER(TRIM(COALESCE("personName", ''))) = ANY($4::text[])
+              )
+            )
          ORDER BY "personName" ASC, "eventDate" ASC, "createdAt" ASC
          LIMIT 5000`,
         archive.date,
-        archivedEventIds
+        archivedEventIds,
+        archivedPersonIds,
+        archivedPersonNames
       ).catch(() => []);
       const trainingReportVersions = await db.$queryRawUnsafe(
         `SELECT "eventId", "traineeId", "traineeFullName", "reportDate", "action", "versionHash", "reportData", "changedBy", "changedAt"
@@ -17981,7 +18008,6 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         `pt051-${report.eventId}-${report.traineeFullName}`,
         report,
       ]));
-      const configContentByType = Object.fromEntries((configVersions || []).map(row => [row.configType, row.content]));
       const snapshot = {
         date: archive.snapshotKey,
         scheduleEvents,
@@ -17990,8 +18016,8 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         pt051Assessments: trainingReportMap,
         eventCompletions: completionRows || [],
         flightLogEntries: flightLogRows || [],
-        traineeProfiles: configContentByType.traineeRosterState || [],
-        staffProfiles: configContentByType.staffRosterState || [],
+        traineeProfiles: archivedTraineeProfiles,
+        staffProfiles: archivedStaffProfiles,
         lmpCompletedIds: configContentByType.lmpCompletionState || {},
         staffCurrency: configContentByType.staffCurrencyState || {},
         staffLogbook: {},
