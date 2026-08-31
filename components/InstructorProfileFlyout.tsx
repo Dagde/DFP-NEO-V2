@@ -217,6 +217,11 @@ const getProfileLogbookMonth = (person: any): string => {
   return getLocalLogbookMonth();
 };
 
+const formatLogbookMonthLabel = (logbookMonth: string): string => {
+  const monthLabels: Record<string, string> = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
+  return `${monthLabels[logbookMonth.slice(5, 7)] || ''} ${logbookMonth.slice(2, 4)}`.trim();
+};
+
 const getProfileLogbookAsAtLabel = (person: any, logbookMonth: string): string => {
   const archiveDate = String(person?._archiveDate || '').slice(0, 10);
   if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) {
@@ -226,7 +231,7 @@ const getProfileLogbookAsAtLabel = (person: any, logbookMonth: string): string =
       : archiveDate;
     return `As at ${label}`;
   }
-  return `Current month ${logbookMonth}`;
+  return `Current month ${formatLogbookMonthLabel(logbookMonth)}`;
 };
 
 const ExperienceInput: React.FC<{ label: string; value: number; onChange: (val: number) => void }> = ({ label, value, onChange }) => (
