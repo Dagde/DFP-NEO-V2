@@ -151,7 +151,9 @@ const DraftTextArea = ({
             }}
             onBlur={commitDraftValue}
             onChange={(event) => {
-                setDraftValue(event.target.value);
+                const nextValue = event.target.value;
+                setDraftValue(nextValue);
+                onCommit(nextValue);
                 autoSize(event.currentTarget);
             }}
             ref={(el) => {

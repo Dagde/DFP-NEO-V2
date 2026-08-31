@@ -24622,7 +24622,9 @@ const DraftTextArea$1 = ({
       },
       onBlur: commitDraftValue,
       onChange: (event) => {
-        setDraftValue(event.target.value);
+        const nextValue = event.target.value;
+        setDraftValue(nextValue);
+        onCommit(nextValue);
         autoSize(event.currentTarget);
       },
       ref: (el) => {
@@ -131646,6 +131648,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       resolvedDate,
       assessmentDate: assessmentAny.date || null,
       eventDate: eventAny?.date || null,
+      scoreCount: Array.isArray(assessmentAny.scores) ? assessmentAny.scores.length : 0,
+      scoredElementCount: Array.isArray(assessmentAny.scores) ? assessmentAny.scores.filter((score) => score?.grade !== null && score?.grade !== void 0 && score?.grade !== "").length : 0,
+      commentedElementCount: Array.isArray(assessmentAny.scores) ? assessmentAny.scores.filter((score) => String(score?.comment || "").trim()).length : 0,
       dcoResult: assessment.dcoResult,
       dpcoFollowUp: assessment.dpcoFollowUp || null,
       dncoFollowUp: assessment.dncoFollowUp || null,

@@ -20875,6 +20875,13 @@ app.post('/api/trainee-performance', async (req, res) => {
         $22::text, $23::text, $24, NOW(), NOW(), $25::text
       )
       ON CONFLICT ("eventId") DO UPDATE SET
+        "traineeId"                = EXCLUDED."traineeId",
+        "traineeFullName"          = EXCLUDED."traineeFullName",
+        "eventCode"                = EXCLUDED."eventCode",
+        "flightNumber"             = EXCLUDED."flightNumber",
+        "eventDescription"         = EXCLUDED."eventDescription",
+        "date"                     = EXCLUDED."date",
+        "instructorId"             = EXCLUDED."instructorId",
         "overallGrade"             = EXCLUDED."overallGrade",
         "overallResult"            = EXCLUDED."overallResult",
         "dcoResult"                = EXCLUDED."dcoResult",
@@ -20887,6 +20894,9 @@ app.post('/api/trainee-performance', async (req, res) => {
         "endTime"                  = EXCLUDED."endTime",
         "isGroundSchoolAssessment" = EXCLUDED."isGroundSchoolAssessment",
         "groundSchoolResult"       = EXCLUDED."groundSchoolResult",
+        "course"                   = EXCLUDED."course",
+        "syllabusPhase"            = EXCLUDED."syllabusPhase",
+        "eventSequence"            = EXCLUDED."eventSequence",
         "updatedAt"                = NOW(),
         "updatedBy"                = EXCLUDED."createdBy"
     `,

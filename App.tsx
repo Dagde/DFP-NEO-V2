@@ -39173,6 +39173,13 @@ const App: React.FC = () => {
             resolvedDate,
             assessmentDate: assessmentAny.date || null,
             eventDate: eventAny?.date || null,
+            scoreCount: Array.isArray(assessmentAny.scores) ? assessmentAny.scores.length : 0,
+            scoredElementCount: Array.isArray(assessmentAny.scores)
+                ? assessmentAny.scores.filter((score: any) => score?.grade !== null && score?.grade !== undefined && score?.grade !== '').length
+                : 0,
+            commentedElementCount: Array.isArray(assessmentAny.scores)
+                ? assessmentAny.scores.filter((score: any) => String(score?.comment || '').trim()).length
+                : 0,
             dcoResult: assessment.dcoResult,
             dpcoFollowUp: assessment.dpcoFollowUp || null,
             dncoFollowUp: assessment.dncoFollowUp || null,
