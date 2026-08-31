@@ -16807,6 +16807,15 @@ function countArchiveProfileCurrencyRows(profiles) {
   }, 0);
 }
 
+function countArchiveRowsByKey(rows, getKey) {
+  return (Array.isArray(rows) ? rows : []).reduce((counts, row) => {
+    const rawKey = getKey(row);
+    const key = String(rawKey || 'unknown').trim().toLowerCase() || 'unknown';
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
+}
+
 function buildArchiveCompletenessDiagnostics({
   source,
   date,
@@ -16839,17 +16848,35 @@ function buildArchiveCompletenessDiagnostics({
   const configTypes = (Array.isArray(configVersions) ? configVersions : [])
     .map(row => row?.configType)
     .filter(Boolean);
+  const scheduleEventsCount = Array.isArray(scheduleEvents) ? scheduleEvents.length : 0;
+  const archivedEventRowsCount = Array.isArray(eventRows) ? eventRows.length : null;
+  const warnings = [];
+  if (source === 'compact-archive' && !configTypes.includes('currencyDefinitionState')) {
+    warnings.push({
+      code: 'ARCHIVE_CURRENCY_DEFINITIONS_MISSING',
+      message: 'This compact archive does not contain currencyDefinitionState. It was likely published before currency definition archiving was added; republish the DFP after CCH 8.558 to capture historical currency and recency definitions.',
+    });
+  }
+  if (scheduleEventsCount > 0 && archivedEventRowsCount === scheduleEventsCount && (staffEvents?.length || 0) === 0 && (traineeEvents?.length || 0) === 0) {
+    warnings.push({
+      code: 'ARCHIVE_USES_CANONICAL_SCHEDULE_EVENTS',
+      message: 'This archive stores events in the canonical scheduleEvents list. Legacy staffEvents and traineeEvents split lists are empty but scheduleEvents is populated.',
+    });
+  }
 
   return {
     source,
     date,
     snapshotKey,
     generatedAt: new Date().toISOString(),
+    warnings,
     schedule: {
-      scheduleEvents: Array.isArray(scheduleEvents) ? scheduleEvents.length : 0,
-      archivedEventRows: Array.isArray(eventRows) ? eventRows.length : null,
+      scheduleEvents: scheduleEventsCount,
+      archivedEventRows: archivedEventRowsCount,
       staffEvents: Array.isArray(staffEvents) ? staffEvents.length : 0,
       traineeEvents: Array.isArray(traineeEvents) ? traineeEvents.length : 0,
+      eventTypes: countArchiveRowsByKey(scheduleEvents, event => event?.type || event?.eventType || event?.resourceType),
+      archivedEventTypes: countArchiveRowsByKey(eventRows, row => row?.eventType || row?.eventData?.type || row?.eventData?.resourceType),
     },
     profiles: {
       staffProfiles: Array.isArray(staffProfiles) ? staffProfiles.length : 0,
