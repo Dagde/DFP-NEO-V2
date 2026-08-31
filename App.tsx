@@ -12307,7 +12307,6 @@ function generateDfpInternal(
     });
     recordNeoBuildPhaseSnapshot('build-start-after-remedial-inputs', generatedEvents, {
         remedialRequests: remedialRequests.length,
-        mandatoryRemedialFlights: mandatoryRemedialFlights.length,
         highestPriorityEvents: highestPriorityEvents.length,
     });
     saveNeoBuildDiag('build-start');
@@ -12479,6 +12478,11 @@ function generateDfpInternal(
     };
 
     const mandatoryRemedialFlights = highestPriorityEvents.filter(isMandatoryRemedialFlight);
+    recordNeoBuildPhaseSnapshot('mandatory-remedial-queue-built', generatedEvents, {
+        remedialRequests: remedialRequests.length,
+        mandatoryRemedialFlights: mandatoryRemedialFlights.length,
+        highestPriorityEvents: highestPriorityEvents.length,
+    });
     neoBuildDiag.mandatoryRemedialFlights.priorityQueueAudit = highestPriorityEvents
         .filter(event => event.isRemedial || event.id?.startsWith('remedial-'))
         .map(event => {
