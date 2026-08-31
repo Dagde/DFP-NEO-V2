@@ -29226,6 +29226,39 @@ const App: React.FC = () => {
             }));
         }
 
+        const snapshotStaffProfiles = Array.isArray(snap.staffProfiles) ? snap.staffProfiles : [];
+        const snapshotTraineeProfiles = Array.isArray(snap.traineeProfiles) ? snap.traineeProfiles : [];
+        const snapshotStaffCurrency = snap.staffCurrency && typeof snap.staffCurrency === 'object' ? snap.staffCurrency : {};
+        const snapshotLmpCompletedIds = snap.lmpCompletedIds && typeof snap.lmpCompletedIds === 'object' ? snap.lmpCompletedIds : {};
+        if (
+            snapshotStaffProfiles.length > 0 ||
+            snapshotTraineeProfiles.length > 0 ||
+            Object.keys(snapshotStaffCurrency).length > 0 ||
+            Object.keys(snapshotLmpCompletedIds).length > 0
+        ) {
+            setHistoricalDfpContextByDate(prev => ({
+                ...prev,
+                [targetDate]: {
+                    staffProfiles: snapshotStaffProfiles,
+                    traineeProfiles: snapshotTraineeProfiles,
+                    staffCurrency: snapshotStaffCurrency,
+                    lmpCompletedIds: snapshotLmpCompletedIds,
+                    snapshotSource: snap.snapshotSource || source,
+                    snapshotKey: snap.date || '',
+                },
+            }));
+            pushDfpDataDiag('snapshot:apply-historical-context', {
+                targetDate,
+                snapshotSchool,
+                snapshotUnit,
+                source,
+                staffProfiles: snapshotStaffProfiles.length,
+                traineeProfiles: snapshotTraineeProfiles.length,
+                staffCurrencyPeople: Object.keys(snapshotStaffCurrency).length,
+                lmpPeople: Object.keys(snapshotLmpCompletedIds).length,
+            });
+        }
+
         const snapshotEventCompletions = Array.isArray(snap.eventCompletions) ? snap.eventCompletions : [];
         if (snapshotEventCompletions.length > 0 && targetDate === date) {
             setEventCompletionsForDate(snapshotEventCompletions);
@@ -29803,6 +29836,46 @@ const App: React.FC = () => {
     const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(new Map());
     const [pt051PerformanceLoading, setPt051PerformanceLoading] = useState(true);
     const [eventCompletionsForDate, setEventCompletionsForDate] = useState<any[]>([]);
+    const [historicalDfpContextByDate, setHistoricalDfpContextByDate] = useState<Record<string, {
+        staffProfiles: any[];
+        traineeProfiles: any[];
+        staffCurrency: Record<string, any[]>;
+        lmpCompletedIds: Record<string, string[]>;
+        snapshotSource?: string;
+        snapshotKey?: string;
+    }>>({});
+    const activeHistoricalDfpContext = historicalDfpContextByDate[date] || null;
+    const historicalInstructorsDataForDate = useMemo<Instructor[]>(() => {
+        const staffProfiles = Array.isArray(activeHistoricalDfpContext?.staffProfiles)
+            ? activeHistoricalDfpContext.staffProfiles
+            : [];
+        if (staffProfiles.length === 0) return [];
+        const staffCurrency = activeHistoricalDfpContext?.staffCurrency || {};
+        return staffProfiles.map((profile: any) => normalisePersonnelRecord({
+            ...profile,
+            _dataSource: 'archive',
+            currencyStatus: Array.isArray(profile.currencyStatus) && profile.currencyStatus.length > 0
+                ? profile.currencyStatus
+                : staffCurrency[profile.name] || staffCurrency[profile.fullName] || [],
+        }) as Instructor);
+    }, [activeHistoricalDfpContext]);
+    const historicalTraineesDataForDate = useMemo<Trainee[]>(() => {
+        const traineeProfiles = Array.isArray(activeHistoricalDfpContext?.traineeProfiles)
+            ? activeHistoricalDfpContext.traineeProfiles
+            : [];
+        if (traineeProfiles.length === 0) return [];
+        return traineeProfiles.map((profile: any) => normalisePersonnelRecord({
+            ...profile,
+            _dataSource: 'archive',
+            currencyStatus: Array.isArray(profile.currencyStatus) ? profile.currencyStatus : [],
+        }) as Trainee);
+    }, [activeHistoricalDfpContext]);
+    const activeDateInstructorsData = historicalInstructorsDataForDate.length > 0
+        ? historicalInstructorsDataForDate
+        : instructorsData;
+    const activeDateTraineesData = historicalTraineesDataForDate.length > 0
+        ? historicalTraineesDataForDate
+        : traineesData;
     const [dashboardReportMinuteTick, setDashboardReportMinuteTick] = useState(0);
     const dashboardReportReconcileKeysRef = useRef<Set<string>>(new Set());
     const [courses, setCourses] = useState<Course[]>([]);
@@ -48504,7 +48577,8 @@ appliedUpdates.forEach(update => {
         const findContextTrainee = (candidate: ScheduleEvent): Trainee | undefined => {
             const traineeName = String(candidate.student || (candidate as any).trainee || '').trim();
             if (!traineeName) return undefined;
-            return allTraineesData.find(t => (
+            const roster = activeDateTraineesData.length > 0 ? activeDateTraineesData : allTraineesData;
+            return roster.find(t => (
                 t.fullName === traineeName ||
                 t.name === traineeName ||
                 t.idNumber === (candidate as any).studentId ||
@@ -48514,7 +48588,8 @@ appliedUpdates.forEach(update => {
         const findContextStaff = (name?: string | null): Instructor | undefined => {
             const staffName = String(name || '').trim();
             if (!staffName) return undefined;
-            return instructorsData.find(i => i.name === staffName || i.idNumber === staffName || (i as any).personnelId === staffName);
+            const roster = activeDateInstructorsData.length > 0 ? activeDateInstructorsData : instructorsData;
+            return roster.find(i => i.name === staffName || i.idNumber === staffName || (i as any).personnelId === staffName);
         };
         const openContextTrainingReport = (candidate: ScheduleEvent) => {
             const trainee = findContextTrainee(candidate);
@@ -48764,6 +48839,8 @@ appliedUpdates.forEach(update => {
         });
     }, [
         activeUnitHasTrainees,
+        activeDateInstructorsData,
+        activeDateTraineesData,
         activeView,
         allTraineesData,
         buildDfpDate,
@@ -52990,12 +53067,12 @@ appliedUpdates.forEach(update => {
                     onClose={() => setShowAuthFlyout(false)}
                     onAuthorise={handleAuthorise}
                     onClearAuth={clearAuthorisationForEvent}
-                    instructorsList={instructorsData}
+                    instructorsList={activeDateInstructorsData}
                     currentUserName={currentUserName}
                     currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
                     currentUserUnit={currentUser?.unit}
-                    instructorsData={instructorsData}
-                    traineesData={traineesData}
+                    instructorsData={activeDateInstructorsData}
+                    traineesData={activeDateTraineesData}
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}
                     instructorLabel={instructorLabel}

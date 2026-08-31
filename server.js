@@ -16779,6 +16779,11 @@ function compactArchiveProfile(profile) {
     location: profile.location || null,
     category: profile.category || null,
     callsign: profile.callsign || profile.traineeCallsign || profile.callsignNumber || null,
+    currencyStatus: Array.isArray(profile.currencyStatus)
+      ? profile.currencyStatus
+      : Array.isArray(profile.qualifications?.currencyStatus)
+        ? profile.qualifications.currencyStatus
+        : [],
     isActive: profile.isActive !== false,
   };
 }

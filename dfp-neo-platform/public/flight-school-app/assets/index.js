@@ -123569,6 +123569,33 @@ const App = () => {
         [baselineKey]: snap2.aircraftConfigState
       }));
     }
+    const snapshotStaffProfiles = Array.isArray(snap2.staffProfiles) ? snap2.staffProfiles : [];
+    const snapshotTraineeProfiles = Array.isArray(snap2.traineeProfiles) ? snap2.traineeProfiles : [];
+    const snapshotStaffCurrency = snap2.staffCurrency && typeof snap2.staffCurrency === "object" ? snap2.staffCurrency : {};
+    const snapshotLmpCompletedIds = snap2.lmpCompletedIds && typeof snap2.lmpCompletedIds === "object" ? snap2.lmpCompletedIds : {};
+    if (snapshotStaffProfiles.length > 0 || snapshotTraineeProfiles.length > 0 || Object.keys(snapshotStaffCurrency).length > 0 || Object.keys(snapshotLmpCompletedIds).length > 0) {
+      setHistoricalDfpContextByDate((prev) => ({
+        ...prev,
+        [targetDate]: {
+          staffProfiles: snapshotStaffProfiles,
+          traineeProfiles: snapshotTraineeProfiles,
+          staffCurrency: snapshotStaffCurrency,
+          lmpCompletedIds: snapshotLmpCompletedIds,
+          snapshotSource: snap2.snapshotSource || source,
+          snapshotKey: snap2.date || ""
+        }
+      }));
+      pushDfpDataDiag("snapshot:apply-historical-context", {
+        targetDate,
+        snapshotSchool,
+        snapshotUnit,
+        source,
+        staffProfiles: snapshotStaffProfiles.length,
+        traineeProfiles: snapshotTraineeProfiles.length,
+        staffCurrencyPeople: Object.keys(snapshotStaffCurrency).length,
+        lmpPeople: Object.keys(snapshotLmpCompletedIds).length
+      });
+    }
     const snapshotEventCompletions = Array.isArray(snap2.eventCompletions) ? snap2.eventCompletions : [];
     if (snapshotEventCompletions.length > 0 && targetDate === date) {
       setEventCompletionsForDate(snapshotEventCompletions);
@@ -124080,6 +124107,29 @@ const App = () => {
   const [pt051Assessments, setPt051Assessments] = reactExports.useState(/* @__PURE__ */ new Map());
   const [pt051PerformanceLoading, setPt051PerformanceLoading] = reactExports.useState(true);
   const [eventCompletionsForDate, setEventCompletionsForDate] = reactExports.useState([]);
+  const [historicalDfpContextByDate, setHistoricalDfpContextByDate] = reactExports.useState({});
+  const activeHistoricalDfpContext = historicalDfpContextByDate[date] || null;
+  const historicalInstructorsDataForDate = reactExports.useMemo(() => {
+    const staffProfiles = Array.isArray(activeHistoricalDfpContext?.staffProfiles) ? activeHistoricalDfpContext.staffProfiles : [];
+    if (staffProfiles.length === 0) return [];
+    const staffCurrency = activeHistoricalDfpContext?.staffCurrency || {};
+    return staffProfiles.map((profile) => normalisePersonnelRecord({
+      ...profile,
+      _dataSource: "archive",
+      currencyStatus: Array.isArray(profile.currencyStatus) && profile.currencyStatus.length > 0 ? profile.currencyStatus : staffCurrency[profile.name] || staffCurrency[profile.fullName] || []
+    }));
+  }, [activeHistoricalDfpContext]);
+  const historicalTraineesDataForDate = reactExports.useMemo(() => {
+    const traineeProfiles = Array.isArray(activeHistoricalDfpContext?.traineeProfiles) ? activeHistoricalDfpContext.traineeProfiles : [];
+    if (traineeProfiles.length === 0) return [];
+    return traineeProfiles.map((profile) => normalisePersonnelRecord({
+      ...profile,
+      _dataSource: "archive",
+      currencyStatus: Array.isArray(profile.currencyStatus) ? profile.currencyStatus : []
+    }));
+  }, [activeHistoricalDfpContext]);
+  const activeDateInstructorsData = historicalInstructorsDataForDate.length > 0 ? historicalInstructorsDataForDate : instructorsData;
+  const activeDateTraineesData = historicalTraineesDataForDate.length > 0 ? historicalTraineesDataForDate : traineesData;
   const [dashboardReportMinuteTick, setDashboardReportMinuteTick] = reactExports.useState(0);
   const dashboardReportReconcileKeysRef = reactExports.useRef(/* @__PURE__ */ new Set());
   const [courses, setCourses] = reactExports.useState([]);
@@ -139261,12 +139311,14 @@ ${error instanceof Error ? error.message : String(error)}`,
     const findContextTrainee = (candidate) => {
       const traineeName = String(candidate.student || candidate.trainee || "").trim();
       if (!traineeName) return void 0;
-      return allTraineesData.find((t) => t.fullName === traineeName || t.name === traineeName || t.idNumber === candidate.studentId || t.idNumber === candidate.traineeId);
+      const roster = activeDateTraineesData.length > 0 ? activeDateTraineesData : allTraineesData;
+      return roster.find((t) => t.fullName === traineeName || t.name === traineeName || t.idNumber === candidate.studentId || t.idNumber === candidate.traineeId);
     };
     const findContextStaff = (name) => {
       const staffName = String(name || "").trim();
       if (!staffName) return void 0;
-      return instructorsData.find((i) => i.name === staffName || i.idNumber === staffName || i.personnelId === staffName);
+      const roster = activeDateInstructorsData.length > 0 ? activeDateInstructorsData : instructorsData;
+      return roster.find((i) => i.name === staffName || i.idNumber === staffName || i.personnelId === staffName);
     };
     const openContextTrainingReport = (candidate) => {
       const trainee = findContextTrainee(candidate);
@@ -139502,6 +139554,8 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
   }, [
     activeUnitHasTrainees,
+    activeDateInstructorsData,
+    activeDateTraineesData,
     activeView,
     allTraineesData,
     buildDfpDate,
@@ -143421,12 +143475,12 @@ Do you want to replace the existing entry?`,
           onClose: () => setShowAuthFlyout(false),
           onAuthorise: handleAuthorise,
           onClearAuth: clearAuthorisationForEvent,
-          instructorsList: instructorsData,
+          instructorsList: activeDateInstructorsData,
           currentUserName,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "",
           currentUserUnit: currentUser2?.unit,
-          instructorsData,
-          traineesData,
+          instructorsData: activeDateInstructorsData,
+          traineesData: activeDateTraineesData,
           masterCurrencies,
           currencyRequirements,
           instructorLabel: instructorLabel2,
