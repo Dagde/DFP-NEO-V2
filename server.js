@@ -17959,6 +17959,9 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         profile?.fullName,
         profile?.displayName,
       ]).map(value => String(value || '').trim().toLowerCase()).filter(Boolean)));
+      const archiveMonthStart = /^\d{4}-\d{2}-\d{2}$/.test(String(archive.date || ''))
+        ? `${String(archive.date).slice(0, 7)}-01`
+        : archive.date;
       const performanceRows = await db.$queryRawUnsafe(
         `SELECT * FROM "TraineePerformance"
          WHERE "date" = $1::text OR "eventId" = ANY($2::text[])
@@ -17979,7 +17982,8 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         `SELECT * FROM "FlightLogEntry"
          WHERE "scheduleEventId" = ANY($2::text[])
             OR (
-              "eventDate" <= $1::text
+              "eventDate" >= $5::text
+              AND "eventDate" <= $1::text
               AND (
                 "personnelId" = ANY($3::text[])
                 OR "traineeId" = ANY($3::text[])
@@ -17991,7 +17995,8 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         archive.date,
         archivedEventIds,
         archivedPersonIds,
-        archivedPersonNames
+        archivedPersonNames,
+        archiveMonthStart
       ).catch(() => []);
       const trainingReportVersions = await db.$queryRawUnsafe(
         `SELECT "eventId", "traineeId", "traineeFullName", "reportDate", "action", "versionHash", "reportData", "changedBy", "changedAt"
