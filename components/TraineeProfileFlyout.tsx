@@ -96,6 +96,19 @@ const normaliseAssignedInstructorDisplayList = (value: unknown): string[] => {
     .filter(Boolean);
 };
 
+const getLocalLogbookMonth = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+};
+
+const getProfileLogbookMonth = (person: any): string => {
+    const archiveDate = String(person?._archiveDate || '').slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) return archiveDate.slice(0, 7);
+    return getLocalLogbookMonth();
+};
+
 const getTraineeEnduringPreFlightNotes = (trainee?: Trainee | null): string => {
   if (!trainee) return '';
   const preferences = trainee.preferences && typeof trainee.preferences === 'object' && !Array.isArray(trainee.preferences)
@@ -609,7 +622,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [logbookEntries, setLogbookEntries] = useState<any[]>([]);
     const [logbookLoading, setLogbookLoading] = useState(false);
     const [logbookError, setLogbookError] = useState<string | null>(null);
-    const [logbookMonth, setLogbookMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+    const [logbookMonth, setLogbookMonth] = useState<string>(() => getProfileLogbookMonth(trainee));
     const formatResourceDisplayLabel = useMemo(
       () => (resourceId: string) => formatConfiguredResourceLabel(resourceId, resourceDisplayNames),
       [resourceDisplayNames]
@@ -715,7 +728,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         if (activeTab !== 'logbook') return;
         setLogbookLoading(true);
         setLogbookError(null);
-        setLogbookMonth(new Date().toISOString().slice(0, 7));
+        setLogbookMonth(getProfileLogbookMonth(trainee));
         if (isArchiveProfile) {
             setLogbookEntries(archivedLogbookEntries);
             setLogbookLoading(false);

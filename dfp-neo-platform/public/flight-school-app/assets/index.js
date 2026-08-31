@@ -26811,6 +26811,17 @@ const normaliseAssignedInstructorDisplayList = (value) => {
   }
   return trimmed.split(/[;|]/).map((name) => name.trim()).filter(Boolean);
 };
+const getLocalLogbookMonth$1 = () => {
+  const now = /* @__PURE__ */ new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+};
+const getProfileLogbookMonth$1 = (person) => {
+  const archiveDate = String(person?._archiveDate || "").slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) return archiveDate.slice(0, 7);
+  return getLocalLogbookMonth$1();
+};
 const getTraineeEnduringPreFlightNotes$1 = (trainee) => {
   if (!trainee) return "";
   const preferences = trainee.preferences && typeof trainee.preferences === "object" && !Array.isArray(trainee.preferences) ? trainee.preferences : {};
@@ -27036,7 +27047,7 @@ const TraineeProfileFlyout = ({
   const [logbookEntries, setLogbookEntries] = reactExports.useState([]);
   const [logbookLoading, setLogbookLoading] = reactExports.useState(false);
   const [logbookError, setLogbookError] = reactExports.useState(null);
-  const [logbookMonth, setLogbookMonth] = reactExports.useState((/* @__PURE__ */ new Date()).toISOString().slice(0, 7));
+  const [logbookMonth, setLogbookMonth] = reactExports.useState(() => getProfileLogbookMonth$1(trainee));
   const formatResourceDisplayLabel = reactExports.useMemo(
     () => (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
     [resourceDisplayNames]
@@ -27124,7 +27135,7 @@ const TraineeProfileFlyout = ({
     if (activeTab !== "logbook") return;
     setLogbookLoading(true);
     setLogbookError(null);
-    setLogbookMonth((/* @__PURE__ */ new Date()).toISOString().slice(0, 7));
+    setLogbookMonth(getProfileLogbookMonth$1(trainee));
     if (isArchiveProfile) {
       setLogbookEntries(archivedLogbookEntries);
       setLogbookLoading(false);
@@ -59619,6 +59630,17 @@ const withAirCombatLinkedEventNote$1 = (item, linkedEventCode) => {
     notes: notes || void 0
   };
 };
+const getLocalLogbookMonth = () => {
+  const now = /* @__PURE__ */ new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+};
+const getProfileLogbookMonth = (person) => {
+  const archiveDate = String(person?._archiveDate || "").slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) return archiveDate.slice(0, 7);
+  return getLocalLogbookMonth();
+};
 const ExperienceInput = ({ label, value, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-gray-400 mb-1", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60408,14 +60430,14 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
   const [logbookEntries, setLogbookEntries] = reactExports.useState([]);
   const [logbookLoading, setLogbookLoading] = reactExports.useState(false);
   const [logbookError, setLogbookError] = reactExports.useState(null);
-  const [logbookMonth, setLogbookMonth] = reactExports.useState((/* @__PURE__ */ new Date()).toISOString().slice(0, 7));
+  const [logbookMonth, setLogbookMonth] = reactExports.useState(() => getProfileLogbookMonth(instructor));
   const isArchiveProfile = instructor._dataSource === "archive";
   const archivedLogbookEntries = reactExports.useMemo(() => Array.isArray(instructor.archivedLogbookEntries) ? [...instructor.archivedLogbookEntries] : [], [instructor]);
   reactExports.useEffect(() => {
     if (activeTab !== "logbook") return;
     setLogbookLoading(true);
     setLogbookError(null);
-    setLogbookMonth((/* @__PURE__ */ new Date()).toISOString().slice(0, 7));
+    setLogbookMonth(getProfileLogbookMonth(instructor));
     if (isArchiveProfile) {
       setLogbookEntries(archivedLogbookEntries);
       setLogbookLoading(false);
@@ -124203,10 +124225,11 @@ const App = () => {
     return staffProfiles.map((profile) => normalisePersonnelRecord({
       ...profile,
       _dataSource: "archive",
+      _archiveDate: date,
       archivedLogbookEntries: getArchivedLogbookEntriesForProfile(profile, flightLogEntries),
       currencyStatus: Array.isArray(profile.currencyStatus) && profile.currencyStatus.length > 0 ? profile.currencyStatus : staffCurrency[profile.name] || staffCurrency[profile.fullName] || []
     }));
-  }, [activeHistoricalDfpContext]);
+  }, [activeHistoricalDfpContext, date]);
   const historicalTraineesDataForDate = reactExports.useMemo(() => {
     const traineeProfiles = Array.isArray(activeHistoricalDfpContext?.traineeProfiles) ? activeHistoricalDfpContext.traineeProfiles : [];
     if (traineeProfiles.length === 0) return [];
@@ -124214,10 +124237,11 @@ const App = () => {
     return traineeProfiles.map((profile) => normalisePersonnelRecord({
       ...profile,
       _dataSource: "archive",
+      _archiveDate: date,
       archivedLogbookEntries: getArchivedLogbookEntriesForProfile(profile, flightLogEntries),
       currencyStatus: Array.isArray(profile.currencyStatus) ? profile.currencyStatus : []
     }));
-  }, [activeHistoricalDfpContext]);
+  }, [activeHistoricalDfpContext, date]);
   const activeDateInstructorsData = historicalInstructorsDataForDate.length > 0 ? historicalInstructorsDataForDate : instructorsData;
   const activeDateTraineesData = historicalTraineesDataForDate.length > 0 ? historicalTraineesDataForDate : traineesData;
   const [dashboardReportMinuteTick, setDashboardReportMinuteTick] = reactExports.useState(0);

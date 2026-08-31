@@ -204,6 +204,19 @@ const withAirCombatLinkedEventNote = (item: SyllabusItemDetail, linkedEventCode:
   };
 };
 
+const getLocalLogbookMonth = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
+const getProfileLogbookMonth = (person: any): string => {
+  const archiveDate = String(person?._archiveDate || '').slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) return archiveDate.slice(0, 7);
+  return getLocalLogbookMonth();
+};
+
 const ExperienceInput: React.FC<{ label: string; value: number; onChange: (val: number) => void }> = ({ label, value, onChange }) => (
   <div className="flex flex-col items-center">
     <label className="text-xs text-gray-400 mb-1">{label}</label>
@@ -1091,7 +1104,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [logbookLoading, setLogbookLoading] = useState(false);
   const [logbookError, setLogbookError] = useState<string | null>(null);
   // Month navigator: null = show all, 'YYYY-MM' for specific month
-  const [logbookMonth, setLogbookMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [logbookMonth, setLogbookMonth] = useState<string>(() => getProfileLogbookMonth(instructor));
   const isArchiveProfile = (instructor as any)._dataSource === 'archive';
   const archivedLogbookEntries = useMemo(() => (
     Array.isArray((instructor as any).archivedLogbookEntries)
@@ -1103,7 +1116,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     if (activeTab !== 'logbook') return;
     setLogbookLoading(true);
     setLogbookError(null);
-    setLogbookMonth(new Date().toISOString().slice(0, 7)); // Reset to current month each time tab opens
+    setLogbookMonth(getProfileLogbookMonth(instructor)); // Reset to the active profile month each time tab opens
     if (isArchiveProfile) {
       setLogbookEntries(archivedLogbookEntries);
       setLogbookLoading(false);

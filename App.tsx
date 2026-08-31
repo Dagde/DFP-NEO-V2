@@ -29901,12 +29901,13 @@ const App: React.FC = () => {
         return staffProfiles.map((profile: any) => normalisePersonnelRecord({
             ...profile,
             _dataSource: 'archive',
+            _archiveDate: date,
             archivedLogbookEntries: getArchivedLogbookEntriesForProfile(profile, flightLogEntries),
             currencyStatus: Array.isArray(profile.currencyStatus) && profile.currencyStatus.length > 0
                 ? profile.currencyStatus
                 : staffCurrency[profile.name] || staffCurrency[profile.fullName] || [],
         }) as Instructor);
-    }, [activeHistoricalDfpContext]);
+    }, [activeHistoricalDfpContext, date]);
     const historicalTraineesDataForDate = useMemo<Trainee[]>(() => {
         const traineeProfiles = Array.isArray(activeHistoricalDfpContext?.traineeProfiles)
             ? activeHistoricalDfpContext.traineeProfiles
@@ -29918,10 +29919,11 @@ const App: React.FC = () => {
         return traineeProfiles.map((profile: any) => normalisePersonnelRecord({
             ...profile,
             _dataSource: 'archive',
+            _archiveDate: date,
             archivedLogbookEntries: getArchivedLogbookEntriesForProfile(profile, flightLogEntries),
             currencyStatus: Array.isArray(profile.currencyStatus) ? profile.currencyStatus : [],
         }) as Trainee);
-    }, [activeHistoricalDfpContext]);
+    }, [activeHistoricalDfpContext, date]);
     const activeDateInstructorsData = historicalInstructorsDataForDate.length > 0
         ? historicalInstructorsDataForDate
         : instructorsData;
