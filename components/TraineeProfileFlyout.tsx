@@ -109,6 +109,18 @@ const getProfileLogbookMonth = (person: any): string => {
     return getLocalLogbookMonth();
 };
 
+const getProfileLogbookAsAtLabel = (person: any, logbookMonth: string): string => {
+    const archiveDate = String(person?._archiveDate || '').slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) {
+        const date = new Date(`${archiveDate}T00:00:00`);
+        const label = Number.isFinite(date.getTime())
+            ? date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
+            : archiveDate;
+        return `As at ${label}`;
+    }
+    return `Current month ${logbookMonth}`;
+};
+
 const getTraineeEnduringPreFlightNotes = (trainee?: Trainee | null): string => {
   if (!trainee) return '';
   const preferences = trainee.preferences && typeof trainee.preferences === 'object' && !Array.isArray(trainee.preferences)
@@ -694,6 +706,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             ? [...(trainee as any).archivedLogbookEntries]
             : []
     ), [trainee]);
+    const logbookAsAtLabel = getProfileLogbookAsAtLabel(trainee, logbookMonth);
 
     useEffect(() => {
         if (activeTab !== 'review') return;
@@ -2778,6 +2791,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                   <button onClick={() => setLogbookMonth(shiftMonth(logbookMonth, -1))} className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none">‹</button>
                                   <span className="min-w-[50px] text-center text-[10px] font-mono text-sky-300 bg-gray-800/60 border border-gray-600 rounded px-1 py-0.5">{label}</span>
                                   <button onClick={() => setLogbookMonth(shiftMonth(logbookMonth, 1))} className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none">›</button>
+                                  <span className="ml-2 rounded border border-slate-600/60 bg-slate-900/40 px-2 py-0.5 text-[10px] font-semibold text-slate-300">{logbookAsAtLabel}</span>
                                 </div>
                               );
                             })()}

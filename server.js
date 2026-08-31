@@ -17998,6 +17998,23 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         archivedPersonNames,
         archiveMonthStart
       ).catch(() => []);
+      const archiveLogbookDiagnostics = {
+        archiveDate: archive.date,
+        monthStart: archiveMonthStart,
+        archivedPersonIds: archivedPersonIds.length,
+        archivedPersonNames: archivedPersonNames.length,
+        archivedEventIds: archivedEventIds.length,
+        flightLogEntries: Array.isArray(flightLogRows) ? flightLogRows.length : 0,
+        sampleFlightLogEntries: (flightLogRows || []).slice(0, 8).map(row => ({
+          id: row.id,
+          eventDate: row.eventDate,
+          personName: row.personName,
+          personnelId: row.personnelId,
+          traineeId: row.traineeId,
+          eventCode: row.eventCode,
+          scheduleEventId: row.scheduleEventId,
+        })),
+      };
       const trainingReportVersions = await db.$queryRawUnsafe(
         `SELECT "eventId", "traineeId", "traineeFullName", "reportDate", "action", "versionHash", "reportData", "changedBy", "changedAt"
          FROM "TrainingReportVersionArchive"
@@ -18027,6 +18044,7 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         staffCurrency: configContentByType.staffCurrencyState || {},
         staffLogbook: {},
         aircraftConfigState: configContentByType.aircraftConfigState || {},
+        archiveLogbookDiagnostics,
         snapshotSource: 'compact-archive',
       };
       const response = {
@@ -18056,6 +18074,7 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         eventCompletions: completionRows || [],
         flightLogEntries: flightLogRows || [],
         configVersions: configVersions || [],
+        archiveLogbookDiagnostics,
         assembledAt: new Date().toISOString(),
         durationMs: Date.now() - startedAt,
       };
@@ -18079,24 +18098,101 @@ app.get('/api/archive/dfp-date', async (req, res) => {
     }
     const snapshot = snapshotRows[0];
     const parsed = parseDailySnapshotDateKey(snapshot.date);
+    const fallbackScheduleEvents = Array.isArray(snapshot.scheduleEvents) ? snapshot.scheduleEvents : [];
+    const fallbackStaffProfiles = Array.isArray(snapshot.staffProfiles) ? snapshot.staffProfiles : [];
+    const fallbackTraineeProfiles = Array.isArray(snapshot.traineeProfiles) ? snapshot.traineeProfiles : [];
+    const fallbackEventIds = fallbackScheduleEvents
+      .map(event => event?.id)
+      .filter(Boolean);
+    const fallbackProfileRefs = [...fallbackStaffProfiles, ...fallbackTraineeProfiles];
+    const fallbackPersonIds = Array.from(new Set(fallbackProfileRefs.flatMap(profile => [
+      profile?.id,
+      profile?.idNumber,
+      profile?.personnelId,
+      profile?.staffRecordId,
+      profile?.traineeRecordId,
+      profile?.userId,
+    ]).map(value => String(value || '').trim()).filter(Boolean)));
+    const fallbackPersonNames = Array.from(new Set(fallbackProfileRefs.flatMap(profile => [
+      profile?.name,
+      profile?.fullName,
+      profile?.displayName,
+    ]).map(value => String(value || '').trim().toLowerCase()).filter(Boolean)));
+    const fallbackMonthStart = /^\d{4}-\d{2}-\d{2}$/.test(String(parsed.date || ''))
+      ? `${String(parsed.date).slice(0, 7)}-01`
+      : parsed.date;
+    const fallbackFlightLogRows = await db.$queryRawUnsafe(
+      `SELECT * FROM "FlightLogEntry"
+       WHERE "scheduleEventId" = ANY($2::text[])
+          OR (
+            "eventDate" >= $5::text
+            AND "eventDate" <= $1::text
+            AND (
+              "personnelId" = ANY($3::text[])
+              OR "traineeId" = ANY($3::text[])
+              OR LOWER(TRIM(COALESCE("personName", ''))) = ANY($4::text[])
+            )
+          )
+       ORDER BY "personName" ASC, "eventDate" ASC, "createdAt" ASC
+       LIMIT 5000`,
+      parsed.date,
+      fallbackEventIds,
+      fallbackPersonIds,
+      fallbackPersonNames,
+      fallbackMonthStart
+    ).catch(() => []);
+    const existingFallbackFlightLogs = Array.isArray(snapshot.flightLogEntries) ? snapshot.flightLogEntries : [];
+    const fallbackFlightLogEntries = [...existingFallbackFlightLogs, ...(fallbackFlightLogRows || [])]
+      .filter((row, index, rows) => {
+        const key = row?.id || `${row?.scheduleEventId || ''}:${row?.personName || ''}:${row?.personRole || ''}:${row?.eventDate || ''}`;
+        return key && rows.findIndex(candidate => (
+          (candidate?.id || `${candidate?.scheduleEventId || ''}:${candidate?.personName || ''}:${candidate?.personRole || ''}:${candidate?.eventDate || ''}`) === key
+        )) === index;
+      });
+    const fallbackLogbookDiagnostics = {
+      archiveDate: parsed.date,
+      monthStart: fallbackMonthStart,
+      archivedPersonIds: fallbackPersonIds.length,
+      archivedPersonNames: fallbackPersonNames.length,
+      archivedEventIds: fallbackEventIds.length,
+      flightLogEntries: fallbackFlightLogEntries.length,
+      sourceRowsFromSnapshot: existingFallbackFlightLogs.length,
+      sourceRowsFromFlightLogTable: Array.isArray(fallbackFlightLogRows) ? fallbackFlightLogRows.length : 0,
+      sampleFlightLogEntries: fallbackFlightLogEntries.slice(0, 8).map(row => ({
+        id: row.id,
+        eventDate: row.eventDate,
+        personName: row.personName,
+        personnelId: row.personnelId,
+        traineeId: row.traineeId,
+        eventCode: row.eventCode,
+        scheduleEventId: row.scheduleEventId,
+      })),
+    };
+    const snapshotWithArchiveLogbook = {
+      ...snapshot,
+      flightLogEntries: fallbackFlightLogEntries,
+      archiveLogbookDiagnostics: fallbackLogbookDiagnostics,
+    };
     const fallbackResponse = {
       success: true,
       source: 'daily-snapshot-fallback',
       date: parsed.date,
       snapshotKey: snapshot.date,
-      snapshot,
+      snapshot: snapshotWithArchiveLogbook,
       archive: null,
-      scheduleEvents: snapshot.scheduleEvents || [],
+      scheduleEvents: fallbackScheduleEvents,
       staffEvents: snapshot.staffEvents || [],
       traineeEvents: snapshot.traineeEvents || [],
       trainingReports: Object.values(snapshot.pt051Assessments || {}),
       trainingReportVersions: [],
-      traineeProfiles: snapshot.traineeProfiles || [],
-      staffProfiles: snapshot.staffProfiles || [],
+      traineeProfiles: fallbackTraineeProfiles,
+      staffProfiles: fallbackStaffProfiles,
       lmpCompletedIds: snapshot.lmpCompletedIds || {},
       staffCurrency: snapshot.staffCurrency || {},
       staffLogbook: snapshot.staffLogbook || {},
       aircraftConfigState: snapshot.aircraftConfigState || {},
+      flightLogEntries: fallbackFlightLogEntries,
+      archiveLogbookDiagnostics: fallbackLogbookDiagnostics,
       assembledAt: new Date().toISOString(),
       durationMs: Date.now() - startedAt,
     };

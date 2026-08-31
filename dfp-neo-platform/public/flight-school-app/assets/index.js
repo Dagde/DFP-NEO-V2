@@ -26822,6 +26822,15 @@ const getProfileLogbookMonth$1 = (person) => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) return archiveDate.slice(0, 7);
   return getLocalLogbookMonth$1();
 };
+const getProfileLogbookAsAtLabel$1 = (person, logbookMonth) => {
+  const archiveDate = String(person?._archiveDate || "").slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) {
+    const date = /* @__PURE__ */ new Date(`${archiveDate}T00:00:00`);
+    const label = Number.isFinite(date.getTime()) ? date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : archiveDate;
+    return `As at ${label}`;
+  }
+  return `Current month ${logbookMonth}`;
+};
 const getTraineeEnduringPreFlightNotes$1 = (trainee) => {
   if (!trainee) return "";
   const preferences = trainee.preferences && typeof trainee.preferences === "object" && !Array.isArray(trainee.preferences) ? trainee.preferences : {};
@@ -27106,6 +27115,7 @@ const TraineeProfileFlyout = ({
   const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
   const isArchiveProfile = trainee._dataSource === "archive";
   const archivedLogbookEntries = reactExports.useMemo(() => Array.isArray(trainee.archivedLogbookEntries) ? [...trainee.archivedLogbookEntries] : [], [trainee]);
+  const logbookAsAtLabel = getProfileLogbookAsAtLabel$1(trainee, logbookMonth);
   reactExports.useEffect(() => {
     if (activeTab !== "review") return;
     setReviewLogbookLoading(true);
@@ -28884,7 +28894,8 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-0.5", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setLogbookMonth(shiftMonth(logbookMonth, -1)), className: "w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none", children: "‹" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-[50px] text-center text-[10px] font-mono text-sky-300 bg-gray-800/60 border border-gray-600 rounded px-1 py-0.5", children: label }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setLogbookMonth(shiftMonth(logbookMonth, 1)), className: "w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none", children: "›" })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setLogbookMonth(shiftMonth(logbookMonth, 1)), className: "w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none", children: "›" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 rounded border border-slate-600/60 bg-slate-900/40 px-2 py-0.5 text-[10px] font-semibold text-slate-300", children: logbookAsAtLabel })
                       ] });
                     })()
                   ] }),
@@ -59641,6 +59652,15 @@ const getProfileLogbookMonth = (person) => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) return archiveDate.slice(0, 7);
   return getLocalLogbookMonth();
 };
+const getProfileLogbookAsAtLabel = (person, logbookMonth) => {
+  const archiveDate = String(person?._archiveDate || "").slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) {
+    const date = /* @__PURE__ */ new Date(`${archiveDate}T00:00:00`);
+    const label = Number.isFinite(date.getTime()) ? date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : archiveDate;
+    return `As at ${label}`;
+  }
+  return `Current month ${logbookMonth}`;
+};
 const ExperienceInput = ({ label, value, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-gray-400 mb-1", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60433,6 +60453,7 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
   const [logbookMonth, setLogbookMonth] = reactExports.useState(() => getProfileLogbookMonth(instructor));
   const isArchiveProfile = instructor._dataSource === "archive";
   const archivedLogbookEntries = reactExports.useMemo(() => Array.isArray(instructor.archivedLogbookEntries) ? [...instructor.archivedLogbookEntries] : [], [instructor]);
+  const logbookAsAtLabel = getProfileLogbookAsAtLabel(instructor, logbookMonth);
   reactExports.useEffect(() => {
     if (activeTab !== "logbook") return;
     setLogbookLoading(true);
@@ -60657,7 +60678,8 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-0.5", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setLogbookMonth(shiftMonth(logbookMonth, -1)), className: "w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none", children: "‹" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-[50px] text-center text-[10px] font-mono text-sky-300 bg-gray-800/60 border border-gray-600 rounded px-1 py-0.5", children: label }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setLogbookMonth(shiftMonth(logbookMonth, 1)), className: "w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none", children: "›" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setLogbookMonth(shiftMonth(logbookMonth, 1)), className: "w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none", children: "›" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 rounded border border-slate-600/60 bg-slate-900/40 px-2 py-0.5 text-[10px] font-semibold text-slate-300", children: logbookAsAtLabel })
                   ] });
                 })()
               ] }),
@@ -62477,6 +62499,7 @@ const InstructorListView = ({
   units,
   selectedPersonForProfile,
   onProfileOpened,
+  onProfileClosed,
   onViewLogbook,
   onRequestSct,
   sctRequests = [],
@@ -62793,11 +62816,13 @@ const InstructorListView = ({
     }
   };
   const handleCloseProfile = () => {
+    const closingInstructor = selectedInstructor;
     setIsClosing(true);
     setTimeout(() => {
       setSelectedInstructor(null);
       setIsAddingNew(false);
       setNewInstructorTemplate(null);
+      onProfileClosed?.(closingInstructor);
     }, 300);
   };
   const handleShowAddChoice = (anchor) => {
@@ -63592,6 +63617,12 @@ const StaffView = (props) => {
           units: props.units,
           selectedPersonForProfile: props.selfOnlyProfile || props.selectedPersonForProfile,
           onProfileOpened: props.onProfileOpened,
+          onProfileClosed: (instructor) => {
+            props.onProfileClosed?.(instructor);
+            if (instructor?._dataSource === "archive" && canViewStaffSchedule) {
+              setActiveTab("schedule");
+            }
+          },
           onViewLogbook: props.onViewLogbook,
           masterCurrencies: props.masterCurrencies,
           sctRequests: props.sctRequests,

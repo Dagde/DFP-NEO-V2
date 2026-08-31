@@ -217,6 +217,18 @@ const getProfileLogbookMonth = (person: any): string => {
   return getLocalLogbookMonth();
 };
 
+const getProfileLogbookAsAtLabel = (person: any, logbookMonth: string): string => {
+  const archiveDate = String(person?._archiveDate || '').slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) {
+    const date = new Date(`${archiveDate}T00:00:00`);
+    const label = Number.isFinite(date.getTime())
+      ? date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
+      : archiveDate;
+    return `As at ${label}`;
+  }
+  return `Current month ${logbookMonth}`;
+};
+
 const ExperienceInput: React.FC<{ label: string; value: number; onChange: (val: number) => void }> = ({ label, value, onChange }) => (
   <div className="flex flex-col items-center">
     <label className="text-xs text-gray-400 mb-1">{label}</label>
@@ -1111,6 +1123,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       ? [...(instructor as any).archivedLogbookEntries]
       : []
   ), [instructor]);
+  const logbookAsAtLabel = getProfileLogbookAsAtLabel(instructor, logbookMonth);
 
   useEffect(() => {
     if (activeTab !== 'logbook') return;
@@ -1366,10 +1379,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                          // Default to current month when "All" and user clicks an arrow
                                                 const label = `${ML[logbookMonth.slice(5,7)]||''} ${logbookMonth.slice(2,4)}`;
                          return (
-                           <div className="flex items-center gap-0.5">
+                          <div className="flex items-center gap-0.5">
                              <button onClick={() => setLogbookMonth(shiftMonth(logbookMonth, -1))} className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none">‹</button>
                              <span className="min-w-[50px] text-center text-[10px] font-mono text-sky-300 bg-gray-800/60 border border-gray-600 rounded px-1 py-0.5">{label}</span>
                              <button onClick={() => setLogbookMonth(shiftMonth(logbookMonth, 1))} className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none">›</button>
+                             <span className="ml-2 rounded border border-slate-600/60 bg-slate-900/40 px-2 py-0.5 text-[10px] font-semibold text-slate-300">{logbookAsAtLabel}</span>
                            </div>
                          );
                        })()}

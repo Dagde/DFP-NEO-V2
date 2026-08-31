@@ -168,6 +168,7 @@ interface InstructorListViewProps {
   selectedPersonForProfile?: Instructor | null;
   onNavigateToTrainee?: (trainee: Trainee) => void;
   onProfileOpened?: () => void;
+  onProfileClosed?: (instructor: Instructor | null) => void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: (instructor: Instructor) => void;
   sctRequests?: SctRequest[];
@@ -220,6 +221,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     units,
     selectedPersonForProfile,
     onProfileOpened,
+    onProfileClosed,
     onViewLogbook,
     onRequestSct,
     sctRequests = [],
@@ -600,11 +602,13 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   };
 
   const handleCloseProfile = () => {
+    const closingInstructor = selectedInstructor;
     setIsClosing(true);
     setTimeout(() => {
       setSelectedInstructor(null);
       setIsAddingNew(false);
       setNewInstructorTemplate(null);
+      onProfileClosed?.(closingInstructor);
     }, 300);
   };
 
