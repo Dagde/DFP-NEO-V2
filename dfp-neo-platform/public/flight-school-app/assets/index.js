@@ -112637,7 +112637,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       const SOLO_WINDOW_START = 9;
       const SOLO_WINDOW_END = 15;
-      if (isSoloFlight) {
+      const enforceTraineeSoloWindow = isSoloFlight && options.skipTraineeSoloWindow !== true;
+      if (enforceTraineeSoloWindow) {
         if (startTime < SOLO_WINDOW_START - 1e-3 || startTime > SOLO_WINDOW_END + 1e-3) {
           _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TIME_BOUNDARY_VIOLATION");
           return traceScheduleReject("SOLO_WINDOW_VIOLATION", {
@@ -116600,6 +116601,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                   enforcePersonnelTurnaround: true,
                   traineeOverlapRole: resolved.excludeInstructorNames.length > 0 ? "trainee" : "any",
                   resourceCandidatesOverride: [candidateResourceId],
+                  skipTraineeSoloWindow: !!resolved.staff,
                   diagnosticTrace: (entry) => {
                     scheduleEventTrace = entry;
                     traceCurrencyPriority("scheduleAttempts", {
@@ -118420,6 +118422,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             traineeTotalLimitOverride,
             enforcePersonnelTurnaround: true,
             traineeOverlapRole: resolved.excludeInstructorNames.length > 0 ? "trainee" : "any",
+            skipTraineeSoloWindow: !!resolved.staff,
             diagnosticTrace: (entry) => {
               scheduleEventTrace = entry;
             }

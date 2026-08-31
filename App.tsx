@@ -14584,6 +14584,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         enforcePersonnelTurnaround?: boolean;
         traineeOverlapRole?: 'any' | 'trainee';
         resourceCandidatesOverride?: string[];
+        skipTraineeSoloWindow?: boolean;
     };
 
     const scheduleEvent = (
@@ -15932,12 +15933,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 });
             }
 
-            // SOLO DEPARTURE WINDOW: Solo flights may only depart between 09:00 and 15:00.
+            // TRAINEE SOLO DEPARTURE WINDOW: trainee solo flights may only depart between 09:00 and 15:00.
+            // Staff self-flown currency events can still be solo crew-wise, but they are not trainee solo sorties.
             // This is checked here, inside scheduleEvent, so the slot search loop in scheduleList
             // will naturally skip all times outside this window (returning null → next slot tried).
             const SOLO_WINDOW_START = 9;   // 09:00
             const SOLO_WINDOW_END   = 15;  // 15:00 (latest departure)
-            if (isSoloFlight) {
+            const enforceTraineeSoloWindow = isSoloFlight && options.skipTraineeSoloWindow !== true;
+            if (enforceTraineeSoloWindow) {
                 if (startTime < SOLO_WINDOW_START - 0.001 || startTime > SOLO_WINDOW_END + 0.001) {
                     _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TIME_BOUNDARY_VIOLATION');
                     return traceScheduleReject('SOLO_WINDOW_VIOLATION', {
@@ -20327,6 +20330,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     enforcePersonnelTurnaround: true,
                                     traineeOverlapRole: resolved.excludeInstructorNames.length > 0 ? 'trainee' : 'any',
                                     resourceCandidatesOverride: [candidateResourceId],
+                                    skipTraineeSoloWindow: !!resolved.staff,
                                     diagnosticTrace: entry => {
                                         scheduleEventTrace = entry;
                                         traceCurrencyPriority('scheduleAttempts', {
@@ -22612,6 +22616,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         traineeTotalLimitOverride,
                         enforcePersonnelTurnaround: true,
                         traineeOverlapRole: resolved.excludeInstructorNames.length > 0 ? 'trainee' : 'any',
+                        skipTraineeSoloWindow: !!resolved.staff,
                         diagnosticTrace: entry => {
                             scheduleEventTrace = entry;
                         },
