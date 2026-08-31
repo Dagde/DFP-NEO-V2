@@ -41269,7 +41269,7 @@ const App: React.FC = () => {
     };
 
     const handleSelectInstructorFromSchedule = (instructorName: string) => {
-        const instructor = instructorsData.find(i => i.name === instructorName);
+        const instructor = activeDateInstructorsData.find(i => i.name === instructorName);
         if (instructor) {
             setSelectedPersonForProfile(instructor);
             handleNavigation('Instructors');
@@ -41277,7 +41277,7 @@ const App: React.FC = () => {
     };
 
     const handleSelectTraineeFromSchedule = (traineeFullName: string) => {
-        const trainee = allTraineesData.find(t => t.fullName === traineeFullName);
+        const trainee = activeDateTraineesData.find(t => t.fullName === traineeFullName);
         if (trainee) {
             setSelectedPersonForProfile(trainee);
             handleNavigation('CourseRoster');
@@ -49256,7 +49256,7 @@ appliedUpdates.forEach(update => {
                             onDateSelect={handleDateSelect}
                             snapshotDates={snapshotDates}
                             events={eventsForStaffTraineeSchedule}
-                            trainees={[...traineesData]
+                            trainees={[...activeDateTraineesData]
                                 .sort((a, b) => {
                                     // First sort by course
                                     if (a.course !== b.course) {
@@ -49267,8 +49267,8 @@ appliedUpdates.forEach(update => {
                                 })
                                 .map(t => t.fullName)
                             }
-                            traineesData={traineesData}
-                            instructorsData={instructorsData}
+                            traineesData={activeDateTraineesData}
+                            instructorsData={activeDateInstructorsData}
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             zoomLevel={zoomLevel}
@@ -49284,7 +49284,7 @@ appliedUpdates.forEach(update => {
                             aircraftNumberSettings={aircraftNumberSettings}
                        />;
             case 'InstructorSchedule':
-                const locationFilteredInstructorsForSchedule = [...instructorsData]
+                const locationFilteredInstructorsForSchedule = [...activeDateInstructorsData]
                     .sort((a, b) => {
                         // First sort by unit (group by unit)
                         const unitA = a.unit || 'ZZZ'; // Put staff without unit at the end
@@ -49298,7 +49298,7 @@ appliedUpdates.forEach(update => {
 
                 logRoutineAppDebug('🔍 STAFF SCHEDULE - Location filtering and sorting applied');
                 logRoutineAppDebug('🔍 School:', school);
-                logRoutineAppDebug('👁 Total instructors:', instructorsData?.length);
+                logRoutineAppDebug('👁 Total instructors:', activeDateInstructorsData?.length);
                 logRoutineAppDebug('🔍 Filtered instructors:', locationFilteredInstructorsForSchedule?.length);
                 logRoutineAppDebug('🔍 Sorted instructors (unit then configured personnel sort):', locationFilteredInstructorsForSchedule.map(i => `${i.unit || 'No Unit'} - ${i.rank} ${i.name}`));
 
@@ -49311,7 +49311,7 @@ appliedUpdates.forEach(update => {
                       events={eventSegmentsForDate}
                       instructors={locationFilteredInstructorsForSchedule.map(i => ({ id: (i as any).id, idNumber: i.idNumber, name: i.name, rank: i.rank, unit: i.unit, role: i.role }))}
                       instructorsData={locationFilteredInstructorsForSchedule}
-                      traineesData={traineesData}
+                      traineesData={activeDateTraineesData}
                       onSelectEvent={handleOpenModal}
                       onUpdateEvent={handleScheduleUpdate}
                       zoomLevel={zoomLevel}
@@ -49403,7 +49403,7 @@ appliedUpdates.forEach(update => {
             case 'Trainee':
                 return <TraineeView
                             events={eventsForStaffTraineeSchedule}
-                            traineesData={traineesData}
+                            traineesData={activeDateTraineesData}
                             courseColors={scopedCourseColors}
                             courses={courses}
                             archivedCourses={archivedCourses}
@@ -49430,7 +49430,7 @@ appliedUpdates.forEach(update => {
                             onSelectPt051ForEvent={openPt051FromTraineeProfile}
                             onSavePt051Assessment={onSavePT051Assessment}
                             onDeletePt051Assessment={onDeletePT051Assessment}
-                            instructorsData={instructorsData}
+                            instructorsData={activeDateInstructorsData}
                             registerDirtyCheck={registerDirtyCheck}
                             phraseBank={phraseBank}
                             canViewTraineeProfile={canViewTraineeProfile}
@@ -49564,7 +49564,7 @@ appliedUpdates.forEach(update => {
             case 'CourseRoster':
                 return <CourseRosterView
                             events={eventsForStaffTraineeSchedule}
-                            traineesData={traineesData}
+                            traineesData={activeDateTraineesData}
                             courseColors={scopedCourseColors}
                             courses={courses}
                             archivedCourses={archivedCourses}
@@ -49591,7 +49591,7 @@ appliedUpdates.forEach(update => {
                             onSelectPt051ForEvent={openPt051FromTraineeProfile}
                             onSavePt051Assessment={onSavePT051Assessment}
                             onDeletePt051Assessment={onDeletePT051Assessment}
-                            instructorsData={instructorsData}
+                            instructorsData={activeDateInstructorsData}
                             registerDirtyCheck={registerDirtyCheck}
                             phraseBank={phraseBank}
                             canViewTraineeProfile={canViewTraineeProfile}
@@ -50645,12 +50645,12 @@ appliedUpdates.forEach(update => {
                         />;
             case 'Staff':
             case 'Instructors':
-                logRoutineAppDebug(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
+                logRoutineAppDebug(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${activeDateInstructorsData.length}, school=${school}`);
                 return <StaffView
                             onClose={handleCloseStaffView}
                             events={eventsForStaffTraineeSchedule}
-                            traineesData={traineesData}
-                            instructorsData={instructorsData}
+                            traineesData={activeDateTraineesData}
+                            instructorsData={activeDateInstructorsData}
                             archivedInstructorsData={archivedInstructorsData}
                             scheduleHistoryEvents={publishedScheduleHistoryEvents}
                             insertEventTypes={insertEventTypes}

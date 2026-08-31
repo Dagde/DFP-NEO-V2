@@ -133470,14 +133470,14 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     logRoutineAppDebug("🗑️ Deleted priority event:", eventId);
   };
   const handleSelectInstructorFromSchedule = (instructorName) => {
-    const instructor = instructorsData.find((i) => i.name === instructorName);
+    const instructor = activeDateInstructorsData.find((i) => i.name === instructorName);
     if (instructor) {
       setSelectedPersonForProfile(instructor);
       handleNavigation("Instructors");
     }
   };
   const handleSelectTraineeFromSchedule = (traineeFullName) => {
-    const trainee = allTraineesData.find((t) => t.fullName === traineeFullName);
+    const trainee = activeDateTraineesData.find((t) => t.fullName === traineeFullName);
     if (trainee) {
       setSelectedPersonForProfile(trainee);
       handleNavigation("CourseRoster");
@@ -140041,14 +140041,14 @@ ${error instanceof Error ? error.message : String(error)}`,
             onDateSelect: handleDateSelect,
             snapshotDates,
             events: eventsForStaffTraineeSchedule,
-            trainees: [...traineesData].sort((a, b) => {
+            trainees: [...activeDateTraineesData].sort((a, b) => {
               if (a.course !== b.course) {
                 return a.course.localeCompare(b.course);
               }
               return a.name.localeCompare(b.name);
             }).map((t) => t.fullName),
-            traineesData,
-            instructorsData,
+            traineesData: activeDateTraineesData,
+            instructorsData: activeDateInstructorsData,
             onSelectEvent: handleOpenModal,
             onUpdateEvent: handleScheduleUpdate,
             zoomLevel,
@@ -140065,7 +140065,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           }
         );
       case "InstructorSchedule":
-        const locationFilteredInstructorsForSchedule = [...instructorsData].sort((a, b) => {
+        const locationFilteredInstructorsForSchedule = [...activeDateInstructorsData].sort((a, b) => {
           const unitA = a.unit || "ZZZ";
           const unitB = b.unit || "ZZZ";
           if (unitA !== unitB) {
@@ -140075,7 +140075,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         });
         logRoutineAppDebug("🔍 STAFF SCHEDULE - Location filtering and sorting applied");
         logRoutineAppDebug("🔍 School:", school);
-        logRoutineAppDebug("👁 Total instructors:", instructorsData?.length);
+        logRoutineAppDebug("👁 Total instructors:", activeDateInstructorsData?.length);
         logRoutineAppDebug("🔍 Filtered instructors:", locationFilteredInstructorsForSchedule?.length);
         logRoutineAppDebug("🔍 Sorted instructors (unit then configured personnel sort):", locationFilteredInstructorsForSchedule.map((i) => `${i.unit || "No Unit"} - ${i.rank} ${i.name}`));
         try {
@@ -140089,7 +140089,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               events: eventSegmentsForDate,
               instructors: locationFilteredInstructorsForSchedule.map((i) => ({ id: i.id, idNumber: i.idNumber, name: i.name, rank: i.rank, unit: i.unit, role: i.role })),
               instructorsData: locationFilteredInstructorsForSchedule,
-              traineesData,
+              traineesData: activeDateTraineesData,
               onSelectEvent: handleOpenModal,
               onUpdateEvent: handleScheduleUpdate,
               zoomLevel,
@@ -140182,7 +140182,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           TraineeView,
           {
             events: eventsForStaffTraineeSchedule,
-            traineesData,
+            traineesData: activeDateTraineesData,
             courseColors: scopedCourseColors,
             courses,
             archivedCourses,
@@ -140210,7 +140210,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSelectPt051ForEvent: openPt051FromTraineeProfile,
             onSavePt051Assessment: onSavePT051Assessment,
             onDeletePt051Assessment: onDeletePT051Assessment,
-            instructorsData,
+            instructorsData: activeDateInstructorsData,
             registerDirtyCheck,
             phraseBank,
             canViewTraineeProfile,
@@ -140340,7 +140340,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           CourseRosterView,
           {
             events: eventsForStaffTraineeSchedule,
-            traineesData,
+            traineesData: activeDateTraineesData,
             courseColors: scopedCourseColors,
             courses,
             archivedCourses,
@@ -140368,7 +140368,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSelectPt051ForEvent: openPt051FromTraineeProfile,
             onSavePt051Assessment: onSavePT051Assessment,
             onDeletePt051Assessment: onDeletePT051Assessment,
-            instructorsData,
+            instructorsData: activeDateInstructorsData,
             registerDirtyCheck,
             phraseBank,
             canViewTraineeProfile,
@@ -141312,14 +141312,14 @@ ${error instanceof Error ? error.message : String(error)}`,
         );
       case "Staff":
       case "Instructors":
-        logRoutineAppDebug(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
+        logRoutineAppDebug(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${activeDateInstructorsData.length}, school=${school}`);
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           StaffView,
           {
             onClose: handleCloseStaffView,
             events: eventsForStaffTraineeSchedule,
-            traineesData,
-            instructorsData,
+            traineesData: activeDateTraineesData,
+            instructorsData: activeDateInstructorsData,
             archivedInstructorsData,
             scheduleHistoryEvents: publishedScheduleHistoryEvents,
             insertEventTypes,
