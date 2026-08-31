@@ -9119,6 +9119,7 @@ function generateDfpInternal(
                         rejectionSamples: diag.rejectionSamples?.slice?.(0, 20) || [],
                         attemptSamples: diag.attemptSamples?.slice?.(0, 30) || [],
                         searchWindowSamples: diag.searchWindowSamples?.slice?.(0, 20) || [],
+                        placementExplanations: diag.placementExplanations?.slice?.(0, 160) || [],
                     }
                 ])),
                 scheduleFlow: (neoBuildDiag.scheduleFlow || []).slice(-80),
@@ -13985,6 +13986,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             }>,
             rejectionSamples: [] as any[],
             attemptSamples: [] as any[],
+            placementExplanations: [] as any[],
             passSummaries: [] as any[],
             searchWindowSamples: [] as any[],
             sample: list.slice(0, 20).map(trainee => {
@@ -14113,6 +14115,63 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             }
         };
 
+        const analysePlacementResourceRow = (
+            result: ScheduleEventResult,
+            syllabusItem: SyllabusItemDetail,
+            scheduledDuration: number,
+            searchStartTime: number
+        ) => {
+            if (!result || typeof result !== 'object' || !('id' in result)) return null;
+            const proposedTurnaround = getResourceTurnaroundAfter({ type: result.type, flightNumber: syllabusItem.code });
+            const sameResourceEvents = getGeneratedEventsForResource(result.resourceId)
+                .filter(existing => existing.id !== result.id)
+                .sort((a, b) => a.startTime - b.startTime);
+            const previousEvent = sameResourceEvents
+                .filter(existing => existing.startTime + existing.duration <= result.startTime + 0.001)
+                .sort((a, b) => (b.startTime + b.duration) - (a.startTime + a.duration))[0] || null;
+            const previousAvailableAt = previousEvent
+                ? previousEvent.startTime + previousEvent.duration + getResourceTurnaroundAfter(previousEvent)
+                : searchStartTime;
+            const selectedResourceIdleBeforeStartHours = Math.max(0, result.startTime - previousAvailableAt);
+            const selectedResourceIdleBeforeStartMinutes = Math.round(selectedResourceIdleBeforeStartHours * 60);
+            const resultResourceNumber = Number(String(result.resourceId || '').match(/(\d+)$/)?.[1] || NaN);
+            const lowerNumberResourcesFreeAtSelectedTime = !Number.isFinite(resultResourceNumber)
+                ? []
+                : Array.from({ length: Math.max(0, resultResourceNumber - 1) }, (_, index) => `${result.resourceId.replace(/\s+\d+$/, '')} ${index + 1}`)
+                    .filter(resourceId => {
+                        const occupied = getGeneratedEventsForResource(resourceId).some(existing => {
+                            const existingTurnaround = getResourceTurnaroundAfter(existing);
+                            const existingEnd = existing.startTime + existing.duration + existingTurnaround;
+                            const proposedEnd = result.startTime + scheduledDuration + proposedTurnaround;
+                            return result.startTime < existingEnd && proposedEnd > existing.startTime;
+                        });
+                        return !occupied;
+                    })
+                    .slice(0, 8);
+            return {
+                selectedResourceId: result.resourceId,
+                selectedResourceIdleBeforeStartMinutes,
+                selectedResourcePreviousEvent: previousEvent ? {
+                    id: previousEvent.id,
+                    flightNumber: previousEvent.flightNumber,
+                    type: previousEvent.type,
+                    startTime: previousEvent.startTime,
+                    displayTime: _fmtT(previousEvent.startTime),
+                    duration: previousEvent.duration,
+                    endsAt: previousEvent.startTime + previousEvent.duration,
+                    availableAt: previousAvailableAt,
+                    instructor: previousEvent.instructor || null,
+                    pilot: previousEvent.pilot || null,
+                    student: previousEvent.student || null,
+                    source: (previousEvent as any)._source || null,
+                } : null,
+                selectedResourceAvailableFrom: previousAvailableAt,
+                selectedResourceAvailableFromDisplay: _fmtT(previousAvailableAt),
+                lowerNumberResourcesFreeAtSelectedTime,
+                lowerNumberResourcesFreeAtSelectedTimeCount: lowerNumberResourcesFreeAtSelectedTime.length,
+            };
+        };
+
         const segments: { start: number, end: number, count: number }[] = [];
         if ((type === 'cpt' || type === 'ground') && !isNightPass) {
             const segmentDuration = 2;
@@ -14143,6 +14202,36 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 }
                 const scheduledDuration = getScheduledEventDuration(syllabusItem, type, trainee);
                 const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type, trainee);
+                const placementAttemptTrace = {
+                    earliestAttemptedTime: null as number | null,
+                    attemptsBeforePlacement: 0,
+                    rejectionReasonsBeforePlacement: {} as Record<string, number>,
+                    failedEarlierAttempts: [] as any[],
+                };
+                const recordPlacementAttemptTrace = (entry: Record<string, any>) => {
+                    if (entry?.outcome !== 'rejected') return;
+                    const start = typeof entry.startTime === 'number' ? entry.startTime : null;
+                    if (typeof start === 'number' && (
+                        placementAttemptTrace.earliestAttemptedTime === null ||
+                        start < placementAttemptTrace.earliestAttemptedTime
+                    )) {
+                        placementAttemptTrace.earliestAttemptedTime = start;
+                    }
+                    placementAttemptTrace.attemptsBeforePlacement++;
+                    const reason = String(entry.reason || 'UNKNOWN_REJECTION');
+                    placementAttemptTrace.rejectionReasonsBeforePlacement[reason] =
+                        (placementAttemptTrace.rejectionReasonsBeforePlacement[reason] || 0) + 1;
+                    if (placementAttemptTrace.failedEarlierAttempts.length < getNeoBuildTraceLimit(24, 90)) {
+                        placementAttemptTrace.failedEarlierAttempts.push({
+                            reason,
+                            startTime: start,
+                            displayTime: entry.displayTime || (typeof start === 'number' ? _fmtT(start) : null),
+                            primaryPreferOnly: typeof entry.primaryPreferOnly === 'boolean' ? entry.primaryPreferOnly : null,
+                            requirePreferredNightAircraft: typeof entry.requirePreferredNightAircraft === 'boolean' ? entry.requirePreferredNightAircraft : null,
+                            details: entry.details || null,
+                        });
+                    }
+                };
 
                 const isRemedialItem = isRemedialSyllabusItem(syllabusItem);
                 if (type === 'flight' && !isPlusOne && !isRemedialItem && isMultiResourceFlightItem(syllabusItem)) {
@@ -14254,6 +14343,26 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                             }
                             if (cappedLatestEventStart < earliestEventStart - 0.001) {
                                 listDiag.noSearchWindow++;
+                                const noSearchWindowTrace = {
+                                    phase: 'slot-window',
+                                    outcome: 'rejected',
+                                    reason: 'NO_SEARCH_WINDOW',
+                                    trainee: trainee.fullName,
+                                    event: syllabusItem.code,
+                                    type,
+                                    startTime: earliestEventStart,
+                                    displayTime: _fmtT(earliestEventStart),
+                                    details: {
+                                        space,
+                                        earliestEventStart,
+                                        latestEventStart,
+                                        cappedLatestEventStart,
+                                        startTimeBoundary,
+                                        endTimeBoundary,
+                                        latestStartBefore,
+                                    },
+                                };
+                                recordPlacementAttemptTrace(noSearchWindowTrace);
                                 if (listDiag.rejectionSamples.length < 80) {
                                     listDiag.rejectionSamples.push({
                                         phase: 'slot-window',
@@ -14282,7 +14391,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     : null;
                                 if (cachedFtdNoResource) {
                                     listDiag.cachedResourceRejections++;
-                                    recordScheduleListRejection({
+                                    const cachedResourceTrace = {
                                         phase: 'schedule-event',
                                         outcome: 'rejected',
                                         reason: 'NO_RESOURCE_AVAILABLE',
@@ -14300,7 +14409,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                             ...cachedFtdNoResource,
                                             cachedResourceCheck: true,
                                         },
-                                    });
+                                    };
+                                    recordPlacementAttemptTrace(cachedResourceTrace);
+                                    recordScheduleListRejection(cachedResourceTrace);
                                     recordNeoBuildAttemptTiming({
                                         listName,
                                         type,
@@ -14317,6 +14428,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     enforcePersonnelTurnaround: true,
                                     diagnosticListName: listName,
                                     diagnosticTrace: (traceEntry) => {
+                                        recordPlacementAttemptTrace(traceEntry);
                                         recordScheduleListRejection(traceEntry);
                                         if (
                                             ftdNoResourceCacheKey &&
@@ -14347,8 +14459,52 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     });
                                 }
                                 if (result && typeof result === 'object' && 'id' in result) {
+                                    if (placementAttemptTrace.earliestAttemptedTime === null) {
+                                        placementAttemptTrace.earliestAttemptedTime = time;
+                                    }
+                                    const delayFromEarliestAttemptMinutes = Math.max(
+                                        0,
+                                        Math.round((result.startTime - placementAttemptTrace.earliestAttemptedTime) * 60)
+                                    );
+                                    const placementExplanation = {
+                                        eventId: result.id,
+                                        listName,
+                                        trainee: trainee.fullName,
+                                        traineeIdNumber: trainee.idNumber ?? null,
+                                        traineeIdentityKey: getBuildTraineeKey(trainee),
+                                        course: trainee.course || null,
+                                        unit: trainee.unit || null,
+                                        ...describeBuildTrainingEventForDiag(syllabusItem),
+                                        type,
+                                        isPlusOne,
+                                        isNightPass,
+                                        selectedBecause: placementAttemptTrace.attemptsBeforePlacement > 0
+                                            ? 'First candidate slot that passed all scheduler constraints after earlier rejected slots.'
+                                            : 'First candidate slot accepted by the scheduler.',
+                                        earliestAttemptedTime: placementAttemptTrace.earliestAttemptedTime,
+                                        earliestAttemptedDisplayTime: _fmtT(placementAttemptTrace.earliestAttemptedTime),
+                                        selectedStartTime: result.startTime,
+                                        selectedDisplayTime: _fmtT(result.startTime),
+                                        delayFromEarliestAttemptMinutes,
+                                        acceptedAttempt: {
+                                            startTime: result.startTime,
+                                            displayTime: _fmtT(result.startTime),
+                                            resourceId: result.resourceId,
+                                            instructor: result.instructor || null,
+                                            pilot: result.pilot || null,
+                                            student: result.student || null,
+                                        },
+                                        attemptsBeforePlacement: placementAttemptTrace.attemptsBeforePlacement,
+                                        rejectionReasonsBeforePlacement: placementAttemptTrace.rejectionReasonsBeforePlacement,
+                                        failedEarlierAttemptSamples: placementAttemptTrace.failedEarlierAttempts,
+                                        resourceRowAnalysis: analysePlacementResourceRow(result, syllabusItem, scheduledDuration, searchStartTime),
+                                        generatedEventsCountBeforePlacement: generatedEvents.length,
+                                    };
                                     pushGeneratedEvent({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
                                     ftdNoResourceCache.clear();
+                                    if (listDiag.placementExplanations.length < getNeoBuildTraceLimit(220, 900)) {
+                                        listDiag.placementExplanations.push(placementExplanation);
+                                    }
                                     if (listDiag.placed.length < 80) {
                                         listDiag.placed.push({
                                             trainee: trainee.fullName,
@@ -14368,6 +14524,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                             personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(result),
                                             staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(result),
                                             generatedEventsCount: generatedEvents.length,
+                                            placementExplanation,
                                         });
                                     }
                                     if (isPlusOne && next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
@@ -14536,6 +14693,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             firstSearchWindowSample: listDiag.searchWindowSamples[0] || null,
             firstRejectionSample: listDiag.rejectionSamples[0] || null,
             placedSample: listDiag.placed.slice(0, 12),
+            placementExplanationSample: listDiag.placementExplanations.slice(0, 12),
             unplacedSample: listDiag.unplaced.slice(0, 12),
         });
         markBuildTiming(`schedule-list:${listName}`, {
@@ -24523,6 +24681,15 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     };
     annotateScheduleListUnplacedRecovery();
 
+    const finalPlacementExplanations = Object.values(neoBuildDiag.scheduleLists || {})
+        .flatMap((diag: any) => Array.isArray(diag?.placementExplanations) ? diag.placementExplanations : [])
+        .slice(0, getNeoBuildTraceLimit(300, 1200));
+    const finalPlacementExplanationsByEventId = new Map(
+        finalPlacementExplanations
+            .filter((entry: any) => entry?.eventId)
+            .map((entry: any) => [entry.eventId, entry])
+    );
+
     const finalPersonnelIdentityEvents = sortedEvents.map(event => {
         const personnelRefs = describeNeoBuildDiagnosticPersonnelRefs(event);
         const staffIdentityRefs = personnelRefs.filter(ref => ref.personType === 'staff');
@@ -24596,6 +24763,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             duplicateNamedStaffSample: duplicateNamedStaffFinalEvents.slice(0, 40),
             nameOnlySample: finalNameOnlyEvents.slice(0, 40),
         },
+        placementExplanations: finalPlacementExplanations,
         firstEvents: sortedEvents.slice(0, 80).map(event => ({
             id: event.id,
             flightNumber: event.flightNumber,
@@ -24618,6 +24786,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             personnelIdentityStatus: getNeoBuildDiagnosticIdentityStatus(event),
             personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(event),
             staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(event),
+            placementExplanation: finalPlacementExplanationsByEventId.get(event.id) || null,
         })),
         events: sortedEvents.map(event => ({
             id: event.id,
@@ -24641,6 +24810,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             personnelIdentityStatus: getNeoBuildDiagnosticIdentityStatus(event),
             personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(event),
             staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(event),
+            placementExplanation: finalPlacementExplanationsByEventId.get(event.id) || null,
         })),
     };
     if (sortedEvents.length === 0) {

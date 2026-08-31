@@ -106993,7 +106993,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             unplaced: diag.unplaced?.slice?.(0, 20) || [],
             rejectionSamples: diag.rejectionSamples?.slice?.(0, 20) || [],
             attemptSamples: diag.attemptSamples?.slice?.(0, 30) || [],
-            searchWindowSamples: diag.searchWindowSamples?.slice?.(0, 20) || []
+            searchWindowSamples: diag.searchWindowSamples?.slice?.(0, 20) || [],
+            placementExplanations: diag.placementExplanations?.slice?.(0, 160) || []
           }
         ])),
         scheduleFlow: (neoBuildDiag.scheduleFlow || []).slice(-80),
@@ -111090,6 +111091,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       rejectionPatterns: {},
       rejectionSamples: [],
       attemptSamples: [],
+      placementExplanations: [],
       passSummaries: [],
       searchWindowSamples: [],
       sample: list.slice(0, 20).map((trainee) => {
@@ -111188,6 +111190,47 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
       }
     };
+    const analysePlacementResourceRow = (result, syllabusItem, scheduledDuration, searchStartTime) => {
+      if (!result || typeof result !== "object" || !("id" in result)) return null;
+      const proposedTurnaround = getResourceTurnaroundAfter({ type: result.type, flightNumber: syllabusItem.code });
+      const sameResourceEvents = getGeneratedEventsForResource(result.resourceId).filter((existing) => existing.id !== result.id).sort((a, b) => a.startTime - b.startTime);
+      const previousEvent = sameResourceEvents.filter((existing) => existing.startTime + existing.duration <= result.startTime + 1e-3).sort((a, b) => b.startTime + b.duration - (a.startTime + a.duration))[0] || null;
+      const previousAvailableAt = previousEvent ? previousEvent.startTime + previousEvent.duration + getResourceTurnaroundAfter(previousEvent) : searchStartTime;
+      const selectedResourceIdleBeforeStartHours = Math.max(0, result.startTime - previousAvailableAt);
+      const selectedResourceIdleBeforeStartMinutes = Math.round(selectedResourceIdleBeforeStartHours * 60);
+      const resultResourceNumber = Number(String(result.resourceId || "").match(/(\d+)$/)?.[1] || NaN);
+      const lowerNumberResourcesFreeAtSelectedTime = !Number.isFinite(resultResourceNumber) ? [] : Array.from({ length: Math.max(0, resultResourceNumber - 1) }, (_, index) => `${result.resourceId.replace(/\s+\d+$/, "")} ${index + 1}`).filter((resourceId) => {
+        const occupied = getGeneratedEventsForResource(resourceId).some((existing) => {
+          const existingTurnaround = getResourceTurnaroundAfter(existing);
+          const existingEnd = existing.startTime + existing.duration + existingTurnaround;
+          const proposedEnd = result.startTime + scheduledDuration + proposedTurnaround;
+          return result.startTime < existingEnd && proposedEnd > existing.startTime;
+        });
+        return !occupied;
+      }).slice(0, 8);
+      return {
+        selectedResourceId: result.resourceId,
+        selectedResourceIdleBeforeStartMinutes,
+        selectedResourcePreviousEvent: previousEvent ? {
+          id: previousEvent.id,
+          flightNumber: previousEvent.flightNumber,
+          type: previousEvent.type,
+          startTime: previousEvent.startTime,
+          displayTime: _fmtT(previousEvent.startTime),
+          duration: previousEvent.duration,
+          endsAt: previousEvent.startTime + previousEvent.duration,
+          availableAt: previousAvailableAt,
+          instructor: previousEvent.instructor || null,
+          pilot: previousEvent.pilot || null,
+          student: previousEvent.student || null,
+          source: previousEvent._source || null
+        } : null,
+        selectedResourceAvailableFrom: previousAvailableAt,
+        selectedResourceAvailableFromDisplay: _fmtT(previousAvailableAt),
+        lowerNumberResourcesFreeAtSelectedTime,
+        lowerNumberResourcesFreeAtSelectedTimeCount: lowerNumberResourcesFreeAtSelectedTime.length
+      };
+    };
     const segments = [];
     if ((type === "cpt" || type === "ground") && !isNightPass) {
       const segmentDuration = 2;
@@ -111214,6 +111257,32 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const scheduledDuration = getScheduledEventDuration(syllabusItem, type, trainee);
         const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type, trainee);
+        const placementAttemptTrace = {
+          earliestAttemptedTime: null,
+          attemptsBeforePlacement: 0,
+          rejectionReasonsBeforePlacement: {},
+          failedEarlierAttempts: []
+        };
+        const recordPlacementAttemptTrace = (entry) => {
+          if (entry?.outcome !== "rejected") return;
+          const start = typeof entry.startTime === "number" ? entry.startTime : null;
+          if (typeof start === "number" && (placementAttemptTrace.earliestAttemptedTime === null || start < placementAttemptTrace.earliestAttemptedTime)) {
+            placementAttemptTrace.earliestAttemptedTime = start;
+          }
+          placementAttemptTrace.attemptsBeforePlacement++;
+          const reason = String(entry.reason || "UNKNOWN_REJECTION");
+          placementAttemptTrace.rejectionReasonsBeforePlacement[reason] = (placementAttemptTrace.rejectionReasonsBeforePlacement[reason] || 0) + 1;
+          if (placementAttemptTrace.failedEarlierAttempts.length < getNeoBuildTraceLimit(24, 90)) {
+            placementAttemptTrace.failedEarlierAttempts.push({
+              reason,
+              startTime: start,
+              displayTime: entry.displayTime || (typeof start === "number" ? _fmtT(start) : null),
+              primaryPreferOnly: typeof entry.primaryPreferOnly === "boolean" ? entry.primaryPreferOnly : null,
+              requirePreferredNightAircraft: typeof entry.requirePreferredNightAircraft === "boolean" ? entry.requirePreferredNightAircraft : null,
+              details: entry.details || null
+            });
+          }
+        };
         const isRemedialItem = isRemedialSyllabusItem(syllabusItem);
         if (type === "flight" && !isPlusOne && !isRemedialItem && isMultiResourceFlightItem(syllabusItem)) {
           traceFormation("skippedSinglePlacements", {
@@ -111286,6 +111355,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               }
               if (cappedLatestEventStart < earliestEventStart - 1e-3) {
                 listDiag.noSearchWindow++;
+                const noSearchWindowTrace = {
+                  outcome: "rejected",
+                  reason: "NO_SEARCH_WINDOW",
+                  trainee: trainee.fullName,
+                  event: syllabusItem.code,
+                  startTime: earliestEventStart,
+                  displayTime: _fmtT(earliestEventStart),
+                  details: {
+                    space,
+                    earliestEventStart,
+                    latestEventStart,
+                    cappedLatestEventStart,
+                    startTimeBoundary,
+                    endTimeBoundary,
+                    latestStartBefore
+                  }
+                };
+                recordPlacementAttemptTrace(noSearchWindowTrace);
                 if (listDiag.rejectionSamples.length < 80) {
                   listDiag.rejectionSamples.push({
                     phase: "slot-window",
@@ -111309,7 +111396,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                 const cachedFtdNoResource = ftdNoResourceCacheKey ? ftdNoResourceCache.get(ftdNoResourceCacheKey) : null;
                 if (cachedFtdNoResource) {
                   listDiag.cachedResourceRejections++;
-                  recordScheduleListRejection({
+                  const cachedResourceTrace = {
                     outcome: "rejected",
                     reason: "NO_RESOURCE_AVAILABLE",
                     trainee: trainee.fullName,
@@ -111326,7 +111413,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                       ...cachedFtdNoResource,
                       cachedResourceCheck: true
                     }
-                  });
+                  };
+                  recordPlacementAttemptTrace(cachedResourceTrace);
+                  recordScheduleListRejection(cachedResourceTrace);
                   recordNeoBuildAttemptTiming({
                     listName,
                     type,
@@ -111343,6 +111432,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                   enforcePersonnelTurnaround: true,
                   diagnosticListName: listName,
                   diagnosticTrace: (traceEntry) => {
+                    recordPlacementAttemptTrace(traceEntry);
                     recordScheduleListRejection(traceEntry);
                     if (ftdNoResourceCacheKey && traceEntry?.outcome === "rejected" && traceEntry.reason === "NO_RESOURCE_AVAILABLE" && traceEntry.details?.earlyResourceCheck === true) {
                       ftdNoResourceCache.set(ftdNoResourceCacheKey, {
@@ -111368,8 +111458,50 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                   });
                 }
                 if (result && typeof result === "object" && "id" in result) {
+                  if (placementAttemptTrace.earliestAttemptedTime === null) {
+                    placementAttemptTrace.earliestAttemptedTime = time;
+                  }
+                  const delayFromEarliestAttemptMinutes = Math.max(
+                    0,
+                    Math.round((result.startTime - placementAttemptTrace.earliestAttemptedTime) * 60)
+                  );
+                  const placementExplanation = {
+                    eventId: result.id,
+                    listName,
+                    trainee: trainee.fullName,
+                    traineeIdNumber: trainee.idNumber ?? null,
+                    traineeIdentityKey: getBuildTraineeKey(trainee),
+                    course: trainee.course || null,
+                    unit: trainee.unit || null,
+                    ...describeBuildTrainingEventForDiag(syllabusItem),
+                    type,
+                    isPlusOne,
+                    isNightPass,
+                    selectedBecause: placementAttemptTrace.attemptsBeforePlacement > 0 ? "First candidate slot that passed all scheduler constraints after earlier rejected slots." : "First candidate slot accepted by the scheduler.",
+                    earliestAttemptedTime: placementAttemptTrace.earliestAttemptedTime,
+                    earliestAttemptedDisplayTime: _fmtT(placementAttemptTrace.earliestAttemptedTime),
+                    selectedStartTime: result.startTime,
+                    selectedDisplayTime: _fmtT(result.startTime),
+                    delayFromEarliestAttemptMinutes,
+                    acceptedAttempt: {
+                      startTime: result.startTime,
+                      displayTime: _fmtT(result.startTime),
+                      resourceId: result.resourceId,
+                      instructor: result.instructor || null,
+                      pilot: result.pilot || null,
+                      student: result.student || null
+                    },
+                    attemptsBeforePlacement: placementAttemptTrace.attemptsBeforePlacement,
+                    rejectionReasonsBeforePlacement: placementAttemptTrace.rejectionReasonsBeforePlacement,
+                    failedEarlierAttemptSamples: placementAttemptTrace.failedEarlierAttempts,
+                    resourceRowAnalysis: analysePlacementResourceRow(result, syllabusItem, scheduledDuration, searchStartTime),
+                    generatedEventsCountBeforePlacement: generatedEvents.length
+                  };
                   pushGeneratedEvent({ ...result, _source: "generated", _isNext: !isPlusOne, _traineeName: trainee.fullName });
                   ftdNoResourceCache.clear();
+                  if (listDiag.placementExplanations.length < getNeoBuildTraceLimit(220, 900)) {
+                    listDiag.placementExplanations.push(placementExplanation);
+                  }
                   if (listDiag.placed.length < 80) {
                     listDiag.placed.push({
                       trainee: trainee.fullName,
@@ -111388,7 +111520,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                       personnelIdentityStatus: getNeoBuildDiagnosticIdentityStatus(result),
                       personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(result),
                       staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(result),
-                      generatedEventsCount: generatedEvents.length
+                      generatedEventsCount: generatedEvents.length,
+                      placementExplanation
                     });
                   }
                   if (isPlusOne && next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
@@ -111546,6 +111679,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       firstSearchWindowSample: listDiag.searchWindowSamples[0] || null,
       firstRejectionSample: listDiag.rejectionSamples[0] || null,
       placedSample: listDiag.placed.slice(0, 12),
+      placementExplanationSample: listDiag.placementExplanations.slice(0, 12),
       unplacedSample: listDiag.unplaced.slice(0, 12)
     });
     markBuildTiming(`schedule-list:${listName}`, {
@@ -111823,18 +111957,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         });
       }
     }
-    const getResourceTurnaroundAfter = (event) => {
+    const getResourceTurnaroundAfter2 = (event) => {
       if (event.type === "flight") return flightTurnaround;
       if (event.type === "ftd") return ftdTurnaround;
       if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) return cptTurnaround;
       return 0;
     };
     const hasFtdResourceAvailableAtTime = () => {
-      const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
+      const proposedTurnaround = getResourceTurnaroundAfter2({ type, flightNumber: syllabusItem.code });
       for (let index = 1; index <= ftdCount; index++) {
         const candidateResourceId = `FTD ${index}`;
         const resourceIsOccupied = getGeneratedEventsForResource(candidateResourceId).some((e) => {
-          const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
+          const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter2(e);
           const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
           return startTime < existingEventEnd && proposedEventEnd > e.startTime;
         });
@@ -111846,7 +111980,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       let aircraftConfigMismatchCount2 = 0;
       const aircraftConfigMismatchSamples2 = [];
       let compatibleResourceCandidateCount2 = 0;
-      const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
+      const proposedTurnaround = getResourceTurnaroundAfter2({ type, flightNumber: syllabusItem.code });
       for (let index = 1; index <= availableAircraftCount; index++) {
         const candidateResourceId = `${buildAircraftResourceIdPrefix}${index}`;
         const resourceAircraftConfigId = getAircraftConfigIdForResource(candidateResourceId);
@@ -111863,7 +111997,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         compatibleResourceCandidateCount2++;
         const resourceIsOccupied = getGeneratedEventsForResource(candidateResourceId).some((e) => {
-          const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter(e);
+          const existingEventEnd = e.startTime + e.duration + getResourceTurnaroundAfter2(e);
           const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
           return startTime < existingEventEnd && proposedEventEnd > e.startTime;
         });
@@ -112567,7 +112701,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         compatibleResourceCandidateCount++;
       }
       const resourceIsOccupied = getGeneratedEventsForResource(id).some((e) => {
-        let existingTurnaround = getResourceTurnaroundAfter(e);
+        let existingTurnaround = getResourceTurnaroundAfter2(e);
         if (e.type === "flight") {
           const isExistingEventNight = e.flightNumber.startsWith("BNF");
           if (isNightPass && isExistingEventNight) {
@@ -112583,7 +112717,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             }
           }
         }
-        const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
+        const proposedTurnaround = getResourceTurnaroundAfter2({ type, flightNumber: syllabusItem.code });
         const existingEventEnd = e.startTime + e.duration + existingTurnaround;
         const newEventStart = startTime;
         const proposedEventEnd = startTime + scheduledDuration + proposedTurnaround;
@@ -119992,6 +120126,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
   };
   annotateScheduleListUnplacedRecovery();
+  const finalPlacementExplanations = Object.values(neoBuildDiag.scheduleLists || {}).flatMap((diag) => Array.isArray(diag?.placementExplanations) ? diag.placementExplanations : []).slice(0, getNeoBuildTraceLimit(300, 1200));
+  const finalPlacementExplanationsByEventId = new Map(
+    finalPlacementExplanations.filter((entry) => entry?.eventId).map((entry) => [entry.eventId, entry])
+  );
   const finalPersonnelIdentityEvents = sortedEvents.map((event) => {
     const personnelRefs = describeNeoBuildDiagnosticPersonnelRefs(event);
     const staffIdentityRefs = personnelRefs.filter((ref) => ref.personType === "staff");
@@ -120062,6 +120200,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       duplicateNamedStaffSample: duplicateNamedStaffFinalEvents.slice(0, 40),
       nameOnlySample: finalNameOnlyEvents.slice(0, 40)
     },
+    placementExplanations: finalPlacementExplanations,
     firstEvents: sortedEvents.slice(0, 80).map((event) => ({
       id: event.id,
       flightNumber: event.flightNumber,
@@ -120083,7 +120222,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       traineeName: event._traineeName,
       personnelIdentityStatus: getNeoBuildDiagnosticIdentityStatus(event),
       personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(event),
-      staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(event)
+      staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(event),
+      placementExplanation: finalPlacementExplanationsByEventId.get(event.id) || null
     })),
     events: sortedEvents.map((event) => ({
       id: event.id,
@@ -120106,7 +120246,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       traineeName: event._traineeName,
       personnelIdentityStatus: getNeoBuildDiagnosticIdentityStatus(event),
       personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(event),
-      staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(event)
+      staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(event),
+      placementExplanation: finalPlacementExplanationsByEventId.get(event.id) || null
     }))
   };
   if (sortedEvents.length === 0) {
