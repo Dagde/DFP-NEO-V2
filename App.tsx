@@ -9424,6 +9424,16 @@ function generateDfpInternal(
     const eventCounts = new Map<string, { flightFtd: number, ground: number, cpt: number, dutySup: number, isStby: boolean }>();
     originalInstructors.forEach(i => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
     trainees.forEach(t => eventCounts.set(getBuildTraineeKey(t), { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
+    const getOrCreateEventCounts = (key: string) => {
+        const normalizedKey = String(key || '').trim();
+        const resolvedKey = normalizedKey || '__unknown_person__';
+        let counts = eventCounts.get(resolvedKey);
+        if (!counts) {
+            counts = { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false };
+            eventCounts.set(resolvedKey, counts);
+        }
+        return counts;
+    };
 
     // Initialize event counts with Active DFP events
     buildDebugLog('Initializing event counts from Active DFP...');
@@ -14375,8 +14385,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     }
                                     listDiag.successes++;
                                     // Only get instructor counts if not a solo flight
-                                       const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
-                                    const tCounts = eventCounts.get(getBuildTraineeKey(trainee))!;
+                                    const ipCounts = result.instructor ? getOrCreateEventCounts(result.instructor) : null;
+                                    const tCounts = getOrCreateEventCounts(getBuildTraineeKey(trainee));
                                     if (type === 'flight' || type === 'ftd') {
                                         tCounts.flightFtd++;
                                         if (ipCounts) ipCounts.flightFtd++;
@@ -14618,7 +14628,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
         const _fbEnd = startTime + scheduledDuration;
-        const traineeCounts = eventCounts.get(getBuildTraineeKey(trainee))!;
+        const traineeEventCountKey = getBuildTraineeKey(trainee);
+        const traineeCounts = getOrCreateEventCounts(traineeEventCountKey);
         const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
         let forcedInstructorConflictDetails: string[] = [];
         const isFormationTraceAttempt = !!options.formationGroupId || (type === 'flight' && isMultiResourceFlightItem(syllabusItem) && !isRemedialSyllabusItem(syllabusItem));
@@ -20212,14 +20223,13 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         },
                         excludeInstructorNames: resolved.excludeInstructorNames,
                     }, 3000);
-                    if (!eventCounts.has(resolved.trainee.fullName)) {
-                        eventCounts.set(resolved.trainee.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
-                    }
+                    const resolvedTraineeCountKey = getBuildTraineeKey(resolved.trainee);
+                    const resolvedTraineeCounts = getOrCreateEventCounts(resolvedTraineeCountKey);
                     const resolvedPersonKey = normalizeBuildPersonnelName(resolved.trainee.fullName);
                     if (!startingFlightFtdCountByPersonKey.has(resolvedPersonKey)) {
                         startingFlightFtdCountByPersonKey.set(
                             resolvedPersonKey,
-                            eventCounts.get(resolved.trainee.fullName)?.flightFtd || 0
+                            resolvedTraineeCounts.flightFtd
                         );
                     }
                     const selectedCurrencyEventsForPerson = currencyEventCountByPersonKey.get(resolvedPersonKey) || 1;
@@ -20384,7 +20394,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     continue;
                                 }
                                 pushGeneratedEvent({ ...result, _source: 'highest-priority-currency', _isNext: true, _traineeName: resolved.trainee.fullName });
-                                const tCounts = eventCounts.get(resolved.trainee.fullName);
+                                const tCounts = getOrCreateEventCounts(resolvedTraineeCountKey);
                                 const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
                                 if (tCounts) tCounts.flightFtd++;
                                 if (ipCounts) ipCounts.flightFtd++;
@@ -20941,7 +20951,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         generatedEvent.callsign = numberedCallsign;
                     }
                     const trainee = selectedTrainees[index];
-                    const traineeCounts = eventCounts.get(getBuildTraineeKey(trainee))!;
+                    const traineeCounts = getOrCreateEventCounts(getBuildTraineeKey(trainee));
                     traineeCounts.flightFtd++;
                     if (event.instructor) {
                         const instructorCounts = eventCounts.get(event.instructor);
@@ -21502,7 +21512,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         });
                         if (result && typeof result === 'object' && 'id' in result) {
                             pushGeneratedEvent({ ...result, _source: 'generated', _isNext: true, _traineeName: trainee.fullName });
-                            const tCounts = eventCounts.get(getBuildTraineeKey(trainee))!;
+                            const tCounts = getOrCreateEventCounts(getBuildTraineeKey(trainee));
                             tCounts.flightFtd++;
                             lastPlacedTime = Math.max(lastPlacedTime, time);
                             placed = true;
@@ -22573,7 +22583,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 }
 
                 let scheduleEventTrace: Record<string, any> | null = null;
-                const traineeCounts = eventCounts.get(resolved.trainee.fullName);
+                const traineeCounts = getOrCreateEventCounts(getBuildTraineeKey(resolved.trainee));
                 const traineeFlightFtdLimitOverride = Math.max(
                     eventLimits.trainee.maxFlightFtd,
                     (traineeCounts?.flightFtd || 0) + 1
