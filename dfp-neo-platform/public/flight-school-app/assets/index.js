@@ -124140,7 +124140,7 @@ const App = () => {
   const [pt051PerformanceLoading, setPt051PerformanceLoading] = reactExports.useState(true);
   const [eventCompletionsForDate, setEventCompletionsForDate] = reactExports.useState([]);
   const [historicalDfpContextByDate, setHistoricalDfpContextByDate] = reactExports.useState({});
-  const activeHistoricalDfpContext = historicalDfpContextByDate[date] || null;
+  const activeHistoricalDfpContext = isViewingPastDfp ? historicalDfpContextByDate[date] || null : null;
   const historicalInstructorsDataForDate = reactExports.useMemo(() => {
     const staffProfiles = Array.isArray(activeHistoricalDfpContext?.staffProfiles) ? activeHistoricalDfpContext.staffProfiles : [];
     if (staffProfiles.length === 0) return [];

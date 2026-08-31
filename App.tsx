@@ -29844,7 +29844,7 @@ const App: React.FC = () => {
         snapshotSource?: string;
         snapshotKey?: string;
     }>>({});
-    const activeHistoricalDfpContext = historicalDfpContextByDate[date] || null;
+    const activeHistoricalDfpContext = isViewingPastDfp ? historicalDfpContextByDate[date] || null : null;
     const historicalInstructorsDataForDate = useMemo<Instructor[]>(() => {
         const staffProfiles = Array.isArray(activeHistoricalDfpContext?.staffProfiles)
             ? activeHistoricalDfpContext.staffProfiles
