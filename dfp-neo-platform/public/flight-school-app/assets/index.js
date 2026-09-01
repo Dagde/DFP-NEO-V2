@@ -7363,7 +7363,7 @@ const AuditFlyout = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[999999] flex items-center justify-center", style: { zIndex: 999999 }, onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
-        className: "bg-gray-800 rounded-lg shadow-2xl w-[96vw] max-w-[1500px] border border-gray-700 flex flex-col max-h-[90vh] relative",
+        className: "bg-gray-800 rounded-lg shadow-2xl w-[94vw] max-w-[1320px] border border-gray-700 flex flex-col max-h-[90vh] relative",
         style: { zIndex: 999999 },
         onClick: (e) => e.stopPropagation(),
         children: [
@@ -7708,7 +7708,17 @@ const AuditFlyout = ({
                       ]
                     }
                   ),
-                  isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+                  isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-sm", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[92px]" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[155px]" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[88px]" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[82px]" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[120px]" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[175px]" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[220px]" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", {})
+                    ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Time" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "User" }),
@@ -7721,12 +7731,12 @@ const AuditFlyout = ({
                     ] }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800/70", children: group.entries.map((log) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/50", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.timestamp.toLocaleTimeString() }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.user }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-400", children: log.userRole || "-" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-3 py-3 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", title: log.user, children: log.user }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-3 py-3 text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", title: log.userRole || "-", children: log.userRole || "-" }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2 py-1 text-xs font-medium ${actionClassName(log.action)}`, children: log.action }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.page || "-" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-4 py-3 text-gray-300", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: log.affectedLabel || humaniseEntityType(log.entityType || "") || "-" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-3 py-3 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", title: log.page || "-", children: log.page || "-" }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-3 py-3 text-gray-300", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", title: log.affectedLabel || humaniseEntityType(log.entityType || "") || "-", children: log.affectedLabel || humaniseEntityType(log.entityType || "") || "-" }),
                         (log.dfpDate || log.unit || log.location || log.operationalModel) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] text-gray-500", children: [log.dfpDate, log.unit, log.location, log.operationalModel].filter(Boolean).join(" | ") })
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-gray-300", children: log.description }),

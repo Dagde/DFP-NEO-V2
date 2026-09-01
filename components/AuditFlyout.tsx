@@ -565,7 +565,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/60 z-[999999] flex items-center justify-center" style={{ zIndex: 999999 }} onClick={onClose}>
       <div 
-        className="bg-gray-800 rounded-lg shadow-2xl w-[96vw] max-w-[1500px] border border-gray-700 flex flex-col max-h-[90vh] relative" style={{ zIndex: 999999 }}
+        className="bg-gray-800 rounded-lg shadow-2xl w-[94vw] max-w-[1320px] border border-gray-700 flex flex-col max-h-[90vh] relative" style={{ zIndex: 999999 }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -867,7 +867,17 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
 
                     {isExpanded && (
                       <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full table-fixed text-sm">
+                          <colgroup>
+                            <col className="w-[92px]" />
+                            <col className="w-[155px]" />
+                            <col className="w-[88px]" />
+                            <col className="w-[82px]" />
+                            <col className="w-[120px]" />
+                            <col className="w-[175px]" />
+                            <col className="w-[220px]" />
+                            <col />
+                          </colgroup>
                           <thead className="bg-gray-800">
                             <tr>
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Time</th>
@@ -886,22 +896,24 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                                 <td className="whitespace-nowrap px-4 py-3 text-gray-300">
                                   {log.timestamp.toLocaleTimeString()}
                                 </td>
-                                <td className="whitespace-nowrap px-4 py-3 text-gray-300">
-                                  {log.user}
+                                <td className="whitespace-nowrap px-3 py-3 text-gray-300">
+                                  <div className="truncate" title={log.user}>{log.user}</div>
                                 </td>
-                                <td className="whitespace-nowrap px-4 py-3 text-gray-400">
-                                  {log.userRole || '-'}
+                                <td className="whitespace-nowrap px-3 py-3 text-gray-400">
+                                  <div className="truncate" title={log.userRole || '-'}>{log.userRole || '-'}</div>
                                 </td>
                                 <td className="whitespace-nowrap px-4 py-3">
                                   <span className={`rounded px-2 py-1 text-xs font-medium ${actionClassName(log.action)}`}>
                                     {log.action}
                                   </span>
                                 </td>
-                                <td className="whitespace-nowrap px-4 py-3 text-gray-300">
-                                  {log.page || '-'}
+                                <td className="whitespace-nowrap px-3 py-3 text-gray-300">
+                                  <div className="truncate" title={log.page || '-'}>{log.page || '-'}</div>
                                 </td>
-                                <td className="px-4 py-3 text-gray-300">
-                                  <div>{log.affectedLabel || humaniseEntityType(log.entityType || '') || '-'}</div>
+                                <td className="px-3 py-3 text-gray-300">
+                                  <div className="truncate" title={log.affectedLabel || humaniseEntityType(log.entityType || '') || '-'}>
+                                    {log.affectedLabel || humaniseEntityType(log.entityType || '') || '-'}
+                                  </div>
                                   {(log.dfpDate || log.unit || log.location || log.operationalModel) && (
                                     <div className="mt-1 text-[11px] text-gray-500">
                                       {[log.dfpDate, log.unit, log.location, log.operationalModel].filter(Boolean).join(' | ')}
