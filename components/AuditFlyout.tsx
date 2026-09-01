@@ -363,6 +363,12 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     return dateKey === todayDateKey ? `Today - ${label}` : label;
   };
 
+  const formatAuditTime = (date: Date): string => date.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
   const actionClassName = (action: AuditLog['action']): string => (
     action === 'View' ? 'bg-blue-900/50 text-blue-300' :
     action === 'Edit' ? 'bg-yellow-900/50 text-yellow-300' :
@@ -504,7 +510,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
             ${sortedLogs.map(log => `
               <tr>
                 <td>${log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
-                <td>${log.timestamp.toLocaleTimeString()}</td>
+                <td>${formatAuditTime(log.timestamp)}</td>
                 <td>${log.user}</td>
                 <td>${log.userRole || '-'}</td>
                 <td>${log.action}</td>
@@ -530,7 +536,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     const escapeCsv = (value: string) => `"${String(value || '').replaceAll('"', '""')}"`;
     const rows = sortedLogs.map(log => [
       log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
-      log.timestamp.toLocaleTimeString(),
+      formatAuditTime(log.timestamp),
       log.user,
       log.userRole || '',
       log.action,
@@ -894,7 +900,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                             {group.entries.map((log) => (
                               <tr key={log.id} className="hover:bg-gray-700/50">
                                 <td className="whitespace-nowrap px-4 py-3 text-gray-300">
-                                  {log.timestamp.toLocaleTimeString()}
+                                  {formatAuditTime(log.timestamp)}
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-3 text-gray-300">
                                   <div className="truncate" title={log.user}>{log.user}</div>

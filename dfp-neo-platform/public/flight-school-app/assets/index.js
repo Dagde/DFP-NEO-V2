@@ -7196,6 +7196,11 @@ const AuditFlyout = ({
     });
     return dateKey === todayDateKey ? `Today - ${label}` : label;
   };
+  const formatAuditTime = (date) => date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
   const actionClassName = (action) => action === "View" ? "bg-blue-900/50 text-blue-300" : action === "Edit" ? "bg-yellow-900/50 text-yellow-300" : action === "Add" ? "bg-green-900/50 text-green-300" : action === "Delete" ? "bg-red-900/50 text-red-300" : action === "Archive" ? "bg-purple-900/50 text-purple-300" : action === "Restore" ? "bg-cyan-900/50 text-cyan-300" : action === "Publish" ? "bg-emerald-900/50 text-emerald-300" : action === "Build" ? "bg-orange-900/50 text-orange-300" : action === "Move" ? "bg-indigo-900/50 text-indigo-300" : action === "Submit" ? "bg-teal-900/50 text-teal-300" : action === "Cancel" ? "bg-rose-900/50 text-rose-300" : action === "Generate" ? "bg-violet-900/50 text-violet-300" : action === "Save" ? "bg-lime-900/50 text-lime-300" : action === "Sync" ? "bg-sky-900/50 text-sky-300" : action === "Ignore" ? "bg-slate-900/50 text-slate-300" : action === "Override" ? "bg-amber-900/50 text-amber-300" : "bg-gray-900/50 text-gray-300";
   const uniqueOptions = (values) => Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
   const pageOptions = reactExports.useMemo(() => uniqueOptions([pageName, ...logs.map((log) => log.page)]), [logs, pageName]);
@@ -7306,7 +7311,7 @@ const AuditFlyout = ({
             ${sortedLogs.map((log) => `
               <tr>
                 <td>${log.timestamp.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}</td>
-                <td>${log.timestamp.toLocaleTimeString()}</td>
+                <td>${formatAuditTime(log.timestamp)}</td>
                 <td>${log.user}</td>
                 <td>${log.userRole || "-"}</td>
                 <td>${log.action}</td>
@@ -7330,7 +7335,7 @@ const AuditFlyout = ({
     const escapeCsv = (value) => `"${String(value || "").replaceAll('"', '""')}"`;
     const rows = sortedLogs.map((log) => [
       log.timestamp.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }),
-      log.timestamp.toLocaleTimeString(),
+      formatAuditTime(log.timestamp),
       log.user,
       log.userRole || "",
       log.action,
@@ -7730,7 +7735,7 @@ const AuditFlyout = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Changes" })
                     ] }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800/70", children: group.entries.map((log) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/50", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.timestamp.toLocaleTimeString() }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: formatAuditTime(log.timestamp) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-3 py-3 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", title: log.user, children: log.user }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-3 py-3 text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate", title: log.userRole || "-", children: log.userRole || "-" }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2 py-1 text-xs font-medium ${actionClassName(log.action)}`, children: log.action }) }),
