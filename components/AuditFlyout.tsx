@@ -131,6 +131,42 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     return `${humaniseEntityType(entry.entityType || 'Record')} ${String(entry.action || 'updated').toLowerCase()}`;
   };
 
+  const splitLocalAuditDescription = (entry: AuditLog): { affectedLabel: string; description: string } => {
+    const description = String(entry.description || '').trim();
+    const page = String(entry.page || '').trim();
+    const patterns: Array<{ regex: RegExp; description: string }> = [
+      { regex: /^Viewed staff profile for\s+(.+)$/i, description: 'Viewed staff profile' },
+      { regex: /^Viewed trainee profile for\s+(.+)$/i, description: 'Viewed trainee profile' },
+      { regex: /^Edited staff profile for\s+(.+)$/i, description: 'Edited staff profile' },
+      { regex: /^Edited trainee profile for\s+(.+)$/i, description: 'Edited trainee profile' },
+      { regex: /^Added new staff\s+(.+)$/i, description: 'Added staff profile' },
+      { regex: /^Added new trainee\s+(.+)$/i, description: 'Added trainee profile' },
+      { regex: /^Deleted staff\s+(.+)$/i, description: 'Deleted staff profile' },
+      { regex: /^Deleted trainee\s+(.+)$/i, description: 'Deleted trainee profile' },
+      { regex: /^Added unavailability for\s+(.+)$/i, description: 'Added staff unavailability' },
+      { regex: /^Generated .+ for\s+(.+?)\s+- Event:/i, description: description.replace(/\s+for\s+.+$/i, '') || 'Generated report' },
+      { regex: /^Opened embedded .+ for\s+(.+?)\s+- Event:/i, description: description.replace(/\s+for\s+.+$/i, '') || 'Opened embedded report' },
+      { regex: /^Updated .+ for\s+(.+?)\s+- Event:/i, description: description.replace(/\s+for\s+.+$/i, '') || 'Updated report' },
+      { regex: /^Modified .+ for\s+(.+?)\s+- Event:/i, description: description.replace(/\s+for\s+.+$/i, '') || 'Modified report' },
+      { regex: /^Deleted .+ for\s+(.+?)\s+- Event:/i, description: description.replace(/\s+for\s+.+$/i, '') || 'Deleted report' },
+    ];
+
+    for (const pattern of patterns) {
+      const match = description.match(pattern.regex);
+      if (match?.[1]) {
+        return {
+          affectedLabel: match[1].trim(),
+          description: pattern.description,
+        };
+      }
+    }
+
+    return {
+      affectedLabel: page || 'Record',
+      description: description || `${page || 'Record'} ${normaliseAuditAction(entry.action).toLowerCase()}`,
+    };
+  };
+
   const mapDatabaseAuditLog = (entry: any): AuditLogWithMeta => {
     const changes = entry.changes || {};
     const changedFields = Array.isArray(changes.changedFields) ? changes.changedFields : [];
@@ -161,11 +197,15 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     };
   };
 
-  const mapLocalAuditLog = (entry: AuditLog): AuditLogWithMeta => ({
-    ...entry,
-    action: normaliseAuditAction(entry.action || ''),
-    affectedLabel: entry.description || entry.page || 'Record',
-  });
+  const mapLocalAuditLog = (entry: AuditLog): AuditLogWithMeta => {
+    const localLabels = splitLocalAuditDescription(entry);
+    return {
+      ...entry,
+      action: normaliseAuditAction(entry.action || ''),
+      description: localLabels.description,
+      affectedLabel: localLabels.affectedLabel,
+    };
+  };
 
   useEffect(() => {
     let cancelled = false;
