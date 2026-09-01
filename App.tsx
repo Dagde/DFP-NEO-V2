@@ -5318,6 +5318,7 @@ import DutyWarningFlyout from './components/DutyWarningFlyout';
 import SctRequestFlyout from './components/SctRequestFlyout';
 import NextDayInstructorScheduleView from './components/NextDayInstructorScheduleView';
 import { NextDayTraineeScheduleView } from './components/NextDayTraineeScheduleView';
+import AuditFlyout from './components/AuditFlyout';
 import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 import PauseFlightOpsPanel, { PausePhase, PauseBuildConfig } from './components/PauseFlightOpsPanel';
 import PropellerLoadingOverlay from './components/PropellerLoadingOverlay';
@@ -25347,6 +25348,7 @@ const App: React.FC = () => {
     const setupTestProfile = getSetupTestProfile();
     const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = useState(false);
     const [dfpContextMenu, setDfpContextMenu] = useState<DfpContextMenuState | null>(null);
+    const [showDfpAuditFlyout, setShowDfpAuditFlyout] = useState(false);
     const [preFlightNotesEditor, setPreFlightNotesEditor] = useState<PreFlightNotesEditorState | null>(null);
 
     // Theme
@@ -48934,6 +48936,7 @@ appliedUpdates.forEach(update => {
                 { label: showDepartureDensityOverlay ? 'Dispatch Rate OFF' : 'Dispatch Rate ON', disabled: !canUseDispatchRateOnActiveDfp, onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
                 { label: isMagnifierEnabled ? 'Magnifier OFF' : 'Magnifier ON', onSelect: () => setIsMagnifierEnabled(!isMagnifierEnabled) },
                 { label: isMultiSelectMode ? 'Multi Select OFF' : 'Multi Select ON', disabled: !canUseMultiSelectOnActiveDfp, onSelect: () => handleSetIsMultiSelectMode(!isMultiSelectMode) },
+                { label: 'Audit Log', detail: canOpenDfpAuditLog ? 'Open Program Schedule audit history.' : 'Audit Log is not available for this profile.', disabled: !canOpenDfpAuditLog, onSelect: () => setShowDfpAuditFlyout(true) },
                 ...(isNeoBuildScheduleView ? [] : [
                     { label: 'Pause Flight Ops', disabled: !canPauseFlightOpsOnActiveDfp, onSelect: openPauseFlightOpsFromContextMenu },
                     { label: 'Directed Tasks', onSelect: () => handleNavigation('Priorities') },
@@ -49017,6 +49020,7 @@ appliedUpdates.forEach(update => {
         canAddFlightTile,
         canAddGroundTile,
         canEditDfpTiles,
+        canOpenDfpAuditLog,
         canOpenFlightLine,
         canRunNeoBuildForActiveModel,
         canRunValidation,
@@ -52509,6 +52513,12 @@ appliedUpdates.forEach(update => {
                     onScrollCapture={closeDfpContextMenu}
                 >
                     <DfpContextMenu menu={dfpContextMenu} onClose={closeDfpContextMenu} />
+                    {showDfpAuditFlyout && (
+                        <AuditFlyout
+                            pageName="Program Schedule"
+                            onClose={() => setShowDfpAuditFlyout(false)}
+                        />
+                    )}
                     <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                         {renderActiveView()}
                     </div>

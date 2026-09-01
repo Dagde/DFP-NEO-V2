@@ -120867,6 +120867,7 @@ const App = () => {
   const setupTestProfile = getSetupTestProfile();
   const [isInitialSetupWizardActive, setIsInitialSetupWizardActive] = reactExports.useState(false);
   const [dfpContextMenu, setDfpContextMenu] = reactExports.useState(null);
+  const [showDfpAuditFlyout, setShowDfpAuditFlyout] = reactExports.useState(false);
   const [preFlightNotesEditor, setPreFlightNotesEditor] = reactExports.useState(null);
   const { theme } = useTheme();
   const { checkAndWarn, freezeState } = useSystemFreeze$1();
@@ -139777,6 +139778,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         { label: showDepartureDensityOverlay ? "Dispatch Rate OFF" : "Dispatch Rate ON", disabled: !canUseDispatchRateOnActiveDfp, onSelect: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay) },
         { label: isMagnifierEnabled ? "Magnifier OFF" : "Magnifier ON", onSelect: () => setIsMagnifierEnabled(!isMagnifierEnabled) },
         { label: isMultiSelectMode ? "Multi Select OFF" : "Multi Select ON", disabled: !canUseMultiSelectOnActiveDfp, onSelect: () => handleSetIsMultiSelectMode(!isMultiSelectMode) },
+        { label: "Audit Log", detail: canOpenDfpAuditLog ? "Open Program Schedule audit history." : "Audit Log is not available for this profile.", disabled: !canOpenDfpAuditLog, onSelect: () => setShowDfpAuditFlyout(true) },
         ...isNeoBuildScheduleView ? [] : [
           { label: "Pause Flight Ops", disabled: !canPauseFlightOpsOnActiveDfp, onSelect: openPauseFlightOpsFromContextMenu },
           { label: "Directed Tasks", onSelect: () => handleNavigation("Priorities") },
@@ -139859,6 +139861,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     canAddFlightTile,
     canAddGroundTile,
     canEditDfpTiles,
+    canOpenDfpAuditLog,
     canOpenFlightLine,
     canRunNeoBuildForActiveModel,
     canRunValidation,
@@ -143046,6 +143049,13 @@ Do you want to replace the existing entry?`,
             onScrollCapture: closeDfpContextMenu,
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(DfpContextMenu, { menu: dfpContextMenu, onClose: closeDfpContextMenu }),
+              showDfpAuditFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                AuditFlyout,
+                {
+                  pageName: "Program Schedule",
+                  onClose: () => setShowDfpAuditFlyout(false)
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }),
               activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "aside",
