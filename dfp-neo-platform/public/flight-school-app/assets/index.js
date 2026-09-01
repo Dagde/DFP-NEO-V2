@@ -143756,6 +143756,7 @@ Do you want to replace the existing entry?`,
             const logbook = diagnostics.logbook || {};
             const config = diagnostics.config || {};
             const warnings = Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [];
+            const notices = Array.isArray(diagnostics.notices) ? diagnostics.notices : [];
             const currencyDefinitionsSource = String(currency.definitionsSource || "unknown");
             const currencyDefinitionsSourceLabel = currencyDefinitionsSource === "archived-config-version" ? "Captured in compact archive" : currencyDefinitionsSource === "daily-snapshot" ? "Stored in daily snapshot" : currencyDefinitionsSource === "saved-settings-fallback" ? "Recovered from saved Settings" : currencyDefinitionsSource === "missing" ? "Missing" : "Unknown";
             const healthRows = [
@@ -143790,6 +143791,13 @@ Do you want to replace the existing entry?`,
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold uppercase tracking-wide text-amber-300", children: warning?.code || "Archive warning" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-amber-50", children: warning?.message || String(warning) })
                 ] }, `${warning?.code || "warning"}-${index}`)) })
+              ] }),
+              notices.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-sky-800/50 bg-sky-950/20 p-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-sky-100", children: "Archive notes" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: notices.map((notice, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-800/40 bg-gray-950/35 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold uppercase tracking-wide text-sky-300", children: notice?.code || "Archive note" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-sky-50", children: notice?.message || String(notice) })
+                ] }, `${notice?.code || "notice"}-${index}`)) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: healthRows.map(([label, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-800/50 p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-wide text-gray-500", children: label }),

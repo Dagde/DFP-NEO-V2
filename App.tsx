@@ -53222,6 +53222,7 @@ appliedUpdates.forEach(update => {
                                 const logbook = diagnostics.logbook || {};
                                 const config = diagnostics.config || {};
                                 const warnings = Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [];
+                                const notices = Array.isArray(diagnostics.notices) ? diagnostics.notices : [];
                                 const currencyDefinitionsSource = String(currency.definitionsSource || 'unknown');
                                 const currencyDefinitionsSourceLabel = currencyDefinitionsSource === 'archived-config-version'
                                     ? 'Captured in compact archive'
@@ -53276,6 +53277,20 @@ appliedUpdates.forEach(update => {
                                                         <div key={`${warning?.code || 'warning'}-${index}`} className="rounded border border-amber-700/40 bg-gray-950/40 p-3">
                                                             <p className="text-xs font-bold uppercase tracking-wide text-amber-300">{warning?.code || 'Archive warning'}</p>
                                                             <p className="mt-1 text-sm text-amber-50">{warning?.message || String(warning)}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {notices.length > 0 && (
+                                            <div className="rounded-md border border-sky-800/50 bg-sky-950/20 p-4">
+                                                <h3 className="text-sm font-bold text-sky-100">Archive notes</h3>
+                                                <div className="mt-3 space-y-2">
+                                                    {notices.map((notice: any, index: number) => (
+                                                        <div key={`${notice?.code || 'notice'}-${index}`} className="rounded border border-sky-800/40 bg-gray-950/35 p-3">
+                                                            <p className="text-xs font-bold uppercase tracking-wide text-sky-300">{notice?.code || 'Archive note'}</p>
+                                                            <p className="mt-1 text-sm text-sky-50">{notice?.message || String(notice)}</p>
                                                         </div>
                                                     ))}
                                                 </div>

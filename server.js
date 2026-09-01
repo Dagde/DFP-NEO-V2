@@ -16852,6 +16852,7 @@ function buildArchiveCompletenessDiagnostics({
   const scheduleEventsCount = Array.isArray(scheduleEvents) ? scheduleEvents.length : 0;
   const archivedEventRowsCount = Array.isArray(eventRows) ? eventRows.length : null;
   const warnings = [];
+  const notices = [];
   if (source === 'compact-archive' && !configTypes.includes('currencyDefinitionState')) {
     warnings.push({
       code: 'ARCHIVE_CURRENCY_DEFINITIONS_MISSING',
@@ -16871,7 +16872,7 @@ function buildArchiveCompletenessDiagnostics({
     });
   }
   if (scheduleEventsCount > 0 && archivedEventRowsCount === scheduleEventsCount && (staffEvents?.length || 0) === 0 && (traineeEvents?.length || 0) === 0) {
-    warnings.push({
+    notices.push({
       code: 'ARCHIVE_USES_CANONICAL_SCHEDULE_EVENTS',
       message: 'This archive stores events in the canonical scheduleEvents list. Legacy staffEvents and traineeEvents split lists are empty but scheduleEvents is populated.',
     });
@@ -16883,6 +16884,7 @@ function buildArchiveCompletenessDiagnostics({
     snapshotKey,
     generatedAt: new Date().toISOString(),
     warnings,
+    notices,
     schedule: {
       scheduleEvents: scheduleEventsCount,
       archivedEventRows: archivedEventRowsCount,
