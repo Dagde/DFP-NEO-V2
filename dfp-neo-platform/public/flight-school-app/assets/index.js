@@ -7215,7 +7215,7 @@ const AuditFlyout = ({
                       onChange: (event) => setDatePreset(event.target.value),
                       className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white",
                       children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All loaded" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "ALL" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "today", children: "Today" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "7d", children: "Last 7 days" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "30d", children: "Last 30 days" }),

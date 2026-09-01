@@ -453,7 +453,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                   onChange={(event) => setDatePreset(event.target.value as AuditDatePreset)}
                   className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white"
                 >
-                  <option value="all">All loaded</option>
+                  <option value="all">ALL</option>
                   <option value="today">Today</option>
                   <option value="7d">Last 7 days</option>
                   <option value="30d">Last 30 days</option>
