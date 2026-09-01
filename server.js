@@ -6399,6 +6399,7 @@ app.get('/api/audit/logs', async (req, res) => {
          a."createdAt",
          u.username,
          u."userId",
+         u.role,
          u."firstName",
          u."lastName"
        FROM "AuditLog" a
@@ -6421,6 +6422,7 @@ app.get('/api/audit/logs', async (req, res) => {
         userAgent: row.userAgent || '',
         createdAt: row.createdAt,
         userName: displayName,
+        userRole: row.role || '',
       };
     });
 

@@ -5,6 +5,7 @@ export type AuditAction = 'View' | 'Edit' | 'Add' | 'Move' | 'Delete' | 'Archive
 export interface AuditLog {
   id: string;
   user: string;
+  userRole?: string;
   action: AuditAction;
   description: string;
   changes?: string;

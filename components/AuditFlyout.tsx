@@ -17,10 +17,11 @@ interface AuditFlyoutProps {
   onClose: () => void;
 }
 
-type AuditSortField = 'timestamp' | 'user' | 'action' | 'page' | 'entityType';
+type AuditSortField = 'timestamp' | 'user' | 'userRole' | 'action' | 'page' | 'entityType';
 type AuditDatePreset = 'all' | 'today' | '7d' | '30d' | 'custom';
 type AuditLogWithMeta = AuditLog & {
   rawAction?: string;
+  userRole?: string;
   entityType?: string;
   entityId?: string;
   affectedLabel?: string;
@@ -44,6 +45,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   const [pageFilter, setPageFilter] = useState('');
   const [actionFilter, setActionFilter] = useState('');
   const [userFilter, setUserFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
   const [unitFilter, setUnitFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [modelFilter, setModelFilter] = useState('');
@@ -187,6 +189,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
       timestamp: new Date(entry.createdAt),
       page: changes.source || entry.entityType || 'Database Audit',
       rawAction: entry.action || '',
+      userRole: entry.userRole || changes.userRole || '',
       entityType: entry.entityType || '',
       entityId: entry.entityId || '',
       affectedLabel,
@@ -202,6 +205,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     return {
       ...entry,
       action: normaliseAuditAction(entry.action || ''),
+      userRole: entry.userRole || '',
       description: localLabels.description,
       affectedLabel: localLabels.affectedLabel,
     };
@@ -288,6 +292,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     if (pageFilter && log.page !== pageFilter) return false;
     if (actionFilter && log.action !== actionFilter) return false;
     if (!matchesText(log.user, userFilter)) return false;
+    if (!matchesText(log.userRole, roleFilter)) return false;
     if (!matchesText(log.unit, unitFilter)) return false;
     if (!matchesText(log.location, locationFilter)) return false;
     if (!matchesText(log.operationalModel, modelFilter)) return false;
@@ -297,6 +302,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     if (searchFilter.trim()) {
       const haystack = [
         log.user,
+        log.userRole,
         log.action,
         log.rawAction,
         log.page,
@@ -314,7 +320,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     }
 
     return true;
-  }), [activeDateFrom, activeDateTo, actionFilter, dfpDateFilter, entityFilter, locationFilter, logs, modelFilter, pageFilter, searchFilter, unitFilter, userFilter]);
+  }), [activeDateFrom, activeDateTo, actionFilter, dfpDateFilter, entityFilter, locationFilter, logs, modelFilter, pageFilter, roleFilter, searchFilter, unitFilter, userFilter]);
 
   const sortedLogs = useMemo(() => [...filteredLogs].sort((a, b) => {
     let comparison = 0;
@@ -323,6 +329,8 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
       comparison = a.timestamp.getTime() - b.timestamp.getTime();
     } else if (sortField === 'user') {
       comparison = a.user.localeCompare(b.user);
+    } else if (sortField === 'userRole') {
+      comparison = (a.userRole || '').localeCompare(b.userRole || '');
     } else if (sortField === 'action') {
       comparison = a.action.localeCompare(b.action);
     } else if (sortField === 'page') {
@@ -407,6 +415,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     setPageFilter('');
     setActionFilter('');
     setUserFilter('');
+    setRoleFilter('');
     setUnitFilter('');
     setLocationFilter('');
     setModelFilter('');
@@ -483,6 +492,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
               <th>Date</th>
               <th>Time</th>
               <th>User</th>
+              <th>Role</th>
               <th>Action</th>
               <th>Page</th>
               <th>Affected</th>
@@ -496,6 +506,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                 <td>${log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}</td>
                 <td>${log.timestamp.toLocaleTimeString()}</td>
                 <td>${log.user}</td>
+                <td>${log.userRole || '-'}</td>
                 <td>${log.action}</td>
                 <td>${log.page || '-'}</td>
                 <td>${log.affectedLabel || humaniseEntityType(log.entityType || '') || '-'}</td>
@@ -515,12 +526,13 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   };
 
   const handleExport = () => {
-    const headers = ['Date', 'Time', 'User', 'Action', 'Page', 'Affected', 'Record Type', 'Record ID', 'DFP Date', 'Unit', 'Location', 'Model', 'Description', 'Changes'];
+    const headers = ['Date', 'Time', 'User', 'Role', 'Action', 'Page', 'Affected', 'Record Type', 'Record ID', 'DFP Date', 'Unit', 'Location', 'Model', 'Description', 'Changes'];
     const escapeCsv = (value: string) => `"${String(value || '').replaceAll('"', '""')}"`;
     const rows = sortedLogs.map(log => [
       log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
       log.timestamp.toLocaleTimeString(),
       log.user,
+      log.userRole || '',
       log.action,
       log.page,
       log.affectedLabel || humaniseEntityType(log.entityType || '') || '',
@@ -553,7 +565,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/60 z-[999999] flex items-center justify-center" style={{ zIndex: 999999 }} onClick={onClose}>
       <div 
-        className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-6xl border border-gray-700 flex flex-col max-h-[90vh] relative" style={{ zIndex: 999999 }}
+        className="bg-gray-800 rounded-lg shadow-2xl w-[96vw] max-w-[1500px] border border-gray-700 flex flex-col max-h-[90vh] relative" style={{ zIndex: 999999 }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -658,7 +670,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-7">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                 Date Range
                 <select
@@ -704,6 +716,16 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                   value={userFilter}
                   onChange={(event) => setUserFilter(event.target.value)}
                   placeholder="Name or ID"
+                  className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                />
+              </label>
+
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                Role
+                <input
+                  value={roleFilter}
+                  onChange={(event) => setRoleFilter(event.target.value)}
+                  placeholder="Admin, trainee"
                   className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
                 />
               </label>
@@ -808,7 +830,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-gray-700 bg-gray-900/60 px-3 py-2">
                 <div className="text-xs font-medium uppercase tracking-wider text-gray-400">Sort Results By</div>
                 <div className="flex gap-2">
-                  {(['timestamp', 'user', 'action', 'page', 'entityType'] as const).map(field => (
+                  {(['timestamp', 'user', 'userRole', 'action', 'page', 'entityType'] as const).map(field => (
                     <button
                       key={field}
                       onClick={() => handleSort(field)}
@@ -818,7 +840,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                           : 'border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700'
                       }`}
                     >
-                      {field === 'timestamp' ? 'Time' : field === 'entityType' ? 'Affected' : field}
+                      {field === 'timestamp' ? 'Time' : field === 'entityType' ? 'Affected' : field === 'userRole' ? 'Role' : field}
                       {sortField === field && <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
                     </button>
                   ))}
@@ -850,6 +872,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                             <tr>
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Time</th>
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">User</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Role</th>
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Action</th>
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Page</th>
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Affected</th>
@@ -865,6 +888,9 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                                 </td>
                                 <td className="whitespace-nowrap px-4 py-3 text-gray-300">
                                   {log.user}
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3 text-gray-400">
+                                  {log.userRole || '-'}
                                 </td>
                                 <td className="whitespace-nowrap px-4 py-3">
                                   <span className={`rounded px-2 py-1 text-xs font-medium ${actionClassName(log.action)}`}>

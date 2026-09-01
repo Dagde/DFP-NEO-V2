@@ -1571,11 +1571,18 @@ const AUDIT_RECORDING_ACTIONS = [
   "Override"
 ];
 let currentUser = "Unknown User";
+let currentUserRole = "";
 const setCurrentUser = (user) => {
   currentUser = user;
 };
+const setCurrentUserRole = (role) => {
+  currentUserRole = role;
+};
 const getCurrentUser = () => {
   return currentUser;
+};
+const getCurrentUserRole = () => {
+  return currentUserRole;
 };
 const getDefaultPageRecordingSettings = () => AUDIT_RECORDING_ACTIONS.reduce((settings, action) => {
   settings[action] = true;
@@ -1675,6 +1682,7 @@ function logAudit(pageOrParams, action, description, changes) {
     const newLog = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       user: getCurrentUser(),
+      userRole: getCurrentUserRole(),
       action: auditAction,
       description: auditDescription,
       changes: auditChanges,
@@ -6918,6 +6926,7 @@ const AuditFlyout = ({
   const [pageFilter, setPageFilter] = reactExports.useState("");
   const [actionFilter, setActionFilter] = reactExports.useState("");
   const [userFilter, setUserFilter] = reactExports.useState("");
+  const [roleFilter, setRoleFilter] = reactExports.useState("");
   const [unitFilter, setUnitFilter] = reactExports.useState("");
   const [locationFilter, setLocationFilter] = reactExports.useState("");
   const [modelFilter, setModelFilter] = reactExports.useState("");
@@ -7034,6 +7043,7 @@ const AuditFlyout = ({
       timestamp: new Date(entry.createdAt),
       page: changes.source || entry.entityType || "Database Audit",
       rawAction: entry.action || "",
+      userRole: entry.userRole || changes.userRole || "",
       entityType: entry.entityType || "",
       entityId: entry.entityId || "",
       affectedLabel,
@@ -7048,6 +7058,7 @@ const AuditFlyout = ({
     return {
       ...entry,
       action: normaliseAuditAction(entry.action || ""),
+      userRole: entry.userRole || "",
       description: localLabels.description,
       affectedLabel: localLabels.affectedLabel
     };
@@ -7123,6 +7134,7 @@ const AuditFlyout = ({
     if (pageFilter && log.page !== pageFilter) return false;
     if (actionFilter && log.action !== actionFilter) return false;
     if (!matchesText(log.user, userFilter)) return false;
+    if (!matchesText(log.userRole, roleFilter)) return false;
     if (!matchesText(log.unit, unitFilter)) return false;
     if (!matchesText(log.location, locationFilter)) return false;
     if (!matchesText(log.operationalModel, modelFilter)) return false;
@@ -7131,6 +7143,7 @@ const AuditFlyout = ({
     if (searchFilter.trim()) {
       const haystack = [
         log.user,
+        log.userRole,
         log.action,
         log.rawAction,
         log.page,
@@ -7147,13 +7160,15 @@ const AuditFlyout = ({
       if (!haystack.includes(searchFilter.trim().toLowerCase())) return false;
     }
     return true;
-  }), [activeDateFrom, activeDateTo, actionFilter, dfpDateFilter, entityFilter, locationFilter, logs, modelFilter, pageFilter, searchFilter, unitFilter, userFilter]);
+  }), [activeDateFrom, activeDateTo, actionFilter, dfpDateFilter, entityFilter, locationFilter, logs, modelFilter, pageFilter, roleFilter, searchFilter, unitFilter, userFilter]);
   const sortedLogs = reactExports.useMemo(() => [...filteredLogs].sort((a, b) => {
     let comparison = 0;
     if (sortField === "timestamp") {
       comparison = a.timestamp.getTime() - b.timestamp.getTime();
     } else if (sortField === "user") {
       comparison = a.user.localeCompare(b.user);
+    } else if (sortField === "userRole") {
+      comparison = (a.userRole || "").localeCompare(b.userRole || "");
     } else if (sortField === "action") {
       comparison = a.action.localeCompare(b.action);
     } else if (sortField === "page") {
@@ -7210,6 +7225,7 @@ const AuditFlyout = ({
     setPageFilter("");
     setActionFilter("");
     setUserFilter("");
+    setRoleFilter("");
     setUnitFilter("");
     setLocationFilter("");
     setModelFilter("");
@@ -7278,6 +7294,7 @@ const AuditFlyout = ({
               <th>Date</th>
               <th>Time</th>
               <th>User</th>
+              <th>Role</th>
               <th>Action</th>
               <th>Page</th>
               <th>Affected</th>
@@ -7291,6 +7308,7 @@ const AuditFlyout = ({
                 <td>${log.timestamp.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}</td>
                 <td>${log.timestamp.toLocaleTimeString()}</td>
                 <td>${log.user}</td>
+                <td>${log.userRole || "-"}</td>
                 <td>${log.action}</td>
                 <td>${log.page || "-"}</td>
                 <td>${log.affectedLabel || humaniseEntityType(log.entityType || "") || "-"}</td>
@@ -7308,12 +7326,13 @@ const AuditFlyout = ({
     printWindow.print();
   };
   const handleExport = () => {
-    const headers = ["Date", "Time", "User", "Action", "Page", "Affected", "Record Type", "Record ID", "DFP Date", "Unit", "Location", "Model", "Description", "Changes"];
+    const headers = ["Date", "Time", "User", "Role", "Action", "Page", "Affected", "Record Type", "Record ID", "DFP Date", "Unit", "Location", "Model", "Description", "Changes"];
     const escapeCsv = (value) => `"${String(value || "").replaceAll('"', '""')}"`;
     const rows = sortedLogs.map((log) => [
       log.timestamp.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }),
       log.timestamp.toLocaleTimeString(),
       log.user,
+      log.userRole || "",
       log.action,
       log.page,
       log.affectedLabel || humaniseEntityType(log.entityType || "") || "",
@@ -7344,7 +7363,7 @@ const AuditFlyout = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[999999] flex items-center justify-center", style: { zIndex: 999999 }, onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
-        className: "bg-gray-800 rounded-lg shadow-2xl w-full max-w-6xl border border-gray-700 flex flex-col max-h-[90vh] relative",
+        className: "bg-gray-800 rounded-lg shadow-2xl w-[96vw] max-w-[1500px] border border-gray-700 flex flex-col max-h-[90vh] relative",
         style: { zIndex: 999999 },
         onClick: (e) => e.stopPropagation(),
         children: [
@@ -7469,7 +7488,7 @@ const AuditFlyout = ({
                   }
                 )
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 lg:grid-cols-6", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 lg:grid-cols-7", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
                   "Date Range",
                   /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -7526,6 +7545,18 @@ const AuditFlyout = ({
                       value: userFilter,
                       onChange: (event) => setUserFilter(event.target.value),
                       placeholder: "Name or ID",
+                      className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                  "Role",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      value: roleFilter,
+                      onChange: (event) => setRoleFilter(event.target.value),
+                      placeholder: "Admin, trainee",
                       className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
                     }
                   )
@@ -7642,13 +7673,13 @@ const AuditFlyout = ({
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2 rounded-md border border-gray-700 bg-gray-900/60 px-3 py-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-medium uppercase tracking-wider text-gray-400", children: "Sort Results By" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", children: ["timestamp", "user", "action", "page", "entityType"].map((field) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", children: ["timestamp", "user", "userRole", "action", "page", "entityType"].map((field) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "button",
                   {
                     onClick: () => handleSort(field),
                     className: `rounded-md border px-3 py-1.5 text-xs font-semibold capitalize ${sortField === field ? "border-sky-500 bg-sky-900/40 text-sky-200" : "border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700"}`,
                     children: [
-                      field === "timestamp" ? "Time" : field === "entityType" ? "Affected" : field,
+                      field === "timestamp" ? "Time" : field === "entityType" ? "Affected" : field === "userRole" ? "Role" : field,
                       sortField === field && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1", children: sortDirection === "asc" ? "↑" : "↓" })
                     ]
                   },
@@ -7681,6 +7712,7 @@ const AuditFlyout = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Time" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "User" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Role" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Action" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Page" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Affected" }),
@@ -7690,6 +7722,7 @@ const AuditFlyout = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800/70", children: group.entries.map((log) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/50", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.timestamp.toLocaleTimeString() }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.user }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-400", children: log.userRole || "-" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2 py-1 text-xs font-medium ${actionClassName(log.action)}`, children: log.action }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.page || "-" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-4 py-3 text-gray-300", children: [
@@ -24854,7 +24887,7 @@ const TraineeLmpView = ({
   instructorLabel: instructorLabel2 = "Instructor",
   staffQualificationCatalogue: staffQualificationCatalogue2,
   operationalModel = "flight_school",
-  currentUserRole = "",
+  currentUserRole: currentUserRole2 = "",
   currentUserName = ""
 }) => {
   const { isFrozen } = useSystemFreeze();
@@ -24926,7 +24959,7 @@ const TraineeLmpView = ({
     if (!selectedItem) return null;
     return traineeLmp.find((item) => selectedItem.id && item.id === selectedItem.id || selectedItem.code && item.code === selectedItem.code) || selectedItem;
   }, [selectedItem, traineeLmp]);
-  const canManageRpl = canManageRplForRole(currentUserRole);
+  const canManageRpl = canManageRplForRole(currentUserRole2);
   const handleToggleRpl = async (item, checked) => {
     if (!canManageRpl) {
       onAccessDenied?.("grant RPL");
@@ -27654,7 +27687,7 @@ const TraineeProfileFlyout = ({
   currencyRequirements = [],
   currentUserId,
   currentUserName,
-  currentUserRole = "",
+  currentUserRole: currentUserRole2 = "",
   pt051Assessments,
   pt051PerformanceLoading = false,
   traineeLMPs,
@@ -27695,7 +27728,7 @@ const TraineeProfileFlyout = ({
   const { isFrozen } = useSystemFreeze();
   const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
-  const canManageAccountAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase());
+  const canManageAccountAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole2 || "").trim().toUpperCase());
   const allAcademicLmpCourses = reactExports.useMemo(() => {
     const courseCodes = /* @__PURE__ */ new Set();
     syllabusDetails.forEach((s) => {
@@ -29822,7 +29855,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     instructorLabel: activeReportAssessorDisplayLabel,
                     staffQualificationCatalogue: staffQualificationCatalogue2,
                     operationalModel,
-                    currentUserRole,
+                    currentUserRole: currentUserRole2,
                     currentUserName
                   }
                 ) });
@@ -31451,7 +31484,7 @@ const TraineeBulkUploadFlyout = ({
   onBulkUpdateTrainees,
   onReplaceTrainees,
   onUpdateTraineeLMPs,
-  currentUserRole
+  currentUserRole: currentUserRole2
 }) => {
   const inputRef = reactExports.useRef(null);
   const [file, setFile] = reactExports.useState(null);
@@ -31491,7 +31524,7 @@ const TraineeBulkUploadFlyout = ({
     }
     return Array.from(courseNames).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
   }, [activeCourses, coursesFromFile]);
-  const canIssueAccountActivations = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_"));
+  const canIssueAccountActivations = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole2 || "").trim().toUpperCase().replace(/[\s-]+/g, "_"));
   const handleFile = (selectedFile) => {
     if (!selectedFile) return;
     setRows([]);
@@ -31854,7 +31887,7 @@ const CourseRosterView = ({
   currencyRequirements = [],
   currentUserId,
   currentUserName,
-  currentUserRole,
+  currentUserRole: currentUserRole2,
   pt051Assessments,
   pt051PerformanceLoading = false,
   userProfile,
@@ -31893,7 +31926,7 @@ const CourseRosterView = ({
   const [flyoutPosition, setFlyoutPosition] = reactExports.useState(null);
   const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = reactExports.useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = reactExports.useState(false);
-  const normalisedCurrentUserRole = String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+  const normalisedCurrentUserRole = String(currentUserRole2 || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
   const canManageTraineeRemoval = normalisedCurrentUserRole === "ADMIN" || normalisedCurrentUserRole === "SUPER_ADMIN";
   const [courseToEdit, setCourseToEdit] = reactExports.useState(null);
   const [showBulkUpload, setShowBulkUpload] = reactExports.useState(false);
@@ -32269,7 +32302,7 @@ const CourseRosterView = ({
         currencyRequirements,
         currentUserId,
         currentUserName,
-        currentUserRole,
+        currentUserRole: currentUserRole2,
         resourceDisplayNames,
         personnelDisplaySettings,
         trainingReportTerminology,
@@ -32370,7 +32403,7 @@ const CourseRosterView = ({
         onBulkUpdateTrainees,
         onReplaceTrainees,
         onUpdateTraineeLMPs,
-        currentUserRole
+        currentUserRole: currentUserRole2
       }
     )
   ] });
@@ -58663,7 +58696,7 @@ const ACHistoryAircraftAvailability = ({
   currentUserId,
   currentAircraftAvailable = 0,
   totalAircraft = 24,
-  currentUserRole,
+  currentUserRole: currentUserRole2,
   timezoneOffset = 0,
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
@@ -58681,7 +58714,7 @@ const ACHistoryAircraftAvailability = ({
   const [fleetSizeError, setFleetSizeError] = reactExports.useState(null);
   const [showFleetSizeEditor, setShowFleetSizeEditor] = reactExports.useState(false);
   const [newFleetSize, setNewFleetSize] = reactExports.useState(totalAircraft.toString());
-  const canEditFleetSize = currentUserRole === "Super Admin" || currentUserRole === "Admin";
+  const canEditFleetSize = currentUserRole2 === "Super Admin" || currentUserRole2 === "Admin";
   const availabilityContext = reactExports.useMemo(() => ({
     locationCode: String(locationCode || "").trim().toUpperCase(),
     unitCode: String(unitCode || "").trim().toUpperCase()
@@ -59773,7 +59806,7 @@ const ACHistoryIntelligencePanel = ({
   currentUserId,
   currentAircraftAvailable = 0,
   totalAircraft = 24,
-  currentUserRole,
+  currentUserRole: currentUserRole2,
   timezoneOffset = 0,
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
@@ -59824,7 +59857,7 @@ const ACHistoryIntelligencePanel = ({
         currentUserId,
         currentAircraftAvailable,
         totalAircraft,
-        currentUserRole,
+        currentUserRole: currentUserRole2,
         timezoneOffset,
         dayFlyingStart,
         dayFlyingEnd,
@@ -60476,7 +60509,7 @@ const InstructorProfileFlyout = ({
   onProfileTabConsumed,
   currentUserId,
   currentUserName,
-  currentUserRole = "",
+  currentUserRole: currentUserRole2 = "",
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel: instructorLabel2 = "Instructor",
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -60496,7 +60529,7 @@ const InstructorProfileFlyout = ({
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
-  const canManageAccountAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase());
+  const canManageAccountAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole2 || "").trim().toUpperCase());
   const [idNumber, setIdNumber] = reactExports.useState(instructor.idNumber);
   const [name, setName] = reactExports.useState(instructor.name);
   const [rank, setRank] = reactExports.useState(instructor.rank);
@@ -63218,7 +63251,7 @@ const InstructorListView = ({
   onProfileTabConsumed,
   currentUserId,
   currentUserName,
-  currentUserRole,
+  currentUserRole: currentUserRole2,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
   instructorLabel: instructorLabel2 = "Instructor",
@@ -63803,7 +63836,7 @@ const InstructorListView = ({
         onProfileTabConsumed,
         currentUserId,
         currentUserName,
-        currentUserRole,
+        currentUserRole: currentUserRole2,
         resourceDisplayNames,
         personnelDisplaySettings,
         instructorLabel: instructorLabel2,
@@ -71258,7 +71291,7 @@ const CancellationCodesTable = ({
   ] });
 };
 const ACHistoryPage = ({
-  currentUserRole,
+  currentUserRole: currentUserRole2,
   cancellationRecords,
   currentUserId,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
@@ -71267,7 +71300,7 @@ const ACHistoryPage = ({
   const [usedCodes, setUsedCodes] = reactExports.useState(/* @__PURE__ */ new Set());
   const [codesLoading, setCodesLoading] = reactExports.useState(true);
   const [codesError, setCodesError] = reactExports.useState(null);
-  const canEdit = currentUserRole === "Super Admin" || currentUserRole === "Admin";
+  const canEdit = currentUserRole2 === "Super Admin" || currentUserRole2 === "Admin";
   const getAuthHeaders = reactExports.useCallback(() => {
     const sessionToken = localStorage.getItem("dfp_session_token") || "";
     return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
@@ -71691,7 +71724,7 @@ const defaultAllowedActions = {
   aircraftAvailability: false
 };
 const EmergencyPage = ({
-  currentUserRole,
+  currentUserRole: currentUserRole2,
   onShowSuccess,
   trainingReportDisplayName,
   emergencyFreezeAuthority,
@@ -71815,7 +71848,7 @@ const EmergencyPage = ({
     );
     if (!unlocked) return;
     setIsProcessing(true);
-    freezeSystem("Aircraft Emergency", effectivePendingAllowedActions, currentUserRole);
+    freezeSystem("Aircraft Emergency", effectivePendingAllowedActions, currentUserRole2);
     setShowConfirmDialog(false);
     setIsProcessing(false);
     if (onShowSuccess) {
@@ -122591,7 +122624,7 @@ const App = () => {
   const [authLoading, setAuthLoading] = reactExports.useState(true);
   const [showChangePassword, setShowChangePassword] = reactExports.useState(false);
   const [showAdminPanel, setShowAdminPanel] = reactExports.useState(false);
-  const fetchAndSetAuditUser = async (firstName, lastName, displayName) => {
+  const fetchAndSetAuditUser = async (firstName, lastName, displayName, role) => {
     const startedAt = performance.now();
     const formattedName = lastName && firstName ? `${lastName}, ${firstName}` : displayName || lastName || firstName || "Unknown User";
     let rank = "";
@@ -122634,6 +122667,7 @@ const App = () => {
     }
     const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
     setCurrentUser(auditUserString);
+    setCurrentUserRole(String(role || "").trim());
     pushDfpDataDiag("startup:audit-user-rank:end", {
       durationMs: Math.round(performance.now() - startedAt),
       formattedName,
@@ -122671,6 +122705,7 @@ const App = () => {
         setAuthSessionToken("");
         setIsAuthenticated(true);
         setCurrentUserName("Setup Admin");
+        setCurrentUserRole(setupUser.role);
         setSessionUser({
           firstName: setupUser.firstName,
           lastName: setupUser.lastName,
@@ -122712,6 +122747,7 @@ const App = () => {
             authSource = "sso-local-storage";
             setAuthLoading(false);
             setCurrentUserName(formatAuthLoginName(nextAuthUser));
+            setCurrentUserRole(nextAuthUser.role || "USER");
             setSessionUser({
               firstName: nextAuthUser.firstName || "",
               lastName: nextAuthUser.lastName || "",
@@ -122720,7 +122756,7 @@ const App = () => {
               userId: nextAuthUser.userId,
               username: nextAuthUser.username
             });
-            fetchAndSetAuditUser(nextAuthUser.firstName || null, nextAuthUser.lastName || null, nextAuthUser.displayName);
+            fetchAndSetAuditUser(nextAuthUser.firstName || null, nextAuthUser.lastName || null, nextAuthUser.displayName, nextAuthUser.role || "USER");
             pushDfpDataDiag("startup:auth-session:end", {
               durationMs: Math.round(performance.now() - startedAt),
               source: "sso-local-storage",
@@ -122754,6 +122790,7 @@ const App = () => {
           setAuthSessionToken(storedToken);
           setIsAuthenticated(true);
           setCurrentUserName(formatAuthLoginName(cleanUser));
+          setCurrentUserRole(cleanUser.role || "");
           setSessionUser({
             firstName: cleanUser.firstName,
             lastName: cleanUser.lastName,
@@ -122762,7 +122799,7 @@ const App = () => {
             userId: cleanUser.userId,
             username: cleanUser.username
           });
-          fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName);
+          fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName, cleanUser.role || "");
           if (cleanUser.mustChangePassword) {
             setShowChangePassword(true);
           }
@@ -122791,6 +122828,7 @@ const App = () => {
     setAuthSessionToken(token);
     setIsAuthenticated(true);
     setCurrentUserName(formatAuthLoginName(cleanUser));
+    setCurrentUserRole(cleanUser.role || "");
     setSessionUser({
       firstName: cleanUser.firstName,
       lastName: cleanUser.lastName,
@@ -122799,7 +122837,7 @@ const App = () => {
       userId: cleanUser.userId,
       username: cleanUser.username
     });
-    fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName);
+    fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName, cleanUser.role || "");
     if (cleanUser.mustChangePassword) {
       setShowChangePassword(true);
     }
@@ -122817,6 +122855,7 @@ const App = () => {
     setAuthUser(null);
     setAuthSessionToken("");
     setCurrentUserName("Bloggs, Joe");
+    setCurrentUserRole("");
     setSessionUser(null);
     if (typeof window !== "undefined") {
       window.location.assign("https://dfp-neo.com/");
@@ -123261,6 +123300,7 @@ const App = () => {
     if (!authUser && currentUser2) {
       const userString = `${currentUser2.rank || ""} ${currentUser2.name}`.trim();
       setCurrentUser(userString);
+      setCurrentUserRole(String(currentUser2.role || "").trim());
     }
   }, [authUser, currentUser2, currentUserName]);
   const [syllabusDetails, setSyllabusDetails] = reactExports.useState([]);

@@ -28,15 +28,24 @@ export type AuditRecordingSettings = Record<string, Partial<Record<AuditAction, 
 
 // Current user - set by the application
 let currentUser: string = 'Unknown User';
+let currentUserRole: string = '';
 
 // Set current user (called by App.tsx on initialization)
 export const setCurrentUser = (user: string): void => {
   currentUser = user;
 };
 
+export const setCurrentUserRole = (role: string): void => {
+  currentUserRole = role;
+};
+
 // Get current user
 const getCurrentUser = (): string => {
   return currentUser;
+};
+
+const getCurrentUserRole = (): string => {
+  return currentUserRole;
 };
 
 const getDefaultPageRecordingSettings = (): Record<AuditAction, boolean> => (
@@ -178,6 +187,7 @@ export function logAudit(
     const newLog: AuditLog = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       user: getCurrentUser(),
+      userRole: getCurrentUserRole(),
       action: auditAction,
       description: auditDescription,
       changes: auditChanges,

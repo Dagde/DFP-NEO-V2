@@ -6,7 +6,7 @@ import ChangePasswordModal from './components/ChangePasswordModal';
 import AdminPanel from './components/AdminPanel';
 import { v4 as uuidv4 } from 'uuid';
 import { initDB } from './utils/db';
-import { setCurrentUser, logAudit } from './utils/auditLogger';
+import { setCurrentUser, setCurrentUserRole, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
 import { initialiseLiveChangeBus, LIVE_CHANGE_EVENT } from './utils/liveChangeBus';
 import { isEditableElement } from './utils/editableKeyEvents';
@@ -26809,7 +26809,7 @@ const App: React.FC = () => {
     const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
 
     // Fetch the logged-in user's military rank from Personnel table and update audit logger
-    const fetchAndSetAuditUser = async (firstName: string | null, lastName: string | null, displayName?: string) => {
+    const fetchAndSetAuditUser = async (firstName: string | null, lastName: string | null, displayName?: string, role?: string) => {
         const startedAt = performance.now();
         const formattedName = lastName && firstName
             ? `${lastName}, ${firstName}`
@@ -26856,6 +26856,7 @@ const App: React.FC = () => {
 
         const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
         setCurrentUser(auditUserString);
+        setCurrentUserRole(String(role || '').trim());
         pushDfpDataDiag('startup:audit-user-rank:end', {
             durationMs: Math.round(performance.now() - startedAt),
             formattedName,
@@ -26897,6 +26898,7 @@ const App: React.FC = () => {
                 setAuthSessionToken('');
                 setIsAuthenticated(true);
                 setCurrentUserName('Setup Admin');
+                setCurrentUserRole(setupUser.role);
                 setSessionUser({
                     firstName: setupUser.firstName,
                     lastName: setupUser.lastName,
@@ -26941,6 +26943,7 @@ const App: React.FC = () => {
                         authSource = 'sso-local-storage';
                         setAuthLoading(false);
                         setCurrentUserName(formatAuthLoginName(nextAuthUser));
+                        setCurrentUserRole(nextAuthUser.role || 'USER');
                         // Update sessionUser
                         setSessionUser({
                             firstName: nextAuthUser.firstName || '',
@@ -26951,7 +26954,7 @@ const App: React.FC = () => {
                             username: nextAuthUser.username
                         });
                         // Set correct user for audit logging
-                        fetchAndSetAuditUser(nextAuthUser.firstName || null, nextAuthUser.lastName || null, nextAuthUser.displayName);
+                        fetchAndSetAuditUser(nextAuthUser.firstName || null, nextAuthUser.lastName || null, nextAuthUser.displayName, nextAuthUser.role || 'USER');
                         pushDfpDataDiag('startup:auth-session:end', {
                             durationMs: Math.round(performance.now() - startedAt),
                             source: 'sso-local-storage',
@@ -26987,6 +26990,7 @@ const App: React.FC = () => {
                     setAuthSessionToken(storedToken);
                     setIsAuthenticated(true);
                     setCurrentUserName(formatAuthLoginName(cleanUser));
+                    setCurrentUserRole(cleanUser.role || '');
                     // Update sessionUser
                     setSessionUser({
                         firstName: cleanUser.firstName,
@@ -26997,7 +27001,7 @@ const App: React.FC = () => {
                         username: cleanUser.username
                     });
                     // Set correct user for audit logging
-                    fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName);
+                    fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName, cleanUser.role || '');
                     if (cleanUser.mustChangePassword) {
                         setShowChangePassword(true);
                     }
@@ -27027,6 +27031,7 @@ const App: React.FC = () => {
         setAuthSessionToken(token);
         setIsAuthenticated(true);
         setCurrentUserName(formatAuthLoginName(cleanUser));
+        setCurrentUserRole(cleanUser.role || '');
         // Update sessionUser
         setSessionUser({
             firstName: cleanUser.firstName,
@@ -27037,7 +27042,7 @@ const App: React.FC = () => {
             username: cleanUser.username,
         });
         // Set correct user for audit logging
-        fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName);
+        fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName, cleanUser.role || '');
         if (cleanUser.mustChangePassword) {
             setShowChangePassword(true);
         }
@@ -27056,6 +27061,7 @@ const App: React.FC = () => {
         setAuthUser(null);
         setAuthSessionToken('');
         setCurrentUserName('Bloggs, Joe');
+        setCurrentUserRole('');
         setSessionUser(null);
         if (typeof window !== 'undefined') {
             window.location.assign('https://dfp-neo.com/');
@@ -27955,6 +27961,7 @@ const App: React.FC = () => {
         if (!authUser && currentUser) {
             const userString = `${currentUser.rank || ''} ${currentUser.name}`.trim();
             setCurrentUser(userString);
+            setCurrentUserRole(String(currentUser.role || '').trim());
         }
     }, [authUser, currentUser, currentUserName]);
     // Syllabus state declared here before useEffects that reference it to avoid TDZ errors
