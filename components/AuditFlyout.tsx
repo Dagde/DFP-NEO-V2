@@ -489,7 +489,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
         </div>
 
         {showRecordingSettings && (
-          <div className="border-b border-gray-700 bg-gray-900/95 px-4 py-3">
+          <div className="mx-4 mt-3 rounded-md border border-cyan-500/70 bg-cyan-950/15 px-4 py-3 shadow-[0_0_0_1px_rgba(8,145,178,0.18)]">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-gray-300">Audit Recording Settings</div>

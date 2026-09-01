@@ -7271,7 +7271,7 @@ const AuditFlyout = ({
               )
             ] })
           ] }),
-          showRecordingSettings && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 bg-gray-900/95 px-4 py-3", children: [
+          showRecordingSettings && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mt-3 rounded-md border border-cyan-500/70 bg-cyan-950/15 px-4 py-3 shadow-[0_0_0_1px_rgba(8,145,178,0.18)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wider text-gray-300", children: "Audit Recording Settings" }),
