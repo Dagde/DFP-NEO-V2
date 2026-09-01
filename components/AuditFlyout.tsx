@@ -870,7 +870,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                         <table className="w-full table-fixed text-sm">
                           <colgroup>
                             <col className="w-[92px]" />
-                            <col className="w-[190px]" />
+                            <col className="w-[210px]" />
                             <col className="w-[88px]" />
                             <col className="w-[82px]" />
                             <col className="w-[120px]" />
