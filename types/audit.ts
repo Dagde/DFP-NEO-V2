@@ -1,6 +1,6 @@
 // Audit-related TypeScript interfaces
 
-export type AuditAction = 'View' | 'Edit' | 'Add' | 'Delete' | 'Archive' | 'Restore' | 'Sign';
+export type AuditAction = 'View' | 'Edit' | 'Add' | 'Move' | 'Delete' | 'Archive' | 'Restore' | 'Sign' | 'Publish' | 'Build';
 
 export interface AuditLog {
   id: string;

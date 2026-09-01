@@ -3,6 +3,10 @@
 import { AuditLog, AuditAction } from '../types/audit';
 
 const AUDIT_STORAGE_KEY = 'dfp_audit_logs';
+const AUDIT_RECORDING_SETTINGS_KEY = 'dfp_audit_recording_settings';
+export const AUDIT_RECORDING_ACTIONS: AuditAction[] = ['View', 'Add', 'Edit', 'Move', 'Delete', 'Archive', 'Restore', 'Sign', 'Publish', 'Build'];
+
+export type AuditRecordingSettings = Record<string, Partial<Record<AuditAction, boolean>>>;
 
 // Current user - set by the application
 let currentUser: string = 'Unknown User';
@@ -16,6 +20,50 @@ export const setCurrentUser = (user: string): void => {
 const getCurrentUser = (): string => {
   return currentUser;
 };
+
+const getDefaultPageRecordingSettings = (): Record<AuditAction, boolean> => (
+  AUDIT_RECORDING_ACTIONS.reduce((settings, action) => {
+    settings[action] = true;
+    return settings;
+  }, {} as Record<AuditAction, boolean>)
+);
+
+export const getAuditRecordingSettings = (): AuditRecordingSettings => {
+  try {
+    const raw = localStorage.getItem(AUDIT_RECORDING_SETTINGS_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error('Error reading audit recording settings:', error);
+    return {};
+  }
+};
+
+export const getAuditRecordingSettingsForPage = (page: string): Record<AuditAction, boolean> => {
+  const defaults = getDefaultPageRecordingSettings();
+  const allSettings = getAuditRecordingSettings();
+  return {
+    ...defaults,
+    ...(allSettings[page] || {}),
+  };
+};
+
+export const saveAuditRecordingSettingsForPage = (page: string, settings: Partial<Record<AuditAction, boolean>>): void => {
+  try {
+    const allSettings = getAuditRecordingSettings();
+    allSettings[page] = {
+      ...getDefaultPageRecordingSettings(),
+      ...settings,
+    };
+    localStorage.setItem(AUDIT_RECORDING_SETTINGS_KEY, JSON.stringify(allSettings));
+  } catch (error) {
+    console.error('Error saving audit recording settings:', error);
+  }
+};
+
+export const shouldRecordAuditAction = (page: string, action: AuditAction): boolean => (
+  getAuditRecordingSettingsForPage(page)[action] !== false
+);
 
 // Get all audit logs from localStorage
 export const getAuditLogs = (page?: string): AuditLog[] => {
@@ -79,6 +127,10 @@ export function logAudit(
       auditAction = action!;
       auditDescription = description!;
       auditChanges = changes;
+    }
+
+    if (!shouldRecordAuditAction(page, auditAction)) {
+      return;
     }
     
     const newLog: AuditLog = {

@@ -2,7 +2,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
-import { getAuditLogs } from '../utils/auditLogger';
+import {
+  AUDIT_RECORDING_ACTIONS,
+  getAuditLogs,
+  getAuditRecordingSettingsForPage,
+  saveAuditRecordingSettingsForPage,
+} from '../utils/auditLogger';
 import { AuditLog } from '../types/audit';
 import { getAppApiBase } from '../utils/externalDataControls';
 
@@ -43,6 +48,10 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   const [entityFilter, setEntityFilter] = useState('');
   const [dfpDateFilter, setDfpDateFilter] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
+  const [showRecordingSettings, setShowRecordingSettings] = useState(false);
+  const [recordingSettings, setRecordingSettings] = useState<Record<AuditLog['action'], boolean>>(() => (
+    getAuditRecordingSettingsForPage(pageName)
+  ));
 
   const getApiBase = (): string => getAppApiBase();
 
@@ -63,6 +72,9 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   const mapDatabaseAction = (action: string): AuditLog['action'] => {
     if (action.includes('ADDED') || action === 'CREATE') return 'Add';
     if (action.includes('DELETE') || action.includes('REMOVED')) return 'Delete';
+    if (action.includes('MOVE')) return 'Move';
+    if (action.includes('PUBLISH')) return 'Publish';
+    if (action.includes('BUILD')) return 'Build';
     if (action === 'LOGIN') return 'Sign';
     return 'Edit';
   };
@@ -122,6 +134,10 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
 
     loadLogs();
     return () => { cancelled = true; };
+  }, [pageName]);
+
+  useEffect(() => {
+    setRecordingSettings(getAuditRecordingSettingsForPage(pageName));
   }, [pageName]);
 
   const handleSort = (field: AuditSortField) => {
@@ -248,6 +264,9 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     action === 'Delete' ? 'bg-red-900/50 text-red-300' :
     action === 'Archive' ? 'bg-purple-900/50 text-purple-300' :
     action === 'Restore' ? 'bg-cyan-900/50 text-cyan-300' :
+    action === 'Publish' ? 'bg-emerald-900/50 text-emerald-300' :
+    action === 'Build' ? 'bg-orange-900/50 text-orange-300' :
+    action === 'Move' ? 'bg-indigo-900/50 text-indigo-300' :
     'bg-gray-900/50 text-gray-300'
   );
 
@@ -257,6 +276,24 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
 
   const pageOptions = useMemo(() => uniqueOptions([pageName, ...logs.map(log => log.page)]), [logs, pageName]);
   const actionOptions = useMemo(() => uniqueOptions(logs.map(log => log.action)), [logs]);
+  const recordingActionOptions = useMemo(() => {
+    const pageKey = pageName.toLowerCase();
+    const baseActions = new Set<AuditLog['action']>(['View', 'Add', 'Edit', 'Delete', 'Archive', 'Restore']);
+    if (pageKey.includes('dfp') || pageKey.includes('schedule') || pageKey.includes('program') || pageKey.includes('neo')) {
+      baseActions.add('Move');
+      baseActions.add('Publish');
+      baseActions.add('Build');
+    }
+    if (pageKey.includes('login') || pageKey.includes('security') || pageKey.includes('access')) {
+      baseActions.add('Sign');
+    }
+    actionOptions.forEach(action => {
+      if (AUDIT_RECORDING_ACTIONS.includes(action as AuditLog['action'])) {
+        baseActions.add(action as AuditLog['action']);
+      }
+    });
+    return AUDIT_RECORDING_ACTIONS.filter(action => baseActions.has(action));
+  }, [actionOptions, pageName]);
 
   const resetFilters = () => {
     setDatePreset('all');
@@ -271,6 +308,21 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     setEntityFilter('');
     setDfpDateFilter('');
     setSearchFilter('');
+  };
+
+  const setRecordingAction = (action: AuditLog['action'], enabled: boolean) => {
+    const nextSettings = { ...recordingSettings, [action]: enabled };
+    setRecordingSettings(nextSettings);
+    saveAuditRecordingSettingsForPage(pageName, nextSettings);
+  };
+
+  const setAllRecordingActions = (enabled: boolean) => {
+    const nextSettings = recordingActionOptions.reduce((settings, action) => {
+      settings[action] = enabled;
+      return settings;
+    }, { ...recordingSettings } as Record<AuditLog['action'], boolean>);
+    setRecordingSettings(nextSettings);
+    saveAuditRecordingSettingsForPage(pageName, nextSettings);
   };
 
   const groupedLogs = useMemo(() => {
@@ -404,7 +456,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
             <h2 className="text-xl font-bold text-white">Audit Log</h2>
             <p className="text-sm text-gray-400 mt-1">Page: {pageName}</p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-px">
             <button
               onClick={handleExport}
               className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black"
@@ -420,6 +472,14 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
               Print
             </button>
             <button
+              onClick={() => setShowRecordingSettings(!showRecordingSettings)}
+              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[18px] font-semibold rounded-md btn-aluminium-brushed text-black"
+              title="Audit Log Recording Settings"
+              aria-label="Audit Log Recording Settings"
+            >
+              ⚙
+            </button>
+            <button
               onClick={onClose}
               className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed text-black"
             >
@@ -427,6 +487,53 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
             </button>
           </div>
         </div>
+
+        {showRecordingSettings && (
+          <div className="border-b border-gray-700 bg-gray-900/95 px-4 py-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-gray-300">Audit Recording Settings</div>
+                <div className="text-[11px] text-gray-500">Applies to this page or tab: {pageName}</div>
+              </div>
+              <div className="flex items-center gap-px">
+                <button
+                  type="button"
+                  onClick={() => setAllRecordingActions(true)}
+                  className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700"
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAllRecordingActions(false)}
+                  className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+              {recordingActionOptions.map(action => (
+                <label
+                  key={action}
+                  className="flex cursor-pointer items-center gap-2 rounded-md border border-gray-700 bg-gray-800/70 px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-gray-800"
+                >
+                  <input
+                    type="checkbox"
+                    checked={recordingSettings[action] !== false}
+                    onChange={(event) => setRecordingAction(action, event.target.checked)}
+                    className="h-4 w-4 accent-sky-500"
+                  />
+                  {action}
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-gray-500">
+              These choices control future audit entries only. Existing audit history is retained unchanged.
+            </p>
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-4">
