@@ -18135,9 +18135,22 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       const configContentByType = Object.fromEntries((configVersions || []).map(row => [row.configType, row.content]));
       const archivedStaffProfiles = Array.isArray(configContentByType.staffRosterState) ? configContentByType.staffRosterState : [];
       const archivedTraineeProfiles = Array.isArray(configContentByType.traineeRosterState) ? configContentByType.traineeRosterState : [];
-      const archivedCurrencyDefinitions = configContentByType.currencyDefinitionState && typeof configContentByType.currencyDefinitionState === 'object'
-        ? configContentByType.currencyDefinitionState
-        : { masterCurrencies: [], currencyRequirements: [] };
+      const archivedCurrencyDefinitions = await resolveArchiveCurrencyDefinitions(
+        db,
+        {
+          date: archive.snapshotKey,
+          currencyDefinitions: configContentByType.currencyDefinitionState && typeof configContentByType.currencyDefinitionState === 'object'
+            ? configContentByType.currencyDefinitionState
+            : { masterCurrencies: [], currencyRequirements: [] },
+        },
+        {
+          ...buildArchiveScopeFromSnapshotPayload(archive.snapshotKey, {
+            scheduleEvents: eventRows.map(row => row.eventData).filter(Boolean),
+          }),
+          unitCode: archive.unitCode,
+          snapshotKey: archive.snapshotKey,
+        }
+      );
       const archivedProfileRefs = [...archivedStaffProfiles, ...archivedTraineeProfiles];
       const archivedPersonIds = Array.from(new Set(archivedProfileRefs.flatMap(profile => [
         profile?.id,
