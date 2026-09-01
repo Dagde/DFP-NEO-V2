@@ -473,11 +473,11 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
             </button>
             <button
               onClick={() => setShowRecordingSettings(!showRecordingSettings)}
-              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[24px] font-semibold leading-none rounded-md btn-aluminium-brushed text-black"
+              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black"
               title="Audit Log Recording Settings"
               aria-label="Audit Log Recording Settings"
             >
-              ⚙
+              Settings
             </button>
             <button
               onClick={onClose}
