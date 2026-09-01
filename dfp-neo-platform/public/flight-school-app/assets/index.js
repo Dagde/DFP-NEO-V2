@@ -7711,11 +7711,11 @@ const AuditFlyout = ({
                   isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-sm", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[92px]" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[155px]" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[88px]" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[82px]" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[120px]" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[175px]" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[210px]" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[220px]" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("col", {})
                     ] }),
