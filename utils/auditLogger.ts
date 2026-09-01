@@ -19,6 +19,7 @@ export const AUDIT_RECORDING_ACTIONS: AuditAction[] = [
   'Cancel',
   'Generate',
   'Save',
+  'Sync',
   'Ignore',
   'Override',
 ];
@@ -81,6 +82,28 @@ export const saveAuditRecordingSettingsForPage = (page: string, settings: Partia
 export const shouldRecordAuditAction = (page: string, action: AuditAction): boolean => (
   getAuditRecordingSettingsForPage(page)[action] !== false
 );
+
+export const normaliseAuditAction = (action: string | AuditAction): AuditAction => {
+  const cleanAction = String(action || '').trim().toUpperCase();
+  if (cleanAction === 'VIEW' || cleanAction.includes('VIEW')) return 'View';
+  if (cleanAction === 'ADD' || cleanAction === 'CREATE' || cleanAction === 'CREATED' || cleanAction.includes('ADDED')) return 'Add';
+  if (cleanAction === 'EDIT' || cleanAction === 'UPDATE' || cleanAction === 'UPDATED' || cleanAction.includes('CHANGED')) return 'Edit';
+  if (cleanAction === 'MOVE' || cleanAction === 'MOVED' || cleanAction.includes('MOVE')) return 'Move';
+  if (cleanAction === 'DELETE' || cleanAction === 'DELETED' || cleanAction.includes('REMOVED')) return 'Delete';
+  if (cleanAction === 'ARCHIVE' || cleanAction === 'ARCHIVED') return 'Archive';
+  if (cleanAction === 'RESTORE' || cleanAction === 'RESTORED') return 'Restore';
+  if (cleanAction === 'SIGN' || cleanAction === 'LOGIN' || cleanAction === 'SIGNED') return 'Sign';
+  if (cleanAction === 'PUBLISH' || cleanAction === 'PUBLISHED') return 'Publish';
+  if (cleanAction === 'BUILD' || cleanAction === 'BUILT') return 'Build';
+  if (cleanAction === 'SUBMIT' || cleanAction === 'SUBMITTED') return 'Submit';
+  if (cleanAction === 'CANCEL' || cleanAction === 'CANCELLED' || cleanAction === 'CANCELED') return 'Cancel';
+  if (cleanAction === 'GENERATE' || cleanAction === 'GENERATED') return 'Generate';
+  if (cleanAction === 'SAVE' || cleanAction === 'SAVED') return 'Save';
+  if (cleanAction === 'SYNC' || cleanAction === 'SYNCED' || cleanAction === 'SYNCHRONISE' || cleanAction === 'SYNCHRONIZE') return 'Sync';
+  if (cleanAction === 'IGNORE' || cleanAction === 'IGNORED') return 'Ignore';
+  if (cleanAction === 'OVERRIDE' || cleanAction === 'OVERRIDDEN') return 'Override';
+  return 'Edit';
+};
 
 // Get all audit logs from localStorage
 export const getAuditLogs = (page?: string): AuditLog[] => {
@@ -145,6 +168,8 @@ export function logAudit(
       auditDescription = description!;
       auditChanges = changes;
     }
+
+    auditAction = normaliseAuditAction(auditAction);
 
     if (!shouldRecordAuditAction(page, auditAction)) {
       return;

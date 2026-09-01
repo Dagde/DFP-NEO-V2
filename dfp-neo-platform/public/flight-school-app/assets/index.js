@@ -1566,6 +1566,7 @@ const AUDIT_RECORDING_ACTIONS = [
   "Cancel",
   "Generate",
   "Save",
+  "Sync",
   "Ignore",
   "Override"
 ];
@@ -1611,6 +1612,27 @@ const saveAuditRecordingSettingsForPage = (page, settings) => {
   }
 };
 const shouldRecordAuditAction = (page, action) => getAuditRecordingSettingsForPage(page)[action] !== false;
+const normaliseAuditAction = (action) => {
+  const cleanAction = String(action || "").trim().toUpperCase();
+  if (cleanAction === "VIEW" || cleanAction.includes("VIEW")) return "View";
+  if (cleanAction === "ADD" || cleanAction === "CREATE" || cleanAction === "CREATED" || cleanAction.includes("ADDED")) return "Add";
+  if (cleanAction === "EDIT" || cleanAction === "UPDATE" || cleanAction === "UPDATED" || cleanAction.includes("CHANGED")) return "Edit";
+  if (cleanAction === "MOVE" || cleanAction === "MOVED" || cleanAction.includes("MOVE")) return "Move";
+  if (cleanAction === "DELETE" || cleanAction === "DELETED" || cleanAction.includes("REMOVED")) return "Delete";
+  if (cleanAction === "ARCHIVE" || cleanAction === "ARCHIVED") return "Archive";
+  if (cleanAction === "RESTORE" || cleanAction === "RESTORED") return "Restore";
+  if (cleanAction === "SIGN" || cleanAction === "LOGIN" || cleanAction === "SIGNED") return "Sign";
+  if (cleanAction === "PUBLISH" || cleanAction === "PUBLISHED") return "Publish";
+  if (cleanAction === "BUILD" || cleanAction === "BUILT") return "Build";
+  if (cleanAction === "SUBMIT" || cleanAction === "SUBMITTED") return "Submit";
+  if (cleanAction === "CANCEL" || cleanAction === "CANCELLED" || cleanAction === "CANCELED") return "Cancel";
+  if (cleanAction === "GENERATE" || cleanAction === "GENERATED") return "Generate";
+  if (cleanAction === "SAVE" || cleanAction === "SAVED") return "Save";
+  if (cleanAction === "SYNC" || cleanAction === "SYNCED" || cleanAction === "SYNCHRONISE" || cleanAction === "SYNCHRONIZE") return "Sync";
+  if (cleanAction === "IGNORE" || cleanAction === "IGNORED") return "Ignore";
+  if (cleanAction === "OVERRIDE" || cleanAction === "OVERRIDDEN") return "Override";
+  return "Edit";
+};
 const getAuditLogs = (page) => {
   try {
     const logs = localStorage.getItem(AUDIT_STORAGE_KEY);
@@ -1646,6 +1668,7 @@ function logAudit(pageOrParams, action, description, changes) {
       auditDescription = description;
       auditChanges = changes;
     }
+    auditAction = normaliseAuditAction(auditAction);
     if (!shouldRecordAuditAction(page, auditAction)) {
       return;
     }
@@ -6916,22 +6939,6 @@ const AuditFlyout = ({
     const afterValue = field.displayAfter ?? summariseValue(field.after);
     return `${label}: ${beforeValue} -> ${afterValue}`;
   };
-  const mapDatabaseAction = (action) => {
-    const cleanAction = String(action || "").toUpperCase();
-    if (cleanAction.includes("SUBMIT")) return "Submit";
-    if (cleanAction.includes("CANCEL")) return "Cancel";
-    if (cleanAction.includes("GENERATE")) return "Generate";
-    if (cleanAction.includes("SAVE")) return "Save";
-    if (cleanAction.includes("IGNORE")) return "Ignore";
-    if (cleanAction.includes("OVERRIDE")) return "Override";
-    if (cleanAction.includes("ADDED") || cleanAction === "CREATE") return "Add";
-    if (cleanAction.includes("DELETE") || cleanAction.includes("REMOVED")) return "Delete";
-    if (cleanAction.includes("MOVE")) return "Move";
-    if (cleanAction.includes("PUBLISH")) return "Publish";
-    if (cleanAction.includes("BUILD")) return "Build";
-    if (cleanAction === "LOGIN") return "Sign";
-    return "Edit";
-  };
   const humaniseEntityType = (entityType) => {
     const labels = {
       currency: "Currency",
@@ -6988,7 +6995,7 @@ const AuditFlyout = ({
     return {
       id: `db-${entry.id}`,
       user: entry.userName || "Unknown User",
-      action: mapDatabaseAction(entry.action || ""),
+      action: normaliseAuditAction(entry.action || ""),
       description: getAuditDescription(entry, changes, affectedLabel),
       changes: changesText || "",
       timestamp: new Date(entry.createdAt),
@@ -7005,7 +7012,7 @@ const AuditFlyout = ({
   };
   const mapLocalAuditLog = (entry) => ({
     ...entry,
-    action: mapDatabaseAction(String(entry.action || "")),
+    action: normaliseAuditAction(entry.action || ""),
     affectedLabel: entry.description || entry.page || "Record"
   });
   reactExports.useEffect(() => {
@@ -7137,7 +7144,7 @@ const AuditFlyout = ({
     });
     return dateKey === todayDateKey ? `Today - ${label}` : label;
   };
-  const actionClassName = (action) => action === "View" ? "bg-blue-900/50 text-blue-300" : action === "Edit" ? "bg-yellow-900/50 text-yellow-300" : action === "Add" ? "bg-green-900/50 text-green-300" : action === "Delete" ? "bg-red-900/50 text-red-300" : action === "Archive" ? "bg-purple-900/50 text-purple-300" : action === "Restore" ? "bg-cyan-900/50 text-cyan-300" : action === "Publish" ? "bg-emerald-900/50 text-emerald-300" : action === "Build" ? "bg-orange-900/50 text-orange-300" : action === "Move" ? "bg-indigo-900/50 text-indigo-300" : action === "Submit" ? "bg-teal-900/50 text-teal-300" : action === "Cancel" ? "bg-rose-900/50 text-rose-300" : action === "Generate" ? "bg-violet-900/50 text-violet-300" : action === "Save" ? "bg-lime-900/50 text-lime-300" : action === "Ignore" ? "bg-slate-900/50 text-slate-300" : action === "Override" ? "bg-amber-900/50 text-amber-300" : "bg-gray-900/50 text-gray-300";
+  const actionClassName = (action) => action === "View" ? "bg-blue-900/50 text-blue-300" : action === "Edit" ? "bg-yellow-900/50 text-yellow-300" : action === "Add" ? "bg-green-900/50 text-green-300" : action === "Delete" ? "bg-red-900/50 text-red-300" : action === "Archive" ? "bg-purple-900/50 text-purple-300" : action === "Restore" ? "bg-cyan-900/50 text-cyan-300" : action === "Publish" ? "bg-emerald-900/50 text-emerald-300" : action === "Build" ? "bg-orange-900/50 text-orange-300" : action === "Move" ? "bg-indigo-900/50 text-indigo-300" : action === "Submit" ? "bg-teal-900/50 text-teal-300" : action === "Cancel" ? "bg-rose-900/50 text-rose-300" : action === "Generate" ? "bg-violet-900/50 text-violet-300" : action === "Save" ? "bg-lime-900/50 text-lime-300" : action === "Sync" ? "bg-sky-900/50 text-sky-300" : action === "Ignore" ? "bg-slate-900/50 text-slate-300" : action === "Override" ? "bg-amber-900/50 text-amber-300" : "bg-gray-900/50 text-gray-300";
   const uniqueOptions = (values) => Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
   const pageOptions = reactExports.useMemo(() => uniqueOptions([pageName, ...logs.map((log) => log.page)]), [logs, pageName]);
   const actionOptions = reactExports.useMemo(() => uniqueOptions(logs.map((log) => log.action)), [logs]);

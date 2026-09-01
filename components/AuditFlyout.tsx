@@ -6,6 +6,7 @@ import {
   AUDIT_RECORDING_ACTIONS,
   getAuditLogs,
   getAuditRecordingSettingsForPage,
+  normaliseAuditAction,
   saveAuditRecordingSettingsForPage,
 } from '../utils/auditLogger';
 import { AuditLog } from '../types/audit';
@@ -68,23 +69,6 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     const beforeValue = field.displayBefore ?? summariseValue(field.before);
     const afterValue = field.displayAfter ?? summariseValue(field.after);
     return `${label}: ${beforeValue} -> ${afterValue}`;
-  };
-
-  const mapDatabaseAction = (action: string): AuditLog['action'] => {
-    const cleanAction = String(action || '').toUpperCase();
-    if (cleanAction.includes('SUBMIT')) return 'Submit';
-    if (cleanAction.includes('CANCEL')) return 'Cancel';
-    if (cleanAction.includes('GENERATE')) return 'Generate';
-    if (cleanAction.includes('SAVE')) return 'Save';
-    if (cleanAction.includes('IGNORE')) return 'Ignore';
-    if (cleanAction.includes('OVERRIDE')) return 'Override';
-    if (cleanAction.includes('ADDED') || cleanAction === 'CREATE') return 'Add';
-    if (cleanAction.includes('DELETE') || cleanAction.includes('REMOVED')) return 'Delete';
-    if (cleanAction.includes('MOVE')) return 'Move';
-    if (cleanAction.includes('PUBLISH')) return 'Publish';
-    if (cleanAction.includes('BUILD')) return 'Build';
-    if (cleanAction === 'LOGIN') return 'Sign';
-    return 'Edit';
   };
 
   const humaniseEntityType = (entityType: string): string => {
@@ -161,7 +145,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     return {
       id: `db-${entry.id}`,
       user: entry.userName || 'Unknown User',
-      action: mapDatabaseAction(entry.action || ''),
+      action: normaliseAuditAction(entry.action || ''),
       description: getAuditDescription(entry, changes, affectedLabel),
       changes: changesText || '',
       timestamp: new Date(entry.createdAt),
@@ -179,7 +163,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
 
   const mapLocalAuditLog = (entry: AuditLog): AuditLogWithMeta => ({
     ...entry,
-    action: mapDatabaseAction(String(entry.action || '')),
+    action: normaliseAuditAction(entry.action || ''),
     affectedLabel: entry.description || entry.page || 'Record',
   });
 
@@ -345,6 +329,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     action === 'Cancel' ? 'bg-rose-900/50 text-rose-300' :
     action === 'Generate' ? 'bg-violet-900/50 text-violet-300' :
     action === 'Save' ? 'bg-lime-900/50 text-lime-300' :
+    action === 'Sync' ? 'bg-sky-900/50 text-sky-300' :
     action === 'Ignore' ? 'bg-slate-900/50 text-slate-300' :
     action === 'Override' ? 'bg-amber-900/50 text-amber-300' :
     'bg-gray-900/50 text-gray-300'
