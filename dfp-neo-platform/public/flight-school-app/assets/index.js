@@ -23111,6 +23111,9 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
   const [entries, setEntries] = reactExports.useState([]);
   const [isLoading, setIsLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState(null);
+  const pageName = "Currency Audit Log";
+  const [showRecordingSettings, setShowRecordingSettings] = reactExports.useState(false);
+  const [recordingSettings, setRecordingSettings] = reactExports.useState(() => getAuditRecordingSettingsForPage(pageName));
   reactExports.useEffect(() => {
     if (!personId) return;
     setIsLoading(true);
@@ -23142,6 +23145,20 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
       return dateStr;
     }
   }
+  const recordingActionOptions = AUDIT_RECORDING_ACTIONS.filter((action) => ["View", "Edit", "Add", "Delete", "Save"].includes(action));
+  const setRecordingAction = (action, enabled) => {
+    const nextSettings = { ...recordingSettings, [action]: enabled };
+    setRecordingSettings(nextSettings);
+    saveAuditRecordingSettingsForPage(pageName, nextSettings);
+  };
+  const setAllRecordingActions = (enabled) => {
+    const nextSettings = recordingActionOptions.reduce((settings, action) => {
+      settings[action] = enabled;
+      return settings;
+    }, { ...recordingSettings });
+    setRecordingSettings(nextSettings);
+    saveAuditRecordingSettingsForPage(pageName, nextSettings);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[9999] flex items-center justify-center bg-black/60", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -23154,15 +23171,74 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-white", children: "Currency Audit Log" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-gray-400", children: personName })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-px", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => setShowRecordingSettings(!showRecordingSettings),
+                className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black",
+                title: "Audit Log Recording Settings",
+                children: "Settings"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: onClose,
+                className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed text-black",
+                title: "Close",
+                children: "Close"
+              }
+            )
+          ] })
+        ] }),
+        showRecordingSettings && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mt-3 rounded-md border border-cyan-500/70 bg-cyan-950/15 px-4 py-3 shadow-[0_0_0_1px_rgba(8,145,178,0.18)]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wider text-gray-300", children: "Audit Recording Settings" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Applies to currency audit history." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-px", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setAllRecordingActions(true),
+                  className: "rounded-md border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700",
+                  children: "Select All"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setAllRecordingActions(false),
+                  className: "rounded-md border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700",
+                  children: "Deselect All"
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2 sm:grid-cols-3", children: recordingActionOptions.map((action) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "label",
             {
-              onClick: onClose,
-              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed text-black",
-              title: "Close",
-              children: "Close"
-            }
-          )
+              className: "flex cursor-pointer items-center gap-2 rounded-md border border-gray-700 bg-gray-800/70 px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-gray-800",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: recordingSettings[action] !== false,
+                    onChange: (event) => setRecordingAction(action, event.target.checked),
+                    className: "h-4 w-4 accent-sky-500"
+                  }
+                ),
+                action
+              ]
+            },
+            action
+          )) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-[11px] text-gray-500", children: "These choices control future audit entries only. Existing audit history is retained unchanged." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto p-4 space-y-3", children: [
           isLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400 text-xs text-center py-8 animate-pulse", children: "Loading audit history…" }),

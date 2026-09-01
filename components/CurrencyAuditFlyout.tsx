@@ -1,4 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import {
+  AUDIT_RECORDING_ACTIONS,
+  getAuditRecordingSettingsForPage,
+  saveAuditRecordingSettingsForPage,
+} from '../utils/auditLogger';
+import { AuditAction } from '../types/audit';
 
 interface AuditEntry {
   id: string;
@@ -19,6 +25,11 @@ const CurrencyAuditFlyout: React.FC<CurrencyAuditFlyoutProps> = ({ personId, per
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pageName = 'Currency Audit Log';
+  const [showRecordingSettings, setShowRecordingSettings] = useState(false);
+  const [recordingSettings, setRecordingSettings] = useState<Record<AuditAction, boolean>>(() => (
+    getAuditRecordingSettingsForPage(pageName)
+  ));
 
   useEffect(() => {
     if (!personId) return;
@@ -54,6 +65,25 @@ const CurrencyAuditFlyout: React.FC<CurrencyAuditFlyoutProps> = ({ personId, per
     }
   }
 
+  const recordingActionOptions = AUDIT_RECORDING_ACTIONS.filter(action => (
+    ['View', 'Edit', 'Add', 'Delete', 'Save'].includes(action)
+  ));
+
+  const setRecordingAction = (action: AuditAction, enabled: boolean) => {
+    const nextSettings = { ...recordingSettings, [action]: enabled };
+    setRecordingSettings(nextSettings);
+    saveAuditRecordingSettingsForPage(pageName, nextSettings);
+  };
+
+  const setAllRecordingActions = (enabled: boolean) => {
+    const nextSettings = recordingActionOptions.reduce((settings, action) => {
+      settings[action] = enabled;
+      return settings;
+    }, { ...recordingSettings } as Record<AuditAction, boolean>);
+    setRecordingSettings(nextSettings);
+    saveAuditRecordingSettingsForPage(pageName, nextSettings);
+  };
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={onClose}>
       <div
@@ -67,14 +97,70 @@ const CurrencyAuditFlyout: React.FC<CurrencyAuditFlyoutProps> = ({ personId, per
             <h3 className="text-sm font-bold text-white">Currency Audit Log</h3>
             <p className="text-[11px] text-gray-400">{personName}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed text-black"
-            title="Close"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-px">
+            <button
+              onClick={() => setShowRecordingSettings(!showRecordingSettings)}
+              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black"
+              title="Audit Log Recording Settings"
+            >
+              Settings
+            </button>
+            <button
+              onClick={onClose}
+              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed text-black"
+              title="Close"
+            >
+              Close
+            </button>
+          </div>
         </div>
+
+        {showRecordingSettings && (
+          <div className="mx-4 mt-3 rounded-md border border-cyan-500/70 bg-cyan-950/15 px-4 py-3 shadow-[0_0_0_1px_rgba(8,145,178,0.18)]">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-gray-300">Audit Recording Settings</div>
+                <div className="text-[11px] text-gray-500">Applies to currency audit history.</div>
+              </div>
+              <div className="flex items-center gap-px">
+                <button
+                  type="button"
+                  onClick={() => setAllRecordingActions(true)}
+                  className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700"
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAllRecordingActions(false)}
+                  className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {recordingActionOptions.map(action => (
+                <label
+                  key={action}
+                  className="flex cursor-pointer items-center gap-2 rounded-md border border-gray-700 bg-gray-800/70 px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-gray-800"
+                >
+                  <input
+                    type="checkbox"
+                    checked={recordingSettings[action] !== false}
+                    onChange={(event) => setRecordingAction(action, event.target.checked)}
+                    className="h-4 w-4 accent-sky-500"
+                  />
+                  {action}
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-gray-500">
+              These choices control future audit entries only. Existing audit history is retained unchanged.
+            </p>
+          </div>
+        )}
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
