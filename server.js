@@ -6169,6 +6169,10 @@ app.post('/api/audit/currency', async (req, res) => {
       }
       return parts.join(', ') || `${c.currencyName}: updated`;
     }).join('; ');
+    const changedCurrencyNames = [...new Set(changes.map(c => c.currencyName).filter(Boolean))];
+    const affectedLabel = personName
+      ? `${personName}${changedCurrencyNames.length === 1 ? ` - ${changedCurrencyNames[0]}` : changedCurrencyNames.length > 1 ? ` - ${changedCurrencyNames.length} currency items` : ''}`
+      : changedCurrencyNames.join(', ') || 'Currency record';
 
     // Resolve the DB User for the audit entry
     // User.userId = Personnel ID string (what frontend sends), User.id = UUID primary key (what AuditLog needs)
@@ -6226,6 +6230,8 @@ app.post('/api/audit/currency', async (req, res) => {
         entityType: 'currency',
         entityId: String(personId),
         changes: {
+          source: 'Currency',
+          label: affectedLabel,
           personName,
           personType,
           userName,

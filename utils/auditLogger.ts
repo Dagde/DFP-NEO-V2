@@ -4,7 +4,24 @@ import { AuditLog, AuditAction } from '../types/audit';
 
 const AUDIT_STORAGE_KEY = 'dfp_audit_logs';
 const AUDIT_RECORDING_SETTINGS_KEY = 'dfp_audit_recording_settings';
-export const AUDIT_RECORDING_ACTIONS: AuditAction[] = ['View', 'Add', 'Edit', 'Move', 'Delete', 'Archive', 'Restore', 'Sign', 'Publish', 'Build'];
+export const AUDIT_RECORDING_ACTIONS: AuditAction[] = [
+  'View',
+  'Add',
+  'Edit',
+  'Move',
+  'Delete',
+  'Archive',
+  'Restore',
+  'Sign',
+  'Publish',
+  'Build',
+  'Submit',
+  'Cancel',
+  'Generate',
+  'Save',
+  'Ignore',
+  'Override',
+];
 
 export type AuditRecordingSettings = Record<string, Partial<Record<AuditAction, boolean>>>;
 

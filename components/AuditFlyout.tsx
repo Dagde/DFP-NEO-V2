@@ -22,6 +22,7 @@ type AuditLogWithMeta = AuditLog & {
   rawAction?: string;
   entityType?: string;
   entityId?: string;
+  affectedLabel?: string;
   dfpDate?: string;
   unit?: string;
   location?: string;
@@ -70,13 +71,80 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   };
 
   const mapDatabaseAction = (action: string): AuditLog['action'] => {
-    if (action.includes('ADDED') || action === 'CREATE') return 'Add';
-    if (action.includes('DELETE') || action.includes('REMOVED')) return 'Delete';
-    if (action.includes('MOVE')) return 'Move';
-    if (action.includes('PUBLISH')) return 'Publish';
-    if (action.includes('BUILD')) return 'Build';
-    if (action === 'LOGIN') return 'Sign';
+    const cleanAction = String(action || '').toUpperCase();
+    if (cleanAction.includes('SUBMIT')) return 'Submit';
+    if (cleanAction.includes('CANCEL')) return 'Cancel';
+    if (cleanAction.includes('GENERATE')) return 'Generate';
+    if (cleanAction.includes('SAVE')) return 'Save';
+    if (cleanAction.includes('IGNORE')) return 'Ignore';
+    if (cleanAction.includes('OVERRIDE')) return 'Override';
+    if (cleanAction.includes('ADDED') || cleanAction === 'CREATE') return 'Add';
+    if (cleanAction.includes('DELETE') || cleanAction.includes('REMOVED')) return 'Delete';
+    if (cleanAction.includes('MOVE')) return 'Move';
+    if (cleanAction.includes('PUBLISH')) return 'Publish';
+    if (cleanAction.includes('BUILD')) return 'Build';
+    if (cleanAction === 'LOGIN') return 'Sign';
     return 'Edit';
+  };
+
+  const humaniseEntityType = (entityType: string): string => {
+    const labels: Record<string, string> = {
+      currency: 'Currency',
+      CommercialOrganisation: 'Organisation',
+      CommercialLocation: 'Location',
+      CommercialUnit: 'Unit',
+      CommercialAircraftType: 'Aircraft Type',
+      CommercialResourcePool: 'DFP Resource Rows',
+      CommercialUnitModule: 'Unit Module',
+      CommercialLicense: 'Licence',
+      CommercialSchedulingRuleSet: 'Scheduling Rule Set',
+      CommercialUserAccess: 'User Access Scope',
+      SecurityMonitoring: 'Security Event',
+      ProgramSchedule: 'Program Schedule',
+    };
+    if (labels[entityType]) return labels[entityType];
+    return String(entityType || '')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/[_-]+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, char => char.toUpperCase());
+  };
+
+  const getCurrencyNamesFromChanges = (changes: any): string[] => {
+    const details = Array.isArray(changes.details) ? changes.details : [];
+    return Array.from(new Set(details
+      .map((detail: any) => detail?.currencyName || detail?.name || detail?.code)
+      .filter(Boolean)
+      .map(String)));
+  };
+
+  const getAffectedLabel = (entry: any, changes: any): string => {
+    const entityType = String(entry.entityType || '');
+    const personName = String(changes.personName || changes.traineeName || changes.staffName || '').trim();
+    const currencyNames = getCurrencyNamesFromChanges(changes);
+
+    if (entityType === 'currency') {
+      if (personName && currencyNames.length === 1) return `${personName} - ${currencyNames[0]}`;
+      if (personName && currencyNames.length > 1) return `${personName} - ${currencyNames.length} currency items`;
+      if (personName) return personName;
+      if (currencyNames.length === 1) return currencyNames[0];
+    }
+
+    if (changes.label) return String(changes.label);
+    if (changes.context?.displayName) return String(changes.context.displayName);
+    if (changes.eventName || changes.eventCode) return [changes.eventName, changes.eventCode].filter(Boolean).join(' - ');
+    if (changes.flightNumber) return String(changes.flightNumber);
+    if (changes.dfpDate || changes.scheduleDate || changes.date) {
+      return `DFP ${changes.dfpDate || changes.scheduleDate || changes.date}`;
+    }
+    return humaniseEntityType(entityType) || 'Record';
+  };
+
+  const getAuditDescription = (entry: any, changes: any, affectedLabel: string): string => {
+    if (changes.description) return changes.description;
+    if (entry.entityType === 'currency') return `Updated currency for ${affectedLabel}`;
+    if (changes.label) return `${humaniseEntityType(entry.entityType || 'Record')}: ${changes.label}`;
+    return `${humaniseEntityType(entry.entityType || 'Record')} ${String(entry.action || 'updated').toLowerCase()}`;
   };
 
   const mapDatabaseAuditLog = (entry: any): AuditLogWithMeta => {
@@ -88,21 +156,20 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     const changesText = changedFields.length && hasFriendlyFields
       ? changedFields.map(formatChangedField).join('; ')
       : changes.summary || '';
+    const affectedLabel = getAffectedLabel(entry, changes);
 
     return {
       id: `db-${entry.id}`,
       user: entry.userName || 'Unknown User',
       action: mapDatabaseAction(entry.action || ''),
-      description: changes.description
-        || (changes.label
-        ? `${entry.entityType}: ${changes.label}`
-        : `${entry.entityType || 'Record'} ${entry.action || 'updated'}`),
+      description: getAuditDescription(entry, changes, affectedLabel),
       changes: changesText || '',
       timestamp: new Date(entry.createdAt),
       page: changes.source || entry.entityType || 'Database Audit',
       rawAction: entry.action || '',
       entityType: entry.entityType || '',
       entityId: entry.entityId || '',
+      affectedLabel,
       dfpDate: changes.dfpDate || changes.date || changes.scheduleDate || '',
       unit: changes.unit || changes.unitId || changes.unitContext || changes.combinedUnit || '',
       location: changes.location || changes.locationId || changes.base || '',
@@ -110,11 +177,17 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     };
   };
 
+  const mapLocalAuditLog = (entry: AuditLog): AuditLogWithMeta => ({
+    ...entry,
+    action: mapDatabaseAction(String(entry.action || '')),
+    affectedLabel: entry.description || entry.page || 'Record',
+  });
+
   useEffect(() => {
     let cancelled = false;
 
     const loadLogs = async () => {
-      const pageLogs = getAuditLogs(pageName);
+      const pageLogs = getAuditLogs(pageName).map(mapLocalAuditLog);
       setLogs(pageLogs);
 
       try {
@@ -194,7 +267,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     if (!matchesText(log.unit, unitFilter)) return false;
     if (!matchesText(log.location, locationFilter)) return false;
     if (!matchesText(log.operationalModel, modelFilter)) return false;
-    if (!matchesText(log.entityType, entityFilter) && !matchesText(log.entityId, entityFilter)) return false;
+    if (!matchesText(log.affectedLabel, entityFilter) && !matchesText(log.entityType, entityFilter) && !matchesText(log.entityId, entityFilter)) return false;
     if (dfpDateFilter && log.dfpDate !== dfpDateFilter) return false;
 
     if (searchFilter.trim()) {
@@ -203,6 +276,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
         log.action,
         log.rawAction,
         log.page,
+        log.affectedLabel,
         log.entityType,
         log.entityId,
         log.description,
@@ -230,7 +304,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     } else if (sortField === 'page') {
       comparison = a.page.localeCompare(b.page);
     } else if (sortField === 'entityType') {
-      comparison = (a.entityType || '').localeCompare(b.entityType || '');
+      comparison = (a.affectedLabel || a.entityType || '').localeCompare(b.affectedLabel || b.entityType || '');
     }
     
     return sortDirection === 'asc' ? comparison : -comparison;
@@ -267,6 +341,12 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     action === 'Publish' ? 'bg-emerald-900/50 text-emerald-300' :
     action === 'Build' ? 'bg-orange-900/50 text-orange-300' :
     action === 'Move' ? 'bg-indigo-900/50 text-indigo-300' :
+    action === 'Submit' ? 'bg-teal-900/50 text-teal-300' :
+    action === 'Cancel' ? 'bg-rose-900/50 text-rose-300' :
+    action === 'Generate' ? 'bg-violet-900/50 text-violet-300' :
+    action === 'Save' ? 'bg-lime-900/50 text-lime-300' :
+    action === 'Ignore' ? 'bg-slate-900/50 text-slate-300' :
+    action === 'Override' ? 'bg-amber-900/50 text-amber-300' :
     'bg-gray-900/50 text-gray-300'
   );
 
@@ -393,7 +473,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                 <td>${log.user}</td>
                 <td>${log.action}</td>
                 <td>${log.page || '-'}</td>
-                <td>${[log.entityType, log.entityId, log.dfpDate, log.unit, log.location, log.operationalModel].filter(Boolean).join(' | ') || '-'}</td>
+                <td>${log.affectedLabel || humaniseEntityType(log.entityType || '') || '-'}</td>
                 <td>${log.description}</td>
                 <td>${log.changes || '-'}</td>
               </tr>
@@ -410,7 +490,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   };
 
   const handleExport = () => {
-    const headers = ['Date', 'Time', 'User', 'Action', 'Page', 'Entity Type', 'Entity ID', 'DFP Date', 'Unit', 'Location', 'Model', 'Description', 'Changes'];
+    const headers = ['Date', 'Time', 'User', 'Action', 'Page', 'Affected', 'Record Type', 'Record ID', 'DFP Date', 'Unit', 'Location', 'Model', 'Description', 'Changes'];
     const escapeCsv = (value: string) => `"${String(value || '').replaceAll('"', '""')}"`;
     const rows = sortedLogs.map(log => [
       log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
@@ -418,7 +498,8 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
       log.user,
       log.action,
       log.page,
-      log.entityType || '',
+      log.affectedLabel || humaniseEntityType(log.entityType || '') || '',
+      humaniseEntityType(log.entityType || ''),
       log.entityId || '',
       log.dfpDate || '',
       log.unit || '',
@@ -769,8 +850,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                                   {log.page || '-'}
                                 </td>
                                 <td className="px-4 py-3 text-gray-300">
-                                  <div>{log.entityType || '-'}</div>
-                                  {log.entityId && <div className="text-[11px] text-gray-500">{log.entityId}</div>}
+                                  <div>{log.affectedLabel || humaniseEntityType(log.entityType || '') || '-'}</div>
                                   {(log.dfpDate || log.unit || log.location || log.operationalModel) && (
                                     <div className="mt-1 text-[11px] text-gray-500">
                                       {[log.dfpDate, log.unit, log.location, log.operationalModel].filter(Boolean).join(' | ')}
