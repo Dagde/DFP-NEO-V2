@@ -9088,7 +9088,7 @@ const RightSidebar = ({
   isSupervisor,
   onPublish,
   onDownloadNeoBuildReport,
-  onDownloadArchiveReport,
+  onOpenArchiveReport,
   showArchiveReport = false,
   currentUserRank,
   currentUserName,
@@ -9250,11 +9250,11 @@ const RightSidebar = ({
           ] })
         }
       ) }),
-      showArchiveReport && onDownloadArchiveReport && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      showArchiveReport && onOpenArchiveReport && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: onDownloadArchiveReport,
-          title: "Download the archive diagnostic JSON report for this DFP date",
+          onClick: onOpenArchiveReport,
+          title: "Open the archive health report for this DFP date",
           className: "w-[75px] h-[46px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md",
           children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
             "Archive",
@@ -126002,6 +126002,7 @@ ${"=".repeat(60)}`);
   const [neoProblemTileForFlyout, setNeoProblemTileForFlyout] = reactExports.useState(null);
   const [neoRemediesForFlyout, setNeoRemediesForFlyout] = reactExports.useState([]);
   const [showInfoNotification, setShowInfoNotification] = reactExports.useState(null);
+  const [archiveHealthReport, setArchiveHealthReport] = reactExports.useState(null);
   const [dutyWarningRemedy, setDutyWarningRemedy] = reactExports.useState(null);
   const [showDutyWarning, setShowDutyWarning] = reactExports.useState(false);
   const [timeOnlyRemedyForConfirmation, setTimeOnlyRemedyForConfirmation] = reactExports.useState(null);
@@ -134026,7 +134027,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     URL.revokeObjectURL(url);
     setShowInfoNotification("NEO Build diagnostic JSON downloaded.");
   }, [activeOperationalModel, activeUnitCode, activeView, buildDfpDate, currentUserName, nextDayBuildEvents, school]);
-  const handleDownloadArchiveReport = reactExports.useCallback(async () => {
+  const handleOpenArchiveReport = reactExports.useCallback(async () => {
+    setArchiveHealthReport({ status: "loading" });
     try {
       const apiBase = getAppApiBase();
       const sessionToken = localStorage.getItem("dfp_session_token") || "";
@@ -134041,23 +134043,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       if (!response.ok || !report) {
         throw new Error(report?.message || report?.error || `Archive report failed with HTTP ${response.status}`);
       }
-      const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const safeUser = String(currentUserName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
-      const safeDate = String(date || "no-date").replace(/[^0-9-]/g, "");
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `dfp-archive-diagnostic-${safeUser}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      setShowInfoNotification("Archive diagnostic JSON downloaded.");
+      setArchiveHealthReport({ status: "loaded", report });
     } catch (error) {
       console.error("[Archive] Failed to download archive diagnostic report:", error);
-      setSuccessMessage(`Archive report failed: ${error instanceof Error ? error.message : String(error)}`);
+      setArchiveHealthReport({
+        status: "error",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
-  }, [currentUserName, date]);
+  }, [date]);
   const runBuildAlgorithm = async (preservedEvents, buildPublishedSchedulesOverride) => {
     logNeoBuildUiDebug("🚀 [NEO-Build] runBuildAlgorithm called");
     logNeoBuildUiDebug("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
@@ -143313,7 +143307,7 @@ Do you want to replace the existing entry?`,
           isSupervisor: true,
           onPublish: handlePublish,
           onDownloadNeoBuildReport: handleDownloadNeoBuildReport,
-          onDownloadArchiveReport: handleDownloadArchiveReport,
+          onOpenArchiveReport: handleOpenArchiveReport,
           showArchiveReport: isViewingPastDfp,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "",
           currentUserName,
@@ -143729,6 +143723,86 @@ Do you want to replace the existing entry?`,
           dutyHours: dutyWarningRemedy.type !== "trainee" ? dutyWarningRemedy.instructor.dutyHours : 0
         }
       ),
+      archiveHealthReport && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-3xl overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-2xl", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 bg-gray-950 px-5 py-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: "Archive Health Report" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-400", children: [
+              "Plain-English archive status for ",
+              date,
+              "."
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setArchiveHealthReport(null),
+              className: "rounded-md border border-gray-700 px-3 py-1.5 text-sm font-semibold text-gray-200 hover:bg-gray-800",
+              children: "Close"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-[72vh] overflow-y-auto p-5", children: [
+          archiveHealthReport.status === "loading" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-sky-700/60 bg-sky-950/30 p-4 text-sm text-sky-100", children: "Loading archive report..." }),
+          archiveHealthReport.status === "error" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-red-700/60 bg-red-950/30 p-4 text-sm text-red-100", children: [
+            "Could not load the archive report. ",
+            archiveHealthReport.error || "Please try again."
+          ] }),
+          archiveHealthReport.status === "loaded" && (() => {
+            const report = archiveHealthReport.report || {};
+            const diagnostics = report.archiveCompletenessDiagnostics || report.snapshot?.archiveCompletenessDiagnostics || {};
+            const schedule = diagnostics.schedule || {};
+            const profiles = diagnostics.profiles || {};
+            const currency = diagnostics.currencyAndRecency || {};
+            const training = diagnostics.training || {};
+            const logbook = diagnostics.logbook || {};
+            const config = diagnostics.config || {};
+            const warnings = Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [];
+            const healthRows = [
+              ["Archive source", report.source || diagnostics.source || "Unknown"],
+              ["Snapshot key", report.snapshotKey || diagnostics.snapshotKey || "Unknown"],
+              ["Schedule events", `${schedule.scheduleEvents ?? report.scheduleEvents?.length ?? 0}`],
+              ["Staff events", `${schedule.staffEvents ?? report.staffEvents?.length ?? 0}`],
+              ["Trainee events", `${schedule.traineeEvents ?? report.traineeEvents?.length ?? 0}`],
+              ["Staff profiles", `${profiles.staffProfiles ?? report.staffProfiles?.length ?? 0}`],
+              ["Trainee profiles", `${profiles.traineeProfiles ?? report.traineeProfiles?.length ?? 0}`],
+              ["Currency status rows", `${currency.profileCurrencyRows ?? 0} profile rows, ${currency.staffCurrencyRows ?? 0} staff map rows`],
+              ["Currency definitions", `${currency.masterCurrencyDefinitions ?? 0} master, ${currency.currencyRequirementDefinitions ?? 0} requirements`],
+              ["Recency definitions", `${currency.recencyDefinitionRows ?? 0}`],
+              ["Training reports", `${training.trainingReports ?? report.trainingReports?.length ?? 0}`],
+              ["Training report versions", `${training.trainingReportVersions ?? report.trainingReportVersions?.length ?? 0}`],
+              ["Event completions", `${training.eventCompletions ?? report.eventCompletions?.length ?? 0}`],
+              ["Flight log entries", `${logbook.flightLogEntries ?? report.flightLogEntries?.length ?? 0}`],
+              ["Config versions", `${config.configVersions ?? report.configVersions?.length ?? 0}`]
+            ];
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-800/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-gray-200", children: "Overall status" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: warnings.length > 0 ? "The archive loaded, with items for admin review." : "The archive loaded and no health warnings were reported." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-3 py-1 text-xs font-bold uppercase ${warnings.length > 0 ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/40" : "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/40"}`, children: warnings.length > 0 ? "Review" : "Healthy" })
+              ] }) }),
+              warnings.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-amber-700/60 bg-amber-950/25 p-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-amber-100", children: "Items for review" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: warnings.map((warning, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-amber-700/40 bg-gray-950/40 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-bold uppercase tracking-wide text-amber-300", children: warning?.code || "Archive warning" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-amber-50", children: warning?.message || String(warning) })
+                ] }, `${warning?.code || "warning"}-${index}`)) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: healthRows.map(([label, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-800/50 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-bold uppercase tracking-wide text-gray-500", children: label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-gray-100", children: value })
+              ] }, label)) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-800/50 p-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-gray-100", children: "What this means" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm leading-6 text-gray-300", children: "This report checks whether the historical DFP can rebuild the operational picture for that date: schedule tiles, people, currency and recency status, training evidence, completions, logbook rows, and configuration versions. Older archives may not contain every newer archive field, but the warning section explains that clearly when it happens." })
+              ] })
+            ] });
+          })()
+        ] })
+      ] }) }),
       showInfoNotification && /* @__PURE__ */ jsxRuntimeExports.jsx(InfoNotification, { message: showInfoNotification, onClose: () => setShowInfoNotification(null) }),
       showNightFlyingInfo && /* @__PURE__ */ jsxRuntimeExports.jsx(NightFlyingInfoFlyout, { traineeCount: nightFlyingTraineeCount }),
       isBuildingDfp && /* @__PURE__ */ jsxRuntimeExports.jsx(BuildDfpLoadingFlyout, { progress: dfpBuildProgress }),
