@@ -16981,6 +16981,55 @@ function buildArchiveScopeFromSnapshotPayload(date, payload = {}) {
   };
 }
 
+function hasArchiveCurrencyDefinitions(definitions) {
+  return (
+    definitions &&
+    typeof definitions === 'object' &&
+    (
+      (Array.isArray(definitions.masterCurrencies) && definitions.masterCurrencies.length > 0) ||
+      (Array.isArray(definitions.currencyRequirements) && definitions.currencyRequirements.length > 0)
+    )
+  );
+}
+
+async function resolveArchiveCurrencyDefinitions(db, payload, context) {
+  const payloadDefinitions = payload.currencyDefinitions && typeof payload.currencyDefinitions === 'object'
+    ? payload.currencyDefinitions
+    : {
+        masterCurrencies: payload.masterCurrencies || [],
+        currencyRequirements: payload.currencyRequirements || [],
+      };
+  if (hasArchiveCurrencyDefinitions(payloadDefinitions)) {
+    return payloadDefinitions;
+  }
+
+  try {
+    const rows = await db.$queryRawUnsafe(
+      `SELECT data FROM "AppSettings" WHERE "orgId" = $1::text LIMIT 1`,
+      'default'
+    );
+    const settings = rows?.[0]?.data && typeof rows[0].data === 'object' ? rows[0].data : {};
+    const unitKey = String(context?.unitCode || '').trim().toUpperCase();
+    const unitDefinitions = unitKey && settings.unitCurrencyDefinitions && typeof settings.unitCurrencyDefinitions === 'object'
+      ? settings.unitCurrencyDefinitions[unitKey]
+      : null;
+    const fallbackDefinitions = unitDefinitions && typeof unitDefinitions === 'object'
+      ? unitDefinitions
+      : {
+          masterCurrencies: settings.masterCurrencies || [],
+          currencyRequirements: settings.currencyRequirements || [],
+        };
+    if (hasArchiveCurrencyDefinitions(fallbackDefinitions)) {
+      console.warn(`[Archive] Snapshot for ${context?.snapshotKey || payload.date || 'unknown'} supplied empty currency definitions; archived saved settings catalogue instead.`);
+      return fallbackDefinitions;
+    }
+  } catch (error) {
+    console.warn('[Archive] Could not load saved currency definitions for archive fallback:', error.message);
+  }
+
+  return payloadDefinitions;
+}
+
 async function writeArchiveDiagnostic(db, action, snapshotKey, date, status, details = {}, durationMs = 0) {
   try {
     await db.$executeRawUnsafe(`
@@ -17030,6 +17079,7 @@ async function saveArchiveConfigVersion(db, scopeKey, configType, effectiveFrom,
 async function saveCompactPublishedDfpArchive(db, payload) {
   const startedAt = Date.now();
   const context = buildArchiveScopeFromSnapshotPayload(payload.date, payload);
+  const archiveCurrencyDefinitions = await resolveArchiveCurrencyDefinitions(db, payload, context);
   const scheduleEvents = Array.isArray(payload.scheduleEvents) ? payload.scheduleEvents : [];
   const staffEvents = Array.isArray(payload.staffEvents) ? payload.staffEvents : [];
   const traineeEvents = Array.isArray(payload.traineeEvents) ? payload.traineeEvents : [];
@@ -17048,10 +17098,7 @@ async function saveCompactPublishedDfpArchive(db, payload) {
     traineeRosterState: compactTraineeProfiles,
     lmpCompletionState: payload.lmpCompletedIds || {},
     staffCurrencyState: payload.staffCurrency || {},
-    currencyDefinitionState: payload.currencyDefinitions || {
-      masterCurrencies: payload.masterCurrencies || [],
-      currencyRequirements: payload.currencyRequirements || [],
-    },
+    currencyDefinitionState: archiveCurrencyDefinitions,
   };
   for (const [configType, content] of Object.entries(configPayloads)) {
     configVersions[configType] = await saveArchiveConfigVersion(
