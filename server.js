@@ -16836,6 +16836,7 @@ function buildArchiveCompletenessDiagnostics({
   flightLogEntries,
   configVersions,
   currencyDefinitions,
+  currencyDefinitionsSource = 'archive',
 }) {
   const staffCurrencyCounts = countArchiveMapRows(staffCurrency);
   const lmpCompletionCounts = countArchiveMapRows(lmpCompletedIds);
@@ -16855,6 +16856,18 @@ function buildArchiveCompletenessDiagnostics({
     warnings.push({
       code: 'ARCHIVE_CURRENCY_DEFINITIONS_MISSING',
       message: 'This compact archive does not contain currencyDefinitionState. It was likely published before currency definition archiving was added; republish the DFP after CCH 8.558 to capture historical currency and recency definitions.',
+    });
+  }
+  if (currencyDefinitionRows.length === 0) {
+    warnings.push({
+      code: 'ARCHIVE_CURRENCY_DEFINITIONS_EMPTY',
+      message: 'No currency or recency definitions were found for this archive. Currency dates may still appear on profiles, but the rules/catalogue for that day cannot be fully explained.',
+    });
+  }
+  if (currencyDefinitionsSource === 'saved-settings-fallback') {
+    warnings.push({
+      code: 'ARCHIVE_CURRENCY_DEFINITIONS_FROM_SETTINGS',
+      message: 'This archive did not contain its own currency definition catalogue, so NEO used the saved unit settings catalogue as a fallback. This keeps the archived screen usable, but it is not as strong as definitions captured inside the original archive.',
     });
   }
   if (scheduleEventsCount > 0 && archivedEventRowsCount === scheduleEventsCount && (staffEvents?.length || 0) === 0 && (traineeEvents?.length || 0) === 0) {
@@ -16891,6 +16904,7 @@ function buildArchiveCompletenessDiagnostics({
       masterCurrencyDefinitions: masterCurrencies.length,
       currencyRequirementDefinitions: currencyRequirements.length,
       recencyDefinitionRows: currencyDefinitionRows.filter(row => row?.showInPostFlightRecency).length,
+      definitionsSource: currencyDefinitionsSource,
       note: 'Recency is stored as currency status against profile records; recency display is driven by archived/current currency definitions marked showInPostFlightRecency.',
     },
     training: {
@@ -18135,13 +18149,14 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       const configContentByType = Object.fromEntries((configVersions || []).map(row => [row.configType, row.content]));
       const archivedStaffProfiles = Array.isArray(configContentByType.staffRosterState) ? configContentByType.staffRosterState : [];
       const archivedTraineeProfiles = Array.isArray(configContentByType.traineeRosterState) ? configContentByType.traineeRosterState : [];
+      const rawArchivedCurrencyDefinitions = configContentByType.currencyDefinitionState && typeof configContentByType.currencyDefinitionState === 'object'
+        ? configContentByType.currencyDefinitionState
+        : { masterCurrencies: [], currencyRequirements: [] };
       const archivedCurrencyDefinitions = await resolveArchiveCurrencyDefinitions(
         db,
         {
           date: archive.snapshotKey,
-          currencyDefinitions: configContentByType.currencyDefinitionState && typeof configContentByType.currencyDefinitionState === 'object'
-            ? configContentByType.currencyDefinitionState
-            : { masterCurrencies: [], currencyRequirements: [] },
+          currencyDefinitions: rawArchivedCurrencyDefinitions,
         },
         {
           ...buildArchiveScopeFromSnapshotPayload(archive.snapshotKey, {
@@ -18151,6 +18166,11 @@ app.get('/api/archive/dfp-date', async (req, res) => {
           snapshotKey: archive.snapshotKey,
         }
       );
+      const archivedCurrencyDefinitionsSource = hasArchiveCurrencyDefinitions(rawArchivedCurrencyDefinitions)
+        ? 'archived-config-version'
+        : hasArchiveCurrencyDefinitions(archivedCurrencyDefinitions)
+          ? 'saved-settings-fallback'
+          : 'missing';
       const archivedProfileRefs = [...archivedStaffProfiles, ...archivedTraineeProfiles];
       const archivedPersonIds = Array.from(new Set(archivedProfileRefs.flatMap(profile => [
         profile?.id,
@@ -18258,6 +18278,7 @@ app.get('/api/archive/dfp-date', async (req, res) => {
         flightLogEntries: flightLogRows || [],
         configVersions: configVersions || [],
         currencyDefinitions: archivedCurrencyDefinitions,
+        currencyDefinitionsSource: archivedCurrencyDefinitionsSource,
       });
       const snapshot = {
         date: archive.snapshotKey,
@@ -18418,12 +18439,31 @@ app.get('/api/archive/dfp-date', async (req, res) => {
     const fallbackTrainingReports = Object.values(snapshot.pt051Assessments || {});
     const fallbackStaffEvents = Array.isArray(snapshot.staffEvents) ? snapshot.staffEvents : [];
     const fallbackTraineeEvents = Array.isArray(snapshot.traineeEvents) ? snapshot.traineeEvents : [];
-    const fallbackCurrencyDefinitions = snapshot.currencyDefinitions && typeof snapshot.currencyDefinitions === 'object'
+    const rawFallbackCurrencyDefinitions = snapshot.currencyDefinitions && typeof snapshot.currencyDefinitions === 'object'
       ? snapshot.currencyDefinitions
       : {
           masterCurrencies: snapshot.masterCurrencies || [],
           currencyRequirements: snapshot.currencyRequirements || [],
         };
+    const fallbackCurrencyDefinitions = await resolveArchiveCurrencyDefinitions(
+      db,
+      {
+        date: snapshot.date,
+        currencyDefinitions: rawFallbackCurrencyDefinitions,
+      },
+      {
+        ...buildArchiveScopeFromSnapshotPayload(snapshot.date, {
+          scheduleEvents: fallbackScheduleEvents,
+        }),
+        unitCode: parsed.unit,
+        snapshotKey: snapshot.date,
+      }
+    );
+    const fallbackCurrencyDefinitionsSource = hasArchiveCurrencyDefinitions(rawFallbackCurrencyDefinitions)
+      ? 'daily-snapshot'
+      : hasArchiveCurrencyDefinitions(fallbackCurrencyDefinitions)
+        ? 'saved-settings-fallback'
+        : 'missing';
     const fallbackCompletenessDiagnostics = buildArchiveCompletenessDiagnostics({
       source: 'daily-snapshot-fallback',
       date: parsed.date,
@@ -18444,6 +18484,7 @@ app.get('/api/archive/dfp-date', async (req, res) => {
       flightLogEntries: fallbackFlightLogEntries,
       configVersions: [],
       currencyDefinitions: fallbackCurrencyDefinitions,
+      currencyDefinitionsSource: fallbackCurrencyDefinitionsSource,
     });
     const snapshotWithArchiveLogbook = {
       ...snapshot,

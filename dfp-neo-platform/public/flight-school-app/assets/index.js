@@ -143756,6 +143756,8 @@ Do you want to replace the existing entry?`,
             const logbook = diagnostics.logbook || {};
             const config = diagnostics.config || {};
             const warnings = Array.isArray(diagnostics.warnings) ? diagnostics.warnings : [];
+            const currencyDefinitionsSource = String(currency.definitionsSource || "unknown");
+            const currencyDefinitionsSourceLabel = currencyDefinitionsSource === "archived-config-version" ? "Captured in compact archive" : currencyDefinitionsSource === "daily-snapshot" ? "Stored in daily snapshot" : currencyDefinitionsSource === "saved-settings-fallback" ? "Recovered from saved Settings" : currencyDefinitionsSource === "missing" ? "Missing" : "Unknown";
             const healthRows = [
               ["Archive source", report.source || diagnostics.source || "Unknown"],
               ["Snapshot key", report.snapshotKey || diagnostics.snapshotKey || "Unknown"],
@@ -143766,6 +143768,7 @@ Do you want to replace the existing entry?`,
               ["Trainee profiles", `${profiles.traineeProfiles ?? report.traineeProfiles?.length ?? 0}`],
               ["Currency status rows", `${currency.profileCurrencyRows ?? 0} profile rows, ${currency.staffCurrencyRows ?? 0} staff map rows`],
               ["Currency definitions", `${currency.masterCurrencyDefinitions ?? 0} master, ${currency.currencyRequirementDefinitions ?? 0} requirements`],
+              ["Currency catalogue source", currencyDefinitionsSourceLabel],
               ["Recency definitions", `${currency.recencyDefinitionRows ?? 0}`],
               ["Training reports", `${training.trainingReports ?? report.trainingReports?.length ?? 0}`],
               ["Training report versions", `${training.trainingReportVersions ?? report.trainingReportVersions?.length ?? 0}`],
