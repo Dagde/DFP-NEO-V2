@@ -52741,8 +52741,6 @@ appliedUpdates.forEach(update => {
                 isSupervisor={true}
                 onPublish={handlePublish}
                 onDownloadNeoBuildReport={handleDownloadNeoBuildReport}
-                onOpenArchiveReport={handleOpenArchiveReport}
-                showArchiveReport={isViewingPastDfp}
                 currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
                 currentUserName={currentUserName}
                 currentUserLocation={school}
@@ -52754,6 +52752,18 @@ appliedUpdates.forEach(update => {
                 modelUnavailableViews={modelUnavailableRightViews}
                 operationalModel={activeOperationalModel}
             />
+            {isAuthenticated && isViewingPastDfp && (
+                <div className="fixed bottom-[168px] right-[18px] z-[100] flex w-[75px] justify-center">
+                    <button
+                        type="button"
+                        onClick={handleOpenArchiveReport}
+                        title="Open the archive health report for this DFP date"
+                        className="w-[75px] rounded border border-sky-300/20 bg-transparent px-1.5 py-1.5 text-center text-[10px] font-semibold leading-tight text-sky-100/65 shadow-none transition-colors hover:border-sky-300/35 hover:bg-sky-300/10 hover:text-sky-100"
+                    >
+                        Archive<br/>Report
+                    </button>
+                </div>
+            )}
             {floatingDashboardWindows.MyDashboard && (
                 <FloatingDashboardWindow
                     title="My Home"

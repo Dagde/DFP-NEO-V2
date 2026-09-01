@@ -9088,8 +9088,6 @@ const RightSidebar = ({
   isSupervisor,
   onPublish,
   onDownloadNeoBuildReport,
-  onOpenArchiveReport,
-  showArchiveReport = false,
   currentUserRank,
   currentUserName,
   currentUserLocation,
@@ -9245,19 +9243,6 @@ const RightSidebar = ({
           className: "w-[75px] h-[46px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md",
           children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
             "Build",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-            "Report"
-          ] })
-        }
-      ) }),
-      showArchiveReport && onOpenArchiveReport && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: onOpenArchiveReport,
-          title: "Open the archive health report for this DFP date",
-          className: "w-[75px] h-[46px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md",
-          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
-            "Archive",
             /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
             "Report"
           ] })
@@ -143307,8 +143292,6 @@ Do you want to replace the existing entry?`,
           isSupervisor: true,
           onPublish: handlePublish,
           onDownloadNeoBuildReport: handleDownloadNeoBuildReport,
-          onOpenArchiveReport: handleOpenArchiveReport,
-          showArchiveReport: isViewingPastDfp,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "",
           currentUserName,
           currentUserLocation: school,
@@ -143321,6 +143304,20 @@ Do you want to replace the existing entry?`,
           operationalModel: activeOperationalModel
         }
       ),
+      isAuthenticated && isViewingPastDfp && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed bottom-[168px] right-[18px] z-[100] flex w-[75px] justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          onClick: handleOpenArchiveReport,
+          title: "Open the archive health report for this DFP date",
+          className: "w-[75px] rounded border border-sky-300/20 bg-transparent px-1.5 py-1.5 text-center text-[10px] font-semibold leading-tight text-sky-100/65 shadow-none transition-colors hover:border-sky-300/35 hover:bg-sky-300/10 hover:text-sky-100",
+          children: [
+            "Archive",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "Report"
+          ]
+        }
+      ) }),
       floatingDashboardWindows.MyDashboard && /* @__PURE__ */ jsxRuntimeExports.jsx(
         FloatingDashboardWindow,
         {
