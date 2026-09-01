@@ -11,14 +11,38 @@ interface AuditFlyoutProps {
   onClose: () => void;
 }
 
+type AuditSortField = 'timestamp' | 'user' | 'action' | 'page' | 'entityType';
+type AuditDatePreset = 'all' | 'today' | '7d' | '30d' | 'custom';
+type AuditLogWithMeta = AuditLog & {
+  rawAction?: string;
+  entityType?: string;
+  entityId?: string;
+  dfpDate?: string;
+  unit?: string;
+  location?: string;
+  operationalModel?: string;
+};
+
 const AuditFlyout: React.FC<AuditFlyoutProps> = ({ 
   pageName, 
   onClose
 }) => {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [sortField, setSortField] = useState<'timestamp' | 'user' | 'action'>('timestamp');
+  const [logs, setLogs] = useState<AuditLogWithMeta[]>([]);
+  const [sortField, setSortField] = useState<AuditSortField>('timestamp');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [expandedDateKey, setExpandedDateKey] = useState<string | null>(null);
+  const [datePreset, setDatePreset] = useState<AuditDatePreset>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [pageFilter, setPageFilter] = useState('');
+  const [actionFilter, setActionFilter] = useState('');
+  const [userFilter, setUserFilter] = useState('');
+  const [unitFilter, setUnitFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [modelFilter, setModelFilter] = useState('');
+  const [entityFilter, setEntityFilter] = useState('');
+  const [dfpDateFilter, setDfpDateFilter] = useState('');
+  const [searchFilter, setSearchFilter] = useState('');
 
   const getApiBase = (): string => getAppApiBase();
 
@@ -43,7 +67,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     return 'Edit';
   };
 
-  const mapDatabaseAuditLog = (entry: any): AuditLog => {
+  const mapDatabaseAuditLog = (entry: any): AuditLogWithMeta => {
     const changes = entry.changes || {};
     const changedFields = Array.isArray(changes.changedFields) ? changes.changedFields : [];
     const hasFriendlyFields = changedFields.some((field: any) => (
@@ -64,6 +88,13 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
       changes: changesText || '',
       timestamp: new Date(entry.createdAt),
       page: changes.source || entry.entityType || 'Database Audit',
+      rawAction: entry.action || '',
+      entityType: entry.entityType || '',
+      entityId: entry.entityId || '',
+      dfpDate: changes.dfpDate || changes.date || changes.scheduleDate || '',
+      unit: changes.unit || changes.unitId || changes.unitContext || changes.combinedUnit || '',
+      location: changes.location || changes.locationId || changes.base || '',
+      operationalModel: changes.operationalModel || changes.model || '',
     };
   };
 
@@ -76,7 +107,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
 
       try {
         const sessionToken = localStorage.getItem('dfp_session_token');
-        const res = await fetch(`${getApiBase()}/audit/logs?limit=300`, {
+        const res = await fetch(`${getApiBase()}/audit/logs?limit=500`, {
           headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
         });
         if (!res.ok) return;
@@ -93,7 +124,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     return () => { cancelled = true; };
   }, [pageName]);
 
-  const handleSort = (field: 'timestamp' | 'user' | 'action') => {
+  const handleSort = (field: AuditSortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -102,7 +133,76 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     }
   };
 
-  const sortedLogs = useMemo(() => [...logs].sort((a, b) => {
+  const getDateOnlyTime = (date: Date): number => {
+    const copy = new Date(date);
+    copy.setHours(0, 0, 0, 0);
+    return copy.getTime();
+  };
+
+  const datePresetRange = useMemo(() => {
+    if (datePreset === 'all' || datePreset === 'custom') return { from: '', to: '' };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const from = new Date(today);
+    if (datePreset === '7d') from.setDate(from.getDate() - 6);
+    if (datePreset === '30d') from.setDate(from.getDate() - 29);
+    const formatInputDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    return { from: formatInputDate(from), to: formatInputDate(today) };
+  }, [datePreset]);
+
+  const activeDateFrom = datePreset === 'custom' ? dateFrom : datePresetRange.from;
+  const activeDateTo = datePreset === 'custom' ? dateTo : datePresetRange.to;
+
+  const matchesText = (value: string | undefined, filter: string): boolean => (
+    !filter || String(value || '').toLowerCase().includes(filter.trim().toLowerCase())
+  );
+
+  const filteredLogs = useMemo(() => logs.filter(log => {
+    const logDateTime = getDateOnlyTime(log.timestamp);
+    if (activeDateFrom) {
+      const fromTime = new Date(`${activeDateFrom}T00:00:00`).getTime();
+      if (logDateTime < fromTime) return false;
+    }
+    if (activeDateTo) {
+      const toTime = new Date(`${activeDateTo}T00:00:00`).getTime();
+      if (logDateTime > toTime) return false;
+    }
+    if (pageFilter && log.page !== pageFilter) return false;
+    if (actionFilter && log.action !== actionFilter) return false;
+    if (!matchesText(log.user, userFilter)) return false;
+    if (!matchesText(log.unit, unitFilter)) return false;
+    if (!matchesText(log.location, locationFilter)) return false;
+    if (!matchesText(log.operationalModel, modelFilter)) return false;
+    if (!matchesText(log.entityType, entityFilter) && !matchesText(log.entityId, entityFilter)) return false;
+    if (dfpDateFilter && log.dfpDate !== dfpDateFilter) return false;
+
+    if (searchFilter.trim()) {
+      const haystack = [
+        log.user,
+        log.action,
+        log.rawAction,
+        log.page,
+        log.entityType,
+        log.entityId,
+        log.description,
+        log.changes,
+        log.dfpDate,
+        log.unit,
+        log.location,
+        log.operationalModel,
+      ].join(' ').toLowerCase();
+      if (!haystack.includes(searchFilter.trim().toLowerCase())) return false;
+    }
+
+    return true;
+  }), [activeDateFrom, activeDateTo, actionFilter, dfpDateFilter, entityFilter, locationFilter, logs, modelFilter, pageFilter, searchFilter, unitFilter, userFilter]);
+
+  const sortedLogs = useMemo(() => [...filteredLogs].sort((a, b) => {
     let comparison = 0;
     
     if (sortField === 'timestamp') {
@@ -111,10 +211,14 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
       comparison = a.user.localeCompare(b.user);
     } else if (sortField === 'action') {
       comparison = a.action.localeCompare(b.action);
+    } else if (sortField === 'page') {
+      comparison = a.page.localeCompare(b.page);
+    } else if (sortField === 'entityType') {
+      comparison = (a.entityType || '').localeCompare(b.entityType || '');
     }
     
     return sortDirection === 'asc' ? comparison : -comparison;
-  }), [logs, sortDirection, sortField]);
+  }), [filteredLogs, sortDirection, sortField]);
 
   const getDateKey = (date: Date): string => {
     const year = date.getFullYear();
@@ -147,8 +251,30 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
     'bg-gray-900/50 text-gray-300'
   );
 
+  const uniqueOptions = (values: Array<string | undefined>) => (
+    Array.from(new Set(values.map(value => String(value || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b))
+  );
+
+  const pageOptions = useMemo(() => uniqueOptions([pageName, ...logs.map(log => log.page)]), [logs, pageName]);
+  const actionOptions = useMemo(() => uniqueOptions(logs.map(log => log.action)), [logs]);
+
+  const resetFilters = () => {
+    setDatePreset('all');
+    setDateFrom('');
+    setDateTo('');
+    setPageFilter('');
+    setActionFilter('');
+    setUserFilter('');
+    setUnitFilter('');
+    setLocationFilter('');
+    setModelFilter('');
+    setEntityFilter('');
+    setDfpDateFilter('');
+    setSearchFilter('');
+  };
+
   const groupedLogs = useMemo(() => {
-    const groups = new Map<string, AuditLog[]>();
+    const groups = new Map<string, AuditLogWithMeta[]>();
     sortedLogs.forEach(log => {
       const key = getDateKey(log.timestamp);
       if (!groups.has(key)) groups.set(key, []);
@@ -201,6 +327,8 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
               <th>Time</th>
               <th>User</th>
               <th>Action</th>
+              <th>Page</th>
+              <th>Affected</th>
               <th>Description</th>
               <th>Changes</th>
             </tr>
@@ -212,6 +340,8 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                 <td>${log.timestamp.toLocaleTimeString()}</td>
                 <td>${log.user}</td>
                 <td>${log.action}</td>
+                <td>${log.page || '-'}</td>
+                <td>${[log.entityType, log.entityId, log.dfpDate, log.unit, log.location, log.operationalModel].filter(Boolean).join(' | ') || '-'}</td>
                 <td>${log.description}</td>
                 <td>${log.changes || '-'}</td>
               </tr>
@@ -228,16 +358,22 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   };
 
   const handleExport = () => {
-    const headers = ['Date', 'Time', 'User', 'Action', 'Description', 'Changes', 'Page'];
+    const headers = ['Date', 'Time', 'User', 'Action', 'Page', 'Entity Type', 'Entity ID', 'DFP Date', 'Unit', 'Location', 'Model', 'Description', 'Changes'];
     const escapeCsv = (value: string) => `"${String(value || '').replaceAll('"', '""')}"`;
     const rows = sortedLogs.map(log => [
       log.timestamp.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
       log.timestamp.toLocaleTimeString(),
       log.user,
       log.action,
+      log.page,
+      log.entityType || '',
+      log.entityId || '',
+      log.dfpDate || '',
+      log.unit || '',
+      log.location || '',
+      log.operationalModel || '',
       log.description,
-      log.changes || '',
-      log.page
+      log.changes || ''
     ]);
     const csv = [
       headers.map(escapeCsv).join(','),
@@ -294,20 +430,172 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-4">
+          <div className="mb-4 rounded-md border border-gray-700 bg-gray-900/60 p-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-gray-300">Investigation Filters</div>
+                <div className="text-[11px] text-gray-500">Showing {sortedLogs.length} of {logs.length} audit entries</div>
+              </div>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700"
+              >
+                Reset Filters
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-6">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                Date Range
+                <select
+                  value={datePreset}
+                  onChange={(event) => setDatePreset(event.target.value as AuditDatePreset)}
+                  className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white"
+                >
+                  <option value="all">All loaded</option>
+                  <option value="today">Today</option>
+                  <option value="7d">Last 7 days</option>
+                  <option value="30d">Last 30 days</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                Page / Module
+                <select
+                  value={pageFilter}
+                  onChange={(event) => setPageFilter(event.target.value)}
+                  className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white"
+                >
+                  <option value="">All pages</option>
+                  {pageOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </label>
+
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                Action
+                <select
+                  value={actionFilter}
+                  onChange={(event) => setActionFilter(event.target.value)}
+                  className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white"
+                >
+                  <option value="">All actions</option>
+                  {actionOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </label>
+
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                User
+                <input
+                  value={userFilter}
+                  onChange={(event) => setUserFilter(event.target.value)}
+                  placeholder="Name or ID"
+                  className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                />
+              </label>
+
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                Unit / Org
+                <input
+                  value={unitFilter}
+                  onChange={(event) => setUnitFilter(event.target.value)}
+                  placeholder="1FTS, CFS"
+                  className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                />
+              </label>
+
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                Search
+                <input
+                  value={searchFilter}
+                  onChange={(event) => setSearchFilter(event.target.value)}
+                  placeholder="Anything"
+                  className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                />
+              </label>
+            </div>
+
+            {datePreset === 'custom' && (
+              <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-6">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  From
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(event) => setDateFrom(event.target.value)}
+                    className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white"
+                  />
+                </label>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  To
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(event) => setDateTo(event.target.value)}
+                    className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white"
+                  />
+                </label>
+              </div>
+            )}
+
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-gray-400">Advanced Filters</summary>
+              <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  Location
+                  <input
+                    value={locationFilter}
+                    onChange={(event) => setLocationFilter(event.target.value)}
+                    placeholder="YMES"
+                    className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                  />
+                </label>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  Model
+                  <input
+                    value={modelFilter}
+                    onChange={(event) => setModelFilter(event.target.value)}
+                    placeholder="Flight School"
+                    className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                  />
+                </label>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  DFP Date
+                  <input
+                    type="date"
+                    value={dfpDateFilter}
+                    onChange={(event) => setDfpDateFilter(event.target.value)}
+                    className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white"
+                  />
+                </label>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  Affected Record
+                  <input
+                    value={entityFilter}
+                    onChange={(event) => setEntityFilter(event.target.value)}
+                    placeholder="Person, tile, ID"
+                    className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                  />
+                </label>
+              </div>
+            </details>
+          </div>
+
           {sortedLogs.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <p className="text-lg font-medium">No audit logs found</p>
-              <p className="text-sm mt-2">Activity on this page will be recorded here</p>
+              <p className="text-lg font-medium">{logs.length === 0 ? 'No audit logs found' : 'No audit logs match the current filters'}</p>
+              <p className="text-sm mt-2">{logs.length === 0 ? 'Activity on this page will be recorded here' : 'Clear or broaden the filters to review more entries'}</p>
             </div>
           ) : (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-gray-700 bg-gray-900/60 px-3 py-2">
-                <div className="text-xs font-medium uppercase tracking-wider text-gray-400">Sort Open Date By</div>
+                <div className="text-xs font-medium uppercase tracking-wider text-gray-400">Sort Results By</div>
                 <div className="flex gap-2">
-                  {(['timestamp', 'user', 'action'] as const).map(field => (
+                  {(['timestamp', 'user', 'action', 'page', 'entityType'] as const).map(field => (
                     <button
                       key={field}
                       onClick={() => handleSort(field)}
@@ -317,7 +605,7 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                           : 'border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700'
                       }`}
                     >
-                      {field === 'timestamp' ? 'Time' : field}
+                      {field === 'timestamp' ? 'Time' : field === 'entityType' ? 'Affected' : field}
                       {sortField === field && <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
                     </button>
                   ))}
@@ -350,6 +638,8 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Time</th>
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">User</th>
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Action</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Page</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Affected</th>
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Description</th>
                               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300">Changes</th>
                             </tr>
@@ -367,6 +657,18 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
                                   <span className={`rounded px-2 py-1 text-xs font-medium ${actionClassName(log.action)}`}>
                                     {log.action}
                                   </span>
+                                </td>
+                                <td className="whitespace-nowrap px-4 py-3 text-gray-300">
+                                  {log.page || '-'}
+                                </td>
+                                <td className="px-4 py-3 text-gray-300">
+                                  <div>{log.entityType || '-'}</div>
+                                  {log.entityId && <div className="text-[11px] text-gray-500">{log.entityId}</div>}
+                                  {(log.dfpDate || log.unit || log.location || log.operationalModel) && (
+                                    <div className="mt-1 text-[11px] text-gray-500">
+                                      {[log.dfpDate, log.unit, log.location, log.operationalModel].filter(Boolean).join(' | ')}
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="px-4 py-3 text-gray-300">
                                   {log.description}

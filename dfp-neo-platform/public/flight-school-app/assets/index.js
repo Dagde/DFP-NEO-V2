@@ -6832,6 +6832,18 @@ const AuditFlyout = ({
   const [sortField, setSortField] = reactExports.useState("timestamp");
   const [sortDirection, setSortDirection] = reactExports.useState("desc");
   const [expandedDateKey, setExpandedDateKey] = reactExports.useState(null);
+  const [datePreset, setDatePreset] = reactExports.useState("all");
+  const [dateFrom, setDateFrom] = reactExports.useState("");
+  const [dateTo, setDateTo] = reactExports.useState("");
+  const [pageFilter, setPageFilter] = reactExports.useState("");
+  const [actionFilter, setActionFilter] = reactExports.useState("");
+  const [userFilter, setUserFilter] = reactExports.useState("");
+  const [unitFilter, setUnitFilter] = reactExports.useState("");
+  const [locationFilter, setLocationFilter] = reactExports.useState("");
+  const [modelFilter, setModelFilter] = reactExports.useState("");
+  const [entityFilter, setEntityFilter] = reactExports.useState("");
+  const [dfpDateFilter, setDfpDateFilter] = reactExports.useState("");
+  const [searchFilter, setSearchFilter] = reactExports.useState("");
   const getApiBase2 = () => getAppApiBase();
   const summariseValue = (value) => {
     if (value === null || value === void 0 || value === "") return "blank";
@@ -6863,7 +6875,14 @@ const AuditFlyout = ({
       description: changes.description || (changes.label ? `${entry.entityType}: ${changes.label}` : `${entry.entityType || "Record"} ${entry.action || "updated"}`),
       changes: changesText || "",
       timestamp: new Date(entry.createdAt),
-      page: changes.source || entry.entityType || "Database Audit"
+      page: changes.source || entry.entityType || "Database Audit",
+      rawAction: entry.action || "",
+      entityType: entry.entityType || "",
+      entityId: entry.entityId || "",
+      dfpDate: changes.dfpDate || changes.date || changes.scheduleDate || "",
+      unit: changes.unit || changes.unitId || changes.unitContext || changes.combinedUnit || "",
+      location: changes.location || changes.locationId || changes.base || "",
+      operationalModel: changes.operationalModel || changes.model || ""
     };
   };
   reactExports.useEffect(() => {
@@ -6873,7 +6892,7 @@ const AuditFlyout = ({
       setLogs(pageLogs);
       try {
         const sessionToken = localStorage.getItem("dfp_session_token");
-        const res = await fetch(`${getApiBase2()}/audit/logs?limit=300`, {
+        const res = await fetch(`${getApiBase2()}/audit/logs?limit=500`, {
           headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0
         });
         if (!res.ok) return;
@@ -6898,7 +6917,67 @@ const AuditFlyout = ({
       setSortDirection("desc");
     }
   };
-  const sortedLogs = reactExports.useMemo(() => [...logs].sort((a, b) => {
+  const getDateOnlyTime = (date) => {
+    const copy = new Date(date);
+    copy.setHours(0, 0, 0, 0);
+    return copy.getTime();
+  };
+  const datePresetRange = reactExports.useMemo(() => {
+    if (datePreset === "all" || datePreset === "custom") return { from: "", to: "" };
+    const today = /* @__PURE__ */ new Date();
+    today.setHours(0, 0, 0, 0);
+    const from = new Date(today);
+    if (datePreset === "7d") from.setDate(from.getDate() - 6);
+    if (datePreset === "30d") from.setDate(from.getDate() - 29);
+    const formatInputDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+    return { from: formatInputDate(from), to: formatInputDate(today) };
+  }, [datePreset]);
+  const activeDateFrom = datePreset === "custom" ? dateFrom : datePresetRange.from;
+  const activeDateTo = datePreset === "custom" ? dateTo : datePresetRange.to;
+  const matchesText = (value, filter) => !filter || String(value || "").toLowerCase().includes(filter.trim().toLowerCase());
+  const filteredLogs = reactExports.useMemo(() => logs.filter((log) => {
+    const logDateTime = getDateOnlyTime(log.timestamp);
+    if (activeDateFrom) {
+      const fromTime = (/* @__PURE__ */ new Date(`${activeDateFrom}T00:00:00`)).getTime();
+      if (logDateTime < fromTime) return false;
+    }
+    if (activeDateTo) {
+      const toTime = (/* @__PURE__ */ new Date(`${activeDateTo}T00:00:00`)).getTime();
+      if (logDateTime > toTime) return false;
+    }
+    if (pageFilter && log.page !== pageFilter) return false;
+    if (actionFilter && log.action !== actionFilter) return false;
+    if (!matchesText(log.user, userFilter)) return false;
+    if (!matchesText(log.unit, unitFilter)) return false;
+    if (!matchesText(log.location, locationFilter)) return false;
+    if (!matchesText(log.operationalModel, modelFilter)) return false;
+    if (!matchesText(log.entityType, entityFilter) && !matchesText(log.entityId, entityFilter)) return false;
+    if (dfpDateFilter && log.dfpDate !== dfpDateFilter) return false;
+    if (searchFilter.trim()) {
+      const haystack = [
+        log.user,
+        log.action,
+        log.rawAction,
+        log.page,
+        log.entityType,
+        log.entityId,
+        log.description,
+        log.changes,
+        log.dfpDate,
+        log.unit,
+        log.location,
+        log.operationalModel
+      ].join(" ").toLowerCase();
+      if (!haystack.includes(searchFilter.trim().toLowerCase())) return false;
+    }
+    return true;
+  }), [activeDateFrom, activeDateTo, actionFilter, dfpDateFilter, entityFilter, locationFilter, logs, modelFilter, pageFilter, searchFilter, unitFilter, userFilter]);
+  const sortedLogs = reactExports.useMemo(() => [...filteredLogs].sort((a, b) => {
     let comparison = 0;
     if (sortField === "timestamp") {
       comparison = a.timestamp.getTime() - b.timestamp.getTime();
@@ -6906,9 +6985,13 @@ const AuditFlyout = ({
       comparison = a.user.localeCompare(b.user);
     } else if (sortField === "action") {
       comparison = a.action.localeCompare(b.action);
+    } else if (sortField === "page") {
+      comparison = a.page.localeCompare(b.page);
+    } else if (sortField === "entityType") {
+      comparison = (a.entityType || "").localeCompare(b.entityType || "");
     }
     return sortDirection === "asc" ? comparison : -comparison;
-  }), [logs, sortDirection, sortField]);
+  }), [filteredLogs, sortDirection, sortField]);
   const getDateKey = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -6928,6 +7011,23 @@ const AuditFlyout = ({
     return dateKey === todayDateKey ? `Today - ${label}` : label;
   };
   const actionClassName = (action) => action === "View" ? "bg-blue-900/50 text-blue-300" : action === "Edit" ? "bg-yellow-900/50 text-yellow-300" : action === "Add" ? "bg-green-900/50 text-green-300" : action === "Delete" ? "bg-red-900/50 text-red-300" : action === "Archive" ? "bg-purple-900/50 text-purple-300" : action === "Restore" ? "bg-cyan-900/50 text-cyan-300" : "bg-gray-900/50 text-gray-300";
+  const uniqueOptions = (values) => Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const pageOptions = reactExports.useMemo(() => uniqueOptions([pageName, ...logs.map((log) => log.page)]), [logs, pageName]);
+  const actionOptions = reactExports.useMemo(() => uniqueOptions(logs.map((log) => log.action)), [logs]);
+  const resetFilters = () => {
+    setDatePreset("all");
+    setDateFrom("");
+    setDateTo("");
+    setPageFilter("");
+    setActionFilter("");
+    setUserFilter("");
+    setUnitFilter("");
+    setLocationFilter("");
+    setModelFilter("");
+    setEntityFilter("");
+    setDfpDateFilter("");
+    setSearchFilter("");
+  };
   const groupedLogs = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     sortedLogs.forEach((log) => {
@@ -6977,6 +7077,8 @@ const AuditFlyout = ({
               <th>Time</th>
               <th>User</th>
               <th>Action</th>
+              <th>Page</th>
+              <th>Affected</th>
               <th>Description</th>
               <th>Changes</th>
             </tr>
@@ -6988,6 +7090,8 @@ const AuditFlyout = ({
                 <td>${log.timestamp.toLocaleTimeString()}</td>
                 <td>${log.user}</td>
                 <td>${log.action}</td>
+                <td>${log.page || "-"}</td>
+                <td>${[log.entityType, log.entityId, log.dfpDate, log.unit, log.location, log.operationalModel].filter(Boolean).join(" | ") || "-"}</td>
                 <td>${log.description}</td>
                 <td>${log.changes || "-"}</td>
               </tr>
@@ -7002,16 +7106,22 @@ const AuditFlyout = ({
     printWindow.print();
   };
   const handleExport = () => {
-    const headers = ["Date", "Time", "User", "Action", "Description", "Changes", "Page"];
+    const headers = ["Date", "Time", "User", "Action", "Page", "Entity Type", "Entity ID", "DFP Date", "Unit", "Location", "Model", "Description", "Changes"];
     const escapeCsv = (value) => `"${String(value || "").replaceAll('"', '""')}"`;
     const rows = sortedLogs.map((log) => [
       log.timestamp.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }),
       log.timestamp.toLocaleTimeString(),
       log.user,
       log.action,
+      log.page,
+      log.entityType || "",
+      log.entityId || "",
+      log.dfpDate || "",
+      log.unit || "",
+      log.location || "",
+      log.operationalModel || "",
       log.description,
-      log.changes || "",
-      log.page
+      log.changes || ""
     ]);
     const csv = [
       headers.map(escapeCsv).join(","),
@@ -7072,67 +7182,265 @@ const AuditFlyout = ({
               )
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-auto p-4", children: sortedLogs.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-12 text-gray-400", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "mx-auto h-12 w-12 mb-4", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg font-medium", children: "No audit logs found" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm mt-2", children: "Activity on this page will be recorded here" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2 rounded-md border border-gray-700 bg-gray-900/60 px-3 py-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-medium uppercase tracking-wider text-gray-400", children: "Sort Open Date By" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", children: ["timestamp", "user", "action"].map((field) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  onClick: () => handleSort(field),
-                  className: `rounded-md border px-3 py-1.5 text-xs font-semibold capitalize ${sortField === field ? "border-sky-500 bg-sky-900/40 text-sky-200" : "border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700"}`,
-                  children: [
-                    field === "timestamp" ? "Time" : field,
-                    sortField === field && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1", children: sortDirection === "asc" ? "↑" : "↓" })
-                  ]
-                },
-                field
-              )) })
-            ] }),
-            groupedLogs.map((group) => {
-              const isExpanded = expandedDateKey === group.dateKey;
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-gray-700 bg-gray-900/30", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-auto p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-md border border-gray-700 bg-gray-900/60 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wider text-gray-300", children: "Investigation Filters" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-gray-500", children: [
+                    "Showing ",
+                    sortedLogs.length,
+                    " of ",
+                    logs.length,
+                    " audit entries"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
                     type: "button",
-                    onClick: () => setExpandedDateKey(isExpanded ? null : group.dateKey),
-                    className: `flex w-full items-center justify-between px-4 py-3 text-left transition ${isExpanded ? "bg-gray-700 text-white" : "bg-gray-800 text-gray-200 hover:bg-gray-700/70"}`,
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold", children: formatDateHeading(group.dateKey) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400", children: [
-                          group.entries.length,
-                          " recorded activit",
-                          group.entries.length === 1 ? "y" : "ies"
-                        ] })
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xl leading-none text-gray-300", children: isExpanded ? "−" : "+" })
-                    ]
+                    onClick: resetFilters,
+                    className: "rounded-md border border-gray-600 bg-gray-800 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700",
+                    children: "Reset Filters"
                   }
-                ),
-                isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Time" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "User" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Action" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Description" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Changes" })
-                  ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800/70", children: group.entries.map((log) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/50", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.timestamp.toLocaleTimeString() }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.user }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2 py-1 text-xs font-medium ${actionClassName(log.action)}`, children: log.action }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-gray-300", children: log.description }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-sm text-gray-400", children: log.changes || "-" })
-                  ] }, log.id)) })
-                ] }) })
-              ] }, group.dateKey);
-            })
-          ] }) }),
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 lg:grid-cols-6", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                  "Date Range",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      value: datePreset,
+                      onChange: (event) => setDatePreset(event.target.value),
+                      className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All loaded" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "today", children: "Today" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "7d", children: "Last 7 days" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "30d", children: "Last 30 days" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "custom", children: "Custom" })
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                  "Page / Module",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      value: pageFilter,
+                      onChange: (event) => setPageFilter(event.target.value),
+                      className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All pages" }),
+                        pageOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                  "Action",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      value: actionFilter,
+                      onChange: (event) => setActionFilter(event.target.value),
+                      className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All actions" }),
+                        actionOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                  "User",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      value: userFilter,
+                      onChange: (event) => setUserFilter(event.target.value),
+                      placeholder: "Name or ID",
+                      className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                  "Unit / Org",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      value: unitFilter,
+                      onChange: (event) => setUnitFilter(event.target.value),
+                      placeholder: "1FTS, CFS",
+                      className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                  "Search",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      value: searchFilter,
+                      onChange: (event) => setSearchFilter(event.target.value),
+                      placeholder: "Anything",
+                      className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                    }
+                  )
+                ] })
+              ] }),
+              datePreset === "custom" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid grid-cols-2 gap-2 lg:grid-cols-6", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                  "From",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "date",
+                      value: dateFrom,
+                      onChange: (event) => setDateFrom(event.target.value),
+                      className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                  "To",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "date",
+                      value: dateTo,
+                      onChange: (event) => setDateTo(event.target.value),
+                      className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white"
+                    }
+                  )
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("details", { className: "mt-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("summary", { className: "cursor-pointer text-xs font-semibold uppercase tracking-wider text-gray-400", children: "Advanced Filters" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid grid-cols-2 gap-2 lg:grid-cols-5", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                    "Location",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        value: locationFilter,
+                        onChange: (event) => setLocationFilter(event.target.value),
+                        placeholder: "YMES",
+                        className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                    "Model",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        value: modelFilter,
+                        onChange: (event) => setModelFilter(event.target.value),
+                        placeholder: "Flight School",
+                        className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                    "DFP Date",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "date",
+                        value: dfpDateFilter,
+                        onChange: (event) => setDfpDateFilter(event.target.value),
+                        className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
+                    "Affected Record",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        value: entityFilter,
+                        onChange: (event) => setEntityFilter(event.target.value),
+                        placeholder: "Person, tile, ID",
+                        className: "mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-2 text-xs normal-case tracking-normal text-white placeholder:text-gray-500"
+                      }
+                    )
+                  ] })
+                ] })
+              ] })
+            ] }),
+            sortedLogs.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-12 text-gray-400", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "mx-auto h-12 w-12 mb-4", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg font-medium", children: logs.length === 0 ? "No audit logs found" : "No audit logs match the current filters" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm mt-2", children: logs.length === 0 ? "Activity on this page will be recorded here" : "Clear or broaden the filters to review more entries" })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2 rounded-md border border-gray-700 bg-gray-900/60 px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-medium uppercase tracking-wider text-gray-400", children: "Sort Results By" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", children: ["timestamp", "user", "action", "page", "entityType"].map((field) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    onClick: () => handleSort(field),
+                    className: `rounded-md border px-3 py-1.5 text-xs font-semibold capitalize ${sortField === field ? "border-sky-500 bg-sky-900/40 text-sky-200" : "border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700"}`,
+                    children: [
+                      field === "timestamp" ? "Time" : field === "entityType" ? "Affected" : field,
+                      sortField === field && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1", children: sortDirection === "asc" ? "↑" : "↓" })
+                    ]
+                  },
+                  field
+                )) })
+              ] }),
+              groupedLogs.map((group) => {
+                const isExpanded = expandedDateKey === group.dateKey;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-gray-700 bg-gray-900/30", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => setExpandedDateKey(isExpanded ? null : group.dateKey),
+                      className: `flex w-full items-center justify-between px-4 py-3 text-left transition ${isExpanded ? "bg-gray-700 text-white" : "bg-gray-800 text-gray-200 hover:bg-gray-700/70"}`,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold", children: formatDateHeading(group.dateKey) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400", children: [
+                            group.entries.length,
+                            " recorded activit",
+                            group.entries.length === 1 ? "y" : "ies"
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xl leading-none text-gray-300", children: isExpanded ? "−" : "+" })
+                      ]
+                    }
+                  ),
+                  isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Time" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "User" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Action" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Page" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Affected" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Description" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-300", children: "Changes" })
+                    ] }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700 bg-gray-800/70", children: group.entries.map((log) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/50", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.timestamp.toLocaleTimeString() }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.user }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded px-2 py-1 text-xs font-medium ${actionClassName(log.action)}`, children: log.action }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-3 text-gray-300", children: log.page || "-" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-4 py-3 text-gray-300", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: log.entityType || "-" }),
+                        log.entityId && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: log.entityId }),
+                        (log.dfpDate || log.unit || log.location || log.operationalModel) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] text-gray-500", children: [log.dfpDate, log.unit, log.location, log.operationalModel].filter(Boolean).join(" | ") })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-gray-300", children: log.description }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-sm text-gray-400", children: log.changes || "-" })
+                    ] }, log.id)) })
+                  ] }) })
+                ] }, group.dateKey);
+              })
+            ] })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-t border-gray-700 bg-gray-900 rounded-b-lg flex justify-between items-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-400", children: [
               "Total entries: ",

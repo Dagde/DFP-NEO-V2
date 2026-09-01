@@ -6289,6 +6289,16 @@ app.get('/api/audit/logs', async (req, res) => {
     const limit = Math.max(1, Math.min(Number(req.query.limit || 200), 500));
     const entityType = req.query.entityType ? String(req.query.entityType) : '';
     const action = req.query.action ? String(req.query.action) : '';
+    const page = req.query.page ? String(req.query.page) : '';
+    const dateFrom = req.query.dateFrom ? String(req.query.dateFrom) : '';
+    const dateTo = req.query.dateTo ? String(req.query.dateTo) : '';
+    const userSearch = req.query.user ? String(req.query.user) : '';
+    const search = req.query.search ? String(req.query.search) : '';
+    const entityId = req.query.entityId ? String(req.query.entityId) : '';
+    const dfpDate = req.query.dfpDate ? String(req.query.dfpDate) : '';
+    const unit = req.query.unit ? String(req.query.unit) : '';
+    const location = req.query.location ? String(req.query.location) : '';
+    const operationalModel = req.query.operationalModel ? String(req.query.operationalModel) : '';
     const params = [];
     const where = [];
 
@@ -6300,6 +6310,73 @@ app.get('/api/audit/logs', async (req, res) => {
     if (action) {
       params.push(action);
       where.push(`a.action = $${params.length}`);
+    }
+
+    if (entityId) {
+      params.push(entityId);
+      where.push(`a."entityId" = $${params.length}`);
+    }
+
+    if (dateFrom) {
+      params.push(new Date(`${dateFrom}T00:00:00.000Z`));
+      where.push(`a."createdAt" >= $${params.length}`);
+    }
+
+    if (dateTo) {
+      const dateToEnd = new Date(`${dateTo}T00:00:00.000Z`);
+      dateToEnd.setUTCDate(dateToEnd.getUTCDate() + 1);
+      params.push(dateToEnd);
+      where.push(`a."createdAt" < $${params.length}`);
+    }
+
+    if (page) {
+      params.push(`%${page}%`);
+      where.push(`COALESCE(a.changes->>'source', a."entityType", '') ILIKE $${params.length}`);
+    }
+
+    if (dfpDate) {
+      params.push(dfpDate);
+      where.push(`COALESCE(a.changes->>'dfpDate', a.changes->>'date', a.changes->>'scheduleDate', '') = $${params.length}`);
+    }
+
+    if (unit) {
+      params.push(`%${unit}%`);
+      where.push(`COALESCE(a.changes->>'unit', a.changes->>'unitId', a.changes->>'unitContext', a.changes->>'combinedUnit', a.changes::text, '') ILIKE $${params.length}`);
+    }
+
+    if (location) {
+      params.push(`%${location}%`);
+      where.push(`COALESCE(a.changes->>'location', a.changes->>'locationId', a.changes->>'base', a.changes::text, '') ILIKE $${params.length}`);
+    }
+
+    if (operationalModel) {
+      params.push(`%${operationalModel}%`);
+      where.push(`COALESCE(a.changes->>'operationalModel', a.changes->>'model', a.changes::text, '') ILIKE $${params.length}`);
+    }
+
+    if (userSearch) {
+      params.push(`%${userSearch}%`);
+      where.push(`(
+        u.username ILIKE $${params.length}
+        OR u."userId" ILIKE $${params.length}
+        OR u."firstName" ILIKE $${params.length}
+        OR u."lastName" ILIKE $${params.length}
+        OR CONCAT_WS(' ', u."firstName", u."lastName") ILIKE $${params.length}
+      )`);
+    }
+
+    if (search) {
+      params.push(`%${search}%`);
+      where.push(`(
+        a.action ILIKE $${params.length}
+        OR a."entityType" ILIKE $${params.length}
+        OR COALESCE(a."entityId", '') ILIKE $${params.length}
+        OR COALESCE(a.changes::text, '') ILIKE $${params.length}
+        OR COALESCE(u.username, '') ILIKE $${params.length}
+        OR COALESCE(u."userId", '') ILIKE $${params.length}
+        OR COALESCE(u."firstName", '') ILIKE $${params.length}
+        OR COALESCE(u."lastName", '') ILIKE $${params.length}
+      )`);
     }
 
     params.push(limit);
