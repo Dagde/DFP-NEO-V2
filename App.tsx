@@ -52758,7 +52758,7 @@ appliedUpdates.forEach(update => {
                         type="button"
                         onClick={handleOpenArchiveReport}
                         title="Open the archive health report for this DFP date"
-                        className="w-[75px] rounded-md border border-sky-200/35 bg-gray-900/10 px-1.5 py-1.5 text-center text-[10px] font-semibold leading-tight text-sky-100/70 shadow-none transition-colors hover:border-sky-200/50 hover:bg-sky-300/10 hover:text-sky-100"
+                        className="w-[75px] rounded-md border border-sky-200/55 bg-gray-900/15 px-1.5 py-1.5 text-center text-[10px] font-semibold leading-tight text-sky-100/85 shadow-none transition-colors hover:border-sky-100/75 hover:bg-sky-300/12 hover:text-white"
                     >
                         Archive<br/>Report
                     </button>
