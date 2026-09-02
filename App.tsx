@@ -5733,7 +5733,7 @@ const DfpSidePanelTimeline: React.FC<{
     };
 
     return (
-        <div className="neo-assist-light-shell border-b border-slate-300 bg-slate-100/95 p-4 text-slate-900">
+        <div className="neo-assist-light-shell border-b border-slate-300 bg-slate-100 p-4 text-slate-900">
             <style>{`
                 .neo-assist-light-shell {
                     color: #0f172a;
@@ -5761,6 +5761,12 @@ const DfpSidePanelTimeline: React.FC<{
                 .neo-assist-light-shell .text-orange-50 {
                     color: #334155 !important;
                 }
+                .neo-assist-light-shell .text-emerald-50,
+                .neo-assist-light-shell .text-emerald-100,
+                .neo-assist-light-shell .text-emerald-200,
+                .neo-assist-light-shell .text-lime-50 {
+                    color: #047857 !important;
+                }
                 .neo-assist-light-shell .bg-slate-950,
                 .neo-assist-light-shell .bg-slate-950\\/72,
                 .neo-assist-light-shell .bg-slate-950\\/80,
@@ -5781,11 +5787,28 @@ const DfpSidePanelTimeline: React.FC<{
                 .neo-assist-light-shell .bg-slate-700 {
                     background-color: rgba(248, 250, 252, 0.96) !important;
                 }
+                .neo-assist-light-shell .bg-cyan-400\\/10,
+                .neo-assist-light-shell .bg-cyan-400\\/15,
+                .neo-assist-light-shell .bg-emerald-400\\/15,
+                .neo-assist-light-shell .bg-emerald-500\\/10 {
+                    background-color: rgba(224, 242, 254, 0.72) !important;
+                }
+                .neo-assist-light-shell .bg-orange-500\\/10,
+                .neo-assist-light-shell .bg-orange-500\\/20,
+                .neo-assist-light-shell .bg-orange-500\\/35,
+                .neo-assist-light-shell .bg-orange-500\\/18 {
+                    background-color: rgba(255, 237, 213, 0.78) !important;
+                }
                 .neo-assist-light-shell .border-slate-700,
                 .neo-assist-light-shell .border-slate-700\\/50,
                 .neo-assist-light-shell .border-slate-700\\/70,
                 .neo-assist-light-shell .border-cyan-400\\/15,
-                .neo-assist-light-shell .border-cyan-400\\/25 {
+                .neo-assist-light-shell .border-cyan-400\\/25,
+                .neo-assist-light-shell .border-cyan-400\\/40,
+                .neo-assist-light-shell .border-cyan-300\\/70,
+                .neo-assist-light-shell .border-emerald-300\\/70,
+                .neo-assist-light-shell .border-emerald-500\\/35,
+                .neo-assist-light-shell .border-slate-600\\/70 {
                     border-color: rgba(203, 213, 225, 0.9) !important;
                 }
                 .neo-assist-light-shell input,
@@ -5794,6 +5817,12 @@ const DfpSidePanelTimeline: React.FC<{
                     background-color: #ffffff !important;
                     color: #0f172a !important;
                     border-color: #cbd5e1 !important;
+                }
+                .neo-assist-light-shell button:not([draggable]) {
+                    color: #0f172a !important;
+                }
+                .neo-assist-light-shell .shadow-\\[0_0_14px_rgba\\(251\\,146\\,60\\,0\\.22\\)\\] {
+                    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
                 }
             `}</style>
             {usesNeoAssistModeHeader ? (
@@ -5893,7 +5922,7 @@ const DfpSidePanelTimeline: React.FC<{
             {isNeoAssistWizardMode && renderAssistDfpOverview()}
             {isNeoAssistWizardMode ? (
                 <div
-                    className="mt-3 min-h-[520px] bg-[#fb923c] p-5 text-slate-900"
+                    className="mt-3 min-h-[520px] bg-slate-100 p-5 text-slate-900"
                     style={{
                         WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, black 18px), linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)',
                         WebkitMaskComposite: 'source-in',
@@ -5911,7 +5940,7 @@ const DfpSidePanelTimeline: React.FC<{
                             to { opacity: 0; transform: translateX(-28px); }
                         }
                     `}</style>
-                    <div className="mx-auto max-w-[560px]">
+                    <div className="mx-auto max-w-[1120px]">
                         {renderWizardStep()}
                     </div>
                 </div>
@@ -5977,8 +6006,8 @@ const DfpSidePanelTimeline: React.FC<{
                                         onClick={() => setActiveAssistSection('details')}
                                         className={`w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${
                                             activeAssistSection === 'details'
-                                                ? 'border-emerald-300/70 bg-emerald-400/15 text-emerald-50'
-                                                : 'border-emerald-500/35 bg-emerald-500/10 text-emerald-100/85 hover:border-emerald-300/55 hover:text-emerald-50'
+                                                ? 'border-cyan-300 bg-cyan-50 text-slate-900'
+                                                : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
                                         }`}
                                     >
                                         Manual Tile Creator
@@ -5991,8 +6020,8 @@ const DfpSidePanelTimeline: React.FC<{
                                             onClick={() => setActiveAssistSection(section.id)}
                                             className={`w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${
                                                 activeAssistSection === section.id
-                                                    ? 'border-cyan-300/70 bg-cyan-400/15 text-cyan-50'
-                                                    : 'border-slate-600/70 bg-slate-900/65 text-slate-300 hover:border-cyan-400/45 hover:text-cyan-100'
+                                                    ? 'border-cyan-300 bg-cyan-50 text-slate-900'
+                                                    : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
                                             }`}
                                         >
                                             {section.label}
@@ -6000,13 +6029,13 @@ const DfpSidePanelTimeline: React.FC<{
                                     ))}
                                 </div>
                                 <div className="min-w-0 space-y-3">
-                                    <div className="rounded-md border border-slate-700/75 bg-slate-900/65 p-3">
-                                        <div className="mb-2 border-b border-slate-700/70 pb-2">
-                                            <p className="text-[11px] font-semibold text-white">
+                                    <div className="rounded-md border border-slate-300 bg-white p-3 shadow-sm">
+                                        <div className="mb-2 border-b border-slate-200 pb-2">
+                                            <p className="text-[11px] font-semibold text-slate-900">
                                                 {activeAssistSection === 'details' ? 'Manual Tile Creator' : assistSections.find(section => section.id === activeAssistSection)?.label}
                                             </p>
                                             {activeAssistSection === 'details' && (
-                                                <p className="mt-0.5 text-[9px] text-slate-400">Separate from NEO Build priorities. Create a specific tile by choosing the event, person or crew, timing and resource details.</p>
+                                                <p className="mt-0.5 text-[9px] text-slate-500">Separate from NEO Build priorities. Create a specific tile by choosing the event, person or crew, timing and resource details.</p>
                                             )}
                                         </div>
                                         {renderAssistSection()}
