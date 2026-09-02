@@ -3433,6 +3433,13 @@ const DfpSidePanelTimeline: React.FC<{
                             key={`assist-priority-tab-${option.value}`}
                             type="button"
                             onClick={() => setAssistPrioritySourceView(option.value)}
+                            style={option.value === 'all'
+                                ? {
+                                    backgroundColor: assistPriorityTypeFilter === option.value ? '#dcfce7' : '#ecfdf5',
+                                    borderColor: assistPriorityTypeFilter === option.value ? '#86efac' : '#bbf7d0',
+                                    color: '#14532d',
+                                }
+                                : undefined}
                             className={`rounded-md border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                                 option.value === 'all'
                                     ? assistPriorityTypeFilter === option.value
@@ -6340,6 +6347,13 @@ const DfpSidePanelTimeline: React.FC<{
                                                 key={`assist-priority-source-${option.value}`}
                                                 type="button"
                                                 onClick={() => setAssistPrioritySourceView(option.value)}
+                                                style={option.value === 'all'
+                                                    ? {
+                                                        backgroundColor: assistPriorityTypeFilter === option.value ? '#dcfce7' : '#ecfdf5',
+                                                        borderColor: assistPriorityTypeFilter === option.value ? '#86efac' : '#bbf7d0',
+                                                        color: '#14532d',
+                                                    }
+                                                    : undefined}
                                                 className={`min-h-[44px] rounded-md border px-3 py-2 text-left text-[11px] font-semibold shadow-sm transition ${
                                                     option.value === 'all'
                                                         ? assistPriorityTypeFilter === option.value

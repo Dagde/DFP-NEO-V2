@@ -103512,6 +103512,11 @@ const DfpSidePanelTimeline = ({
         {
           type: "button",
           onClick: () => setAssistPrioritySourceView(option.value),
+          style: option.value === "all" ? {
+            backgroundColor: assistPriorityTypeFilter === option.value ? "#dcfce7" : "#ecfdf5",
+            borderColor: assistPriorityTypeFilter === option.value ? "#86efac" : "#bbf7d0",
+            color: "#14532d"
+          } : void 0,
           className: `rounded-md border px-2.5 py-1.5 text-[11px] font-semibold transition ${option.value === "all" ? assistPriorityTypeFilter === option.value ? "border-emerald-300 bg-emerald-50 text-emerald-950 shadow-sm" : "border-emerald-200 bg-emerald-50/70 text-emerald-900 hover:border-emerald-300 hover:bg-emerald-50" : assistPriorityTypeFilter === option.value ? "border-cyan-300 bg-cyan-50 text-slate-950" : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50"}`,
           children: [
             option.label,
@@ -106342,6 +106347,11 @@ const DfpSidePanelTimeline = ({
             {
               type: "button",
               onClick: () => setAssistPrioritySourceView(option.value),
+              style: option.value === "all" ? {
+                backgroundColor: assistPriorityTypeFilter === option.value ? "#dcfce7" : "#ecfdf5",
+                borderColor: assistPriorityTypeFilter === option.value ? "#86efac" : "#bbf7d0",
+                color: "#14532d"
+              } : void 0,
               className: `min-h-[44px] rounded-md border px-3 py-2 text-left text-[11px] font-semibold shadow-sm transition ${option.value === "all" ? assistPriorityTypeFilter === option.value ? "border-emerald-300 bg-emerald-50 text-emerald-950" : "border-emerald-200 bg-emerald-50/70 text-emerald-900 hover:border-emerald-300 hover:bg-emerald-50" : assistPriorityTypeFilter === option.value ? "border-cyan-300 bg-cyan-50 text-slate-950" : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block leading-tight", children: option.label }),
