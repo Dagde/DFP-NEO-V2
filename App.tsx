@@ -5733,7 +5733,60 @@ const DfpSidePanelTimeline: React.FC<{
     };
 
     return (
-        <div className="border-b border-cyan-400/15 bg-slate-950/72 p-4">
+        <div className="neo-assist-light-shell border-b border-slate-300 bg-[#fb923c] p-4 text-slate-900">
+            <style>{`
+                .neo-assist-light-shell {
+                    color: #0f172a;
+                }
+                .neo-assist-light-shell h3,
+                .neo-assist-light-shell h4,
+                .neo-assist-light-shell label,
+                .neo-assist-light-shell p,
+                .neo-assist-light-shell span {
+                    color: inherit;
+                }
+                .neo-assist-light-shell .text-white,
+                .neo-assist-light-shell .text-slate-100,
+                .neo-assist-light-shell .text-slate-200,
+                .neo-assist-light-shell .text-slate-300,
+                .neo-assist-light-shell .text-slate-400 {
+                    color: #0f172a !important;
+                }
+                .neo-assist-light-shell .text-slate-500,
+                .neo-assist-light-shell .text-cyan-100,
+                .neo-assist-light-shell .text-cyan-200,
+                .neo-assist-light-shell .text-cyan-300,
+                .neo-assist-light-shell .text-cyan-50,
+                .neo-assist-light-shell .text-orange-100,
+                .neo-assist-light-shell .text-orange-50 {
+                    color: #334155 !important;
+                }
+                .neo-assist-light-shell .bg-slate-950,
+                .neo-assist-light-shell .bg-slate-950\\/72,
+                .neo-assist-light-shell .bg-slate-950\\/80,
+                .neo-assist-light-shell .bg-slate-950\\/90,
+                .neo-assist-light-shell .bg-slate-900\\/40,
+                .neo-assist-light-shell .bg-slate-900\\/70,
+                .neo-assist-light-shell .bg-slate-900\\/80,
+                .neo-assist-light-shell .bg-slate-900\\/90,
+                .neo-assist-light-shell .bg-slate-800\\/80 {
+                    background-color: rgba(248, 250, 252, 0.92) !important;
+                }
+                .neo-assist-light-shell .border-slate-700,
+                .neo-assist-light-shell .border-slate-700\\/50,
+                .neo-assist-light-shell .border-slate-700\\/70,
+                .neo-assist-light-shell .border-cyan-400\\/15,
+                .neo-assist-light-shell .border-cyan-400\\/25 {
+                    border-color: rgba(203, 213, 225, 0.9) !important;
+                }
+                .neo-assist-light-shell input,
+                .neo-assist-light-shell select,
+                .neo-assist-light-shell textarea {
+                    background-color: #ffffff !important;
+                    color: #0f172a !important;
+                    border-color: #cbd5e1 !important;
+                }
+            `}</style>
             {usesNeoAssistModeHeader ? (
                 <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                     <button
@@ -53297,7 +53350,7 @@ appliedUpdates.forEach(update => {
                     </div>
                     {activeView === 'Program Schedule' && (
                         <aside
-                            className={`absolute inset-y-0 right-0 z-[1000] w-[calc(100%-24px)] max-w-none border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
+                            className={`absolute inset-y-0 right-0 z-[1000] w-[calc(100%-224px)] max-w-none border-l border-orange-300/70 bg-[#fb923c] shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
                             aria-hidden={!showDfpSidePanel}
                         >
                             <button
@@ -53322,7 +53375,7 @@ appliedUpdates.forEach(update => {
                                     }}
                                 />
                             </button>
-                            <div className="h-full overflow-y-auto border-l border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80">
+                            <div className="h-full overflow-y-auto border-l border-orange-200/55 bg-[#fb923c]">
                                 <DfpSidePanelTimeline
                                     flyingStartTime={flyingStartTime}
                                     flyingEndTime={flyingEndTime}
