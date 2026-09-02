@@ -101479,6 +101479,49 @@ const normaliseAssistPriorityWeights = (items) => {
     weight: item.enabled === false ? 0 : (stepsByItem.get(item) || 0) * ASSIST_PRIORITY_STEP
   }));
 };
+const NEO_ASSIST_CURRENCY_TRACE_KEY = "neo_assist_currency_persistence_trace";
+const appendNeoAssistCurrencyTrace = (stage, details = {}) => {
+  try {
+    if (typeof window === "undefined") return;
+    const existing = JSON.parse(localStorage.getItem(NEO_ASSIST_CURRENCY_TRACE_KEY) || "[]");
+    const entries = Array.isArray(existing) ? existing : [];
+    entries.push({
+      stage,
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      url: window.location.href,
+      ...details
+    });
+    localStorage.setItem(NEO_ASSIST_CURRENCY_TRACE_KEY, JSON.stringify(entries.slice(-250)));
+  } catch (error) {
+    console.warn("[NEO_ASSIST_CURRENCY_TRACE] Failed to record trace entry:", error);
+  }
+};
+const downloadNeoAssistCurrencyTrace = (context = {}) => {
+  try {
+    if (typeof window === "undefined") return;
+    const entries = JSON.parse(localStorage.getItem(NEO_ASSIST_CURRENCY_TRACE_KEY) || "[]");
+    const report = {
+      reportType: "NEO_ASSIST_CURRENCY_PERSISTENCE_TRACE",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      context,
+      entryCount: Array.isArray(entries) ? entries.length : 0,
+      entries: Array.isArray(entries) ? entries : []
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const safeUser = String(context.currentUserName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
+    const safeDate = String(context.date || "no-date").replace(/[^0-9-]/g, "") || "no-date";
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `neo-assist-currency-trace-${safeUser}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("[NEO_ASSIST_CURRENCY_TRACE] Failed to download trace:", error);
+  }
+};
 const TASKING_REQUEST_STORAGE_KEY = "neoTaskingRequests";
 const TASKING_REQUESTS_UPDATED_EVENT = "neoTaskingRequestsUpdated";
 const CURRENCY_DRAFT_STORAGE_KEY = "neoCurrencyDraftEvents.v2";
@@ -105341,6 +105384,12 @@ const DfpSidePanelTimeline = ({
                   callsign: isFixedCrewNeoAssist ? buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, assistUnitCallsignNumber) : "",
                   aircraftCount: 1
                 };
+                appendNeoAssistCurrencyTrace("NEO_ASSIST_ADD_CURRENCY_CLICK", {
+                  activeUnitCode,
+                  operationalModel: normalisedAssistOperationalModel,
+                  requestType,
+                  request: nextRequest
+                });
                 onAddSctRequestFromAssist(requestType, nextRequest);
                 window.setTimeout(onSyncSctRequestsFromAssist, 120);
                 setShowAssistCurrencyForm(false);
@@ -105744,6 +105793,60 @@ const DfpSidePanelTimeline = ({
           onClick: onOpenPrioritiesExclusions,
           className: "shrink-0 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-50 transition hover:border-cyan-200",
           children: "Open Priorities"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => {
+            appendNeoAssistCurrencyTrace("NEO_ASSIST_CURRENCY_TRACE_DOWNLOAD_REQUESTED", {
+              date,
+              activeUnitCode,
+              operationalModel: normalisedAssistOperationalModel,
+              sctFlightCount: sctFlights.length,
+              sctFtdCount: sctFtds.length
+            });
+            downloadNeoAssistCurrencyTrace({
+              date,
+              activeUnitCode,
+              operationalModel: normalisedAssistOperationalModel,
+              sctFlights: sctFlights.map((request) => ({
+                id: request.id,
+                userId: request.userId,
+                name: request.name,
+                event: request.event,
+                currency: request.currency,
+                dateRequested: request.dateRequested,
+                requestedTime: request.requestedTime,
+                priority: request.priority,
+                submitted: request.submitted,
+                includeInBuild: request.includeInBuild,
+                requestType: request.requestType || "flight",
+                crewMember: request.crewMember,
+                crewIndividual: request.crewIndividual,
+                crewDisplayLabel: request.crewDisplayLabel
+              })),
+              sctFtds: sctFtds.map((request) => ({
+                id: request.id,
+                userId: request.userId,
+                name: request.name,
+                event: request.event,
+                currency: request.currency,
+                dateRequested: request.dateRequested,
+                requestedTime: request.requestedTime,
+                priority: request.priority,
+                submitted: request.submitted,
+                includeInBuild: request.includeInBuild,
+                requestType: request.requestType || "ftd",
+                crewMember: request.crewMember,
+                crewIndividual: request.crewIndividual,
+                crewDisplayLabel: request.crewDisplayLabel
+              }))
+            });
+          },
+          className: "shrink-0 rounded-md border border-slate-500/45 bg-slate-900/40 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 transition hover:border-cyan-300/60 hover:text-cyan-50",
+          children: "Request Trace"
         }
       )
     ] }),
@@ -126805,10 +126908,38 @@ const App = () => {
         const res = await fetch(`/api/sct-requests?userId=${sessionUser.userId}`);
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
+          appendNeoAssistCurrencyTrace("SCT_REQUESTS_GET_FAILED", {
+            userId: sessionUser.userId,
+            status: res.status,
+            error: errData
+          });
           console.error("[CONTINUATION] Failed to load from DB:", res.status, errData);
           return;
         }
         const data = await res.json();
+        appendNeoAssistCurrencyTrace("SCT_REQUESTS_GET_RESPONSE", {
+          userId: sessionUser.userId,
+          status: res.status,
+          totalRows: Array.isArray(data) ? data.length : 0,
+          flightRows: Array.isArray(data) ? data.filter((r) => r.requestType === "flight").length : 0,
+          ftdRows: Array.isArray(data) ? data.filter((r) => r.requestType === "ftd").length : 0,
+          currencyRows: Array.isArray(data) ? data.filter((r) => String(r.currency || r.event || "").trim()).length : 0,
+          rows: Array.isArray(data) ? data.slice(-30).map((r) => ({
+            id: r.id,
+            userId: r.userId,
+            requestType: r.requestType,
+            name: r.name,
+            event: r.event,
+            currency: r.currency,
+            dateRequested: r.dateRequested,
+            requestedTime: r.requestedTime,
+            priority: r.priority,
+            submitted: Boolean(r.submitted),
+            includeInBuild: Boolean(r.includeInBuild),
+            hasCrewRequirement: Boolean(r.crewRequirement),
+            formationCrewCount: Array.isArray(r.formationCrew) ? r.formationCrew.length : 0
+          })) : []
+        });
         const normaliseSctAcceptableConfigs = (value) => {
           if (Array.isArray(value)) return value.map((configId) => String(configId || "").trim()).filter(Boolean);
           if (typeof value === "string" && value.trim()) {
@@ -126897,6 +127028,10 @@ const App = () => {
           callsign: r.callsign || ""
         })));
       } catch (err) {
+        appendNeoAssistCurrencyTrace("SCT_REQUESTS_GET_ERROR", {
+          userId: sessionUser.userId,
+          error: err instanceof Error ? err.message : String(err)
+        });
         console.error("[CONTINUATION] Failed to load continuation requests from DB:", err);
       }
     };
@@ -144424,27 +144559,64 @@ Do you want to replace the existing entry?`,
                         sctFlights,
                         sctFtds,
                         onAddSctRequestFromAssist: async (type, request) => {
+                          appendNeoAssistCurrencyTrace("SCT_REQUEST_OPTIMISTIC_ADD", {
+                            type,
+                            currentUserId: getCurrentUserId(),
+                            sessionUserId: sessionUser?.userId || null,
+                            request
+                          });
                           if (type === "flight") setSctFlights((prev) => [...prev, request]);
                           else setSctFtds((prev) => [...prev, request]);
                           const userId = getCurrentUserId();
-                          if (!userId) return;
+                          if (!userId) {
+                            appendNeoAssistCurrencyTrace("SCT_REQUEST_SAVE_SKIPPED_NO_USER", { type, request });
+                            return;
+                          }
                           try {
+                            const payload = { ...request, userId, requestType: type };
+                            appendNeoAssistCurrencyTrace("SCT_REQUEST_POST_REQUEST", {
+                              type,
+                              userId,
+                              payload
+                            });
                             const res = await fetch("/api/sct-requests", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ ...request, userId, requestType: type })
+                              body: JSON.stringify(payload)
+                            });
+                            appendNeoAssistCurrencyTrace("SCT_REQUEST_POST_HTTP_STATUS", {
+                              type,
+                              userId,
+                              status: res.status,
+                              ok: res.ok
                             });
                             if (res.ok) {
                               const saved = await res.json();
+                              appendNeoAssistCurrencyTrace("SCT_REQUEST_POST_RESPONSE", {
+                                type,
+                                userId,
+                                saved
+                              });
                               const savedRequest = { ...request, ...saved, userId: saved.userId || userId, requestType: saved.requestType || type };
                               const updater = (prev) => prev.map((item) => item.id === request.id ? savedRequest : item);
                               if (type === "flight") setSctFlights(updater);
                               else setSctFtds(updater);
                             } else {
                               const errData = await res.json().catch(() => ({}));
+                              appendNeoAssistCurrencyTrace("SCT_REQUEST_POST_FAILED", {
+                                type,
+                                userId,
+                                status: res.status,
+                                error: errData
+                              });
                               console.error("Failed to save NEO Assist continuation request:", res.status, errData);
                             }
                           } catch (err) {
+                            appendNeoAssistCurrencyTrace("SCT_REQUEST_POST_ERROR", {
+                              type,
+                              userId,
+                              error: err instanceof Error ? err.message : String(err)
+                            });
                             console.error("Failed to save NEO Assist continuation request:", err);
                           }
                         },
