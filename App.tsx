@@ -5094,6 +5094,57 @@ const DfpSidePanelTimeline: React.FC<{
                                     </select>
                                 )}
                             </label>
+                            {isFixedCrewNeoAssist ? (
+                                <>
+                                    <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Crew
+                                        <select value={selectedFixedCrewGroup} onChange={event => handleFixedCrewAssistGroupChange(event.target.value)} className={fieldClass}>
+                                            <option value="">Select crew</option>
+                                            {fixedCrewAssistGroups.map(group => (
+                                                <option key={`assist-currency-crew-${group}`} value={group}>{formatFixedCrewDisplayGroup(group)}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">PIC
+                                        <select value={selectedFixedCrewPic} onChange={event => handleFixedCrewAssistPicChange(event.target.value)} className={fieldClass}>
+                                            <option value="">Select PIC</option>
+                                            {(fixedCrewPicCandidates.length > 0 ? fixedCrewPicCandidates : fixedCrewAssistMembers).map(staff => (
+                                                <option key={`assist-currency-pic-${staff.name}`} value={staff.name}>{staff.name}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </>
+                            ) : (
+                                <>
+                                    <label className={effectiveAssistCurrencyFlightType === 'Dual' ? 'font-semibold uppercase tracking-[0.1em] text-slate-400' : 'col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400'}>PIC
+                                        <select value={selectedCrewName} onChange={event => setCrewSelection(event.target.value, Boolean(event.target.value))} className={fieldClass}>
+                                            <option value="">Select PIC</option>
+                                            {displayedCrewOptions.map(name => (
+                                                <option key={`assist-currency-pic-${name}`} value={name}>{name}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    {effectiveAssistCurrencyFlightType === 'Dual' && (
+                                        <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Crew
+                                            <select
+                                                value={selectedCrewNames.find(name => name && name !== selectedCrewName) || ''}
+                                                onChange={event => {
+                                                    const crewName = event.target.value;
+                                                    setSelectedCrewNames([selectedCrewName, crewName].filter(Boolean));
+                                                }}
+                                                disabled={!selectedCrewName}
+                                                className={fieldClass}
+                                            >
+                                                <option value="">Select crew</option>
+                                                {displayedCrewOptions
+                                                    .filter(name => name !== selectedCrewName)
+                                                    .map(name => (
+                                                        <option key={`assist-currency-crew-${name}`} value={name}>{name}</option>
+                                                    ))}
+                                            </select>
+                                        </label>
+                                    )}
+                                </>
+                            )}
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">CONFIG
                                 <select value={assistCurrencyConfigId} onChange={event => setAssistCurrencyConfigId(event.target.value)} className={fieldClass}>
                                     {aircraftConfigurationDefinitions.map(definition => <option key={definition.id} value={definition.id}>{definition.label}</option>)}
@@ -5160,12 +5211,12 @@ const DfpSidePanelTimeline: React.FC<{
                                         submitted: false,
                                         includeInBuild: false,
                                         aircraftConfigId: assistCurrencyConfigId,
-                                        crewMember: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : '',
+                                        crewMember: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : effectiveAssistCurrencyFlightType === 'Dual' ? selectedSupportCrewName : '',
                                         crewGroup: isFixedCrewNeoAssist ? selectedFixedCrewGroup.replace(/^.*::/, '').replace(/^CREW\s*/i, '').trim() : '',
                                         crewGroupKey: isFixedCrewNeoAssist ? selectedFixedCrewGroup : '',
                                         crewUnitCode: isFixedCrewNeoAssist ? selectedFixedCrewGroup.split('::')[0] || activeAssistUnitCode : '',
-                                        crewDisplayLabel: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : '',
-                                        crewIndividual: isFixedCrewNeoAssist ? selectedFixedCrewPic : '',
+                                        crewDisplayLabel: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : effectiveAssistCurrencyFlightType === 'Dual' ? selectedSupportCrewName : '',
+                                        crewIndividual: isFixedCrewNeoAssist ? selectedFixedCrewPic : selectedCrewName,
                                         callsignBase: isFixedCrewNeoAssist ? (assistUnitCallsignBase || defaultAssistUnitCallsign) : '',
                                         callsignNumber: isFixedCrewNeoAssist ? assistUnitCallsignNumber : 0,
                                         callsign: isFixedCrewNeoAssist

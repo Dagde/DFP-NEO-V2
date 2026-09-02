@@ -105182,6 +105182,49 @@ const DfpSidePanelTimeline = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
             ] })
           ] }),
+          isFixedCrewNeoAssist ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+              "Crew",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedFixedCrewGroup, onChange: (event) => handleFixedCrewAssistGroupChange(event.target.value), className: fieldClass2, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
+                fixedCrewAssistGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group, children: formatFixedCrewDisplayGroup(group) }, `assist-currency-crew-${group}`))
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+              "PIC",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedFixedCrewPic, onChange: (event) => handleFixedCrewAssistPicChange(event.target.value), className: fieldClass2, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
+                (fixedCrewPicCandidates.length > 0 ? fixedCrewPicCandidates : fixedCrewAssistMembers).map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: staff.name }, `assist-currency-pic-${staff.name}`))
+              ] })
+            ] })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: effectiveAssistCurrencyFlightType === "Dual" ? "font-semibold uppercase tracking-[0.1em] text-slate-400" : "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+              "PIC",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedCrewName, onChange: (event) => setCrewSelection(event.target.value, Boolean(event.target.value)), className: fieldClass2, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
+                displayedCrewOptions.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, `assist-currency-pic-${name}`))
+              ] })
+            ] }),
+            effectiveAssistCurrencyFlightType === "Dual" && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+              "Crew",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: selectedCrewNames.find((name) => name && name !== selectedCrewName) || "",
+                  onChange: (event) => {
+                    const crewName = event.target.value;
+                    setSelectedCrewNames([selectedCrewName, crewName].filter(Boolean));
+                  },
+                  disabled: !selectedCrewName,
+                  className: fieldClass2,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
+                    displayedCrewOptions.filter((name) => name !== selectedCrewName).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, `assist-currency-crew-${name}`))
+                  ]
+                }
+              )
+            ] })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "CONFIG",
             /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: assistCurrencyConfigId, onChange: (event) => setAssistCurrencyConfigId(event.target.value), className: fieldClass2, children: aircraftConfigurationDefinitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, definition.id)) })
@@ -105237,12 +105280,12 @@ const DfpSidePanelTimeline = ({
                   submitted: false,
                   includeInBuild: false,
                   aircraftConfigId: assistCurrencyConfigId,
-                  crewMember: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : "",
+                  crewMember: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : effectiveAssistCurrencyFlightType === "Dual" ? selectedSupportCrewName : "",
                   crewGroup: isFixedCrewNeoAssist ? selectedFixedCrewGroup.replace(/^.*::/, "").replace(/^CREW\s*/i, "").trim() : "",
                   crewGroupKey: isFixedCrewNeoAssist ? selectedFixedCrewGroup : "",
                   crewUnitCode: isFixedCrewNeoAssist ? selectedFixedCrewGroup.split("::")[0] || activeAssistUnitCode : "",
-                  crewDisplayLabel: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : "",
-                  crewIndividual: isFixedCrewNeoAssist ? selectedFixedCrewPic : "",
+                  crewDisplayLabel: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : effectiveAssistCurrencyFlightType === "Dual" ? selectedSupportCrewName : "",
+                  crewIndividual: isFixedCrewNeoAssist ? selectedFixedCrewPic : selectedCrewName,
                   callsignBase: isFixedCrewNeoAssist ? assistUnitCallsignBase || defaultAssistUnitCallsign : "",
                   callsignNumber: isFixedCrewNeoAssist ? assistUnitCallsignNumber : 0,
                   callsign: isFixedCrewNeoAssist ? buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, assistUnitCallsignNumber) : "",
