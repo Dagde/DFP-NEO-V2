@@ -3262,6 +3262,24 @@ const DfpSidePanelTimeline: React.FC<{
     const assistPriorityUnitOptions = useMemo(() => (
         Array.from(new Set(assistBuildQueueRows.map(row => row.unit).filter(Boolean))).sort((left, right) => left.localeCompare(right))
     ), [assistBuildQueueRows]);
+    const assistPrioritySourceTabs = useMemo(() => [
+        { value: 'all', label: 'All Priority Sources', count: assistBuildQueueRows.length },
+        { value: 'tasking', label: 'Directed Tasks', count: assistBuildQueueRows.filter(row => row.group === 'tasking').length },
+        { value: 'currency', label: 'Staff Currency Events', count: assistBuildQueueRows.filter(row => row.group === 'currency').length },
+        { value: 'special', label: 'Saved Special Events', count: assistBuildQueueRows.filter(row => row.group === 'special').length },
+        ...(normalisedAssistOperationalModel === 'flight_school'
+            ? [{ value: 'trainee-currency', label: 'Trainee Currency Events', count: assistBuildQueueRows.filter(row => row.group === 'trainee-currency').length }]
+            : []),
+        { value: 'bulk-currency', label: 'Bulk Currency Builder', count: null },
+    ], [assistBuildQueueRows, normalisedAssistOperationalModel]);
+    const setAssistPrioritySourceView = (value: string) => {
+        setAssistPriorityTypeFilter(value);
+        if (value === 'tasking') setActiveAssistSection('taskings');
+        if (value === 'currency') setActiveAssistSection('currency');
+        if (value === 'special') setActiveAssistSection('saved-special');
+        if (value === 'trainee-currency') setActiveAssistSection('trainee-currency');
+        if (value === 'bulk-currency') setActiveAssistSection('bulk-currency');
+    };
     const moveAssistBuildQueueEvent = (eventId: string, direction: -1 | 1) => {
         const currentIndex = highestPriorityEvents.findIndex(event => event.id === eventId);
         const nextIndex = currentIndex + direction;
@@ -3333,16 +3351,6 @@ const DfpSidePanelTimeline: React.FC<{
             'trainee-currency': 'Trainee Currency Events',
             special: 'Saved Special Events',
         };
-        const priorityTypeOptions = [
-            { value: 'all', label: 'All priority sources' },
-            { value: 'tasking', label: 'Directed Tasks' },
-            { value: 'currency', label: 'Staff Currency Events' },
-            { value: 'special', label: 'Saved Special Events' },
-            ...(normalisedAssistOperationalModel === 'flight_school'
-                ? [{ value: 'trainee-currency', label: 'Trainee Currency Events' }]
-                : []),
-            { value: 'bulk-currency', label: 'Bulk Currency Builder' },
-        ];
         return (
             <div className="rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
                 <div className="mb-2 flex items-start justify-between gap-3">
@@ -3362,7 +3370,7 @@ const DfpSidePanelTimeline: React.FC<{
                     <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                         Type
                         <select value={assistPriorityTypeFilter} onChange={event => setAssistPriorityTypeFilter(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900">
-                            {priorityTypeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                            {assistPrioritySourceTabs.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                         </select>
                     </label>
                     <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
@@ -3386,25 +3394,18 @@ const DfpSidePanelTimeline: React.FC<{
                     </label>
                 </div>
                 <div className="mb-3 flex flex-wrap gap-1.5">
-                    {priorityTypeOptions.map(option => (
+                    {assistPrioritySourceTabs.map(option => (
                         <button
                             key={`assist-priority-tab-${option.value}`}
                             type="button"
-                            onClick={() => {
-                                setAssistPriorityTypeFilter(option.value);
-                                if (option.value === 'tasking') setActiveAssistSection('taskings');
-                                if (option.value === 'currency') setActiveAssistSection('currency');
-                                if (option.value === 'special') setActiveAssistSection('saved-special');
-                                if (option.value === 'trainee-currency') setActiveAssistSection('trainee-currency');
-                                if (option.value === 'bulk-currency') setActiveAssistSection('bulk-currency');
-                            }}
+                            onClick={() => setAssistPrioritySourceView(option.value)}
                             className={`rounded-md border px-2.5 py-1.5 text-[11px] font-semibold transition ${
                                 assistPriorityTypeFilter === option.value
                                     ? 'border-cyan-300 bg-cyan-50 text-slate-950'
                                     : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
                             }`}
                         >
-                            {option.label}
+                            {option.label}{option.count === null ? '' : ` (${option.count})`}
                         </button>
                     ))}
                 </div>
@@ -6190,6 +6191,33 @@ const DfpSidePanelTimeline: React.FC<{
                         </div>
                         {activeAssistPage === 'priority' ? (
                             <div className="min-w-0">
+                                <div className="rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
+                                    <div className="mb-2 flex items-center justify-between gap-3">
+                                        <div>
+                                            <h4 className="text-[14px] font-semibold text-slate-950">Priority Sources</h4>
+                                            <p className="text-[11px] text-slate-600">Choose the build-priority source to view, edit, order, or send to the main Priorities page.</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+                                        {assistPrioritySourceTabs.map(option => (
+                                            <button
+                                                key={`assist-priority-source-${option.value}`}
+                                                type="button"
+                                                onClick={() => setAssistPrioritySourceView(option.value)}
+                                                className={`min-h-[44px] rounded-md border px-3 py-2 text-left text-[11px] font-semibold shadow-sm transition ${
+                                                    assistPriorityTypeFilter === option.value
+                                                        ? 'border-cyan-300 bg-cyan-50 text-slate-950'
+                                                        : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
+                                                }`}
+                                            >
+                                                <span className="block leading-tight">{option.label}</span>
+                                                <span className="mt-0.5 block text-[10px] font-medium text-slate-500">
+                                                    {option.count === null ? 'Setup section' : `${option.count} item${option.count === 1 ? '' : 's'}`}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                                 {renderAssistDfpOverview()}
                                 <div className="mt-3">
                                     {renderAssistBuildQueue()}

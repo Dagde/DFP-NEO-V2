@@ -103345,6 +103345,22 @@ const DfpSidePanelTimeline = ({
     });
   }, [assistBuildQueueRows, assistPriorityPersonFilter, assistPrioritySchedulerFilter, assistPriorityTypeFilter, assistPriorityUnitFilter]);
   const assistPriorityUnitOptions = reactExports.useMemo(() => Array.from(new Set(assistBuildQueueRows.map((row) => row.unit).filter(Boolean))).sort((left, right) => left.localeCompare(right)), [assistBuildQueueRows]);
+  const assistPrioritySourceTabs = reactExports.useMemo(() => [
+    { value: "all", label: "All Priority Sources", count: assistBuildQueueRows.length },
+    { value: "tasking", label: "Directed Tasks", count: assistBuildQueueRows.filter((row) => row.group === "tasking").length },
+    { value: "currency", label: "Staff Currency Events", count: assistBuildQueueRows.filter((row) => row.group === "currency").length },
+    { value: "special", label: "Saved Special Events", count: assistBuildQueueRows.filter((row) => row.group === "special").length },
+    ...normalisedAssistOperationalModel === "flight_school" ? [{ value: "trainee-currency", label: "Trainee Currency Events", count: assistBuildQueueRows.filter((row) => row.group === "trainee-currency").length }] : [],
+    { value: "bulk-currency", label: "Bulk Currency Builder", count: null }
+  ], [assistBuildQueueRows, normalisedAssistOperationalModel]);
+  const setAssistPrioritySourceView = (value) => {
+    setAssistPriorityTypeFilter(value);
+    if (value === "tasking") setActiveAssistSection("taskings");
+    if (value === "currency") setActiveAssistSection("currency");
+    if (value === "special") setActiveAssistSection("saved-special");
+    if (value === "trainee-currency") setActiveAssistSection("trainee-currency");
+    if (value === "bulk-currency") setActiveAssistSection("bulk-currency");
+  };
   const moveAssistBuildQueueEvent = (eventId, direction) => {
     const currentIndex = highestPriorityEvents.findIndex((event) => event.id === eventId);
     const nextIndex = currentIndex + direction;
@@ -103416,14 +103432,6 @@ const DfpSidePanelTimeline = ({
       "trainee-currency": "Trainee Currency Events",
       special: "Saved Special Events"
     };
-    const priorityTypeOptions = [
-      { value: "all", label: "All priority sources" },
-      { value: "tasking", label: "Directed Tasks" },
-      { value: "currency", label: "Staff Currency Events" },
-      { value: "special", label: "Saved Special Events" },
-      ...normalisedAssistOperationalModel === "flight_school" ? [{ value: "trainee-currency", label: "Trainee Currency Events" }] : [],
-      { value: "bulk-currency", label: "Bulk Currency Builder" }
-    ];
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -103443,7 +103451,7 @@ const DfpSidePanelTimeline = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.75fr)_minmax(0,0.8fr)] gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
           "Type",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: assistPriorityTypeFilter, onChange: (event) => setAssistPriorityTypeFilter(event.target.value), className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900", children: priorityTypeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: assistPriorityTypeFilter, onChange: (event) => setAssistPriorityTypeFilter(event.target.value), className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900", children: assistPrioritySourceTabs.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
           "Person / Crew",
@@ -103465,20 +103473,16 @@ const DfpSidePanelTimeline = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 flex flex-wrap gap-1.5", children: priorityTypeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 flex flex-wrap gap-1.5", children: assistPrioritySourceTabs.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "button",
         {
           type: "button",
-          onClick: () => {
-            setAssistPriorityTypeFilter(option.value);
-            if (option.value === "tasking") setActiveAssistSection("taskings");
-            if (option.value === "currency") setActiveAssistSection("currency");
-            if (option.value === "special") setActiveAssistSection("saved-special");
-            if (option.value === "trainee-currency") setActiveAssistSection("trainee-currency");
-            if (option.value === "bulk-currency") setActiveAssistSection("bulk-currency");
-          },
+          onClick: () => setAssistPrioritySourceView(option.value),
           className: `rounded-md border px-2.5 py-1.5 text-[11px] font-semibold transition ${assistPriorityTypeFilter === option.value ? "border-cyan-300 bg-cyan-50 text-slate-950" : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50"}`,
-          children: option.label
+          children: [
+            option.label,
+            option.count === null ? "" : ` (${option.count})`
+          ]
         },
         `assist-priority-tab-${option.value}`
       )) }),
@@ -106191,6 +106195,25 @@ const DfpSidePanelTimeline = ({
         ] })
       ] }),
       activeAssistPage === "priority" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 flex items-center justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[14px] font-semibold text-slate-950", children: "Priority Sources" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-slate-600", children: "Choose the build-priority source to view, edit, order, or send to the main Priorities page." })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6", children: assistPrioritySourceTabs.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => setAssistPrioritySourceView(option.value),
+              className: `min-h-[44px] rounded-md border px-3 py-2 text-left text-[11px] font-semibold shadow-sm transition ${assistPriorityTypeFilter === option.value ? "border-cyan-300 bg-cyan-50 text-slate-950" : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block leading-tight", children: option.label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-medium text-slate-500", children: option.count === null ? "Setup section" : `${option.count} item${option.count === 1 ? "" : "s"}` })
+              ]
+            },
+            `assist-priority-source-${option.value}`
+          )) })
+        ] }),
         renderAssistDfpOverview(),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: renderAssistBuildQueue() }),
         ["taskings", "currency", "saved-special", "trainee-currency", "bulk-currency"].includes(activeAssistSection) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-slate-300 bg-white p-4 shadow-sm", children: [
