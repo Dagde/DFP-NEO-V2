@@ -3163,18 +3163,18 @@ const DfpSidePanelTimeline: React.FC<{
                         {assistBuildQueueRows.length} item{assistBuildQueueRows.length === 1 ? '' : 's'}
                     </span>
                 </div>
-                <div className="max-h-[640px] overflow-auto rounded border border-slate-700/80">
-                    <table className="w-full min-w-[760px] table-fixed text-[10px]">
+                <div className="max-h-[640px] overflow-y-auto overflow-x-hidden rounded border border-slate-700/80">
+                    <table className="w-full table-fixed text-[10px]">
                         <colgroup>
-                            <col className="w-[42px]" />
-                            <col className="w-[108px]" />
+                            <col className="w-[48px]" />
+                            <col className="w-[118px]" />
+                            <col />
                             <col className="w-[150px]" />
-                            <col className="w-[132px]" />
-                            <col className="w-[84px]" />
-                            <col className="w-[88px]" />
-                            <col className="w-[95px]" />
+                            <col className="w-[78px]" />
+                            <col className="w-[86px]" />
+                            <col className="w-[102px]" />
                             <col className="w-[92px]" />
-                            <col className="w-[70px]" />
+                            <col className="w-[64px]" />
                         </colgroup>
                         <thead className="sticky top-0 z-10 bg-slate-950 text-[8px] uppercase tracking-[0.12em] text-slate-400">
                             <tr>
@@ -5423,7 +5423,7 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             ) : (
                 <>
-                    <div className="mt-3 grid grid-cols-[minmax(760px,1fr)_minmax(620px,0.78fr)] gap-3">
+                    <div className="mt-3 grid grid-cols-[minmax(920px,1fr)_minmax(600px,0.62fr)] gap-3">
                         <div className="min-w-0">
                             {renderAssistBuildQueue()}
                         </div>
@@ -52786,7 +52786,7 @@ appliedUpdates.forEach(update => {
                     </div>
                     {activeView === 'Program Schedule' && (
                         <aside
-                            className={`absolute inset-y-0 right-0 z-40 w-[82vw] min-w-[1240px] max-w-[calc(100%-96px)] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
+                            className={`absolute inset-y-0 right-0 z-40 w-[calc(100%-24px)] max-w-none border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
                             aria-hidden={!showDfpSidePanel}
                         >
                             <button

@@ -103256,17 +103256,17 @@ const DfpSidePanelTimeline = ({
           assistBuildQueueRows.length === 1 ? "" : "s"
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[640px] overflow-auto rounded border border-slate-700/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[760px] table-fixed text-[10px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[640px] overflow-y-auto overflow-x-hidden rounded border border-slate-700/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-[10px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[42px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[108px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[48px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[118px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", {}),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[150px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[132px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[84px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[88px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[95px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[78px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[86px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[102px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[92px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[70px]" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[64px]" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-950 text-[8px] uppercase tracking-[0.12em] text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Order" }),
@@ -105456,7 +105456,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto max-w-[560px]", children: renderWizardStep() })
         ]
       }
-    ) : /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-[minmax(760px,1fr)_minmax(620px,0.78fr)] gap-3", children: [
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-[minmax(920px,1fr)_minmax(600px,0.62fr)] gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: renderAssistBuildQueue() }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-3", children: [
         renderAssistDfpOverview(),
@@ -143979,7 +143979,7 @@ Do you want to replace the existing entry?`,
               activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "aside",
                 {
-                  className: `absolute inset-y-0 right-0 z-40 w-[82vw] min-w-[1240px] max-w-[calc(100%-96px)] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
+                  className: `absolute inset-y-0 right-0 z-40 w-[calc(100%-24px)] max-w-none border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
                   "aria-hidden": !showDfpSidePanel,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
