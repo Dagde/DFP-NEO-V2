@@ -1870,7 +1870,7 @@ const DfpSidePanelTimeline: React.FC<{
         if (color === 'bg-sky-500/70') return 'rgba(14,165,233,0.42)';
         return color.startsWith('bg-') ? '#047857' : color;
     };
-    const assistPreviewTileOrange = '#b45309';
+    const assistPreviewTilePink = '#be185d';
 
     const assistDraftEvent: ScheduleEvent = useMemo(() => ({
         id: `neo-assist-draft-${Date.now()}`,
@@ -2085,9 +2085,9 @@ const DfpSidePanelTimeline: React.FC<{
                 : assistDraftEvent.flightType.toUpperCase();
             flightType.style.justifySelf = 'start';
             flightType.style.borderRadius = '3px';
-            flightType.style.background = 'rgba(132,204,22,0.62)';
+            flightType.style.background = 'rgba(255,255,255,0.28)';
             flightType.style.padding = '1px 4px';
-            flightType.style.color = '#f7fee7';
+            flightType.style.color = '#ffffff';
 
             const areaCallsign = document.createElement('span');
             const previewFormationCallsign = isDeploymentAssistTile ? 'DEPLOY' : assistFormationSize > 1 ? getAssistFormationCallsign(position) : previewCallsign;
@@ -6085,7 +6085,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         onDragOver={updateAssistTileDrag}
                                         onDragEnd={clearAssistDragPreview}
                                         className={`neo-assist-tile-preview ${isAssistTileDragging ? 'neo-assist-tile-preview-dragging' : ''} w-full max-w-[360px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${
-                                            isDeploymentAssistTile ? 'border-slate-500/45' : 'border-orange-300/50'
+                                            isDeploymentAssistTile ? 'border-slate-500/45' : 'border-pink-300/60'
                                         }`}
                                         title="Drag this tile onto the DFP to create a copy"
                                     >
@@ -6104,7 +6104,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         ) : (
                                             <div
                                                 className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
-                                                style={{ backgroundColor: assistPreviewTileOrange }}
+                                                style={{ backgroundColor: assistPreviewTilePink }}
                                             >
                                                 <div className="absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
                                                     <span className="shrink-0 font-mono text-[9px] font-semibold text-white/70">{formatTime(assistStartTime)}</span>
@@ -6113,7 +6113,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                 </div>
                                                 <div className="absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none">
                                                     <span className="font-mono text-[9px] text-white/80">{previewAircraftNumber}</span>
-                                                    <span className="justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">
+                                                    <span className="justify-self-start rounded bg-white/35 px-1 text-[9px] text-slate-950 ring-1 ring-slate-900/10">
                                                         {isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase()}
                                                     </span>
                                                     <span className="truncate text-right font-mono text-cyan-50">

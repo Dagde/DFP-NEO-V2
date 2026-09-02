@@ -102225,7 +102225,7 @@ const DfpSidePanelTimeline = ({
     if (color === "bg-sky-500/70") return "rgba(14,165,233,0.42)";
     return color.startsWith("bg-") ? "#047857" : color;
   };
-  const assistPreviewTileOrange = "#b45309";
+  const assistPreviewTilePink = "#be185d";
   const assistDraftEvent = reactExports.useMemo(() => ({
     id: `neo-assist-draft-${Date.now()}`,
     date: activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date,
@@ -102417,9 +102417,9 @@ const DfpSidePanelTimeline = ({
       flightType.textContent = isDeploymentAssistTile ? "DEPLOY" : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase();
       flightType.style.justifySelf = "start";
       flightType.style.borderRadius = "3px";
-      flightType.style.background = "rgba(132,204,22,0.62)";
+      flightType.style.background = "rgba(255,255,255,0.28)";
       flightType.style.padding = "1px 4px";
-      flightType.style.color = "#f7fee7";
+      flightType.style.color = "#ffffff";
       const areaCallsign = document.createElement("span");
       const previewFormationCallsign = isDeploymentAssistTile ? "DEPLOY" : assistFormationSize > 1 ? getAssistFormationCallsign(position) : previewCallsign;
       areaCallsign.textContent = `${selectedAssignedArea && selectedAssignedArea !== "TBA" ? `${selectedAssignedArea} ` : ""}${previewFormationCallsign || "CSIGN"}`;
@@ -106096,7 +106096,7 @@ const DfpSidePanelTimeline = ({
             onDrag: updateAssistTileDrag,
             onDragOver: updateAssistTileDrag,
             onDragEnd: clearAssistDragPreview,
-            className: `neo-assist-tile-preview ${isAssistTileDragging ? "neo-assist-tile-preview-dragging" : ""} w-full max-w-[360px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-orange-300/50"}`,
+            className: `neo-assist-tile-preview ${isAssistTileDragging ? "neo-assist-tile-preview-dragging" : ""} w-full max-w-[360px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-pink-300/60"}`,
             title: "Drag this tile onto the DFP to create a copy",
             children: isDeploymentAssistTile ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70", children: formatDeploymentAssistClock(assistDeploymentStartTime) }),
@@ -106112,7 +106112,7 @@ const DfpSidePanelTimeline = ({
               "div",
               {
                 className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
-                style: { backgroundColor: assistPreviewTileOrange },
+                style: { backgroundColor: assistPreviewTilePink },
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(assistStartTime) }),
@@ -106126,7 +106126,7 @@ const DfpSidePanelTimeline = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase() }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-white/35 px-1 text-[9px] text-slate-950 ring-1 ring-slate-900/10", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase() }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
                   ] })
                 ]
