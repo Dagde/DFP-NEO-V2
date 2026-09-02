@@ -835,6 +835,8 @@ type NeoAssistSection =
     | 'details'
     | 'crew';
 
+type NeoAssistPage = 'inputs' | 'priority';
+
 const NEO_ASSIST_CURRENCY_TRACE_KEY = 'neo_assist_currency_persistence_trace';
 const appendNeoAssistCurrencyTrace = (stage: string, details: Record<string, unknown> = {}) => {
     try {
@@ -1049,7 +1051,9 @@ const DfpSidePanelTimeline: React.FC<{
     const assistDragPreviewRef = useRef<HTMLElement | null>(null);
     const wizardRepeatRef = useRef<number | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
+    const [activeAssistPage, setActiveAssistPage] = useState<NeoAssistPage>('inputs');
     const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('flying');
+    const [isAssistTileDragging, setIsAssistTileDragging] = useState(false);
     const [showAssistCurrencyInfo, setShowAssistCurrencyInfo] = useState(false);
     const filteredEventOptions = useMemo(() => (
         syllabusDetails
@@ -1962,6 +1966,7 @@ const DfpSidePanelTimeline: React.FC<{
     const clearAssistDragPreview = () => {
         assistDragPreviewRef.current?.remove();
         assistDragPreviewRef.current = null;
+        setIsAssistTileDragging(false);
     };
 
     const createAssistDragImage = (): HTMLElement => {
@@ -2106,6 +2111,7 @@ const DfpSidePanelTimeline: React.FC<{
     };
 
     const startAssistTileDrag = (event: React.DragEvent<HTMLDivElement>) => {
+        setIsAssistTileDragging(true);
         event.dataTransfer.effectAllowed = 'copy';
         event.dataTransfer.setData('application/neo-assist-event', JSON.stringify(assistDraftEvent));
         event.dataTransfer.setData('text/plain', assistEventLabel);
@@ -5885,8 +5891,12 @@ const DfpSidePanelTimeline: React.FC<{
                 .neo-assist-light-shell button:not([draggable]) {
                     color: #0f172a !important;
                 }
-                .neo-assist-light-shell .neo-assist-tile-preview,
-                .neo-assist-light-shell .neo-assist-tile-preview * {
+                .neo-assist-light-shell .neo-assist-tile-preview:not(.neo-assist-tile-preview-dragging),
+                .neo-assist-light-shell .neo-assist-tile-preview:not(.neo-assist-tile-preview-dragging) * {
+                    color: #0f172a !important;
+                }
+                .neo-assist-light-shell .neo-assist-tile-preview-dragging,
+                .neo-assist-light-shell .neo-assist-tile-preview-dragging * {
                     color: #ffffff !important;
                 }
                 .neo-assist-light-shell .neo-assist-status-pill-ready {
@@ -6029,103 +6039,154 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             ) : (
                 <>
-                    <div className="mt-3 grid grid-cols-[minmax(920px,1fr)_minmax(600px,0.62fr)] gap-3">
-                        <div className="min-w-0">
-                            {renderAssistBuildQueue()}
-                        </div>
-                        <div className="min-w-0 space-y-3">
-                            {renderAssistDfpOverview()}
-                            <div className="flex justify-center">
-                                <div
-                                    draggable
-                                    onDragStart={startAssistTileDrag}
-                                    onDrag={updateAssistTileDrag}
-                                    onDragOver={updateAssistTileDrag}
-                                    onDragEnd={clearAssistDragPreview}
-                                    className={`neo-assist-tile-preview w-full max-w-[360px] cursor-grab rounded-md border bg-slate-800 p-2 active:cursor-grabbing ${
-                                        isDeploymentAssistTile ? 'border-slate-500/45' : 'border-emerald-300/35'
+                    <div className="mt-3 space-y-3">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-300 pb-2">
+                            <div className="flex gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveAssistPage('inputs')}
+                                    className={`rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${
+                                        activeAssistPage === 'inputs'
+                                            ? 'border-cyan-300 bg-cyan-50 text-slate-950'
+                                            : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
                                     }`}
-                                    title="Drag this tile onto the DFP to create a copy"
                                 >
-                                    {isDeploymentAssistTile ? (
-                                        <div className="relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md">
-                                            <span className="absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70">
-                                                {formatDeploymentAssistClock(assistDeploymentStartTime)}
-                                            </span>
-                                            <span className="absolute inset-0 flex items-center justify-center gap-1 px-14">
-                                                <span>DEPLOYMENT</span>
-                                                <span className="whitespace-nowrap text-white/75">
-                                                    {formatDeploymentAssistClock(assistDeploymentStartTime).replace(':', '')} {formatDeploymentAssistDateLabel(assistDeploymentStartDate)}
-                                                </span>
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <div
-                                            className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
-                                            style={{ backgroundColor: getAssistTileDisplayColor(assistDraftEvent.color) }}
-                                        >
-                                            <div className="absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
-                                                <span className="shrink-0 font-mono text-[9px] font-semibold text-white/70">{formatTime(assistStartTime)}</span>
-                                                <span className="truncate">{previewCrewName}</span>
-                                                <span className="shrink-0 whitespace-nowrap font-mono">[{assistDuration.toFixed(1)}] {assistEventLabel}</span>
-                                            </div>
-                                            <div className="absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none">
-                                                <span className="font-mono text-[9px] text-white/80">{previewAircraftNumber}</span>
-                                                <span className="justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">
-                                                    {isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase()}
-                                                </span>
-                                                <span className="truncate text-right font-mono text-cyan-50">
-                                                    {previewAreaCallsign}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                    NEO Build Inputs
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveAssistPage('priority')}
+                                    className={`rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${
+                                        activeAssistPage === 'priority'
+                                            ? 'border-cyan-300 bg-cyan-50 text-slate-950'
+                                            : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
+                                    }`}
+                                >
+                                    Priority Table
+                                </button>
                             </div>
-                            <div className="grid grid-cols-[132px_minmax(0,1fr)] gap-3">
-                                <div className="space-y-1.5">
-                                    <button
-                                        type="button"
-                                        onClick={() => setActiveAssistSection('details')}
-                                        className={`w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${
-                                            activeAssistSection === 'details'
-                                                ? 'border-cyan-300 bg-cyan-50 text-slate-900'
-                                                : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
-                                        }`}
-                                    >
-                                        Manual Tile Creator
-                                    </button>
-                                    <p className="px-1 pt-2 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">NEO Build Inputs</p>
-                                    {assistSections.map(section => (
-                                        <button
-                                            key={section.id}
-                                            type="button"
-                                            onClick={() => setActiveAssistSection(section.id)}
-                                            className={`w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${
-                                                activeAssistSection === section.id
-                                                    ? 'border-cyan-300 bg-cyan-50 text-slate-900'
-                                                    : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
-                                            }`}
-                                        >
-                                            {section.label}
-                                        </button>
-                                    ))}
+                            <span className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm">
+                                {assistBuildQueueRows.length} build priorit{assistBuildQueueRows.length === 1 ? 'y' : 'ies'}
+                            </span>
+                        </div>
+                        {activeAssistPage === 'priority' ? (
+                            <div className="min-w-0">
+                                {renderAssistBuildQueue()}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-[minmax(0,1fr)_minmax(420px,0.48fr)] gap-4">
+                                <div className="min-w-0 space-y-3">
+                                    <div className="rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
+                                        <div className="mb-2 flex items-center justify-between gap-3">
+                                            <div>
+                                                <h4 className="text-[12px] font-semibold text-slate-950">NEO Build Inputs</h4>
+                                                <p className="text-[9px] text-slate-500">Set the windows, resources, priorities and directed events used by NEO Build.</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={onOpenPrioritiesExclusions}
+                                                className="shrink-0 rounded-md border border-cyan-300 bg-cyan-50 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-800 transition hover:bg-cyan-100"
+                                            >
+                                                Open Priorities
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-[170px_minmax(0,1fr)] gap-3">
+                                            <div className="space-y-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setActiveAssistSection('details')}
+                                                    className={`w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${
+                                                        activeAssistSection === 'details'
+                                                            ? 'border-cyan-300 bg-cyan-50 text-slate-900'
+                                                            : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
+                                                    }`}
+                                                >
+                                                    Manual Tile Creator
+                                                </button>
+                                                <p className="px-1 pt-2 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">NEO Build Inputs</p>
+                                                {assistSections.map(section => (
+                                                    <button
+                                                        key={section.id}
+                                                        type="button"
+                                                        onClick={() => setActiveAssistSection(section.id)}
+                                                        className={`w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${
+                                                            activeAssistSection === section.id
+                                                                ? 'border-cyan-300 bg-cyan-50 text-slate-900'
+                                                                : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
+                                                        }`}
+                                                    >
+                                                        {section.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <div className="min-w-0 space-y-3">
+                                                <div className="rounded-md border border-slate-300 bg-white p-3 shadow-sm">
+                                                    <div className="mb-2 border-b border-slate-200 pb-2">
+                                                        <p className="text-[11px] font-semibold text-slate-900">
+                                                            {activeAssistSection === 'details' ? 'Manual Tile Creator' : assistSections.find(section => section.id === activeAssistSection)?.label}
+                                                        </p>
+                                                        {activeAssistSection === 'details' && (
+                                                            <p className="mt-0.5 text-[9px] text-slate-500">Separate from NEO Build priorities. Create a specific tile by choosing the event, person or crew, timing and resource details.</p>
+                                                        )}
+                                                    </div>
+                                                    {renderAssistSection()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="min-w-0 space-y-3">
-                                    <div className="rounded-md border border-slate-300 bg-white p-3 shadow-sm">
-                                        <div className="mb-2 border-b border-slate-200 pb-2">
-                                            <p className="text-[11px] font-semibold text-slate-900">
-                                                {activeAssistSection === 'details' ? 'Manual Tile Creator' : assistSections.find(section => section.id === activeAssistSection)?.label}
-                                            </p>
-                                            {activeAssistSection === 'details' && (
-                                                <p className="mt-0.5 text-[9px] text-slate-500">Separate from NEO Build priorities. Create a specific tile by choosing the event, person or crew, timing and resource details.</p>
+                                    {renderAssistDfpOverview()}
+                                    <div className="flex justify-center rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
+                                        <div
+                                            draggable
+                                            onDragStart={startAssistTileDrag}
+                                            onDrag={updateAssistTileDrag}
+                                            onDragOver={updateAssistTileDrag}
+                                            onDragEnd={clearAssistDragPreview}
+                                            className={`neo-assist-tile-preview ${isAssistTileDragging ? 'neo-assist-tile-preview-dragging' : ''} w-full max-w-[360px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${
+                                                isDeploymentAssistTile ? 'border-slate-500/45' : 'border-emerald-300/35'
+                                            }`}
+                                            title="Drag this tile onto the DFP to create a copy"
+                                        >
+                                            {isDeploymentAssistTile ? (
+                                                <div className="relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md">
+                                                    <span className="absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70">
+                                                        {formatDeploymentAssistClock(assistDeploymentStartTime)}
+                                                    </span>
+                                                    <span className="absolute inset-0 flex items-center justify-center gap-1 px-14">
+                                                        <span>DEPLOYMENT</span>
+                                                        <span className="whitespace-nowrap text-white/75">
+                                                            {formatDeploymentAssistClock(assistDeploymentStartTime).replace(':', '')} {formatDeploymentAssistDateLabel(assistDeploymentStartDate)}
+                                                        </span>
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className="relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]"
+                                                    style={{ backgroundColor: getAssistTileDisplayColor(assistDraftEvent.color) }}
+                                                >
+                                                    <div className="absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight">
+                                                        <span className="shrink-0 font-mono text-[9px] font-semibold text-white/70">{formatTime(assistStartTime)}</span>
+                                                        <span className="truncate">{previewCrewName}</span>
+                                                        <span className="shrink-0 whitespace-nowrap font-mono">[{assistDuration.toFixed(1)}] {assistEventLabel}</span>
+                                                    </div>
+                                                    <div className="absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none">
+                                                        <span className="font-mono text-[9px] text-white/80">{previewAircraftNumber}</span>
+                                                        <span className="justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50">
+                                                            {isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase()}
+                                                        </span>
+                                                        <span className="truncate text-right font-mono text-cyan-50">
+                                                            {previewAreaCallsign}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
-                                        {renderAssistSection()}
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </>
             )}
