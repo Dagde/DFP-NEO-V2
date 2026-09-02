@@ -103256,7 +103256,7 @@ const DfpSidePanelTimeline = ({
           assistBuildQueueRows.length === 1 ? "" : "s"
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[390px] overflow-auto rounded border border-slate-700/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[760px] table-fixed text-[10px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[640px] overflow-auto rounded border border-slate-700/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[760px] table-fixed text-[10px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[42px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[108px]" }),
@@ -103337,6 +103337,130 @@ const DfpSidePanelTimeline = ({
       ] }) })
     ] });
   };
+  const renderAssistDfpOverview = () => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "div",
+    {
+      ref: scrollRef,
+      className: "overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-3 shadow-inner [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+      "aria-label": "Scrollable ten hour flying window timeline",
+      children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "relative",
+          style: { width: `${timelineSpanHours / visibleWindowHours * 100}%`, minWidth: "660px" },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-1 h-4", children: ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: `absolute text-[9px] font-semibold tracking-[0.08em] text-slate-200/80 ${hour === timelineEndHour ? "-translate-x-full" : "-translate-x-1/2"}`,
+                style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` },
+                children: formatTick(hour)
+              },
+              `mini-tick-${hour}`
+            )) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: chartRef, className: "relative h-20 overflow-visible rounded border border-slate-500/80 bg-slate-950", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-300/45" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${dayShade}`,
+                  style: { left: `${getLeft(flyingStartTime)}%`, width: `${getWidth(flyingStartTime, flyingEndTime)}%` },
+                  title: `Day flying ${formatTime2(flyingStartTime)}-${formatTime2(flyingEndTime)}`
+                }
+              ),
+              allowNightFlying && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${nightShade}`,
+                  style: { left: `${getLeft(commenceNightFlying)}%`, width: `${getWidth(commenceNightFlying, ceaseNightFlying)}%` },
+                  title: `Night flying ${formatTime2(commenceNightFlying)}-${formatTime2(ceaseNightFlying)}`
+                }
+              ),
+              flyingWindowExclusions.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${exclusionShade}`,
+                  style: { left: `${getLeft(period.startTime)}%`, width: `${getWidth(period.startTime, period.endTime)}%` },
+                  title: `Exclusion ${formatTime2(period.startTime)}-${formatTime2(period.endTime)}`
+                },
+                period.id
+              )),
+              miniTimelineEvents.map((tile) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: `absolute z-20 rounded-[2px] border border-white/25 opacity-95 shadow-[0_0_4px_rgba(15,23,42,0.55)] ${tile.isInlineColor ? "" : tile.color}`,
+                  style: {
+                    left: `${tile.left}%`,
+                    top: `${tile.top}px`,
+                    width: `${tile.width}%`,
+                    minWidth: "3px",
+                    height: `${tile.height}px`,
+                    backgroundColor: tile.isInlineColor ? tile.color : void 0
+                  },
+                  title: `${formatTime2(tile.event.startTime)} ${tile.event.flightNumber || tile.event.type}`
+                },
+                tile.id
+              )),
+              ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "div",
+                {
+                  className: "absolute inset-y-0 z-10 border-l border-slate-400/28",
+                  style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` }
+                },
+                `mini-line-${hour}`
+              )),
+              markers.map((marker) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onPointerDown: (event) => startDrag(event, marker.target, marker.label, marker.time),
+                  className: "absolute inset-y-0 z-30 flex w-3 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200",
+                  style: { left: `${getLeft(marker.time)}%` },
+                  title: `Drag ${marker.label}: ${formatTime2(marker.time)}`,
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-full w-px rounded-full ${marker.color} opacity-70 shadow-[0_0_5px_currentColor]` })
+                },
+                marker.key
+              )),
+              activeDrag && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  className: "pointer-events-none absolute -top-10 z-40 -translate-x-1/2 rounded-md border border-cyan-200/70 bg-slate-950 px-2 py-1 text-[10px] font-semibold text-cyan-50 shadow-xl",
+                  style: { left: `${activeDrag.left}%` },
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] uppercase tracking-[0.12em] text-cyan-200/70", children: activeDrag.label }),
+                    formatCompactTime(activeDrag.time)
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2 h-9", children: markers.map((marker) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: "absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-400/45 bg-slate-950/95 px-1.5 py-1 text-[9px] font-semibold text-slate-100 shadow",
+                style: { left: `${getLeft(marker.time)}%` },
+                children: formatCompactTime(marker.time)
+              },
+              `mini-label-${marker.key}`
+            )) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-semibold text-slate-300/90", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${dayShade}` }),
+                " Day"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${nightShade}` }),
+                " Night"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${exclusionShade}` }),
+                " Exclusion"
+              ] })
+            ] })
+          ]
+        }
+      )
+    }
+  );
   const wizardStepsCount = 12;
   const moveWizardTo = (nextStep) => {
     setWizardTransition("out");
@@ -105307,130 +105431,7 @@ const DfpSidePanelTimeline = ({
         }
       )
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "div",
-      {
-        ref: scrollRef,
-        className: "overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-3 shadow-inner [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-        "aria-label": "Scrollable ten hour flying window timeline",
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: "relative",
-            style: { width: `${timelineSpanHours / visibleWindowHours * 100}%`, minWidth: "660px" },
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-1 h-4", children: ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "span",
-                {
-                  className: `absolute text-[9px] font-semibold tracking-[0.08em] text-slate-200/80 ${hour === timelineEndHour ? "-translate-x-full" : "-translate-x-1/2"}`,
-                  style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` },
-                  children: formatTick(hour)
-                },
-                `mini-tick-${hour}`
-              )) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: chartRef, className: "relative h-20 overflow-visible rounded border border-slate-500/80 bg-slate-950", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-300/45" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
-                  {
-                    className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${dayShade}`,
-                    style: { left: `${getLeft(flyingStartTime)}%`, width: `${getWidth(flyingStartTime, flyingEndTime)}%` },
-                    title: `Day flying ${formatTime2(flyingStartTime)}-${formatTime2(flyingEndTime)}`
-                  }
-                ),
-                allowNightFlying && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
-                  {
-                    className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${nightShade}`,
-                    style: { left: `${getLeft(commenceNightFlying)}%`, width: `${getWidth(commenceNightFlying, ceaseNightFlying)}%` },
-                    title: `Night flying ${formatTime2(commenceNightFlying)}-${formatTime2(ceaseNightFlying)}`
-                  }
-                ),
-                flyingWindowExclusions.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
-                  {
-                    className: `absolute inset-y-0 rounded-sm ring-1 ring-inset ${exclusionShade}`,
-                    style: { left: `${getLeft(period.startTime)}%`, width: `${getWidth(period.startTime, period.endTime)}%` },
-                    title: `Exclusion ${formatTime2(period.startTime)}-${formatTime2(period.endTime)}`
-                  },
-                  period.id
-                )),
-                miniTimelineEvents.map((tile) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "span",
-                  {
-                    className: `absolute z-20 rounded-[2px] border border-white/25 opacity-95 shadow-[0_0_4px_rgba(15,23,42,0.55)] ${tile.isInlineColor ? "" : tile.color}`,
-                    style: {
-                      left: `${tile.left}%`,
-                      top: `${tile.top}px`,
-                      width: `${tile.width}%`,
-                      minWidth: "3px",
-                      height: `${tile.height}px`,
-                      backgroundColor: tile.isInlineColor ? tile.color : void 0
-                    },
-                    title: `${formatTime2(tile.event.startTime)} ${tile.event.flightNumber || tile.event.type}`
-                  },
-                  tile.id
-                )),
-                ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "div",
-                  {
-                    className: "absolute inset-y-0 z-10 border-l border-slate-400/28",
-                    style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` }
-                  },
-                  `mini-line-${hour}`
-                )),
-                markers.map((marker) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onPointerDown: (event) => startDrag(event, marker.target, marker.label, marker.time),
-                    className: "absolute inset-y-0 z-30 flex w-3 -translate-x-1/2 cursor-ew-resize touch-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200",
-                    style: { left: `${getLeft(marker.time)}%` },
-                    title: `Drag ${marker.label}: ${formatTime2(marker.time)}`,
-                    children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-full w-px rounded-full ${marker.color} opacity-70 shadow-[0_0_5px_currentColor]` })
-                  },
-                  marker.key
-                )),
-                activeDrag && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "div",
-                  {
-                    className: "pointer-events-none absolute -top-10 z-40 -translate-x-1/2 rounded-md border border-cyan-200/70 bg-slate-950 px-2 py-1 text-[10px] font-semibold text-cyan-50 shadow-xl",
-                    style: { left: `${activeDrag.left}%` },
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] uppercase tracking-[0.12em] text-cyan-200/70", children: activeDrag.label }),
-                      formatCompactTime(activeDrag.time)
-                    ]
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2 h-9", children: markers.map((marker) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "span",
-                {
-                  className: "absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-400/45 bg-slate-950/95 px-1.5 py-1 text-[9px] font-semibold text-slate-100 shadow",
-                  style: { left: `${getLeft(marker.time)}%` },
-                  children: formatCompactTime(marker.time)
-                },
-                `mini-label-${marker.key}`
-              )) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-semibold text-slate-300/90", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${dayShade}` }),
-                  " Day"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${nightShade}` }),
-                  " Night"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${exclusionShade}` }),
-                  " Exclusion"
-                ] })
-              ] })
-            ]
-          }
-        )
-      }
-    ),
+    isNeoAssistWizardMode && renderAssistDfpOverview(),
     isNeoAssistWizardMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
@@ -105455,74 +105456,77 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto max-w-[560px]", children: renderWizardStep() })
         ]
       }
-    ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          draggable: true,
-          onDragStart: startAssistTileDrag,
-          onDrag: updateAssistTileDrag,
-          onDragOver: updateAssistTileDrag,
-          onDragEnd: clearAssistDragPreview,
-          className: `w-full max-w-[360px] cursor-grab rounded-md border bg-slate-950/70 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-emerald-300/35"}`,
-          title: "Drag this tile onto the DFP to create a copy",
-          children: isDeploymentAssistTile ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70", children: formatDeploymentAssistClock(assistDeploymentStartTime) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute inset-0 flex items-center justify-center gap-1 px-14", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "DEPLOYMENT" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "whitespace-nowrap text-white/75", children: [
-                formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", ""),
-                " ",
-                formatDeploymentAssistDateLabel(assistDeploymentStartDate)
-              ] })
-            ] })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
-              style: { backgroundColor: getAssistTileDisplayColor(assistDraftEvent.color) },
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(assistStartTime) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: previewCrewName }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 whitespace-nowrap font-mono", children: [
-                    "[",
-                    assistDuration.toFixed(1),
-                    "] ",
-                    assistEventLabel
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase() }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
-                ] })
-              ]
-            }
-          )
-        }
-      ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-[minmax(520px,1.45fr)_128px_minmax(280px,0.85fr)] gap-3", children: [
-        renderAssistBuildQueue(),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: assistSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-[minmax(760px,1fr)_minmax(620px,0.78fr)] gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: renderAssistBuildQueue() }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-3", children: [
+        renderAssistDfpOverview(),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
           {
-            type: "button",
-            onClick: () => setActiveAssistSection(section.id),
-            className: `w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${activeAssistSection === section.id ? "border-cyan-300/70 bg-cyan-400/15 text-cyan-50" : "border-slate-600/70 bg-slate-900/65 text-slate-300 hover:border-cyan-400/45 hover:text-cyan-100"}`,
-            children: section.label
-          },
-          section.id
-        )) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/75 bg-slate-900/65 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 border-b border-slate-700/70 pb-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold text-white", children: activeAssistSection === "details" ? "Manual Tile Details" : assistSections.find((section) => section.id === activeAssistSection)?.label }),
-            activeAssistSection === "details" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-[9px] text-slate-400", children: "Create a specific tile by choosing the event, person or crew, timing and resource details." })
-          ] }),
-          renderAssistSection()
-        ] }) })
+            draggable: true,
+            onDragStart: startAssistTileDrag,
+            onDrag: updateAssistTileDrag,
+            onDragOver: updateAssistTileDrag,
+            onDragEnd: clearAssistDragPreview,
+            className: `w-full max-w-[360px] cursor-grab rounded-md border bg-slate-950/70 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-emerald-300/35"}`,
+            title: "Drag this tile onto the DFP to create a copy",
+            children: isDeploymentAssistTile ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70", children: formatDeploymentAssistClock(assistDeploymentStartTime) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute inset-0 flex items-center justify-center gap-1 px-14", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "DEPLOYMENT" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "whitespace-nowrap text-white/75", children: [
+                  formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", ""),
+                  " ",
+                  formatDeploymentAssistDateLabel(assistDeploymentStartDate)
+                ] })
+              ] })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
+                style: { backgroundColor: getAssistTileDisplayColor(assistDraftEvent.color) },
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(assistStartTime) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: previewCrewName }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 whitespace-nowrap font-mono", children: [
+                      "[",
+                      assistDuration.toFixed(1),
+                      "] ",
+                      assistEventLabel
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase() }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
+                  ] })
+                ]
+              }
+            )
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[132px_minmax(0,1fr)] gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: assistSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setActiveAssistSection(section.id),
+              className: `w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${activeAssistSection === section.id ? "border-cyan-300/70 bg-cyan-400/15 text-cyan-50" : "border-slate-600/70 bg-slate-900/65 text-slate-300 hover:border-cyan-400/45 hover:text-cyan-100"}`,
+              children: section.label
+            },
+            section.id
+          )) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/75 bg-slate-900/65 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 border-b border-slate-700/70 pb-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold text-white", children: activeAssistSection === "details" ? "Manual Tile Details" : assistSections.find((section) => section.id === activeAssistSection)?.label }),
+              activeAssistSection === "details" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-[9px] text-slate-400", children: "Create a specific tile by choosing the event, person or crew, timing and resource details." })
+            ] }),
+            renderAssistSection()
+          ] }) })
+        ] })
       ] })
-    ] })
+    ] }) })
   ] });
 };
 const normalisePersonnelRecord = (person) => {
@@ -143975,7 +143979,7 @@ Do you want to replace the existing entry?`,
               activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "aside",
                 {
-                  className: `absolute inset-y-0 right-0 z-40 w-[58%] min-w-[760px] max-w-[1120px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
+                  className: `absolute inset-y-0 right-0 z-40 w-[82vw] min-w-[1240px] max-w-[calc(100%-96px)] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
                   "aria-hidden": !showDfpSidePanel,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
