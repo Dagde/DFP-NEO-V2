@@ -1056,6 +1056,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistPriorityPersonFilter, setAssistPriorityPersonFilter] = useState('');
     const [assistPriorityUnitFilter, setAssistPriorityUnitFilter] = useState('all');
     const [assistPrioritySchedulerFilter, setAssistPrioritySchedulerFilter] = useState('all');
+    const [editingAssistPriorityEventId, setEditingAssistPriorityEventId] = useState<string | null>(null);
     const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('flying');
     const [isAssistTileDragging, setIsAssistTileDragging] = useState(false);
     const [showAssistCurrencyInfo, setShowAssistCurrencyInfo] = useState(false);
@@ -3305,6 +3306,7 @@ const DfpSidePanelTimeline: React.FC<{
     };
     const setAssistBuildQueueScheduler = (event: ScheduleEvent, scheduler: 'Mandatory' | 'Desirable' | 'Ignore') => {
         if (scheduler === 'Ignore') {
+            setEditingAssistPriorityEventId(current => current === event.id ? null : current);
             void onDeletePriorityEvent(event.id);
             return;
         }
@@ -3312,6 +3314,25 @@ const DfpSidePanelTimeline: React.FC<{
             priority: scheduler === 'Mandatory' ? 'High' : 'Medium',
             isMandatoryTasking: scheduler === 'Mandatory',
         });
+    };
+    const updateAssistBuildQueueEventLabel = (event: ScheduleEvent, group: 'tasking' | 'currency' | 'trainee-currency' | 'special', value: string) => {
+        const updates: Partial<ScheduleEvent> & Record<string, any> = { flightNumber: value };
+        if (group === 'tasking') {
+            updates.taskingName = value;
+            updates.taskingDisplayLabel = value;
+        }
+        if (group === 'currency' || group === 'trainee-currency') {
+            updates.currency = value;
+        }
+        onUpdatePriorityEvent(event.id, updates);
+    };
+    const updateAssistBuildQueueEventCrew = (event: ScheduleEvent, value: string) => {
+        const updates: Partial<ScheduleEvent> = { crew: value };
+        if (event.instructor) updates.instructor = value;
+        else if (event.pilot) updates.pilot = value;
+        else if (event.student) updates.student = value;
+        else updates.pilot = value;
+        onUpdatePriorityEvent(event.id, updates);
     };
     const selectAssistBuildQueueEvent = (event: ScheduleEvent) => {
         const group = getAssistBuildQueueGroup(event);
@@ -3360,6 +3381,10 @@ const DfpSidePanelTimeline: React.FC<{
             'trainee-currency': 'Trainee Currency Events',
             special: 'Saved Special Events',
         };
+        const priorityEventOptions = Array.from(new Set([
+            ...currencyNames,
+            ...fullAssistEventOptions.map(option => option.code || option.name || '').filter(Boolean),
+        ])).slice(0, 220);
         return (
             <div className="rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
                 <div className="mb-2 flex items-start justify-between gap-3">
@@ -3409,15 +3434,25 @@ const DfpSidePanelTimeline: React.FC<{
                             type="button"
                             onClick={() => setAssistPrioritySourceView(option.value)}
                             className={`rounded-md border px-2.5 py-1.5 text-[11px] font-semibold transition ${
-                                assistPriorityTypeFilter === option.value
-                                    ? 'border-cyan-300 bg-cyan-50 text-slate-950'
-                                    : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
+                                option.value === 'all'
+                                    ? assistPriorityTypeFilter === option.value
+                                        ? 'border-emerald-300 bg-emerald-50 text-emerald-950 shadow-sm'
+                                        : 'border-emerald-200 bg-emerald-50/70 text-emerald-900 hover:border-emerald-300 hover:bg-emerald-50'
+                                    : assistPriorityTypeFilter === option.value
+                                        ? 'border-cyan-300 bg-cyan-50 text-slate-950'
+                                        : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
                             }`}
                         >
                             {option.label}{option.count === null ? '' : ` (${option.count})`}
                         </button>
                     ))}
                 </div>
+                <datalist id="neo-assist-priority-event-options">
+                    {priorityEventOptions.map(option => <option key={`assist-priority-event-option-${option}`} value={option} />)}
+                </datalist>
+                <datalist id="neo-assist-priority-person-options">
+                    {staffListNames.map(name => <option key={`assist-priority-person-option-${name}`} value={name} />)}
+                </datalist>
                 {assistPriorityTypeFilter === 'bulk-currency' && (
                     <div className="mb-3 rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-3">
                         <h5 className="text-[12px] font-semibold text-slate-950">Bulk Currency Builder</h5>
@@ -3469,68 +3504,159 @@ const DfpSidePanelTimeline: React.FC<{
                                     </td>
                                 </tr>
                             )}
-                            {filteredAssistBuildQueueRows.map(row => (
-                                <tr key={row.event.id} className="hover:bg-cyan-50">
-                                    <td className="px-2 py-2 align-middle text-slate-600">
-                                        <div className="flex items-center gap-1">
-                                            <span className="w-5 font-mono">{row.index + 1}</span>
-                                            <span className="flex flex-col">
-                                                <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, -1)} className="leading-none text-slate-500 hover:text-cyan-700">▲</button>
-                                                <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, 1)} className="leading-none text-slate-500 hover:text-cyan-700">▼</button>
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-2 py-2 align-middle">
-                                        <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`}>
-                                            {groupLabels[row.group]}
-                                        </span>
-                                    </td>
-                                    <td className="px-2 py-2 align-middle font-mono text-slate-700">{formatAssistCurrencyDate(row.event.date || date)}</td>
-                                    <td className="truncate px-2 py-2 align-middle font-semibold text-slate-950" title={row.label}>{row.label}</td>
-                                    <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.person}>{row.person}</td>
-                                    <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.requestedBy}>{row.requestedBy}</td>
-                                    <td className="px-2 py-2 align-middle font-mono text-slate-700">
-                                        <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
-                                        <span className="block truncate text-[10px] text-slate-500">{row.unit}</span>
-                                    </td>
-                                    <td className="px-2 py-2 align-middle">
-                                        <select
-                                            value={row.event.priority || 'High'}
-                                            onChange={event => setAssistBuildQueuePriority(row.event, event.target.value as 'High' | 'Medium' | 'Low')}
-                                            className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
-                                        >
-                                            <option value="High">High</option>
-                                            <option value="Medium">Medium</option>
-                                            <option value="Low">Low</option>
-                                        </select>
-                                    </td>
-                                    <td className="px-2 py-2 align-middle">
-                                        <select
-                                            value={row.scheduler}
-                                            onChange={event => setAssistBuildQueueScheduler(row.event, event.target.value as 'Mandatory' | 'Desirable' | 'Ignore')}
-                                            className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
-                                        >
-                                            <option value="Mandatory">Mandatory</option>
-                                            <option value="Desirable">Desirable</option>
-                                            <option value="Ignore">Ignore</option>
-                                        </select>
-                                    </td>
-                                    <td className="px-2 py-2 align-middle">
-                                        <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${row.status.className}`}>
-                                            {row.status.label}
-                                        </span>
-                                    </td>
-                                    <td className="px-2 py-2 text-center align-middle">
-                                        <button
-                                            type="button"
-                                            onClick={() => selectAssistBuildQueueEvent(row.event)}
-                                            className="rounded border border-cyan-300 bg-cyan-50 px-2 py-1 text-[10px] font-semibold text-cyan-800 hover:bg-cyan-100"
-                                        >
-                                            Edit
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {filteredAssistBuildQueueRows.map(row => {
+                                const isEditing = editingAssistPriorityEventId === row.event.id;
+                                return (
+                                    <React.Fragment key={row.event.id}>
+                                        <tr className={isEditing ? 'bg-emerald-50/70' : 'hover:bg-cyan-50'}>
+                                            <td className="px-2 py-2 align-middle text-slate-600">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="w-5 font-mono">{row.index + 1}</span>
+                                                    <span className="flex flex-col">
+                                                        <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, -1)} className="leading-none text-slate-500 hover:text-cyan-700">▲</button>
+                                                        <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, 1)} className="leading-none text-slate-500 hover:text-cyan-700">▼</button>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-2 py-2 align-middle">
+                                                <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`}>
+                                                    {groupLabels[row.group]}
+                                                </span>
+                                            </td>
+                                            <td className="px-2 py-2 align-middle font-mono text-slate-700">{formatAssistCurrencyDate(row.event.date || date)}</td>
+                                            <td className="truncate px-2 py-2 align-middle font-semibold text-slate-950" title={row.label}>{row.label}</td>
+                                            <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.person}>{row.person}</td>
+                                            <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.requestedBy}>{row.requestedBy}</td>
+                                            <td className="px-2 py-2 align-middle font-mono text-slate-700">
+                                                <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
+                                                <span className="block truncate text-[10px] text-slate-500">{row.unit}</span>
+                                            </td>
+                                            <td className="px-2 py-2 align-middle">
+                                                <select
+                                                    value={row.event.priority || 'High'}
+                                                    onChange={event => setAssistBuildQueuePriority(row.event, event.target.value as 'High' | 'Medium' | 'Low')}
+                                                    className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                >
+                                                    <option value="High">High</option>
+                                                    <option value="Medium">Medium</option>
+                                                    <option value="Low">Low</option>
+                                                </select>
+                                            </td>
+                                            <td className="px-2 py-2 align-middle">
+                                                <select
+                                                    value={row.scheduler}
+                                                    onChange={event => setAssistBuildQueueScheduler(row.event, event.target.value as 'Mandatory' | 'Desirable' | 'Ignore')}
+                                                    className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                >
+                                                    <option value="Mandatory">Mandatory</option>
+                                                    <option value="Desirable">Desirable</option>
+                                                    <option value="Ignore">Ignore</option>
+                                                </select>
+                                            </td>
+                                            <td className="px-2 py-2 align-middle">
+                                                <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${row.status.className}`}>
+                                                    {row.status.label}
+                                                </span>
+                                            </td>
+                                            <td className="px-2 py-2 text-center align-middle">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        selectAssistBuildQueueEvent(row.event);
+                                                        setEditingAssistPriorityEventId(current => current === row.event.id ? null : row.event.id);
+                                                    }}
+                                                    className={`rounded border px-2 py-1 text-[10px] font-semibold ${
+                                                        isEditing
+                                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                                                            : 'border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
+                                                    }`}
+                                                >
+                                                    {isEditing ? 'Done' : 'Edit'}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {isEditing && (
+                                            <tr className="bg-emerald-50/60">
+                                                <td colSpan={11} className="border-t border-emerald-200 px-3 py-3">
+                                                    <div className="grid grid-cols-[minmax(120px,0.8fr)_minmax(180px,1.2fr)_minmax(180px,1fr)_minmax(110px,0.65fr)_minmax(120px,0.7fr)_minmax(130px,0.75fr)_auto] gap-2 rounded-md border border-emerald-200 bg-white p-3 shadow-sm">
+                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                                            Date
+                                                            <input
+                                                                type="date"
+                                                                value={row.event.date || date}
+                                                                onChange={event => onUpdatePriorityEvent(row.event.id, { date: event.target.value })}
+                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
+                                                            />
+                                                        </label>
+                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                                            Event
+                                                            <input
+                                                                list="neo-assist-priority-event-options"
+                                                                value={row.label}
+                                                                onChange={event => updateAssistBuildQueueEventLabel(row.event, row.group, event.target.value)}
+                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
+                                                            />
+                                                        </label>
+                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                                            Crew
+                                                            <input
+                                                                list="neo-assist-priority-person-options"
+                                                                value={row.person === 'TBA' ? '' : row.person}
+                                                                onChange={event => updateAssistBuildQueueEventCrew(row.event, event.target.value)}
+                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
+                                                                placeholder="PIC, crew or trainee"
+                                                            />
+                                                        </label>
+                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                                            Time
+                                                            <select
+                                                                value={row.event.startTime || 0}
+                                                                onChange={event => onUpdatePriorityEvent(row.event.id, { startTime: Number(event.target.value) })}
+                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
+                                                            >
+                                                                {timeOptions.map(option => <option key={`priority-edit-time-${row.event.id}-${option.label}`} value={option.value}>{option.label}</option>)}
+                                                            </select>
+                                                        </label>
+                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                                            Priority
+                                                            <select
+                                                                value={row.event.priority || 'High'}
+                                                                onChange={event => setAssistBuildQueuePriority(row.event, event.target.value as 'High' | 'Medium' | 'Low')}
+                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
+                                                            >
+                                                                <option value="High">High</option>
+                                                                <option value="Medium">Medium</option>
+                                                                <option value="Low">Low</option>
+                                                            </select>
+                                                        </label>
+                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                                            Scheduler
+                                                            <select
+                                                                value={row.scheduler}
+                                                                onChange={event => setAssistBuildQueueScheduler(row.event, event.target.value as 'Mandatory' | 'Desirable' | 'Ignore')}
+                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
+                                                            >
+                                                                <option value="Mandatory">Mandatory</option>
+                                                                <option value="Desirable">Desirable</option>
+                                                                <option value="Ignore">Ignore</option>
+                                                            </select>
+                                                        </label>
+                                                        <div className="flex items-end">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditingAssistPriorityEventId(null)}
+                                                                className="w-full rounded border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100"
+                                                            >
+                                                                Done
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -6215,9 +6341,13 @@ const DfpSidePanelTimeline: React.FC<{
                                                 type="button"
                                                 onClick={() => setAssistPrioritySourceView(option.value)}
                                                 className={`min-h-[44px] rounded-md border px-3 py-2 text-left text-[11px] font-semibold shadow-sm transition ${
-                                                    assistPriorityTypeFilter === option.value
-                                                        ? 'border-cyan-300 bg-cyan-50 text-slate-950'
-                                                        : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
+                                                    option.value === 'all'
+                                                        ? assistPriorityTypeFilter === option.value
+                                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
+                                                            : 'border-emerald-200 bg-emerald-50/70 text-emerald-900 hover:border-emerald-300 hover:bg-emerald-50'
+                                                        : assistPriorityTypeFilter === option.value
+                                                            ? 'border-cyan-300 bg-cyan-50 text-slate-950'
+                                                            : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
                                                 }`}
                                             >
                                                 <span className="block leading-tight">{option.label}</span>
