@@ -1161,6 +1161,7 @@ const DfpSidePanelTimeline: React.FC<{
     }, [isFixedCrewNeoAssist]);
     const [showAssistTaskForm, setShowAssistTaskForm] = useState(false);
     const [showAssistCurrencyForm, setShowAssistCurrencyForm] = useState(false);
+    const [expandedAssistCurrencyRowId, setExpandedAssistCurrencyRowId] = useState<string | null>(null);
     const [airCombatAssistMode, setAirCombatAssistMode] = useState<'tile' | 'wizard'>('tile');
     const [selectedAssistPrioritySource, setSelectedAssistPrioritySource] = useState<{ kind: 'task' | 'currency'; id: string } | null>(null);
     const [wizardStep, setWizardStep] = useState(0);
@@ -2800,6 +2801,16 @@ const DfpSidePanelTimeline: React.FC<{
                 if (Object.keys(queueUpdates).length > 0) onUpdatePriorityEvent(event.id, queueUpdates);
             });
     };
+    const formatAssistCurrencyDate = (value?: string | null): string => {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        const parsed = new Date(`${raw.slice(0, 10)}T00:00:00Z`);
+        if (Number.isNaN(parsed.getTime())) return raw;
+        return parsed.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' });
+    };
+    const getAssistCurrencyEventTypeLabel = (requestType?: string): string => (
+        requestType === 'ftd' ? simulatorResourceLabel || 'Simulator' : 'Flight'
+    );
     const saveAssistCurrencyRequest = (id: string) => {
         patchAssistCurrencyRequest(id, { submitted: false, includeInBuild: false });
     };
@@ -4921,105 +4932,126 @@ const DfpSidePanelTimeline: React.FC<{
                             </div>
                         )}
                     </div>
-                    <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                    <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
                         {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No currency requests entered.</p>}
-                        {rows.map(row => (
-                            <div key={`${row.source}-${row.id}`} className="rounded border border-slate-700 bg-slate-950/60 p-2">
-                                <div className="mb-2 flex items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <p className="truncate text-[11px] font-semibold text-slate-100" title={row.currency}>{row.currency}</p>
-                                        <p className="truncate text-[9px] text-slate-400" title={row.requester}>Requested by {row.requester}</p>
-                                    </div>
-                                    <span className={`shrink-0 rounded border px-1.5 py-1 text-[9px] font-semibold ${row.scheduled ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100' : 'border-amber-400/40 bg-amber-500/10 text-amber-100'}`}>
-                                        {row.scheduled ? 'In build queue' : 'Not scheduled'}
-                                    </span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                                        Date
-                                        {row.source === 'build-priorities' ? (
-                                            <input
-                                                type="date"
-                                                value={row.date || date}
-                                                onChange={event => patchAssistCurrencyRequestAndQueue(row.id, { dateRequested: event.target.value }, row.requestType)}
-                                                className={fieldClass}
-                                            />
-                                        ) : (
-                                            <div className={fieldClass}>{row.date || date}</div>
-                                        )}
-                                    </label>
-                                    <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                                        Time
-                                        {row.source === 'build-priorities' ? (
-                                            <select
-                                                value={parseTimeToDecimal(row.requestedTime || formatTime(row.takeoff))}
-                                                onChange={event => patchAssistCurrencyRequestAndQueue(row.id, { requestedTime: formatTime(Number(event.target.value)) }, row.requestType)}
-                                                className={fieldClass}
-                                            >
-                                                {timeOptions.map(option => <option key={`currency-row-time-${row.id}-${option.label}`} value={option.value}>{option.label}</option>)}
-                                            </select>
-                                        ) : (
-                                            <div className={fieldClass}>{formatTime(row.takeoff)}</div>
-                                        )}
-                                    </label>
-                                    <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                                        Resource
-                                        <div className={fieldClass}>{row.requestType === 'ftd' ? simulatorResourceLabel : 'Flight'}</div>
-                                    </label>
-                                    <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                                        Priority
-                                        {row.source === 'build-priorities' ? (
-                                            <select
-                                                value={row.priority || 'Medium'}
-                                                onChange={event => patchAssistCurrencyRequestAndQueue(row.id, { priority: event.target.value as 'High' | 'Medium' | 'Low' }, row.requestType)}
-                                                className={fieldClass}
-                                            >
-                                                <option value="High">High</option>
-                                                <option value="Medium">Medium</option>
-                                                <option value="Low">Low</option>
-                                            </select>
-                                        ) : (
-                                            <div className={fieldClass}>{row.priority || 'High'}</div>
-                                        )}
-                                    </label>
-                                </div>
-                                {row.notes && <p className="mt-2 rounded border border-slate-800 bg-slate-900/70 px-2 py-1 text-[9px] text-slate-400">{row.notes}</p>}
-                                <div className="mt-2 flex flex-wrap items-center justify-end gap-1 text-[9px]">
+                        {rows.map(row => {
+                            const rowKey = `${row.source}-${row.id}`;
+                            const isExpanded = expandedAssistCurrencyRowId === rowKey;
+                            return (
+                                <div key={rowKey} className="overflow-hidden rounded border border-slate-700 bg-slate-950/60 transition-all duration-200">
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            selectAirCombatTileCurrency(row);
-                                            setShowAssistCurrencyForm(true);
-                                        }}
-                                        className="rounded border border-cyan-400/45 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10"
+                                        onClick={() => setExpandedAssistCurrencyRowId(prev => prev === rowKey ? null : rowKey)}
+                                        className="grid w-full grid-cols-[6.2rem_minmax(0,1fr)_5.5rem_1.5rem] items-center gap-2 px-2 py-2 text-left hover:bg-cyan-950/25"
+                                        aria-expanded={isExpanded}
                                     >
-                                        Edit
+                                        <span className="font-mono text-[10px] font-semibold text-slate-300">{formatAssistCurrencyDate(row.date || date)}</span>
+                                        <span className="min-w-0 truncate text-[11px] font-semibold text-slate-100" title={row.requester}>{row.requester}</span>
+                                        <span className="rounded border border-slate-600/80 bg-slate-900/80 px-1.5 py-1 text-center text-[9px] font-semibold text-slate-300">
+                                            {getAssistCurrencyEventTypeLabel(row.requestType)}
+                                        </span>
+                                        <span className={`justify-self-end text-[12px] text-cyan-100 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>v</span>
                                     </button>
-                                    {row.source === 'build-priorities' && (
-                                        <button
-                                            type="button"
-                                            onClick={() => submitAssistCurrencyRequest(row.id)}
-                                            className={`rounded px-2 py-1 font-semibold text-white ${row.scheduled ? 'bg-sky-600 hover:bg-sky-700' : 'bg-orange-500 hover:bg-orange-600'}`}
-                                        >
-                                            {row.scheduled ? 'Re-submit' : 'Schedule'}
-                                        </button>
+                                    {isExpanded && (
+                                        <div className="border-t border-slate-800 bg-slate-900/45 px-2 pb-2 pt-2">
+                                            <div className="mb-2 flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-[11px] font-semibold text-slate-100" title={row.currency}>{row.currency}</p>
+                                                    <p className="truncate text-[9px] text-slate-400" title={row.requester}>Requested by {row.requester}</p>
+                                                </div>
+                                                <span className={`shrink-0 rounded border px-1.5 py-1 text-[9px] font-semibold ${row.scheduled ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100' : 'border-amber-400/40 bg-amber-500/10 text-amber-100'}`}>
+                                                    {row.scheduled ? 'In build queue' : 'Not scheduled'}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                                                    Date
+                                                    {row.source === 'build-priorities' ? (
+                                                        <input
+                                                            type="date"
+                                                            value={row.date || date}
+                                                            onChange={event => patchAssistCurrencyRequestAndQueue(row.id, { dateRequested: event.target.value }, row.requestType)}
+                                                            className={fieldClass}
+                                                        />
+                                                    ) : (
+                                                        <div className={fieldClass}>{formatAssistCurrencyDate(row.date || date)}</div>
+                                                    )}
+                                                </label>
+                                                <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                                                    Time
+                                                    {row.source === 'build-priorities' ? (
+                                                        <select
+                                                            value={parseTimeToDecimal(row.requestedTime || formatTime(row.takeoff))}
+                                                            onChange={event => patchAssistCurrencyRequestAndQueue(row.id, { requestedTime: formatTime(Number(event.target.value)) }, row.requestType)}
+                                                            className={fieldClass}
+                                                        >
+                                                            {timeOptions.map(option => <option key={`currency-row-time-${row.id}-${option.label}`} value={option.value}>{option.label}</option>)}
+                                                        </select>
+                                                    ) : (
+                                                        <div className={fieldClass}>{formatTime(row.takeoff)}</div>
+                                                    )}
+                                                </label>
+                                                <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                                                    Currency Event
+                                                    <div className={fieldClass}>{row.currency}</div>
+                                                </label>
+                                                <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                                                    Priority
+                                                    {row.source === 'build-priorities' ? (
+                                                        <select
+                                                            value={row.priority || 'Medium'}
+                                                            onChange={event => patchAssistCurrencyRequestAndQueue(row.id, { priority: event.target.value as 'High' | 'Medium' | 'Low' }, row.requestType)}
+                                                            className={fieldClass}
+                                                        >
+                                                            <option value="High">High</option>
+                                                            <option value="Medium">Medium</option>
+                                                            <option value="Low">Low</option>
+                                                        </select>
+                                                    ) : (
+                                                        <div className={fieldClass}>{row.priority || 'High'}</div>
+                                                    )}
+                                                </label>
+                                            </div>
+                                            {row.notes && <p className="mt-2 rounded border border-slate-800 bg-slate-900/70 px-2 py-1 text-[9px] text-slate-400">{row.notes}</p>}
+                                            <div className="mt-2 flex flex-wrap items-center justify-end gap-1 text-[9px]">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        selectAirCombatTileCurrency(row);
+                                                        setShowAssistCurrencyForm(true);
+                                                    }}
+                                                    className="rounded border border-cyan-400/45 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10"
+                                                >
+                                                    Edit
+                                                </button>
+                                                {row.source === 'build-priorities' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => submitAssistCurrencyRequest(row.id)}
+                                                        className={`rounded px-2 py-1 font-semibold text-white ${row.scheduled ? 'bg-sky-600 hover:bg-sky-700' : 'bg-orange-500 hover:bg-orange-600'}`}
+                                                    >
+                                                        {row.scheduled ? 'Re-submit' : 'Schedule'}
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (row.source === 'build-priorities') ignoreAssistCurrencyRequest(row.id);
+                                                        else {
+                                                            const remote = highestPriorityCurrencyRows.find(item => item.id === row.id);
+                                                            if (remote) ignorePriorityEvents([remote.event]);
+                                                        }
+                                                    }}
+                                                    className="rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100 hover:bg-rose-500/10"
+                                                >
+                                                    Ignore
+                                                </button>
+                                            </div>
+                                        </div>
                                     )}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (row.source === 'build-priorities') ignoreAssistCurrencyRequest(row.id);
-                                            else {
-                                                const remote = highestPriorityCurrencyRows.find(item => item.id === row.id);
-                                                if (remote) ignorePriorityEvents([remote.event]);
-                                            }
-                                        }}
-                                        className="rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100 hover:bg-rose-500/10"
-                                    >
-                                        Ignore
-                                    </button>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                     <button
                         type="button"

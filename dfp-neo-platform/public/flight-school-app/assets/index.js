@@ -101685,6 +101685,7 @@ const DfpSidePanelTimeline = ({
   }, [isFixedCrewNeoAssist]);
   const [showAssistTaskForm, setShowAssistTaskForm] = reactExports.useState(false);
   const [showAssistCurrencyForm, setShowAssistCurrencyForm] = reactExports.useState(false);
+  const [expandedAssistCurrencyRowId, setExpandedAssistCurrencyRowId] = reactExports.useState(null);
   const [airCombatAssistMode, setAirCombatAssistMode] = reactExports.useState("tile");
   const [selectedAssistPrioritySource, setSelectedAssistPrioritySource] = reactExports.useState(null);
   const [wizardStep, setWizardStep] = reactExports.useState(0);
@@ -102984,6 +102985,14 @@ const DfpSidePanelTimeline = ({
       if (Object.keys(queueUpdates).length > 0) onUpdatePriorityEvent(event.id, queueUpdates);
     });
   };
+  const formatAssistCurrencyDate = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const parsed = /* @__PURE__ */ new Date(`${raw.slice(0, 10)}T00:00:00Z`);
+    if (Number.isNaN(parsed.getTime())) return raw;
+    return parsed.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" });
+  };
+  const getAssistCurrencyEventTypeLabel = (requestType) => requestType === "ftd" ? simulatorResourceLabel || "Simulator" : "Flight";
   const submitAssistCurrencyRequest = (id) => {
     if (highestPriorityEvents.some((event) => event.sctRequestId === id || event.currencyDraftId === id || String(event.id || "") === `sct-flight-${id}` || String(event.id || "") === `sct-ftd-${id}` || String(event.id || "") === `neo-assist-currency-${id}`)) return;
     const type = getAssistCurrencyRequestType(id);
@@ -105013,105 +105022,126 @@ const DfpSidePanelTimeline = ({
             )
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 space-y-2 overflow-y-auto pr-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 space-y-1 overflow-y-auto pr-1", children: [
           rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No currency requests entered." }),
-          rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/60 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-[11px] font-semibold text-slate-100", title: row.currency, children: row.currency }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-[9px] text-slate-400", title: row.requester, children: [
-                  "Requested by ",
-                  row.requester
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `shrink-0 rounded border px-1.5 py-1 text-[9px] font-semibold ${row.scheduled ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: row.scheduled ? "In build queue" : "Not scheduled" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
-                "Date",
-                row.source === "build-priorities" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "date",
-                    value: row.date || date,
-                    onChange: (event) => patchAssistCurrencyRequestAndQueue(row.id, { dateRequested: event.target.value }, row.requestType),
-                    className: fieldClass2
-                  }
-                ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: row.date || date })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
-                "Time",
-                row.source === "build-priorities" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "select",
-                  {
-                    value: parseTimeToDecimal(row.requestedTime || formatTime2(row.takeoff)),
-                    onChange: (event) => patchAssistCurrencyRequestAndQueue(row.id, { requestedTime: formatTime2(Number(event.target.value)) }, row.requestType),
-                    className: fieldClass2,
-                    children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `currency-row-time-${row.id}-${option.label}`))
-                  }
-                ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: formatTime2(row.takeoff) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
-                "Resource",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: row.requestType === "ftd" ? simulatorResourceLabel : "Flight" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
-                "Priority",
-                row.source === "build-priorities" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "select",
-                  {
-                    value: row.priority || "Medium",
-                    onChange: (event) => patchAssistCurrencyRequestAndQueue(row.id, { priority: event.target.value }, row.requestType),
-                    className: fieldClass2,
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
-                    ]
-                  }
-                ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: row.priority || "High" })
-              ] })
-            ] }),
-            row.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 rounded border border-slate-800 bg-slate-900/70 px-2 py-1 text-[9px] text-slate-400", children: row.notes }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap items-center justify-end gap-1 text-[9px]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
+          rows.map((row) => {
+            const rowKey = `${row.source}-${row.id}`;
+            const isExpanded = expandedAssistCurrencyRowId === rowKey;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded border border-slate-700 bg-slate-950/60 transition-all duration-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
                   type: "button",
-                  onClick: () => {
-                    selectAirCombatTileCurrency(row);
-                    setShowAssistCurrencyForm(true);
-                  },
-                  className: "rounded border border-cyan-400/45 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10",
-                  children: "Edit"
+                  onClick: () => setExpandedAssistCurrencyRowId((prev) => prev === rowKey ? null : rowKey),
+                  className: "grid w-full grid-cols-[6.2rem_minmax(0,1fr)_5.5rem_1.5rem] items-center gap-2 px-2 py-2 text-left hover:bg-cyan-950/25",
+                  "aria-expanded": isExpanded,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[10px] font-semibold text-slate-300", children: formatAssistCurrencyDate(row.date || date) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-[11px] font-semibold text-slate-100", title: row.requester, children: row.requester }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-600/80 bg-slate-900/80 px-1.5 py-1 text-center text-[9px] font-semibold text-slate-300", children: getAssistCurrencyEventTypeLabel(row.requestType) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `justify-self-end text-[12px] text-cyan-100 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`, children: "v" })
+                  ]
                 }
               ),
-              row.source === "build-priorities" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => submitAssistCurrencyRequest(row.id),
-                  className: `rounded px-2 py-1 font-semibold text-white ${row.scheduled ? "bg-sky-600 hover:bg-sky-700" : "bg-orange-500 hover:bg-orange-600"}`,
-                  children: row.scheduled ? "Re-submit" : "Schedule"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    if (row.source === "build-priorities") ignoreAssistCurrencyRequest(row.id);
-                    else {
-                      const remote = highestPriorityCurrencyRows.find((item) => item.id === row.id);
-                      if (remote) ignorePriorityEvents([remote.event]);
+              isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-800 bg-slate-900/45 px-2 pb-2 pt-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-[11px] font-semibold text-slate-100", title: row.currency, children: row.currency }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-[9px] text-slate-400", title: row.requester, children: [
+                      "Requested by ",
+                      row.requester
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `shrink-0 rounded border px-1.5 py-1 text-[9px] font-semibold ${row.scheduled ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: row.scheduled ? "In build queue" : "Not scheduled" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
+                    "Date",
+                    row.source === "build-priorities" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "date",
+                        value: row.date || date,
+                        onChange: (event) => patchAssistCurrencyRequestAndQueue(row.id, { dateRequested: event.target.value }, row.requestType),
+                        className: fieldClass2
+                      }
+                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: formatAssistCurrencyDate(row.date || date) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
+                    "Time",
+                    row.source === "build-priorities" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "select",
+                      {
+                        value: parseTimeToDecimal(row.requestedTime || formatTime2(row.takeoff)),
+                        onChange: (event) => patchAssistCurrencyRequestAndQueue(row.id, { requestedTime: formatTime2(Number(event.target.value)) }, row.requestType),
+                        className: fieldClass2,
+                        children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `currency-row-time-${row.id}-${option.label}`))
+                      }
+                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: formatTime2(row.takeoff) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
+                    "Currency Event",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: row.currency })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
+                    "Priority",
+                    row.source === "build-priorities" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: row.priority || "Medium",
+                        onChange: (event) => patchAssistCurrencyRequestAndQueue(row.id, { priority: event.target.value }, row.requestType),
+                        className: fieldClass2,
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
+                        ]
+                      }
+                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: row.priority || "High" })
+                  ] })
+                ] }),
+                row.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 rounded border border-slate-800 bg-slate-900/70 px-2 py-1 text-[9px] text-slate-400", children: row.notes }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap items-center justify-end gap-1 text-[9px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        selectAirCombatTileCurrency(row);
+                        setShowAssistCurrencyForm(true);
+                      },
+                      className: "rounded border border-cyan-400/45 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10",
+                      children: "Edit"
                     }
-                  },
-                  className: "rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100 hover:bg-rose-500/10",
-                  children: "Ignore"
-                }
-              )
-            ] })
-          ] }, `${row.source}-${row.id}`))
+                  ),
+                  row.source === "build-priorities" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => submitAssistCurrencyRequest(row.id),
+                      className: `rounded px-2 py-1 font-semibold text-white ${row.scheduled ? "bg-sky-600 hover:bg-sky-700" : "bg-orange-500 hover:bg-orange-600"}`,
+                      children: row.scheduled ? "Re-submit" : "Schedule"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        if (row.source === "build-priorities") ignoreAssistCurrencyRequest(row.id);
+                        else {
+                          const remote = highestPriorityCurrencyRows.find((item) => item.id === row.id);
+                          if (remote) ignorePriorityEvents([remote.event]);
+                        }
+                      },
+                      className: "rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100 hover:bg-rose-500/10",
+                      children: "Ignore"
+                    }
+                  )
+                ] })
+              ] })
+            ] }, rowKey);
+          })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
