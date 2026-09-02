@@ -1045,7 +1045,7 @@ const DfpSidePanelTimeline: React.FC<{
     const timelineSpanHours = timelineEndHour - timelineStartHour;
     const visibleWindowHours = 10;
     const timelineMinGap = 5 / 60;
-    const miniTimelineBodyHeight = 55;
+    const miniTimelineBodyHeight = 80;
     const chartRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const assistDragPreviewRef = useRef<HTMLElement | null>(null);
@@ -3323,7 +3323,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                 </div>
                 <div className="max-h-[640px] overflow-y-auto overflow-x-hidden rounded-md border border-slate-300">
-                    <table className="w-full table-fixed text-[10px]">
+                    <table className="w-full table-fixed text-[12px]">
                         <colgroup>
                             <col className="w-[48px]" />
                             <col className="w-[118px]" />
@@ -3335,7 +3335,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <col className="w-[92px]" />
                             <col className="w-[64px]" />
                         </colgroup>
-                        <thead className="sticky top-0 z-10 bg-slate-100 text-[8px] uppercase tracking-[0.12em] text-slate-500">
+                        <thead className="sticky top-0 z-10 bg-slate-100 text-[10px] uppercase tracking-[0.12em] text-slate-500">
                             <tr>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Order</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Type</th>
@@ -3382,7 +3382,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         <select
                                             value={row.event.priority || 'High'}
                                             onChange={event => setAssistBuildQueuePriority(row.event, event.target.value as 'High' | 'Medium' | 'Low')}
-                                            className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[10px] text-slate-900"
+                                            className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
                                         >
                                             <option value="High">High</option>
                                             <option value="Medium">Medium</option>
@@ -3393,7 +3393,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         <select
                                             value={row.scheduler}
                                             onChange={event => setAssistBuildQueueScheduler(row.event, event.target.value as 'Mandatory' | 'Desirable' | 'Ignore')}
-                                            className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[10px] text-slate-900"
+                                            className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
                                         >
                                             <option value="Mandatory">Mandatory</option>
                                             <option value="Desirable">Desirable</option>
@@ -3425,14 +3425,14 @@ const DfpSidePanelTimeline: React.FC<{
     const renderAssistDfpOverview = () => (
         <div
             ref={scrollRef}
-            className="overflow-x-auto rounded-lg border border-slate-300 bg-white p-3 pb-3 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="overflow-x-auto rounded-lg border border-slate-300 bg-white p-2 pb-2 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             aria-label="Scrollable ten hour flying window timeline"
         >
             <div
                 className="relative"
                 style={{ width: `${(timelineSpanHours / visibleWindowHours) * 100}%`, minWidth: '660px' }}
             >
-                <div className="relative mb-1 h-4">
+                <div className="relative h-3">
                     {ticks.map(hour => (
                         <span
                             key={`mini-tick-${hour}`}
@@ -3443,7 +3443,7 @@ const DfpSidePanelTimeline: React.FC<{
                         </span>
                     ))}
                 </div>
-                <div ref={chartRef} className="relative h-[55px] overflow-visible rounded border border-slate-300 bg-slate-50">
+                <div ref={chartRef} className="relative h-20 overflow-visible rounded border border-slate-300 bg-slate-50">
                     <div className="absolute inset-x-0 top-1/2 h-px bg-slate-300" />
                     <div
                         className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${dayShade}`}
@@ -3509,7 +3509,7 @@ const DfpSidePanelTimeline: React.FC<{
                         </div>
                     )}
                 </div>
-                <div className="relative mt-2 h-9">
+                <div className="relative mt-1 h-8">
                     {markers.map(marker => (
                         <span
                             key={`mini-label-${marker.key}`}
@@ -3520,7 +3520,7 @@ const DfpSidePanelTimeline: React.FC<{
                         </span>
                     ))}
                 </div>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-semibold text-slate-600">
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-semibold text-slate-600">
                     <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${dayShade}`} /> Day</span>
                     <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${nightShade}`} /> Night</span>
                     <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${exclusionShade}`} /> Exclusion</span>

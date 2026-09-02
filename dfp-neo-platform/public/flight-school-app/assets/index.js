@@ -101608,7 +101608,7 @@ const DfpSidePanelTimeline = ({
   const timelineSpanHours = timelineEndHour - timelineStartHour;
   const visibleWindowHours = 10;
   const timelineMinGap = 5 / 60;
-  const miniTimelineBodyHeight = 55;
+  const miniTimelineBodyHeight = 80;
   const chartRef = reactExports.useRef(null);
   const scrollRef = reactExports.useRef(null);
   const assistDragPreviewRef = reactExports.useRef(null);
@@ -103408,7 +103408,7 @@ const DfpSidePanelTimeline = ({
           assistBuildQueueRows.length === 1 ? "" : "s"
         ] }) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[640px] overflow-y-auto overflow-x-hidden rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-[10px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[640px] overflow-y-auto overflow-x-hidden rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-[12px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[48px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[118px]" }),
@@ -103420,7 +103420,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[92px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[64px]" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-100 text-[8px] uppercase tracking-[0.12em] text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-100 text-[10px] uppercase tracking-[0.12em] text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Order" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Type" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Event" }),
@@ -103453,7 +103453,7 @@ const DfpSidePanelTimeline = ({
               {
                 value: row.event.priority || "High",
                 onChange: (event) => setAssistBuildQueuePriority(row.event, event.target.value),
-                className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[10px] text-slate-900",
+                className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
@@ -103466,7 +103466,7 @@ const DfpSidePanelTimeline = ({
               {
                 value: row.scheduler,
                 onChange: (event) => setAssistBuildQueueScheduler(row.event, event.target.value),
-                className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[10px] text-slate-900",
+                className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mandatory", children: "Mandatory" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Desirable", children: "Desirable" }),
@@ -103493,7 +103493,7 @@ const DfpSidePanelTimeline = ({
     "div",
     {
       ref: scrollRef,
-      className: "overflow-x-auto rounded-lg border border-slate-300 bg-white p-3 pb-3 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+      className: "overflow-x-auto rounded-lg border border-slate-300 bg-white p-2 pb-2 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       "aria-label": "Scrollable ten hour flying window timeline",
       children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
@@ -103501,7 +103501,7 @@ const DfpSidePanelTimeline = ({
           className: "relative",
           style: { width: `${timelineSpanHours / visibleWindowHours * 100}%`, minWidth: "660px" },
           children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-1 h-4", children: ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative h-3", children: ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
               "span",
               {
                 className: `absolute text-[9px] font-semibold tracking-[0.08em] text-slate-500 ${hour === timelineEndHour ? "-translate-x-full" : "-translate-x-1/2"}`,
@@ -103510,7 +103510,7 @@ const DfpSidePanelTimeline = ({
               },
               `mini-tick-${hour}`
             )) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: chartRef, className: "relative h-[55px] overflow-visible rounded border border-slate-300 bg-slate-50", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: chartRef, className: "relative h-20 overflow-visible rounded border border-slate-300 bg-slate-50", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-300" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
@@ -103585,7 +103585,7 @@ const DfpSidePanelTimeline = ({
                 }
               )
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2 h-9", children: markers.map((marker) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-1 h-8", children: markers.map((marker) => /* @__PURE__ */ jsxRuntimeExports.jsx(
               "span",
               {
                 className: "absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-300 bg-white px-1.5 py-1 text-[9px] font-semibold text-slate-800 shadow-sm",
@@ -103594,7 +103594,7 @@ const DfpSidePanelTimeline = ({
               },
               `mini-label-${marker.key}`
             )) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-semibold text-slate-600", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] font-semibold text-slate-600", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${dayShade}` }),
                 " Day"
