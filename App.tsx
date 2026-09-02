@@ -32098,7 +32098,7 @@ const App: React.FC = () => {
         if (!sessionUser?.userId) return;
         const loadSctRequests = async () => {
             try {
-                const res = await fetch(`/api/sct-requests?userId=${sessionUser.userId}`);
+                const res = await fetch(`${getAppApiBase()}/sct-requests?userId=${encodeURIComponent(sessionUser.userId)}`);
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
                     appendNeoAssistCurrencyTrace('SCT_REQUESTS_GET_FAILED', {
@@ -32224,7 +32224,7 @@ const App: React.FC = () => {
         else setSctFlights(updater);
         setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-${type}-${id}`));
         try {
-            const response = await fetch(`/api/sct-requests/${encodeURIComponent(id)}`, {
+            const response = await fetch(`${getAppApiBase()}/sct-requests/${encodeURIComponent(id)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...normalisedUpdates, userId: currentUserId })
@@ -32245,7 +32245,7 @@ const App: React.FC = () => {
         setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-${type}-${id}`));
         try {
             const query = currentUserId ? `?userId=${encodeURIComponent(currentUserId)}` : '';
-            const response = await fetch(`/api/sct-requests/${encodeURIComponent(id)}${query}`, { method: 'DELETE' });
+            const response = await fetch(`${getAppApiBase()}/sct-requests/${encodeURIComponent(id)}${query}`, { method: 'DELETE' });
             if (!response.ok) {
                 const error = await response.json().catch(() => ({}));
                 console.error('[CONTINUATION] Failed to cancel owned request:', response.status, error);
@@ -44974,7 +44974,7 @@ const App: React.FC = () => {
             const currentUserId = getCurrentUserId();
             publishedSctRequestIds.forEach(requestId => {
                 const query = currentUserId ? `?userId=${encodeURIComponent(currentUserId)}` : '';
-                fetch(`/api/sct-requests/${encodeURIComponent(requestId)}${query}`, { method: 'DELETE' })
+                fetch(`${getAppApiBase()}/sct-requests/${encodeURIComponent(requestId)}${query}`, { method: 'DELETE' })
                     .catch(err => console.error('Failed to delete published continuation request:', err));
             });
         }
@@ -50842,7 +50842,7 @@ appliedUpdates.forEach(update => {
                         try {
                           const payload = { ...newReq, userId, requestType: type };
                           logRoutineAppDebug('[CONTINUATION] POST payload:', JSON.stringify(payload));
-                          const res = await fetch('/api/sct-requests', {
+                          const res = await fetch(`${getAppApiBase()}/sct-requests`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
@@ -50871,7 +50871,7 @@ appliedUpdates.forEach(update => {
                       try {
                         const userId = getCurrentUserId();
                         const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-                        await fetch(`/api/sct-requests/${encodeURIComponent(id)}${query}`, { method: 'DELETE' });
+                        await fetch(`${getAppApiBase()}/sct-requests/${encodeURIComponent(id)}${query}`, { method: 'DELETE' });
                       } catch (err) { console.error('Failed to delete continuation request:', err); }
                     }}
                     onUpdateSctRequest={async (id, field, value, type) => {
@@ -50884,7 +50884,7 @@ appliedUpdates.forEach(update => {
                       setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-${type}-${id}`));
                       // Persist to DB
                       try {
-                        await fetch(`/api/sct-requests/${id}`, {
+                        await fetch(`${getAppApiBase()}/sct-requests/${encodeURIComponent(id)}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ [field]: effectiveValue, userId: getCurrentUserId() })
@@ -50910,7 +50910,7 @@ appliedUpdates.forEach(update => {
                       else setSctFtds(updater);
                       setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-${type}-${id}`));
                       try {
-                        await fetch(`/api/sct-requests/${id}`, {
+                        await fetch(`${getAppApiBase()}/sct-requests/${encodeURIComponent(id)}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ ...normalisedUpdates, userId: getCurrentUserId() })
@@ -50933,7 +50933,7 @@ appliedUpdates.forEach(update => {
                       else setSctFtds(updater);
                       // Persist to DB
                       try {
-                        await fetch(`/api/sct-requests/${id}`, {
+                        await fetch(`${getAppApiBase()}/sct-requests/${encodeURIComponent(id)}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ submitted: true, userId: getCurrentUserId() })
@@ -50951,7 +50951,7 @@ appliedUpdates.forEach(update => {
                       else setSctFtds(updater);
                       // Persist to DB
                       try {
-                        await fetch(`/api/sct-requests/${id}`, {
+                        await fetch(`${getAppApiBase()}/sct-requests/${encodeURIComponent(id)}`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ includeInBuild: newValue, userId: getCurrentUserId() })
@@ -53388,7 +53388,7 @@ appliedUpdates.forEach(update => {
                                                 userId,
                                                 payload,
                                             });
-                                            const res = await fetch('/api/sct-requests', {
+                                            const res = await fetch(`${getAppApiBase()}/sct-requests`, {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify(payload),
@@ -53439,7 +53439,7 @@ appliedUpdates.forEach(update => {
                                         else setSctFtds(updater);
                                         setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-${type}-${id}`));
                                         try {
-                                            await fetch(`/api/sct-requests/${id}`, {
+                                            await fetch(`${getAppApiBase()}/sct-requests/${encodeURIComponent(id)}`, {
                                                 method: 'PUT',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({ ...updates, userId: getCurrentUserId() }),
@@ -54291,7 +54291,7 @@ appliedUpdates.forEach(update => {
                                 const requestType = requestWithDefaults.event.includes('FTD') ? 'ftd' : 'flight';
                                 const payload = { ...requestWithDefaults, userId: flyoutUserId, requestType };
                                 logRoutineAppDebug('[CONTINUATION] POST from SctRequestFlyout:', JSON.stringify(payload));
-                                const res = await fetch('/api/sct-requests', {
+                                const res = await fetch(`${getAppApiBase()}/sct-requests`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify(payload)

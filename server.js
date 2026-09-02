@@ -1051,6 +1051,75 @@ async function sendActivationEmail({ db, target, suffix, expiresAt }) {
   };
 }
 
+// Create SCT request table if it doesn't exist. These records back NEO Assist
+// continuation/currency request rows and must survive browser refreshes.
+async function ensureSctRequestTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SctRequest" (
+        "id"             TEXT NOT NULL,
+        "userId"         TEXT NOT NULL,
+        "requestType"    TEXT NOT NULL DEFAULT 'flight',
+        "name"           TEXT NOT NULL DEFAULT '',
+        "event"          TEXT NOT NULL DEFAULT '',
+        "eventCode"      TEXT DEFAULT '',
+        "flightType"     TEXT NOT NULL DEFAULT 'Dual',
+        "currency"       TEXT NOT NULL DEFAULT '',
+        "currencyExpire" TEXT NOT NULL DEFAULT '',
+        "priority"       TEXT NOT NULL DEFAULT 'Medium',
+        "notes"          TEXT,
+        "dateRequested"  TEXT,
+        "requestedTime"  TEXT,
+        "dayNight"       TEXT DEFAULT 'Day',
+        "submitted"      BOOLEAN NOT NULL DEFAULT false,
+        "includeInBuild" BOOLEAN NOT NULL DEFAULT false,
+        "aircraftConfigId" TEXT DEFAULT 'CONFIG-0',
+        "acceptableAircraftConfigs" JSONB DEFAULT '[]'::jsonb,
+        "crewMember"     TEXT DEFAULT '',
+        "crewGroup"      TEXT DEFAULT '',
+        "crewGroupKey"   TEXT DEFAULT '',
+        "crewUnitCode"   TEXT DEFAULT '',
+        "crewDisplayLabel" TEXT DEFAULT '',
+        "crewIndividual" TEXT DEFAULT '',
+        "crewRequirement" JSONB,
+        "aircraftCount"  INTEGER NOT NULL DEFAULT 1,
+        "formationCrew"  JSONB,
+        "callsignBase"   TEXT DEFAULT '',
+        "callsignNumber" INTEGER DEFAULT 0,
+        "callsign"       TEXT DEFAULT '',
+        "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "SctRequest_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "SctRequest"
+      ADD COLUMN IF NOT EXISTS "eventCode" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "dayNight" TEXT DEFAULT 'Day',
+      ADD COLUMN IF NOT EXISTS "aircraftConfigId" TEXT DEFAULT 'CONFIG-0',
+      ADD COLUMN IF NOT EXISTS "acceptableAircraftConfigs" JSONB DEFAULT '[]'::jsonb,
+      ADD COLUMN IF NOT EXISTS "crewMember" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewGroup" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewGroupKey" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewUnitCode" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewDisplayLabel" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewIndividual" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "crewRequirement" JSONB,
+      ADD COLUMN IF NOT EXISTS "aircraftCount" INTEGER NOT NULL DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS "formationCrew" JSONB,
+      ADD COLUMN IF NOT EXISTS "callsignBase" TEXT DEFAULT '',
+      ADD COLUMN IF NOT EXISTS "callsignNumber" INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS "callsign" TEXT DEFAULT '';
+    `);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SctRequest_userId_idx" ON "SctRequest"("userId");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SctRequest_priority_idx" ON "SctRequest"("priority");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SctRequest_requestType_idx" ON "SctRequest"("requestType");`);
+    console.log('✅ SctRequest table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure SctRequest table:', err.message);
+  }
+}
+
 async function runPrismaRuntimeMaintenance(db) {
   const startedAt = Date.now();
   console.log('🛠️ Starting Prisma runtime maintenance checks in background...');
@@ -1062,6 +1131,8 @@ async function runPrismaRuntimeMaintenance(db) {
     // Ensure CancellationCode table exists. Initial setup cancellation codes are opt-in.
     await ensureCancellationCodesTable(db);
     await seedCancellationCodesIfEmpty(db);
+    // Ensure NEO Assist continuation/currency request persistence exists.
+    await ensureSctRequestTable(db);
     // Ensure IndividualLMP table exists (create if missing)
     await ensureIndividualLMPTable(db);
     await ensureTraineeLmpOverlayTable(db);
@@ -1864,6 +1935,205 @@ async function migrateFlightSchoolAssessmentRequiredDefaults(db) {
 // ============================================================
 // API ROUTES
 // ============================================================
+
+// ============================================================
+// SCT REQUESTS API — NEO Assist continuation/currency requests
+// ============================================================
+
+const SCT_REQUEST_UPDATE_FIELDS = new Set([
+  'requestType',
+  'name',
+  'event',
+  'eventCode',
+  'flightType',
+  'currency',
+  'currencyExpire',
+  'priority',
+  'notes',
+  'dateRequested',
+  'requestedTime',
+  'dayNight',
+  'submitted',
+  'includeInBuild',
+  'aircraftConfigId',
+  'acceptableAircraftConfigs',
+  'crewMember',
+  'crewGroup',
+  'crewGroupKey',
+  'crewUnitCode',
+  'crewDisplayLabel',
+  'crewIndividual',
+  'crewRequirement',
+  'aircraftCount',
+  'formationCrew',
+  'callsignBase',
+  'callsignNumber',
+  'callsign',
+]);
+
+const safeSctRequest = (row) => row ? ({
+  ...row,
+  submitted: Boolean(row.submitted),
+  includeInBuild: Boolean(row.includeInBuild),
+}) : null;
+
+const serialiseSctJsonField = (value, fallback = null) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value === 'string') {
+    try {
+      return JSON.stringify(JSON.parse(value));
+    } catch {
+      return fallback;
+    }
+  }
+  return JSON.stringify(value);
+};
+
+const getRequestingSctUserId = (req) => {
+  const bodyUserId = req.body && typeof req.body === 'object' ? req.body.userId : '';
+  return String(req.query.userId || bodyUserId || '').trim();
+};
+
+const loadOwnedSctRequest = async (db, id, userId) => {
+  if (!userId) return null;
+  const rows = await db.$queryRawUnsafe(
+    `SELECT * FROM "SctRequest" WHERE "id" = $1 AND "userId" = $2`,
+    String(id),
+    String(userId)
+  );
+  return rows[0] || null;
+};
+
+app.get('/api/sct-requests', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureSctRequestTable(db);
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const requests = await db.$queryRawUnsafe(
+      `SELECT * FROM "SctRequest" WHERE "userId" = $1 ORDER BY "createdAt" ASC`,
+      String(userId)
+    );
+    res.json(requests.map(safeSctRequest));
+  } catch (err) {
+    console.error('❌ Error fetching SCT requests:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/sct-requests', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureSctRequestTable(db);
+    const { id, userId, requestType, name, event, eventCode, flightType, currency, currencyExpire, priority, notes, dateRequested, requestedTime, dayNight, submitted, includeInBuild, aircraftConfigId, acceptableAircraftConfigs, crewMember, crewGroup, crewGroupKey, crewUnitCode, crewDisplayLabel, crewIndividual, crewRequirement, aircraftCount, formationCrew, callsignBase, callsignNumber, callsign } = req.body || {};
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const newId = id || crypto.randomUUID();
+    const acceptableConfigJson = serialiseSctJsonField(Array.isArray(acceptableAircraftConfigs) ? acceptableAircraftConfigs : [], '[]');
+    const crewRequirementJson = serialiseSctJsonField(crewRequirement);
+    const formationCrewJson = serialiseSctJsonField(formationCrew);
+    await db.$executeRawUnsafe(
+      `INSERT INTO "SctRequest" ("id","userId","requestType","name","event","eventCode","flightType","currency","currencyExpire","priority","notes","dateRequested","requestedTime","dayNight","submitted","includeInBuild","aircraftConfigId","acceptableAircraftConfigs","crewMember","crewGroup","crewGroupKey","crewUnitCode","crewDisplayLabel","crewIndividual","crewRequirement","aircraftCount","formationCrew","callsignBase","callsignNumber","callsign","createdAt","updatedAt")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::jsonb,$19,$20,$21,$22,$23,$24,$25::jsonb,$26,$27::jsonb,$28,$29,$30,NOW(),NOW())`,
+      newId,
+      String(userId),
+      requestType || 'flight',
+      name || '',
+      event || '',
+      eventCode || '',
+      flightType || 'Dual',
+      currency || '',
+      currencyExpire || '',
+      priority || 'Medium',
+      notes || null,
+      dateRequested ?? new Date().toISOString().split('T')[0],
+      requestedTime || '15:00',
+      dayNight || 'Day',
+      submitted === true || submitted === 'true',
+      includeInBuild === true || includeInBuild === 'true',
+      aircraftConfigId || 'CONFIG-0',
+      acceptableConfigJson,
+      crewMember || '',
+      crewGroup || '',
+      crewGroupKey || '',
+      crewUnitCode || '',
+      crewDisplayLabel || '',
+      crewIndividual || '',
+      crewRequirementJson,
+      Math.max(1, Math.min(24, Math.floor(Number(aircraftCount) || 1))),
+      formationCrewJson,
+      callsignBase || '',
+      Math.max(0, Math.floor(Number(callsignNumber) || 0)),
+      callsign || ''
+    );
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SctRequest" WHERE "id" = $1`, newId);
+    res.json(safeSctRequest(rows[0]) || { id: newId });
+  } catch (err) {
+    console.error('❌ Error creating SCT request:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/sct-requests/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureSctRequestTable(db);
+    const { id } = req.params;
+    const userId = getRequestingSctUserId(req);
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const existing = await loadOwnedSctRequest(db, id, userId);
+    if (!existing) return res.status(403).json({ error: 'SCT request not found for this user' });
+    const updates = { ...(req.body || {}) };
+    delete updates.id;
+    delete updates.userId;
+    delete updates.createdAt;
+    delete updates.updatedAt;
+    ['acceptableAircraftConfigs', 'crewRequirement', 'formationCrew'].forEach(field => {
+      if (field in updates) updates[field] = serialiseSctJsonField(updates[field], field === 'acceptableAircraftConfigs' ? '[]' : null);
+    });
+    if ('aircraftCount' in updates) {
+      updates.aircraftCount = Math.max(1, Math.min(24, Math.floor(Number(updates.aircraftCount) || 1)));
+    }
+    if ('callsignNumber' in updates) {
+      updates.callsignNumber = Math.max(0, Math.floor(Number(updates.callsignNumber) || 0));
+    }
+    const fields = Object.keys(updates).filter(field => SCT_REQUEST_UPDATE_FIELDS.has(field));
+    if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
+    const setClauses = fields.map((field, index) => (
+      ['acceptableAircraftConfigs', 'crewRequirement', 'formationCrew'].includes(field)
+        ? `"${field}" = $${index + 2}::jsonb`
+        : `"${field}" = $${index + 2}`
+    )).join(', ');
+    const values = fields.map(field => updates[field]);
+    await db.$executeRawUnsafe(
+      `UPDATE "SctRequest" SET ${setClauses}, "updatedAt" = NOW() WHERE "id" = $1 AND "userId" = $${fields.length + 2}`,
+      id,
+      ...values,
+      userId
+    );
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SctRequest" WHERE "id" = $1 AND "userId" = $2`, id, userId);
+    res.json(safeSctRequest(rows[0]) || { id });
+  } catch (err) {
+    console.error('❌ Error updating SCT request:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/sct-requests/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureSctRequestTable(db);
+    const { id } = req.params;
+    const userId = getRequestingSctUserId(req);
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const existing = await loadOwnedSctRequest(db, id, userId);
+    if (!existing) return res.status(403).json({ error: 'SCT request not found for this user' });
+    await db.$executeRawUnsafe(`DELETE FROM "SctRequest" WHERE "id" = $1 AND "userId" = $2`, id, userId);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Error deleting SCT request:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ============================================================
 // APP SETTINGS (currencies, org config, etc.) — PERSISTENT
