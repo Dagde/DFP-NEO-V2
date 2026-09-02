@@ -101542,7 +101542,7 @@ const DfpSidePanelTimeline = ({
   const assistDragPreviewRef = reactExports.useRef(null);
   const wizardRepeatRef = reactExports.useRef(null);
   const [activeDrag, setActiveDrag] = reactExports.useState(null);
-  const [activeAssistSection, setActiveAssistSection] = reactExports.useState("details");
+  const [activeAssistSection, setActiveAssistSection] = reactExports.useState("flying");
   const [showAssistCurrencyInfo, setShowAssistCurrencyInfo] = reactExports.useState(false);
   const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => !isSyllabusCourseShell(item)).filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
   const fullAssistEventOptions = reactExports.useMemo(() => syllabusDetails, [syllabusDetails]);
@@ -102516,7 +102516,6 @@ const DfpSidePanelTimeline = ({
     ])
   ];
   const assistSections = [
-    { id: "details", label: "Details" },
     { id: "flying", label: "Flying Window" },
     { id: "resources", label: "Resources Available" },
     { id: "training", label: "Training Priority" },
@@ -103225,7 +103224,7 @@ const DfpSidePanelTimeline = ({
       setSelectedTaskProfile("");
       setSelectedCurrencyName("");
     }
-    setActiveAssistSection("details");
+    setActiveAssistSection(group === "tasking" ? "taskings" : group === "currency" || group === "trainee-currency" ? "currency" : "training");
   };
   const renderAssistBuildQueue = () => {
     const groupStyles = {
@@ -103235,25 +103234,36 @@ const DfpSidePanelTimeline = ({
       special: "border-slate-500/40 bg-slate-700/40 text-slate-100"
     };
     const groupLabels = {
-      tasking: "Directed Task",
-      currency: "Currency",
-      "trainee-currency": "Trainee Currency",
-      special: "Special Event"
+      tasking: "Directed Tasks",
+      currency: "Currency Events",
+      "trainee-currency": "Trainee Currency Events",
+      special: "Saved Special Events"
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600/80 bg-slate-900/75 p-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[12px] font-semibold text-white", children: "NEO Build Queue" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[12px] font-semibold text-white", children: "04 Directed Tasks / Build Priorities" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-slate-400", children: [
-            "Same priority queue used by NEO Build for ",
+            "Directed Tasks, Currency Events, Saved Special Events and Flight School Trainee Currency Events used by NEO Build for ",
             date,
             "."
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-slate-600/70 bg-slate-950/70 px-2 py-1 text-[9px] font-semibold text-slate-300", children: [
-          assistBuildQueueRows.length,
-          " item",
-          assistBuildQueueRows.length === 1 ? "" : "s"
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center gap-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: onOpenPrioritiesExclusions,
+              className: "rounded border border-cyan-400/35 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:border-cyan-200",
+              children: "Bulk Currency Builder"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-slate-600/70 bg-slate-950/70 px-2 py-1 text-[9px] font-semibold text-slate-300", children: [
+            assistBuildQueueRows.length,
+            " item",
+            assistBuildQueueRows.length === 1 ? "" : "s"
+          ] })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[640px] overflow-y-auto overflow-x-hidden rounded border border-slate-700/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-[10px]", children: [
@@ -105507,20 +105517,32 @@ const DfpSidePanelTimeline = ({
           }
         ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[132px_minmax(0,1fr)] gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: assistSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: () => setActiveAssistSection(section.id),
-              className: `w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${activeAssistSection === section.id ? "border-cyan-300/70 bg-cyan-400/15 text-cyan-50" : "border-slate-600/70 bg-slate-900/65 text-slate-300 hover:border-cyan-400/45 hover:text-cyan-100"}`,
-              children: section.label
-            },
-            section.id
-          )) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setActiveAssistSection("details"),
+                className: `w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${activeAssistSection === "details" ? "border-emerald-300/70 bg-emerald-400/15 text-emerald-50" : "border-emerald-500/35 bg-emerald-500/10 text-emerald-100/85 hover:border-emerald-300/55 hover:text-emerald-50"}`,
+                children: "Manual Tile Creator"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-1 pt-2 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: "NEO Build Inputs" }),
+            assistSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setActiveAssistSection(section.id),
+                className: `w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${activeAssistSection === section.id ? "border-cyan-300/70 bg-cyan-400/15 text-cyan-50" : "border-slate-600/70 bg-slate-900/65 text-slate-300 hover:border-cyan-400/45 hover:text-cyan-100"}`,
+                children: section.label
+              },
+              section.id
+            ))
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/75 bg-slate-900/65 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 border-b border-slate-700/70 pb-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold text-white", children: activeAssistSection === "details" ? "Manual Tile Details" : assistSections.find((section) => section.id === activeAssistSection)?.label }),
-              activeAssistSection === "details" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-[9px] text-slate-400", children: "Create a specific tile by choosing the event, person or crew, timing and resource details." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold text-white", children: activeAssistSection === "details" ? "Manual Tile Creator" : assistSections.find((section) => section.id === activeAssistSection)?.label }),
+              activeAssistSection === "details" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-[9px] text-slate-400", children: "Separate from NEO Build priorities. Create a specific tile by choosing the event, person or crew, timing and resource details." })
             ] }),
             renderAssistSection()
           ] }) })
