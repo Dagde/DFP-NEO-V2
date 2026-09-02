@@ -827,6 +827,9 @@ type NeoAssistSection =
     | 'training'
     | 'taskings'
     | 'currency'
+    | 'saved-special'
+    | 'trainee-currency'
+    | 'bulk-currency'
     | 'course'
     | 'packages'
     | 'details'
@@ -915,6 +918,7 @@ const DfpSidePanelTimeline: React.FC<{
     scheduleZoomLevel?: number;
     onRunNeoBuild?: () => void;
     onNavigateToCurrencySettings?: () => void;
+    onOpenPrioritiesSection?: (target: string) => void;
 }> = ({
     flyingStartTime,
     flyingEndTime,
@@ -985,6 +989,7 @@ const DfpSidePanelTimeline: React.FC<{
     scheduleZoomLevel = 1,
     onRunNeoBuild,
     onNavigateToCurrencySettings,
+    onOpenPrioritiesSection,
 }) => {
     const timelineStartHour = 6;
     const timelineEndHour = 25;
@@ -2252,6 +2257,11 @@ const DfpSidePanelTimeline: React.FC<{
         { id: 'training', label: 'Training Priority' },
         { id: 'taskings', label: 'Directed Tasks' },
         { id: 'currency', label: 'Currency events' },
+        { id: 'saved-special', label: 'Saved Special Events' },
+        ...(normalisedAssistOperationalModel === 'flight_school'
+            ? [{ id: 'trainee-currency' as NeoAssistSection, label: 'Trainee Currency Events' }]
+            : []),
+        { id: 'bulk-currency', label: 'Bulk Currency Builder' },
         { id: 'course', label: 'Course events' },
         { id: 'packages', label: 'Packages' },
     ];
@@ -3161,13 +3171,6 @@ const DfpSidePanelTimeline: React.FC<{
                         </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                        <button
-                            type="button"
-                            onClick={onOpenPrioritiesExclusions}
-                            className="rounded border border-cyan-400/35 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:border-cyan-200"
-                        >
-                            Bulk Currency Builder
-                        </button>
                         <span className="rounded border border-slate-600/70 bg-slate-950/70 px-2 py-1 text-[9px] font-semibold text-slate-300">
                             {assistBuildQueueRows.length} item{assistBuildQueueRows.length === 1 ? '' : 's'}
                         </span>
@@ -5069,6 +5072,97 @@ const DfpSidePanelTimeline: React.FC<{
                             </button>
                         </div>
                     )}
+                </div>
+            );
+        }
+        if (activeAssistSection === 'saved-special') {
+            const rows = assistBuildQueueRows.filter(row => row.group === 'special');
+            return (
+                <div className="space-y-2 text-[10px] text-slate-200">
+                    <div className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2">
+                        <p className="font-semibold text-slate-100">Saved Special Events</p>
+                        <p className="mt-1 text-[9px] text-slate-400">Saved non-standard events that NEO Build can consider with the directed build priorities.</p>
+                    </div>
+                    <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
+                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No saved special events are currently in the build priority list.</p>}
+                        {rows.map(row => (
+                            <div key={`assist-special-${row.event.id}`} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
+                                <span className="min-w-0 truncate">
+                                    <span className="font-semibold text-slate-100">{row.label}</span>
+                                    <span className="ml-2 text-slate-400">{row.person}</span>
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => selectAssistBuildQueueEvent(row.event)}
+                                    className="rounded border border-cyan-400/45 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/10"
+                                >
+                                    Edit
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => onOpenPrioritiesSection?.('.saved-special-events-card')}
+                        className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
+                    >
+                        Open Priorities - Saved Special Events
+                    </button>
+                </div>
+            );
+        }
+        if (activeAssistSection === 'trainee-currency') {
+            const rows = assistBuildQueueRows.filter(row => row.group === 'trainee-currency');
+            return (
+                <div className="space-y-2 text-[10px] text-slate-200">
+                    <div className="rounded border border-violet-500/35 bg-violet-500/10 px-2 py-2">
+                        <p className="font-semibold text-violet-100">Trainee Currency Events</p>
+                        <p className="mt-1 text-[9px] text-violet-100/65">Flight School trainee currency events that NEO Build can schedule as directed build priorities.</p>
+                    </div>
+                    <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
+                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No trainee currency events are currently in the build priority list.</p>}
+                        {rows.map(row => (
+                            <div key={`assist-trainee-currency-${row.event.id}`} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
+                                <span className="min-w-0 truncate">
+                                    <span className="font-semibold text-slate-100">{row.label}</span>
+                                    <span className="ml-2 text-slate-400">{row.person}</span>
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => selectAssistBuildQueueEvent(row.event)}
+                                    className="rounded border border-cyan-400/45 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/10"
+                                >
+                                    Edit
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => onOpenPrioritiesSection?.('.trainee-currency-events-card')}
+                        className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
+                    >
+                        Open Priorities - Trainee Currency Events
+                    </button>
+                </div>
+            );
+        }
+        if (activeAssistSection === 'bulk-currency') {
+            return (
+                <div className="space-y-3 text-[10px] text-slate-200">
+                    <div className="rounded border border-fuchsia-500/35 bg-fuchsia-500/10 px-2 py-2">
+                        <p className="font-semibold text-fuchsia-100">Bulk Currency Builder</p>
+                        <p className="mt-1 text-[9px] text-fuchsia-100/65">
+                            Opens Priorities page, 04 Directed Tasks, Bulk Currency Builder section. Use it to select multiple people and create a consolidated build-priority list.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => onOpenPrioritiesSection?.('.bulk-currency-card')}
+                        className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
+                    >
+                        Open Bulk Currency Builder
+                    </button>
                 </div>
             );
         }
@@ -52949,6 +53043,13 @@ appliedUpdates.forEach(update => {
                                     onOpenPrioritiesExclusions={() => {
                                         try {
                                             localStorage.setItem('neo_open_departure_arrival_exclusions', '1');
+                                        } catch {}
+                                        setShowDfpSidePanel(false);
+                                        handleNavigation('Priorities');
+                                    }}
+                                    onOpenPrioritiesSection={(target) => {
+                                        try {
+                                            localStorage.setItem('neo_open_priorities_target', target);
                                         } catch {}
                                         setShowDfpSidePanel(false);
                                         handleNavigation('Priorities');

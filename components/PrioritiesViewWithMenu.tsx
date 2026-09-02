@@ -238,6 +238,33 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     }, [activeFixedCrewTab, isFixedCrewModel]);
 
     useEffect(() => {
+        let target = '';
+        try {
+            target = localStorage.getItem('neo_open_priorities_target') || '';
+            if (target) localStorage.removeItem('neo_open_priorities_target');
+        } catch {
+            target = '';
+        }
+        if (!target) return;
+        setActiveSection('directed-events');
+        if (isFixedCrewModel) setActiveFixedCrewTab('events-builder');
+        window.setTimeout(() => {
+            const scrollRoot = mainScrollRef.current;
+            const element = scrollRoot?.querySelector<HTMLElement>(target);
+            if (!scrollRoot || !element) {
+                scrollPlannerToTop();
+                return;
+            }
+            const rootTop = scrollRoot.getBoundingClientRect().top;
+            const elementTop = element.getBoundingClientRect().top;
+            scrollRoot.scrollTo({
+                top: scrollRoot.scrollTop + elementTop - rootTop - 16,
+                behavior: 'smooth',
+            });
+        }, 120);
+    }, [isFixedCrewModel]);
+
+    useEffect(() => {
         setDeploymentStartDate(props.buildDfpDate);
         setDeploymentEndDate(props.buildDfpDate);
     }, [props.buildDfpDate]);

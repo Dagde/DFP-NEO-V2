@@ -5112,7 +5112,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             {renderSavedSpecialEvents()}
         </div>
 
-        {!isFixedCrewModel && <div className="rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
+        {!isFixedCrewModel && <div className="trainee-currency-events-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
                     <h2 className="text-xl font-semibold text-sky-400">Trainee Currency Events</h2>

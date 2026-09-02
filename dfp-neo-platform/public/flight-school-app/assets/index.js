@@ -49800,7 +49800,7 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Saved Special Events" }),
         renderSavedSpecialEvents()
       ] }),
-      !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
+      !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "trainee-currency-events-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Trainee Currency Events" }),
@@ -50381,6 +50381,32 @@ const PrioritiesViewWithMenu = (props) => {
     }
     setActiveSection((current) => current === "course-demand" ? current : "build-timeline");
   }, [activeFixedCrewTab, isFixedCrewModel]);
+  reactExports.useEffect(() => {
+    let target = "";
+    try {
+      target = localStorage.getItem("neo_open_priorities_target") || "";
+      if (target) localStorage.removeItem("neo_open_priorities_target");
+    } catch {
+      target = "";
+    }
+    if (!target) return;
+    setActiveSection("directed-events");
+    if (isFixedCrewModel) setActiveFixedCrewTab("events-builder");
+    window.setTimeout(() => {
+      const scrollRoot = mainScrollRef.current;
+      const element = scrollRoot?.querySelector(target);
+      if (!scrollRoot || !element) {
+        scrollPlannerToTop();
+        return;
+      }
+      const rootTop = scrollRoot.getBoundingClientRect().top;
+      const elementTop = element.getBoundingClientRect().top;
+      scrollRoot.scrollTo({
+        top: scrollRoot.scrollTop + elementTop - rootTop - 16,
+        behavior: "smooth"
+      });
+    }, 120);
+  }, [isFixedCrewModel]);
   reactExports.useEffect(() => {
     setDeploymentStartDate(props.buildDfpDate);
     setDeploymentEndDate(props.buildDfpDate);
@@ -101529,7 +101555,8 @@ const DfpSidePanelTimeline = ({
   unitCallsignSettings,
   scheduleZoomLevel = 1,
   onRunNeoBuild,
-  onNavigateToCurrencySettings
+  onNavigateToCurrencySettings,
+  onOpenPrioritiesSection
 }) => {
   const timelineStartHour = 6;
   const timelineEndHour = 25;
@@ -102521,6 +102548,9 @@ const DfpSidePanelTimeline = ({
     { id: "training", label: "Training Priority" },
     { id: "taskings", label: "Directed Tasks" },
     { id: "currency", label: "Currency events" },
+    { id: "saved-special", label: "Saved Special Events" },
+    ...normalisedAssistOperationalModel === "flight_school" ? [{ id: "trainee-currency", label: "Trainee Currency Events" }] : [],
+    { id: "bulk-currency", label: "Bulk Currency Builder" },
     { id: "course", label: "Course events" },
     { id: "packages", label: "Packages" }
   ];
@@ -103249,22 +103279,11 @@ const DfpSidePanelTimeline = ({
             "."
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center gap-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: onOpenPrioritiesExclusions,
-              className: "rounded border border-cyan-400/35 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:border-cyan-200",
-              children: "Bulk Currency Builder"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-slate-600/70 bg-slate-950/70 px-2 py-1 text-[9px] font-semibold text-slate-300", children: [
-            assistBuildQueueRows.length,
-            " item",
-            assistBuildQueueRows.length === 1 ? "" : "s"
-          ] })
-        ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex shrink-0 items-center gap-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-slate-600/70 bg-slate-950/70 px-2 py-1 text-[9px] font-semibold text-slate-300", children: [
+          assistBuildQueueRows.length,
+          " item",
+          assistBuildQueueRows.length === 1 ? "" : "s"
+        ] }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[640px] overflow-y-auto overflow-x-hidden rounded border border-slate-700/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-[10px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
@@ -105136,6 +105155,95 @@ const DfpSidePanelTimeline = ({
             }
           )
         ] })
+      ] });
+    }
+    if (activeAssistSection === "saved-special") {
+      const rows = assistBuildQueueRows.filter((row) => row.group === "special");
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-slate-100", children: "Saved Special Events" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[9px] text-slate-400", children: "Saved non-standard events that NEO Build can consider with the directed build priorities." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-40 space-y-1 overflow-y-auto pr-1", children: [
+          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No saved special events are currently in the build priority list." }),
+          rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: row.label }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-slate-400", children: row.person })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => selectAssistBuildQueueEvent(row.event),
+                className: "rounded border border-cyan-400/45 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/10",
+                children: "Edit"
+              }
+            )
+          ] }, `assist-special-${row.event.id}`))
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => onOpenPrioritiesSection?.(".saved-special-events-card"),
+            className: "rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100",
+            children: "Open Priorities - Saved Special Events"
+          }
+        )
+      ] });
+    }
+    if (activeAssistSection === "trainee-currency") {
+      const rows = assistBuildQueueRows.filter((row) => row.group === "trainee-currency");
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/35 bg-violet-500/10 px-2 py-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Trainee Currency Events" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[9px] text-violet-100/65", children: "Flight School trainee currency events that NEO Build can schedule as directed build priorities." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-40 space-y-1 overflow-y-auto pr-1", children: [
+          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No trainee currency events are currently in the build priority list." }),
+          rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: row.label }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-slate-400", children: row.person })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => selectAssistBuildQueueEvent(row.event),
+                className: "rounded border border-cyan-400/45 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/10",
+                children: "Edit"
+              }
+            )
+          ] }, `assist-trainee-currency-${row.event.id}`))
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => onOpenPrioritiesSection?.(".trainee-currency-events-card"),
+            className: "rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100",
+            children: "Open Priorities - Trainee Currency Events"
+          }
+        )
+      ] });
+    }
+    if (activeAssistSection === "bulk-currency") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-fuchsia-500/35 bg-fuchsia-500/10 px-2 py-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-fuchsia-100", children: "Bulk Currency Builder" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[9px] text-fuchsia-100/65", children: "Opens Priorities page, 04 Directed Tasks, Bulk Currency Builder section. Use it to select multiple people and create a consolidated build-priority list." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => onOpenPrioritiesSection?.(".bulk-currency-card"),
+            className: "rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100",
+            children: "Open Bulk Currency Builder"
+          }
+        )
       ] });
     }
     if (activeAssistSection === "crew") {
@@ -144149,6 +144257,14 @@ Do you want to replace the existing entry?`,
                         onOpenPrioritiesExclusions: () => {
                           try {
                             localStorage.setItem("neo_open_departure_arrival_exclusions", "1");
+                          } catch {
+                          }
+                          setShowDfpSidePanel(false);
+                          handleNavigation("Priorities");
+                        },
+                        onOpenPrioritiesSection: (target) => {
+                          try {
+                            localStorage.setItem("neo_open_priorities_target", target);
                           } catch {
                           }
                           setShowDfpSidePanel(false);
