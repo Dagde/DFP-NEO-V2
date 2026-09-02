@@ -105755,7 +105755,7 @@ const DfpSidePanelTimeline = ({
       )
     ] });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "neo-assist-light-shell border-b border-slate-300 bg-[#fb923c] p-4 text-slate-900", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "neo-assist-light-shell border-b border-slate-300 bg-slate-100/95 p-4 text-slate-900", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
                 .neo-assist-light-shell {
                     color: #0f172a;
@@ -105791,8 +105791,17 @@ const DfpSidePanelTimeline = ({
                 .neo-assist-light-shell .bg-slate-900\\/70,
                 .neo-assist-light-shell .bg-slate-900\\/80,
                 .neo-assist-light-shell .bg-slate-900\\/90,
+                .neo-assist-light-shell .bg-slate-900\\/95,
+                .neo-assist-light-shell .bg-slate-800\\/40,
+                .neo-assist-light-shell .bg-slate-800\\/50,
+                .neo-assist-light-shell .bg-slate-800\\/60,
                 .neo-assist-light-shell .bg-slate-800\\/80 {
-                    background-color: rgba(248, 250, 252, 0.92) !important;
+                    background-color: rgba(255, 255, 255, 0.92) !important;
+                }
+                .neo-assist-light-shell .bg-slate-900,
+                .neo-assist-light-shell .bg-slate-800,
+                .neo-assist-light-shell .bg-slate-700 {
+                    background-color: rgba(248, 250, 252, 0.96) !important;
                 }
                 .neo-assist-light-shell .border-slate-700,
                 .neo-assist-light-shell .border-slate-700\\/50,
@@ -144530,7 +144539,7 @@ Do you want to replace the existing entry?`,
               activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "aside",
                 {
-                  className: `absolute inset-y-0 right-0 z-[1000] w-[calc(100%-224px)] max-w-none border-l border-orange-300/70 bg-[#fb923c] shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
+                  className: `absolute inset-y-0 right-0 z-[1000] w-[calc(100%-224px)] max-w-none border-l border-slate-300 bg-slate-100/96 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
                   "aria-hidden": !showDfpSidePanel,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -144565,7 +144574,7 @@ Do you want to replace the existing entry?`,
                         ]
                       }
                     ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-l border-orange-200/55 bg-[#fb923c]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-l border-slate-200 bg-slate-100/95", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                       DfpSidePanelTimeline,
                       {
                         flyingStartTime,
