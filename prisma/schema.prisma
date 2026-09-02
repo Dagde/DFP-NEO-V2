@@ -351,7 +351,12 @@ model SctRequest {
   crewUnitCode   String?  @default("")
   crewDisplayLabel String? @default("")
   crewIndividual String?  @default("")
+  crewRequirement Json?
   aircraftCount  Int      @default(1)
+  formationCrew  Json?
+  callsignBase   String?  @default("")
+  callsignNumber Int?     @default(0)
+  callsign       String?  @default("")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

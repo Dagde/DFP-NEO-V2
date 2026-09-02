@@ -126821,6 +126821,17 @@ const App = () => {
           }
           return void 0;
         };
+        const normaliseSctJsonObject = (value) => {
+          if (!value) return void 0;
+          if (typeof value === "string") {
+            try {
+              return JSON.parse(value);
+            } catch {
+              return void 0;
+            }
+          }
+          return value;
+        };
         setSctFlights(data.filter((r) => r.requestType === "flight").map((r) => ({
           id: r.id,
           userId: r.userId,
@@ -126846,7 +126857,12 @@ const App = () => {
           crewUnitCode: r.crewUnitCode || "",
           crewDisplayLabel: r.crewDisplayLabel || "",
           crewIndividual: r.crewIndividual || "",
-          aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1))
+          crewRequirement: normaliseSctJsonObject(r.crewRequirement),
+          aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1)),
+          formationCrew: normaliseSctJsonObject(r.formationCrew),
+          callsignBase: r.callsignBase || "",
+          callsignNumber: Math.max(0, Math.floor(Number(r.callsignNumber) || 0)),
+          callsign: r.callsign || ""
         })));
         setSctFtds(data.filter((r) => r.requestType === "ftd").map((r) => ({
           id: r.id,
@@ -126873,7 +126889,12 @@ const App = () => {
           crewUnitCode: r.crewUnitCode || "",
           crewDisplayLabel: r.crewDisplayLabel || "",
           crewIndividual: r.crewIndividual || "",
-          aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1))
+          crewRequirement: normaliseSctJsonObject(r.crewRequirement),
+          aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1)),
+          formationCrew: normaliseSctJsonObject(r.formationCrew),
+          callsignBase: r.callsignBase || "",
+          callsignNumber: Math.max(0, Math.floor(Number(r.callsignNumber) || 0)),
+          callsign: r.callsign || ""
         })));
       } catch (err) {
         console.error("[CONTINUATION] Failed to load continuation requests from DB:", err);
@@ -142129,7 +142150,8 @@ ${error instanceof Error ? error.message : String(error)}`,
                   logRoutineAppDebug("[CONTINUATION] POST response status:", res.status);
                   if (res.ok) {
                     const saved = await res.json();
-                    const updater = (prev) => prev.map((r) => r.id === newReq.id ? { ...r, id: saved.id, userId: saved.userId || userId, requestType: saved.requestType || type } : r);
+                    const savedRequest = { ...newReq, ...saved, userId: saved.userId || userId, requestType: saved.requestType || type };
+                    const updater = (prev) => prev.map((r) => r.id === newReq.id ? savedRequest : r);
                     if (type === "flight") setSctFlights(updater);
                     else setSctFtds(updater);
                     logRoutineAppDebug("[CONTINUATION] Saved to DB:", saved.id, "userId:", saved.userId);
@@ -144414,9 +144436,13 @@ Do you want to replace the existing entry?`,
                             });
                             if (res.ok) {
                               const saved = await res.json();
-                              const updater = (prev) => prev.map((item) => item.id === request.id ? { ...item, id: saved.id } : item);
+                              const savedRequest = { ...request, ...saved, userId: saved.userId || userId, requestType: saved.requestType || type };
+                              const updater = (prev) => prev.map((item) => item.id === request.id ? savedRequest : item);
                               if (type === "flight") setSctFlights(updater);
                               else setSctFtds(updater);
+                            } else {
+                              const errData = await res.json().catch(() => ({}));
+                              console.error("Failed to save NEO Assist continuation request:", res.status, errData);
                             }
                           } catch (err) {
                             console.error("Failed to save NEO Assist continuation request:", err);
@@ -145238,10 +145264,11 @@ Do you want to replace the existing entry?`,
                 if (res.ok) {
                   const saved = await res.json();
                   logRoutineAppDebug("[CONTINUATION] Saved from Flyout:", saved.id, "userId:", saved.userId);
+                  const savedRequest = { ...requestWithDefaults, ...saved, userId: saved.userId || flyoutUserId, requestType };
                   if (requestWithDefaults.event.includes("FTD")) {
-                    setSctFtds((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved.id, userId: saved.userId || flyoutUserId, requestType: "ftd" } : r));
+                    setSctFtds((prev) => prev.map((r) => r.id === requestWithDefaults.id ? savedRequest : r));
                   } else {
-                    setSctFlights((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved.id, userId: saved.userId || flyoutUserId, requestType: "flight" } : r));
+                    setSctFlights((prev) => prev.map((r) => r.id === requestWithDefaults.id ? savedRequest : r));
                   }
                 } else {
                   const errData = await res.json().catch(() => ({}));

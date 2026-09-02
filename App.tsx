@@ -32014,6 +32014,17 @@ const App: React.FC = () => {
                     }
                     return undefined;
                 };
+                const normaliseSctJsonObject = <T,>(value: unknown): T | undefined => {
+                    if (!value) return undefined;
+                    if (typeof value === 'string') {
+                        try {
+                            return JSON.parse(value) as T;
+                        } catch {
+                            return undefined;
+                        }
+                    }
+                    return value as T;
+                };
                 setSctFlights(data.filter((r: any) => r.requestType === 'flight').map((r: any) => ({
                     id: r.id, userId: r.userId, requestType: 'flight', name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
@@ -32028,7 +32039,12 @@ const App: React.FC = () => {
                     crewUnitCode: r.crewUnitCode || '',
                     crewDisplayLabel: r.crewDisplayLabel || '',
                     crewIndividual: r.crewIndividual || '',
+                    crewRequirement: normaliseSctJsonObject(r.crewRequirement),
                     aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1)),
+                    formationCrew: normaliseSctJsonObject(r.formationCrew),
+                    callsignBase: r.callsignBase || '',
+                    callsignNumber: Math.max(0, Math.floor(Number(r.callsignNumber) || 0)),
+                    callsign: r.callsign || '',
                 })));
                 setSctFtds(data.filter((r: any) => r.requestType === 'ftd').map((r: any) => ({
                     id: r.id, userId: r.userId, requestType: 'ftd', name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
@@ -32044,7 +32060,12 @@ const App: React.FC = () => {
                     crewUnitCode: r.crewUnitCode || '',
                     crewDisplayLabel: r.crewDisplayLabel || '',
                     crewIndividual: r.crewIndividual || '',
+                    crewRequirement: normaliseSctJsonObject(r.crewRequirement),
                     aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1)),
+                    formationCrew: normaliseSctJsonObject(r.formationCrew),
+                    callsignBase: r.callsignBase || '',
+                    callsignNumber: Math.max(0, Math.floor(Number(r.callsignNumber) || 0)),
+                    callsign: r.callsign || '',
                 })));
             } catch (err) {
                 console.error('[CONTINUATION] Failed to load continuation requests from DB:', err);
@@ -50694,8 +50715,8 @@ appliedUpdates.forEach(update => {
                           logRoutineAppDebug('[CONTINUATION] POST response status:', res.status);
                           if (res.ok) {
                             const saved = await res.json();
-                            // Update local state with DB-assigned id
-                            const updater = (prev: SctRequest[]) => prev.map(r => r.id === newReq.id ? { ...r, id: saved.id, userId: saved.userId || userId, requestType: saved.requestType || type } : r);
+                            const savedRequest = { ...newReq, ...saved, userId: saved.userId || userId, requestType: saved.requestType || type } as SctRequest;
+                            const updater = (prev: SctRequest[]) => prev.map(r => r.id === newReq.id ? savedRequest : r);
                             if (type === 'flight') setSctFlights(updater);
                             else setSctFtds(updater);
                             logRoutineAppDebug('[CONTINUATION] Saved to DB:', saved.id, 'userId:', saved.userId);
@@ -53224,11 +53245,15 @@ appliedUpdates.forEach(update => {
                                             });
                                             if (res.ok) {
                                                 const saved = await res.json();
+                                                const savedRequest = { ...request, ...saved, userId: saved.userId || userId, requestType: saved.requestType || type } as SctRequest;
                                                 const updater = (prev: SctRequest[]) => prev.map(item => (
-                                                    item.id === request.id ? { ...item, id: saved.id } : item
+                                                    item.id === request.id ? savedRequest : item
                                                 ));
                                                 if (type === 'flight') setSctFlights(updater);
                                                 else setSctFtds(updater);
+                                            } else {
+                                                const errData = await res.json().catch(() => ({}));
+                                                console.error('Failed to save NEO Assist continuation request:', res.status, errData);
                                             }
                                         } catch (err) {
                                             console.error('Failed to save NEO Assist continuation request:', err);
@@ -54102,11 +54127,11 @@ appliedUpdates.forEach(update => {
                                 if (res.ok) {
                                     const saved = await res.json();
                                     logRoutineAppDebug('[CONTINUATION] Saved from Flyout:', saved.id, 'userId:', saved.userId);
-                                    // Update local state with DB-assigned id
+                                    const savedRequest = { ...requestWithDefaults, ...saved, userId: saved.userId || flyoutUserId, requestType } as SctRequest;
                                     if (requestWithDefaults.event.includes('FTD')) {
-                                        setSctFtds(prev => prev.map(r => r.id === requestWithDefaults.id ? { ...r, id: saved.id, userId: saved.userId || flyoutUserId, requestType: 'ftd' } : r));
+                                        setSctFtds(prev => prev.map(r => r.id === requestWithDefaults.id ? savedRequest : r));
                                     } else {
-                                        setSctFlights(prev => prev.map(r => r.id === requestWithDefaults.id ? { ...r, id: saved.id, userId: saved.userId || flyoutUserId, requestType: 'flight' } : r));
+                                        setSctFlights(prev => prev.map(r => r.id === requestWithDefaults.id ? savedRequest : r));
                                     }
                                 } else {
                                     const errData = await res.json().catch(() => ({}));
