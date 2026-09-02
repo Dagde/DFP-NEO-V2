@@ -144001,7 +144001,7 @@ Do you want to replace the existing entry?`,
               activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "aside",
                 {
-                  className: `absolute inset-y-0 right-0 z-[90] w-[calc(100%-24px)] max-w-none border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
+                  className: `absolute inset-y-0 right-0 z-[1000] w-[calc(100%-24px)] max-w-none border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
                   "aria-hidden": !showDfpSidePanel,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
