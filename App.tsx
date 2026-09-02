@@ -3206,15 +3206,15 @@ const DfpSidePanelTimeline: React.FC<{
     );
     const getAssistBuildQueueStatus = (event: ScheduleEvent): { label: string; className: string } => {
         if ((event.date || date) !== date) {
-            return { label: 'Other date', className: 'border-amber-400/35 bg-amber-500/10 text-amber-100' };
+            return { label: 'Other date', className: 'neo-assist-status-pill-warning border-amber-200 bg-amber-50 text-amber-800' };
         }
         if (!event.flightNumber && !event.taskingName && !event.currency) {
-            return { label: 'Needs event', className: 'border-rose-400/35 bg-rose-500/10 text-rose-100' };
+            return { label: 'Needs event', className: 'neo-assist-status-pill-error border-rose-200 bg-rose-50 text-rose-700' };
         }
         if (event.type === 'flight' && !event.aircraftConfigId && !Array.isArray(event.acceptableAircraftConfigs)) {
-            return { label: 'Needs CONFIG', className: 'border-amber-400/35 bg-amber-500/10 text-amber-100' };
+            return { label: 'Needs CONFIG', className: 'neo-assist-status-pill-warning border-amber-200 bg-amber-50 text-amber-800' };
         }
-        return { label: 'Ready', className: 'border-emerald-400/35 bg-emerald-500/10 text-emerald-100' };
+        return { label: 'Ready', className: 'neo-assist-status-pill-ready border-emerald-200 bg-emerald-50 text-emerald-700' };
     };
     const assistBuildQueueRows = useMemo(() => (
         highestPriorityEvents
@@ -3289,10 +3289,10 @@ const DfpSidePanelTimeline: React.FC<{
     };
     const renderAssistBuildQueue = () => {
         const groupStyles: Record<typeof assistBuildQueueRows[number]['group'], string> = {
-            tasking: 'border-cyan-400/40 bg-cyan-500/10 text-cyan-100',
-            currency: 'border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-100',
-            'trainee-currency': 'border-violet-400/40 bg-violet-500/10 text-violet-100',
-            special: 'border-slate-500/40 bg-slate-700/40 text-slate-100',
+            tasking: 'border-cyan-200 bg-cyan-50 text-cyan-900',
+            currency: 'border-fuchsia-200 bg-fuchsia-50 text-fuchsia-900',
+            'trainee-currency': 'border-violet-200 bg-violet-50 text-violet-900',
+            special: 'border-slate-300 bg-slate-100 text-slate-800',
         };
         const groupLabels: Record<typeof assistBuildQueueRows[number]['group'], string> = {
             tasking: 'Directed Tasks',
@@ -3301,21 +3301,21 @@ const DfpSidePanelTimeline: React.FC<{
             special: 'Saved Special Events',
         };
         return (
-            <div className="rounded-md border border-slate-600/80 bg-slate-900/75 p-3">
+            <div className="rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
                 <div className="mb-2 flex items-start justify-between gap-3">
                     <div>
-                        <h4 className="text-[12px] font-semibold text-white">04 Directed Tasks / Build Priorities</h4>
-                        <p className="text-[9px] text-slate-400">
+                        <h4 className="text-[12px] font-semibold text-slate-950">04 Directed Tasks / Build Priorities</h4>
+                        <p className="text-[9px] text-slate-500">
                             Directed Tasks, Currency Events, Saved Special Events and Flight School Trainee Currency Events used by NEO Build for {date}.
                         </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                        <span className="rounded border border-slate-600/70 bg-slate-950/70 px-2 py-1 text-[9px] font-semibold text-slate-300">
+                        <span className="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-[9px] font-semibold text-slate-700">
                             {assistBuildQueueRows.length} item{assistBuildQueueRows.length === 1 ? '' : 's'}
                         </span>
                     </div>
                 </div>
-                <div className="max-h-[640px] overflow-y-auto overflow-x-hidden rounded border border-slate-700/80">
+                <div className="max-h-[640px] overflow-y-auto overflow-x-hidden rounded-md border border-slate-300">
                     <table className="w-full table-fixed text-[10px]">
                         <colgroup>
                             <col className="w-[48px]" />
@@ -3328,20 +3328,20 @@ const DfpSidePanelTimeline: React.FC<{
                             <col className="w-[92px]" />
                             <col className="w-[64px]" />
                         </colgroup>
-                        <thead className="sticky top-0 z-10 bg-slate-950 text-[8px] uppercase tracking-[0.12em] text-slate-400">
+                        <thead className="sticky top-0 z-10 bg-slate-100 text-[8px] uppercase tracking-[0.12em] text-slate-500">
                             <tr>
-                                <th className="border-b border-slate-700 px-2 py-2 text-left">Order</th>
-                                <th className="border-b border-slate-700 px-2 py-2 text-left">Type</th>
-                                <th className="border-b border-slate-700 px-2 py-2 text-left">Event</th>
-                                <th className="border-b border-slate-700 px-2 py-2 text-left">Person/Crew</th>
-                                <th className="border-b border-slate-700 px-2 py-2 text-left">Time</th>
-                                <th className="border-b border-slate-700 px-2 py-2 text-left">Priority</th>
-                                <th className="border-b border-slate-700 px-2 py-2 text-left">Scheduler</th>
-                                <th className="border-b border-slate-700 px-2 py-2 text-left">Status</th>
-                                <th className="border-b border-slate-700 px-2 py-2 text-center">Edit</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Order</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Type</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Event</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Person/Crew</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Time</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Priority</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Scheduler</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Status</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-center">Edit</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800/80 bg-slate-950/45">
+                        <tbody className="divide-y divide-slate-200 bg-white">
                             {assistBuildQueueRows.length === 0 && (
                                 <tr>
                                     <td colSpan={9} className="px-3 py-8 text-center text-slate-500">
@@ -3350,13 +3350,13 @@ const DfpSidePanelTimeline: React.FC<{
                                 </tr>
                             )}
                             {assistBuildQueueRows.map(row => (
-                                <tr key={row.event.id} className="hover:bg-cyan-950/30">
-                                    <td className="px-2 py-2 align-middle text-slate-300">
+                                <tr key={row.event.id} className="hover:bg-cyan-50">
+                                    <td className="px-2 py-2 align-middle text-slate-600">
                                         <div className="flex items-center gap-1">
                                             <span className="w-5 font-mono">{row.index + 1}</span>
                                             <span className="flex flex-col">
-                                                <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, -1)} className="leading-none text-slate-400 hover:text-cyan-100">▲</button>
-                                                <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, 1)} className="leading-none text-slate-400 hover:text-cyan-100">▼</button>
+                                                <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, -1)} className="leading-none text-slate-500 hover:text-cyan-700">▲</button>
+                                                <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, 1)} className="leading-none text-slate-500 hover:text-cyan-700">▼</button>
                                             </span>
                                         </div>
                                     </td>
@@ -3365,9 +3365,9 @@ const DfpSidePanelTimeline: React.FC<{
                                             {groupLabels[row.group]}
                                         </span>
                                     </td>
-                                    <td className="truncate px-2 py-2 align-middle font-semibold text-slate-100" title={row.label}>{row.label}</td>
-                                    <td className="truncate px-2 py-2 align-middle text-slate-300" title={row.person}>{row.person}</td>
-                                    <td className="px-2 py-2 align-middle font-mono text-slate-300">
+                                    <td className="truncate px-2 py-2 align-middle font-semibold text-slate-950" title={row.label}>{row.label}</td>
+                                    <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.person}>{row.person}</td>
+                                    <td className="px-2 py-2 align-middle font-mono text-slate-700">
                                         <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
                                         <span className="block truncate text-[8px] text-slate-500">{row.event.date || date}</span>
                                     </td>
@@ -3375,7 +3375,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         <select
                                             value={row.event.priority || 'High'}
                                             onChange={event => setAssistBuildQueuePriority(row.event, event.target.value as 'High' | 'Medium' | 'Low')}
-                                            className="w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-white"
+                                            className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[10px] text-slate-900"
                                         >
                                             <option value="High">High</option>
                                             <option value="Medium">Medium</option>
@@ -3386,7 +3386,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         <select
                                             value={row.scheduler}
                                             onChange={event => setAssistBuildQueueScheduler(row.event, event.target.value as 'Mandatory' | 'Desirable' | 'Ignore')}
-                                            className="w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-white"
+                                            className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[10px] text-slate-900"
                                         >
                                             <option value="Mandatory">Mandatory</option>
                                             <option value="Desirable">Desirable</option>
@@ -3402,7 +3402,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         <button
                                             type="button"
                                             onClick={() => selectAssistBuildQueueEvent(row.event)}
-                                            className="rounded border border-cyan-400/45 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/20"
+                                            className="rounded border border-cyan-300 bg-cyan-50 px-2 py-1 text-[9px] font-semibold text-cyan-800 hover:bg-cyan-100"
                                         >
                                             Edit
                                         </button>
@@ -3418,7 +3418,7 @@ const DfpSidePanelTimeline: React.FC<{
     const renderAssistDfpOverview = () => (
         <div
             ref={scrollRef}
-            className="overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-3 shadow-inner [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="overflow-x-auto rounded-lg border border-slate-300 bg-white p-3 pb-3 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             aria-label="Scrollable ten hour flying window timeline"
         >
             <div
@@ -3429,15 +3429,15 @@ const DfpSidePanelTimeline: React.FC<{
                     {ticks.map(hour => (
                         <span
                             key={`mini-tick-${hour}`}
-                            className={`absolute text-[9px] font-semibold tracking-[0.08em] text-slate-200/80 ${hour === timelineEndHour ? '-translate-x-full' : '-translate-x-1/2'}`}
+                            className={`absolute text-[9px] font-semibold tracking-[0.08em] text-slate-500 ${hour === timelineEndHour ? '-translate-x-full' : '-translate-x-1/2'}`}
                             style={{ left: `${((hour - timelineStartHour) / timelineSpanHours) * 100}%` }}
                         >
                             {formatTick(hour)}
                         </span>
                     ))}
                 </div>
-                <div ref={chartRef} className="relative h-20 overflow-visible rounded border border-slate-500/80 bg-slate-950">
-                    <div className="absolute inset-x-0 top-1/2 h-px bg-slate-300/45" />
+                <div ref={chartRef} className="relative h-20 overflow-visible rounded border border-slate-300 bg-slate-50">
+                    <div className="absolute inset-x-0 top-1/2 h-px bg-slate-300" />
                     <div
                         className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${dayShade}`}
                         style={{ left: `${getLeft(flyingStartTime)}%`, width: `${getWidth(flyingStartTime, flyingEndTime)}%` }}
@@ -3476,7 +3476,7 @@ const DfpSidePanelTimeline: React.FC<{
                     {ticks.map(hour => (
                         <div
                             key={`mini-line-${hour}`}
-                            className="absolute inset-y-0 z-10 border-l border-slate-400/28"
+                            className="absolute inset-y-0 z-10 border-l border-slate-300"
                             style={{ left: `${((hour - timelineStartHour) / timelineSpanHours) * 100}%` }}
                         />
                     ))}
@@ -3494,10 +3494,10 @@ const DfpSidePanelTimeline: React.FC<{
                     ))}
                     {activeDrag && (
                         <div
-                            className="pointer-events-none absolute -top-10 z-40 -translate-x-1/2 rounded-md border border-cyan-200/70 bg-slate-950 px-2 py-1 text-[10px] font-semibold text-cyan-50 shadow-xl"
+                            className="pointer-events-none absolute -top-10 z-40 -translate-x-1/2 rounded-md border border-cyan-300 bg-white px-2 py-1 text-[10px] font-semibold text-slate-900 shadow-xl"
                             style={{ left: `${activeDrag.left}%` }}
                         >
-                            <span className="block text-[8px] uppercase tracking-[0.12em] text-cyan-200/70">{activeDrag.label}</span>
+                            <span className="block text-[8px] uppercase tracking-[0.12em] text-cyan-700">{activeDrag.label}</span>
                             {formatCompactTime(activeDrag.time)}
                         </div>
                     )}
@@ -3506,14 +3506,14 @@ const DfpSidePanelTimeline: React.FC<{
                     {markers.map(marker => (
                         <span
                             key={`mini-label-${marker.key}`}
-                            className="absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-400/45 bg-slate-950/95 px-1.5 py-1 text-[9px] font-semibold text-slate-100 shadow"
+                            className="absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-300 bg-white px-1.5 py-1 text-[9px] font-semibold text-slate-800 shadow-sm"
                             style={{ left: `${getLeft(marker.time)}%` }}
                         >
                             {formatCompactTime(marker.time)}
                         </span>
                     ))}
                 </div>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-semibold text-slate-300/90">
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-semibold text-slate-600">
                     <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${dayShade}`} /> Day</span>
                     <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${nightShade}`} /> Night</span>
                     <span className="inline-flex items-center gap-1"><span className={`h-2 w-3 rounded-sm ring-1 ring-inset ${exclusionShade}`} /> Exclusion</span>
@@ -5733,10 +5733,17 @@ const DfpSidePanelTimeline: React.FC<{
     };
 
     return (
-        <div className="neo-assist-light-shell border-b border-slate-300 bg-slate-100 p-4 text-slate-900">
+        <div className="neo-assist-light-shell min-h-full border-b border-slate-300 bg-slate-100 p-4 text-slate-900">
             <style>{`
                 .neo-assist-light-shell {
                     color: #0f172a;
+                    background: #f1f5f9;
+                    isolation: isolate;
+                }
+                .neo-assist-light-shell *,
+                .neo-assist-light-shell *::before,
+                .neo-assist-light-shell *::after {
+                    text-shadow: none !important;
                 }
                 .neo-assist-light-shell h3,
                 .neo-assist-light-shell h4,
@@ -5761,11 +5768,31 @@ const DfpSidePanelTimeline: React.FC<{
                 .neo-assist-light-shell .text-orange-50 {
                     color: #334155 !important;
                 }
+                .neo-assist-light-shell [class*="text-slate-"],
+                .neo-assist-light-shell [class*="text-cyan-"],
+                .neo-assist-light-shell [class*="text-fuchsia-"],
+                .neo-assist-light-shell [class*="text-violet-"],
+                .neo-assist-light-shell [class*="text-amber-"],
+                .neo-assist-light-shell [class*="text-rose-"] {
+                    color: #334155 !important;
+                }
+                .neo-assist-light-shell h3,
+                .neo-assist-light-shell h4,
+                .neo-assist-light-shell th,
+                .neo-assist-light-shell .font-semibold,
+                .neo-assist-light-shell .font-bold,
+                .neo-assist-light-shell .font-black {
+                    color: #0f172a !important;
+                }
                 .neo-assist-light-shell .text-emerald-50,
                 .neo-assist-light-shell .text-emerald-100,
                 .neo-assist-light-shell .text-emerald-200,
                 .neo-assist-light-shell .text-lime-50 {
                     color: #047857 !important;
+                }
+                .neo-assist-light-shell [class*="bg-slate-"],
+                .neo-assist-light-shell [class*="bg-gray-"] {
+                    background-color: rgba(255, 255, 255, 0.94) !important;
                 }
                 .neo-assist-light-shell .bg-slate-950,
                 .neo-assist-light-shell .bg-slate-950\\/72,
@@ -5779,6 +5806,7 @@ const DfpSidePanelTimeline: React.FC<{
                 .neo-assist-light-shell .bg-slate-800\\/40,
                 .neo-assist-light-shell .bg-slate-800\\/50,
                 .neo-assist-light-shell .bg-slate-800\\/60,
+                .neo-assist-light-shell .bg-slate-800\\/75,
                 .neo-assist-light-shell .bg-slate-800\\/80 {
                     background-color: rgba(255, 255, 255, 0.92) !important;
                 }
@@ -5786,6 +5814,22 @@ const DfpSidePanelTimeline: React.FC<{
                 .neo-assist-light-shell .bg-slate-800,
                 .neo-assist-light-shell .bg-slate-700 {
                     background-color: rgba(248, 250, 252, 0.96) !important;
+                }
+                .neo-assist-light-shell [class*="bg-cyan-"],
+                .neo-assist-light-shell [class*="bg-emerald-"],
+                .neo-assist-light-shell [class*="bg-sky-"] {
+                    background-color: rgba(224, 242, 254, 0.78) !important;
+                }
+                .neo-assist-light-shell [class*="bg-fuchsia-"],
+                .neo-assist-light-shell [class*="bg-violet-"] {
+                    background-color: rgba(245, 243, 255, 0.92) !important;
+                }
+                .neo-assist-light-shell [class*="bg-amber-"],
+                .neo-assist-light-shell [class*="bg-orange-"] {
+                    background-color: rgba(255, 237, 213, 0.82) !important;
+                }
+                .neo-assist-light-shell [class*="bg-rose-"] {
+                    background-color: rgba(255, 228, 230, 0.88) !important;
                 }
                 .neo-assist-light-shell .bg-cyan-400\\/10,
                 .neo-assist-light-shell .bg-cyan-400\\/15,
@@ -5811,6 +5855,15 @@ const DfpSidePanelTimeline: React.FC<{
                 .neo-assist-light-shell .border-slate-600\\/70 {
                     border-color: rgba(203, 213, 225, 0.9) !important;
                 }
+                .neo-assist-light-shell [class*="border-slate-"],
+                .neo-assist-light-shell [class*="border-cyan-"],
+                .neo-assist-light-shell [class*="border-emerald-"],
+                .neo-assist-light-shell [class*="border-fuchsia-"],
+                .neo-assist-light-shell [class*="border-violet-"],
+                .neo-assist-light-shell [class*="border-amber-"],
+                .neo-assist-light-shell [class*="border-rose-"] {
+                    border-color: #cbd5e1 !important;
+                }
                 .neo-assist-light-shell input,
                 .neo-assist-light-shell select,
                 .neo-assist-light-shell textarea {
@@ -5818,8 +5871,38 @@ const DfpSidePanelTimeline: React.FC<{
                     color: #0f172a !important;
                     border-color: #cbd5e1 !important;
                 }
+                .neo-assist-light-shell table {
+                    background: #ffffff !important;
+                }
+                .neo-assist-light-shell thead,
+                .neo-assist-light-shell tbody,
+                .neo-assist-light-shell tr {
+                    background-color: #ffffff !important;
+                }
+                .neo-assist-light-shell tr:hover {
+                    background-color: #eff6ff !important;
+                }
                 .neo-assist-light-shell button:not([draggable]) {
                     color: #0f172a !important;
+                }
+                .neo-assist-light-shell .neo-assist-tile-preview,
+                .neo-assist-light-shell .neo-assist-tile-preview * {
+                    color: #ffffff !important;
+                }
+                .neo-assist-light-shell .neo-assist-status-pill-ready {
+                    color: #047857 !important;
+                    background: #ecfdf5 !important;
+                    border-color: #a7f3d0 !important;
+                }
+                .neo-assist-light-shell .neo-assist-status-pill-warning {
+                    color: #92400e !important;
+                    background: #fffbeb !important;
+                    border-color: #fde68a !important;
+                }
+                .neo-assist-light-shell .neo-assist-status-pill-error {
+                    color: #be123c !important;
+                    background: #fff1f2 !important;
+                    border-color: #fecdd3 !important;
                 }
                 .neo-assist-light-shell .shadow-\\[0_0_14px_rgba\\(251\\,146\\,60\\,0\\.22\\)\\] {
                     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
@@ -5959,7 +6042,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     onDrag={updateAssistTileDrag}
                                     onDragOver={updateAssistTileDrag}
                                     onDragEnd={clearAssistDragPreview}
-                                    className={`w-full max-w-[360px] cursor-grab rounded-md border bg-slate-950/70 p-2 active:cursor-grabbing ${
+                                    className={`neo-assist-tile-preview w-full max-w-[360px] cursor-grab rounded-md border bg-slate-800 p-2 active:cursor-grabbing ${
                                         isDeploymentAssistTile ? 'border-slate-500/45' : 'border-emerald-300/35'
                                     }`}
                                     title="Drag this tile onto the DFP to create a copy"
@@ -53388,7 +53471,7 @@ appliedUpdates.forEach(update => {
                     </div>
                     {activeView === 'Program Schedule' && (
                         <aside
-                            className={`absolute inset-y-0 right-0 z-[1000] w-[calc(100%-224px)] max-w-none border-l border-slate-300 bg-slate-100/96 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
+                            className={`absolute inset-y-0 right-0 z-[1000] w-[calc(100%-224px)] max-w-none border-l border-slate-300 bg-slate-100 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
                             aria-hidden={!showDfpSidePanel}
                         >
                             <button
@@ -53413,7 +53496,7 @@ appliedUpdates.forEach(update => {
                                     }}
                                 />
                             </button>
-                            <div className="h-full overflow-y-auto border-l border-slate-200 bg-slate-100/95">
+                            <div className="h-full overflow-y-auto border-l border-slate-200 bg-slate-100">
                                 <DfpSidePanelTimeline
                                     flyingStartTime={flyingStartTime}
                                     flyingEndTime={flyingEndTime}

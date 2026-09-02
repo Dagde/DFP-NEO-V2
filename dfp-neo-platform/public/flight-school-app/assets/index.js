@@ -103297,15 +103297,15 @@ const DfpSidePanelTimeline = ({
   const getAssistBuildQueueScheduler = (event) => event.isMandatoryTasking || event.priority === "High" || event.isTimeFixed ? "Mandatory" : "Desirable";
   const getAssistBuildQueueStatus = (event) => {
     if ((event.date || date) !== date) {
-      return { label: "Other date", className: "border-amber-400/35 bg-amber-500/10 text-amber-100" };
+      return { label: "Other date", className: "neo-assist-status-pill-warning border-amber-200 bg-amber-50 text-amber-800" };
     }
     if (!event.flightNumber && !event.taskingName && !event.currency) {
-      return { label: "Needs event", className: "border-rose-400/35 bg-rose-500/10 text-rose-100" };
+      return { label: "Needs event", className: "neo-assist-status-pill-error border-rose-200 bg-rose-50 text-rose-700" };
     }
     if (event.type === "flight" && !event.aircraftConfigId && !Array.isArray(event.acceptableAircraftConfigs)) {
-      return { label: "Needs CONFIG", className: "border-amber-400/35 bg-amber-500/10 text-amber-100" };
+      return { label: "Needs CONFIG", className: "neo-assist-status-pill-warning border-amber-200 bg-amber-50 text-amber-800" };
     }
-    return { label: "Ready", className: "border-emerald-400/35 bg-emerald-500/10 text-emerald-100" };
+    return { label: "Ready", className: "neo-assist-status-pill-ready border-emerald-200 bg-emerald-50 text-emerald-700" };
   };
   const assistBuildQueueRows = reactExports.useMemo(() => highestPriorityEvents.filter((event) => !String(event.id || "").startsWith("tasking-formation-member-")).map((event, index) => ({
     event,
@@ -103376,10 +103376,10 @@ const DfpSidePanelTimeline = ({
   };
   const renderAssistBuildQueue = () => {
     const groupStyles = {
-      tasking: "border-cyan-400/40 bg-cyan-500/10 text-cyan-100",
-      currency: "border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-100",
-      "trainee-currency": "border-violet-400/40 bg-violet-500/10 text-violet-100",
-      special: "border-slate-500/40 bg-slate-700/40 text-slate-100"
+      tasking: "border-cyan-200 bg-cyan-50 text-cyan-900",
+      currency: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-900",
+      "trainee-currency": "border-violet-200 bg-violet-50 text-violet-900",
+      special: "border-slate-300 bg-slate-100 text-slate-800"
     };
     const groupLabels = {
       tasking: "Directed Tasks",
@@ -103387,23 +103387,23 @@ const DfpSidePanelTimeline = ({
       "trainee-currency": "Trainee Currency Events",
       special: "Saved Special Events"
     };
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600/80 bg-slate-900/75 p-3", children: [
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[12px] font-semibold text-white", children: "04 Directed Tasks / Build Priorities" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-slate-400", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[12px] font-semibold text-slate-950", children: "04 Directed Tasks / Build Priorities" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-slate-500", children: [
             "Directed Tasks, Currency Events, Saved Special Events and Flight School Trainee Currency Events used by NEO Build for ",
             date,
             "."
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex shrink-0 items-center gap-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-slate-600/70 bg-slate-950/70 px-2 py-1 text-[9px] font-semibold text-slate-300", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex shrink-0 items-center gap-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-slate-300 bg-slate-50 px-2 py-1 text-[9px] font-semibold text-slate-700", children: [
           assistBuildQueueRows.length,
           " item",
           assistBuildQueueRows.length === 1 ? "" : "s"
         ] }) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[640px] overflow-y-auto overflow-x-hidden rounded border border-slate-700/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-[10px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[640px] overflow-y-auto overflow-x-hidden rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-[10px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[48px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[118px]" }),
@@ -103415,31 +103415,31 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[92px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[64px]" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-950 text-[8px] uppercase tracking-[0.12em] text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Order" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Type" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Event" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Person/Crew" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Time" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Priority" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Scheduler" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Status" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-center", children: "Edit" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-100 text-[8px] uppercase tracking-[0.12em] text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Order" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Type" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Event" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Person/Crew" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Time" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Priority" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Scheduler" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Status" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-center", children: "Edit" })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-800/80 bg-slate-950/45", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-200 bg-white", children: [
           assistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, className: "px-3 py-8 text-center text-slate-500", children: "No directed tasks, currency events or saved special events are in the NEO Build queue." }) }),
-          assistBuildQueueRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-cyan-950/30", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
+          assistBuildQueueRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-cyan-50", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-5 font-mono", children: row.index + 1 }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, -1), className: "leading-none text-slate-400 hover:text-cyan-100", children: "▲" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, 1), className: "leading-none text-slate-400 hover:text-cyan-100", children: "▼" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, -1), className: "leading-none text-slate-500 hover:text-cyan-700", children: "▲" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, 1), className: "leading-none text-slate-500 hover:text-cyan-700", children: "▼" })
               ] })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${groupStyles[row.group]}`, children: groupLabels[row.group] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle font-semibold text-slate-100", title: row.label, children: row.label }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle text-slate-300", title: row.person, children: row.person }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-2 py-2 align-middle font-mono text-slate-300", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle font-semibold text-slate-950", title: row.label, children: row.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle text-slate-700", title: row.person, children: row.person }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: formatCompactTime(row.event.startTime || 0) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[8px] text-slate-500", children: row.event.date || date })
             ] }),
@@ -103448,7 +103448,7 @@ const DfpSidePanelTimeline = ({
               {
                 value: row.event.priority || "High",
                 onChange: (event) => setAssistBuildQueuePriority(row.event, event.target.value),
-                className: "w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-white",
+                className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[10px] text-slate-900",
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
@@ -103461,7 +103461,7 @@ const DfpSidePanelTimeline = ({
               {
                 value: row.scheduler,
                 onChange: (event) => setAssistBuildQueueScheduler(row.event, event.target.value),
-                className: "w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-white",
+                className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[10px] text-slate-900",
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mandatory", children: "Mandatory" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Desirable", children: "Desirable" }),
@@ -103475,7 +103475,7 @@ const DfpSidePanelTimeline = ({
               {
                 type: "button",
                 onClick: () => selectAssistBuildQueueEvent(row.event),
-                className: "rounded border border-cyan-400/45 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/20",
+                className: "rounded border border-cyan-300 bg-cyan-50 px-2 py-1 text-[9px] font-semibold text-cyan-800 hover:bg-cyan-100",
                 children: "Edit"
               }
             ) })
@@ -103488,7 +103488,7 @@ const DfpSidePanelTimeline = ({
     "div",
     {
       ref: scrollRef,
-      className: "overflow-x-auto rounded-md border border-slate-600/80 bg-slate-900/85 p-3 pb-3 shadow-inner [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+      className: "overflow-x-auto rounded-lg border border-slate-300 bg-white p-3 pb-3 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       "aria-label": "Scrollable ten hour flying window timeline",
       children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
@@ -103499,14 +103499,14 @@ const DfpSidePanelTimeline = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mb-1 h-4", children: ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
               "span",
               {
-                className: `absolute text-[9px] font-semibold tracking-[0.08em] text-slate-200/80 ${hour === timelineEndHour ? "-translate-x-full" : "-translate-x-1/2"}`,
+                className: `absolute text-[9px] font-semibold tracking-[0.08em] text-slate-500 ${hour === timelineEndHour ? "-translate-x-full" : "-translate-x-1/2"}`,
                 style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` },
                 children: formatTick(hour)
               },
               `mini-tick-${hour}`
             )) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: chartRef, className: "relative h-20 overflow-visible rounded border border-slate-500/80 bg-slate-950", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-300/45" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: chartRef, className: "relative h-20 overflow-visible rounded border border-slate-300 bg-slate-50", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-300" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
@@ -103551,7 +103551,7 @@ const DfpSidePanelTimeline = ({
               ticks.map((hour) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: "absolute inset-y-0 z-10 border-l border-slate-400/28",
+                  className: "absolute inset-y-0 z-10 border-l border-slate-300",
                   style: { left: `${(hour - timelineStartHour) / timelineSpanHours * 100}%` }
                 },
                 `mini-line-${hour}`
@@ -103571,10 +103571,10 @@ const DfpSidePanelTimeline = ({
               activeDrag && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "div",
                 {
-                  className: "pointer-events-none absolute -top-10 z-40 -translate-x-1/2 rounded-md border border-cyan-200/70 bg-slate-950 px-2 py-1 text-[10px] font-semibold text-cyan-50 shadow-xl",
+                  className: "pointer-events-none absolute -top-10 z-40 -translate-x-1/2 rounded-md border border-cyan-300 bg-white px-2 py-1 text-[10px] font-semibold text-slate-900 shadow-xl",
                   style: { left: `${activeDrag.left}%` },
                   children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] uppercase tracking-[0.12em] text-cyan-200/70", children: activeDrag.label }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] uppercase tracking-[0.12em] text-cyan-700", children: activeDrag.label }),
                     formatCompactTime(activeDrag.time)
                   ]
                 }
@@ -103583,13 +103583,13 @@ const DfpSidePanelTimeline = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2 h-9", children: markers.map((marker) => /* @__PURE__ */ jsxRuntimeExports.jsx(
               "span",
               {
-                className: "absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-400/45 bg-slate-950/95 px-1.5 py-1 text-[9px] font-semibold text-slate-100 shadow",
+                className: "absolute -translate-x-1/2 whitespace-nowrap rounded border border-slate-300 bg-white px-1.5 py-1 text-[9px] font-semibold text-slate-800 shadow-sm",
                 style: { left: `${getLeft(marker.time)}%` },
                 children: formatCompactTime(marker.time)
               },
               `mini-label-${marker.key}`
             )) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-semibold text-slate-300/90", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-semibold text-slate-600", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-3 rounded-sm ring-1 ring-inset ${dayShade}` }),
                 " Day"
@@ -105755,10 +105755,17 @@ const DfpSidePanelTimeline = ({
       )
     ] });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "neo-assist-light-shell border-b border-slate-300 bg-slate-100 p-4 text-slate-900", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "neo-assist-light-shell min-h-full border-b border-slate-300 bg-slate-100 p-4 text-slate-900", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
                 .neo-assist-light-shell {
                     color: #0f172a;
+                    background: #f1f5f9;
+                    isolation: isolate;
+                }
+                .neo-assist-light-shell *,
+                .neo-assist-light-shell *::before,
+                .neo-assist-light-shell *::after {
+                    text-shadow: none !important;
                 }
                 .neo-assist-light-shell h3,
                 .neo-assist-light-shell h4,
@@ -105783,11 +105790,31 @@ const DfpSidePanelTimeline = ({
                 .neo-assist-light-shell .text-orange-50 {
                     color: #334155 !important;
                 }
+                .neo-assist-light-shell [class*="text-slate-"],
+                .neo-assist-light-shell [class*="text-cyan-"],
+                .neo-assist-light-shell [class*="text-fuchsia-"],
+                .neo-assist-light-shell [class*="text-violet-"],
+                .neo-assist-light-shell [class*="text-amber-"],
+                .neo-assist-light-shell [class*="text-rose-"] {
+                    color: #334155 !important;
+                }
+                .neo-assist-light-shell h3,
+                .neo-assist-light-shell h4,
+                .neo-assist-light-shell th,
+                .neo-assist-light-shell .font-semibold,
+                .neo-assist-light-shell .font-bold,
+                .neo-assist-light-shell .font-black {
+                    color: #0f172a !important;
+                }
                 .neo-assist-light-shell .text-emerald-50,
                 .neo-assist-light-shell .text-emerald-100,
                 .neo-assist-light-shell .text-emerald-200,
                 .neo-assist-light-shell .text-lime-50 {
                     color: #047857 !important;
+                }
+                .neo-assist-light-shell [class*="bg-slate-"],
+                .neo-assist-light-shell [class*="bg-gray-"] {
+                    background-color: rgba(255, 255, 255, 0.94) !important;
                 }
                 .neo-assist-light-shell .bg-slate-950,
                 .neo-assist-light-shell .bg-slate-950\\/72,
@@ -105801,6 +105828,7 @@ const DfpSidePanelTimeline = ({
                 .neo-assist-light-shell .bg-slate-800\\/40,
                 .neo-assist-light-shell .bg-slate-800\\/50,
                 .neo-assist-light-shell .bg-slate-800\\/60,
+                .neo-assist-light-shell .bg-slate-800\\/75,
                 .neo-assist-light-shell .bg-slate-800\\/80 {
                     background-color: rgba(255, 255, 255, 0.92) !important;
                 }
@@ -105808,6 +105836,22 @@ const DfpSidePanelTimeline = ({
                 .neo-assist-light-shell .bg-slate-800,
                 .neo-assist-light-shell .bg-slate-700 {
                     background-color: rgba(248, 250, 252, 0.96) !important;
+                }
+                .neo-assist-light-shell [class*="bg-cyan-"],
+                .neo-assist-light-shell [class*="bg-emerald-"],
+                .neo-assist-light-shell [class*="bg-sky-"] {
+                    background-color: rgba(224, 242, 254, 0.78) !important;
+                }
+                .neo-assist-light-shell [class*="bg-fuchsia-"],
+                .neo-assist-light-shell [class*="bg-violet-"] {
+                    background-color: rgba(245, 243, 255, 0.92) !important;
+                }
+                .neo-assist-light-shell [class*="bg-amber-"],
+                .neo-assist-light-shell [class*="bg-orange-"] {
+                    background-color: rgba(255, 237, 213, 0.82) !important;
+                }
+                .neo-assist-light-shell [class*="bg-rose-"] {
+                    background-color: rgba(255, 228, 230, 0.88) !important;
                 }
                 .neo-assist-light-shell .bg-cyan-400\\/10,
                 .neo-assist-light-shell .bg-cyan-400\\/15,
@@ -105833,6 +105877,15 @@ const DfpSidePanelTimeline = ({
                 .neo-assist-light-shell .border-slate-600\\/70 {
                     border-color: rgba(203, 213, 225, 0.9) !important;
                 }
+                .neo-assist-light-shell [class*="border-slate-"],
+                .neo-assist-light-shell [class*="border-cyan-"],
+                .neo-assist-light-shell [class*="border-emerald-"],
+                .neo-assist-light-shell [class*="border-fuchsia-"],
+                .neo-assist-light-shell [class*="border-violet-"],
+                .neo-assist-light-shell [class*="border-amber-"],
+                .neo-assist-light-shell [class*="border-rose-"] {
+                    border-color: #cbd5e1 !important;
+                }
                 .neo-assist-light-shell input,
                 .neo-assist-light-shell select,
                 .neo-assist-light-shell textarea {
@@ -105840,8 +105893,38 @@ const DfpSidePanelTimeline = ({
                     color: #0f172a !important;
                     border-color: #cbd5e1 !important;
                 }
+                .neo-assist-light-shell table {
+                    background: #ffffff !important;
+                }
+                .neo-assist-light-shell thead,
+                .neo-assist-light-shell tbody,
+                .neo-assist-light-shell tr {
+                    background-color: #ffffff !important;
+                }
+                .neo-assist-light-shell tr:hover {
+                    background-color: #eff6ff !important;
+                }
                 .neo-assist-light-shell button:not([draggable]) {
                     color: #0f172a !important;
+                }
+                .neo-assist-light-shell .neo-assist-tile-preview,
+                .neo-assist-light-shell .neo-assist-tile-preview * {
+                    color: #ffffff !important;
+                }
+                .neo-assist-light-shell .neo-assist-status-pill-ready {
+                    color: #047857 !important;
+                    background: #ecfdf5 !important;
+                    border-color: #a7f3d0 !important;
+                }
+                .neo-assist-light-shell .neo-assist-status-pill-warning {
+                    color: #92400e !important;
+                    background: #fffbeb !important;
+                    border-color: #fde68a !important;
+                }
+                .neo-assist-light-shell .neo-assist-status-pill-error {
+                    color: #be123c !important;
+                    background: #fff1f2 !important;
+                    border-color: #fecdd3 !important;
                 }
                 .neo-assist-light-shell .shadow-\\[0_0_14px_rgba\\(251\\,146\\,60\\,0\\.22\\)\\] {
                     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
@@ -105978,7 +106061,7 @@ const DfpSidePanelTimeline = ({
             onDrag: updateAssistTileDrag,
             onDragOver: updateAssistTileDrag,
             onDragEnd: clearAssistDragPreview,
-            className: `w-full max-w-[360px] cursor-grab rounded-md border bg-slate-950/70 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-emerald-300/35"}`,
+            className: `neo-assist-tile-preview w-full max-w-[360px] cursor-grab rounded-md border bg-slate-800 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-emerald-300/35"}`,
             title: "Drag this tile onto the DFP to create a copy",
             children: isDeploymentAssistTile ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70", children: formatDeploymentAssistClock(assistDeploymentStartTime) }),
@@ -144568,7 +144651,7 @@ Do you want to replace the existing entry?`,
               activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "aside",
                 {
-                  className: `absolute inset-y-0 right-0 z-[1000] w-[calc(100%-224px)] max-w-none border-l border-slate-300 bg-slate-100/96 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
+                  className: `absolute inset-y-0 right-0 z-[1000] w-[calc(100%-224px)] max-w-none border-l border-slate-300 bg-slate-100 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
                   "aria-hidden": !showDfpSidePanel,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -144603,7 +144686,7 @@ Do you want to replace the existing entry?`,
                         ]
                       }
                     ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-l border-slate-200 bg-slate-100/95", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-y-auto border-l border-slate-200 bg-slate-100", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                       DfpSidePanelTimeline,
                       {
                         flyingStartTime,
