@@ -415,6 +415,7 @@ export interface ScheduleEvent {
       trainingReportNextEventExtensions?: Record<string, number>;
   currency?: string;
   currencyDraftId?: string;
+  currencyAudience?: 'staff' | 'trainee';
   aircraftCount?: number;
   priority?: 'High' | 'Medium' | 'Low';
       soloOrDual?: 'Solo' | 'Dual';

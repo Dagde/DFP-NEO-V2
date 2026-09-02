@@ -3144,6 +3144,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           isTimeFixed: false,
           eventCategory: 'currency',
           currency: selectedCurrencyText || 'Currency',
+          currencyAudience: draft.audience,
           priority: 'Medium',
           notes: [
             selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : 'Currency event required',
