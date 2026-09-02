@@ -102225,6 +102225,7 @@ const DfpSidePanelTimeline = ({
     if (color === "bg-sky-500/70") return "rgba(14,165,233,0.42)";
     return color.startsWith("bg-") ? "#047857" : color;
   };
+  const assistPreviewTileOrange = "#b45309";
   const assistDraftEvent = reactExports.useMemo(() => ({
     id: `neo-assist-draft-${Date.now()}`,
     date: activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date,
@@ -106085,8 +106086,55 @@ const DfpSidePanelTimeline = ({
           assistBuildQueueRows.length === 1 ? "y" : "ies"
         ] })
       ] }),
-      activeAssistPage === "priority" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: renderAssistBuildQueue() }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(0,1fr)_minmax(420px,0.48fr)] gap-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: [
+      activeAssistPage === "priority" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: renderAssistBuildQueue() }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+        renderAssistDfpOverview(),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            draggable: true,
+            onDragStart: startAssistTileDrag,
+            onDrag: updateAssistTileDrag,
+            onDragOver: updateAssistTileDrag,
+            onDragEnd: clearAssistDragPreview,
+            className: `neo-assist-tile-preview ${isAssistTileDragging ? "neo-assist-tile-preview-dragging" : ""} w-full max-w-[360px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-orange-300/50"}`,
+            title: "Drag this tile onto the DFP to create a copy",
+            children: isDeploymentAssistTile ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70", children: formatDeploymentAssistClock(assistDeploymentStartTime) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute inset-0 flex items-center justify-center gap-1 px-14", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "DEPLOYMENT" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "whitespace-nowrap text-white/75", children: [
+                  formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", ""),
+                  " ",
+                  formatDeploymentAssistDateLabel(assistDeploymentStartDate)
+                ] })
+              ] })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
+                style: { backgroundColor: assistPreviewTileOrange },
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(assistStartTime) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: previewCrewName }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 whitespace-nowrap font-mono", children: [
+                      "[",
+                      assistDuration.toFixed(1),
+                      "] ",
+                      assistEventLabel
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase() }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
+                  ] })
+                ]
+              }
+            )
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[12px] font-semibold text-slate-950", children: "NEO Build Inputs" }),
@@ -106133,55 +106181,6 @@ const DfpSidePanelTimeline = ({
               renderAssistSection()
             ] }) })
           ] })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-3", children: [
-          renderAssistDfpOverview(),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "div",
-            {
-              draggable: true,
-              onDragStart: startAssistTileDrag,
-              onDrag: updateAssistTileDrag,
-              onDragOver: updateAssistTileDrag,
-              onDragEnd: clearAssistDragPreview,
-              className: `neo-assist-tile-preview ${isAssistTileDragging ? "neo-assist-tile-preview-dragging" : ""} w-full max-w-[360px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${isDeploymentAssistTile ? "border-slate-500/45" : "border-emerald-300/35"}`,
-              title: "Drag this tile onto the DFP to create a copy",
-              children: isDeploymentAssistTile ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative h-10 overflow-hidden rounded-sm border border-white/60 bg-gray-600/30 px-2 text-center text-xs font-semibold text-white/80 shadow-md", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-2 top-1 font-mono text-[9px] font-semibold text-white/70", children: formatDeploymentAssistClock(assistDeploymentStartTime) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "absolute inset-0 flex items-center justify-center gap-1 px-14", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "DEPLOYMENT" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "whitespace-nowrap text-white/75", children: [
-                    formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", ""),
-                    " ",
-                    formatDeploymentAssistDateLabel(assistDeploymentStartDate)
-                  ] })
-                ] })
-              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "div",
-                {
-                  className: "relative h-10 overflow-hidden rounded-[3px] border border-white/10 px-2 py-1 text-white shadow-[inset_3px_0_0_rgba(163,230,53,0.72),0_6px_16px_rgba(0,0,0,0.28)]",
-                  style: { backgroundColor: getAssistTileDisplayColor(assistDraftEvent.color) },
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 right-2 top-1 grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2 text-[11px] font-bold leading-tight", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 font-mono text-[9px] font-semibold text-white/70", children: formatTime2(assistStartTime) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: previewCrewName }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 whitespace-nowrap font-mono", children: [
-                        "[",
-                        assistDuration.toFixed(1),
-                        "] ",
-                        assistEventLabel
-                      ] })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-lime-500/60 px-1 text-[9px] text-lime-50", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase() }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
-                    ] })
-                  ]
-                }
-              )
-            }
-          ) })
         ] })
       ] })
     ] }) })
