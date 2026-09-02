@@ -915,6 +915,7 @@ const DfpSidePanelTimeline: React.FC<{
     activeAircraftType?: any;
     staffQualificationCatalogue?: StaffQualificationCatalogue;
     unitCallsignSettings?: UnitCallsignSettings;
+    personnelDisplaySettings?: Partial<PersonnelDisplaySettings>;
     scheduleZoomLevel?: number;
     onRunNeoBuild?: () => void;
     onNavigateToCurrencySettings?: () => void;
@@ -986,6 +987,7 @@ const DfpSidePanelTimeline: React.FC<{
     activeAircraftType,
     staffQualificationCatalogue,
     unitCallsignSettings,
+    personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
     scheduleZoomLevel = 1,
     onRunNeoBuild,
     onNavigateToCurrencySettings,
@@ -1463,6 +1465,44 @@ const DfpSidePanelTimeline: React.FC<{
         if (!staff.name || staff.isAdminStaff) return false;
         return requiredAssistCrewRoles.some(requiredRole => staffMatchesRequiredCrewRole(staff, requiredRole));
     }, [isAirCombatTileMode, requiredAssistCrewRoles, selectedResourceKind, staffMatchesRequiredCrewRole]);
+    const formatCrewOptionLabel = useCallback((name: string): string => {
+        const instructor = instructors.find(item => item.name === name);
+        const rank = String(instructor?.rank || '').trim();
+        const roleLabel = getCrewPositionDisplayLabel(instructor?.role, crewPositionTerminology, '');
+        const personLabel = rank ? `${rank} ${name}` : name;
+        return roleLabel ? `${personLabel} (${roleLabel})` : personLabel;
+    }, [crewPositionTerminology, instructors]);
+    const staffByAssistName = useMemo(() => {
+        const map = new Map<string, Instructor>();
+        instructors.forEach(staff => {
+            const name = String(staff.name || '').trim();
+            if (name && !map.has(name)) map.set(name, staff);
+        });
+        return map;
+    }, [instructors]);
+    const getAssistStaffUnitLabel = useCallback((nameOrStaff: string | Instructor | undefined): string => {
+        const staff = typeof nameOrStaff === 'string' ? staffByAssistName.get(nameOrStaff) : nameOrStaff;
+        return String(staff?.unit || '').trim().toUpperCase() || 'Unassigned';
+    }, [staffByAssistName]);
+    const compareAssistStaffRecords = useCallback((left: Instructor, right: Instructor): number => {
+        const unitCompare = getAssistStaffUnitLabel(left).localeCompare(getAssistStaffUnitLabel(right), undefined, {
+            numeric: true,
+            sensitivity: 'base',
+        });
+        if (unitCompare) return unitCompare;
+        return comparePeopleByConfiguredRank(left, right, personnelDisplaySettings, 'staff');
+    }, [getAssistStaffUnitLabel, personnelDisplaySettings]);
+    const compareAssistCrewNames = useCallback((leftName: string, rightName: string): number => {
+        const leftStaff = staffByAssistName.get(leftName);
+        const rightStaff = staffByAssistName.get(rightName);
+        if (leftStaff && rightStaff) return compareAssistStaffRecords(leftStaff, rightStaff);
+        if (leftStaff) return -1;
+        if (rightStaff) return 1;
+        return String(leftName || '').localeCompare(String(rightName || ''), undefined, {
+            numeric: true,
+            sensitivity: 'base',
+        });
+    }, [compareAssistStaffRecords, staffByAssistName]);
     const crewOptions = useMemo(() => {
         const seen = new Set<string>();
         const eligibleNames = new Set(
@@ -1478,14 +1518,43 @@ const DfpSidePanelTimeline: React.FC<{
                 if (eligibleNames.size > 0 && !eligibleNames.has(name)) return false;
                 seen.add(name);
                 return true;
-            });
-    }, [diagnosticCrewPriority, instructors, isStaffEligibleForAssistCrew]);
-    const displayedCrewOptions = crewSourceMode === 'priority' && diagnosticCrewPriority.length > 0
-        ? crewOptions
-        : staffListNames.filter(name => {
+            })
+            .sort(compareAssistCrewNames);
+    }, [compareAssistCrewNames, diagnosticCrewPriority, instructors, isStaffEligibleForAssistCrew]);
+    const displayedCrewOptions = useMemo(() => {
+        const options = crewSourceMode === 'priority' && diagnosticCrewPriority.length > 0
+            ? crewOptions
+            : staffListNames.filter(name => {
             const staff = instructors.find(instructor => instructor.name === name);
             return staff ? isStaffEligibleForAssistCrew(staff) : true;
         });
+        return [...options].sort(compareAssistCrewNames);
+    }, [compareAssistCrewNames, crewOptions, crewSourceMode, diagnosticCrewPriority.length, instructors, isStaffEligibleForAssistCrew, staffListNames]);
+    const displayedCrewOptionGroups = useMemo(() => {
+        const groups = new Map<string, string[]>();
+        displayedCrewOptions.forEach(name => {
+            const unit = getAssistStaffUnitLabel(name);
+            if (!groups.has(unit)) groups.set(unit, []);
+            groups.get(unit)!.push(name);
+        });
+        return Array.from(groups.entries()).map(([unit, names]) => ({ unit, names }));
+    }, [displayedCrewOptions, getAssistStaffUnitLabel]);
+    const displayedCrewOrderByName = useMemo(() => (
+        new Map(displayedCrewOptions.map((name, index) => [name, index + 1]))
+    ), [displayedCrewOptions]);
+    const renderCrewOptionsByUnit = (optionKeyPrefix: string, namesToExclude = new Set<string>()) => (
+        displayedCrewOptionGroups.map(group => {
+            const names = group.names.filter(name => !namesToExclude.has(name));
+            if (names.length === 0) return null;
+            return (
+                <optgroup key={`${optionKeyPrefix}-${group.unit}`} label={group.unit}>
+                    {names.map(name => (
+                        <option key={`${optionKeyPrefix}-${name}`} value={name}>{formatCrewOptionLabel(name)}</option>
+                    ))}
+                </optgroup>
+            );
+        })
+    );
     const setCrewSelection = (name: string, checked: boolean) => {
         if (!canSelectFormationCrew) {
             const nextName = checked ? name : '';
@@ -1572,8 +1641,8 @@ const DfpSidePanelTimeline: React.FC<{
             })
             .filter(staff => String(staff.crew || '').replace(/^CREW\s*/i, '').trim().toUpperCase() === selectedCrew)
             .filter(staff => !staff.isAdminStaff)
-            .sort((left, right) => String(left.name || '').localeCompare(String(right.name || ''), undefined, { sensitivity: 'base' }));
-    }, [fixedCrewAssistUnitCodeSet, instructors, selectedFixedCrewGroup]);
+            .sort(compareAssistStaffRecords);
+    }, [compareAssistStaffRecords, fixedCrewAssistUnitCodeSet, instructors, selectedFixedCrewGroup]);
     const fixedCrewPicQualification = useMemo(() => getQualificationsForOperationalModel(staffQualificationCatalogue, 'fixed_crew')
         .find(qualification => (
             normaliseQualificationToken(qualification.id) === 'pic'
@@ -2295,13 +2364,6 @@ const DfpSidePanelTimeline: React.FC<{
     const aircraftResourceLabel = formatResourceLabel(`${aircraftResourceBase} 1`).replace(/\s+1$/, '') || 'Aircraft';
     const simulatorResourceLabel = formatResourceLabel('FTD 1').replace(/\s+1$/, '');
     const proceduralTrainerResourceLabel = formatResourceLabel('CPT 1').replace(/\s+1$/, '');
-    const formatCrewOptionLabel = (name: string): string => {
-        const instructor = instructors.find(item => item.name === name);
-        const rank = String(instructor?.rank || '').trim();
-        const roleLabel = getCrewPositionDisplayLabel(instructor?.role, crewPositionTerminology, '');
-        const personLabel = rank ? `${rank} ${name}` : name;
-        return roleLabel ? `${personLabel} (${roleLabel})` : personLabel;
-    };
     const hoursOverlap = (firstStart: number, firstEnd: number, secondStart: number, secondEnd: number): boolean =>
         firstStart < secondEnd && secondStart < firstEnd;
     const getSyllabusDurationOffset = (value: unknown): number => {
@@ -5118,9 +5180,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     <label className={effectiveAssistCurrencyFlightType === 'Dual' ? 'font-semibold uppercase tracking-[0.1em] text-slate-400' : 'col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400'}>PIC
                                         <select value={selectedCrewName} onChange={event => setCrewSelection(event.target.value, Boolean(event.target.value))} className={fieldClass}>
                                             <option value="">Select PIC</option>
-                                            {displayedCrewOptions.map(name => (
-                                                <option key={`assist-currency-pic-${name}`} value={name}>{name}</option>
-                                            ))}
+                                            {renderCrewOptionsByUnit('assist-currency-pic')}
                                         </select>
                                     </label>
                                     {effectiveAssistCurrencyFlightType === 'Dual' && (
@@ -5135,11 +5195,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                 className={fieldClass}
                                             >
                                                 <option value="">Select crew</option>
-                                                {displayedCrewOptions
-                                                    .filter(name => name !== selectedCrewName)
-                                                    .map(name => (
-                                                        <option key={`assist-currency-crew-${name}`} value={name}>{name}</option>
-                                                    ))}
+                                                {renderCrewOptionsByUnit('assist-currency-crew', new Set([selectedCrewName].filter(Boolean)))}
                                             </select>
                                         </label>
                                     )}
@@ -5414,42 +5470,49 @@ const DfpSidePanelTimeline: React.FC<{
                         </div>
                         <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
                             {displayedCrewOptions.length === 0 && <p className="text-[10px] text-slate-500">No crew available.</p>}
-                            {displayedCrewOptions.map((name, index) => {
-                                const selectedOrder = selectedCrewNames.indexOf(name) + 1;
-                                const isSelected = selectedOrder > 0;
-                                const selectionFull = canSelectFormationCrew && !isSelected && selectedCrewNames.length >= assistFormationSize;
-                                const crewStatus = crewStatusByName.get(name);
-                                const crewStatusTextClass = crewStatus?.status === 'unavailable'
-                                    ? 'text-red-300'
-                                    : crewStatus?.status === 'scheduled'
-                                        ? 'text-amber-300'
-                                        : isSelected ? 'text-cyan-50' : 'text-slate-300';
-                                return (
-                                    <label
-                                        key={name}
-                                        title={crewStatus ? `${formatCrewOptionLabel(name)} - ${crewStatus.reason}` : formatCrewOptionLabel(name)}
-                                        className={`grid cursor-pointer grid-cols-[22px_auto_24px_1fr] items-center gap-x-3 rounded border px-2 py-1 text-[10px] ${isSelected ? 'border-cyan-300/70 bg-cyan-400/10 text-cyan-50' : 'border-slate-700 bg-slate-950/45 text-slate-300'} ${selectionFull ? 'opacity-55' : ''}`}
-                                    >
-                                        <span className="font-mono text-[9px] text-slate-500">
-                                            {crewSourceMode === 'priority' ? index + 1 : ''}
-                                        </span>
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            disabled={selectionFull}
-                                            onChange={event => setCrewSelection(name, event.target.checked)}
-                                        />
-                                        <span className="flex h-5 w-6 items-center justify-center">
-                                            {canSelectFormationCrew && isSelected && (
-                                                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded bg-emerald-500 px-1 text-[9px] font-bold leading-none text-emerald-950 shadow-[0_0_6px_rgba(16,185,129,0.35)]">
-                                                    {selectedOrder}
+                            {displayedCrewOptionGroups.map(group => (
+                                <div key={`assist-crew-group-${group.unit}`} className="space-y-1">
+                                    <div className="px-1 pt-1 text-[9px] font-bold uppercase tracking-[0.12em] text-cyan-200/70">
+                                        {group.unit}
+                                    </div>
+                                    {group.names.map(name => {
+                                        const selectedOrder = selectedCrewNames.indexOf(name) + 1;
+                                        const isSelected = selectedOrder > 0;
+                                        const selectionFull = canSelectFormationCrew && !isSelected && selectedCrewNames.length >= assistFormationSize;
+                                        const crewStatus = crewStatusByName.get(name);
+                                        const crewStatusTextClass = crewStatus?.status === 'unavailable'
+                                            ? 'text-red-300'
+                                            : crewStatus?.status === 'scheduled'
+                                                ? 'text-amber-300'
+                                                : isSelected ? 'text-cyan-50' : 'text-slate-300';
+                                        return (
+                                            <label
+                                                key={name}
+                                                title={crewStatus ? `${formatCrewOptionLabel(name)} - ${crewStatus.reason}` : formatCrewOptionLabel(name)}
+                                                className={`grid cursor-pointer grid-cols-[22px_auto_24px_1fr] items-center gap-x-3 rounded border px-2 py-1 text-[10px] ${isSelected ? 'border-cyan-300/70 bg-cyan-400/10 text-cyan-50' : 'border-slate-700 bg-slate-950/45 text-slate-300'} ${selectionFull ? 'opacity-55' : ''}`}
+                                            >
+                                                <span className="font-mono text-[9px] text-slate-500">
+                                                    {crewSourceMode === 'priority' ? displayedCrewOrderByName.get(name) : ''}
                                                 </span>
-                                            )}
-                                        </span>
-                                        <span className={`truncate ${crewStatusTextClass}`}>{formatCrewOptionLabel(name)}</span>
-                                    </label>
-                                );
-                            })}
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    disabled={selectionFull}
+                                                    onChange={event => setCrewSelection(name, event.target.checked)}
+                                                />
+                                                <span className="flex h-5 w-6 items-center justify-center">
+                                                    {canSelectFormationCrew && isSelected && (
+                                                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded bg-emerald-500 px-1 text-[9px] font-bold leading-none text-emerald-950 shadow-[0_0_6px_rgba(16,185,129,0.35)]">
+                                                            {selectedOrder}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <span className={`truncate ${crewStatusTextClass}`}>{formatCrewOptionLabel(name)}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            ))}
                         </div>
                     </div>
                     <span className="block text-[9px] text-slate-500">
@@ -53213,6 +53276,7 @@ appliedUpdates.forEach(update => {
                                     activeAircraftType={activeRuntimeAircraftType}
                                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                                     unitCallsignSettings={activeUnitCallsignSettings}
+                                    personnelDisplaySettings={personnelDisplaySettings}
                                     scheduleZoomLevel={zoomLevel}
                                     onRunNeoBuild={handleBuildDfp}
                                     onNavigateToCurrencySettings={() => handleNavigateToSettingsSection({ sectionId: 'sct-events', unitCode: activeUnitCode })}
