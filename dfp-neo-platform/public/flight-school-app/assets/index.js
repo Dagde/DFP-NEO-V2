@@ -101608,7 +101608,7 @@ const DfpSidePanelTimeline = ({
   const timelineSpanHours = timelineEndHour - timelineStartHour;
   const visibleWindowHours = 10;
   const timelineMinGap = 5 / 60;
-  const miniTimelineBodyHeight = 80;
+  const miniTimelineBodyHeight = 55;
   const chartRef = reactExports.useRef(null);
   const scrollRef = reactExports.useRef(null);
   const assistDragPreviewRef = reactExports.useRef(null);
@@ -103510,7 +103510,7 @@ const DfpSidePanelTimeline = ({
               },
               `mini-tick-${hour}`
             )) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: chartRef, className: "relative h-20 overflow-visible rounded border border-slate-300 bg-slate-50", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: chartRef, className: "relative h-[55px] overflow-visible rounded border border-slate-300 bg-slate-50", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-x-0 top-1/2 h-px bg-slate-300" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
@@ -105912,12 +105912,8 @@ const DfpSidePanelTimeline = ({
                 .neo-assist-light-shell button:not([draggable]) {
                     color: #0f172a !important;
                 }
-                .neo-assist-light-shell .neo-assist-tile-preview:not(.neo-assist-tile-preview-dragging),
-                .neo-assist-light-shell .neo-assist-tile-preview:not(.neo-assist-tile-preview-dragging) * {
-                    color: #0f172a !important;
-                }
-                .neo-assist-light-shell .neo-assist-tile-preview-dragging,
-                .neo-assist-light-shell .neo-assist-tile-preview-dragging * {
+                .neo-assist-light-shell .neo-assist-tile-preview,
+                .neo-assist-light-shell .neo-assist-tile-preview * {
                     color: #ffffff !important;
                 }
                 .neo-assist-light-shell .neo-assist-status-pill-ready {
@@ -106126,7 +106122,7 @@ const DfpSidePanelTimeline = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-white/80", children: previewAircraftNumber }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-white/35 px-1 text-[9px] text-slate-950 ring-1 ring-slate-900/10", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase() }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "justify-self-start rounded bg-white/25 px-1 text-[9px] text-white ring-1 ring-white/30", children: isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase() }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-right font-mono text-cyan-50", children: previewAreaCallsign })
                   ] })
                 ]

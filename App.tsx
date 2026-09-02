@@ -1045,7 +1045,7 @@ const DfpSidePanelTimeline: React.FC<{
     const timelineSpanHours = timelineEndHour - timelineStartHour;
     const visibleWindowHours = 10;
     const timelineMinGap = 5 / 60;
-    const miniTimelineBodyHeight = 80;
+    const miniTimelineBodyHeight = 55;
     const chartRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const assistDragPreviewRef = useRef<HTMLElement | null>(null);
@@ -3443,7 +3443,7 @@ const DfpSidePanelTimeline: React.FC<{
                         </span>
                     ))}
                 </div>
-                <div ref={chartRef} className="relative h-20 overflow-visible rounded border border-slate-300 bg-slate-50">
+                <div ref={chartRef} className="relative h-[55px] overflow-visible rounded border border-slate-300 bg-slate-50">
                     <div className="absolute inset-x-0 top-1/2 h-px bg-slate-300" />
                     <div
                         className={`absolute inset-y-0 rounded-sm ring-1 ring-inset ${dayShade}`}
@@ -5892,12 +5892,8 @@ const DfpSidePanelTimeline: React.FC<{
                 .neo-assist-light-shell button:not([draggable]) {
                     color: #0f172a !important;
                 }
-                .neo-assist-light-shell .neo-assist-tile-preview:not(.neo-assist-tile-preview-dragging),
-                .neo-assist-light-shell .neo-assist-tile-preview:not(.neo-assist-tile-preview-dragging) * {
-                    color: #0f172a !important;
-                }
-                .neo-assist-light-shell .neo-assist-tile-preview-dragging,
-                .neo-assist-light-shell .neo-assist-tile-preview-dragging * {
+                .neo-assist-light-shell .neo-assist-tile-preview,
+                .neo-assist-light-shell .neo-assist-tile-preview * {
                     color: #ffffff !important;
                 }
                 .neo-assist-light-shell .neo-assist-status-pill-ready {
@@ -6113,7 +6109,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                 </div>
                                                 <div className="absolute bottom-[4px] left-2 right-2 grid grid-cols-[44px_minmax(0,1fr)_auto] items-end gap-2 text-[10px] font-semibold leading-none">
                                                     <span className="font-mono text-[9px] text-white/80">{previewAircraftNumber}</span>
-                                                    <span className="justify-self-start rounded bg-white/35 px-1 text-[9px] text-slate-950 ring-1 ring-slate-900/10">
+                                                    <span className="justify-self-start rounded bg-white/25 px-1 text-[9px] text-white ring-1 ring-white/30">
                                                         {isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : assistDraftEvent.flightType.toUpperCase()}
                                                     </span>
                                                     <span className="truncate text-right font-mono text-cyan-50">
