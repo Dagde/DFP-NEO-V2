@@ -835,7 +835,7 @@ type NeoAssistSection =
     | 'details'
     | 'crew';
 
-type NeoAssistPage = 'inputs' | 'priority';
+type NeoAssistPage = 'inputs' | 'priority' | 'manual';
 
 const NEO_ASSIST_CURRENCY_TRACE_KEY = 'neo_assist_currency_persistence_trace';
 const appendNeoAssistCurrencyTrace = (stage: string, details: Record<string, unknown> = {}) => {
@@ -1052,6 +1052,10 @@ const DfpSidePanelTimeline: React.FC<{
     const wizardRepeatRef = useRef<number | null>(null);
     const [activeDrag, setActiveDrag] = useState<DfpMiniTimelineDragState | null>(null);
     const [activeAssistPage, setActiveAssistPage] = useState<NeoAssistPage>('inputs');
+    const [assistPriorityTypeFilter, setAssistPriorityTypeFilter] = useState('all');
+    const [assistPriorityPersonFilter, setAssistPriorityPersonFilter] = useState('');
+    const [assistPriorityUnitFilter, setAssistPriorityUnitFilter] = useState('all');
+    const [assistPrioritySchedulerFilter, setAssistPrioritySchedulerFilter] = useState('all');
     const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('flying');
     const [isAssistTileDragging, setIsAssistTileDragging] = useState(false);
     const [showAssistCurrencyInfo, setShowAssistCurrencyInfo] = useState(false);
@@ -2377,13 +2381,6 @@ const DfpSidePanelTimeline: React.FC<{
         { id: 'flying', label: 'Flying Window' },
         { id: 'resources', label: 'Resources Available' },
         { id: 'training', label: 'Training Priority' },
-        { id: 'taskings', label: 'Directed Tasks' },
-        { id: 'currency', label: 'Currency events' },
-        { id: 'saved-special', label: 'Saved Special Events' },
-        ...(normalisedAssistOperationalModel === 'flight_school'
-            ? [{ id: 'trainee-currency' as NeoAssistSection, label: 'Trainee Currency Events' }]
-            : []),
-        { id: 'bulk-currency', label: 'Bulk Currency Builder' },
         { id: 'course', label: 'Course events' },
         { id: 'packages', label: 'Packages' },
     ];
@@ -3187,10 +3184,12 @@ const DfpSidePanelTimeline: React.FC<{
         if (isTasking) return 'tasking';
         const isCurrency = Boolean(event.currency || event.currencyDraftId || event.sctRequestId || event.eventCategory === 'currency' || eventId.startsWith('sct-') || eventId.startsWith('neo-assist-currency-') || eventId.startsWith('currency-'));
         const explicitAudience = String((event as any).currencyAudience || '').trim().toLowerCase();
+        const hasTraineeLink = Boolean((event as any).traineeId || (event as any).traineeRecordId || (event as any).traineeUserId);
+        const hasStaffLink = Boolean((event as any).staffRecordId || (event as any).staffId || (event as any).staffUserId || event.sctRequestId || event.isSct || event.eventCategory === 'sct');
         if (isCurrency && explicitAudience === 'trainee') return 'trainee-currency';
         if (isCurrency && explicitAudience === 'staff') return 'currency';
-        if (isCurrency && (event.sctRequestId || event.isSct || event.eventCategory === 'sct' || eventId.startsWith('sct-'))) return 'currency';
-        if (isCurrency && normalisedAssistOperationalModel === 'flight_school' && (event.traineeId || eventId.includes('currency-trainee-') || eventId.includes('trainee-currency'))) return 'trainee-currency';
+        if (isCurrency && (hasStaffLink || eventId.startsWith('sct-'))) return 'currency';
+        if (isCurrency && normalisedAssistOperationalModel === 'flight_school' && hasTraineeLink) return 'trainee-currency';
         if (isCurrency) return 'currency';
         return 'special';
     };
@@ -3208,6 +3207,15 @@ const DfpSidePanelTimeline: React.FC<{
         if (people.length > 0) return people.slice(0, 2).join(', ');
         return event.fixedCrewPic || event.pilot || event.instructor || event.student || event.crew || event.group || 'TBA';
     };
+    const getAssistBuildQueueRequestedBy = (event: ScheduleEvent): string => {
+        const raw = (event as any).requestedByName || (event as any).requestedBy || (event as any).createdByName || (event as any).createdBy || (event as any).requesterName || '';
+        if (String(raw || '').trim()) return String(raw).trim();
+        if (event.sctRequestId || event.currencyDraftId || event.currency) return getAssistBuildQueuePerson(event);
+        return 'Operations';
+    };
+    const getAssistBuildQueueUnit = (event: ScheduleEvent): string => (
+        String((event as any).unitCode || (event as any).unit || (event as any).crewUnitCode || activeUnitCode || '').trim() || 'Unit'
+    );
     const getAssistBuildQueueScheduler = (event: ScheduleEvent): 'Mandatory' | 'Desirable' => (
         event.isMandatoryTasking || event.priority === 'High' || event.isTimeFixed ? 'Mandatory' : 'Desirable'
     );
@@ -3232,10 +3240,28 @@ const DfpSidePanelTimeline: React.FC<{
                 group: getAssistBuildQueueGroup(event),
                 label: getAssistBuildQueueLabel(event),
                 person: getAssistBuildQueuePerson(event),
+                requestedBy: getAssistBuildQueueRequestedBy(event),
+                unit: getAssistBuildQueueUnit(event),
                 scheduler: getAssistBuildQueueScheduler(event),
                 status: getAssistBuildQueueStatus(event),
             }))
-    ), [date, highestPriorityEvents, normalisedAssistOperationalModel]);
+    ), [activeUnitCode, date, highestPriorityEvents, normalisedAssistOperationalModel]);
+    const filteredAssistBuildQueueRows = useMemo(() => {
+        const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
+        return assistBuildQueueRows.filter(row => {
+            if (assistPriorityTypeFilter !== 'all' && row.group !== assistPriorityTypeFilter) return false;
+            if (assistPrioritySchedulerFilter !== 'all' && row.scheduler !== assistPrioritySchedulerFilter) return false;
+            if (assistPriorityUnitFilter !== 'all' && row.unit !== assistPriorityUnitFilter) return false;
+            if (personNeedle) {
+                const haystack = `${row.person} ${row.requestedBy} ${row.label}`.toLowerCase();
+                if (!haystack.includes(personNeedle)) return false;
+            }
+            return true;
+        });
+    }, [assistBuildQueueRows, assistPriorityPersonFilter, assistPrioritySchedulerFilter, assistPriorityTypeFilter, assistPriorityUnitFilter]);
+    const assistPriorityUnitOptions = useMemo(() => (
+        Array.from(new Set(assistBuildQueueRows.map(row => row.unit).filter(Boolean))).sort((left, right) => left.localeCompare(right))
+    ), [assistBuildQueueRows]);
     const moveAssistBuildQueueEvent = (eventId: string, direction: -1 | 1) => {
         const currentIndex = highestPriorityEvents.findIndex(event => event.id === eventId);
         const nextIndex = currentIndex + direction;
@@ -3303,17 +3329,27 @@ const DfpSidePanelTimeline: React.FC<{
         };
         const groupLabels: Record<typeof assistBuildQueueRows[number]['group'], string> = {
             tasking: 'Directed Tasks',
-            currency: 'Currency Events',
+            currency: 'Staff Currency Events',
             'trainee-currency': 'Trainee Currency Events',
             special: 'Saved Special Events',
         };
+        const priorityTypeOptions = [
+            { value: 'all', label: 'All priority sources' },
+            { value: 'tasking', label: 'Directed Tasks' },
+            { value: 'currency', label: 'Staff Currency Events' },
+            { value: 'special', label: 'Saved Special Events' },
+            ...(normalisedAssistOperationalModel === 'flight_school'
+                ? [{ value: 'trainee-currency', label: 'Trainee Currency Events' }]
+                : []),
+            { value: 'bulk-currency', label: 'Bulk Currency Builder' },
+        ];
         return (
             <div className="rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
                 <div className="mb-2 flex items-start justify-between gap-3">
                     <div>
-                        <h4 className="text-[12px] font-semibold text-slate-950">04 Directed Tasks / Build Priorities</h4>
-                        <p className="text-[9px] text-slate-500">
-                            Directed Tasks, Currency Events, Saved Special Events and Flight School Trainee Currency Events used by NEO Build for {date}.
+                        <h4 className="text-[14px] font-semibold text-slate-950">Priority Table</h4>
+                        <p className="text-[11px] text-slate-600">
+                            Operational priority queue used by NEO Build for {formatAssistCurrencyDate(date)}.
                         </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
@@ -3322,25 +3358,92 @@ const DfpSidePanelTimeline: React.FC<{
                         </span>
                     </div>
                 </div>
-                <div className="max-h-[640px] overflow-y-auto overflow-x-hidden rounded-md border border-slate-300">
+                <div className="mb-3 grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.75fr)_minmax(0,0.8fr)] gap-2">
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        Type
+                        <select value={assistPriorityTypeFilter} onChange={event => setAssistPriorityTypeFilter(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900">
+                            {priorityTypeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                    </label>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        Person / Crew
+                        <input value={assistPriorityPersonFilter} onChange={event => setAssistPriorityPersonFilter(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900" placeholder="Name, crew or event" />
+                    </label>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        Unit
+                        <select value={assistPriorityUnitFilter} onChange={event => setAssistPriorityUnitFilter(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900">
+                            <option value="all">All units</option>
+                            {assistPriorityUnitOptions.map(unit => <option key={unit} value={unit}>{unit}</option>)}
+                        </select>
+                    </label>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        Scheduler
+                        <select value={assistPrioritySchedulerFilter} onChange={event => setAssistPrioritySchedulerFilter(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900">
+                            <option value="all">All states</option>
+                            <option value="Mandatory">Mandatory</option>
+                            <option value="Desirable">Desirable</option>
+                        </select>
+                    </label>
+                </div>
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                    {priorityTypeOptions.map(option => (
+                        <button
+                            key={`assist-priority-tab-${option.value}`}
+                            type="button"
+                            onClick={() => {
+                                setAssistPriorityTypeFilter(option.value);
+                                if (option.value === 'tasking') setActiveAssistSection('taskings');
+                                if (option.value === 'currency') setActiveAssistSection('currency');
+                                if (option.value === 'special') setActiveAssistSection('saved-special');
+                                if (option.value === 'trainee-currency') setActiveAssistSection('trainee-currency');
+                                if (option.value === 'bulk-currency') setActiveAssistSection('bulk-currency');
+                            }}
+                            className={`rounded-md border px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                                assistPriorityTypeFilter === option.value
+                                    ? 'border-cyan-300 bg-cyan-50 text-slate-950'
+                                    : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
+                            }`}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>
+                {assistPriorityTypeFilter === 'bulk-currency' && (
+                    <div className="mb-3 rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-3">
+                        <h5 className="text-[12px] font-semibold text-slate-950">Bulk Currency Builder</h5>
+                        <p className="mt-1 text-[11px] text-slate-600">Create multiple staff currency requests, then return here to order and prioritise them for NEO Build.</p>
+                        <button
+                            type="button"
+                            onClick={() => onOpenPrioritiesSection?.('.bulk-currency-card')}
+                            className="mt-2 rounded-md border border-cyan-300 bg-cyan-50 px-3 py-1.5 text-[11px] font-semibold text-cyan-800 hover:bg-cyan-100"
+                        >
+                            Open Build Priorities - Bulk Currency Builder
+                        </button>
+                    </div>
+                )}
+                <div className="overflow-x-hidden rounded-md border border-slate-300">
                     <table className="w-full table-fixed text-[12px]">
                         <colgroup>
-                            <col className="w-[48px]" />
-                            <col className="w-[118px]" />
+                            <col className="w-[46px]" />
+                            <col className="w-[130px]" />
+                            <col className="w-[82px]" />
                             <col />
                             <col className="w-[150px]" />
-                            <col className="w-[78px]" />
-                            <col className="w-[86px]" />
-                            <col className="w-[102px]" />
-                            <col className="w-[92px]" />
-                            <col className="w-[64px]" />
+                            <col className="w-[140px]" />
+                            <col className="w-[74px]" />
+                            <col className="w-[90px]" />
+                            <col className="w-[104px]" />
+                            <col className="w-[88px]" />
+                            <col className="w-[60px]" />
                         </colgroup>
                         <thead className="sticky top-0 z-10 bg-slate-100 text-[10px] uppercase tracking-[0.12em] text-slate-500">
                             <tr>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Order</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Type</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Date</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Event</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Person/Crew</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Requested By</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Time</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Priority</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Scheduler</th>
@@ -3349,14 +3452,14 @@ const DfpSidePanelTimeline: React.FC<{
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
-                            {assistBuildQueueRows.length === 0 && (
+                            {filteredAssistBuildQueueRows.length === 0 && (
                                 <tr>
-                                    <td colSpan={9} className="px-3 py-8 text-center text-slate-500">
-                                        No directed tasks, currency events or saved special events are in the NEO Build queue.
+                                    <td colSpan={11} className="px-3 py-8 text-center text-slate-500">
+                                        No matching NEO Build priority items are in this view.
                                     </td>
                                 </tr>
                             )}
-                            {assistBuildQueueRows.map(row => (
+                            {filteredAssistBuildQueueRows.map(row => (
                                 <tr key={row.event.id} className="hover:bg-cyan-50">
                                     <td className="px-2 py-2 align-middle text-slate-600">
                                         <div className="flex items-center gap-1">
@@ -3372,11 +3475,13 @@ const DfpSidePanelTimeline: React.FC<{
                                             {groupLabels[row.group]}
                                         </span>
                                     </td>
+                                    <td className="px-2 py-2 align-middle font-mono text-slate-700">{formatAssistCurrencyDate(row.event.date || date)}</td>
                                     <td className="truncate px-2 py-2 align-middle font-semibold text-slate-950" title={row.label}>{row.label}</td>
                                     <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.person}>{row.person}</td>
+                                    <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.requestedBy}>{row.requestedBy}</td>
                                     <td className="px-2 py-2 align-middle font-mono text-slate-700">
                                         <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
-                                        <span className="block truncate text-[10px] text-slate-500">{row.event.date || date}</span>
+                                        <span className="block truncate text-[10px] text-slate-500">{row.unit}</span>
                                     </td>
                                     <td className="px-2 py-2 align-middle">
                                         <select
@@ -6041,7 +6146,10 @@ const DfpSidePanelTimeline: React.FC<{
                             <div className="flex gap-1">
                                 <button
                                     type="button"
-                                    onClick={() => setActiveAssistPage('inputs')}
+                                    onClick={() => {
+                                        setActiveAssistPage('inputs');
+                                        if (!assistSections.some(section => section.id === activeAssistSection)) setActiveAssistSection('flying');
+                                    }}
                                     className={`rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${
                                         activeAssistPage === 'inputs'
                                             ? 'border-cyan-300 bg-cyan-50 text-slate-950'
@@ -6061,6 +6169,20 @@ const DfpSidePanelTimeline: React.FC<{
                                 >
                                     Priority Table
                                 </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveAssistPage('manual');
+                                        setActiveAssistSection('details');
+                                    }}
+                                    className={`rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${
+                                        activeAssistPage === 'manual'
+                                            ? 'border-cyan-300 bg-cyan-50 text-slate-950'
+                                            : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
+                                    }`}
+                                >
+                                    Manual Tile Creator
+                                </button>
                             </div>
                             <span className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm">
                                 {assistBuildQueueRows.length} build priorit{assistBuildQueueRows.length === 1 ? 'y' : 'ies'}
@@ -6068,9 +6190,33 @@ const DfpSidePanelTimeline: React.FC<{
                         </div>
                         {activeAssistPage === 'priority' ? (
                             <div className="min-w-0">
-                                {renderAssistBuildQueue()}
+                                {renderAssistDfpOverview()}
+                                <div className="mt-3">
+                                    {renderAssistBuildQueue()}
+                                </div>
+                                {['taskings', 'currency', 'saved-special', 'trainee-currency', 'bulk-currency'].includes(activeAssistSection) && (
+                                    <div className="mt-3 rounded-lg border border-slate-300 bg-white p-4 shadow-sm">
+                                        <div className="mb-3 border-b border-slate-200 pb-2">
+                                            <h4 className="text-[14px] font-semibold text-slate-950">
+                                                {activeAssistSection === 'taskings'
+                                                    ? 'Directed Tasks'
+                                                    : activeAssistSection === 'currency'
+                                                        ? 'Staff Currency Events'
+                                                        : activeAssistSection === 'saved-special'
+                                                            ? 'Saved Special Events'
+                                                            : activeAssistSection === 'trainee-currency'
+                                                                ? 'Trainee Currency Events'
+                                                                : 'Bulk Currency Builder'}
+                                            </h4>
+                                            <p className="text-[11px] text-slate-600">
+                                                View and adjust the selected priority source without changing the NEO Build algorithm.
+                                            </p>
+                                        </div>
+                                        {renderAssistSection()}
+                                    </div>
+                                )}
                             </div>
-                        ) : (
+                        ) : activeAssistPage === 'manual' ? (
                             <div className="space-y-3">
                                 {renderAssistDfpOverview()}
                                 <div className="flex justify-center rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
@@ -6080,7 +6226,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         onDrag={updateAssistTileDrag}
                                         onDragOver={updateAssistTileDrag}
                                         onDragEnd={clearAssistDragPreview}
-                                        className={`neo-assist-tile-preview ${isAssistTileDragging ? 'neo-assist-tile-preview-dragging' : ''} w-full max-w-[360px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${
+                                        className={`neo-assist-tile-preview ${isAssistTileDragging ? 'neo-assist-tile-preview-dragging' : ''} w-full max-w-[520px] cursor-grab rounded-md border bg-slate-100 p-2 active:cursor-grabbing ${
                                             isDeploymentAssistTile ? 'border-slate-500/45' : 'border-pink-300/60'
                                         }`}
                                         title="Drag this tile onto the DFP to create a copy"
@@ -6120,33 +6266,33 @@ const DfpSidePanelTimeline: React.FC<{
                                         )}
                                     </div>
                                 </div>
-                                <div className="rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
+                                <div className="rounded-lg border border-slate-300 bg-white p-4 shadow-sm">
+                                    <div className="mb-3 border-b border-slate-200 pb-2">
+                                        <h4 className="text-[14px] font-semibold text-slate-950">Manual Tile Creator</h4>
+                                        <p className="text-[11px] text-slate-600">Create one specific DFP tile manually. These controls are separate from NEO Build priority settings.</p>
+                                    </div>
+                                    {renderAssistSection()}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {renderAssistDfpOverview()}
+                                <div className="rounded-lg border border-slate-300 bg-white p-4 shadow-sm">
                                     <div className="mb-2 flex items-center justify-between gap-3">
                                         <div>
-                                            <h4 className="text-[12px] font-semibold text-slate-950">NEO Build Inputs</h4>
-                                            <p className="text-[9px] text-slate-500">Set the windows, resources, priorities and directed events used by NEO Build.</p>
+                                            <h4 className="text-[14px] font-semibold text-slate-950">NEO Build Inputs</h4>
+                                            <p className="text-[11px] text-slate-600">Set the windows, resources, course priorities and package priorities used by NEO Build.</p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={onOpenPrioritiesExclusions}
-                                            className="shrink-0 rounded-md border border-cyan-300 bg-cyan-50 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-800 transition hover:bg-cyan-100"
+                                            className="shrink-0 rounded-md border border-cyan-300 bg-cyan-50 px-3 py-1.5 text-[11px] font-semibold text-cyan-800 transition hover:bg-cyan-100"
                                         >
                                             Open Priorities
                                         </button>
                                     </div>
-                                    <div className="grid grid-cols-[170px_minmax(0,1fr)] gap-3">
+                                    <div className="grid grid-cols-[190px_minmax(0,1fr)] gap-4">
                                         <div className="space-y-1.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => setActiveAssistSection('details')}
-                                                className={`w-full rounded-md border px-2 py-1.5 text-left text-[10px] font-semibold transition ${
-                                                    activeAssistSection === 'details'
-                                                        ? 'border-cyan-300 bg-cyan-50 text-slate-900'
-                                                        : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
-                                                }`}
-                                            >
-                                                Manual Tile Creator
-                                            </button>
                                             <p className="px-1 pt-2 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">NEO Build Inputs</p>
                                             {assistSections.map(section => (
                                                 <button
@@ -6167,11 +6313,8 @@ const DfpSidePanelTimeline: React.FC<{
                                             <div className="rounded-md border border-slate-300 bg-white p-3 shadow-sm">
                                                 <div className="mb-2 border-b border-slate-200 pb-2">
                                                     <p className="text-[11px] font-semibold text-slate-900">
-                                                        {activeAssistSection === 'details' ? 'Manual Tile Creator' : assistSections.find(section => section.id === activeAssistSection)?.label}
+                                                        {assistSections.find(section => section.id === activeAssistSection)?.label || 'NEO Build Inputs'}
                                                     </p>
-                                                    {activeAssistSection === 'details' && (
-                                                        <p className="mt-0.5 text-[9px] text-slate-500">Separate from NEO Build priorities. Create a specific tile by choosing the event, person or crew, timing and resource details.</p>
-                                                    )}
                                                 </div>
                                                 {renderAssistSection()}
                                             </div>
