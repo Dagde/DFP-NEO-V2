@@ -3280,6 +3280,15 @@ const DfpSidePanelTimeline: React.FC<{
         if (value === 'trainee-currency') setActiveAssistSection('trainee-currency');
         if (value === 'bulk-currency') setActiveAssistSection('bulk-currency');
     };
+    const getAssistPrioritySourceSection = (value: string): NeoAssistSection | null => {
+        if (value === 'tasking') return 'taskings';
+        if (value === 'currency') return 'currency';
+        if (value === 'special') return 'saved-special';
+        if (value === 'trainee-currency') return 'trainee-currency';
+        if (value === 'bulk-currency') return 'bulk-currency';
+        return null;
+    };
+    const selectedAssistPrioritySection = getAssistPrioritySourceSection(assistPriorityTypeFilter);
     const moveAssistBuildQueueEvent = (eventId: string, direction: -1 | 1) => {
         const currentIndex = highestPriorityEvents.findIndex(event => event.id === eventId);
         const nextIndex = currentIndex + direction;
@@ -4310,8 +4319,9 @@ const DfpSidePanelTimeline: React.FC<{
         );
     };
 
-    const renderAssistSection = () => {
-        if (activeAssistSection === 'details') {
+    const renderAssistSection = (sectionOverride?: NeoAssistSection) => {
+        const renderedAssistSection = sectionOverride || activeAssistSection;
+        if (renderedAssistSection === 'details') {
             const showFlightOnlyDetails = selectedResourceKind !== 'deployment' && (!isAirCombatTileMode || selectedResourceKind === 'flight');
             return (
                 <div className="grid grid-cols-2 gap-2">
@@ -4534,7 +4544,7 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             );
         }
-        if (activeAssistSection === 'flying') {
+        if (renderedAssistSection === 'flying') {
             const renderReadOnlyWindow = (label: string, start: number, end: number) => (
                 <div className="rounded border border-cyan-400/35 bg-slate-950/65 p-2 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.08)]">
                     <p className="mb-1 text-center text-[10px] font-semibold text-cyan-50">{label}</p>
@@ -4636,7 +4646,7 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             );
         }
-        if (activeAssistSection === 'resources') {
+        if (renderedAssistSection === 'resources') {
             if (isAirCombatTileMode) {
                 return <div className="min-h-[120px]" />;
             }
@@ -4689,7 +4699,7 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             );
         }
-        if (activeAssistSection === 'training') {
+        if (renderedAssistSection === 'training') {
             if (isAirCombatTileMode) {
                 return <div className="min-h-[120px]" />;
             }
@@ -4895,7 +4905,7 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             );
         }
-        if (activeAssistSection === 'taskings') {
+        if (renderedAssistSection === 'taskings') {
             const localRows = visibleAssistTaskRequests.map(request => ({
                 id: request.id,
                 tasking: request.tasking || 'Directed event',
@@ -5071,7 +5081,7 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             );
         }
-        if (activeAssistSection === 'currency') {
+        if (renderedAssistSection === 'currency') {
             const buildPriorityRows = [
                 ...sctFlights.map(request => ({ request, requestType: 'flight' as const })),
                 ...sctFtds.map(request => ({ request, requestType: 'ftd' as const })),
@@ -5457,7 +5467,7 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             );
         }
-        if (activeAssistSection === 'saved-special') {
+        if (renderedAssistSection === 'saved-special') {
             const rows = assistBuildQueueRows.filter(row => row.group === 'special');
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
@@ -5493,7 +5503,7 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             );
         }
-        if (activeAssistSection === 'trainee-currency') {
+        if (renderedAssistSection === 'trainee-currency') {
             const rows = assistBuildQueueRows.filter(row => row.group === 'trainee-currency');
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
@@ -5529,7 +5539,7 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             );
         }
-        if (activeAssistSection === 'bulk-currency') {
+        if (renderedAssistSection === 'bulk-currency') {
             return (
                 <div className="space-y-3 text-[10px] text-slate-200">
                     <div className="rounded border border-fuchsia-500/35 bg-fuchsia-500/10 px-2 py-2">
@@ -5548,7 +5558,7 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             );
         }
-        if (activeAssistSection === 'crew') {
+        if (renderedAssistSection === 'crew') {
             if (isFixedCrewNeoAssist) {
                 return (
                     <div className="space-y-3 text-[10px] text-slate-200">
@@ -5685,8 +5695,8 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
             );
         }
-        if (activeAssistSection === 'course' || activeAssistSection === 'packages') {
-            const isPackageSection = activeAssistSection === 'packages';
+        if (renderedAssistSection === 'course' || renderedAssistSection === 'packages') {
+            const isPackageSection = renderedAssistSection === 'packages';
             if (isFixedCrewNeoAssist) {
                 const sourceOptions = (isPackageSection ? packageEventOptions : courseEventOptions)
                     .filter(item => ['flight', 'ftd', 'sim', 'simulator'].includes(String(item.type || '').trim().toLowerCase()))
@@ -5708,7 +5718,7 @@ const DfpSidePanelTimeline: React.FC<{
                             {isPackageSection ? 'Package Event' : 'Course Event'}
                             <select
                                 value={selectedCode}
-                                onChange={event => selectAssistTrainingEvent(activeAssistSection, event.target.value)}
+                                onChange={event => selectAssistTrainingEvent(renderedAssistSection, event.target.value)}
                                 className={fieldClass}
                             >
                                 <option value="">Select {isPackageSection ? 'package' : 'course'} event</option>
@@ -5749,7 +5759,7 @@ const DfpSidePanelTimeline: React.FC<{
                     isComplete: completion.complete,
                     completionDateLabel: completion.dateLabel,
                     rowKey: [
-                        activeAssistSection,
+                        renderedAssistSection,
                         selectedCrewName,
                         selectedGroupName,
                         item.lmpType || 'lmp',
@@ -5760,7 +5770,7 @@ const DfpSidePanelTimeline: React.FC<{
                     ].join('|'),
                 };
             });
-            const selectedCode = activeAssistSection === 'course' ? selectedCourseEventCode : selectedPackageEventCode;
+            const selectedCode = renderedAssistSection === 'course' ? selectedCourseEventCode : selectedPackageEventCode;
             const assignmentLabel = assignedOptions.find(option => option.key === selectedGroupName)?.label || selectedGroupName;
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
@@ -5806,10 +5816,10 @@ const DfpSidePanelTimeline: React.FC<{
                                 <label key={rowKey} className={`grid cursor-pointer grid-cols-[auto_auto_1fr] items-center gap-2 rounded border px-2 py-1 ${rowClass}`}>
                                     <input
                                         type="radio"
-                                        name={`neo-assist-${activeAssistSection}`}
+                                        name={`neo-assist-${renderedAssistSection}`}
                                         checked={selectedCode === item.code}
                                         onChange={() => {
-                                            selectAssistTrainingEvent(activeAssistSection, item.code);
+                                            selectAssistTrainingEvent(renderedAssistSection, item.code);
                                         }}
                                     />
                                     <span className={isComplete ? 'text-emerald-300' : 'text-slate-300'}>{isComplete ? '✓' : '□'}</span>
@@ -6222,17 +6232,17 @@ const DfpSidePanelTimeline: React.FC<{
                                 <div className="mt-3">
                                     {renderAssistBuildQueue()}
                                 </div>
-                                {['taskings', 'currency', 'saved-special', 'trainee-currency', 'bulk-currency'].includes(activeAssistSection) && (
+                                {selectedAssistPrioritySection && (
                                     <div className="mt-3 rounded-lg border border-slate-300 bg-white p-4 shadow-sm">
                                         <div className="mb-3 border-b border-slate-200 pb-2">
                                             <h4 className="text-[14px] font-semibold text-slate-950">
-                                                {activeAssistSection === 'taskings'
+                                                {selectedAssistPrioritySection === 'taskings'
                                                     ? 'Directed Tasks'
-                                                    : activeAssistSection === 'currency'
+                                                    : selectedAssistPrioritySection === 'currency'
                                                         ? 'Staff Currency Events'
-                                                        : activeAssistSection === 'saved-special'
+                                                        : selectedAssistPrioritySection === 'saved-special'
                                                             ? 'Saved Special Events'
-                                                            : activeAssistSection === 'trainee-currency'
+                                                            : selectedAssistPrioritySection === 'trainee-currency'
                                                                 ? 'Trainee Currency Events'
                                                                 : 'Bulk Currency Builder'}
                                             </h4>
@@ -6240,7 +6250,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                 View and adjust the selected priority source without changing the NEO Build algorithm.
                                             </p>
                                         </div>
-                                        {renderAssistSection()}
+                                        {renderAssistSection(selectedAssistPrioritySection)}
                                     </div>
                                 )}
                             </div>

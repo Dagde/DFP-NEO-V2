@@ -103361,6 +103361,15 @@ const DfpSidePanelTimeline = ({
     if (value === "trainee-currency") setActiveAssistSection("trainee-currency");
     if (value === "bulk-currency") setActiveAssistSection("bulk-currency");
   };
+  const getAssistPrioritySourceSection = (value) => {
+    if (value === "tasking") return "taskings";
+    if (value === "currency") return "currency";
+    if (value === "special") return "saved-special";
+    if (value === "trainee-currency") return "trainee-currency";
+    if (value === "bulk-currency") return "bulk-currency";
+    return null;
+  };
+  const selectedAssistPrioritySection = getAssistPrioritySourceSection(assistPriorityTypeFilter);
   const moveAssistBuildQueueEvent = (eventId, direction) => {
     const currentIndex = highestPriorityEvents.findIndex((event) => event.id === eventId);
     const nextIndex = currentIndex + direction;
@@ -104384,8 +104393,9 @@ const DfpSidePanelTimeline = ({
       )) })
     ] });
   };
-  const renderAssistSection = () => {
-    if (activeAssistSection === "details") {
+  const renderAssistSection = (sectionOverride) => {
+    const renderedAssistSection = sectionOverride || activeAssistSection;
+    if (renderedAssistSection === "details") {
       const showFlightOnlyDetails = selectedResourceKind !== "deployment" && (!isAirCombatTileMode || selectedResourceKind === "flight");
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
@@ -104612,7 +104622,7 @@ const DfpSidePanelTimeline = ({
         ] })
       ] });
     }
-    if (activeAssistSection === "flying") {
+    if (renderedAssistSection === "flying") {
       const renderReadOnlyWindow = (label, start, end) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/35 bg-slate-950/65 p-2 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.08)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 text-center text-[10px] font-semibold text-cyan-50", children: label }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 font-mono text-[11px] text-slate-100", children: [
@@ -104698,7 +104708,7 @@ const DfpSidePanelTimeline = ({
         ] })
       ] });
     }
-    if (activeAssistSection === "resources") {
+    if (renderedAssistSection === "resources") {
       if (isAirCombatTileMode) {
         return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[120px]" });
       }
@@ -104745,7 +104755,7 @@ const DfpSidePanelTimeline = ({
         ] })
       ] });
     }
-    if (activeAssistSection === "training") {
+    if (renderedAssistSection === "training") {
       if (isAirCombatTileMode) {
         return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[120px]" });
       }
@@ -104959,7 +104969,7 @@ const DfpSidePanelTimeline = ({
         ] })
       ] });
     }
-    if (activeAssistSection === "taskings") {
+    if (renderedAssistSection === "taskings") {
       const localRows = visibleAssistTaskRequests.map((request) => ({
         id: request.id,
         tasking: request.tasking || "Directed event",
@@ -105140,7 +105150,7 @@ const DfpSidePanelTimeline = ({
         ] })
       ] });
     }
-    if (activeAssistSection === "currency") {
+    if (renderedAssistSection === "currency") {
       const buildPriorityRows = [
         ...sctFlights.map((request) => ({ request, requestType: "flight" })),
         ...sctFtds.map((request) => ({ request, requestType: "ftd" }))
@@ -105503,7 +105513,7 @@ const DfpSidePanelTimeline = ({
         ] })
       ] });
     }
-    if (activeAssistSection === "saved-special") {
+    if (renderedAssistSection === "saved-special") {
       const rows = assistBuildQueueRows.filter((row) => row.group === "special");
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2", children: [
@@ -105539,7 +105549,7 @@ const DfpSidePanelTimeline = ({
         )
       ] });
     }
-    if (activeAssistSection === "trainee-currency") {
+    if (renderedAssistSection === "trainee-currency") {
       const rows = assistBuildQueueRows.filter((row) => row.group === "trainee-currency");
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/35 bg-violet-500/10 px-2 py-2", children: [
@@ -105575,7 +105585,7 @@ const DfpSidePanelTimeline = ({
         )
       ] });
     }
-    if (activeAssistSection === "bulk-currency") {
+    if (renderedAssistSection === "bulk-currency") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-fuchsia-500/35 bg-fuchsia-500/10 px-2 py-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-fuchsia-100", children: "Bulk Currency Builder" }),
@@ -105592,7 +105602,7 @@ const DfpSidePanelTimeline = ({
         )
       ] });
     }
-    if (activeAssistSection === "crew") {
+    if (renderedAssistSection === "crew") {
       if (isFixedCrewNeoAssist) {
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
@@ -105696,8 +105706,8 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[9px] text-slate-500", children: "Priority list uses the latest NEO Build ordering when priority data is available." })
       ] });
     }
-    if (activeAssistSection === "course" || activeAssistSection === "packages") {
-      const isPackageSection = activeAssistSection === "packages";
+    if (renderedAssistSection === "course" || renderedAssistSection === "packages") {
+      const isPackageSection = renderedAssistSection === "packages";
       if (isFixedCrewNeoAssist) {
         const sourceOptions = (isPackageSection ? packageEventOptions : courseEventOptions).filter((item) => ["flight", "ftd", "sim", "simulator"].includes(String(item.type || "").trim().toLowerCase())).sort((left, right) => {
           const groupLeft = String(left.module || left.phase || (Array.isArray(left.courses) ? left.courses[0] : "") || "").toUpperCase();
@@ -105718,7 +105728,7 @@ const DfpSidePanelTimeline = ({
               "select",
               {
                 value: selectedCode2,
-                onChange: (event) => selectAssistTrainingEvent(activeAssistSection, event.target.value),
+                onChange: (event) => selectAssistTrainingEvent(renderedAssistSection, event.target.value),
                 className: fieldClass2,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "", children: [
@@ -105756,7 +105766,7 @@ const DfpSidePanelTimeline = ({
           isComplete: completion.complete,
           completionDateLabel: completion.dateLabel,
           rowKey: [
-            activeAssistSection,
+            renderedAssistSection,
             selectedCrewName,
             selectedGroupName,
             item.lmpType || "lmp",
@@ -105767,7 +105777,7 @@ const DfpSidePanelTimeline = ({
           ].join("|")
         };
       });
-      const selectedCode = activeAssistSection === "course" ? selectedCourseEventCode : selectedPackageEventCode;
+      const selectedCode = renderedAssistSection === "course" ? selectedCourseEventCode : selectedPackageEventCode;
       const assignmentLabel = assignedOptions.find((option) => option.key === selectedGroupName)?.label || selectedGroupName;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         !selectedCrewName && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "rounded border border-amber-400/30 bg-amber-500/10 px-2 py-2 text-amber-100", children: [
@@ -105817,10 +105827,10 @@ const DfpSidePanelTimeline = ({
                 "input",
                 {
                   type: "radio",
-                  name: `neo-assist-${activeAssistSection}`,
+                  name: `neo-assist-${renderedAssistSection}`,
                   checked: selectedCode === item.code,
                   onChange: () => {
-                    selectAssistTrainingEvent(activeAssistSection, item.code);
+                    selectAssistTrainingEvent(renderedAssistSection, item.code);
                   }
                 }
               ),
@@ -106216,12 +106226,12 @@ const DfpSidePanelTimeline = ({
         ] }),
         renderAssistDfpOverview(),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: renderAssistBuildQueue() }),
-        ["taskings", "currency", "saved-special", "trainee-currency", "bulk-currency"].includes(activeAssistSection) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-slate-300 bg-white p-4 shadow-sm", children: [
+        selectedAssistPrioritySection && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-slate-300 bg-white p-4 shadow-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 border-b border-slate-200 pb-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[14px] font-semibold text-slate-950", children: activeAssistSection === "taskings" ? "Directed Tasks" : activeAssistSection === "currency" ? "Staff Currency Events" : activeAssistSection === "saved-special" ? "Saved Special Events" : activeAssistSection === "trainee-currency" ? "Trainee Currency Events" : "Bulk Currency Builder" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[14px] font-semibold text-slate-950", children: selectedAssistPrioritySection === "taskings" ? "Directed Tasks" : selectedAssistPrioritySection === "currency" ? "Staff Currency Events" : selectedAssistPrioritySection === "saved-special" ? "Saved Special Events" : selectedAssistPrioritySection === "trainee-currency" ? "Trainee Currency Events" : "Bulk Currency Builder" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-slate-600", children: "View and adjust the selected priority source without changing the NEO Build algorithm." })
           ] }),
-          renderAssistSection()
+          renderAssistSection(selectedAssistPrioritySection)
         ] })
       ] }) : activeAssistPage === "manual" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
         renderAssistDfpOverview(),
