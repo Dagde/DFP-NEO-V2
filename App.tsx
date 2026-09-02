@@ -883,6 +883,8 @@ const DfpSidePanelTimeline: React.FC<{
     onUpdateFixedCrewTrainingPriorities?: (priorities: FixedCrewTrainingStreamPriority[]) => void;
     highestPriorityEvents: ScheduleEvent[];
     onAddPriorityEvents: (events: ScheduleEvent[]) => void;
+    onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
+    onReorderPriorityEvents: (events: ScheduleEvent[]) => void;
     onDeletePriorityEvent: (eventId: string) => void | Promise<void>;
     sctFlights?: SctRequest[];
     sctFtds?: SctRequest[];
@@ -951,6 +953,8 @@ const DfpSidePanelTimeline: React.FC<{
     onUpdateFixedCrewTrainingPriorities,
     highestPriorityEvents,
     onAddPriorityEvents,
+    onUpdatePriorityEvent,
+    onReorderPriorityEvents,
     onDeletePriorityEvent,
     sctFlights = [],
     sctFtds = [],
@@ -2249,7 +2253,6 @@ const DfpSidePanelTimeline: React.FC<{
         { id: 'training', label: 'Training Priority' },
         { id: 'taskings', label: 'Directed Tasks' },
         { id: 'currency', label: 'Currency events' },
-        { id: 'crew', label: 'Crew' },
         { id: 'course', label: 'Course events' },
         { id: 'packages', label: 'Packages' },
     ];
@@ -3027,6 +3030,239 @@ const DfpSidePanelTimeline: React.FC<{
             .forEach(event => void onDeletePriorityEvent(event.id));
         patchAssistCurrencyRequest(id, { submitted: false, includeInBuild: false }, type);
     };
+    const getAssistBuildQueueGroup = (event: ScheduleEvent): 'tasking' | 'currency' | 'trainee-currency' | 'special' => {
+        const eventId = String(event.id || '').toLowerCase();
+        const isTasking = Boolean(event.isTaskingRequest || event.taskingRequestId || eventId.startsWith('tasking-') || eventId.startsWith('neo-assist-tasking-'));
+        if (isTasking) return 'tasking';
+        const isCurrency = Boolean(event.currency || event.currencyDraftId || event.sctRequestId || event.eventCategory === 'currency' || eventId.startsWith('sct-') || eventId.startsWith('neo-assist-currency-') || eventId.startsWith('currency-'));
+        if (isCurrency && normalisedAssistOperationalModel === 'flight_school' && (event.student || event.traineeId || eventId.includes('trainee'))) return 'trainee-currency';
+        if (isCurrency) return 'currency';
+        return 'special';
+    };
+    const getAssistBuildQueueLabel = (event: ScheduleEvent): string => (
+        event.taskingDisplayLabel ||
+        event.taskingName ||
+        event.flightNumber ||
+        event.currency ||
+        event.group ||
+        event.type ||
+        'Build item'
+    );
+    const getAssistBuildQueuePerson = (event: ScheduleEvent): string => {
+        const people = getPersonnel(event).filter(Boolean);
+        if (people.length > 0) return people.slice(0, 2).join(', ');
+        return event.fixedCrewPic || event.pilot || event.instructor || event.student || event.crew || event.group || 'TBA';
+    };
+    const getAssistBuildQueueScheduler = (event: ScheduleEvent): 'Mandatory' | 'Desirable' => (
+        event.isMandatoryTasking || event.priority === 'High' || event.isTimeFixed ? 'Mandatory' : 'Desirable'
+    );
+    const getAssistBuildQueueStatus = (event: ScheduleEvent): { label: string; className: string } => {
+        if ((event.date || date) !== date) {
+            return { label: 'Other date', className: 'border-amber-400/35 bg-amber-500/10 text-amber-100' };
+        }
+        if (!event.flightNumber && !event.taskingName && !event.currency) {
+            return { label: 'Needs event', className: 'border-rose-400/35 bg-rose-500/10 text-rose-100' };
+        }
+        if (event.type === 'flight' && !event.aircraftConfigId && !Array.isArray(event.acceptableAircraftConfigs)) {
+            return { label: 'Needs CONFIG', className: 'border-amber-400/35 bg-amber-500/10 text-amber-100' };
+        }
+        return { label: 'Ready', className: 'border-emerald-400/35 bg-emerald-500/10 text-emerald-100' };
+    };
+    const assistBuildQueueRows = useMemo(() => (
+        highestPriorityEvents
+            .filter(event => !String(event.id || '').startsWith('tasking-formation-member-'))
+            .map((event, index) => ({
+                event,
+                index,
+                group: getAssistBuildQueueGroup(event),
+                label: getAssistBuildQueueLabel(event),
+                person: getAssistBuildQueuePerson(event),
+                scheduler: getAssistBuildQueueScheduler(event),
+                status: getAssistBuildQueueStatus(event),
+            }))
+    ), [date, highestPriorityEvents, normalisedAssistOperationalModel]);
+    const moveAssistBuildQueueEvent = (eventId: string, direction: -1 | 1) => {
+        const currentIndex = highestPriorityEvents.findIndex(event => event.id === eventId);
+        const nextIndex = currentIndex + direction;
+        if (currentIndex < 0 || nextIndex < 0 || nextIndex >= highestPriorityEvents.length) return;
+        const nextEvents = [...highestPriorityEvents];
+        [nextEvents[currentIndex], nextEvents[nextIndex]] = [nextEvents[nextIndex], nextEvents[currentIndex]];
+        onReorderPriorityEvents(nextEvents);
+    };
+    const setAssistBuildQueuePriority = (event: ScheduleEvent, priority: 'High' | 'Medium' | 'Low') => {
+        onUpdatePriorityEvent(event.id, {
+            priority,
+            isMandatoryTasking: priority === 'High' ? true : event.isTaskingRequest ? false : event.isMandatoryTasking,
+        });
+    };
+    const setAssistBuildQueueScheduler = (event: ScheduleEvent, scheduler: 'Mandatory' | 'Desirable' | 'Ignore') => {
+        if (scheduler === 'Ignore') {
+            void onDeletePriorityEvent(event.id);
+            return;
+        }
+        onUpdatePriorityEvent(event.id, {
+            priority: scheduler === 'Mandatory' ? 'High' : 'Medium',
+            isMandatoryTasking: scheduler === 'Mandatory',
+        });
+    };
+    const selectAssistBuildQueueEvent = (event: ScheduleEvent) => {
+        const group = getAssistBuildQueueGroup(event);
+        if (group === 'tasking') {
+            selectAirCombatTileTask({
+                id: event.taskingRequestId || event.id,
+                tasking: event.taskingName || event.taskingDisplayLabel || event.flightNumber || '',
+                date: event.date || date,
+                takeoff: event.startTime,
+                duration: event.duration,
+                flightType: event.flightType === 'Dual' ? 'Dual' : 'Solo',
+                depPoint: event.origin || locationCode,
+                arrivalPoint: event.destination || locationCode,
+                aircraftCount: Number((event as any).taskingAircraftCount) || 1,
+                aircraftConfigId: event.aircraftConfigId,
+            });
+        } else if (group === 'currency' || group === 'trainee-currency') {
+            selectAirCombatTileCurrency({
+                id: event.currencyDraftId || event.sctRequestId || event.id,
+                currency: event.currency || event.flightNumber || '',
+                date: event.date || date,
+                takeoff: event.startTime,
+                duration: event.duration,
+                flightType: event.flightType === 'Dual' ? 'Dual' : 'Solo',
+                depPoint: event.origin || locationCode,
+                arrivalPoint: event.destination || locationCode,
+                aircraftConfigId: event.aircraftConfigId,
+            });
+        } else {
+            setSelectedEventCode(event.flightNumber || '');
+            setSelectedTaskProfile('');
+            setSelectedCurrencyName('');
+        }
+        setActiveAssistSection('details');
+    };
+    const renderAssistBuildQueue = () => {
+        const groupStyles: Record<typeof assistBuildQueueRows[number]['group'], string> = {
+            tasking: 'border-cyan-400/40 bg-cyan-500/10 text-cyan-100',
+            currency: 'border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-100',
+            'trainee-currency': 'border-violet-400/40 bg-violet-500/10 text-violet-100',
+            special: 'border-slate-500/40 bg-slate-700/40 text-slate-100',
+        };
+        const groupLabels: Record<typeof assistBuildQueueRows[number]['group'], string> = {
+            tasking: 'Directed Task',
+            currency: 'Currency',
+            'trainee-currency': 'Trainee Currency',
+            special: 'Special Event',
+        };
+        return (
+            <div className="rounded-md border border-slate-600/80 bg-slate-900/75 p-3">
+                <div className="mb-2 flex items-start justify-between gap-3">
+                    <div>
+                        <h4 className="text-[12px] font-semibold text-white">NEO Build Queue</h4>
+                        <p className="text-[9px] text-slate-400">Same priority queue used by NEO Build for {date}.</p>
+                    </div>
+                    <span className="rounded border border-slate-600/70 bg-slate-950/70 px-2 py-1 text-[9px] font-semibold text-slate-300">
+                        {assistBuildQueueRows.length} item{assistBuildQueueRows.length === 1 ? '' : 's'}
+                    </span>
+                </div>
+                <div className="max-h-[390px] overflow-auto rounded border border-slate-700/80">
+                    <table className="w-full min-w-[760px] table-fixed text-[10px]">
+                        <colgroup>
+                            <col className="w-[42px]" />
+                            <col className="w-[108px]" />
+                            <col className="w-[150px]" />
+                            <col className="w-[132px]" />
+                            <col className="w-[84px]" />
+                            <col className="w-[88px]" />
+                            <col className="w-[95px]" />
+                            <col className="w-[92px]" />
+                            <col className="w-[70px]" />
+                        </colgroup>
+                        <thead className="sticky top-0 z-10 bg-slate-950 text-[8px] uppercase tracking-[0.12em] text-slate-400">
+                            <tr>
+                                <th className="border-b border-slate-700 px-2 py-2 text-left">Order</th>
+                                <th className="border-b border-slate-700 px-2 py-2 text-left">Type</th>
+                                <th className="border-b border-slate-700 px-2 py-2 text-left">Event</th>
+                                <th className="border-b border-slate-700 px-2 py-2 text-left">Person/Crew</th>
+                                <th className="border-b border-slate-700 px-2 py-2 text-left">Time</th>
+                                <th className="border-b border-slate-700 px-2 py-2 text-left">Priority</th>
+                                <th className="border-b border-slate-700 px-2 py-2 text-left">Scheduler</th>
+                                <th className="border-b border-slate-700 px-2 py-2 text-left">Status</th>
+                                <th className="border-b border-slate-700 px-2 py-2 text-center">Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/80 bg-slate-950/45">
+                            {assistBuildQueueRows.length === 0 && (
+                                <tr>
+                                    <td colSpan={9} className="px-3 py-8 text-center text-slate-500">
+                                        No directed tasks, currency events or saved special events are in the NEO Build queue.
+                                    </td>
+                                </tr>
+                            )}
+                            {assistBuildQueueRows.map(row => (
+                                <tr key={row.event.id} className="hover:bg-cyan-950/30">
+                                    <td className="px-2 py-2 align-middle text-slate-300">
+                                        <div className="flex items-center gap-1">
+                                            <span className="w-5 font-mono">{row.index + 1}</span>
+                                            <span className="flex flex-col">
+                                                <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, -1)} className="leading-none text-slate-400 hover:text-cyan-100">▲</button>
+                                                <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, 1)} className="leading-none text-slate-400 hover:text-cyan-100">▼</button>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-2 py-2 align-middle">
+                                        <span className={`inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${groupStyles[row.group]}`}>
+                                            {groupLabels[row.group]}
+                                        </span>
+                                    </td>
+                                    <td className="truncate px-2 py-2 align-middle font-semibold text-slate-100" title={row.label}>{row.label}</td>
+                                    <td className="truncate px-2 py-2 align-middle text-slate-300" title={row.person}>{row.person}</td>
+                                    <td className="px-2 py-2 align-middle font-mono text-slate-300">
+                                        <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
+                                        <span className="block truncate text-[8px] text-slate-500">{row.event.date || date}</span>
+                                    </td>
+                                    <td className="px-2 py-2 align-middle">
+                                        <select
+                                            value={row.event.priority || 'High'}
+                                            onChange={event => setAssistBuildQueuePriority(row.event, event.target.value as 'High' | 'Medium' | 'Low')}
+                                            className="w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-white"
+                                        >
+                                            <option value="High">High</option>
+                                            <option value="Medium">Medium</option>
+                                            <option value="Low">Low</option>
+                                        </select>
+                                    </td>
+                                    <td className="px-2 py-2 align-middle">
+                                        <select
+                                            value={row.scheduler}
+                                            onChange={event => setAssistBuildQueueScheduler(row.event, event.target.value as 'Mandatory' | 'Desirable' | 'Ignore')}
+                                            className="w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-white"
+                                        >
+                                            <option value="Mandatory">Mandatory</option>
+                                            <option value="Desirable">Desirable</option>
+                                            <option value="Ignore">Ignore</option>
+                                        </select>
+                                    </td>
+                                    <td className="px-2 py-2 align-middle">
+                                        <span className={`inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${row.status.className}`}>
+                                            {row.status.label}
+                                        </span>
+                                    </td>
+                                    <td className="px-2 py-2 text-center align-middle">
+                                        <button
+                                            type="button"
+                                            onClick={() => selectAssistBuildQueueEvent(row.event)}
+                                            className="rounded border border-cyan-400/45 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/20"
+                                        >
+                                            Edit
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+    };
     const wizardStepsCount = 12;
     const moveWizardTo = (nextStep: number) => {
         setWizardTransition('out');
@@ -3709,7 +3945,7 @@ const DfpSidePanelTimeline: React.FC<{
             return (
                 <div className="grid grid-cols-2 gap-2">
                     <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                        Resource
+                        Tile Type / Resource
                         <select
                             value={selectedResourceKind}
                             onChange={event => {
@@ -5231,7 +5467,8 @@ const DfpSidePanelTimeline: React.FC<{
                     )}
                 </div>
             </div>
-            <div className="mt-3 grid grid-cols-[128px_minmax(0,1fr)] gap-3">
+            <div className="mt-3 grid grid-cols-[minmax(520px,1.45fr)_128px_minmax(280px,0.85fr)] gap-3">
+                {renderAssistBuildQueue()}
                 <div className="space-y-1.5">
                     {assistSections.map(section => (
                         <button
@@ -5250,6 +5487,14 @@ const DfpSidePanelTimeline: React.FC<{
                 </div>
                 <div className="min-w-0 space-y-3">
                     <div className="rounded-md border border-slate-700/75 bg-slate-900/65 p-3">
+                        <div className="mb-2 border-b border-slate-700/70 pb-2">
+                            <p className="text-[11px] font-semibold text-white">
+                                {activeAssistSection === 'details' ? 'Manual Tile Details' : assistSections.find(section => section.id === activeAssistSection)?.label}
+                            </p>
+                            {activeAssistSection === 'details' && (
+                                <p className="mt-0.5 text-[9px] text-slate-400">Create a specific tile by choosing the event, person or crew, timing and resource details.</p>
+                            )}
+                        </div>
                         {renderAssistSection()}
                     </div>
                 </div>
@@ -52531,7 +52776,7 @@ appliedUpdates.forEach(update => {
                     </div>
                     {activeView === 'Program Schedule' && (
                         <aside
-                            className={`absolute inset-y-0 right-0 z-40 w-[40%] min-w-[360px] max-w-[680px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
+                            className={`absolute inset-y-0 right-0 z-40 w-[58%] min-w-[760px] max-w-[1120px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
                             aria-hidden={!showDfpSidePanel}
                         >
                             <button
@@ -52596,6 +52841,8 @@ appliedUpdates.forEach(update => {
                                     onAddPriorityEvents={(eventsToAdd) => {
                                         setHighestPriorityEvents(prev => mergeHighestPriorityEvents(prev, eventsToAdd));
                                     }}
+                                    onUpdatePriorityEvent={handleUpdatePriorityEvent}
+                                    onReorderPriorityEvents={setHighestPriorityEvents}
                                     onDeletePriorityEvent={handleDeletePriorityEvent}
                                     sctFlights={sctFlights}
                                     sctFtds={sctFtds}

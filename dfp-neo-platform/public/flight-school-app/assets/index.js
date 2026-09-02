@@ -101495,6 +101495,8 @@ const DfpSidePanelTimeline = ({
   onUpdateFixedCrewTrainingPriorities,
   highestPriorityEvents,
   onAddPriorityEvents,
+  onUpdatePriorityEvent,
+  onReorderPriorityEvents,
   onDeletePriorityEvent,
   sctFlights = [],
   sctFtds = [],
@@ -102520,7 +102522,6 @@ const DfpSidePanelTimeline = ({
     { id: "training", label: "Training Priority" },
     { id: "taskings", label: "Directed Tasks" },
     { id: "currency", label: "Currency events" },
-    { id: "crew", label: "Crew" },
     { id: "course", label: "Course events" },
     { id: "packages", label: "Packages" }
   ];
@@ -103130,6 +103131,211 @@ const DfpSidePanelTimeline = ({
     const type = getAssistCurrencyRequestType(id);
     highestPriorityEvents.filter((event) => event.sctRequestId === id || event.id === `sct-${type}-${id}`).forEach((event) => void onDeletePriorityEvent(event.id));
     patchAssistCurrencyRequest(id, { submitted: false, includeInBuild: false }, type);
+  };
+  const getAssistBuildQueueGroup = (event) => {
+    const eventId = String(event.id || "").toLowerCase();
+    const isTasking = Boolean(event.isTaskingRequest || event.taskingRequestId || eventId.startsWith("tasking-") || eventId.startsWith("neo-assist-tasking-"));
+    if (isTasking) return "tasking";
+    const isCurrency = Boolean(event.currency || event.currencyDraftId || event.sctRequestId || event.eventCategory === "currency" || eventId.startsWith("sct-") || eventId.startsWith("neo-assist-currency-") || eventId.startsWith("currency-"));
+    if (isCurrency && normalisedAssistOperationalModel === "flight_school" && (event.student || event.traineeId || eventId.includes("trainee"))) return "trainee-currency";
+    if (isCurrency) return "currency";
+    return "special";
+  };
+  const getAssistBuildQueueLabel = (event) => event.taskingDisplayLabel || event.taskingName || event.flightNumber || event.currency || event.group || event.type || "Build item";
+  const getAssistBuildQueuePerson = (event) => {
+    const people = getPersonnel(event).filter(Boolean);
+    if (people.length > 0) return people.slice(0, 2).join(", ");
+    return event.fixedCrewPic || event.pilot || event.instructor || event.student || event.crew || event.group || "TBA";
+  };
+  const getAssistBuildQueueScheduler = (event) => event.isMandatoryTasking || event.priority === "High" || event.isTimeFixed ? "Mandatory" : "Desirable";
+  const getAssistBuildQueueStatus = (event) => {
+    if ((event.date || date) !== date) {
+      return { label: "Other date", className: "border-amber-400/35 bg-amber-500/10 text-amber-100" };
+    }
+    if (!event.flightNumber && !event.taskingName && !event.currency) {
+      return { label: "Needs event", className: "border-rose-400/35 bg-rose-500/10 text-rose-100" };
+    }
+    if (event.type === "flight" && !event.aircraftConfigId && !Array.isArray(event.acceptableAircraftConfigs)) {
+      return { label: "Needs CONFIG", className: "border-amber-400/35 bg-amber-500/10 text-amber-100" };
+    }
+    return { label: "Ready", className: "border-emerald-400/35 bg-emerald-500/10 text-emerald-100" };
+  };
+  const assistBuildQueueRows = reactExports.useMemo(() => highestPriorityEvents.filter((event) => !String(event.id || "").startsWith("tasking-formation-member-")).map((event, index) => ({
+    event,
+    index,
+    group: getAssistBuildQueueGroup(event),
+    label: getAssistBuildQueueLabel(event),
+    person: getAssistBuildQueuePerson(event),
+    scheduler: getAssistBuildQueueScheduler(event),
+    status: getAssistBuildQueueStatus(event)
+  })), [date, highestPriorityEvents, normalisedAssistOperationalModel]);
+  const moveAssistBuildQueueEvent = (eventId, direction) => {
+    const currentIndex = highestPriorityEvents.findIndex((event) => event.id === eventId);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= highestPriorityEvents.length) return;
+    const nextEvents = [...highestPriorityEvents];
+    [nextEvents[currentIndex], nextEvents[nextIndex]] = [nextEvents[nextIndex], nextEvents[currentIndex]];
+    onReorderPriorityEvents(nextEvents);
+  };
+  const setAssistBuildQueuePriority = (event, priority) => {
+    onUpdatePriorityEvent(event.id, {
+      priority,
+      isMandatoryTasking: priority === "High" ? true : event.isTaskingRequest ? false : event.isMandatoryTasking
+    });
+  };
+  const setAssistBuildQueueScheduler = (event, scheduler) => {
+    if (scheduler === "Ignore") {
+      void onDeletePriorityEvent(event.id);
+      return;
+    }
+    onUpdatePriorityEvent(event.id, {
+      priority: scheduler === "Mandatory" ? "High" : "Medium",
+      isMandatoryTasking: scheduler === "Mandatory"
+    });
+  };
+  const selectAssistBuildQueueEvent = (event) => {
+    const group = getAssistBuildQueueGroup(event);
+    if (group === "tasking") {
+      selectAirCombatTileTask({
+        id: event.taskingRequestId || event.id,
+        tasking: event.taskingName || event.taskingDisplayLabel || event.flightNumber || "",
+        date: event.date || date,
+        takeoff: event.startTime,
+        duration: event.duration,
+        flightType: event.flightType === "Dual" ? "Dual" : "Solo",
+        depPoint: event.origin || locationCode,
+        arrivalPoint: event.destination || locationCode,
+        aircraftCount: Number(event.taskingAircraftCount) || 1,
+        aircraftConfigId: event.aircraftConfigId
+      });
+    } else if (group === "currency" || group === "trainee-currency") {
+      selectAirCombatTileCurrency({
+        id: event.currencyDraftId || event.sctRequestId || event.id,
+        currency: event.currency || event.flightNumber || "",
+        date: event.date || date,
+        takeoff: event.startTime,
+        duration: event.duration,
+        flightType: event.flightType === "Dual" ? "Dual" : "Solo",
+        depPoint: event.origin || locationCode,
+        arrivalPoint: event.destination || locationCode,
+        aircraftConfigId: event.aircraftConfigId
+      });
+    } else {
+      setSelectedEventCode(event.flightNumber || "");
+      setSelectedTaskProfile("");
+      setSelectedCurrencyName("");
+    }
+    setActiveAssistSection("details");
+  };
+  const renderAssistBuildQueue = () => {
+    const groupStyles = {
+      tasking: "border-cyan-400/40 bg-cyan-500/10 text-cyan-100",
+      currency: "border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-100",
+      "trainee-currency": "border-violet-400/40 bg-violet-500/10 text-violet-100",
+      special: "border-slate-500/40 bg-slate-700/40 text-slate-100"
+    };
+    const groupLabels = {
+      tasking: "Directed Task",
+      currency: "Currency",
+      "trainee-currency": "Trainee Currency",
+      special: "Special Event"
+    };
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-600/80 bg-slate-900/75 p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[12px] font-semibold text-white", children: "NEO Build Queue" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[9px] text-slate-400", children: [
+            "Same priority queue used by NEO Build for ",
+            date,
+            "."
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-slate-600/70 bg-slate-950/70 px-2 py-1 text-[9px] font-semibold text-slate-300", children: [
+          assistBuildQueueRows.length,
+          " item",
+          assistBuildQueueRows.length === 1 ? "" : "s"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-[390px] overflow-auto rounded border border-slate-700/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[760px] table-fixed text-[10px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[42px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[108px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[150px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[132px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[84px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[88px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[95px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[92px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[70px]" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-950 text-[8px] uppercase tracking-[0.12em] text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Order" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Type" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Event" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Person/Crew" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Time" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Priority" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Scheduler" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Status" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-center", children: "Edit" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-800/80 bg-slate-950/45", children: [
+          assistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 9, className: "px-3 py-8 text-center text-slate-500", children: "No directed tasks, currency events or saved special events are in the NEO Build queue." }) }),
+          assistBuildQueueRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-cyan-950/30", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-5 font-mono", children: row.index + 1 }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, -1), className: "leading-none text-slate-400 hover:text-cyan-100", children: "▲" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, 1), className: "leading-none text-slate-400 hover:text-cyan-100", children: "▼" })
+              ] })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${groupStyles[row.group]}`, children: groupLabels[row.group] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle font-semibold text-slate-100", title: row.label, children: row.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle text-slate-300", title: row.person, children: row.person }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-2 py-2 align-middle font-mono text-slate-300", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: formatCompactTime(row.event.startTime || 0) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[8px] text-slate-500", children: row.event.date || date })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: row.event.priority || "High",
+                onChange: (event) => setAssistBuildQueuePriority(row.event, event.target.value),
+                className: "w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-white",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
+                ]
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: row.scheduler,
+                onChange: (event) => setAssistBuildQueueScheduler(row.event, event.target.value),
+                className: "w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-white",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mandatory", children: "Mandatory" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Desirable", children: "Desirable" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ignore", children: "Ignore" })
+                ]
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${row.status.className}`, children: row.status.label }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => selectAssistBuildQueueEvent(row.event),
+                className: "rounded border border-cyan-400/45 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/20",
+                children: "Edit"
+              }
+            ) })
+          ] }, row.event.id))
+        ] })
+      ] }) })
+    ] });
   };
   const wizardStepsCount = 12;
   const moveWizardTo = (nextStep) => {
@@ -103810,7 +104016,7 @@ const DfpSidePanelTimeline = ({
       const showFlightOnlyDetails = selectedResourceKind !== "deployment" && (!isAirCombatTileMode || selectedResourceKind === "flight");
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-          "Resource",
+          "Tile Type / Resource",
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
@@ -105296,7 +105502,8 @@ const DfpSidePanelTimeline = ({
           )
         }
       ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-[128px_minmax(0,1fr)] gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-[minmax(520px,1.45fr)_128px_minmax(280px,0.85fr)] gap-3", children: [
+        renderAssistBuildQueue(),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1.5", children: assistSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -105307,7 +105514,13 @@ const DfpSidePanelTimeline = ({
           },
           section.id
         )) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-slate-700/75 bg-slate-900/65 p-3", children: renderAssistSection() }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/75 bg-slate-900/65 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 border-b border-slate-700/70 pb-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold text-white", children: activeAssistSection === "details" ? "Manual Tile Details" : assistSections.find((section) => section.id === activeAssistSection)?.label }),
+            activeAssistSection === "details" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-[9px] text-slate-400", children: "Create a specific tile by choosing the event, person or crew, timing and resource details." })
+          ] }),
+          renderAssistSection()
+        ] }) })
       ] })
     ] })
   ] });
@@ -143762,7 +143975,7 @@ Do you want to replace the existing entry?`,
               activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "aside",
                 {
-                  className: `absolute inset-y-0 right-0 z-40 w-[40%] min-w-[360px] max-w-[680px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
+                  className: `absolute inset-y-0 right-0 z-40 w-[58%] min-w-[760px] max-w-[1120px] border-l border-cyan-400/25 bg-slate-950/96 shadow-[-18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
                   "aria-hidden": !showDfpSidePanel,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -143838,6 +144051,8 @@ Do you want to replace the existing entry?`,
                         onAddPriorityEvents: (eventsToAdd) => {
                           setHighestPriorityEvents((prev) => mergeHighestPriorityEvents(prev, eventsToAdd));
                         },
+                        onUpdatePriorityEvent: handleUpdatePriorityEvent,
+                        onReorderPriorityEvents: setHighestPriorityEvents,
                         onDeletePriorityEvent: handleDeletePriorityEvent,
                         sctFlights,
                         sctFtds,
