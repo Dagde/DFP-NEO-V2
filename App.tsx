@@ -3435,8 +3435,10 @@ const DfpSidePanelTimeline: React.FC<{
                             onClick={() => setAssistPrioritySourceView(option.value)}
                             style={option.value === 'all'
                                 ? {
-                                    backgroundColor: assistPriorityTypeFilter === option.value ? '#dcfce7' : '#ecfdf5',
-                                    borderColor: assistPriorityTypeFilter === option.value ? '#86efac' : '#bbf7d0',
+                                    backgroundColor: assistPriorityTypeFilter === option.value ? '#bbf7d0' : '#dcfce7',
+                                    borderColor: assistPriorityTypeFilter === option.value ? '#22c55e' : '#86efac',
+                                    borderWidth: '2px',
+                                    boxShadow: assistPriorityTypeFilter === option.value ? '0 0 0 1px rgba(34, 197, 94, 0.20)' : 'none',
                                     color: '#14532d',
                                 }
                                 : undefined}
@@ -3450,6 +3452,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
                             }`}
                         >
+                            {option.value === 'all' && <span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-500" />}
                             {option.label}{option.count === null ? '' : ` (${option.count})`}
                         </button>
                     ))}
@@ -6349,8 +6352,10 @@ const DfpSidePanelTimeline: React.FC<{
                                                 onClick={() => setAssistPrioritySourceView(option.value)}
                                                 style={option.value === 'all'
                                                     ? {
-                                                        backgroundColor: assistPriorityTypeFilter === option.value ? '#dcfce7' : '#ecfdf5',
-                                                        borderColor: assistPriorityTypeFilter === option.value ? '#86efac' : '#bbf7d0',
+                                                        backgroundColor: assistPriorityTypeFilter === option.value ? '#bbf7d0' : '#dcfce7',
+                                                        borderColor: assistPriorityTypeFilter === option.value ? '#22c55e' : '#86efac',
+                                                        borderWidth: '2px',
+                                                        boxShadow: assistPriorityTypeFilter === option.value ? '0 0 0 1px rgba(34, 197, 94, 0.20)' : 'none',
                                                         color: '#14532d',
                                                     }
                                                     : undefined}
@@ -6365,8 +6370,10 @@ const DfpSidePanelTimeline: React.FC<{
                                                 }`}
                                             >
                                                 <span className="block leading-tight">{option.label}</span>
-                                                <span className="mt-0.5 block text-[10px] font-medium text-slate-500">
-                                                    {option.count === null ? 'Setup section' : `${option.count} item${option.count === 1 ? '' : 's'}`}
+                                                <span className={`mt-0.5 block text-[10px] font-medium ${option.value === 'all' ? 'text-emerald-800' : 'text-slate-500'}`}>
+                                                    {option.value === 'all'
+                                                        ? `Primary overview - ${option.count ?? 0} item${option.count === 1 ? '' : 's'}`
+                                                        : option.count === null ? 'Setup section' : `${option.count} item${option.count === 1 ? '' : 's'}`}
                                                 </span>
                                             </button>
                                         ))}
