@@ -103441,12 +103441,12 @@ const DfpSidePanelTimeline = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, 1), className: "leading-none text-slate-500 hover:text-cyan-700", children: "▼" })
               ] })
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${groupStyles[row.group]}`, children: groupLabels[row.group] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`, children: groupLabels[row.group] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle font-semibold text-slate-950", title: row.label, children: row.label }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle text-slate-700", title: row.person, children: row.person }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: formatCompactTime(row.event.startTime || 0) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[8px] text-slate-500", children: row.event.date || date })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[10px] text-slate-500", children: row.event.date || date })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "select",
@@ -103474,13 +103474,13 @@ const DfpSidePanelTimeline = ({
                 ]
               }
             ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${row.status.className}`, children: row.status.label }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${row.status.className}`, children: row.status.label }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 onClick: () => selectAssistBuildQueueEvent(row.event),
-                className: "rounded border border-cyan-300 bg-cyan-50 px-2 py-1 text-[9px] font-semibold text-cyan-800 hover:bg-cyan-100",
+                className: "rounded border border-cyan-300 bg-cyan-50 px-2 py-1 text-[10px] font-semibold text-cyan-800 hover:bg-cyan-100",
                 children: "Edit"
               }
             ) })
@@ -104155,7 +104155,7 @@ const DfpSidePanelTimeline = ({
       ) })
     ] }, wizardStep);
   };
-  const fieldClass2 = "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100";
+  const fieldClass2 = "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-100";
   const selectAssistTask = (tasking) => {
     setSelectedTaskProfile(tasking);
     setSelectedCourseEventCode("");

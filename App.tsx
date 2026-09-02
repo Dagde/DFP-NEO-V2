@@ -3368,7 +3368,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         </div>
                                     </td>
                                     <td className="px-2 py-2 align-middle">
-                                        <span className={`inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${groupStyles[row.group]}`}>
+                                        <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`}>
                                             {groupLabels[row.group]}
                                         </span>
                                     </td>
@@ -3376,7 +3376,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.person}>{row.person}</td>
                                     <td className="px-2 py-2 align-middle font-mono text-slate-700">
                                         <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
-                                        <span className="block truncate text-[8px] text-slate-500">{row.event.date || date}</span>
+                                        <span className="block truncate text-[10px] text-slate-500">{row.event.date || date}</span>
                                     </td>
                                     <td className="px-2 py-2 align-middle">
                                         <select
@@ -3401,7 +3401,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         </select>
                                     </td>
                                     <td className="px-2 py-2 align-middle">
-                                        <span className={`inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${row.status.className}`}>
+                                        <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${row.status.className}`}>
                                             {row.status.label}
                                         </span>
                                     </td>
@@ -3409,7 +3409,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         <button
                                             type="button"
                                             onClick={() => selectAssistBuildQueueEvent(row.event)}
-                                            className="rounded border border-cyan-300 bg-cyan-50 px-2 py-1 text-[9px] font-semibold text-cyan-800 hover:bg-cyan-100"
+                                            className="rounded border border-cyan-300 bg-cyan-50 px-2 py-1 text-[10px] font-semibold text-cyan-800 hover:bg-cyan-100"
                                         >
                                             Edit
                                         </button>
@@ -4018,7 +4018,7 @@ const DfpSidePanelTimeline: React.FC<{
             </div>
         );
     };
-    const fieldClass = 'mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100';
+    const fieldClass = 'mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-100';
     const selectAssistTask = (tasking: string) => {
         setSelectedTaskProfile(tasking);
         setSelectedCourseEventCode('');
