@@ -140542,6 +140542,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     setDate(getEffectiveDfpDateString());
     handleNavigation("Program Schedule");
   }, [getEffectiveDfpDateString, handleNavigation]);
+  const openNeoAssistFromContextMenu = reactExports.useCallback(() => {
+    setDate(getEffectiveDfpDateString());
+    handleNavigation("Program Schedule");
+    setShowDfpSidePanel(true);
+  }, [getEffectiveDfpDateString, handleNavigation]);
   const openStaffScheduleFromContextMenu = reactExports.useCallback(() => {
     handleNavigation(["NextDayBuild", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView) ? "NextDayInstructorSchedule" : "InstructorSchedule");
   }, [activeView, handleNavigation]);
@@ -140856,6 +140861,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       kind = "workspace";
       if (activeView !== "Program Schedule") {
         menuItems.push({ label: "Go to DFP", onSelect: openTodayDfpFromContextMenu });
+        if (activeView === "Priorities") {
+          menuItems.push({ label: "NEO Assist", onSelect: openNeoAssistFromContextMenu });
+        }
       }
       if (activeView === "Settings") {
         contextSettingsSections.forEach((section) => {
@@ -140945,6 +140953,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     nextDayBuildEvents,
     openPauseFlightOpsFromContextMenu,
     openStaffScheduleFromContextMenu,
+    openNeoAssistFromContextMenu,
     openTodayDfpFromContextMenu,
     openTraineeProfileTab,
     openTraineeScheduleFromContextMenu,
