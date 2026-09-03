@@ -101574,6 +101574,8 @@ const DfpSidePanelTimeline = ({
   },
   onPatchSctRequestFromAssist = () => {
   },
+  onDeleteSctRequestFromAssist = () => {
+  },
   onSyncSctRequestsFromAssist = () => {
   },
   availableAircraftCount,
@@ -103704,6 +103706,21 @@ const DfpSidePanelTimeline = ({
       isMandatoryTasking: scheduler === "Mandatory"
     });
   };
+  const deleteAssistBuildQueueRow = (row) => {
+    const event = row.event;
+    const requestId = String(event.sctRequestId || "").trim();
+    const requestType = String(event.sctRequestType || getAssistCurrencyRequestType(requestId || event.id)) === "ftd" ? "ftd" : "flight";
+    const label = String(row.label || event.flightNumber || event.currency || "this priority row").trim();
+    if (!window.confirm(`Delete ${label} from the Priority Table? This cannot be undone.`)) return;
+    setEditingAssistPriorityEventId((current) => current === event.id ? null : current);
+    setAssistPriorityDateDrafts((prev) => {
+      const next = { ...prev };
+      delete next[event.id];
+      return next;
+    });
+    if (requestId) void onDeleteSctRequestFromAssist(requestId, requestType);
+    if (!event.isSctSourceOnly) void onDeletePriorityEvent(event.id);
+  };
   const updateAssistBuildQueueRequestedDate = (event, value) => {
     const nextDate = normaliseAssistDateKey(value);
     if (!nextDate) return;
@@ -103890,8 +103907,8 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[74px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[104px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[88px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[60px]" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[72px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[76px]" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-100 text-[10px] uppercase tracking-[0.12em] text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Order" }),
@@ -104095,18 +104112,31 @@ const DfpSidePanelTimeline = ({
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700", children: row.scheduler }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${row.status.className}`, children: row.status.label }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    if (!isEditing) selectAssistBuildQueueEvent(row.event);
-                    setEditingAssistPriorityEventId((current) => current === row.event.id ? null : row.event.id);
-                  },
-                  className: `rounded border px-2 py-1 text-[10px] font-semibold ${isEditing ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100" : "border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100"}`,
-                  children: isEditing ? "Done" : "Edit"
-                }
-              ) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-1 py-2 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => {
+                      if (!isEditing) selectAssistBuildQueueEvent(row.event);
+                      setEditingAssistPriorityEventId((current) => current === row.event.id ? null : row.event.id);
+                    },
+                    className: `rounded border px-1.5 py-1 text-[10px] font-semibold ${isEditing ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100" : "border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100"}`,
+                    children: isEditing ? "Done" : "Edit"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    "aria-label": `Delete ${row.label}`,
+                    title: "Delete row",
+                    onClick: () => deleteAssistBuildQueueRow(row),
+                    className: "rounded border border-rose-200 bg-rose-50 px-1.5 py-1 text-[10px] font-semibold text-rose-700 hover:bg-rose-100",
+                    children: "🗑"
+                  }
+                )
+              ] }) })
             ] }, row.event.id);
           })
         ] })
@@ -145397,6 +145427,7 @@ Do you want to replace the existing entry?`,
                             console.error("Failed to patch NEO Assist continuation request:", err);
                           }
                         },
+                        onDeleteSctRequestFromAssist: handleCancelCurrentUserSctRequest,
                         onSyncSctRequestsFromAssist: syncPriorityEventsWithSctAndRemedial,
                         availableAircraftCount: neoAvailableAircraftCount,
                         onUpdateAircraftCount: handleUpdateNeoAvailableAircraftCount,
