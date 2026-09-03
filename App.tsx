@@ -5013,23 +5013,6 @@ const DfpSidePanelTimeline: React.FC<{
                         </div>
                     ) : (
                         <>
-                            <div className="rounded border border-slate-700 bg-slate-950/45 p-2">
-                                <p className="mb-2 font-semibold text-cyan-100">Priority order</p>
-                                <div className="space-y-1">
-                                    {[
-                                        ['01', 'Mandatory directed task requests', `${scheduledTaskCount} scheduled`],
-                                        ['02', 'Directed currency', `${scheduledCurrencyCount} scheduled`],
-                                        ['03', 'Training packages', `${airCombatSchedulingWeights.trainingPackages}% training share`],
-                                        ['04', 'Course events', `${airCombatSchedulingWeights.courses}% training share`],
-                                    ].map(([number, label, detail]) => (
-                                        <div key={number} className="grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
-                                            <span className="font-mono text-[9px] text-slate-500">{number}</span>
-                                            <span className="font-semibold text-slate-100">{label}</span>
-                                            <span className="text-[9px] text-slate-400">{detail}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
                             <div className="rounded border border-violet-500/25 bg-violet-500/10 p-2">
                                 <div className="mb-2 flex items-center justify-between gap-2">
                                     <div>

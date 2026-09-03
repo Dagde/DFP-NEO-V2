@@ -105051,79 +105051,64 @@ const DfpSidePanelTimeline = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end border-t border-slate-700/70 bg-slate-950/80 px-2 py-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-emerald-500/30 bg-emerald-950/50 px-2 py-0.5 text-[9px] font-bold text-emerald-100", children: "Total: 100%" }) })
             ] })
           ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 font-semibold text-cyan-100", children: "Priority order" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: [
-              ["01", "Mandatory directed task requests", `${scheduledTaskCount} scheduled`],
-              ["02", "Directed currency", `${scheduledCurrencyCount} scheduled`],
-              ["03", "Training packages", `${airCombatSchedulingWeights.trainingPackages}% training share`],
-              ["04", "Course events", `${airCombatSchedulingWeights.courses}% training share`]
-            ].map(([number, label, detail]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[24px_1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[9px] text-slate-500", children: number }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: label }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-slate-400", children: detail })
-            ] }, number)) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Course/Package" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Balances routine Air Combat training after directed task requests." })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100", children: [
-                airCombatSchedulingWeights.courses,
-                "/",
-                airCombatSchedulingWeights.trainingPackages
-              ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-violet-500/25 bg-violet-500/10 p-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Course/Package" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Balances routine Air Combat training after directed task requests." })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_64px_64px] items-end gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Course Weight" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "range",
-                    min: 0,
-                    max: 100,
-                    step: 5,
-                    value: airCombatSchedulingWeights.courses,
-                    onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
-                    className: "mt-2 w-full accent-violet-500"
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Courses" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "number",
-                    min: 0,
-                    max: 100,
-                    step: 5,
-                    value: airCombatSchedulingWeights.courses,
-                    onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
-                    className: "mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-white"
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Packages" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "number",
-                    value: airCombatSchedulingWeights.trainingPackages,
-                    readOnly: true,
-                    disabled: true,
-                    className: "mt-1 w-full cursor-not-allowed rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-400 opacity-80"
-                  }
-                )
-              ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100", children: [
+              airCombatSchedulingWeights.courses,
+              "/",
+              airCombatSchedulingWeights.trainingPackages
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_64px_64px] items-end gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Course Weight" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "range",
+                  min: 0,
+                  max: 100,
+                  step: 5,
+                  value: airCombatSchedulingWeights.courses,
+                  onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
+                  className: "mt-2 w-full accent-violet-500"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Courses" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "number",
+                  min: 0,
+                  max: 100,
+                  step: 5,
+                  value: airCombatSchedulingWeights.courses,
+                  onChange: (event) => updateAirCombatCourseWeight(Number(event.target.value)),
+                  className: "mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-white"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400", children: "Packages" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "number",
+                  value: airCombatSchedulingWeights.trainingPackages,
+                  readOnly: true,
+                  disabled: true,
+                  className: "mt-1 w-full cursor-not-allowed rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-400 opacity-80"
+                }
+              )
             ] })
           ] })
-        ] })
+        ] }) })
       ] });
     }
     if (renderedAssistSection === "taskings") {
