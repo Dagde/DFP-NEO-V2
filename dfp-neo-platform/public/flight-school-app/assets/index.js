@@ -103704,11 +103704,7 @@ const DfpSidePanelTimeline = ({
     if (!patchAssistBuildQueueSctEvent(event, { dateRequested: nextDate })) {
       onUpdatePriorityEvent(event.id, { date: nextDate });
     }
-    setAssistPriorityDateDrafts((prev) => {
-      const next = { ...prev };
-      delete next[event.id];
-      return next;
-    });
+    setAssistPriorityDateDrafts((prev) => ({ ...prev, [event.id]: formatAssistCurrencyDate(nextDate) }));
   };
   const updateAssistBuildQueueEventLabel = (event, group, value) => {
     const updates = { flightNumber: value };
@@ -103982,6 +103978,8 @@ const DfpSidePanelTimeline = ({
                     onChange: (event) => {
                       const nextDate = event.target.value;
                       setAssistPriorityDateDrafts((prev) => ({ ...prev, [row.event.id]: formatAssistCurrencyDate(nextDate) }));
+                      const visibleInput = event.currentTarget.parentElement?.querySelector('input[type="text"]');
+                      if (visibleInput) applyAssistPriorityDateInputStyle(visibleInput, nextDate);
                       updateAssistBuildQueueRequestedDate(row.event, nextDate);
                     },
                     className: "pointer-events-none absolute right-0 top-0 h-px w-px opacity-0 [color-scheme:light]",
