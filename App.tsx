@@ -3754,7 +3754,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                 <span className="text-slate-400">-</span>
                                             )}
                                         </td>
-                                        <td className={`px-2 py-2 align-middle font-mono ${!isEditing && isAssistDatePastOrToday(row.event.date || date) ? 'font-bold text-red-700' : 'text-slate-700'}`}>
+                                        <td className="px-2 py-2 align-middle font-mono text-slate-700">
                                             {isEditing ? (
                                                 <input
                                                     type="date"
@@ -3767,7 +3767,14 @@ const DfpSidePanelTimeline: React.FC<{
                                                     }}
                                                     className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
                                                 />
-                                            ) : formatAssistCurrencyDate(row.event.date || date)}
+                                            ) : (
+                                                <span
+                                                    className={isAssistDatePastOrToday(row.event.date || date) ? 'font-bold' : undefined}
+                                                    style={isAssistDatePastOrToday(row.event.date || date) ? { color: '#b91c1c' } : undefined}
+                                                >
+                                                    {formatAssistCurrencyDate(row.event.date || date)}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-2 py-2 align-middle font-semibold text-slate-950" title={row.label}>
                                             {isEditing ? (

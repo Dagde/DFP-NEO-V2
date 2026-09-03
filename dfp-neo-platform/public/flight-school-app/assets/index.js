@@ -103785,7 +103785,7 @@ const DfpSidePanelTimeline = ({
                   ]
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold uppercase text-slate-700", children: flightTypeValue }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400", children: "-" }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 align-middle font-mono ${!isEditing && isAssistDatePastOrToday(row.event.date || date) ? "font-bold text-red-700" : "text-slate-700"}`, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   type: "date",
@@ -103798,7 +103798,14 @@ const DfpSidePanelTimeline = ({
                   },
                   className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
                 }
-              ) : formatAssistCurrencyDate(row.event.date || date) }),
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: isAssistDatePastOrToday(row.event.date || date) ? "font-bold" : void 0,
+                  style: isAssistDatePastOrToday(row.event.date || date) ? { color: "#b91c1c" } : void 0,
+                  children: formatAssistCurrencyDate(row.event.date || date)
+                }
+              ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-semibold text-slate-950", title: row.label, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
