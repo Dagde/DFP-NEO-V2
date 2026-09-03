@@ -103518,9 +103518,23 @@ const DfpSidePanelTimeline = ({
       renderedDateCells
     };
   };
+  const applyAssistPriorityDateDomStyles = () => {
+    if (typeof document === "undefined") return;
+    document.querySelectorAll('[data-neo-assist-priority-date="true"]').forEach((element) => {
+      const htmlElement = element;
+      if (htmlElement.dataset.staleOrToday === "true") {
+        htmlElement.style.setProperty("color", "#b91c1c", "important");
+        htmlElement.style.setProperty("font-weight", "700", "important");
+      } else {
+        htmlElement.style.removeProperty("color");
+        htmlElement.style.removeProperty("font-weight");
+      }
+    });
+  };
   const lastAssistPriorityDateTraceSignatureRef = reactExports.useRef("");
   reactExports.useEffect(() => {
     if (activeAssistPage !== "priority") return;
+    window.setTimeout(applyAssistPriorityDateDomStyles, 0);
     const diagnostics = buildAssistPriorityDateDiagnostics();
     const signature = JSON.stringify({
       page: activeAssistPage,
@@ -103542,6 +103556,7 @@ const DfpSidePanelTimeline = ({
       ...diagnostics
     });
     window.setTimeout(() => {
+      applyAssistPriorityDateDomStyles();
       const renderedDiagnostics = buildAssistPriorityDateDiagnostics();
       appendNeoAssistCurrencyTrace("NEO_ASSIST_PRIORITY_DATE_DOM_TRACE", {
         ...renderedDiagnostics
@@ -106413,6 +106428,7 @@ const DfpSidePanelTimeline = ({
         {
           type: "button",
           onClick: () => {
+            applyAssistPriorityDateDomStyles();
             const priorityDateDiagnostics = buildAssistPriorityDateDiagnostics();
             appendNeoAssistCurrencyTrace("NEO_ASSIST_CURRENCY_TRACE_DOWNLOAD_REQUESTED", {
               date,
