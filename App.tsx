@@ -3808,9 +3808,9 @@ const DfpSidePanelTimeline: React.FC<{
                             <col className="w-[46px]" />
                             <col className="w-[126px]" />
                             <col className="w-[78px]" />
-                            <col className="w-[92px]" />
+                            <col className="w-[112px]" />
                             <col className="w-[120px]" />
-                            <col className="w-[190px]" />
+                            <col className="w-[170px]" />
                             <col className="w-[128px]" />
                             <col className="w-[74px]" />
                             <col className="w-[90px]" />
