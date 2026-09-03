@@ -3895,24 +3895,33 @@ const DfpSidePanelTimeline: React.FC<{
                                         </td>
                                         <td className="px-2 py-2 align-middle font-mono text-slate-700">
                                             {isEditing ? (
-                                                <div className="flex w-full items-center gap-1">
+                                                <div className="relative w-full">
                                                     <input
                                                         key={`priority-date-input-${row.event.id}-${requestedDateInputValue}`}
                                                         type="text"
                                                         defaultValue={formatAssistCurrencyDate(requestedDateInputValue)}
                                                         placeholder="DD Mmm YY"
+                                                        onClick={event => {
+                                                            const picker = event.currentTarget.parentElement?.querySelector('input[type="date"]') as HTMLInputElement | null;
+                                                            picker?.showPicker?.();
+                                                        }}
+                                                        onFocus={event => {
+                                                            const picker = event.currentTarget.parentElement?.querySelector('input[type="date"]') as HTMLInputElement | null;
+                                                            picker?.showPicker?.();
+                                                        }}
                                                         onBlur={event => updateAssistBuildQueueRequestedDate(row.event, event.target.value)}
                                                         onKeyDown={event => {
                                                             if (event.key === 'Enter') event.currentTarget.blur();
                                                         }}
-                                                        className="min-w-0 flex-1 rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                        className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
                                                     />
                                                     <input
                                                         type="date"
                                                         aria-label="Pick requested date"
                                                         value={requestedDateInputValue}
                                                         onChange={event => updateAssistBuildQueueRequestedDate(row.event, event.target.value)}
-                                                        className="h-[26px] w-[28px] shrink-0 rounded border border-slate-300 bg-white px-0 py-0 text-transparent [color-scheme:light]"
+                                                        className="pointer-events-none absolute right-0 top-0 h-px w-px opacity-0 [color-scheme:light]"
+                                                        tabIndex={-1}
                                                     />
                                                 </div>
                                             ) : (
