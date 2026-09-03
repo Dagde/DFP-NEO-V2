@@ -4132,9 +4132,10 @@ const DfpSidePanelTimeline: React.FC<{
                                                     aria-label={`Delete ${row.label}`}
                                                     title="Delete row"
                                                     onClick={() => deleteAssistBuildQueueRow(row)}
-                                                    className="neo-assist-priority-delete-icon inline-flex h-6 w-5 items-center justify-center text-rose-600 transition hover:text-rose-800"
+                                                    className="neo-assist-priority-delete-icon inline-flex h-6 w-5 items-center justify-center transition"
+                                                    style={{ color: '#dc2626' }}
                                                 >
-                                                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                         <path d="M3 6h18" />
                                                         <path d="M8 6V4h8v2" />
                                                         <path d="M19 6l-1 14H6L5 6" />
@@ -6381,6 +6382,18 @@ const DfpSidePanelTimeline: React.FC<{
                 .neo-assist-light-shell [class*="text-amber-"],
                 .neo-assist-light-shell [class*="text-rose-"] {
                     color: #334155 !important;
+                }
+                .neo-assist-light-shell .neo-assist-priority-delete-icon,
+                .neo-assist-light-shell .neo-assist-priority-delete-icon svg,
+                .neo-assist-light-shell .neo-assist-priority-delete-icon svg path {
+                    color: #dc2626 !important;
+                    stroke: #dc2626 !important;
+                }
+                .neo-assist-light-shell .neo-assist-priority-delete-icon:hover,
+                .neo-assist-light-shell .neo-assist-priority-delete-icon:hover svg,
+                .neo-assist-light-shell .neo-assist-priority-delete-icon:hover svg path {
+                    color: #991b1b !important;
+                    stroke: #991b1b !important;
                 }
                 .neo-assist-light-shell h3,
                 .neo-assist-light-shell h4,
