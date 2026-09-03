@@ -2952,6 +2952,17 @@ const DfpSidePanelTimeline: React.FC<{
         if (!dateKey) return false;
         return dateKey <= getLocalDateKey();
     };
+    const getAssistPriorityRequestedDate = (row: { event: ScheduleEvent; date?: string }): string => {
+        const event = row.event as ScheduleEvent & Record<string, any>;
+        const candidates = [
+            event.dateRequested,
+            event.requestedDate,
+            event.date,
+            row.date,
+            date,
+        ];
+        return String(candidates.find(candidate => String(candidate || '').trim()) || '').trim();
+    };
     const saveAssistCurrencyRequest = (id: string) => {
         patchAssistCurrencyRequest(id, { submitted: false, includeInBuild: false });
     };
@@ -3733,6 +3744,9 @@ const DfpSidePanelTimeline: React.FC<{
                                 const showFlightType = normalisedAssistOperationalModel === 'flight_school' && row.group === 'currency';
                                 const flightTypeValue = row.event.flightType === 'Dual' || (row.event as any).soloOrDual === 'Dual' ? 'Dual' : 'Solo';
                                 const secondaryCrewValue = String(row.event.crew || row.event.student || '').trim();
+                                const requestedDate = getAssistPriorityRequestedDate(row);
+                                const requestedDateInputValue = normaliseAssistDateKey(requestedDate) || normaliseAssistDateKey(row.event.date) || date;
+                                const isRequestedDatePastOrToday = isAssistDatePastOrToday(requestedDate);
                                 return (
                                     <tr key={row.event.id} className={isEditing ? 'bg-emerald-50/80 ring-1 ring-inset ring-emerald-300' : 'hover:bg-cyan-50'}>
                                         <td className="px-2 py-2 align-middle text-slate-600">
@@ -3773,7 +3787,7 @@ const DfpSidePanelTimeline: React.FC<{
                                             {isEditing ? (
                                                 <input
                                                     type="date"
-                                                    value={row.event.date || date}
+                                                    value={requestedDateInputValue}
                                                     onChange={event => {
                                                         const nextDate = event.target.value;
                                                         if (!patchAssistBuildQueueSctEvent(row.event, { dateRequested: nextDate })) {
@@ -3784,10 +3798,10 @@ const DfpSidePanelTimeline: React.FC<{
                                                 />
                                             ) : (
                                                 <span
-                                                    className={isAssistDatePastOrToday(row.event.date || date) ? 'font-bold' : undefined}
-                                                    style={isAssistDatePastOrToday(row.event.date || date) ? { color: '#b91c1c' } : undefined}
+                                                    className={isRequestedDatePastOrToday ? 'font-bold' : undefined}
+                                                    style={isRequestedDatePastOrToday ? { color: '#b91c1c', fontWeight: 700 } : undefined}
                                                 >
-                                                    {formatAssistCurrencyDate(row.event.date || date)}
+                                                    {formatAssistCurrencyDate(requestedDate)}
                                                 </span>
                                             )}
                                         </td>

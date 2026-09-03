@@ -103119,6 +103119,17 @@ const DfpSidePanelTimeline = ({
     if (!dateKey) return false;
     return dateKey <= getLocalDateKey();
   };
+  const getAssistPriorityRequestedDate = (row) => {
+    const event = row.event;
+    const candidates = [
+      event.dateRequested,
+      event.requestedDate,
+      event.date,
+      row.date,
+      date
+    ];
+    return String(candidates.find((candidate) => String(candidate || "").trim()) || "").trim();
+  };
   const submitAssistCurrencyRequest = (id) => {
     if (highestPriorityEvents.some((event) => event.sctRequestId === id || event.currencyDraftId === id || String(event.id || "") === `sct-flight-${id}` || String(event.id || "") === `sct-ftd-${id}` || String(event.id || "") === `neo-assist-currency-${id}`)) return;
     const type = getAssistCurrencyRequestType(id);
@@ -103778,6 +103789,9 @@ const DfpSidePanelTimeline = ({
             const showFlightType = normalisedAssistOperationalModel === "flight_school" && row.group === "currency";
             const flightTypeValue = row.event.flightType === "Dual" || row.event.soloOrDual === "Dual" ? "Dual" : "Solo";
             const secondaryCrewValue = String(row.event.crew || row.event.student || "").trim();
+            const requestedDate = getAssistPriorityRequestedDate(row);
+            const requestedDateInputValue = normaliseAssistDateKey(requestedDate) || normaliseAssistDateKey(row.event.date) || date;
+            const isRequestedDatePastOrToday = isAssistDatePastOrToday(requestedDate);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: isEditing ? "bg-emerald-50/80 ring-1 ring-inset ring-emerald-300" : "hover:bg-cyan-50", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-5 font-mono", children: row.index + 1 }),
@@ -103803,7 +103817,7 @@ const DfpSidePanelTimeline = ({
                 "input",
                 {
                   type: "date",
-                  value: row.event.date || date,
+                  value: requestedDateInputValue,
                   onChange: (event) => {
                     const nextDate = event.target.value;
                     if (!patchAssistBuildQueueSctEvent(row.event, { dateRequested: nextDate })) {
@@ -103815,9 +103829,9 @@ const DfpSidePanelTimeline = ({
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "span",
                 {
-                  className: isAssistDatePastOrToday(row.event.date || date) ? "font-bold" : void 0,
-                  style: isAssistDatePastOrToday(row.event.date || date) ? { color: "#b91c1c" } : void 0,
-                  children: formatAssistCurrencyDate(row.event.date || date)
+                  className: isRequestedDatePastOrToday ? "font-bold" : void 0,
+                  style: isRequestedDatePastOrToday ? { color: "#b91c1c", fontWeight: 700 } : void 0,
+                  children: formatAssistCurrencyDate(requestedDate)
                 }
               ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-semibold text-slate-950", title: row.label, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
