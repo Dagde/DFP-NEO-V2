@@ -104880,7 +104880,7 @@ const DfpSidePanelTimeline = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: aircraftConfigurationDefinitions.map((definition) => {
             const isCleanConfig = definition.id === BASE_AIRCRAFT_CONFIG.id;
-            const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "" : aircraftConfigCapacities[definition.id] || "";
+            const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "0" : aircraftConfigCapacities[definition.id] || "0";
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "grid grid-cols-[1fr_84px] items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: definition.label }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
