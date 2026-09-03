@@ -104881,8 +104881,8 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: aircraftConfigurationDefinitions.map((definition) => {
             const isCleanConfig = definition.id === BASE_AIRCRAFT_CONFIG.id;
             const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "" : aircraftConfigCapacities[definition.id] || "";
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block rounded border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600", children: [
-              definition.label,
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "grid grid-cols-[1fr_84px] items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: definition.label }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -104894,7 +104894,7 @@ const DfpSidePanelTimeline = ({
                   onChange: (event) => {
                     if (!isCleanConfig) updateConfigCapacity(definition.id, event.target.value);
                   },
-                  className: `mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1 text-right text-[12px] normal-case tracking-normal text-slate-950 ${isCleanConfig ? "cursor-not-allowed text-slate-500 opacity-80" : ""}`
+                  className: `w-full rounded border border-slate-300 bg-white px-3 py-1 text-center text-[12px] normal-case tracking-normal text-slate-950 ${isCleanConfig ? "cursor-not-allowed text-slate-500 opacity-80" : ""}`
                 }
               )
             ] }, definition.id);

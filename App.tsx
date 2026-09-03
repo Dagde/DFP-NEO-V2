@@ -4842,8 +4842,8 @@ const DfpSidePanelTimeline: React.FC<{
                                         ? (hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : '')
                                         : (aircraftConfigCapacities[definition.id] || '');
                                     return (
-                                    <label key={definition.id} className="block rounded border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
-                                        {definition.label}
+                                    <label key={definition.id} className="grid grid-cols-[1fr_84px] items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700">
+                                        <span>{definition.label}</span>
                                         <input
                                             type="number"
                                             min={0}
@@ -4853,7 +4853,7 @@ const DfpSidePanelTimeline: React.FC<{
                                             onChange={event => {
                                                 if (!isCleanConfig) updateConfigCapacity(definition.id, event.target.value);
                                             }}
-                                            className={`mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1 text-right text-[12px] normal-case tracking-normal text-slate-950 ${isCleanConfig ? 'cursor-not-allowed text-slate-500 opacity-80' : ''}`}
+                                            className={`w-full rounded border border-slate-300 bg-white px-3 py-1 text-center text-[12px] normal-case tracking-normal text-slate-950 ${isCleanConfig ? 'cursor-not-allowed text-slate-500 opacity-80' : ''}`}
                                         />
                                     </label>
                                 )})}
