@@ -106148,14 +106148,18 @@ const DfpSidePanelTimeline = ({
                     color: #0f172a !important;
                 }
                 .neo-assist-light-shell .neo-assist-all-priority-source {
-                    background-color: #bbf7d0 !important;
+                    background: #b7f3c8 !important;
+                    background-color: #b7f3c8 !important;
+                    background-image: none !important;
                     border-color: #22c55e !important;
                     border-width: 2px !important;
                     color: #14532d !important;
                     box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.22) !important;
                 }
                 .neo-assist-light-shell .neo-assist-all-priority-source:hover {
-                    background-color: #86efac !important;
+                    background: #8eeaa9 !important;
+                    background-color: #8eeaa9 !important;
+                    background-image: none !important;
                     border-color: #16a34a !important;
                 }
                 .neo-assist-light-shell .neo-assist-all-priority-source span {
