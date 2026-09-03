@@ -956,6 +956,8 @@ const DfpSidePanelTimeline: React.FC<{
     trainingAreas: string[];
     callsignOptions: string[];
     staffListNames: string[];
+    staffRecords?: any[];
+    traineeRecords?: any[];
     formatResourceLabel: (resourceId: string) => string;
     operationalModel?: string;
     activeUnitCode?: string;
@@ -1028,6 +1030,8 @@ const DfpSidePanelTimeline: React.FC<{
     trainingAreas,
     callsignOptions,
     staffListNames,
+    staffRecords = [],
+    traineeRecords = [],
     formatResourceLabel,
     operationalModel,
     activeUnitCode,
@@ -3278,6 +3282,60 @@ const DfpSidePanelTimeline: React.FC<{
     const assistPriorityUnitOptions = useMemo(() => (
         Array.from(new Set(assistBuildQueueRows.map(row => row.unit).filter(Boolean))).sort((left, right) => left.localeCompare(right))
     ), [assistBuildQueueRows]);
+    const assistCrewSelectGroups = useMemo(() => {
+        const normaliseUnit = (value: unknown) => String(value || 'Unassigned Unit').trim() || 'Unassigned Unit';
+        const getName = (person: any) => String(person?.name || person?.fullName || '').trim();
+        const getCourseSortValue = (person: any) => {
+            const course = String(person?.course || person?.courseNumber || person?.courseNo || '').trim();
+            const numeric = Number(course.replace(/[^0-9.]/g, ''));
+            return Number.isFinite(numeric) ? numeric : Number.MAX_SAFE_INTEGER;
+        };
+        const staffByUnit = new Map<string, any[]>();
+        const traineeByUnit = new Map<string, any[]>();
+        staffRecords.forEach(person => {
+            const name = getName(person);
+            if (!name) return;
+            const unit = normaliseUnit(person?.unit || person?.unitCode);
+            staffByUnit.set(unit, [...(staffByUnit.get(unit) || []), person]);
+        });
+        traineeRecords.forEach(person => {
+            const name = getName(person);
+            if (!name) return;
+            const unit = normaliseUnit(person?.unit || person?.unitCode);
+            traineeByUnit.set(unit, [...(traineeByUnit.get(unit) || []), person]);
+        });
+        const groups: { label: string; options: string[] }[] = [];
+        Array.from(staffByUnit.keys()).sort((a, b) => a.localeCompare(b)).forEach(unit => {
+            const options = (staffByUnit.get(unit) || [])
+                .sort((left, right) => comparePeopleByConfiguredRank(left, right, personnelDisplaySettings, 'staff') || getName(left).localeCompare(getName(right)))
+                .map(getName)
+                .filter(Boolean);
+            if (options.length > 0) groups.push({ label: `${unit} Staff`, options: Array.from(new Set(options)) });
+        });
+        Array.from(traineeByUnit.keys()).sort((a, b) => a.localeCompare(b)).forEach(unit => {
+            const byCourse = new Map<string, any[]>();
+            (traineeByUnit.get(unit) || []).forEach(person => {
+                const course = String(person?.course || person?.courseNumber || person?.courseNo || 'No Course').trim() || 'No Course';
+                byCourse.set(course, [...(byCourse.get(course) || []), person]);
+            });
+            Array.from(byCourse.keys())
+                .sort((left, right) => {
+                    const leftNumber = Number(left.replace(/[^0-9.]/g, ''));
+                    const rightNumber = Number(right.replace(/[^0-9.]/g, ''));
+                    if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber) && leftNumber !== rightNumber) return leftNumber - rightNumber;
+                    return left.localeCompare(right);
+                })
+                .forEach(course => {
+                    const options = (byCourse.get(course) || [])
+                        .sort((left, right) => getCourseSortValue(left) - getCourseSortValue(right) || getName(left).localeCompare(getName(right)))
+                        .map(getName)
+                        .filter(Boolean);
+                    if (options.length > 0) groups.push({ label: `${unit} Trainees - ${course}`, options: Array.from(new Set(options)) });
+                });
+        });
+        if (groups.length > 0) return groups;
+        return [{ label: 'Staff', options: staffListNames }];
+    }, [personnelDisplaySettings, staffListNames, staffRecords, traineeRecords]);
     const assistPrioritySourceTabs = useMemo(() => [
         { value: 'all', label: 'All Priority Sources', count: assistBuildQueueRows.length },
         { value: 'tasking', label: 'Directed Tasks', count: assistBuildQueueRows.filter(row => row.group === 'tasking').length },
@@ -3358,6 +3416,17 @@ const DfpSidePanelTimeline: React.FC<{
         else if (event.pilot) updates.pilot = value;
         else if (event.student) updates.student = value;
         else updates.pilot = value;
+        onUpdatePriorityEvent(event.id, updates);
+    };
+    const updateAssistBuildQueuePrimaryCrew = (event: ScheduleEvent, value: string) => {
+        const updates: Partial<ScheduleEvent> = {};
+        if (event.instructor) updates.instructor = value;
+        else updates.pilot = value;
+        onUpdatePriorityEvent(event.id, updates);
+    };
+    const updateAssistBuildQueueSecondaryCrew = (event: ScheduleEvent, value: string) => {
+        const updates: Partial<ScheduleEvent> = { crew: value };
+        if (event.student) updates.student = value;
         onUpdatePriorityEvent(event.id, updates);
     };
     const updateAssistBuildQueueFlightType = (event: ScheduleEvent, flightType: 'Solo' | 'Dual') => {
@@ -3508,7 +3577,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <col className="w-[78px]" />
                             <col className="w-[82px]" />
                             <col />
-                            <col className="w-[150px]" />
+                            <col className="w-[170px]" />
                             <col className="w-[140px]" />
                             <col className="w-[74px]" />
                             <col className="w-[90px]" />
@@ -3544,6 +3613,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 const isEditing = editingAssistPriorityEventId === row.event.id;
                                 const showFlightType = normalisedAssistOperationalModel === 'flight_school' && row.group === 'currency';
                                 const flightTypeValue = row.event.flightType === 'Dual' || (row.event as any).soloOrDual === 'Dual' ? 'Dual' : 'Solo';
+                                const secondaryCrewValue = String(row.event.crew || row.event.student || '').trim();
                                 return (
                                     <tr key={row.event.id} className={isEditing ? 'bg-emerald-50/80 ring-1 ring-inset ring-emerald-300' : 'hover:bg-cyan-50'}>
                                         <td className="px-2 py-2 align-middle text-slate-600">
@@ -3603,7 +3673,36 @@ const DfpSidePanelTimeline: React.FC<{
                                             )}
                                         </td>
                                         <td className="px-2 py-2 align-middle text-slate-700" title={row.person}>
-                                            {isEditing ? (
+                                            {isEditing && showFlightType ? (
+                                                <div className="space-y-1">
+                                                    <select
+                                                        value={row.crewDisplay.primary === 'TBA' ? '' : row.crewDisplay.primary}
+                                                        onChange={event => updateAssistBuildQueuePrimaryCrew(row.event, event.target.value)}
+                                                        className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                    >
+                                                        <option value="">Select PIC</option>
+                                                        {assistCrewSelectGroups.map(group => (
+                                                            <optgroup key={`priority-pic-${row.event.id}-${group.label}`} label={group.label}>
+                                                                {group.options.map(name => <option key={`priority-pic-${row.event.id}-${group.label}-${name}`} value={name}>{name}</option>)}
+                                                            </optgroup>
+                                                        ))}
+                                                    </select>
+                                                    {flightTypeValue === 'Dual' && (
+                                                        <select
+                                                            value={secondaryCrewValue}
+                                                            onChange={event => updateAssistBuildQueueSecondaryCrew(row.event, event.target.value)}
+                                                            className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                        >
+                                                            <option value="">Select second crew</option>
+                                                            {assistCrewSelectGroups.map(group => (
+                                                                <optgroup key={`priority-second-crew-${row.event.id}-${group.label}`} label={group.label}>
+                                                                    {group.options.map(name => <option key={`priority-second-crew-${row.event.id}-${group.label}-${name}`} value={name}>{name}</option>)}
+                                                                </optgroup>
+                                                            ))}
+                                                        </select>
+                                                    )}
+                                                </div>
+                                            ) : isEditing ? (
                                                 <input
                                                     list="neo-assist-priority-person-options"
                                                     value={row.person === 'TBA' ? '' : row.person}
@@ -54087,6 +54186,8 @@ appliedUpdates.forEach(update => {
                                     trainingAreas={activeTrainingAreas}
                                     callsignOptions={neoAssistCallsignOptions}
                                     staffListNames={neoAssistStaffListNames}
+                                    staffRecords={instructorsData}
+                                    traineeRecords={traineesData}
                                     formatResourceLabel={formatResourceDisplayLabel}
                                     operationalModel={activeOperationalModel}
                                     activeUnitCode={activeUnitCode}

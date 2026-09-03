@@ -101591,6 +101591,8 @@ const DfpSidePanelTimeline = ({
   trainingAreas,
   callsignOptions,
   staffListNames,
+  staffRecords = [],
+  traineeRecords = [],
   formatResourceLabel: formatResourceLabel2,
   operationalModel,
   activeUnitCode,
@@ -103361,6 +103363,52 @@ const DfpSidePanelTimeline = ({
     });
   }, [assistBuildQueueRows, assistPriorityPersonFilter, assistPrioritySchedulerFilter, assistPriorityTypeFilter, assistPriorityUnitFilter]);
   const assistPriorityUnitOptions = reactExports.useMemo(() => Array.from(new Set(assistBuildQueueRows.map((row) => row.unit).filter(Boolean))).sort((left, right) => left.localeCompare(right)), [assistBuildQueueRows]);
+  const assistCrewSelectGroups = reactExports.useMemo(() => {
+    const normaliseUnit = (value) => String(value || "Unassigned Unit").trim() || "Unassigned Unit";
+    const getName = (person) => String(person?.name || person?.fullName || "").trim();
+    const getCourseSortValue = (person) => {
+      const course = String(person?.course || person?.courseNumber || person?.courseNo || "").trim();
+      const numeric = Number(course.replace(/[^0-9.]/g, ""));
+      return Number.isFinite(numeric) ? numeric : Number.MAX_SAFE_INTEGER;
+    };
+    const staffByUnit = /* @__PURE__ */ new Map();
+    const traineeByUnit = /* @__PURE__ */ new Map();
+    staffRecords.forEach((person) => {
+      const name = getName(person);
+      if (!name) return;
+      const unit = normaliseUnit(person?.unit || person?.unitCode);
+      staffByUnit.set(unit, [...staffByUnit.get(unit) || [], person]);
+    });
+    traineeRecords.forEach((person) => {
+      const name = getName(person);
+      if (!name) return;
+      const unit = normaliseUnit(person?.unit || person?.unitCode);
+      traineeByUnit.set(unit, [...traineeByUnit.get(unit) || [], person]);
+    });
+    const groups = [];
+    Array.from(staffByUnit.keys()).sort((a, b) => a.localeCompare(b)).forEach((unit) => {
+      const options = (staffByUnit.get(unit) || []).sort((left, right) => comparePeopleByConfiguredRank(left, right, personnelDisplaySettings, "staff") || getName(left).localeCompare(getName(right))).map(getName).filter(Boolean);
+      if (options.length > 0) groups.push({ label: `${unit} Staff`, options: Array.from(new Set(options)) });
+    });
+    Array.from(traineeByUnit.keys()).sort((a, b) => a.localeCompare(b)).forEach((unit) => {
+      const byCourse = /* @__PURE__ */ new Map();
+      (traineeByUnit.get(unit) || []).forEach((person) => {
+        const course = String(person?.course || person?.courseNumber || person?.courseNo || "No Course").trim() || "No Course";
+        byCourse.set(course, [...byCourse.get(course) || [], person]);
+      });
+      Array.from(byCourse.keys()).sort((left, right) => {
+        const leftNumber = Number(left.replace(/[^0-9.]/g, ""));
+        const rightNumber = Number(right.replace(/[^0-9.]/g, ""));
+        if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber) && leftNumber !== rightNumber) return leftNumber - rightNumber;
+        return left.localeCompare(right);
+      }).forEach((course) => {
+        const options = (byCourse.get(course) || []).sort((left, right) => getCourseSortValue(left) - getCourseSortValue(right) || getName(left).localeCompare(getName(right))).map(getName).filter(Boolean);
+        if (options.length > 0) groups.push({ label: `${unit} Trainees - ${course}`, options: Array.from(new Set(options)) });
+      });
+    });
+    if (groups.length > 0) return groups;
+    return [{ label: "Staff", options: staffListNames }];
+  }, [personnelDisplaySettings, staffListNames, staffRecords, traineeRecords]);
   const assistPrioritySourceTabs = reactExports.useMemo(() => [
     { value: "all", label: "All Priority Sources", count: assistBuildQueueRows.length },
     { value: "tasking", label: "Directed Tasks", count: assistBuildQueueRows.filter((row) => row.group === "tasking").length },
@@ -103435,6 +103483,17 @@ const DfpSidePanelTimeline = ({
     else if (event.pilot) updates.pilot = value;
     else if (event.student) updates.student = value;
     else updates.pilot = value;
+    onUpdatePriorityEvent(event.id, updates);
+  };
+  const updateAssistBuildQueuePrimaryCrew = (event, value) => {
+    const updates = {};
+    if (event.instructor) updates.instructor = value;
+    else updates.pilot = value;
+    onUpdatePriorityEvent(event.id, updates);
+  };
+  const updateAssistBuildQueueSecondaryCrew = (event, value) => {
+    const updates = { crew: value };
+    if (event.student) updates.student = value;
     onUpdatePriorityEvent(event.id, updates);
   };
   const updateAssistBuildQueueFlightType = (event, flightType) => {
@@ -103575,7 +103634,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[78px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[82px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", {}),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[150px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[170px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[140px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[74px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
@@ -103603,6 +103662,7 @@ const DfpSidePanelTimeline = ({
             const isEditing = editingAssistPriorityEventId === row.event.id;
             const showFlightType = normalisedAssistOperationalModel === "flight_school" && row.group === "currency";
             const flightTypeValue = row.event.flightType === "Dual" || row.event.soloOrDual === "Dual" ? "Dual" : "Solo";
+            const secondaryCrewValue = String(row.event.crew || row.event.student || "").trim();
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: isEditing ? "bg-emerald-50/80 ring-1 ring-inset ring-emerald-300" : "hover:bg-cyan-50", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-5 font-mono", children: row.index + 1 }),
@@ -103642,7 +103702,32 @@ const DfpSidePanelTimeline = ({
                   className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] font-semibold text-slate-900"
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: row.label }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-700", title: row.person, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-700", title: row.person, children: isEditing && showFlightType ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: row.crewDisplay.primary === "TBA" ? "" : row.crewDisplay.primary,
+                    onChange: (event) => updateAssistBuildQueuePrimaryCrew(row.event, event.target.value),
+                    className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
+                      assistCrewSelectGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, `priority-pic-${row.event.id}-${group.label}-${name}`)) }, `priority-pic-${row.event.id}-${group.label}`))
+                    ]
+                  }
+                ),
+                flightTypeValue === "Dual" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: secondaryCrewValue,
+                    onChange: (event) => updateAssistBuildQueueSecondaryCrew(row.event, event.target.value),
+                    className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select second crew" }),
+                      assistCrewSelectGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, `priority-second-crew-${row.event.id}-${group.label}-${name}`)) }, `priority-second-crew-${row.event.id}-${group.label}`))
+                    ]
+                  }
+                )
+              ] }) : isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   list: "neo-assist-priority-person-options",
@@ -145176,6 +145261,8 @@ Do you want to replace the existing entry?`,
                         trainingAreas: activeTrainingAreas,
                         callsignOptions: neoAssistCallsignOptions,
                         staffListNames: neoAssistStaffListNames,
+                        staffRecords: instructorsData,
+                        traineeRecords: traineesData,
                         formatResourceLabel: formatResourceDisplayLabel,
                         operationalModel: activeOperationalModel,
                         activeUnitCode,
