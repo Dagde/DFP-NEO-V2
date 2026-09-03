@@ -103465,9 +103465,7 @@ const DfpSidePanelTimeline = ({
       return true;
     });
   }, [assistBuildQueueRows, assistPriorityPersonFilter, assistPrioritySchedulerFilter, assistPriorityTypeFilter, assistPriorityUnitFilter]);
-  const lastAssistPriorityDateTraceSignatureRef = reactExports.useRef("");
-  reactExports.useEffect(() => {
-    if (activeAssistPage !== "priority") return;
+  const buildAssistPriorityDateDiagnostics = () => {
     const todayKey = getLocalDateKey();
     const rows = filteredAssistBuildQueueRows.map((row) => {
       const event = row.event;
@@ -103492,11 +103490,43 @@ const DfpSidePanelTimeline = ({
         isSctSourceOnly: Boolean(event.isSctSourceOnly)
       };
     });
+    const renderedDateCells = typeof document === "undefined" ? [] : Array.from(document.querySelectorAll('[data-neo-assist-priority-date="true"]')).map((element) => {
+      const htmlElement = element;
+      const computedStyle = window.getComputedStyle(htmlElement);
+      return {
+        rowId: htmlElement.dataset.rowId || "",
+        text: htmlElement.textContent || "",
+        derivedRequestedDate: htmlElement.dataset.requestedDate || "",
+        normalisedDateKey: htmlElement.dataset.dateKey || "",
+        todayKey: htmlElement.dataset.todayKey || "",
+        staleOrToday: htmlElement.dataset.staleOrToday || "",
+        inlineColor: htmlElement.style.color || "",
+        computedColor: computedStyle.color,
+        className: htmlElement.className || ""
+      };
+    });
+    return {
+      activeAssistPage,
+      assistPriorityTypeFilter,
+      assistPrioritySchedulerFilter,
+      assistPriorityUnitFilter,
+      assistPriorityPersonFilter,
+      date,
+      todayKey,
+      rowCount: rows.length,
+      rows,
+      renderedDateCells
+    };
+  };
+  const lastAssistPriorityDateTraceSignatureRef = reactExports.useRef("");
+  reactExports.useEffect(() => {
+    if (activeAssistPage !== "priority") return;
+    const diagnostics = buildAssistPriorityDateDiagnostics();
     const signature = JSON.stringify({
       page: activeAssistPage,
       filter: assistPriorityTypeFilter,
-      todayKey,
-      rows: rows.map((row) => ({
+      todayKey: diagnostics.todayKey,
+      rows: diagnostics.rows.map((row) => ({
         rowId: row.rowId,
         derivedRequestedDate: row.derivedRequestedDate,
         normalisedDateKey: row.normalisedDateKey,
@@ -103506,50 +103536,18 @@ const DfpSidePanelTimeline = ({
     if (signature === lastAssistPriorityDateTraceSignatureRef.current) return;
     lastAssistPriorityDateTraceSignatureRef.current = signature;
     appendNeoAssistCurrencyTrace("NEO_ASSIST_PRIORITY_DATE_RENDER_TRACE", {
-      activeAssistPage,
-      assistPriorityTypeFilter,
-      date,
-      todayKey,
-      rowCount: rows.length,
-      rows
+      ...diagnostics
     });
     console.info("[NEO_ASSIST_PRIORITY_DATE_RENDER_TRACE]", {
-      activeAssistPage,
-      assistPriorityTypeFilter,
-      date,
-      todayKey,
-      rowCount: rows.length,
-      rows
+      ...diagnostics
     });
     window.setTimeout(() => {
-      const renderedDateCells = Array.from(document.querySelectorAll('[data-neo-assist-priority-date="true"]')).map((element) => {
-        const htmlElement = element;
-        const computedStyle = window.getComputedStyle(htmlElement);
-        return {
-          rowId: htmlElement.dataset.rowId || "",
-          text: htmlElement.textContent || "",
-          derivedRequestedDate: htmlElement.dataset.requestedDate || "",
-          normalisedDateKey: htmlElement.dataset.dateKey || "",
-          todayKey: htmlElement.dataset.todayKey || "",
-          staleOrToday: htmlElement.dataset.staleOrToday || "",
-          inlineColor: htmlElement.style.color || "",
-          computedColor: computedStyle.color,
-          className: htmlElement.className || ""
-        };
-      });
+      const renderedDiagnostics = buildAssistPriorityDateDiagnostics();
       appendNeoAssistCurrencyTrace("NEO_ASSIST_PRIORITY_DATE_DOM_TRACE", {
-        activeAssistPage,
-        assistPriorityTypeFilter,
-        date,
-        todayKey,
-        renderedDateCells
+        ...renderedDiagnostics
       });
       console.info("[NEO_ASSIST_PRIORITY_DATE_DOM_TRACE]", {
-        activeAssistPage,
-        assistPriorityTypeFilter,
-        date,
-        todayKey,
-        renderedDateCells
+        ...renderedDiagnostics
       });
     }, 100);
   }, [activeAssistPage, assistPriorityTypeFilter, date, filteredAssistBuildQueueRows]);
@@ -106415,17 +106413,20 @@ const DfpSidePanelTimeline = ({
         {
           type: "button",
           onClick: () => {
+            const priorityDateDiagnostics = buildAssistPriorityDateDiagnostics();
             appendNeoAssistCurrencyTrace("NEO_ASSIST_CURRENCY_TRACE_DOWNLOAD_REQUESTED", {
               date,
               activeUnitCode,
               operationalModel: normalisedAssistOperationalModel,
               sctFlightCount: sctFlights.length,
-              sctFtdCount: sctFtds.length
+              sctFtdCount: sctFtds.length,
+              priorityDateDiagnostics
             });
             downloadNeoAssistCurrencyTrace({
               date,
               activeUnitCode,
               operationalModel: normalisedAssistOperationalModel,
+              priorityDateDiagnostics,
               sctFlights: sctFlights.map((request) => ({
                 id: request.id,
                 userId: request.userId,
