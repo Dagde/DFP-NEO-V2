@@ -104866,7 +104866,7 @@ const DfpSidePanelTimeline = ({
           ] }, label)) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 rounded border border-slate-200 bg-white/75 px-2 py-1.5 text-[10px] text-slate-500", children: [
             resources.length,
-            " DFP rows available for manual placement."
+            " resource rows available on the DFP board."
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-sky-200 bg-[#eef7fb] p-3 shadow-sm", children: [

@@ -4827,7 +4827,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 </label>
                             ))}
                         </div>
-                        <p className="mt-3 rounded border border-slate-200 bg-white/75 px-2 py-1.5 text-[10px] text-slate-500">{resources.length} DFP rows available for manual placement.</p>
+                        <p className="mt-3 rounded border border-slate-200 bg-white/75 px-2 py-1.5 text-[10px] text-slate-500">{resources.length} resource rows available on the DFP board.</p>
                     </div>
                     <div className="rounded-md border border-sky-200 bg-[#eef7fb] p-3 shadow-sm">
                         <div className="mb-2 border-b border-sky-100 pb-2">
