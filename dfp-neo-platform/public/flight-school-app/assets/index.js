@@ -104905,12 +104905,25 @@ const DfpSidePanelTimeline = ({
       }
       const scheduledTaskCount = highestPriorityTaskRows.length;
       const scheduledCurrencyCount = highestPriorityCurrencyRows.length;
+      const formatPrioritySummary = (priorities, fallback) => {
+        const priorityOrder = ["High", "Medium", "Low"];
+        const uniquePriorities = priorityOrder.filter((priority) => priorities.some((value) => value === priority));
+        return uniquePriorities.length > 0 ? uniquePriorities.join("/") : fallback;
+      };
+      const taskPrioritySummary = formatPrioritySummary(
+        highestPriorityTaskRows.flatMap((row) => row.events.map((event) => event.priority)),
+        "High"
+      );
+      const currencyPrioritySummary = formatPrioritySummary(
+        highestPriorityCurrencyRows.map((row) => row.event.priority),
+        "High/Medium"
+      );
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/25 bg-cyan-500/10 px-2 py-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold text-cyan-50", children: "Operational build priority" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Directed Tasks" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-cyan-50", children: scheduledTaskCount > 0 ? "Mandatory" : "None" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-cyan-50", children: taskPrioritySummary }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-[9px] text-cyan-100/60", children: [
               scheduledTaskCount,
               " scheduled"
@@ -104918,7 +104931,7 @@ const DfpSidePanelTimeline = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[68px] rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-fuchsia-100/70", children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-fuchsia-50", children: scheduledCurrencyCount > 0 ? "Directed" : "None" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-fuchsia-50", children: currencyPrioritySummary }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-[9px] text-fuchsia-100/60", children: [
               scheduledCurrencyCount,
               " scheduled"

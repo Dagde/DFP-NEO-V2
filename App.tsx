@@ -4869,6 +4869,19 @@ const DfpSidePanelTimeline: React.FC<{
             }
             const scheduledTaskCount = highestPriorityTaskRows.length;
             const scheduledCurrencyCount = highestPriorityCurrencyRows.length;
+            const formatPrioritySummary = (priorities: Array<string | undefined | null>, fallback: string) => {
+                const priorityOrder = ['High', 'Medium', 'Low'];
+                const uniquePriorities = priorityOrder.filter(priority => priorities.some(value => value === priority));
+                return uniquePriorities.length > 0 ? uniquePriorities.join('/') : fallback;
+            };
+            const taskPrioritySummary = formatPrioritySummary(
+                highestPriorityTaskRows.flatMap(row => row.events.map(event => event.priority)),
+                'High'
+            );
+            const currencyPrioritySummary = formatPrioritySummary(
+                highestPriorityCurrencyRows.map(row => row.event.priority),
+                'High/Medium'
+            );
             return (
                 <div className="space-y-3 text-[10px] text-slate-200">
                     <div className="rounded border border-cyan-400/25 bg-cyan-500/10 px-2 py-1.5">
@@ -4877,12 +4890,12 @@ const DfpSidePanelTimeline: React.FC<{
                     <div className="grid grid-cols-3 gap-2">
                         <div className="min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Directed Tasks</p>
-                            <p className="mt-2 text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
+                            <p className="mt-2 text-sm font-semibold text-cyan-50">{taskPrioritySummary}</p>
                             <p className="mt-0.5 text-[9px] text-cyan-100/60">{scheduledTaskCount} scheduled</p>
                         </div>
                         <div className="min-h-[68px] rounded border border-fuchsia-500/25 bg-fuchsia-500/10 p-2">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-fuchsia-100/70">Currency</p>
-                            <p className="mt-2 text-sm font-semibold text-fuchsia-50">{scheduledCurrencyCount > 0 ? 'Directed' : 'None'}</p>
+                            <p className="mt-2 text-sm font-semibold text-fuchsia-50">{currencyPrioritySummary}</p>
                             <p className="mt-0.5 text-[9px] text-fuchsia-100/60">{scheduledCurrencyCount} scheduled</p>
                         </div>
                         <div className="min-h-[68px] rounded border border-violet-500/25 bg-violet-500/10 p-2">
