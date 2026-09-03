@@ -101738,7 +101738,6 @@ const DfpSidePanelTimeline = ({
   }, [isFixedCrewNeoAssist]);
   const [showAssistTaskForm, setShowAssistTaskForm] = reactExports.useState(false);
   const [showAssistCurrencyForm, setShowAssistCurrencyForm] = reactExports.useState(false);
-  const [expandedAssistCurrencyRowId, setExpandedAssistCurrencyRowId] = reactExports.useState(null);
   const [airCombatAssistMode, setAirCombatAssistMode] = reactExports.useState("tile");
   const [selectedAssistPrioritySource, setSelectedAssistPrioritySource] = reactExports.useState(null);
   const [wizardStep, setWizardStep] = reactExports.useState(0);
@@ -103095,7 +103094,17 @@ const DfpSidePanelTimeline = ({
     const year = String(parsed.getUTCFullYear()).slice(-2);
     return `${day} ${month} ${year}`;
   };
-  const getAssistCurrencyEventTypeLabel = (requestType) => requestType === "ftd" ? simulatorResourceLabel || "Simulator" : "Flight";
+  const getLocalDateKey = (value = /* @__PURE__ */ new Date()) => {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const isAssistDatePastOrToday = (value) => {
+    const raw = String(value || "").trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
+    return raw <= getLocalDateKey();
+  };
   const submitAssistCurrencyRequest = (id) => {
     if (highestPriorityEvents.some((event) => event.sctRequestId === id || event.currencyDraftId === id || String(event.id || "") === `sct-flight-${id}` || String(event.id || "") === `sct-ftd-${id}` || String(event.id || "") === `neo-assist-currency-${id}`)) return;
     const type = getAssistCurrencyRequestType(id);
@@ -103331,6 +103340,9 @@ const DfpSidePanelTimeline = ({
     if ((event.date || date) !== date) {
       return { label: "Other date", className: "neo-assist-status-pill-warning border-amber-200 bg-amber-50 text-amber-800" };
     }
+    if (event.isSctSourceOnly) {
+      return { label: "Submitted", className: "neo-assist-status-pill-ready border-sky-200 bg-sky-50 text-sky-700" };
+    }
     if (!event.flightNumber && !event.taskingName && !event.currency) {
       return { label: "Needs event", className: "neo-assist-status-pill-error border-rose-200 bg-rose-50 text-rose-700" };
     }
@@ -103339,21 +103351,82 @@ const DfpSidePanelTimeline = ({
     }
     return { label: "Ready", className: "neo-assist-status-pill-ready border-emerald-200 bg-emerald-50 text-emerald-700" };
   };
-  const assistBuildQueueRows = reactExports.useMemo(() => highestPriorityEvents.filter((event) => !String(event.id || "").startsWith("tasking-formation-member-")).map((event, index) => {
-    const group = getAssistBuildQueueGroup(event);
+  const buildAssistPriorityEventFromSctRequest = (request, requestType) => {
+    const requestedTime = request.requestedTime || formatTime2(requestType === "ftd" ? ftdStartTime : flyingStartTime);
+    const primaryName = String(request.name || request.crewIndividual || request.crewDisplayLabel || "").trim();
+    const secondaryCrew = String(request.crewMember || request.crewDisplayLabel || request.secondCrewName || request.crewMemberName || request.crew || "").trim();
+    const eventCode2 = String(request.event || request.currency || "Currency").trim();
+    const flightType = request.flightType === "Dual" ? "Dual" : "Solo";
     return {
-      event,
-      index,
-      group,
-      label: getAssistBuildQueueLabel(event),
-      person: getAssistBuildQueuePerson(event),
-      crewDisplay: getAssistBuildQueueCrewDisplay(event, group),
-      requestedBy: getAssistBuildQueueRequestedBy(event),
-      unit: getAssistBuildQueueUnit(event),
-      scheduler: getAssistBuildQueueScheduler(event),
-      status: getAssistBuildQueueStatus(event)
+      id: `sct-source-${requestType}-${request.id}`,
+      sctRequestId: request.id,
+      date: request.dateRequested || date,
+      type: requestType,
+      instructor: primaryName,
+      pilot: primaryName,
+      student: "",
+      crew: flightType === "Dual" ? secondaryCrew : "",
+      flightNumber: eventCode2,
+      duration: defaultAssistCurrencyDuration,
+      startTime: parseTimeToDecimal(requestedTime),
+      resourceId: "",
+      color: "bg-amber-500/80",
+      flightType,
+      soloOrDual: flightType,
+      locationType: "Local",
+      origin: locationCode,
+      destination: locationCode,
+      eventCategory: "currency",
+      currency: eventCode2,
+      currencyAudience: "staff",
+      priority: request.priority || "High",
+      notes: request.notes || "",
+      aircraftConfigId: request.aircraftConfigId,
+      isTimeFixed: false,
+      isMandatoryTasking: request.priority === "High" || request.includeInBuild || request.submitted,
+      ...requestType === "flight" && request.aircraftConfigId ? { acceptableAircraftConfigs: [request.aircraftConfigId] } : {},
+      requestedByName: String(request.requestedByName || request.createdByName || request.submittedByName || request.name || primaryName || "Requester").trim(),
+      sctRequestType: requestType,
+      isSctSourceOnly: true
     };
-  }), [activeUnitCode, date, highestPriorityEvents, normalisedAssistOperationalModel]);
+  };
+  const assistBuildQueueRows = reactExports.useMemo(() => {
+    const queuedSctRequestIds = new Set(
+      highestPriorityEvents.map((event) => String(event.sctRequestId || "").trim()).filter(Boolean)
+    );
+    const queuedCurrencyDraftIds = new Set(
+      highestPriorityEvents.map((event) => String(event.currencyDraftId || "").trim()).filter(Boolean)
+    );
+    const queuedEventIds = new Set(highestPriorityEvents.map((event) => String(event.id || "").trim()).filter(Boolean));
+    const sourceCurrencyEvents = [
+      ...sctFlights.map((request) => ({ request, type: "flight" })),
+      ...sctFtds.map((request) => ({ request, type: "ftd" }))
+    ].filter(({ request }) => request.submitted || request.includeInBuild || request.priority === "High").filter(({ request, type }) => {
+      const requestId = String(request.id || "").trim();
+      if (!requestId) return false;
+      if (queuedSctRequestIds.has(requestId) || queuedCurrencyDraftIds.has(requestId)) return false;
+      if (queuedEventIds.has(`sct-${type}-${requestId}`) || queuedEventIds.has(`neo-assist-currency-${requestId}`)) return false;
+      return true;
+    }).map(({ request, type }) => buildAssistPriorityEventFromSctRequest(request, type));
+    return [
+      ...highestPriorityEvents,
+      ...sourceCurrencyEvents
+    ].filter((event) => !String(event.id || "").startsWith("tasking-formation-member-")).map((event, index) => {
+      const group = getAssistBuildQueueGroup(event);
+      return {
+        event,
+        index,
+        group,
+        label: getAssistBuildQueueLabel(event),
+        person: getAssistBuildQueuePerson(event),
+        crewDisplay: getAssistBuildQueueCrewDisplay(event, group),
+        requestedBy: getAssistBuildQueueRequestedBy(event),
+        unit: getAssistBuildQueueUnit(event),
+        scheduler: getAssistBuildQueueScheduler(event),
+        status: getAssistBuildQueueStatus(event)
+      };
+    });
+  }, [activeUnitCode, date, defaultAssistCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, locationCode, normalisedAssistOperationalModel, sctFlights, sctFtds]);
   const filteredAssistBuildQueueRows = reactExports.useMemo(() => {
     const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
     return assistBuildQueueRows.filter((row) => {
@@ -103447,6 +103520,7 @@ const DfpSidePanelTimeline = ({
   };
   const selectedAssistPrioritySection = getAssistPrioritySourceSection(assistPriorityTypeFilter);
   const moveAssistBuildQueueEvent = (eventId, direction) => {
+    if (String(eventId || "").startsWith("sct-source-")) return;
     const currentIndex = highestPriorityEvents.findIndex((event) => event.id === eventId);
     const nextIndex = currentIndex + direction;
     if (currentIndex < 0 || nextIndex < 0 || nextIndex >= highestPriorityEvents.length) return;
@@ -103454,7 +103528,15 @@ const DfpSidePanelTimeline = ({
     [nextEvents[currentIndex], nextEvents[nextIndex]] = [nextEvents[nextIndex], nextEvents[currentIndex]];
     onReorderPriorityEvents(nextEvents);
   };
+  const patchAssistBuildQueueSctEvent = (event, updates) => {
+    const requestId = String(event.sctRequestId || "").trim();
+    const requestType = String(event.sctRequestType || getAssistCurrencyRequestType(requestId || event.id)) === "ftd" ? "ftd" : "flight";
+    if (!requestId) return false;
+    patchAssistCurrencyRequestAndQueue(requestId, updates, requestType);
+    return true;
+  };
   const setAssistBuildQueuePriority = (event, priority) => {
+    if (patchAssistBuildQueueSctEvent(event, { priority, includeInBuild: priority === "High" || event.includeInBuild, submitted: true })) return;
     onUpdatePriorityEvent(event.id, {
       priority,
       isMandatoryTasking: priority === "High" ? true : event.isTaskingRequest ? false : event.isMandatoryTasking
@@ -103463,9 +103545,18 @@ const DfpSidePanelTimeline = ({
   const setAssistBuildQueueScheduler = (event, scheduler) => {
     if (scheduler === "Ignore") {
       setEditingAssistPriorityEventId((current) => current === event.id ? null : current);
+      if (event.sctRequestId) {
+        ignoreAssistCurrencyRequest(String(event.sctRequestId));
+        return;
+      }
       void onDeletePriorityEvent(event.id);
       return;
     }
+    if (patchAssistBuildQueueSctEvent(event, {
+      priority: scheduler === "Mandatory" ? "High" : "Medium",
+      includeInBuild: true,
+      submitted: true
+    })) return;
     onUpdatePriorityEvent(event.id, {
       priority: scheduler === "Mandatory" ? "High" : "Medium",
       isMandatoryTasking: scheduler === "Mandatory"
@@ -103480,9 +103571,11 @@ const DfpSidePanelTimeline = ({
     if (group === "currency" || group === "trainee-currency") {
       updates.currency = value;
     }
+    if ((group === "currency" || group === "trainee-currency") && patchAssistBuildQueueSctEvent(event, { event: value, currency: value })) return;
     onUpdatePriorityEvent(event.id, updates);
   };
   const updateAssistBuildQueueEventCrew = (event, value) => {
+    if (patchAssistBuildQueueSctEvent(event, { name: value })) return;
     const updates = { crew: value };
     if (event.instructor) updates.instructor = value;
     else if (event.pilot) updates.pilot = value;
@@ -103491,17 +103584,20 @@ const DfpSidePanelTimeline = ({
     onUpdatePriorityEvent(event.id, updates);
   };
   const updateAssistBuildQueuePrimaryCrew = (event, value) => {
+    if (patchAssistBuildQueueSctEvent(event, { name: value })) return;
     const updates = {};
     if (event.instructor) updates.instructor = value;
     else updates.pilot = value;
     onUpdatePriorityEvent(event.id, updates);
   };
   const updateAssistBuildQueueSecondaryCrew = (event, value) => {
+    if (patchAssistBuildQueueSctEvent(event, { crewMember: value, crewDisplayLabel: value })) return;
     const updates = { crew: value };
     if (event.student) updates.student = value;
     onUpdatePriorityEvent(event.id, updates);
   };
   const updateAssistBuildQueueFlightType = (event, flightType) => {
+    if (patchAssistBuildQueueSctEvent(event, { flightType, ...flightType === "Solo" ? { crewMember: "", crewDisplayLabel: "" } : {} })) return;
     const updates = {
       flightType,
       soloOrDual: flightType
@@ -103689,12 +103785,17 @@ const DfpSidePanelTimeline = ({
                   ]
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold uppercase text-slate-700", children: flightTypeValue }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400", children: "-" }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 align-middle font-mono ${!isEditing && isAssistDatePastOrToday(row.event.date || date) ? "font-bold text-red-700" : "text-slate-700"}`, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   type: "date",
                   value: row.event.date || date,
-                  onChange: (event) => onUpdatePriorityEvent(row.event.id, { date: event.target.value }),
+                  onChange: (event) => {
+                    const nextDate = event.target.value;
+                    if (!patchAssistBuildQueueSctEvent(row.event, { dateRequested: nextDate })) {
+                      onUpdatePriorityEvent(row.event.id, { date: nextDate });
+                    }
+                  },
                   className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
                 }
               ) : formatAssistCurrencyDate(row.event.date || date) }),
@@ -103750,7 +103851,12 @@ const DfpSidePanelTimeline = ({
                 "select",
                 {
                   value: row.event.startTime || 0,
-                  onChange: (event) => onUpdatePriorityEvent(row.event.id, { startTime: Number(event.target.value) }),
+                  onChange: (event) => {
+                    const nextTime = Number(event.target.value);
+                    if (!patchAssistBuildQueueSctEvent(row.event, { requestedTime: formatTime2(nextTime) })) {
+                      onUpdatePriorityEvent(row.event.id, { startTime: nextTime });
+                    }
+                  },
                   className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
                   children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `priority-inline-time-${row.event.id}-${option.label}`))
                 }
@@ -105370,53 +105476,6 @@ const DfpSidePanelTimeline = ({
       ] });
     }
     if (renderedAssistSection === "currency") {
-      const buildPriorityRows = [
-        ...sctFlights.map((request) => ({ request, requestType: "flight" })),
-        ...sctFtds.map((request) => ({ request, requestType: "ftd" }))
-      ].map(({ request, requestType }) => ({
-        id: request.id,
-        requestType,
-        requester: request.name || request.crewIndividual || request.crewDisplayLabel || "Not assigned",
-        currency: request.event || request.currency || "Currency",
-        date: request.dateRequested || date,
-        takeoff: parseTimeToDecimal(request.requestedTime || formatTime2(flyingStartTime)),
-        requestedTime: request.requestedTime || formatTime2(flyingStartTime),
-        duration: defaultAssistCurrencyDuration,
-        flightType: request.flightType,
-        depPoint: locationCode,
-        arrivalPoint: locationCode,
-        aircraftConfigId: request.aircraftConfigId,
-        priority: request.priority,
-        notes: request.notes || "",
-        saved: true,
-        scheduled: Boolean(request.submitted || request.priority === "High" || request.includeInBuild),
-        ignored: false,
-        source: "build-priorities"
-      }));
-      const buildPriorityIds = new Set(buildPriorityRows.map((row) => row.id));
-      const visibleRemoteRows = highestPriorityCurrencyRows.filter((remote) => {
-        const remoteId = String(remote.id || "");
-        const sourceRequestId = String(remote.event.sctRequestId || "");
-        return getAssistBuildQueueGroup(remote.event) === "currency" && !buildPriorityIds.has(remoteId) && !buildPriorityIds.has(sourceRequestId) && !Array.from(buildPriorityIds).some((id) => remoteId === `sct-flight-${id}` || remoteId === `sct-ftd-${id}`);
-      });
-      const rows = [
-        ...buildPriorityRows,
-        ...visibleRemoteRows.map((row) => ({
-          ...row,
-          requestType: (row.event.sctRequestType || row.event.type || "flight") === "ftd" ? "ftd" : "flight",
-          requester: getAssistBuildQueuePerson(row.event),
-          requestedTime: formatTime2(row.takeoff),
-          duration: row.event.duration || defaultAssistCurrencyDuration,
-          flightType: row.event.flightType || row.event.soloOrDual || "Solo",
-          depPoint: row.event.origin || locationCode,
-          arrivalPoint: row.event.destination || locationCode,
-          aircraftConfigId: row.event.aircraftConfigId,
-          priority: row.event.priority || "High",
-          notes: row.event.notes || "",
-          ignored: false,
-          source: "remote"
-        }))
-      ];
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex items-center gap-1.5", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: "Currency" }),
@@ -105446,128 +105505,7 @@ const DfpSidePanelTimeline = ({
             )
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 space-y-1 overflow-y-auto pr-1", children: [
-          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No currency requests entered." }),
-          rows.map((row) => {
-            const rowKey = `${row.source}-${row.id}`;
-            const isExpanded = expandedAssistCurrencyRowId === rowKey;
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded border border-slate-700 bg-slate-950/60 transition-all duration-200", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => setExpandedAssistCurrencyRowId((prev) => prev === rowKey ? null : rowKey),
-                  className: "grid w-full grid-cols-[6.2rem_minmax(0,1fr)_5.5rem_7rem_1.5rem] items-center gap-2 px-2 py-2 text-left hover:bg-cyan-950/25",
-                  "aria-expanded": isExpanded,
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[10px] font-semibold text-slate-300", children: formatAssistCurrencyDate(row.date || date) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-[11px] font-semibold text-slate-100", title: row.requester, children: row.requester }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-600/80 bg-slate-900/80 px-1.5 py-1 text-center text-[9px] font-semibold text-slate-300", children: getAssistCurrencyEventTypeLabel(row.requestType) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded border px-1.5 py-1 text-center text-[9px] font-semibold ${row.scheduled ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: row.scheduled ? "In Priority Table" : "Source only" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `justify-self-end text-[12px] text-cyan-100 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`, children: "v" })
-                  ]
-                }
-              ),
-              isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-800 bg-slate-900/45 px-2 pb-2 pt-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-[11px] font-semibold text-slate-100", title: row.currency, children: row.currency }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "truncate text-[9px] text-slate-400", title: row.requester, children: [
-                      "Requested by ",
-                      row.requester
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `shrink-0 rounded border px-1.5 py-1 text-[9px] font-semibold ${row.scheduled ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: row.scheduled ? "In build queue" : "Not scheduled" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
-                    "Date",
-                    row.source === "build-priorities" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "date",
-                        value: row.date || date,
-                        onChange: (event) => patchAssistCurrencyRequestAndQueue(row.id, { dateRequested: event.target.value }, row.requestType),
-                        className: fieldClass2
-                      }
-                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: formatAssistCurrencyDate(row.date || date) })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
-                    "Time",
-                    row.source === "build-priorities" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "select",
-                      {
-                        value: parseTimeToDecimal(row.requestedTime || formatTime2(row.takeoff)),
-                        onChange: (event) => patchAssistCurrencyRequestAndQueue(row.id, { requestedTime: formatTime2(Number(event.target.value)) }, row.requestType),
-                        className: fieldClass2,
-                        children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `currency-row-time-${row.id}-${option.label}`))
-                      }
-                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: formatTime2(row.takeoff) })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
-                    "Currency Event",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: row.currency })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500", children: [
-                    "Priority",
-                    row.source === "build-priorities" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "select",
-                      {
-                        value: row.priority || "Medium",
-                        onChange: (event) => patchAssistCurrencyRequestAndQueue(row.id, { priority: event.target.value }, row.requestType),
-                        className: fieldClass2,
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
-                        ]
-                      }
-                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: fieldClass2, children: row.priority || "High" })
-                  ] })
-                ] }),
-                row.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 rounded border border-slate-800 bg-slate-900/70 px-2 py-1 text-[9px] text-slate-400", children: row.notes }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap items-center justify-end gap-1 text-[9px]", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => {
-                        selectAirCombatTileCurrency(row);
-                        setShowAssistCurrencyForm(true);
-                      },
-                      className: "rounded border border-cyan-400/45 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10",
-                      children: "Edit"
-                    }
-                  ),
-                  row.source === "build-priorities" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => submitAssistCurrencyRequest(row.id),
-                      className: `rounded px-2 py-1 font-semibold text-white ${row.scheduled ? "bg-sky-600 hover:bg-sky-700" : "bg-orange-500 hover:bg-orange-600"}`,
-                      children: row.scheduled ? "Re-submit" : "Schedule"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => {
-                        if (row.source === "build-priorities") ignoreAssistCurrencyRequest(row.id);
-                        else {
-                          const remote = highestPriorityCurrencyRows.find((item) => item.id === row.id);
-                          if (remote) ignorePriorityEvents([remote.event]);
-                        }
-                      },
-                      className: "rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100 hover:bg-rose-500/10",
-                      children: "Ignore"
-                    }
-                  )
-                ] })
-              ] })
-            ] }, rowKey);
-          })
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/25 bg-slate-950/45 px-2 py-2 text-[10px] text-slate-300", children: "Submitted staff currency requests are managed in the Priority Table above. Use this section only to add a new staff currency request." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {

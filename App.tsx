@@ -1221,7 +1221,6 @@ const DfpSidePanelTimeline: React.FC<{
     }, [isFixedCrewNeoAssist]);
     const [showAssistTaskForm, setShowAssistTaskForm] = useState(false);
     const [showAssistCurrencyForm, setShowAssistCurrencyForm] = useState(false);
-    const [expandedAssistCurrencyRowId, setExpandedAssistCurrencyRowId] = useState<string | null>(null);
     const [airCombatAssistMode, setAirCombatAssistMode] = useState<'tile' | 'wizard'>('tile');
     const [selectedAssistPrioritySource, setSelectedAssistPrioritySource] = useState<{ kind: 'task' | 'currency'; id: string } | null>(null);
     const [wizardStep, setWizardStep] = useState(0);
@@ -2927,9 +2926,17 @@ const DfpSidePanelTimeline: React.FC<{
         const year = String(parsed.getUTCFullYear()).slice(-2);
         return `${day} ${month} ${year}`;
     };
-    const getAssistCurrencyEventTypeLabel = (requestType?: string): string => (
-        requestType === 'ftd' ? simulatorResourceLabel || 'Simulator' : 'Flight'
-    );
+    const getLocalDateKey = (value = new Date()): string => {
+        const year = value.getFullYear();
+        const month = String(value.getMonth() + 1).padStart(2, '0');
+        const day = String(value.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    const isAssistDatePastOrToday = (value?: string | null): boolean => {
+        const raw = String(value || '').trim().slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
+        return raw <= getLocalDateKey();
+    };
     const saveAssistCurrencyRequest = (id: string) => {
         patchAssistCurrencyRequest(id, { submitted: false, includeInBuild: false });
     };
@@ -3244,6 +3251,9 @@ const DfpSidePanelTimeline: React.FC<{
         if ((event.date || date) !== date) {
             return { label: 'Other date', className: 'neo-assist-status-pill-warning border-amber-200 bg-amber-50 text-amber-800' };
         }
+        if ((event as any).isSctSourceOnly) {
+            return { label: 'Submitted', className: 'neo-assist-status-pill-ready border-sky-200 bg-sky-50 text-sky-700' };
+        }
         if (!event.flightNumber && !event.taskingName && !event.currency) {
             return { label: 'Needs event', className: 'neo-assist-status-pill-error border-rose-200 bg-rose-50 text-rose-700' };
         }
@@ -3252,8 +3262,74 @@ const DfpSidePanelTimeline: React.FC<{
         }
         return { label: 'Ready', className: 'neo-assist-status-pill-ready border-emerald-200 bg-emerald-50 text-emerald-700' };
     };
-    const assistBuildQueueRows = useMemo(() => (
-        highestPriorityEvents
+    const buildAssistPriorityEventFromSctRequest = (request: SctRequest, requestType: 'flight' | 'ftd'): ScheduleEvent => {
+        const requestedTime = request.requestedTime || formatTime(requestType === 'ftd' ? ftdStartTime : flyingStartTime);
+        const primaryName = String(request.name || request.crewIndividual || request.crewDisplayLabel || '').trim();
+        const secondaryCrew = String((request as any).crewMember || (request as any).crewDisplayLabel || (request as any).secondCrewName || (request as any).crewMemberName || (request as any).crew || '').trim();
+        const eventCode = String(request.event || request.currency || 'Currency').trim();
+        const flightType = request.flightType === 'Dual' ? 'Dual' : 'Solo';
+        return {
+            id: `sct-source-${requestType}-${request.id}`,
+            sctRequestId: request.id,
+            date: request.dateRequested || date,
+            type: requestType,
+            instructor: primaryName,
+            pilot: primaryName,
+            student: '',
+            crew: flightType === 'Dual' ? secondaryCrew : '',
+            flightNumber: eventCode,
+            duration: defaultAssistCurrencyDuration,
+            startTime: parseTimeToDecimal(requestedTime),
+            resourceId: '',
+            color: 'bg-amber-500/80',
+            flightType,
+            soloOrDual: flightType,
+            locationType: 'Local',
+            origin: locationCode,
+            destination: locationCode,
+            eventCategory: 'currency',
+            currency: eventCode,
+            currencyAudience: 'staff',
+            priority: request.priority || 'High',
+            notes: request.notes || '',
+            aircraftConfigId: request.aircraftConfigId,
+            isTimeFixed: false,
+            isMandatoryTasking: request.priority === 'High' || request.includeInBuild || request.submitted,
+            ...(requestType === 'flight' && request.aircraftConfigId ? { acceptableAircraftConfigs: [request.aircraftConfigId] } : {}),
+            requestedByName: String((request as any).requestedByName || (request as any).createdByName || (request as any).submittedByName || request.name || primaryName || 'Requester').trim(),
+            sctRequestType: requestType,
+            isSctSourceOnly: true,
+        } as ScheduleEvent;
+    };
+    const assistBuildQueueRows = useMemo(() => {
+        const queuedSctRequestIds = new Set(
+            highestPriorityEvents
+                .map(event => String((event as any).sctRequestId || '').trim())
+                .filter(Boolean)
+        );
+        const queuedCurrencyDraftIds = new Set(
+            highestPriorityEvents
+                .map(event => String((event as any).currencyDraftId || '').trim())
+                .filter(Boolean)
+        );
+        const queuedEventIds = new Set(highestPriorityEvents.map(event => String(event.id || '').trim()).filter(Boolean));
+        const sourceCurrencyEvents = [
+            ...sctFlights.map(request => ({ request, type: 'flight' as const })),
+            ...sctFtds.map(request => ({ request, type: 'ftd' as const })),
+        ]
+            .filter(({ request }) => request.submitted || request.includeInBuild || request.priority === 'High')
+            .filter(({ request, type }) => {
+                const requestId = String(request.id || '').trim();
+                if (!requestId) return false;
+                if (queuedSctRequestIds.has(requestId) || queuedCurrencyDraftIds.has(requestId)) return false;
+                if (queuedEventIds.has(`sct-${type}-${requestId}`) || queuedEventIds.has(`neo-assist-currency-${requestId}`)) return false;
+                return true;
+            })
+            .map(({ request, type }) => buildAssistPriorityEventFromSctRequest(request, type));
+        return [
+            ...highestPriorityEvents,
+            ...sourceCurrencyEvents,
+        ]
             .filter(event => !String(event.id || '').startsWith('tasking-formation-member-'))
             .map((event, index) => {
                 const group = getAssistBuildQueueGroup(event);
@@ -3269,8 +3345,8 @@ const DfpSidePanelTimeline: React.FC<{
                     scheduler: getAssistBuildQueueScheduler(event),
                     status: getAssistBuildQueueStatus(event),
                 };
-            })
-    ), [activeUnitCode, date, highestPriorityEvents, normalisedAssistOperationalModel]);
+            });
+    }, [activeUnitCode, date, defaultAssistCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, locationCode, normalisedAssistOperationalModel, sctFlights, sctFtds]);
     const filteredAssistBuildQueueRows = useMemo(() => {
         const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
         return assistBuildQueueRows.filter(row => {
@@ -3380,6 +3456,7 @@ const DfpSidePanelTimeline: React.FC<{
     };
     const selectedAssistPrioritySection = getAssistPrioritySourceSection(assistPriorityTypeFilter);
     const moveAssistBuildQueueEvent = (eventId: string, direction: -1 | 1) => {
+        if (String(eventId || '').startsWith('sct-source-')) return;
         const currentIndex = highestPriorityEvents.findIndex(event => event.id === eventId);
         const nextIndex = currentIndex + direction;
         if (currentIndex < 0 || nextIndex < 0 || nextIndex >= highestPriorityEvents.length) return;
@@ -3387,7 +3464,15 @@ const DfpSidePanelTimeline: React.FC<{
         [nextEvents[currentIndex], nextEvents[nextIndex]] = [nextEvents[nextIndex], nextEvents[currentIndex]];
         onReorderPriorityEvents(nextEvents);
     };
+    const patchAssistBuildQueueSctEvent = (event: ScheduleEvent, updates: Partial<SctRequest>): boolean => {
+        const requestId = String((event as any).sctRequestId || '').trim();
+        const requestType = String((event as any).sctRequestType || getAssistCurrencyRequestType(requestId || event.id)) === 'ftd' ? 'ftd' : 'flight';
+        if (!requestId) return false;
+        patchAssistCurrencyRequestAndQueue(requestId, updates, requestType);
+        return true;
+    };
     const setAssistBuildQueuePriority = (event: ScheduleEvent, priority: 'High' | 'Medium' | 'Low') => {
+        if (patchAssistBuildQueueSctEvent(event, { priority, includeInBuild: priority === 'High' || (event as any).includeInBuild, submitted: true })) return;
         onUpdatePriorityEvent(event.id, {
             priority,
             isMandatoryTasking: priority === 'High' ? true : event.isTaskingRequest ? false : event.isMandatoryTasking,
@@ -3396,9 +3481,18 @@ const DfpSidePanelTimeline: React.FC<{
     const setAssistBuildQueueScheduler = (event: ScheduleEvent, scheduler: 'Mandatory' | 'Desirable' | 'Ignore') => {
         if (scheduler === 'Ignore') {
             setEditingAssistPriorityEventId(current => current === event.id ? null : current);
+            if ((event as any).sctRequestId) {
+                ignoreAssistCurrencyRequest(String((event as any).sctRequestId));
+                return;
+            }
             void onDeletePriorityEvent(event.id);
             return;
         }
+        if (patchAssistBuildQueueSctEvent(event, {
+            priority: scheduler === 'Mandatory' ? 'High' : 'Medium',
+            includeInBuild: true,
+            submitted: true,
+        })) return;
         onUpdatePriorityEvent(event.id, {
             priority: scheduler === 'Mandatory' ? 'High' : 'Medium',
             isMandatoryTasking: scheduler === 'Mandatory',
@@ -3413,9 +3507,11 @@ const DfpSidePanelTimeline: React.FC<{
         if (group === 'currency' || group === 'trainee-currency') {
             updates.currency = value;
         }
+        if ((group === 'currency' || group === 'trainee-currency') && patchAssistBuildQueueSctEvent(event, { event: value, currency: value })) return;
         onUpdatePriorityEvent(event.id, updates);
     };
     const updateAssistBuildQueueEventCrew = (event: ScheduleEvent, value: string) => {
+        if (patchAssistBuildQueueSctEvent(event, { name: value })) return;
         const updates: Partial<ScheduleEvent> = { crew: value };
         if (event.instructor) updates.instructor = value;
         else if (event.pilot) updates.pilot = value;
@@ -3424,17 +3520,20 @@ const DfpSidePanelTimeline: React.FC<{
         onUpdatePriorityEvent(event.id, updates);
     };
     const updateAssistBuildQueuePrimaryCrew = (event: ScheduleEvent, value: string) => {
+        if (patchAssistBuildQueueSctEvent(event, { name: value })) return;
         const updates: Partial<ScheduleEvent> = {};
         if (event.instructor) updates.instructor = value;
         else updates.pilot = value;
         onUpdatePriorityEvent(event.id, updates);
     };
     const updateAssistBuildQueueSecondaryCrew = (event: ScheduleEvent, value: string) => {
+        if (patchAssistBuildQueueSctEvent(event, { crewMember: value, crewDisplayLabel: value } as Partial<SctRequest>)) return;
         const updates: Partial<ScheduleEvent> = { crew: value };
         if (event.student) updates.student = value;
         onUpdatePriorityEvent(event.id, updates);
     };
     const updateAssistBuildQueueFlightType = (event: ScheduleEvent, flightType: 'Solo' | 'Dual') => {
+        if (patchAssistBuildQueueSctEvent(event, { flightType, ...(flightType === 'Solo' ? { crewMember: '', crewDisplayLabel: '' } : {}) } as Partial<SctRequest>)) return;
         const updates: Partial<ScheduleEvent> & Record<string, any> = {
             flightType,
             soloOrDual: flightType,
@@ -3655,12 +3754,17 @@ const DfpSidePanelTimeline: React.FC<{
                                                 <span className="text-slate-400">-</span>
                                             )}
                                         </td>
-                                        <td className="px-2 py-2 align-middle font-mono text-slate-700">
+                                        <td className={`px-2 py-2 align-middle font-mono ${!isEditing && isAssistDatePastOrToday(row.event.date || date) ? 'font-bold text-red-700' : 'text-slate-700'}`}>
                                             {isEditing ? (
                                                 <input
                                                     type="date"
                                                     value={row.event.date || date}
-                                                    onChange={event => onUpdatePriorityEvent(row.event.id, { date: event.target.value })}
+                                                    onChange={event => {
+                                                        const nextDate = event.target.value;
+                                                        if (!patchAssistBuildQueueSctEvent(row.event, { dateRequested: nextDate })) {
+                                                            onUpdatePriorityEvent(row.event.id, { date: nextDate });
+                                                        }
+                                                    }}
                                                     className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
                                                 />
                                             ) : formatAssistCurrencyDate(row.event.date || date)}
@@ -3729,7 +3833,12 @@ const DfpSidePanelTimeline: React.FC<{
                                             {isEditing ? (
                                                 <select
                                                     value={row.event.startTime || 0}
-                                                    onChange={event => onUpdatePriorityEvent(row.event.id, { startTime: Number(event.target.value) })}
+                                                    onChange={event => {
+                                                        const nextTime = Number(event.target.value);
+                                                        if (!patchAssistBuildQueueSctEvent(row.event, { requestedTime: formatTime(nextTime) })) {
+                                                            onUpdatePriorityEvent(row.event.id, { startTime: nextTime });
+                                                        }
+                                                    }}
                                                     className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
                                                 >
                                                     {timeOptions.map(option => <option key={`priority-inline-time-${row.event.id}-${option.label}`} value={option.value}>{option.label}</option>)}
@@ -5382,56 +5491,6 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (renderedAssistSection === 'currency') {
-            const buildPriorityRows = [
-                ...sctFlights.map(request => ({ request, requestType: 'flight' as const })),
-                ...sctFtds.map(request => ({ request, requestType: 'ftd' as const })),
-            ].map(({ request, requestType }) => ({
-                id: request.id,
-                requestType,
-                requester: request.name || request.crewIndividual || request.crewDisplayLabel || 'Not assigned',
-                currency: request.event || request.currency || 'Currency',
-                date: request.dateRequested || date,
-                takeoff: parseTimeToDecimal(request.requestedTime || formatTime(flyingStartTime)),
-                requestedTime: request.requestedTime || formatTime(flyingStartTime),
-                duration: defaultAssistCurrencyDuration,
-                flightType: request.flightType,
-                depPoint: locationCode,
-                arrivalPoint: locationCode,
-                aircraftConfigId: request.aircraftConfigId,
-                priority: request.priority,
-                notes: request.notes || '',
-                saved: true,
-                scheduled: Boolean(request.submitted || request.priority === 'High' || request.includeInBuild),
-                ignored: false,
-                source: 'build-priorities' as const,
-            }));
-            const buildPriorityIds = new Set(buildPriorityRows.map(row => row.id));
-            const visibleRemoteRows = highestPriorityCurrencyRows.filter(remote => {
-                const remoteId = String(remote.id || '');
-                const sourceRequestId = String((remote.event as any).sctRequestId || '');
-                return getAssistBuildQueueGroup(remote.event) === 'currency'
-                    && !buildPriorityIds.has(remoteId)
-                    && !buildPriorityIds.has(sourceRequestId)
-                    && !Array.from(buildPriorityIds).some(id => remoteId === `sct-flight-${id}` || remoteId === `sct-ftd-${id}`);
-            });
-            const rows = [
-                ...buildPriorityRows,
-                ...visibleRemoteRows.map(row => ({
-                    ...row,
-                    requestType: ((row.event as any).sctRequestType || row.event.type || 'flight') === 'ftd' ? 'ftd' as const : 'flight' as const,
-                    requester: getAssistBuildQueuePerson(row.event),
-                    requestedTime: formatTime(row.takeoff),
-                    duration: row.event.duration || defaultAssistCurrencyDuration,
-                    flightType: row.event.flightType || row.event.soloOrDual || 'Solo',
-                    depPoint: row.event.origin || locationCode,
-                    arrivalPoint: row.event.destination || locationCode,
-                    aircraftConfigId: row.event.aircraftConfigId,
-                    priority: row.event.priority || 'High',
-                    notes: row.event.notes || '',
-                    ignored: false,
-                    source: 'remote' as const,
-                })),
-            ];
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
                     <div className="relative flex items-center gap-1.5">
@@ -5462,129 +5521,8 @@ const DfpSidePanelTimeline: React.FC<{
                             </div>
                         )}
                     </div>
-                    <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
-                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No currency requests entered.</p>}
-                        {rows.map(row => {
-                            const rowKey = `${row.source}-${row.id}`;
-                            const isExpanded = expandedAssistCurrencyRowId === rowKey;
-                            return (
-                                <div key={rowKey} className="overflow-hidden rounded border border-slate-700 bg-slate-950/60 transition-all duration-200">
-                                    <button
-                                        type="button"
-                                        onClick={() => setExpandedAssistCurrencyRowId(prev => prev === rowKey ? null : rowKey)}
-                                        className="grid w-full grid-cols-[6.2rem_minmax(0,1fr)_5.5rem_7rem_1.5rem] items-center gap-2 px-2 py-2 text-left hover:bg-cyan-950/25"
-                                        aria-expanded={isExpanded}
-                                    >
-                                        <span className="font-mono text-[10px] font-semibold text-slate-300">{formatAssistCurrencyDate(row.date || date)}</span>
-                                        <span className="min-w-0 truncate text-[11px] font-semibold text-slate-100" title={row.requester}>{row.requester}</span>
-                                        <span className="rounded border border-slate-600/80 bg-slate-900/80 px-1.5 py-1 text-center text-[9px] font-semibold text-slate-300">
-                                            {getAssistCurrencyEventTypeLabel(row.requestType)}
-                                        </span>
-                                        <span className={`rounded border px-1.5 py-1 text-center text-[9px] font-semibold ${row.scheduled ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100' : 'border-amber-400/40 bg-amber-500/10 text-amber-100'}`}>
-                                            {row.scheduled ? 'In Priority Table' : 'Source only'}
-                                        </span>
-                                        <span className={`justify-self-end text-[12px] text-cyan-100 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>v</span>
-                                    </button>
-                                    {isExpanded && (
-                                        <div className="border-t border-slate-800 bg-slate-900/45 px-2 pb-2 pt-2">
-                                            <div className="mb-2 flex items-start justify-between gap-2">
-                                                <div className="min-w-0">
-                                                    <p className="truncate text-[11px] font-semibold text-slate-100" title={row.currency}>{row.currency}</p>
-                                                    <p className="truncate text-[9px] text-slate-400" title={row.requester}>Requested by {row.requester}</p>
-                                                </div>
-                                                <span className={`shrink-0 rounded border px-1.5 py-1 text-[9px] font-semibold ${row.scheduled ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100' : 'border-amber-400/40 bg-amber-500/10 text-amber-100'}`}>
-                                                    {row.scheduled ? 'In build queue' : 'Not scheduled'}
-                                                </span>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                                                    Date
-                                                    {row.source === 'build-priorities' ? (
-                                                        <input
-                                                            type="date"
-                                                            value={row.date || date}
-                                                            onChange={event => patchAssistCurrencyRequestAndQueue(row.id, { dateRequested: event.target.value }, row.requestType)}
-                                                            className={fieldClass}
-                                                        />
-                                                    ) : (
-                                                        <div className={fieldClass}>{formatAssistCurrencyDate(row.date || date)}</div>
-                                                    )}
-                                                </label>
-                                                <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                                                    Time
-                                                    {row.source === 'build-priorities' ? (
-                                                        <select
-                                                            value={parseTimeToDecimal(row.requestedTime || formatTime(row.takeoff))}
-                                                            onChange={event => patchAssistCurrencyRequestAndQueue(row.id, { requestedTime: formatTime(Number(event.target.value)) }, row.requestType)}
-                                                            className={fieldClass}
-                                                        >
-                                                            {timeOptions.map(option => <option key={`currency-row-time-${row.id}-${option.label}`} value={option.value}>{option.label}</option>)}
-                                                        </select>
-                                                    ) : (
-                                                        <div className={fieldClass}>{formatTime(row.takeoff)}</div>
-                                                    )}
-                                                </label>
-                                                <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                                                    Currency Event
-                                                    <div className={fieldClass}>{row.currency}</div>
-                                                </label>
-                                                <label className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                                                    Priority
-                                                    {row.source === 'build-priorities' ? (
-                                                        <select
-                                                            value={row.priority || 'Medium'}
-                                                            onChange={event => patchAssistCurrencyRequestAndQueue(row.id, { priority: event.target.value as 'High' | 'Medium' | 'Low' }, row.requestType)}
-                                                            className={fieldClass}
-                                                        >
-                                                            <option value="High">High</option>
-                                                            <option value="Medium">Medium</option>
-                                                            <option value="Low">Low</option>
-                                                        </select>
-                                                    ) : (
-                                                        <div className={fieldClass}>{row.priority || 'High'}</div>
-                                                    )}
-                                                </label>
-                                            </div>
-                                            {row.notes && <p className="mt-2 rounded border border-slate-800 bg-slate-900/70 px-2 py-1 text-[9px] text-slate-400">{row.notes}</p>}
-                                            <div className="mt-2 flex flex-wrap items-center justify-end gap-1 text-[9px]">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        selectAirCombatTileCurrency(row);
-                                                        setShowAssistCurrencyForm(true);
-                                                    }}
-                                                    className="rounded border border-cyan-400/45 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10"
-                                                >
-                                                    Edit
-                                                </button>
-                                                {row.source === 'build-priorities' && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => submitAssistCurrencyRequest(row.id)}
-                                                        className={`rounded px-2 py-1 font-semibold text-white ${row.scheduled ? 'bg-sky-600 hover:bg-sky-700' : 'bg-orange-500 hover:bg-orange-600'}`}
-                                                    >
-                                                        {row.scheduled ? 'Re-submit' : 'Schedule'}
-                                                    </button>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (row.source === 'build-priorities') ignoreAssistCurrencyRequest(row.id);
-                                                        else {
-                                                            const remote = highestPriorityCurrencyRows.find(item => item.id === row.id);
-                                                            if (remote) ignorePriorityEvents([remote.event]);
-                                                        }
-                                                    }}
-                                                    className="rounded border border-rose-400/50 px-2 py-1 font-semibold text-rose-100 hover:bg-rose-500/10"
-                                                >
-                                                    Ignore
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                    <div className="rounded border border-cyan-400/25 bg-slate-950/45 px-2 py-2 text-[10px] text-slate-300">
+                        Submitted staff currency requests are managed in the Priority Table above. Use this section only to add a new staff currency request.
                     </div>
                     <button
                         type="button"
