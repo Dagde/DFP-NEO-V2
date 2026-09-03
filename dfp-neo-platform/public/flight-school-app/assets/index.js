@@ -104783,54 +104783,58 @@ const DfpSidePanelTimeline = ({
           ] })
         ] });
       }
-      const renderWindowControl = (label, start, end, setStart, setEnd) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/55 p-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 text-[10px] font-semibold text-cyan-100", children: label }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2", children: [
-          ["Start", start, setStart],
-          ["End", end, setEnd]
-        ].map(([fieldLabel, value, setter]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[8px] uppercase tracking-[0.1em] text-slate-500", children: fieldLabel }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-[42px] text-center font-mono text-[11px] text-slate-100", children: formatCompactTime(value) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => stepTime(value, setter, 1 / 12), className: "rounded-t border border-slate-600 px-1 text-[8px] leading-none text-slate-200", children: "▲" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => stepTime(value, setter, -1 / 12), className: "rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none text-slate-200", children: "▼" })
-            ] })
-          ] })
-        ] }, `${label}-${fieldLabel}`)) })
+      const renderWindowTimeControl = (label, value, setter) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-[52px] rounded border border-slate-300 bg-white px-2 py-1 text-center font-mono text-[12px] text-slate-950", children: formatCompactTime(value) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", "aria-label": `Increase ${label}`, onClick: () => stepTime(value, setter, 1 / 12), className: "rounded-t border border-slate-300 bg-slate-50 px-1.5 text-[8px] leading-none text-slate-700", children: "▲" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", "aria-label": `Decrease ${label}`, onClick: () => stepTime(value, setter, -1 / 12), className: "rounded-b border-x border-b border-slate-300 bg-slate-50 px-1.5 text-[8px] leading-none text-slate-700", children: "▼" })
+        ] })
       ] });
+      const flyingWindowRows = [
+        { key: "flight", label: "Flight", enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
+        { key: "sim", label: simulatorResourceLabel, enabled: true, start: ftdStartTime, end: ftdEndTime, setStart: onUpdateFtdStartTime, setEnd: onUpdateFtdEndTime },
+        { key: "cpt", label: proceduralTrainerResourceLabel, enabled: true, start: ftdStartTime, end: ftdEndTime, setStart: onUpdateFtdStartTime, setEnd: onUpdateFtdEndTime },
+        { key: "night", label: "Night", enabled: allowNightFlying, start: commenceNightFlying, end: ceaseNightFlying, setStart: onUpdateCommenceNightFlying, setEnd: onUpdateCeaseNightFlying, onEnabledChange: onUpdateAllowNightFlying }
+      ];
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-          renderWindowControl("Flight", flyingStartTime, flyingEndTime, onUpdateFlyingStartTime, onUpdateFlyingEndTime),
-          renderWindowControl(simulatorResourceLabel, ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime),
-          renderWindowControl(proceduralTrainerResourceLabel, ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded border border-slate-700 bg-slate-950/55 p-2 text-[10px] text-slate-200", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: allowNightFlying, onChange: (event) => onUpdateAllowNightFlying(event.target.checked) }),
-            "Night window enabled"
-          ] }),
-          allowNightFlying && renderWindowControl("Night", commenceNightFlying, ceaseNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying)
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/55 p-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-left text-[12px] text-slate-900", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-[#e8f3fa] text-[10px] uppercase tracking-[0.12em] text-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 font-semibold", children: "Window" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 font-semibold", children: "Enabled" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 font-semibold", children: "Start" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 font-semibold", children: "End" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-slate-200 bg-[#f8fbfd]", children: flyingWindowRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 font-semibold text-slate-950", children: row.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: row.onEnabledChange ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-2 text-[12px] font-semibold text-slate-700", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: row.enabled, onChange: (event) => row.onEnabledChange?.(event.target.checked) }),
+              row.enabled ? "Yes" : "No"
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700", children: "Yes" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: row.enabled ? renderWindowTimeControl(`${row.label} start`, row.start, row.setStart) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400", children: "Not active" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: row.enabled ? renderWindowTimeControl(`${row.label} end`, row.end, row.setEnd) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400", children: "Not active" }) })
+          ] }, row.key)) })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-300 bg-[#f8fbfd] p-3 text-slate-900 shadow-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-semibold text-cyan-100", children: "Exclusion windows" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[12px] font-semibold text-slate-950", children: "Exclusion windows" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 onClick: () => onUpdateFlyingWindowExclusions([...flyingWindowExclusions, { id: v4(), startTime: flyingStartTime, endTime: Math.min(23.75, flyingStartTime + 0.5), restriction: "both" }]),
-                className: "rounded border border-cyan-400/50 px-2 py-1 text-[9px] text-cyan-100",
+                className: "rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-semibold text-slate-800",
                 children: "Add"
               }
             )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-            flyingWindowExclusions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-slate-500", children: "No exclusions configured." }),
-            flyingWindowExclusions.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-800 p-2", children: [
+            flyingWindowExclusions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[12px] text-slate-500", children: "No exclusions configured." }),
+            flyingWindowExclusions.map((period) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-200 bg-white p-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "time", value: formatTime2(period.startTime), onChange: (event) => updateExclusionPeriod(period.id, { startTime: parseTimeToDecimal(event.target.value) }), className: "rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-slate-100" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "time", value: formatTime2(period.endTime), onChange: (event) => updateExclusionPeriod(period.id, { endTime: parseTimeToDecimal(event.target.value) }), className: "rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-slate-100" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "time", value: formatTime2(period.startTime), onChange: (event) => updateExclusionPeriod(period.id, { startTime: parseTimeToDecimal(event.target.value) }), className: "rounded border border-slate-300 bg-white px-2 py-1 text-[12px] text-slate-950" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "time", value: formatTime2(period.endTime), onChange: (event) => updateExclusionPeriod(period.id, { endTime: parseTimeToDecimal(event.target.value) }), className: "rounded border border-slate-300 bg-white px-2 py-1 text-[12px] text-slate-950" })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => onUpdateFlyingWindowExclusions(flyingWindowExclusions.filter((item) => item.id !== period.id)), className: "rounded border border-rose-400/50 px-2 py-1 text-[9px] text-rose-100", children: "Del" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => onUpdateFlyingWindowExclusions(flyingWindowExclusions.filter((item) => item.id !== period.id)), className: "rounded border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-700", children: "Del" })
             ] }, period.id))
           ] })
         ] })

@@ -4710,60 +4710,87 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                 );
             }
-            const renderWindowControl = (label: string, start: number, end: number, setStart: (time: number) => void, setEnd: (time: number) => void) => (
-                <div className="rounded border border-slate-700 bg-slate-950/55 p-2">
-                    <p className="mb-1 text-[10px] font-semibold text-cyan-100">{label}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        {[
-                            ['Start', start, setStart],
-                            ['End', end, setEnd],
-                        ].map(([fieldLabel, value, setter]) => (
-                            <div key={`${label}-${fieldLabel}`} className="space-y-1">
-                                <span className="block text-[8px] uppercase tracking-[0.1em] text-slate-500">{fieldLabel as string}</span>
-                                <div className="flex items-center gap-1">
-                                    <span className="min-w-[42px] text-center font-mono text-[11px] text-slate-100">{formatCompactTime(value as number)}</span>
-                                    <span className="flex flex-col">
-                                        <button type="button" onClick={() => stepTime(value as number, setter as (time: number) => void, 1 / 12)} className="rounded-t border border-slate-600 px-1 text-[8px] leading-none text-slate-200">▲</button>
-                                        <button type="button" onClick={() => stepTime(value as number, setter as (time: number) => void, -1 / 12)} className="rounded-b border-x border-b border-slate-600 px-1 text-[8px] leading-none text-slate-200">▼</button>
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+            const renderWindowTimeControl = (label: string, value: number, setter: (time: number) => void) => (
+                <div className="flex items-center gap-1">
+                    <span className="min-w-[52px] rounded border border-slate-300 bg-white px-2 py-1 text-center font-mono text-[12px] text-slate-950">{formatCompactTime(value)}</span>
+                    <span className="flex flex-col">
+                        <button type="button" aria-label={`Increase ${label}`} onClick={() => stepTime(value, setter, 1 / 12)} className="rounded-t border border-slate-300 bg-slate-50 px-1.5 text-[8px] leading-none text-slate-700">▲</button>
+                        <button type="button" aria-label={`Decrease ${label}`} onClick={() => stepTime(value, setter, -1 / 12)} className="rounded-b border-x border-b border-slate-300 bg-slate-50 px-1.5 text-[8px] leading-none text-slate-700">▼</button>
+                    </span>
                 </div>
             );
+            const flyingWindowRows: Array<{
+                key: string;
+                label: string;
+                enabled: boolean;
+                start: number;
+                end: number;
+                setStart: (time: number) => void;
+                setEnd: (time: number) => void;
+                onEnabledChange?: (enabled: boolean) => void;
+            }> = [
+                { key: 'flight', label: 'Flight', enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
+                { key: 'sim', label: simulatorResourceLabel, enabled: true, start: ftdStartTime, end: ftdEndTime, setStart: onUpdateFtdStartTime, setEnd: onUpdateFtdEndTime },
+                { key: 'cpt', label: proceduralTrainerResourceLabel, enabled: true, start: ftdStartTime, end: ftdEndTime, setStart: onUpdateFtdStartTime, setEnd: onUpdateFtdEndTime },
+                { key: 'night', label: 'Night', enabled: allowNightFlying, start: commenceNightFlying, end: ceaseNightFlying, setStart: onUpdateCommenceNightFlying, setEnd: onUpdateCeaseNightFlying, onEnabledChange: onUpdateAllowNightFlying },
+            ];
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
-                    <div className="grid grid-cols-2 gap-2">
-                        {renderWindowControl('Flight', flyingStartTime, flyingEndTime, onUpdateFlyingStartTime, onUpdateFlyingEndTime)}
-                        {renderWindowControl(simulatorResourceLabel, ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime)}
-                        {renderWindowControl(proceduralTrainerResourceLabel, ftdStartTime, ftdEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime)}
-                        <label className="flex items-center gap-2 rounded border border-slate-700 bg-slate-950/55 p-2 text-[10px] text-slate-200">
-                            <input type="checkbox" checked={allowNightFlying} onChange={event => onUpdateAllowNightFlying(event.target.checked)} />
-                            Night window enabled
-                        </label>
-                        {allowNightFlying && renderWindowControl('Night', commenceNightFlying, ceaseNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying)}
+                    <div className="overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm">
+                        <table className="w-full text-left text-[12px] text-slate-900">
+                            <thead className="bg-[#e8f3fa] text-[10px] uppercase tracking-[0.12em] text-slate-600">
+                                <tr>
+                                    <th className="px-3 py-2 font-semibold">Window</th>
+                                    <th className="px-3 py-2 font-semibold">Enabled</th>
+                                    <th className="px-3 py-2 font-semibold">Start</th>
+                                    <th className="px-3 py-2 font-semibold">End</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200 bg-[#f8fbfd]">
+                                {flyingWindowRows.map(row => (
+                                    <tr key={row.key}>
+                                        <td className="px-3 py-2 font-semibold text-slate-950">{row.label}</td>
+                                        <td className="px-3 py-2">
+                                            {row.onEnabledChange ? (
+                                                <label className="inline-flex items-center gap-2 text-[12px] font-semibold text-slate-700">
+                                                    <input type="checkbox" checked={row.enabled} onChange={event => row.onEnabledChange?.(event.target.checked)} />
+                                                    {row.enabled ? 'Yes' : 'No'}
+                                                </label>
+                                            ) : (
+                                                <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">Yes</span>
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            {row.enabled ? renderWindowTimeControl(`${row.label} start`, row.start, row.setStart) : <span className="text-slate-400">Not active</span>}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            {row.enabled ? renderWindowTimeControl(`${row.label} end`, row.end, row.setEnd) : <span className="text-slate-400">Not active</span>}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                    <div className="rounded border border-slate-700 bg-slate-950/55 p-2">
+                    <div className="rounded-md border border-slate-300 bg-[#f8fbfd] p-3 text-slate-900 shadow-sm">
                         <div className="mb-2 flex items-center justify-between">
-                            <p className="text-[10px] font-semibold text-cyan-100">Exclusion windows</p>
+                            <p className="text-[12px] font-semibold text-slate-950">Exclusion windows</p>
                             <button
                                 type="button"
                                 onClick={() => onUpdateFlyingWindowExclusions([...flyingWindowExclusions, { id: uuidv4(), startTime: flyingStartTime, endTime: Math.min(23.75, flyingStartTime + 0.5), restriction: 'both' }])}
-                                className="rounded border border-cyan-400/50 px-2 py-1 text-[9px] text-cyan-100"
+                                className="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-semibold text-slate-800"
                             >
                                 Add
                             </button>
                         </div>
                         <div className="space-y-2">
-                            {flyingWindowExclusions.length === 0 && <p className="text-[10px] text-slate-500">No exclusions configured.</p>}
+                            {flyingWindowExclusions.length === 0 && <p className="text-[12px] text-slate-500">No exclusions configured.</p>}
                             {flyingWindowExclusions.map(period => (
-                                <div key={period.id} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-800 p-2">
+                                <div key={period.id} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-200 bg-white p-2">
                                     <div className="grid grid-cols-2 gap-2">
-                                        <input type="time" value={formatTime(period.startTime)} onChange={event => updateExclusionPeriod(period.id, { startTime: parseTimeToDecimal(event.target.value) })} className="rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-slate-100" />
-                                        <input type="time" value={formatTime(period.endTime)} onChange={event => updateExclusionPeriod(period.id, { endTime: parseTimeToDecimal(event.target.value) })} className="rounded border border-slate-600 bg-slate-950 px-1 py-1 text-[10px] text-slate-100" />
+                                        <input type="time" value={formatTime(period.startTime)} onChange={event => updateExclusionPeriod(period.id, { startTime: parseTimeToDecimal(event.target.value) })} className="rounded border border-slate-300 bg-white px-2 py-1 text-[12px] text-slate-950" />
+                                        <input type="time" value={formatTime(period.endTime)} onChange={event => updateExclusionPeriod(period.id, { endTime: parseTimeToDecimal(event.target.value) })} className="rounded border border-slate-300 bg-white px-2 py-1 text-[12px] text-slate-950" />
                                     </div>
-                                    <button type="button" onClick={() => onUpdateFlyingWindowExclusions(flyingWindowExclusions.filter(item => item.id !== period.id))} className="rounded border border-rose-400/50 px-2 py-1 text-[9px] text-rose-100">Del</button>
+                                    <button type="button" onClick={() => onUpdateFlyingWindowExclusions(flyingWindowExclusions.filter(item => item.id !== period.id))} className="rounded border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-700">Del</button>
                                 </div>
                             ))}
                         </div>
