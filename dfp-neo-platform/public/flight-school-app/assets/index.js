@@ -49809,7 +49809,11 @@ const PrioritiesView = ({
                 focusSubsectionId: "platform-standard-missions"
               }),
               className: "btn-aluminium-brushed flex h-[41px] w-[68px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight",
-              children: "Add/delete"
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                "Add &",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Delete"
+              ] })
             }
           )
         ] }),

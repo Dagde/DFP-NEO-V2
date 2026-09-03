@@ -5119,7 +5119,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 })}
                 className="btn-aluminium-brushed flex h-[41px] w-[68px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight"
               >
-                Add/delete
+                <span>Add &amp;<br />Delete</span>
               </button>
             </div>
             {renderSavedSpecialEvents()}
