@@ -104132,7 +104132,7 @@ const DfpSidePanelTimeline = ({
                     "aria-label": `Delete ${row.label}`,
                     title: "Delete row",
                     onClick: () => deleteAssistBuildQueueRow(row),
-                    className: "rounded border border-rose-200 bg-rose-50 px-1.5 py-1 text-[10px] font-semibold text-rose-700 hover:bg-rose-100",
+                    className: "px-0.5 py-1 text-[13px] leading-none text-rose-600 transition hover:text-rose-800",
                     children: "🗑"
                   }
                 )
