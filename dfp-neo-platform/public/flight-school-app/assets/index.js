@@ -105609,9 +105609,9 @@ This cannot be undone.`,
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-56 overflow-auto rounded border border-slate-700 bg-slate-950/45", children: [
           rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No directed task requests entered." }),
-          rows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1036px] table-fixed text-[10px]", children: [
+          rows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1092px] table-fixed text-[10px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[150px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[136px]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[76px]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[88px]" }),
@@ -105621,7 +105621,8 @@ This cannot be undone.`,
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[70px]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[86px]" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[56px]" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-900 text-[8px] uppercase tracking-[0.12em] text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Actions" }),
@@ -105634,7 +105635,8 @@ This cannot be undone.`,
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Aircraft" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "CONFIG" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Priority" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Status" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Status" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-center", children: "Edit" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-slate-800", children: rows.map((row) => {
               const rowKey = `${row.source}-${row.id}`;
@@ -105644,7 +105646,6 @@ This cannot be undone.`,
               const updateRow = (updates, eventUpdates) => row.source === "local" ? updateLocal(updates) : updateRemote(eventUpdates || updates);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: isEditingRow ? "bg-cyan-950/60" : "bg-slate-950/35", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setEditingAssistTaskRowId((current) => current === rowKey ? null : rowKey), className: "w-[48px] rounded border border-cyan-400/50 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10", children: isEditingRow ? "Done" : "Edit" }),
                   row.source === "local" && !row.saved && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => saveAssistTaskRequest(row.id), className: "w-[64px] rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700", children: "Save" }),
                   isAirCombatTileMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex w-[64px] items-center justify-center gap-1 rounded border border-cyan-400/50 px-2 py-1 text-cyan-100", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -105711,7 +105712,8 @@ This cannot be undone.`,
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
                 ] }) : row.priority }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: row.ignored ? "Ignored" : row.scheduled ? "Scheduled" : row.saved ? "Saved" : "Draft" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: row.ignored ? "Ignored" : row.scheduled ? "Scheduled" : row.saved ? "Saved" : "Draft" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setEditingAssistTaskRowId((current) => current === rowKey ? null : rowKey), className: "w-[48px] rounded border border-cyan-400/50 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10", children: isEditingRow ? "Done" : "Edit" }) })
               ] }, rowKey);
             }) })
           ] })

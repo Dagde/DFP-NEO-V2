@@ -5639,9 +5639,9 @@ const DfpSidePanelTimeline: React.FC<{
                     <div className="max-h-56 overflow-auto rounded border border-slate-700 bg-slate-950/45">
                         {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No directed task requests entered.</p>}
                         {rows.length > 0 && (
-                            <table className="w-full min-w-[1036px] table-fixed text-[10px]">
+                            <table className="w-full min-w-[1092px] table-fixed text-[10px]">
                                 <colgroup>
-                                    <col className="w-[150px]" />
+                                    <col className="w-[136px]" />
                                     <col className="w-[90px]" />
                                     <col className="w-[76px]" />
                                     <col className="w-[88px]" />
@@ -5652,6 +5652,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     <col className="w-[90px]" />
                                     <col className="w-[86px]" />
                                     <col className="w-[90px]" />
+                                    <col className="w-[56px]" />
                                 </colgroup>
                                 <thead className="sticky top-0 z-10 bg-slate-900 text-[8px] uppercase tracking-[0.12em] text-slate-400">
                                     <tr>
@@ -5666,6 +5667,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">CONFIG</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Priority</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Status</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-center">Edit</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800">
@@ -5681,9 +5683,6 @@ const DfpSidePanelTimeline: React.FC<{
                                             <tr key={rowKey} className={isEditingRow ? 'bg-cyan-950/60' : 'bg-slate-950/35'}>
                                                 <td className="px-2 py-2 align-top">
                                                     <div className="flex flex-wrap items-center gap-1">
-                                                        <button type="button" onClick={() => setEditingAssistTaskRowId(current => current === rowKey ? null : rowKey)} className="w-[48px] rounded border border-cyan-400/50 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10">
-                                                            {isEditingRow ? 'Done' : 'Edit'}
-                                                        </button>
                                                         {row.source === 'local' && !row.saved && (
                                                             <button type="button" onClick={() => saveAssistTaskRequest(row.id)} className="w-[64px] rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700">Save</button>
                                                         )}
@@ -5796,6 +5795,11 @@ const DfpSidePanelTimeline: React.FC<{
                                                 </td>
                                                 <td className="px-2 py-2">
                                                     {row.ignored ? 'Ignored' : row.scheduled ? 'Scheduled' : row.saved ? 'Saved' : 'Draft'}
+                                                </td>
+                                                <td className="px-2 py-2 text-center">
+                                                    <button type="button" onClick={() => setEditingAssistTaskRowId(current => current === rowKey ? null : rowKey)} className="w-[48px] rounded border border-cyan-400/50 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10">
+                                                        {isEditingRow ? 'Done' : 'Edit'}
+                                                    </button>
                                                 </td>
                                             </tr>
                                         );
