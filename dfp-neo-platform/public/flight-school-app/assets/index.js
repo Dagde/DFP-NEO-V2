@@ -103575,7 +103575,7 @@ const DfpSidePanelTimeline = ({
         ...renderedDiagnostics
       });
     }, 100);
-  }, [activeAssistPage, assistPriorityTypeFilter, date, filteredAssistBuildQueueRows]);
+  }, [activeAssistPage, assistPriorityDateDrafts, assistPriorityTypeFilter, date, editingAssistPriorityEventId, filteredAssistBuildQueueRows]);
   const assistPriorityUnitOptions = reactExports.useMemo(() => Array.from(new Set(assistBuildQueueRows.map((row) => row.unit).filter(Boolean))).sort((left, right) => left.localeCompare(right)), [assistBuildQueueRows]);
   const assistCrewSelectGroups = reactExports.useMemo(() => {
     const normaliseUnit = (value) => String(value || "Unassigned Unit").trim() || "Unassigned Unit";
