@@ -101605,6 +101605,7 @@ const DfpSidePanelTimeline = ({
   syllabusDetails,
   taskProfiles,
   taskProfileAbbreviations,
+  standardMissionProfiles = [],
   coursePriorities,
   onUpdateCoursePriorities,
   coursePercentages,
@@ -103530,6 +103531,44 @@ const DfpSidePanelTimeline = ({
       isSctSourceOnly: true
     };
   };
+  const buildAssistPriorityEventFromStandardMission = (profile) => {
+    const resourceType = String(profile.resourceType || "Flight");
+    const eventType = resourceType === "FTD" ? "ftd" : resourceType === "Ground" ? "ground" : resourceType === "CPT" ? "cpt" : "flight";
+    const aircraftCount = Math.max(1, Math.floor(Number(profile.isFormation ? profile.formationAircraft : 1) || 1));
+    return {
+      id: `standard-mission-source-${profile.id}`,
+      date,
+      type: eventType,
+      instructor: "",
+      pilot: "",
+      student: "",
+      crew: "",
+      group: profile.unitCode || profile.compositeUnitCode || activeUnitCode || "Unit",
+      flightNumber: profile.shortTitle || profile.missionName || "Special",
+      duration: Math.max(0.1, Number(profile.durationMinutes || 60) / 60),
+      startTime: eventType === "ftd" ? ftdStartTime : flyingStartTime,
+      resourceId: "",
+      color: "bg-slate-500/80",
+      flightType: aircraftCount > 1 ? "Dual" : "Solo",
+      soloOrDual: aircraftCount > 1 ? "Dual" : "Solo",
+      locationType: profile.departureLocationCode !== profile.arrivalLocationCode ? "Land Away" : "Local",
+      origin: profile.departureLocationCode || locationCode,
+      destination: profile.arrivalLocationCode || locationCode,
+      eventCategory: "special",
+      priority: "Medium",
+      notes: profile.description || "",
+      aircraftConfigId: profile.config && profile.config !== "ANY" ? profile.config : void 0,
+      acceptableAircraftConfigs: profile.config && profile.config !== "ANY" ? [profile.config] : void 0,
+      aircraftCount,
+      isTimeFixed: false,
+      isMandatoryTasking: false,
+      isFormation: aircraftCount > 1,
+      formationSize: aircraftCount > 1 ? aircraftCount : void 0,
+      requestedByName: "Settings",
+      standardMissionProfileId: profile.id,
+      isStandardMissionSourceOnly: true
+    };
+  };
   const isAssistSctCurrencyRequestVisible = (request) => Boolean(
     String(request.event || request.currency || "").trim() || String(request.name || request.crewIndividual || request.crewDisplayLabel || "").trim()
   );
@@ -103541,6 +103580,9 @@ const DfpSidePanelTimeline = ({
       highestPriorityEvents.map((event) => String(event.currencyDraftId || "").trim()).filter(Boolean)
     );
     const queuedEventIds = new Set(highestPriorityEvents.map((event) => String(event.id || "").trim()).filter(Boolean));
+    const queuedStandardMissionIds = new Set(
+      highestPriorityEvents.map((event) => String(event.standardMissionProfileId || "").trim()).filter(Boolean)
+    );
     const sourceCurrencyEvents = [
       ...sctFlights.map((request) => ({ request, type: "flight" })),
       ...sctFtds.map((request) => ({ request, type: "ftd" }))
@@ -103551,9 +103593,11 @@ const DfpSidePanelTimeline = ({
       if (queuedEventIds.has(`sct-${type}-${requestId}`) || queuedEventIds.has(`neo-assist-currency-${requestId}`)) return false;
       return true;
     }).map(({ request, type }) => buildAssistPriorityEventFromSctRequest(request, type));
+    const sourceStandardMissionEvents = standardMissionProfiles.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((profile) => !queuedStandardMissionIds.has(profile.id)).filter((profile) => !queuedEventIds.has(`standard-mission-source-${profile.id}`)).map((profile) => buildAssistPriorityEventFromStandardMission(profile));
     return [
       ...highestPriorityEvents,
-      ...sourceCurrencyEvents
+      ...sourceCurrencyEvents,
+      ...sourceStandardMissionEvents
     ].filter((event) => !String(event.id || "").startsWith("tasking-formation-member-")).map((event, index) => {
       const group = getAssistBuildQueueGroup(event);
       return {
@@ -103570,7 +103614,7 @@ const DfpSidePanelTimeline = ({
         status: getAssistBuildQueueStatus(event)
       };
     });
-  }, [activeUnitCode, date, defaultAssistCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, locationCode, normalisedAssistOperationalModel, sctFlights, sctFtds]);
+  }, [activeUnitCode, date, defaultAssistCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, locationCode, normalisedAssistOperationalModel, sctFlights, sctFtds, standardMissionProfiles]);
   const filteredAssistBuildQueueRows = reactExports.useMemo(() => {
     const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
     return assistBuildQueueRows.filter((row) => {
@@ -103772,7 +103816,8 @@ const DfpSidePanelTimeline = ({
   };
   const selectedAssistPrioritySection = getAssistPrioritySourceSection(assistPriorityTypeFilter);
   const moveAssistBuildQueueEvent = (eventId, direction) => {
-    if (String(eventId || "").startsWith("sct-source-")) return;
+    const eventKey = String(eventId || "");
+    if (eventKey.startsWith("sct-source-") || eventKey.startsWith("standard-mission-source-")) return;
     const currentIndex = highestPriorityEvents.findIndex((event) => event.id === eventId);
     const nextIndex = currentIndex + direction;
     if (currentIndex < 0 || nextIndex < 0 || nextIndex >= highestPriorityEvents.length) return;
@@ -103788,6 +103833,7 @@ const DfpSidePanelTimeline = ({
     return true;
   };
   const setAssistBuildQueuePriority = (event, priority) => {
+    if (event.isStandardMissionSourceOnly) return;
     if (patchAssistBuildQueueSctEvent(event, { priority, includeInBuild: true, submitted: true })) return;
     onUpdatePriorityEvent(event.id, {
       priority,
@@ -103795,6 +103841,7 @@ const DfpSidePanelTimeline = ({
     });
   };
   const updateAssistBuildQueueAircraftCount = (event, value) => {
+    if (event.isStandardMissionSourceOnly) return;
     const aircraftCount = normaliseAssistAircraftCount(value);
     if (patchAssistBuildQueueSctEvent(event, { aircraftCount })) return;
     const updates = { aircraftCount };
@@ -103808,6 +103855,10 @@ const DfpSidePanelTimeline = ({
   };
   const deleteAssistBuildQueueRow = async (row) => {
     const event = row.event;
+    if (event.isStandardMissionSourceOnly) {
+      onOpenPrioritiesSection?.(".saved-special-events-card");
+      return;
+    }
     const requestId = String(event.sctRequestId || "").trim();
     const requestType = String(event.sctRequestType || getAssistCurrencyRequestType(requestId || event.id)) === "ftd" ? "ftd" : "flight";
     const label = String(row.label || event.flightNumber || event.currency || "this priority row").trim();
@@ -103829,6 +103880,7 @@ This cannot be undone.`,
     if (!event.isSctSourceOnly) void onDeletePriorityEvent(event.id);
   };
   const updateAssistBuildQueueRequestedDate = (event, value) => {
+    if (event.isStandardMissionSourceOnly) return;
     const nextDate = normaliseAssistDateKey(value);
     if (!nextDate) return;
     if (!patchAssistBuildQueueSctEvent(event, { dateRequested: nextDate })) {
@@ -103837,6 +103889,7 @@ This cannot be undone.`,
     setAssistPriorityDateDrafts((prev) => ({ ...prev, [event.id]: formatAssistCurrencyDate(nextDate) }));
   };
   const updateAssistBuildQueueEventLabel = (event, group, value) => {
+    if (event.isStandardMissionSourceOnly) return;
     const updates = { flightNumber: value };
     if (group === "tasking") {
       updates.taskingName = value;
@@ -103849,6 +103902,7 @@ This cannot be undone.`,
     onUpdatePriorityEvent(event.id, updates);
   };
   const updateAssistBuildQueueEventCrew = (event, value) => {
+    if (event.isStandardMissionSourceOnly) return;
     if (patchAssistBuildQueueSctEvent(event, { name: value })) return;
     const updates = { crew: value };
     if (event.instructor) updates.instructor = value;
@@ -103858,6 +103912,7 @@ This cannot be undone.`,
     onUpdatePriorityEvent(event.id, updates);
   };
   const updateAssistBuildQueuePrimaryCrew = (event, value) => {
+    if (event.isStandardMissionSourceOnly) return;
     if (patchAssistBuildQueueSctEvent(event, { name: value })) return;
     const updates = {};
     if (event.instructor) updates.instructor = value;
@@ -103865,12 +103920,14 @@ This cannot be undone.`,
     onUpdatePriorityEvent(event.id, updates);
   };
   const updateAssistBuildQueueSecondaryCrew = (event, value) => {
+    if (event.isStandardMissionSourceOnly) return;
     if (patchAssistBuildQueueSctEvent(event, { crewMember: value, crewDisplayLabel: value })) return;
     const updates = { crew: value };
     if (event.student) updates.student = value;
     onUpdatePriorityEvent(event.id, updates);
   };
   const updateAssistBuildQueueFlightType = (event, flightType) => {
+    if (event.isStandardMissionSourceOnly) return;
     if (patchAssistBuildQueueSctEvent(event, { flightType, ...flightType === "Solo" ? { crewMember: "", crewDisplayLabel: "" } : {} })) return;
     const updates = {
       flightType,
@@ -103883,6 +103940,10 @@ This cannot be undone.`,
     onUpdatePriorityEvent(event.id, updates);
   };
   const selectAssistBuildQueueEvent = (event) => {
+    if (event.isStandardMissionSourceOnly) {
+      onOpenPrioritiesSection?.(".saved-special-events-card");
+      return;
+    }
     const group = getAssistBuildQueueGroup(event);
     if (group === "tasking") {
       selectAirCombatTileTask({
@@ -104216,11 +104277,15 @@ This cannot be undone.`,
                   {
                     type: "button",
                     onClick: () => {
+                      if (row.event.isStandardMissionSourceOnly) {
+                        selectAssistBuildQueueEvent(row.event);
+                        return;
+                      }
                       if (!isEditing) selectAssistBuildQueueEvent(row.event);
                       setEditingAssistPriorityEventId((current) => current === row.event.id ? null : row.event.id);
                     },
                     className: `rounded border px-1.5 py-1 text-[10px] font-semibold ${isEditing ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100" : "border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100"}`,
-                    children: isEditing ? "Done" : "Edit"
+                    children: isEditing ? "Done" : row.event.isStandardMissionSourceOnly ? "Open" : "Edit"
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -145493,6 +145558,7 @@ Do you want to replace the existing entry?`,
                         syllabusDetails: visibleSyllabusDetails,
                         taskProfiles: activeTaskProfiles,
                         taskProfileAbbreviations: activeTaskProfileAbbreviations,
+                        standardMissionProfiles: activeStandardMissionProfiles,
                         coursePriorities,
                         onUpdateCoursePriorities: setCoursePriorities,
                         coursePercentages,

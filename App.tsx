@@ -920,6 +920,7 @@ const DfpSidePanelTimeline: React.FC<{
     syllabusDetails: SyllabusItemDetail[];
     taskProfiles: string[];
     taskProfileAbbreviations: Record<string, string>;
+    standardMissionProfiles?: StandardMissionProfile[];
     coursePriorities: string[];
     onUpdateCoursePriorities: (priorities: string[]) => void;
     coursePercentages: Map<string, number>;
@@ -995,6 +996,7 @@ const DfpSidePanelTimeline: React.FC<{
     syllabusDetails,
     taskProfiles,
     taskProfileAbbreviations,
+    standardMissionProfiles = [],
     coursePriorities,
     onUpdateCoursePriorities,
     coursePercentages,
@@ -3401,6 +3403,44 @@ const DfpSidePanelTimeline: React.FC<{
             isSctSourceOnly: true,
         } as ScheduleEvent;
     };
+    const buildAssistPriorityEventFromStandardMission = (profile: StandardMissionProfile): ScheduleEvent => {
+        const resourceType = String(profile.resourceType || 'Flight');
+        const eventType = resourceType === 'FTD' ? 'ftd' : resourceType === 'Ground' ? 'ground' : resourceType === 'CPT' ? 'cpt' : 'flight';
+        const aircraftCount = Math.max(1, Math.floor(Number(profile.isFormation ? profile.formationAircraft : 1) || 1));
+        return {
+            id: `standard-mission-source-${profile.id}`,
+            date,
+            type: eventType as ScheduleEvent['type'],
+            instructor: '',
+            pilot: '',
+            student: '',
+            crew: '',
+            group: profile.unitCode || profile.compositeUnitCode || activeUnitCode || 'Unit',
+            flightNumber: profile.shortTitle || profile.missionName || 'Special',
+            duration: Math.max(0.1, Number(profile.durationMinutes || 60) / 60),
+            startTime: eventType === 'ftd' ? ftdStartTime : flyingStartTime,
+            resourceId: '',
+            color: 'bg-slate-500/80',
+            flightType: aircraftCount > 1 ? 'Dual' : 'Solo',
+            soloOrDual: aircraftCount > 1 ? 'Dual' : 'Solo',
+            locationType: profile.departureLocationCode !== profile.arrivalLocationCode ? 'Land Away' : 'Local',
+            origin: profile.departureLocationCode || locationCode,
+            destination: profile.arrivalLocationCode || locationCode,
+            eventCategory: 'special',
+            priority: 'Medium',
+            notes: profile.description || '',
+            aircraftConfigId: profile.config && profile.config !== 'ANY' ? profile.config : undefined,
+            acceptableAircraftConfigs: profile.config && profile.config !== 'ANY' ? [profile.config] : undefined,
+            aircraftCount,
+            isTimeFixed: false,
+            isMandatoryTasking: false,
+            isFormation: aircraftCount > 1,
+            formationSize: aircraftCount > 1 ? aircraftCount : undefined,
+            requestedByName: 'Settings',
+            standardMissionProfileId: profile.id,
+            isStandardMissionSourceOnly: true,
+        } as ScheduleEvent;
+    };
     const isAssistSctCurrencyRequestVisible = (request: SctRequest): boolean => Boolean(
         String(request.event || request.currency || '').trim() ||
         String(request.name || request.crewIndividual || request.crewDisplayLabel || '').trim()
@@ -3417,6 +3457,11 @@ const DfpSidePanelTimeline: React.FC<{
                 .filter(Boolean)
         );
         const queuedEventIds = new Set(highestPriorityEvents.map(event => String(event.id || '').trim()).filter(Boolean));
+        const queuedStandardMissionIds = new Set(
+            highestPriorityEvents
+                .map(event => String((event as any).standardMissionProfileId || '').trim())
+                .filter(Boolean)
+        );
         const sourceCurrencyEvents = [
             ...sctFlights.map(request => ({ request, type: 'flight' as const })),
             ...sctFtds.map(request => ({ request, type: 'ftd' as const })),
@@ -3430,9 +3475,15 @@ const DfpSidePanelTimeline: React.FC<{
                 return true;
             })
             .map(({ request, type }) => buildAssistPriorityEventFromSctRequest(request, type));
+        const sourceStandardMissionEvents = standardMissionProfiles
+            .filter(profile => String(profile.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+            .filter(profile => !queuedStandardMissionIds.has(profile.id))
+            .filter(profile => !queuedEventIds.has(`standard-mission-source-${profile.id}`))
+            .map(profile => buildAssistPriorityEventFromStandardMission(profile));
         return [
             ...highestPriorityEvents,
             ...sourceCurrencyEvents,
+            ...sourceStandardMissionEvents,
         ]
             .filter(event => !String(event.id || '').startsWith('tasking-formation-member-'))
             .map((event, index) => {
@@ -3451,7 +3502,7 @@ const DfpSidePanelTimeline: React.FC<{
                     status: getAssistBuildQueueStatus(event),
                 };
             });
-    }, [activeUnitCode, date, defaultAssistCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, locationCode, normalisedAssistOperationalModel, sctFlights, sctFtds]);
+    }, [activeUnitCode, date, defaultAssistCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, locationCode, normalisedAssistOperationalModel, sctFlights, sctFtds, standardMissionProfiles]);
     const filteredAssistBuildQueueRows = useMemo(() => {
         const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
         return assistBuildQueueRows.filter(row => {
@@ -3671,7 +3722,8 @@ const DfpSidePanelTimeline: React.FC<{
     };
     const selectedAssistPrioritySection = getAssistPrioritySourceSection(assistPriorityTypeFilter);
     const moveAssistBuildQueueEvent = (eventId: string, direction: -1 | 1) => {
-        if (String(eventId || '').startsWith('sct-source-')) return;
+        const eventKey = String(eventId || '');
+        if (eventKey.startsWith('sct-source-') || eventKey.startsWith('standard-mission-source-')) return;
         const currentIndex = highestPriorityEvents.findIndex(event => event.id === eventId);
         const nextIndex = currentIndex + direction;
         if (currentIndex < 0 || nextIndex < 0 || nextIndex >= highestPriorityEvents.length) return;
@@ -3687,6 +3739,7 @@ const DfpSidePanelTimeline: React.FC<{
         return true;
     };
     const setAssistBuildQueuePriority = (event: ScheduleEvent, priority: 'High' | 'Medium' | 'Low') => {
+        if ((event as any).isStandardMissionSourceOnly) return;
         if (patchAssistBuildQueueSctEvent(event, { priority, includeInBuild: true, submitted: true })) return;
         onUpdatePriorityEvent(event.id, {
             priority,
@@ -3694,6 +3747,7 @@ const DfpSidePanelTimeline: React.FC<{
         });
     };
     const updateAssistBuildQueueAircraftCount = (event: ScheduleEvent, value: unknown) => {
+        if ((event as any).isStandardMissionSourceOnly) return;
         const aircraftCount = normaliseAssistAircraftCount(value);
         if (patchAssistBuildQueueSctEvent(event, { aircraftCount } as Partial<SctRequest>)) return;
         const updates: Partial<ScheduleEvent> & Record<string, any> = { aircraftCount };
@@ -3709,6 +3763,10 @@ const DfpSidePanelTimeline: React.FC<{
     };
     const deleteAssistBuildQueueRow = async (row: typeof assistBuildQueueRows[number]) => {
         const event = row.event as ScheduleEvent & Record<string, any>;
+        if (event.isStandardMissionSourceOnly) {
+            onOpenPrioritiesSection?.('.saved-special-events-card');
+            return;
+        }
         const requestId = String(event.sctRequestId || '').trim();
         const requestType = String(event.sctRequestType || getAssistCurrencyRequestType(requestId || event.id)) === 'ftd' ? 'ftd' : 'flight';
         const label = String(row.label || event.flightNumber || event.currency || 'this priority row').trim();
@@ -3728,6 +3786,7 @@ const DfpSidePanelTimeline: React.FC<{
         if (!event.isSctSourceOnly) void onDeletePriorityEvent(event.id);
     };
     const updateAssistBuildQueueRequestedDate = (event: ScheduleEvent, value: string) => {
+        if ((event as any).isStandardMissionSourceOnly) return;
         const nextDate = normaliseAssistDateKey(value);
         if (!nextDate) return;
         if (!patchAssistBuildQueueSctEvent(event, { dateRequested: nextDate })) {
@@ -3736,6 +3795,7 @@ const DfpSidePanelTimeline: React.FC<{
         setAssistPriorityDateDrafts(prev => ({ ...prev, [event.id]: formatAssistCurrencyDate(nextDate) }));
     };
     const updateAssistBuildQueueEventLabel = (event: ScheduleEvent, group: 'tasking' | 'currency' | 'trainee-currency' | 'special', value: string) => {
+        if ((event as any).isStandardMissionSourceOnly) return;
         const updates: Partial<ScheduleEvent> & Record<string, any> = { flightNumber: value };
         if (group === 'tasking') {
             updates.taskingName = value;
@@ -3748,6 +3808,7 @@ const DfpSidePanelTimeline: React.FC<{
         onUpdatePriorityEvent(event.id, updates);
     };
     const updateAssistBuildQueueEventCrew = (event: ScheduleEvent, value: string) => {
+        if ((event as any).isStandardMissionSourceOnly) return;
         if (patchAssistBuildQueueSctEvent(event, { name: value })) return;
         const updates: Partial<ScheduleEvent> = { crew: value };
         if (event.instructor) updates.instructor = value;
@@ -3757,6 +3818,7 @@ const DfpSidePanelTimeline: React.FC<{
         onUpdatePriorityEvent(event.id, updates);
     };
     const updateAssistBuildQueuePrimaryCrew = (event: ScheduleEvent, value: string) => {
+        if ((event as any).isStandardMissionSourceOnly) return;
         if (patchAssistBuildQueueSctEvent(event, { name: value })) return;
         const updates: Partial<ScheduleEvent> = {};
         if (event.instructor) updates.instructor = value;
@@ -3764,12 +3826,14 @@ const DfpSidePanelTimeline: React.FC<{
         onUpdatePriorityEvent(event.id, updates);
     };
     const updateAssistBuildQueueSecondaryCrew = (event: ScheduleEvent, value: string) => {
+        if ((event as any).isStandardMissionSourceOnly) return;
         if (patchAssistBuildQueueSctEvent(event, { crewMember: value, crewDisplayLabel: value } as Partial<SctRequest>)) return;
         const updates: Partial<ScheduleEvent> = { crew: value };
         if (event.student) updates.student = value;
         onUpdatePriorityEvent(event.id, updates);
     };
     const updateAssistBuildQueueFlightType = (event: ScheduleEvent, flightType: 'Solo' | 'Dual') => {
+        if ((event as any).isStandardMissionSourceOnly) return;
         if (patchAssistBuildQueueSctEvent(event, { flightType, ...(flightType === 'Solo' ? { crewMember: '', crewDisplayLabel: '' } : {}) } as Partial<SctRequest>)) return;
         const updates: Partial<ScheduleEvent> & Record<string, any> = {
             flightType,
@@ -3782,6 +3846,10 @@ const DfpSidePanelTimeline: React.FC<{
         onUpdatePriorityEvent(event.id, updates);
     };
     const selectAssistBuildQueueEvent = (event: ScheduleEvent) => {
+        if ((event as any).isStandardMissionSourceOnly) {
+            onOpenPrioritiesSection?.('.saved-special-events-card');
+            return;
+        }
         const group = getAssistBuildQueueGroup(event);
         if (group === 'tasking') {
             selectAirCombatTileTask({
@@ -4172,6 +4240,10 @@ const DfpSidePanelTimeline: React.FC<{
                                                 <button
                                                     type="button"
                                                     onClick={() => {
+                                                        if ((row.event as any).isStandardMissionSourceOnly) {
+                                                            selectAssistBuildQueueEvent(row.event);
+                                                            return;
+                                                        }
                                                         if (!isEditing) selectAssistBuildQueueEvent(row.event);
                                                         setEditingAssistPriorityEventId(current => current === row.event.id ? null : row.event.id);
                                                     }}
@@ -4181,7 +4253,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                             : 'border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
                                                     }`}
                                                 >
-                                                    {isEditing ? 'Done' : 'Edit'}
+                                                    {isEditing ? 'Done' : ((row.event as any).isStandardMissionSourceOnly ? 'Open' : 'Edit')}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -54437,6 +54509,7 @@ appliedUpdates.forEach(update => {
                                     syllabusDetails={visibleSyllabusDetails}
                                     taskProfiles={activeTaskProfiles}
                                     taskProfileAbbreviations={activeTaskProfileAbbreviations}
+                                    standardMissionProfiles={activeStandardMissionProfiles}
                                     coursePriorities={coursePriorities}
                                     onUpdateCoursePriorities={setCoursePriorities}
                                     coursePercentages={coursePercentages}
