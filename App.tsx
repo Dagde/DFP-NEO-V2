@@ -3386,6 +3386,94 @@ const DfpSidePanelTimeline: React.FC<{
             return true;
         });
     }, [assistBuildQueueRows, assistPriorityPersonFilter, assistPrioritySchedulerFilter, assistPriorityTypeFilter, assistPriorityUnitFilter]);
+    const lastAssistPriorityDateTraceSignatureRef = useRef('');
+    useEffect(() => {
+        if (activeAssistPage !== 'priority') return;
+        const todayKey = getLocalDateKey();
+        const rows = filteredAssistBuildQueueRows.map(row => {
+            const event = row.event as ScheduleEvent & Record<string, any>;
+            const requestedDate = getAssistPriorityRequestedDate(row);
+            const normalisedDateKey = normaliseAssistDateKey(requestedDate);
+            return {
+                rowId: event.id,
+                group: row.group,
+                label: row.label,
+                rawDateRequested: event.dateRequested || '',
+                rawRequestedDate: event.requestedDate || '',
+                rawEventDate: event.date || '',
+                rawRowDate: row.date || '',
+                derivedRequestedDate: requestedDate,
+                displayedDate: formatAssistCurrencyDate(requestedDate),
+                normalisedDateKey,
+                todayKey,
+                staleOrToday: Boolean(normalisedDateKey && normalisedDateKey <= todayKey),
+                priority: event.priority || '',
+                sctRequestId: event.sctRequestId || '',
+                currencyDraftId: event.currencyDraftId || '',
+                isSctSourceOnly: Boolean(event.isSctSourceOnly),
+            };
+        });
+        const signature = JSON.stringify({
+            page: activeAssistPage,
+            filter: assistPriorityTypeFilter,
+            todayKey,
+            rows: rows.map(row => ({
+                rowId: row.rowId,
+                derivedRequestedDate: row.derivedRequestedDate,
+                normalisedDateKey: row.normalisedDateKey,
+                staleOrToday: row.staleOrToday,
+            })),
+        });
+        if (signature === lastAssistPriorityDateTraceSignatureRef.current) return;
+        lastAssistPriorityDateTraceSignatureRef.current = signature;
+        appendNeoAssistCurrencyTrace('NEO_ASSIST_PRIORITY_DATE_RENDER_TRACE', {
+            activeAssistPage,
+            assistPriorityTypeFilter,
+            date,
+            todayKey,
+            rowCount: rows.length,
+            rows,
+        });
+        console.info('[NEO_ASSIST_PRIORITY_DATE_RENDER_TRACE]', {
+            activeAssistPage,
+            assistPriorityTypeFilter,
+            date,
+            todayKey,
+            rowCount: rows.length,
+            rows,
+        });
+        window.setTimeout(() => {
+            const renderedDateCells = Array.from(document.querySelectorAll('[data-neo-assist-priority-date="true"]')).map(element => {
+                const htmlElement = element as HTMLElement;
+                const computedStyle = window.getComputedStyle(htmlElement);
+                return {
+                    rowId: htmlElement.dataset.rowId || '',
+                    text: htmlElement.textContent || '',
+                    derivedRequestedDate: htmlElement.dataset.requestedDate || '',
+                    normalisedDateKey: htmlElement.dataset.dateKey || '',
+                    todayKey: htmlElement.dataset.todayKey || '',
+                    staleOrToday: htmlElement.dataset.staleOrToday || '',
+                    inlineColor: htmlElement.style.color || '',
+                    computedColor: computedStyle.color,
+                    className: htmlElement.className || '',
+                };
+            });
+            appendNeoAssistCurrencyTrace('NEO_ASSIST_PRIORITY_DATE_DOM_TRACE', {
+                activeAssistPage,
+                assistPriorityTypeFilter,
+                date,
+                todayKey,
+                renderedDateCells,
+            });
+            console.info('[NEO_ASSIST_PRIORITY_DATE_DOM_TRACE]', {
+                activeAssistPage,
+                assistPriorityTypeFilter,
+                date,
+                todayKey,
+                renderedDateCells,
+            });
+        }, 100);
+    }, [activeAssistPage, assistPriorityTypeFilter, date, filteredAssistBuildQueueRows]);
     const assistPriorityUnitOptions = useMemo(() => (
         Array.from(new Set(assistBuildQueueRows.map(row => row.unit).filter(Boolean))).sort((left, right) => left.localeCompare(right))
     ), [assistBuildQueueRows]);
@@ -3798,6 +3886,12 @@ const DfpSidePanelTimeline: React.FC<{
                                                 />
                                             ) : (
                                                 <span
+                                                    data-neo-assist-priority-date="true"
+                                                    data-row-id={row.event.id}
+                                                    data-requested-date={requestedDate}
+                                                    data-date-key={normaliseAssistDateKey(requestedDate)}
+                                                    data-today-key={getLocalDateKey()}
+                                                    data-stale-or-today={isRequestedDatePastOrToday ? 'true' : 'false'}
                                                     className={isRequestedDatePastOrToday ? 'font-bold' : undefined}
                                                     style={isRequestedDatePastOrToday ? { color: '#b91c1c', fontWeight: 700 } : undefined}
                                                 >
