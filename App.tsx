@@ -3895,17 +3895,26 @@ const DfpSidePanelTimeline: React.FC<{
                                         </td>
                                         <td className="px-2 py-2 align-middle font-mono text-slate-700">
                                             {isEditing ? (
-                                                <input
-                                                    key={`priority-date-input-${row.event.id}-${requestedDateInputValue}`}
-                                                    type="text"
-                                                    defaultValue={formatAssistCurrencyDate(requestedDateInputValue)}
-                                                    placeholder="DD Mmm YY"
-                                                    onBlur={event => updateAssistBuildQueueRequestedDate(row.event, event.target.value)}
-                                                    onKeyDown={event => {
-                                                        if (event.key === 'Enter') event.currentTarget.blur();
-                                                    }}
-                                                    className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
-                                                />
+                                                <div className="flex w-full items-center gap-1">
+                                                    <input
+                                                        key={`priority-date-input-${row.event.id}-${requestedDateInputValue}`}
+                                                        type="text"
+                                                        defaultValue={formatAssistCurrencyDate(requestedDateInputValue)}
+                                                        placeholder="DD Mmm YY"
+                                                        onBlur={event => updateAssistBuildQueueRequestedDate(row.event, event.target.value)}
+                                                        onKeyDown={event => {
+                                                            if (event.key === 'Enter') event.currentTarget.blur();
+                                                        }}
+                                                        className="min-w-0 flex-1 rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                    />
+                                                    <input
+                                                        type="date"
+                                                        aria-label="Pick requested date"
+                                                        value={requestedDateInputValue}
+                                                        onChange={event => updateAssistBuildQueueRequestedDate(row.event, event.target.value)}
+                                                        className="h-[26px] w-[28px] shrink-0 rounded border border-slate-300 bg-white px-0 py-0 text-transparent [color-scheme:light]"
+                                                    />
+                                                </div>
                                             ) : (
                                                 <span
                                                     data-neo-assist-priority-date="true"
