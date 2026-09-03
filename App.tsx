@@ -668,7 +668,7 @@ const getUiLagTargetDescriptor = (target: EventTarget | null): UiLagTargetDescri
     };
 };
 
-import DarkMessageModal from './components/DarkMessageModal';
+import DarkMessageModal, { showDarkConfirm as showGlobalDarkConfirm } from './components/DarkMessageModal';
 import SystemFreezeBanner from './components/SystemFreezeBanner';
 import DataLoadingMonitor from './components/DataLoadingMonitor';
 
@@ -3646,12 +3646,17 @@ const DfpSidePanelTimeline: React.FC<{
             isMandatoryTasking: scheduler === 'Mandatory',
         });
     };
-    const deleteAssistBuildQueueRow = (row: typeof assistBuildQueueRows[number]) => {
+    const deleteAssistBuildQueueRow = async (row: typeof assistBuildQueueRows[number]) => {
         const event = row.event as ScheduleEvent & Record<string, any>;
         const requestId = String(event.sctRequestId || '').trim();
         const requestType = String(event.sctRequestType || getAssistCurrencyRequestType(requestId || event.id)) === 'ftd' ? 'ftd' : 'flight';
         const label = String(row.label || event.flightNumber || event.currency || 'this priority row').trim();
-        if (!window.confirm(`Delete ${label} from the Priority Table? This cannot be undone.`)) return;
+        const confirmed = await showGlobalDarkConfirm(
+            `Delete ${label} from the Priority Table?\n\nThis cannot be undone.`,
+            'Delete Priority Row',
+            'warning'
+        );
+        if (!confirmed) return;
         setEditingAssistPriorityEventId(current => current === event.id ? null : current);
         setAssistPriorityDateDrafts(prev => {
             const next = { ...prev };
@@ -4131,7 +4136,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                     type="button"
                                                     aria-label={`Delete ${row.label}`}
                                                     title="Delete row"
-                                                    onClick={() => deleteAssistBuildQueueRow(row)}
+                                                    onClick={() => { void deleteAssistBuildQueueRow(row); }}
                                                     className="neo-assist-priority-delete-icon inline-flex h-6 w-5 items-center justify-center transition"
                                                     style={{ color: '#dc2626' }}
                                                 >

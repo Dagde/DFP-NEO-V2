@@ -103706,12 +103706,19 @@ const DfpSidePanelTimeline = ({
       isMandatoryTasking: scheduler === "Mandatory"
     });
   };
-  const deleteAssistBuildQueueRow = (row) => {
+  const deleteAssistBuildQueueRow = async (row) => {
     const event = row.event;
     const requestId = String(event.sctRequestId || "").trim();
     const requestType = String(event.sctRequestType || getAssistCurrencyRequestType(requestId || event.id)) === "ftd" ? "ftd" : "flight";
     const label = String(row.label || event.flightNumber || event.currency || "this priority row").trim();
-    if (!window.confirm(`Delete ${label} from the Priority Table? This cannot be undone.`)) return;
+    const confirmed = await showDarkConfirm(
+      `Delete ${label} from the Priority Table?
+
+This cannot be undone.`,
+      "Delete Priority Row",
+      "warning"
+    );
+    if (!confirmed) return;
     setEditingAssistPriorityEventId((current) => current === event.id ? null : current);
     setAssistPriorityDateDrafts((prev) => {
       const next = { ...prev };
@@ -104131,7 +104138,9 @@ const DfpSidePanelTimeline = ({
                     type: "button",
                     "aria-label": `Delete ${row.label}`,
                     title: "Delete row",
-                    onClick: () => deleteAssistBuildQueueRow(row),
+                    onClick: () => {
+                      void deleteAssistBuildQueueRow(row);
+                    },
                     className: "neo-assist-priority-delete-icon inline-flex h-6 w-5 items-center justify-center transition",
                     style: { color: "#dc2626" },
                     children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", className: "h-3.5 w-3.5", fill: "none", stroke: "#dc2626", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
