@@ -2922,7 +2922,10 @@ const DfpSidePanelTimeline: React.FC<{
         if (!raw) return '';
         const parsed = new Date(`${raw.slice(0, 10)}T00:00:00Z`);
         if (Number.isNaN(parsed.getTime())) return raw;
-        return parsed.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' });
+        const day = String(parsed.getUTCDate()).padStart(2, '0');
+        const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parsed.getUTCMonth()];
+        const year = String(parsed.getUTCFullYear()).slice(-2);
+        return `${day} ${month} ${year}`;
     };
     const getAssistCurrencyEventTypeLabel = (requestType?: string): string => (
         requestType === 'ftd' ? simulatorResourceLabel || 'Simulator' : 'Flight'
@@ -5469,13 +5472,16 @@ const DfpSidePanelTimeline: React.FC<{
                                     <button
                                         type="button"
                                         onClick={() => setExpandedAssistCurrencyRowId(prev => prev === rowKey ? null : rowKey)}
-                                        className="grid w-full grid-cols-[6.2rem_minmax(0,1fr)_5.5rem_1.5rem] items-center gap-2 px-2 py-2 text-left hover:bg-cyan-950/25"
+                                        className="grid w-full grid-cols-[6.2rem_minmax(0,1fr)_5.5rem_7rem_1.5rem] items-center gap-2 px-2 py-2 text-left hover:bg-cyan-950/25"
                                         aria-expanded={isExpanded}
                                     >
                                         <span className="font-mono text-[10px] font-semibold text-slate-300">{formatAssistCurrencyDate(row.date || date)}</span>
                                         <span className="min-w-0 truncate text-[11px] font-semibold text-slate-100" title={row.requester}>{row.requester}</span>
                                         <span className="rounded border border-slate-600/80 bg-slate-900/80 px-1.5 py-1 text-center text-[9px] font-semibold text-slate-300">
                                             {getAssistCurrencyEventTypeLabel(row.requestType)}
+                                        </span>
+                                        <span className={`rounded border px-1.5 py-1 text-center text-[9px] font-semibold ${row.scheduled ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100' : 'border-amber-400/40 bg-amber-500/10 text-amber-100'}`}>
+                                            {row.scheduled ? 'In Priority Table' : 'Source only'}
                                         </span>
                                         <span className={`justify-self-end text-[12px] text-cyan-100 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>v</span>
                                     </button>
