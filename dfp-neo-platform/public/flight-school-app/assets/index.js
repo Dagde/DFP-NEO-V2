@@ -103100,10 +103100,24 @@ const DfpSidePanelTimeline = ({
     const day = String(value.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
+  const normaliseAssistDateKey = (value) => {
+    const raw = String(value || "").trim();
+    const iso = raw.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+    const compact = raw.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{2}|\d{4})$/);
+    if (!compact) return "";
+    const monthIndex = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec"].indexOf(compact[2].toLowerCase());
+    if (monthIndex < 0) return "";
+    const monthNumber = monthIndex === 8 || monthIndex === 9 ? 9 : monthIndex > 9 ? monthIndex : monthIndex + 1;
+    const yearNumber = Number(compact[3].length === 2 ? `20${compact[3]}` : compact[3]);
+    const dayNumber = Number(compact[1]);
+    if (!Number.isFinite(yearNumber) || !Number.isFinite(dayNumber) || dayNumber < 1 || dayNumber > 31) return "";
+    return `${yearNumber}-${String(monthNumber).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
+  };
   const isAssistDatePastOrToday = (value) => {
-    const raw = String(value || "").trim().slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
-    return raw <= getLocalDateKey();
+    const dateKey = normaliseAssistDateKey(value);
+    if (!dateKey) return false;
+    return dateKey <= getLocalDateKey();
   };
   const submitAssistCurrencyRequest = (id) => {
     if (highestPriorityEvents.some((event) => event.sctRequestId === id || event.currencyDraftId === id || String(event.id || "") === `sct-flight-${id}` || String(event.id || "") === `sct-ftd-${id}` || String(event.id || "") === `neo-assist-currency-${id}`)) return;
