@@ -4132,9 +4132,15 @@ const DfpSidePanelTimeline: React.FC<{
                                                     aria-label={`Delete ${row.label}`}
                                                     title="Delete row"
                                                     onClick={() => deleteAssistBuildQueueRow(row)}
-                                                    className="px-0.5 py-1 text-[13px] leading-none text-rose-600 transition hover:text-rose-800"
+                                                    className="neo-assist-priority-delete-icon inline-flex h-6 w-5 items-center justify-center text-rose-600 transition hover:text-rose-800"
                                                 >
-                                                    🗑
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M3 6h18" />
+                                                        <path d="M8 6V4h8v2" />
+                                                        <path d="M19 6l-1 14H6L5 6" />
+                                                        <path d="M10 11v5" />
+                                                        <path d="M14 11v5" />
+                                                    </svg>
                                                 </button>
                                             </div>
                                         </td>

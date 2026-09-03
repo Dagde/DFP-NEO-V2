@@ -1033,6 +1033,16 @@ html[data-theme="light"] body {
     color: #b91c1c !important;
     font-weight: 700 !important;
 }
+
+[data-theme="light"] .neo-assist-priority-delete-icon,
+.neo-assist-priority-delete-icon {
+    color: #dc2626 !important;
+}
+
+[data-theme="light"] .neo-assist-priority-delete-icon:hover,
+.neo-assist-priority-delete-icon:hover {
+    color: #991b1b !important;
+}
 /* NEO Build Indicator Styles */
 @keyframes neo-build-pulse {
     0%, 100% {
