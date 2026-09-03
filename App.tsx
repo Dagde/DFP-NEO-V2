@@ -2915,6 +2915,13 @@ const DfpSidePanelTimeline: React.FC<{
                     queueUpdates.priority = updates.priority;
                     queueUpdates.isMandatoryTasking = updates.priority === 'High';
                 }
+                if ('aircraftCount' in updates) {
+                    const aircraftCount = normaliseAssistAircraftCount(updates.aircraftCount);
+                    queueUpdates.aircraftCount = aircraftCount;
+                    (queueUpdates as any).taskingAircraftCount = aircraftCount;
+                    (queueUpdates as any).formationSize = aircraftCount > 1 ? aircraftCount : undefined;
+                    (queueUpdates as any).isFormation = aircraftCount > 1;
+                }
                 if (Object.keys(queueUpdates).length > 0) onUpdatePriorityEvent(event.id, queueUpdates);
             });
     };
@@ -3272,6 +3279,12 @@ const DfpSidePanelTimeline: React.FC<{
     const getAssistBuildQueueUnit = (event: ScheduleEvent): string => (
         String((event as any).unitCode || (event as any).unit || (event as any).crewUnitCode || activeUnitCode || '').trim() || 'Unit'
     );
+    const normaliseAssistAircraftCount = (value: unknown): number => (
+        Math.max(1, Math.min(24, Math.floor(Number(value) || 1)))
+    );
+    const getAssistBuildQueueAircraftCount = (event: ScheduleEvent): number => normaliseAssistAircraftCount(
+        (event as any).aircraftCount ?? (event as any).formationSize ?? (event as any).taskingAircraftCount ?? 1
+    );
     const getAssistBuildQueueScheduler = (event: ScheduleEvent): 'Mandatory' | 'Desirable' => (
         event.isMandatoryTasking || event.priority === 'High' || event.isTimeFixed ? 'Mandatory' : 'Desirable'
     );
@@ -3324,6 +3337,7 @@ const DfpSidePanelTimeline: React.FC<{
             priority: request.priority || 'High',
             notes: request.notes || '',
             aircraftConfigId: request.aircraftConfigId,
+            aircraftCount: normaliseAssistAircraftCount(request.aircraftCount),
             isTimeFixed: false,
             isMandatoryTasking: request.priority === 'High',
             ...(requestType === 'flight' && request.aircraftConfigId ? { acceptableAircraftConfigs: [request.aircraftConfigId] } : {}),
@@ -3377,6 +3391,7 @@ const DfpSidePanelTimeline: React.FC<{
                     crewDisplay: getAssistBuildQueueCrewDisplay(event, group),
                     requestedBy: getAssistBuildQueueRequestedBy(event),
                     unit: getAssistBuildQueueUnit(event),
+                    aircraftCount: getAssistBuildQueueAircraftCount(event),
                     scheduler: getAssistBuildQueueScheduler(event),
                     status: getAssistBuildQueueStatus(event),
                 };
@@ -3623,6 +3638,20 @@ const DfpSidePanelTimeline: React.FC<{
             isMandatoryTasking: priority === 'High',
         });
     };
+    const updateAssistBuildQueueAircraftCount = (event: ScheduleEvent, value: unknown) => {
+        const aircraftCount = normaliseAssistAircraftCount(value);
+        if (patchAssistBuildQueueSctEvent(event, { aircraftCount } as Partial<SctRequest>)) return;
+        const updates: Partial<ScheduleEvent> & Record<string, any> = { aircraftCount };
+        if (event.isTaskingRequest || event.taskingRequestId || event.taskingAircraftCount || event.formationSize) {
+            updates.taskingAircraftCount = aircraftCount;
+            updates.formationSize = aircraftCount > 1 ? aircraftCount : undefined;
+            updates.isFormation = aircraftCount > 1;
+            updates.formationId = aircraftCount > 1
+                ? event.formationId || `tasking-formation-${event.taskingRequestId || event.id}`
+                : undefined;
+        }
+        onUpdatePriorityEvent(event.id, updates);
+    };
     const deleteAssistBuildQueueRow = async (row: typeof assistBuildQueueRows[number]) => {
         const event = row.event as ScheduleEvent & Record<string, any>;
         const requestId = String(event.sctRequestId || '').trim();
@@ -3819,7 +3848,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                 )}
                 <div className="overflow-x-auto rounded-md border border-slate-300">
-                    <table className="w-full min-w-[1116px] table-fixed text-[12px]">
+                    <table className="w-full min-w-[1184px] table-fixed text-[12px]">
                         <colgroup>
                             <col className="w-[46px]" />
                             <col className="w-[126px]" />
@@ -3829,6 +3858,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <col className="w-[170px]" />
                             <col className="w-[128px]" />
                             <col className="w-[74px]" />
+                            <col className="w-[68px]" />
                             <col className="w-[90px]" />
                             <col className="w-[72px]" />
                             <col className="w-[76px]" />
@@ -3843,6 +3873,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Person/Crew</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Requested By</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Time</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Aircraft</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Priority</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Status</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-center">Edit</th>
@@ -3851,7 +3882,7 @@ const DfpSidePanelTimeline: React.FC<{
                         <tbody className="divide-y divide-slate-200 bg-white">
                             {filteredAssistBuildQueueRows.length === 0 && (
                                 <tr>
-                                    <td colSpan={11} className="px-3 py-8 text-center text-slate-500">
+                                    <td colSpan={12} className="px-3 py-8 text-center text-slate-500">
                                         No matching NEO Build priority items are in this view.
                                     </td>
                                 </tr>
@@ -4042,6 +4073,21 @@ const DfpSidePanelTimeline: React.FC<{
                                                 </select>
                                             ) : (
                                                 <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-2 align-middle text-slate-700">
+                                            {isEditing ? (
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    max={24}
+                                                    step={1}
+                                                    value={row.aircraftCount}
+                                                    onChange={event => updateAssistBuildQueueAircraftCount(row.event, event.target.value)}
+                                                    className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                />
+                                            ) : (
+                                                <span className="block font-mono">{row.aircraftCount}</span>
                                             )}
                                         </td>
                                         <td className="px-2 py-2 align-middle">
@@ -42164,6 +42210,7 @@ const App: React.FC = () => {
                     currency: sctReq.currency,
                     currencyAudience: 'staff',
                     notes: buildSctEventNotes(sctReq),
+                    aircraftCount: Math.max(1, Math.floor(Number(sctReq.aircraftCount) || 1)),
                     aircraftConfigId,
                     acceptableAircraftConfigs,
                     dayNight: getSctDayNight(sctReq),
@@ -42213,6 +42260,7 @@ const App: React.FC = () => {
                     currency: sctReq.currency,
                     currencyAudience: 'staff',
                     notes: buildSctEventNotes(sctReq),
+                    aircraftCount: Math.max(1, Math.floor(Number(sctReq.aircraftCount) || 1)),
                     aircraftConfigId,
                     acceptableAircraftConfigs,
                     dayNight: getSctDayNight(sctReq),
@@ -42271,6 +42319,7 @@ const App: React.FC = () => {
                     currency: sctReq.currency,
                     currencyAudience: 'staff',
                     notes: buildSctEventNotes(sctReq),
+                    aircraftCount: Math.max(1, Math.floor(Number(sctReq.aircraftCount) || 1)),
                     aircraftConfigId,
                     acceptableAircraftConfigs,
                     dayNight: getSctDayNight(sctReq),
@@ -42320,6 +42369,7 @@ const App: React.FC = () => {
                     currency: sctReq.currency,
                     currencyAudience: 'staff',
                     notes: buildSctEventNotes(sctReq),
+                    aircraftCount: Math.max(1, Math.floor(Number(sctReq.aircraftCount) || 1)),
                     aircraftConfigId,
                     acceptableAircraftConfigs,
                     dayNight: getSctDayNight(sctReq),

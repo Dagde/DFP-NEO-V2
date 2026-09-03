@@ -103083,6 +103083,13 @@ const DfpSidePanelTimeline = ({
         queueUpdates.priority = updates.priority;
         queueUpdates.isMandatoryTasking = updates.priority === "High";
       }
+      if ("aircraftCount" in updates) {
+        const aircraftCount = normaliseAssistAircraftCount(updates.aircraftCount);
+        queueUpdates.aircraftCount = aircraftCount;
+        queueUpdates.taskingAircraftCount = aircraftCount;
+        queueUpdates.formationSize = aircraftCount > 1 ? aircraftCount : void 0;
+        queueUpdates.isFormation = aircraftCount > 1;
+      }
       if (Object.keys(queueUpdates).length > 0) onUpdatePriorityEvent(event.id, queueUpdates);
     });
   };
@@ -103357,6 +103364,10 @@ const DfpSidePanelTimeline = ({
     return "Operations";
   };
   const getAssistBuildQueueUnit = (event) => String(event.unitCode || event.unit || event.crewUnitCode || activeUnitCode || "").trim() || "Unit";
+  const normaliseAssistAircraftCount = (value) => Math.max(1, Math.min(24, Math.floor(Number(value) || 1)));
+  const getAssistBuildQueueAircraftCount = (event) => normaliseAssistAircraftCount(
+    event.aircraftCount ?? event.formationSize ?? event.taskingAircraftCount ?? 1
+  );
   const getAssistBuildQueueScheduler = (event) => event.isMandatoryTasking || event.priority === "High" || event.isTimeFixed ? "Mandatory" : "Desirable";
   const getAssistBuildQueueStatus = (event) => {
     if ((event.date || date) !== date) {
@@ -103407,6 +103418,7 @@ const DfpSidePanelTimeline = ({
       priority: request.priority || "High",
       notes: request.notes || "",
       aircraftConfigId: request.aircraftConfigId,
+      aircraftCount: normaliseAssistAircraftCount(request.aircraftCount),
       isTimeFixed: false,
       isMandatoryTasking: request.priority === "High",
       ...requestType === "flight" && request.aircraftConfigId ? { acceptableAircraftConfigs: [request.aircraftConfigId] } : {},
@@ -103450,6 +103462,7 @@ const DfpSidePanelTimeline = ({
         crewDisplay: getAssistBuildQueueCrewDisplay(event, group),
         requestedBy: getAssistBuildQueueRequestedBy(event),
         unit: getAssistBuildQueueUnit(event),
+        aircraftCount: getAssistBuildQueueAircraftCount(event),
         scheduler: getAssistBuildQueueScheduler(event),
         status: getAssistBuildQueueStatus(event)
       };
@@ -103678,6 +103691,18 @@ const DfpSidePanelTimeline = ({
       isMandatoryTasking: priority === "High"
     });
   };
+  const updateAssistBuildQueueAircraftCount = (event, value) => {
+    const aircraftCount = normaliseAssistAircraftCount(value);
+    if (patchAssistBuildQueueSctEvent(event, { aircraftCount })) return;
+    const updates = { aircraftCount };
+    if (event.isTaskingRequest || event.taskingRequestId || event.taskingAircraftCount || event.formationSize) {
+      updates.taskingAircraftCount = aircraftCount;
+      updates.formationSize = aircraftCount > 1 ? aircraftCount : void 0;
+      updates.isFormation = aircraftCount > 1;
+      updates.formationId = aircraftCount > 1 ? event.formationId || `tasking-formation-${event.taskingRequestId || event.id}` : void 0;
+    }
+    onUpdatePriorityEvent(event.id, updates);
+  };
   const deleteAssistBuildQueueRow = async (row) => {
     const event = row.event;
     const requestId = String(event.sctRequestId || "").trim();
@@ -103866,7 +103891,7 @@ This cannot be undone.`,
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1116px] table-fixed text-[12px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1184px] table-fixed text-[12px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[46px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[126px]" }),
@@ -103876,6 +103901,7 @@ This cannot be undone.`,
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[170px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[128px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[74px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[68px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[72px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[76px]" })
@@ -103889,12 +103915,13 @@ This cannot be undone.`,
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Person/Crew" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Requested By" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Time" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Aircraft" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Priority" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Status" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-center", children: "Edit" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-200 bg-white", children: [
-          filteredAssistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 11, className: "px-3 py-8 text-center text-slate-500", children: "No matching NEO Build priority items are in this view." }) }),
+          filteredAssistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 12, className: "px-3 py-8 text-center text-slate-500", children: "No matching NEO Build priority items are in this view." }) }),
           filteredAssistBuildQueueRows.map((row) => {
             const isEditing = editingAssistPriorityEventId === row.event.id;
             const showFlightType = normalisedAssistOperationalModel === "flight_school" && row.group === "currency";
@@ -104054,6 +104081,18 @@ This cannot be undone.`,
                   children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `priority-inline-time-${row.event.id}-${option.label}`))
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: formatCompactTime(row.event.startTime || 0) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-700", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "number",
+                  min: 1,
+                  max: 24,
+                  step: 1,
+                  value: row.aircraftCount,
+                  onChange: (event) => updateAssistBuildQueueAircraftCount(row.event, event.target.value),
+                  className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-mono", children: row.aircraftCount }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "select",
                 {
@@ -135062,6 +135101,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           currency: sctReq.currency,
           currencyAudience: "staff",
           notes: buildSctEventNotes(sctReq),
+          aircraftCount: Math.max(1, Math.floor(Number(sctReq.aircraftCount) || 1)),
           aircraftConfigId,
           acceptableAircraftConfigs,
           dayNight: getSctDayNight(sctReq),
@@ -135115,6 +135155,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           currency: sctReq.currency,
           currencyAudience: "staff",
           notes: buildSctEventNotes(sctReq),
+          aircraftCount: Math.max(1, Math.floor(Number(sctReq.aircraftCount) || 1)),
           aircraftConfigId,
           acceptableAircraftConfigs,
           dayNight: getSctDayNight(sctReq),
@@ -135163,6 +135204,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           currency: sctReq.currency,
           currencyAudience: "staff",
           notes: buildSctEventNotes(sctReq),
+          aircraftCount: Math.max(1, Math.floor(Number(sctReq.aircraftCount) || 1)),
           aircraftConfigId,
           acceptableAircraftConfigs,
           dayNight: getSctDayNight(sctReq),
@@ -135216,6 +135258,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           currency: sctReq.currency,
           currencyAudience: "staff",
           notes: buildSctEventNotes(sctReq),
+          aircraftCount: Math.max(1, Math.floor(Number(sctReq.aircraftCount) || 1)),
           aircraftConfigId,
           acceptableAircraftConfigs,
           dayNight: getSctDayNight(sctReq),
