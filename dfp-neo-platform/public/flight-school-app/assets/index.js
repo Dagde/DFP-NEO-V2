@@ -101622,7 +101622,6 @@ const DfpSidePanelTimeline = ({
   const [assistPriorityTypeFilter, setAssistPriorityTypeFilter] = reactExports.useState("all");
   const [assistPriorityPersonFilter, setAssistPriorityPersonFilter] = reactExports.useState("");
   const [assistPriorityUnitFilter, setAssistPriorityUnitFilter] = reactExports.useState("all");
-  const [assistPrioritySchedulerFilter, setAssistPrioritySchedulerFilter] = reactExports.useState("all");
   const [editingAssistPriorityEventId, setEditingAssistPriorityEventId] = reactExports.useState(null);
   const [assistPriorityDateDrafts, setAssistPriorityDateDrafts] = reactExports.useState({});
   const [activeAssistSection, setActiveAssistSection] = reactExports.useState("flying");
@@ -103317,11 +103316,6 @@ const DfpSidePanelTimeline = ({
     );
     setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, saved: true, submitted: false, ignored: true } : item));
   };
-  const ignoreAssistCurrencyRequest = (id) => {
-    const type = getAssistCurrencyRequestType(id);
-    highestPriorityEvents.filter((event) => event.sctRequestId === id || event.id === `sct-${type}-${id}`).forEach((event) => void onDeletePriorityEvent(event.id));
-    patchAssistCurrencyRequest(id, { submitted: false, includeInBuild: false }, type);
-  };
   const getAssistBuildQueueGroup = (event) => {
     const eventId = String(event.id || "").toLowerCase();
     const isTasking = Boolean(event.isTaskingRequest || event.taskingRequestId || eventId.startsWith("tasking-") || eventId.startsWith("neo-assist-tasking-"));
@@ -103414,7 +103408,7 @@ const DfpSidePanelTimeline = ({
       notes: request.notes || "",
       aircraftConfigId: request.aircraftConfigId,
       isTimeFixed: false,
-      isMandatoryTasking: request.priority === "High" || request.includeInBuild || request.submitted,
+      isMandatoryTasking: request.priority === "High",
       ...requestType === "flight" && request.aircraftConfigId ? { acceptableAircraftConfigs: [request.aircraftConfigId] } : {},
       requestedByName: String(request.requestedByName || request.createdByName || request.submittedByName || request.name || primaryName || "Requester").trim(),
       sctRequestType: requestType,
@@ -103465,7 +103459,6 @@ const DfpSidePanelTimeline = ({
     const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
     return assistBuildQueueRows.filter((row) => {
       if (assistPriorityTypeFilter !== "all" && row.group !== assistPriorityTypeFilter) return false;
-      if (assistPrioritySchedulerFilter !== "all" && row.scheduler !== assistPrioritySchedulerFilter) return false;
       if (assistPriorityUnitFilter !== "all" && row.unit !== assistPriorityUnitFilter) return false;
       if (personNeedle) {
         const haystack = `${row.person} ${row.requestedBy} ${row.label}`.toLowerCase();
@@ -103473,7 +103466,7 @@ const DfpSidePanelTimeline = ({
       }
       return true;
     });
-  }, [assistBuildQueueRows, assistPriorityPersonFilter, assistPrioritySchedulerFilter, assistPriorityTypeFilter, assistPriorityUnitFilter]);
+  }, [assistBuildQueueRows, assistPriorityPersonFilter, assistPriorityTypeFilter, assistPriorityUnitFilter]);
   const buildAssistPriorityDateDiagnostics = () => {
     const todayKey = getLocalDateKey();
     const rows = filteredAssistBuildQueueRows.map((row) => {
@@ -103517,7 +103510,6 @@ const DfpSidePanelTimeline = ({
     return {
       activeAssistPage,
       assistPriorityTypeFilter,
-      assistPrioritySchedulerFilter,
       assistPriorityUnitFilter,
       assistPriorityPersonFilter,
       date,
@@ -103680,30 +103672,10 @@ const DfpSidePanelTimeline = ({
     return true;
   };
   const setAssistBuildQueuePriority = (event, priority) => {
-    if (patchAssistBuildQueueSctEvent(event, { priority, includeInBuild: priority === "High" || event.includeInBuild, submitted: true })) return;
+    if (patchAssistBuildQueueSctEvent(event, { priority, includeInBuild: true, submitted: true })) return;
     onUpdatePriorityEvent(event.id, {
       priority,
-      isMandatoryTasking: priority === "High" ? true : event.isTaskingRequest ? false : event.isMandatoryTasking
-    });
-  };
-  const setAssistBuildQueueScheduler = (event, scheduler) => {
-    if (scheduler === "Ignore") {
-      setEditingAssistPriorityEventId((current) => current === event.id ? null : current);
-      if (event.sctRequestId) {
-        ignoreAssistCurrencyRequest(String(event.sctRequestId));
-        return;
-      }
-      void onDeletePriorityEvent(event.id);
-      return;
-    }
-    if (patchAssistBuildQueueSctEvent(event, {
-      priority: scheduler === "Mandatory" ? "High" : "Medium",
-      includeInBuild: true,
-      submitted: true
-    })) return;
-    onUpdatePriorityEvent(event.id, {
-      priority: scheduler === "Mandatory" ? "High" : "Medium",
-      isMandatoryTasking: scheduler === "Mandatory"
+      isMandatoryTasking: priority === "High"
     });
   };
   const deleteAssistBuildQueueRow = async (row) => {
@@ -103862,7 +103834,7 @@ This cannot be undone.`,
         },
         `assist-priority-tab-${option.value}`
       )) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.75fr)_minmax(0,0.8fr)] gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.75fr)] gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
           "Type",
           /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: assistPriorityTypeFilter, onChange: (event) => setAssistPriorityTypeFilter(event.target.value), className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900", children: assistPrioritySourceTabs.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
@@ -103876,14 +103848,6 @@ This cannot be undone.`,
           /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: assistPriorityUnitFilter, onChange: (event) => setAssistPriorityUnitFilter(event.target.value), className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All units" }),
             assistPriorityUnitOptions.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
-          "Scheduler",
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: assistPrioritySchedulerFilter, onChange: (event) => setAssistPrioritySchedulerFilter(event.target.value), className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All states" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mandatory", children: "Mandatory" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Desirable", children: "Desirable" })
           ] })
         ] })
       ] }),
@@ -103902,7 +103866,7 @@ This cannot be undone.`,
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1220px] table-fixed text-[12px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1116px] table-fixed text-[12px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[46px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[126px]" }),
@@ -103913,7 +103877,6 @@ This cannot be undone.`,
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[128px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[74px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[104px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[72px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[76px]" })
         ] }),
@@ -103927,12 +103890,11 @@ This cannot be undone.`,
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Requested By" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Time" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Priority" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Scheduler" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Status" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-center", children: "Edit" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-200 bg-white", children: [
-          filteredAssistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 12, className: "px-3 py-8 text-center text-slate-500", children: "No matching NEO Build priority items are in this view." }) }),
+          filteredAssistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 11, className: "px-3 py-8 text-center text-slate-500", children: "No matching NEO Build priority items are in this view." }) }),
           filteredAssistBuildQueueRows.map((row) => {
             const isEditing = editingAssistPriorityEventId === row.event.id;
             const showFlightType = normalisedAssistOperationalModel === "flight_school" && row.group === "currency";
@@ -104105,19 +104067,6 @@ This cannot be undone.`,
                   ]
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700", children: row.event.priority || "High" }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  value: row.scheduler,
-                  onChange: (event) => setAssistBuildQueueScheduler(row.event, event.target.value),
-                  className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mandatory", children: "Mandatory" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Desirable", children: "Desirable" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ignore", children: "Ignore" })
-                  ]
-                }
-              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700", children: row.scheduler }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${row.status.className}`, children: row.status.label }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-1 py-2 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(

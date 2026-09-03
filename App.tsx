@@ -1061,7 +1061,6 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistPriorityTypeFilter, setAssistPriorityTypeFilter] = useState('all');
     const [assistPriorityPersonFilter, setAssistPriorityPersonFilter] = useState('');
     const [assistPriorityUnitFilter, setAssistPriorityUnitFilter] = useState('all');
-    const [assistPrioritySchedulerFilter, setAssistPrioritySchedulerFilter] = useState('all');
     const [editingAssistPriorityEventId, setEditingAssistPriorityEventId] = useState<string | null>(null);
     const [assistPriorityDateDrafts, setAssistPriorityDateDrafts] = useState<Record<string, string>>({});
     const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('flying');
@@ -3326,7 +3325,7 @@ const DfpSidePanelTimeline: React.FC<{
             notes: request.notes || '',
             aircraftConfigId: request.aircraftConfigId,
             isTimeFixed: false,
-            isMandatoryTasking: request.priority === 'High' || request.includeInBuild || request.submitted,
+            isMandatoryTasking: request.priority === 'High',
             ...(requestType === 'flight' && request.aircraftConfigId ? { acceptableAircraftConfigs: [request.aircraftConfigId] } : {}),
             requestedByName: String((request as any).requestedByName || (request as any).createdByName || (request as any).submittedByName || request.name || primaryName || 'Requester').trim(),
             sctRequestType: requestType,
@@ -3387,7 +3386,6 @@ const DfpSidePanelTimeline: React.FC<{
         const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
         return assistBuildQueueRows.filter(row => {
             if (assistPriorityTypeFilter !== 'all' && row.group !== assistPriorityTypeFilter) return false;
-            if (assistPrioritySchedulerFilter !== 'all' && row.scheduler !== assistPrioritySchedulerFilter) return false;
             if (assistPriorityUnitFilter !== 'all' && row.unit !== assistPriorityUnitFilter) return false;
             if (personNeedle) {
                 const haystack = `${row.person} ${row.requestedBy} ${row.label}`.toLowerCase();
@@ -3395,7 +3393,7 @@ const DfpSidePanelTimeline: React.FC<{
             }
             return true;
         });
-    }, [assistBuildQueueRows, assistPriorityPersonFilter, assistPrioritySchedulerFilter, assistPriorityTypeFilter, assistPriorityUnitFilter]);
+    }, [assistBuildQueueRows, assistPriorityPersonFilter, assistPriorityTypeFilter, assistPriorityUnitFilter]);
     const buildAssistPriorityDateDiagnostics = () => {
         const todayKey = getLocalDateKey();
         const rows = filteredAssistBuildQueueRows.map(row => {
@@ -3441,7 +3439,6 @@ const DfpSidePanelTimeline: React.FC<{
         return {
             activeAssistPage,
             assistPriorityTypeFilter,
-            assistPrioritySchedulerFilter,
             assistPriorityUnitFilter,
             assistPriorityPersonFilter,
             date,
@@ -3620,30 +3617,10 @@ const DfpSidePanelTimeline: React.FC<{
         return true;
     };
     const setAssistBuildQueuePriority = (event: ScheduleEvent, priority: 'High' | 'Medium' | 'Low') => {
-        if (patchAssistBuildQueueSctEvent(event, { priority, includeInBuild: priority === 'High' || (event as any).includeInBuild, submitted: true })) return;
+        if (patchAssistBuildQueueSctEvent(event, { priority, includeInBuild: true, submitted: true })) return;
         onUpdatePriorityEvent(event.id, {
             priority,
-            isMandatoryTasking: priority === 'High' ? true : event.isTaskingRequest ? false : event.isMandatoryTasking,
-        });
-    };
-    const setAssistBuildQueueScheduler = (event: ScheduleEvent, scheduler: 'Mandatory' | 'Desirable' | 'Ignore') => {
-        if (scheduler === 'Ignore') {
-            setEditingAssistPriorityEventId(current => current === event.id ? null : current);
-            if ((event as any).sctRequestId) {
-                ignoreAssistCurrencyRequest(String((event as any).sctRequestId));
-                return;
-            }
-            void onDeletePriorityEvent(event.id);
-            return;
-        }
-        if (patchAssistBuildQueueSctEvent(event, {
-            priority: scheduler === 'Mandatory' ? 'High' : 'Medium',
-            includeInBuild: true,
-            submitted: true,
-        })) return;
-        onUpdatePriorityEvent(event.id, {
-            priority: scheduler === 'Mandatory' ? 'High' : 'Medium',
-            isMandatoryTasking: scheduler === 'Mandatory',
+            isMandatoryTasking: priority === 'High',
         });
     };
     const deleteAssistBuildQueueRow = async (row: typeof assistBuildQueueRows[number]) => {
@@ -3803,7 +3780,7 @@ const DfpSidePanelTimeline: React.FC<{
                         </button>
                     ))}
                 </div>
-                <div className="mb-3 grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.75fr)_minmax(0,0.8fr)] gap-2">
+                <div className="mb-3 grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.75fr)] gap-2">
                     <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                         Type
                         <select value={assistPriorityTypeFilter} onChange={event => setAssistPriorityTypeFilter(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900">
@@ -3819,14 +3796,6 @@ const DfpSidePanelTimeline: React.FC<{
                         <select value={assistPriorityUnitFilter} onChange={event => setAssistPriorityUnitFilter(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900">
                             <option value="all">All units</option>
                             {assistPriorityUnitOptions.map(unit => <option key={unit} value={unit}>{unit}</option>)}
-                        </select>
-                    </label>
-                    <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                        Scheduler
-                        <select value={assistPrioritySchedulerFilter} onChange={event => setAssistPrioritySchedulerFilter(event.target.value)} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900">
-                            <option value="all">All states</option>
-                            <option value="Mandatory">Mandatory</option>
-                            <option value="Desirable">Desirable</option>
                         </select>
                     </label>
                 </div>
@@ -3850,7 +3819,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                 )}
                 <div className="overflow-x-auto rounded-md border border-slate-300">
-                    <table className="w-full min-w-[1220px] table-fixed text-[12px]">
+                    <table className="w-full min-w-[1116px] table-fixed text-[12px]">
                         <colgroup>
                             <col className="w-[46px]" />
                             <col className="w-[126px]" />
@@ -3861,7 +3830,6 @@ const DfpSidePanelTimeline: React.FC<{
                             <col className="w-[128px]" />
                             <col className="w-[74px]" />
                             <col className="w-[90px]" />
-                            <col className="w-[104px]" />
                             <col className="w-[72px]" />
                             <col className="w-[76px]" />
                         </colgroup>
@@ -3876,7 +3844,6 @@ const DfpSidePanelTimeline: React.FC<{
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Requested By</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Time</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Priority</th>
-                                <th className="border-b border-slate-300 px-2 py-2 text-left">Scheduler</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Status</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-center">Edit</th>
                             </tr>
@@ -3884,7 +3851,7 @@ const DfpSidePanelTimeline: React.FC<{
                         <tbody className="divide-y divide-slate-200 bg-white">
                             {filteredAssistBuildQueueRows.length === 0 && (
                                 <tr>
-                                    <td colSpan={12} className="px-3 py-8 text-center text-slate-500">
+                                    <td colSpan={11} className="px-3 py-8 text-center text-slate-500">
                                         No matching NEO Build priority items are in this view.
                                     </td>
                                 </tr>
@@ -4091,23 +4058,6 @@ const DfpSidePanelTimeline: React.FC<{
                                             ) : (
                                                 <span className="inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700">
                                                     {row.event.priority || 'High'}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-2 py-2 align-middle">
-                                            {isEditing ? (
-                                                <select
-                                                    value={row.scheduler}
-                                                    onChange={event => setAssistBuildQueueScheduler(row.event, event.target.value as 'Mandatory' | 'Desirable' | 'Ignore')}
-                                                    className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
-                                                >
-                                                    <option value="Mandatory">Mandatory</option>
-                                                    <option value="Desirable">Desirable</option>
-                                                    <option value="Ignore">Ignore</option>
-                                                </select>
-                                            ) : (
-                                                <span className="inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700">
-                                                    {row.scheduler}
                                                 </span>
                                             )}
                                         </td>
