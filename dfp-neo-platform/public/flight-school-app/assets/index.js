@@ -103921,7 +103921,7 @@ const DfpSidePanelTimeline = ({
                   "data-date-key": normaliseAssistDateKey(requestedDate),
                   "data-today-key": getLocalDateKey(),
                   "data-stale-or-today": isRequestedDatePastOrToday ? "true" : "false",
-                  className: isRequestedDatePastOrToday ? "font-bold" : void 0,
+                  className: isRequestedDatePastOrToday ? "neo-assist-priority-date-stale font-bold" : void 0,
                   style: isRequestedDatePastOrToday ? { color: "#b91c1c", fontWeight: 700 } : void 0,
                   children: formatAssistCurrencyDate(requestedDate)
                 }

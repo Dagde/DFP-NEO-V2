@@ -1027,6 +1027,12 @@ html[data-theme="light"] body {
 [data-theme="light"] .font-mono.text-yellow-400 {
     color: #8a4b00 !important;
 }
+
+[data-theme="light"] .neo-assist-priority-date-stale[data-neo-assist-priority-date="true"],
+.neo-assist-priority-date-stale[data-neo-assist-priority-date="true"] {
+    color: #b91c1c !important;
+    font-weight: 700 !important;
+}
 /* NEO Build Indicator Styles */
 @keyframes neo-build-pulse {
     0%, 100% {

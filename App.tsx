@@ -3892,7 +3892,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                     data-date-key={normaliseAssistDateKey(requestedDate)}
                                                     data-today-key={getLocalDateKey()}
                                                     data-stale-or-today={isRequestedDatePastOrToday ? 'true' : 'false'}
-                                                    className={isRequestedDatePastOrToday ? 'font-bold' : undefined}
+                                                    className={isRequestedDatePastOrToday ? 'neo-assist-priority-date-stale font-bold' : undefined}
                                                     style={isRequestedDatePastOrToday ? { color: '#b91c1c', fontWeight: 700 } : undefined}
                                                 >
                                                     {formatAssistCurrencyDate(requestedDate)}
