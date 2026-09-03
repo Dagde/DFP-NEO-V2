@@ -103332,18 +103332,21 @@ const DfpSidePanelTimeline = ({
     }
     return { label: "Ready", className: "neo-assist-status-pill-ready border-emerald-200 bg-emerald-50 text-emerald-700" };
   };
-  const assistBuildQueueRows = reactExports.useMemo(() => highestPriorityEvents.filter((event) => !String(event.id || "").startsWith("tasking-formation-member-")).map((event, index) => ({
-    event,
-    index,
-    group: getAssistBuildQueueGroup(event),
-    label: getAssistBuildQueueLabel(event),
-    person: getAssistBuildQueuePerson(event),
-    crewDisplay: getAssistBuildQueueCrewDisplay(event, getAssistBuildQueueGroup(event)),
-    requestedBy: getAssistBuildQueueRequestedBy(event),
-    unit: getAssistBuildQueueUnit(event),
-    scheduler: getAssistBuildQueueScheduler(event),
-    status: getAssistBuildQueueStatus(event)
-  })), [activeUnitCode, date, highestPriorityEvents, normalisedAssistOperationalModel]);
+  const assistBuildQueueRows = reactExports.useMemo(() => highestPriorityEvents.filter((event) => !String(event.id || "").startsWith("tasking-formation-member-")).map((event, index) => {
+    const group = getAssistBuildQueueGroup(event);
+    return {
+      event,
+      index,
+      group,
+      label: getAssistBuildQueueLabel(event),
+      person: getAssistBuildQueuePerson(event),
+      crewDisplay: getAssistBuildQueueCrewDisplay(event, group),
+      requestedBy: getAssistBuildQueueRequestedBy(event),
+      unit: getAssistBuildQueueUnit(event),
+      scheduler: getAssistBuildQueueScheduler(event),
+      status: getAssistBuildQueueStatus(event)
+    };
+  }), [activeUnitCode, date, highestPriorityEvents, normalisedAssistOperationalModel]);
   const filteredAssistBuildQueueRows = reactExports.useMemo(() => {
     const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
     return assistBuildQueueRows.filter((row) => {
@@ -103432,6 +103435,17 @@ const DfpSidePanelTimeline = ({
     else if (event.pilot) updates.pilot = value;
     else if (event.student) updates.student = value;
     else updates.pilot = value;
+    onUpdatePriorityEvent(event.id, updates);
+  };
+  const updateAssistBuildQueueFlightType = (event, flightType) => {
+    const updates = {
+      flightType,
+      soloOrDual: flightType
+    };
+    if (flightType === "Solo") {
+      updates.crew = "";
+      updates.student = "";
+    }
     onUpdatePriorityEvent(event.id, updates);
   };
   const selectAssistBuildQueueEvent = (event) => {
@@ -103558,6 +103572,7 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[46px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[130px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[78px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[82px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", {}),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[150px]" }),
@@ -103571,6 +103586,7 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-100 text-[10px] uppercase tracking-[0.12em] text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Order" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Type" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Solo/Dual" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Date" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Event" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Person/Crew" }),
@@ -103582,9 +103598,11 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-center", children: "Edit" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-200 bg-white", children: [
-          filteredAssistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 11, className: "px-3 py-8 text-center text-slate-500", children: "No matching NEO Build priority items are in this view." }) }),
+          filteredAssistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 12, className: "px-3 py-8 text-center text-slate-500", children: "No matching NEO Build priority items are in this view." }) }),
           filteredAssistBuildQueueRows.map((row) => {
             const isEditing = editingAssistPriorityEventId === row.event.id;
+            const showFlightType = normalisedAssistOperationalModel === "flight_school" && row.group === "currency";
+            const flightTypeValue = row.event.flightType === "Dual" || row.event.soloOrDual === "Dual" ? "Dual" : "Solo";
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: isEditing ? "bg-emerald-50/80 ring-1 ring-inset ring-emerald-300" : "hover:bg-cyan-50", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-5 font-mono", children: row.index + 1 }),
@@ -103593,10 +103611,19 @@ const DfpSidePanelTimeline = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, 1), className: "leading-none text-slate-500 hover:text-cyan-700", children: "▼" })
                 ] })
               ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`, children: groupLabels[row.group] }),
-                normalisedAssistOperationalModel === "flight_school" && row.group === "currency" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block w-fit rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-600", children: row.event.flightType === "Dual" || row.event.soloOrDual === "Dual" ? "Dual" : "Solo" })
-              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`, children: groupLabels[row.group] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: showFlightType ? isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: flightTypeValue,
+                  onChange: (event) => updateAssistBuildQueueFlightType(row.event, event.target.value),
+                  className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
+                  ]
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold uppercase text-slate-700", children: flightTypeValue }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-400", children: "-" }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {

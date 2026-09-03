@@ -3246,18 +3246,21 @@ const DfpSidePanelTimeline: React.FC<{
     const assistBuildQueueRows = useMemo(() => (
         highestPriorityEvents
             .filter(event => !String(event.id || '').startsWith('tasking-formation-member-'))
-            .map((event, index) => ({
-                event,
-                index,
-                group: getAssistBuildQueueGroup(event),
-                label: getAssistBuildQueueLabel(event),
-                person: getAssistBuildQueuePerson(event),
-                crewDisplay: getAssistBuildQueueCrewDisplay(event, getAssistBuildQueueGroup(event)),
-                requestedBy: getAssistBuildQueueRequestedBy(event),
-                unit: getAssistBuildQueueUnit(event),
-                scheduler: getAssistBuildQueueScheduler(event),
-                status: getAssistBuildQueueStatus(event),
-            }))
+            .map((event, index) => {
+                const group = getAssistBuildQueueGroup(event);
+                return {
+                    event,
+                    index,
+                    group,
+                    label: getAssistBuildQueueLabel(event),
+                    person: getAssistBuildQueuePerson(event),
+                    crewDisplay: getAssistBuildQueueCrewDisplay(event, group),
+                    requestedBy: getAssistBuildQueueRequestedBy(event),
+                    unit: getAssistBuildQueueUnit(event),
+                    scheduler: getAssistBuildQueueScheduler(event),
+                    status: getAssistBuildQueueStatus(event),
+                };
+            })
     ), [activeUnitCode, date, highestPriorityEvents, normalisedAssistOperationalModel]);
     const filteredAssistBuildQueueRows = useMemo(() => {
         const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
@@ -3355,6 +3358,17 @@ const DfpSidePanelTimeline: React.FC<{
         else if (event.pilot) updates.pilot = value;
         else if (event.student) updates.student = value;
         else updates.pilot = value;
+        onUpdatePriorityEvent(event.id, updates);
+    };
+    const updateAssistBuildQueueFlightType = (event: ScheduleEvent, flightType: 'Solo' | 'Dual') => {
+        const updates: Partial<ScheduleEvent> & Record<string, any> = {
+            flightType,
+            soloOrDual: flightType,
+        };
+        if (flightType === 'Solo') {
+            updates.crew = '';
+            updates.student = '';
+        }
         onUpdatePriorityEvent(event.id, updates);
     };
     const selectAssistBuildQueueEvent = (event: ScheduleEvent) => {
@@ -3491,6 +3505,7 @@ const DfpSidePanelTimeline: React.FC<{
                         <colgroup>
                             <col className="w-[46px]" />
                             <col className="w-[130px]" />
+                            <col className="w-[78px]" />
                             <col className="w-[82px]" />
                             <col />
                             <col className="w-[150px]" />
@@ -3505,6 +3520,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <tr>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Order</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Type</th>
+                                <th className="border-b border-slate-300 px-2 py-2 text-left">Solo/Dual</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Date</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Event</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Person/Crew</th>
@@ -3519,13 +3535,15 @@ const DfpSidePanelTimeline: React.FC<{
                         <tbody className="divide-y divide-slate-200 bg-white">
                             {filteredAssistBuildQueueRows.length === 0 && (
                                 <tr>
-                                    <td colSpan={11} className="px-3 py-8 text-center text-slate-500">
+                                    <td colSpan={12} className="px-3 py-8 text-center text-slate-500">
                                         No matching NEO Build priority items are in this view.
                                     </td>
                                 </tr>
                             )}
                             {filteredAssistBuildQueueRows.map(row => {
                                 const isEditing = editingAssistPriorityEventId === row.event.id;
+                                const showFlightType = normalisedAssistOperationalModel === 'flight_school' && row.group === 'currency';
+                                const flightTypeValue = row.event.flightType === 'Dual' || (row.event as any).soloOrDual === 'Dual' ? 'Dual' : 'Solo';
                                 return (
                                     <tr key={row.event.id} className={isEditing ? 'bg-emerald-50/80 ring-1 ring-inset ring-emerald-300' : 'hover:bg-cyan-50'}>
                                         <td className="px-2 py-2 align-middle text-slate-600">
@@ -3538,16 +3556,29 @@ const DfpSidePanelTimeline: React.FC<{
                                             </div>
                                         </td>
                                         <td className="px-2 py-2 align-middle">
-                                            <div className="space-y-1">
-                                                <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`}>
-                                                    {groupLabels[row.group]}
-                                                </span>
-                                                {normalisedAssistOperationalModel === 'flight_school' && row.group === 'currency' && (
-                                                    <span className="block w-fit rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-600">
-                                                        {row.event.flightType === 'Dual' || row.event.soloOrDual === 'Dual' ? 'Dual' : 'Solo'}
+                                            <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`}>
+                                                {groupLabels[row.group]}
+                                            </span>
+                                        </td>
+                                        <td className="px-2 py-2 align-middle">
+                                            {showFlightType ? (
+                                                isEditing ? (
+                                                    <select
+                                                        value={flightTypeValue}
+                                                        onChange={event => updateAssistBuildQueueFlightType(row.event, event.target.value as 'Solo' | 'Dual')}
+                                                        className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                    >
+                                                        <option value="Solo">Solo</option>
+                                                        <option value="Dual">Dual</option>
+                                                    </select>
+                                                ) : (
+                                                    <span className="inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold uppercase text-slate-700">
+                                                        {flightTypeValue}
                                                     </span>
-                                                )}
-                                            </div>
+                                                )
+                                            ) : (
+                                                <span className="text-slate-400">-</span>
+                                            )}
                                         </td>
                                         <td className="px-2 py-2 align-middle font-mono text-slate-700">
                                             {isEditing ? (
