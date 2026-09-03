@@ -3289,6 +3289,17 @@ const DfpSidePanelTimeline: React.FC<{
         if (value === 'bulk-currency') return 'bulk-currency';
         return null;
     };
+    const getAssistPrioritySourceClass = (value: string) => {
+        const isSelected = assistPriorityTypeFilter === value;
+        if (value === 'all') {
+            return isSelected
+                ? 'neo-assist-all-priority-source-selected'
+                : 'neo-assist-all-priority-source-idle';
+        }
+        return isSelected
+            ? 'neo-assist-priority-source-selected'
+            : 'border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50';
+    };
     const selectedAssistPrioritySection = getAssistPrioritySourceSection(assistPriorityTypeFilter);
     const moveAssistBuildQueueEvent = (eventId: string, direction: -1 | 1) => {
         const currentIndex = highestPriorityEvents.findIndex(event => event.id === eventId);
@@ -3433,15 +3444,9 @@ const DfpSidePanelTimeline: React.FC<{
                             key={`assist-priority-tab-${option.value}`}
                             type="button"
                             onClick={() => setAssistPrioritySourceView(option.value)}
-                            className={`rounded-md border px-2.5 py-1.5 text-[11px] font-semibold transition ${
-                                option.value === 'all'
-                                    ? 'neo-assist-all-priority-source shadow-sm'
-                                    : assistPriorityTypeFilter === option.value
-                                        ? 'border-cyan-300 bg-cyan-50 text-slate-950'
-                                        : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
-                            }`}
+                            className={`rounded-md border px-2.5 py-1.5 text-[11px] font-semibold shadow-sm transition ${getAssistPrioritySourceClass(option.value)}`}
                         >
-                            {option.value === 'all' && <span className="neo-assist-all-priority-source-dot mr-1 inline-block h-2 w-2 rounded-full" />}
+                            {option.value === 'all' && assistPriorityTypeFilter === 'all' && <span className="neo-assist-all-priority-source-dot mr-1 inline-block h-2 w-2 rounded-full" />}
                             {option.label}{option.count === null ? '' : ` (${option.count})`}
                         </button>
                     ))}
@@ -6168,23 +6173,44 @@ const DfpSidePanelTimeline: React.FC<{
                 .neo-assist-light-shell button:not([draggable]) {
                     color: #0f172a !important;
                 }
-                .neo-assist-light-shell .neo-assist-all-priority-source {
-                    background: #b7f3c8 !important;
-                    background-color: #b7f3c8 !important;
+                .neo-assist-light-shell .neo-assist-all-priority-source-selected {
+                    background: #dcfce7 !important;
+                    background-color: #dcfce7 !important;
                     background-image: none !important;
-                    border-color: #22c55e !important;
+                    border-color: #16a34a !important;
                     border-width: 2px !important;
                     color: #14532d !important;
-                    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.22) !important;
+                    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18) !important;
                 }
-                .neo-assist-light-shell .neo-assist-all-priority-source:hover {
-                    background: #8eeaa9 !important;
-                    background-color: #8eeaa9 !important;
+                .neo-assist-light-shell .neo-assist-all-priority-source-selected:hover {
+                    background: #bbf7d0 !important;
+                    background-color: #bbf7d0 !important;
                     background-image: none !important;
                     border-color: #16a34a !important;
                 }
-                .neo-assist-light-shell .neo-assist-all-priority-source span {
+                .neo-assist-light-shell .neo-assist-all-priority-source-selected span {
                     color: #14532d !important;
+                }
+                .neo-assist-light-shell .neo-assist-all-priority-source-idle {
+                    background: #f0fdf4 !important;
+                    background-color: #f0fdf4 !important;
+                    background-image: none !important;
+                    border-color: #bbf7d0 !important;
+                    color: #166534 !important;
+                }
+                .neo-assist-light-shell .neo-assist-all-priority-source-idle:hover {
+                    background: #dcfce7 !important;
+                    background-color: #dcfce7 !important;
+                    border-color: #22c55e !important;
+                }
+                .neo-assist-light-shell .neo-assist-priority-source-selected {
+                    background: #dbeafe !important;
+                    background-color: #dbeafe !important;
+                    background-image: none !important;
+                    border-color: #1d4ed8 !important;
+                    border-width: 2px !important;
+                    color: #0f172a !important;
+                    box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.16) !important;
                 }
                 .neo-assist-light-shell .neo-assist-all-priority-source-dot {
                     background-color: #22c55e !important;
@@ -6395,16 +6421,10 @@ const DfpSidePanelTimeline: React.FC<{
                                                 key={`assist-priority-source-${option.value}`}
                                                 type="button"
                                                 onClick={() => setAssistPrioritySourceView(option.value)}
-                                                className={`min-h-[44px] rounded-md border px-3 py-2 text-left text-[11px] font-semibold shadow-sm transition ${
-                                                    option.value === 'all'
-                                                        ? 'neo-assist-all-priority-source'
-                                                        : assistPriorityTypeFilter === option.value
-                                                            ? 'border-cyan-300 bg-cyan-50 text-slate-950'
-                                                            : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
-                                                }`}
+                                                className={`min-h-[44px] rounded-md border px-3 py-2 text-left text-[11px] font-semibold shadow-sm transition ${getAssistPrioritySourceClass(option.value)}`}
                                             >
                                                 <span className="block leading-tight">{option.label}</span>
-                                                <span className={`mt-0.5 block text-[10px] font-medium ${option.value === 'all' ? 'text-emerald-800' : 'text-slate-500'}`}>
+                                                <span className={`mt-0.5 block text-[10px] font-medium ${assistPriorityTypeFilter === option.value ? 'text-inherit' : 'text-slate-500'}`}>
                                                     {option.value === 'all'
                                                         ? `Primary overview - ${option.count ?? 0} item${option.count === 1 ? '' : 's'}`
                                                         : option.count === null ? 'Setup section' : `${option.count} item${option.count === 1 ? '' : 's'}`}
