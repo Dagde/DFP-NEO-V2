@@ -103489,6 +103489,19 @@ const DfpSidePanelTimeline = ({
           assistBuildQueueRows.length === 1 ? "" : "s"
         ] }) })
       ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6", children: assistPrioritySourceTabs.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          type: "button",
+          onClick: () => setAssistPrioritySourceView(option.value),
+          className: `min-h-[44px] rounded-md border px-3 py-2 text-left text-[11px] font-semibold shadow-sm transition ${getAssistPrioritySourceClass(option.value)}`,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block leading-tight", children: option.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 block text-[10px] font-medium ${assistPriorityTypeFilter === option.value ? "text-inherit" : "text-slate-500"}`, children: option.value === "all" ? `Primary overview - ${option.count ?? 0} item${option.count === 1 ? "" : "s"}` : option.count === null ? "Setup section" : `${option.count} item${option.count === 1 ? "" : "s"}` })
+          ]
+        },
+        `assist-priority-tab-${option.value}`
+      )) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.75fr)_minmax(0,0.8fr)] gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
           "Type",
@@ -106382,25 +106395,6 @@ const DfpSidePanelTimeline = ({
         ] })
       ] }),
       activeAssistPage === "priority" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3 shadow-sm", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 flex items-center justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-[14px] font-semibold text-slate-950", children: "Priority Sources" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-slate-600", children: "Choose the build-priority source to view, edit, order, or send to the main Priorities page." })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6", children: assistPrioritySourceTabs.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              onClick: () => setAssistPrioritySourceView(option.value),
-              className: `min-h-[44px] rounded-md border px-3 py-2 text-left text-[11px] font-semibold shadow-sm transition ${getAssistPrioritySourceClass(option.value)}`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block leading-tight", children: option.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 block text-[10px] font-medium ${assistPriorityTypeFilter === option.value ? "text-inherit" : "text-slate-500"}`, children: option.value === "all" ? `Primary overview - ${option.count ?? 0} item${option.count === 1 ? "" : "s"}` : option.count === null ? "Setup section" : `${option.count} item${option.count === 1 ? "" : "s"}` })
-              ]
-            },
-            `assist-priority-source-${option.value}`
-          )) })
-        ] }),
         renderAssistDfpOverview(),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: renderAssistBuildQueue() }),
         selectedAssistPrioritySection && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-slate-300 bg-white p-4 shadow-sm", children: [
