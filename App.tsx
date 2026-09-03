@@ -4823,7 +4823,7 @@ const DfpSidePanelTimeline: React.FC<{
                             ].map(([label, value, setter]) => (
                                 <label key={label as string} className="grid grid-cols-[1fr_84px] items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700">
                                     <span>{label as string}</span>
-                                    <input type="number" min={0} value={value as number} onChange={event => updateNumber(Number(event.target.value), setter as (nextValue: number) => void)} className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-right text-[12px] text-slate-950" />
+                                    <input type="number" min={0} value={value as number} onChange={event => updateNumber(Number(event.target.value), setter as (nextValue: number) => void)} className="w-full rounded border border-slate-300 bg-white px-3 py-1 text-center text-[12px] text-slate-950" />
                                 </label>
                             ))}
                         </div>
@@ -4834,7 +4834,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <p className="text-[12px] font-semibold text-slate-950">Aircraft CONFIG capacity</p>
                             <p className="mt-0.5 text-[10px] text-slate-500">Aircraft-only split of the total {aircraftResourceLabel.toLowerCase()} count. CONFIG 0 auto-balances from the remaining aircraft.</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 gap-2">
                             {aircraftConfigurationDefinitions
                                 .map(definition => {
                                     const isCleanConfig = definition.id === BASE_AIRCRAFT_CONFIG.id;

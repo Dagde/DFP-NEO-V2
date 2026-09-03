@@ -104862,7 +104862,7 @@ const DfpSidePanelTimeline = ({
             [proceduralTrainerResourceLabel, availableCptCount, onUpdateCptCount]
           ].map(([label, value, setter]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "grid grid-cols-[1fr_84px] items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 0, value, onChange: (event) => updateNumber(Number(event.target.value), setter), className: "w-full rounded border border-slate-300 bg-white px-2 py-1 text-right text-[12px] text-slate-950" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 0, value, onChange: (event) => updateNumber(Number(event.target.value), setter), className: "w-full rounded border border-slate-300 bg-white px-3 py-1 text-center text-[12px] text-slate-950" })
           ] }, label)) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 rounded border border-slate-200 bg-white/75 px-2 py-1.5 text-[10px] text-slate-500", children: [
             resources.length,
@@ -104878,7 +104878,7 @@ const DfpSidePanelTimeline = ({
               " count. CONFIG 0 auto-balances from the remaining aircraft."
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2", children: aircraftConfigurationDefinitions.map((definition) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: aircraftConfigurationDefinitions.map((definition) => {
             const isCleanConfig = definition.id === BASE_AIRCRAFT_CONFIG.id;
             const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "" : aircraftConfigCapacities[definition.id] || "";
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block rounded border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600", children: [
