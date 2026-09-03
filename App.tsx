@@ -4809,45 +4809,57 @@ const DfpSidePanelTimeline: React.FC<{
                 onUpdateAircraftConfigCapacities(nextCapacities);
             };
             return (
-                <div className="space-y-3 text-[10px] text-slate-200">
-                    <div className="grid grid-cols-3 gap-2">
-                        {[
-                            [aircraftResourceLabel, availableAircraftCount, onUpdateAircraftCount],
-                            [simulatorResourceLabel, availableFtdCount, onUpdateFtdCount],
-                            [proceduralTrainerResourceLabel, availableCptCount, onUpdateCptCount],
-                        ].map(([label, value, setter]) => (
-                            <label key={label as string} className="block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                                {label as string}
-                                <input type="number" min={0} value={value as number} onChange={event => updateNumber(Number(event.target.value), setter as (nextValue: number) => void)} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] text-slate-100" />
-                            </label>
-                        ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        {aircraftConfigurationDefinitions
-                            .map(definition => {
-                                const isCleanConfig = definition.id === BASE_AIRCRAFT_CONFIG.id;
-                                const displayValue = isCleanConfig
-                                    ? (hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : '')
-                                    : (aircraftConfigCapacities[definition.id] || '');
-                                return (
-                                <label key={definition.id} className="block text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                                    {definition.label}
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        value={displayValue}
-                                        readOnly={isCleanConfig}
-                                        disabled={isCleanConfig}
-                                        onChange={event => {
-                                            if (!isCleanConfig) updateConfigCapacity(definition.id, event.target.value);
-                                        }}
-                                        className={`mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] text-slate-100 ${isCleanConfig ? 'cursor-not-allowed text-slate-400 opacity-80' : ''}`}
-                                    />
+                <div className="grid grid-cols-[minmax(180px,0.42fr)_minmax(260px,0.58fr)] gap-3 text-[12px] text-slate-900">
+                    <div className="rounded-md border border-slate-300 bg-[#f8fbfd] p-3 shadow-sm">
+                        <div className="mb-2 border-b border-slate-200 pb-2">
+                            <p className="text-[12px] font-semibold text-slate-950">Resources available</p>
+                            <p className="mt-0.5 text-[10px] text-slate-500">Total resource counts NEO can use for this build.</p>
+                        </div>
+                        <div className="space-y-2">
+                            {[
+                                [aircraftResourceLabel, availableAircraftCount, onUpdateAircraftCount],
+                                [simulatorResourceLabel, availableFtdCount, onUpdateFtdCount],
+                                [proceduralTrainerResourceLabel, availableCptCount, onUpdateCptCount],
+                            ].map(([label, value, setter]) => (
+                                <label key={label as string} className="grid grid-cols-[1fr_84px] items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700">
+                                    <span>{label as string}</span>
+                                    <input type="number" min={0} value={value as number} onChange={event => updateNumber(Number(event.target.value), setter as (nextValue: number) => void)} className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-right text-[12px] text-slate-950" />
                                 </label>
-                            )})}
+                            ))}
+                        </div>
+                        <p className="mt-3 rounded border border-slate-200 bg-white/75 px-2 py-1.5 text-[10px] text-slate-500">{resources.length} DFP rows available for manual placement.</p>
                     </div>
-                    <p className="text-slate-500">CONFIG total auto-balances against total aircraft available.</p>
-                    <p className="text-slate-500">{resources.length} DFP rows available for manual placement</p>
+                    <div className="rounded-md border border-sky-200 bg-[#eef7fb] p-3 shadow-sm">
+                        <div className="mb-2 border-b border-sky-100 pb-2">
+                            <p className="text-[12px] font-semibold text-slate-950">Aircraft CONFIG capacity</p>
+                            <p className="mt-0.5 text-[10px] text-slate-500">Aircraft-only split of the total {aircraftResourceLabel.toLowerCase()} count. CONFIG 0 auto-balances from the remaining aircraft.</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {aircraftConfigurationDefinitions
+                                .map(definition => {
+                                    const isCleanConfig = definition.id === BASE_AIRCRAFT_CONFIG.id;
+                                    const displayValue = isCleanConfig
+                                        ? (hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : '')
+                                        : (aircraftConfigCapacities[definition.id] || '');
+                                    return (
+                                    <label key={definition.id} className="block rounded border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+                                        {definition.label}
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            value={displayValue}
+                                            readOnly={isCleanConfig}
+                                            disabled={isCleanConfig}
+                                            onChange={event => {
+                                                if (!isCleanConfig) updateConfigCapacity(definition.id, event.target.value);
+                                            }}
+                                            className={`mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1 text-right text-[12px] normal-case tracking-normal text-slate-950 ${isCleanConfig ? 'cursor-not-allowed text-slate-500 opacity-80' : ''}`}
+                                        />
+                                    </label>
+                                )})}
+                        </div>
+                        <p className="mt-3 rounded border border-sky-100 bg-white/65 px-2 py-1.5 text-[10px] text-slate-500">CONFIG values apply to aircraft only, not simulator or procedural trainer resources.</p>
+                    </div>
                 </div>
             );
         }
