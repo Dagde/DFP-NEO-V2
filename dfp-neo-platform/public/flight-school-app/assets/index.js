@@ -103317,7 +103317,9 @@ const DfpSidePanelTimeline = ({
   const getAssistBuildQueueRequestedBy = (event) => {
     const raw = event.requestedByName || event.requestedBy || event.createdByName || event.createdBy || event.requesterName || "";
     if (String(raw || "").trim()) return String(raw).trim();
-    if (event.sctRequestId || event.currencyDraftId || event.currency) return getAssistBuildQueuePerson(event);
+    if (event.sctRequestId || event.currencyDraftId || event.currency) {
+      return String(event.fixedCrewPic || event.pilot || event.instructor || event.student || event.group || "Requester").trim();
+    }
     return "Operations";
   };
   const getAssistBuildQueueUnit = (event) => String(event.unitCode || event.unit || event.crewUnitCode || activeUnitCode || "").trim() || "Unit";
@@ -103627,15 +103629,15 @@ const DfpSidePanelTimeline = ({
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-hidden rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-[12px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1220px] table-fixed text-[12px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[46px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[130px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[126px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[78px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[82px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", {}),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[170px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[140px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[92px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[120px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[128px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[74px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[104px]" }),
@@ -145084,7 +145086,7 @@ Do you want to replace the existing entry?`,
               activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "aside",
                 {
-                  className: `absolute inset-y-0 right-0 z-[1000] w-[calc(100%-224px)] max-w-none border-l border-slate-300 bg-slate-100 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
+                  className: `absolute inset-y-0 right-0 z-[1000] w-[calc(100%-160px)] max-w-none border-l border-slate-300 bg-slate-100 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
                   "aria-hidden": !showDfpSidePanel,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(

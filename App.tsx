@@ -3226,7 +3226,9 @@ const DfpSidePanelTimeline: React.FC<{
     const getAssistBuildQueueRequestedBy = (event: ScheduleEvent): string => {
         const raw = (event as any).requestedByName || (event as any).requestedBy || (event as any).createdByName || (event as any).createdBy || (event as any).requesterName || '';
         if (String(raw || '').trim()) return String(raw).trim();
-        if (event.sctRequestId || event.currencyDraftId || event.currency) return getAssistBuildQueuePerson(event);
+        if (event.sctRequestId || event.currencyDraftId || event.currency) {
+            return String(event.fixedCrewPic || event.pilot || event.instructor || event.student || event.group || 'Requester').trim();
+        }
         return 'Operations';
     };
     const getAssistBuildQueueUnit = (event: ScheduleEvent): string => (
@@ -3569,16 +3571,16 @@ const DfpSidePanelTimeline: React.FC<{
                         </button>
                     </div>
                 )}
-                <div className="overflow-x-hidden rounded-md border border-slate-300">
-                    <table className="w-full table-fixed text-[12px]">
+                <div className="overflow-x-auto rounded-md border border-slate-300">
+                    <table className="w-full min-w-[1220px] table-fixed text-[12px]">
                         <colgroup>
                             <col className="w-[46px]" />
-                            <col className="w-[130px]" />
+                            <col className="w-[126px]" />
                             <col className="w-[78px]" />
-                            <col className="w-[82px]" />
-                            <col />
-                            <col className="w-[170px]" />
-                            <col className="w-[140px]" />
+                            <col className="w-[92px]" />
+                            <col className="w-[120px]" />
+                            <col className="w-[190px]" />
+                            <col className="w-[128px]" />
                             <col className="w-[74px]" />
                             <col className="w-[90px]" />
                             <col className="w-[104px]" />
@@ -54016,7 +54018,7 @@ appliedUpdates.forEach(update => {
                     </div>
                     {activeView === 'Program Schedule' && (
                         <aside
-                            className={`absolute inset-y-0 right-0 z-[1000] w-[calc(100%-224px)] max-w-none border-l border-slate-300 bg-slate-100 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
+                            className={`absolute inset-y-0 right-0 z-[1000] w-[calc(100%-160px)] max-w-none border-l border-slate-300 bg-slate-100 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
                             aria-hidden={!showDfpSidePanel}
                         >
                             <button
