@@ -4832,7 +4832,7 @@ const DfpSidePanelTimeline: React.FC<{
                     <div className="rounded-md border border-sky-200 bg-[#eef7fb] p-3 shadow-sm">
                         <div className="mb-2 border-b border-sky-100 pb-2">
                             <p className="text-[12px] font-semibold text-slate-950">Aircraft CONFIG capacity</p>
-                            <p className="mt-0.5 text-[10px] text-slate-500">Aircraft-only split of the total {aircraftResourceLabel.toLowerCase()} count. CONFIG 0 auto-balances from the remaining aircraft.</p>
+                            <p className="mt-0.5 text-[10px] text-slate-500">Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft.</p>
                         </div>
                         <div className="grid grid-cols-1 gap-2">
                             {aircraftConfigurationDefinitions

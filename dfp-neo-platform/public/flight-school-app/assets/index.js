@@ -104872,11 +104872,7 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-sky-200 bg-[#eef7fb] p-3 shadow-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 border-b border-sky-100 pb-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[12px] font-semibold text-slate-950", children: "Aircraft CONFIG capacity" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-[10px] text-slate-500", children: [
-              "Aircraft-only split of the total ",
-              aircraftResourceLabel.toLowerCase(),
-              " count. CONFIG 0 auto-balances from the remaining aircraft."
-            ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-[10px] text-slate-500", children: "Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: aircraftConfigurationDefinitions.map((definition) => {
             const isCleanConfig = definition.id === BASE_AIRCRAFT_CONFIG.id;
