@@ -1223,6 +1223,7 @@ const DfpSidePanelTimeline: React.FC<{
     }, [isFixedCrewNeoAssist]);
     const [showAssistTaskForm, setShowAssistTaskForm] = useState(false);
     const [showAssistCurrencyForm, setShowAssistCurrencyForm] = useState(false);
+    const [editingAssistTaskRowId, setEditingAssistTaskRowId] = useState<string | null>(null);
     const [airCombatAssistMode, setAirCombatAssistMode] = useState<'tile' | 'wizard'>('tile');
     const [selectedAssistPrioritySource, setSelectedAssistPrioritySource] = useState<{ kind: 'task' | 'currency'; id: string } | null>(null);
     const [wizardStep, setWizardStep] = useState(0);
@@ -2893,6 +2894,53 @@ const DfpSidePanelTimeline: React.FC<{
         onAddPriorityEvents(buildTaskRequestEvents(request));
         setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, saved: true, submitted: true, ignored: false } : item));
     };
+    const updateAssistTaskPriorityEvents = (id: string, updates: Partial<ScheduleEvent> & Record<string, any>) => {
+        highestPriorityEvents
+            .filter(event => (
+                isAssistTaskPriorityEventForRequest(event, id) &&
+                assistTaskPriorityEventMatchesActiveScope(event)
+            ))
+            .forEach(event => onUpdatePriorityEvent(event.id, updates));
+    };
+    const updateAssistTaskRequestRow = (id: string, updates: Partial<(typeof assistTaskRequests)[number]> & Record<string, any>) => {
+        setAssistTaskRequests(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+        const eventUpdates: Partial<ScheduleEvent> & Record<string, any> = {};
+        if ('tasking' in updates) {
+            const tasking = String(updates.tasking || '').trim();
+            const label = taskProfileAbbreviations[tasking] || tasking || 'Directed Task';
+            eventUpdates.taskingName = tasking;
+            eventUpdates.taskingDisplayLabel = label;
+            eventUpdates.flightNumber = label;
+        }
+        if ('date' in updates) eventUpdates.date = updates.date;
+        if ('takeoff' in updates) eventUpdates.startTime = Number(updates.takeoff);
+        if ('duration' in updates) eventUpdates.duration = Math.max(0.1, Number(updates.duration) || 0.1);
+        if ('flightType' in updates) {
+            eventUpdates.flightType = updates.flightType;
+            eventUpdates.soloOrDual = updates.flightType;
+        }
+        if ('depPoint' in updates) eventUpdates.origin = String(updates.depPoint || '').trim().toUpperCase();
+        if ('arrivalPoint' in updates) eventUpdates.destination = String(updates.arrivalPoint || '').trim().toUpperCase();
+        if ('aircraftConfigId' in updates) {
+            eventUpdates.aircraftConfigId = updates.aircraftConfigId;
+            eventUpdates.acceptableAircraftConfigs = [updates.aircraftConfigId].filter(Boolean);
+        }
+        if ('aircraftCount' in updates) {
+            const aircraftCount = normaliseAssistAircraftCount(updates.aircraftCount);
+            eventUpdates.aircraftCount = aircraftCount;
+            eventUpdates.taskingAircraftCount = aircraftCount;
+            eventUpdates.formationSize = aircraftCount > 1 ? aircraftCount : undefined;
+            eventUpdates.isFormation = aircraftCount > 1;
+        }
+        if ('isMandatory' in updates) {
+            eventUpdates.priority = updates.isMandatory === false ? 'Medium' : 'High';
+            eventUpdates.isMandatoryTasking = updates.isMandatory !== false;
+        }
+        if (Object.keys(eventUpdates).length > 0) updateAssistTaskPriorityEvents(id, eventUpdates);
+    };
+    const updateAssistTaskPriorityRow = (events: ScheduleEvent[], updates: Partial<ScheduleEvent> & Record<string, any>) => {
+        events.forEach(event => onUpdatePriorityEvent(event.id, updates));
+    };
     const getAssistCurrencyRequestType = (id: string): 'flight' | 'ftd' | null => {
         if (sctFlights.some(request => request.id === id)) return 'flight';
         if (sctFtds.some(request => request.id === id)) return 'ftd';
@@ -3076,10 +3124,17 @@ const DfpSidePanelTimeline: React.FC<{
                 tasking: first.taskingName || first.flightNumber || 'Directed Task',
                 date: first.date || date,
                 takeoff: first.startTime,
+                duration: first.duration,
+                flightType: first.flightType === 'Solo' ? 'Solo' as const : 'Dual' as const,
+                depPoint: first.origin || locationCode,
+                arrivalPoint: first.destination || locationCode,
+                aircraftCount: Math.max(1, Math.floor(Number(first.formationSize || first.taskingAircraftCount || first.aircraftCount || events.length || 1) || 1)),
+                aircraftConfigId: first.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+                priority: first.priority || (first.isMandatoryTasking === false ? 'Medium' : 'High'),
                 scheduled: true,
             };
         });
-    }, [date, highestPriorityEvents, assistTaskingUnitCodes.join('|')]);
+    }, [date, highestPriorityEvents, assistTaskingUnitCodes.join('|'), locationCode]);
     const highestPriorityCurrencyRows = useMemo(() => (
         highestPriorityEvents
             .filter(event => event.currency || event.currencyDraftId || String(event.id || '').startsWith('neo-assist-currency-'))
@@ -5561,6 +5616,7 @@ const DfpSidePanelTimeline: React.FC<{
         if (renderedAssistSection === 'taskings') {
             const localRows = visibleAssistTaskRequests.map(request => ({
                 id: request.id,
+                events: [] as ScheduleEvent[],
                 tasking: request.tasking || 'Directed event',
                 date: request.date,
                 takeoff: request.takeoff,
@@ -5570,82 +5626,175 @@ const DfpSidePanelTimeline: React.FC<{
                 arrivalPoint: request.arrivalPoint,
                 aircraftCount: request.aircraftCount,
                 aircraftConfigId: request.aircraftConfigId,
+                priority: request.isMandatory === false ? 'Medium' : 'High',
                 saved: Boolean(request.saved),
                 scheduled: Boolean(request.submitted),
                 ignored: Boolean(request.ignored),
                 source: 'local' as const,
             }));
             const visibleRemoteRows = highestPriorityTaskRows.filter(remote => !visibleAssistTaskRequests.some(local => local.id === remote.id));
-            const rows = [...localRows, ...visibleRemoteRows.map(row => ({ ...row, ignored: false, source: 'remote' as const }))];
+            const rows = [...localRows, ...visibleRemoteRows.map(row => ({ ...row, saved: true, ignored: false, source: 'remote' as const }))];
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
-                    <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
+                    <div className="max-h-56 overflow-auto rounded border border-slate-700 bg-slate-950/45">
                         {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No directed task requests entered.</p>}
-                        {rows.map(row => (
-                            <div key={`${row.source}-${row.id}`} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
-                                <span className="min-w-0 truncate">
-                                    <span className="font-semibold text-slate-100">{row.tasking}</span>
-                                    <span className="ml-2 text-slate-400">{formatAssistCurrencyDate(row.date || date)} {formatTime(row.takeoff)}</span>
-                                </span>
-                                <span className="flex items-center gap-2 text-[9px]">
-                                    {row.source === 'local' && !row.saved ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => saveAssistTaskRequest(row.id)}
-                                            className="rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700"
-                                        >
-                                            Save
-                                        </button>
-                                    ) : isAirCombatTileMode ? (
-                                        <label className="inline-flex items-center gap-1 text-cyan-100">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedAssistPrioritySource?.kind === 'task' && selectedAssistPrioritySource.id === row.id}
-                                                onChange={event => {
-                                                    if (event.target.checked) {
-                                                        selectAirCombatTileTask(row);
-                                                    } else if (selectedAssistPrioritySource?.kind === 'task' && selectedAssistPrioritySource.id === row.id) {
-                                                        setSelectedAssistPrioritySource(null);
-                                                        setSelectedTaskProfile('');
-                                                    }
-                                                }}
-                                            />
-                                            Select
-                                        </label>
-                                    ) : (
-                                        <>
-                                            <label className="inline-flex items-center gap-1 text-emerald-200">
-                                                <input
-                                                    type="radio"
-                                                    name={`neo-assist-task-schedule-${row.source}-${row.id}`}
-                                                    checked={row.scheduled && !row.ignored}
-                                                    onChange={() => {
-                                                        selectAssistTask(row.tasking);
-                                                        if (row.source === 'local') submitAssistTaskRequest(row.id);
-                                                    }}
-                                                />
-                                                Schedule
-                                            </label>
-                                            <label className="inline-flex items-center gap-1 text-rose-200">
-                                                <input
-                                                    type="radio"
-                                                    name={`neo-assist-task-schedule-${row.source}-${row.id}`}
-                                                    checked={row.ignored || !row.scheduled}
-                                                    onChange={() => {
-                                                        if (row.source === 'local') ignoreAssistTaskRequest(row.id);
-                                                        else {
-                                                            const remote = highestPriorityTaskRows.find(item => item.id === row.id);
-                                                            if (remote) ignorePriorityEvents(remote.events);
-                                                        }
-                                                    }}
-                                                />
-                                                Ignore
-                                            </label>
-                                        </>
-                                    )}
-                                </span>
-                            </div>
-                        ))}
+                        {rows.length > 0 && (
+                            <table className="w-full min-w-[980px] table-fixed text-[10px]">
+                                <colgroup>
+                                    <col className="w-[90px]" />
+                                    <col className="w-[76px]" />
+                                    <col className="w-[88px]" />
+                                    <col className="w-[130px]" />
+                                    <col className="w-[112px]" />
+                                    <col className="w-[74px]" />
+                                    <col className="w-[70px]" />
+                                    <col className="w-[90px]" />
+                                    <col className="w-[86px]" />
+                                    <col className="w-[90px]" />
+                                    <col className="w-[94px]" />
+                                </colgroup>
+                                <thead className="sticky top-0 z-10 bg-slate-900 text-[8px] uppercase tracking-[0.12em] text-slate-400">
+                                    <tr>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Type</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Solo/Dual</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Date</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Event</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Route</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Time</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Aircraft</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">CONFIG</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Priority</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Status</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-center">Edit</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {rows.map(row => {
+                                        const rowKey = `${row.source}-${row.id}`;
+                                        const isEditingRow = editingAssistTaskRowId === rowKey;
+                                        const updateLocal = (updates: any) => updateAssistTaskRequestRow(row.id, updates);
+                                        const updateRemote = (updates: Partial<ScheduleEvent> & Record<string, any>) => updateAssistTaskPriorityRow(row.events, updates);
+                                        const updateRow = (updates: any, eventUpdates?: Partial<ScheduleEvent> & Record<string, any>) => (
+                                            row.source === 'local' ? updateLocal(updates) : updateRemote(eventUpdates || updates)
+                                        );
+                                        return (
+                                            <tr key={rowKey} className={isEditingRow ? 'bg-cyan-950/60' : 'bg-slate-950/35'}>
+                                                <td className="px-2 py-2 font-semibold text-cyan-100">Directed Task</td>
+                                                <td className="px-2 py-2">
+                                                    {isEditingRow ? (
+                                                        <select value={row.flightType} onChange={event => updateRow({ flightType: event.target.value }, { flightType: event.target.value, soloOrDual: event.target.value })} className={fieldClass}>
+                                                            <option value="Solo">Solo</option>
+                                                            <option value="Dual">Dual</option>
+                                                        </select>
+                                                    ) : row.flightType}
+                                                </td>
+                                                <td className="px-2 py-2 font-mono">
+                                                    {isEditingRow ? (
+                                                        <input type="date" value={row.date || date} onChange={event => updateRow({ date: event.target.value }, { date: event.target.value })} className={fieldClass} />
+                                                    ) : formatAssistCurrencyDate(row.date || date)}
+                                                </td>
+                                                <td className="px-2 py-2">
+                                                    {isEditingRow ? (
+                                                        <input value={row.tasking} onChange={event => {
+                                                            const tasking = event.target.value;
+                                                            const label = taskProfileAbbreviations[tasking] || tasking || 'Directed Task';
+                                                            updateRow({ tasking }, { taskingName: tasking, taskingDisplayLabel: label, flightNumber: label });
+                                                        }} className={fieldClass} />
+                                                    ) : <span className="block truncate font-semibold text-slate-100">{row.tasking}</span>}
+                                                </td>
+                                                <td className="px-2 py-2">
+                                                    {isEditingRow ? (
+                                                        <div className="grid grid-cols-2 gap-1">
+                                                            <input value={row.depPoint} onChange={event => updateRow({ depPoint: event.target.value.toUpperCase() }, { origin: event.target.value.toUpperCase() })} className={fieldClass} />
+                                                            <input value={row.arrivalPoint} onChange={event => updateRow({ arrivalPoint: event.target.value.toUpperCase() }, { destination: event.target.value.toUpperCase() })} className={fieldClass} />
+                                                        </div>
+                                                    ) : `${row.depPoint}-${row.arrivalPoint}`}
+                                                </td>
+                                                <td className="px-2 py-2 font-mono">
+                                                    {isEditingRow ? (
+                                                        <select value={row.takeoff} onChange={event => updateRow({ takeoff: Number(event.target.value) }, { startTime: Number(event.target.value) })} className={fieldClass}>
+                                                            {timeOptions.map(option => <option key={`assist-task-row-${rowKey}-${option.label}`} value={option.value}>{option.label}</option>)}
+                                                        </select>
+                                                    ) : formatTime(row.takeoff)}
+                                                </td>
+                                                <td className="px-2 py-2 font-mono">
+                                                    {isEditingRow ? (
+                                                        <input type="number" min={1} max={24} value={row.aircraftCount} onChange={event => {
+                                                            const aircraftCount = normaliseAssistAircraftCount(event.target.value);
+                                                            updateRow(
+                                                                { aircraftCount },
+                                                                { aircraftCount, taskingAircraftCount: aircraftCount, formationSize: aircraftCount > 1 ? aircraftCount : undefined, isFormation: aircraftCount > 1 }
+                                                            );
+                                                        }} className={fieldClass} />
+                                                    ) : row.aircraftCount}
+                                                </td>
+                                                <td className="px-2 py-2">
+                                                    {isEditingRow ? (
+                                                        <select value={row.aircraftConfigId} onChange={event => updateRow({ aircraftConfigId: event.target.value }, { aircraftConfigId: event.target.value, acceptableAircraftConfigs: [event.target.value] })} className={fieldClass}>
+                                                            {aircraftConfigurationDefinitions.map(definition => <option key={`assist-task-row-config-${rowKey}-${definition.id}`} value={definition.id}>{definition.label}</option>)}
+                                                        </select>
+                                                    ) : (aircraftConfigurationDefinitions.find(definition => definition.id === row.aircraftConfigId)?.label || row.aircraftConfigId)}
+                                                </td>
+                                                <td className="px-2 py-2">
+                                                    {isEditingRow ? (
+                                                        <select value={row.priority} onChange={event => {
+                                                            const priority = event.target.value as 'High' | 'Medium' | 'Low';
+                                                            updateRow(
+                                                                { isMandatory: priority === 'High', priority },
+                                                                { priority, isMandatoryTasking: priority === 'High' }
+                                                            );
+                                                        }} className={fieldClass}>
+                                                            <option value="High">High</option>
+                                                            <option value="Medium">Medium</option>
+                                                            <option value="Low">Low</option>
+                                                        </select>
+                                                    ) : row.priority}
+                                                </td>
+                                                <td className="px-2 py-2">
+                                                    {row.ignored ? 'Ignored' : row.scheduled ? 'Scheduled' : row.saved ? 'Saved' : 'Draft'}
+                                                </td>
+                                                <td className="px-2 py-2 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button type="button" onClick={() => setEditingAssistTaskRowId(current => current === rowKey ? null : rowKey)} className="rounded border border-cyan-400/50 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10">
+                                                            {isEditingRow ? 'Done' : 'Edit'}
+                                                        </button>
+                                                        {row.source === 'local' && !row.saved && (
+                                                            <button type="button" onClick={() => saveAssistTaskRequest(row.id)} className="rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700">Save</button>
+                                                        )}
+                                                        {isAirCombatTileMode ? (
+                                                            <label className="inline-flex items-center gap-1 text-cyan-100">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedAssistPrioritySource?.kind === 'task' && selectedAssistPrioritySource.id === row.id}
+                                                                    onChange={event => {
+                                                                        if (event.target.checked) selectAirCombatTileTask(row);
+                                                                        else if (selectedAssistPrioritySource?.kind === 'task' && selectedAssistPrioritySource.id === row.id) {
+                                                                            setSelectedAssistPrioritySource(null);
+                                                                            setSelectedTaskProfile('');
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                Select
+                                                            </label>
+                                                        ) : (
+                                                            <button type="button" onClick={() => {
+                                                                if (row.source === 'local') {
+                                                                    row.scheduled && !row.ignored ? ignoreAssistTaskRequest(row.id) : submitAssistTaskRequest(row.id);
+                                                                } else {
+                                                                    ignorePriorityEvents(row.events);
+                                                                }
+                                                            }} className={`rounded border px-2 py-1 font-semibold ${row.scheduled && !row.ignored ? 'border-rose-400/50 text-rose-200 hover:bg-rose-500/10' : 'border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10'}`}>
+                                                                {row.scheduled && !row.ignored ? 'Ignore' : 'Schedule'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                     <button
                         type="button"

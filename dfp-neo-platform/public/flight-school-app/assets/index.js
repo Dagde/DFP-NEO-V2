@@ -101740,6 +101740,7 @@ const DfpSidePanelTimeline = ({
   }, [isFixedCrewNeoAssist]);
   const [showAssistTaskForm, setShowAssistTaskForm] = reactExports.useState(false);
   const [showAssistCurrencyForm, setShowAssistCurrencyForm] = reactExports.useState(false);
+  const [editingAssistTaskRowId, setEditingAssistTaskRowId] = reactExports.useState(null);
   const [airCombatAssistMode, setAirCombatAssistMode] = reactExports.useState("tile");
   const [selectedAssistPrioritySource, setSelectedAssistPrioritySource] = reactExports.useState(null);
   const [wizardStep, setWizardStep] = reactExports.useState(0);
@@ -103063,6 +103064,48 @@ const DfpSidePanelTimeline = ({
     onAddPriorityEvents(buildTaskRequestEvents(request));
     setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, saved: true, submitted: true, ignored: false } : item));
   };
+  const updateAssistTaskPriorityEvents = (id, updates) => {
+    highestPriorityEvents.filter((event) => isAssistTaskPriorityEventForRequest(event, id) && assistTaskPriorityEventMatchesActiveScope(event)).forEach((event) => onUpdatePriorityEvent(event.id, updates));
+  };
+  const updateAssistTaskRequestRow = (id, updates) => {
+    setAssistTaskRequests((prev) => prev.map((item) => item.id === id ? { ...item, ...updates } : item));
+    const eventUpdates = {};
+    if ("tasking" in updates) {
+      const tasking = String(updates.tasking || "").trim();
+      const label = taskProfileAbbreviations[tasking] || tasking || "Directed Task";
+      eventUpdates.taskingName = tasking;
+      eventUpdates.taskingDisplayLabel = label;
+      eventUpdates.flightNumber = label;
+    }
+    if ("date" in updates) eventUpdates.date = updates.date;
+    if ("takeoff" in updates) eventUpdates.startTime = Number(updates.takeoff);
+    if ("duration" in updates) eventUpdates.duration = Math.max(0.1, Number(updates.duration) || 0.1);
+    if ("flightType" in updates) {
+      eventUpdates.flightType = updates.flightType;
+      eventUpdates.soloOrDual = updates.flightType;
+    }
+    if ("depPoint" in updates) eventUpdates.origin = String(updates.depPoint || "").trim().toUpperCase();
+    if ("arrivalPoint" in updates) eventUpdates.destination = String(updates.arrivalPoint || "").trim().toUpperCase();
+    if ("aircraftConfigId" in updates) {
+      eventUpdates.aircraftConfigId = updates.aircraftConfigId;
+      eventUpdates.acceptableAircraftConfigs = [updates.aircraftConfigId].filter(Boolean);
+    }
+    if ("aircraftCount" in updates) {
+      const aircraftCount = normaliseAssistAircraftCount(updates.aircraftCount);
+      eventUpdates.aircraftCount = aircraftCount;
+      eventUpdates.taskingAircraftCount = aircraftCount;
+      eventUpdates.formationSize = aircraftCount > 1 ? aircraftCount : void 0;
+      eventUpdates.isFormation = aircraftCount > 1;
+    }
+    if ("isMandatory" in updates) {
+      eventUpdates.priority = updates.isMandatory === false ? "Medium" : "High";
+      eventUpdates.isMandatoryTasking = updates.isMandatory !== false;
+    }
+    if (Object.keys(eventUpdates).length > 0) updateAssistTaskPriorityEvents(id, eventUpdates);
+  };
+  const updateAssistTaskPriorityRow = (events, updates) => {
+    events.forEach((event) => onUpdatePriorityEvent(event.id, updates));
+  };
   const getAssistCurrencyRequestType = (id) => {
     if (sctFlights.some((request) => request.id === id)) return "flight";
     if (sctFtds.some((request) => request.id === id)) return "ftd";
@@ -103221,10 +103264,17 @@ const DfpSidePanelTimeline = ({
         tasking: first.taskingName || first.flightNumber || "Directed Task",
         date: first.date || date,
         takeoff: first.startTime,
+        duration: first.duration,
+        flightType: first.flightType === "Solo" ? "Solo" : "Dual",
+        depPoint: first.origin || locationCode,
+        arrivalPoint: first.destination || locationCode,
+        aircraftCount: Math.max(1, Math.floor(Number(first.formationSize || first.taskingAircraftCount || first.aircraftCount || events.length || 1) || 1)),
+        aircraftConfigId: first.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+        priority: first.priority || (first.isMandatoryTasking === false ? "Medium" : "High"),
         scheduled: true
       };
     });
-  }, [date, highestPriorityEvents, assistTaskingUnitCodes.join("|")]);
+  }, [date, highestPriorityEvents, assistTaskingUnitCodes.join("|"), locationCode]);
   const highestPriorityCurrencyRows = reactExports.useMemo(() => highestPriorityEvents.filter((event) => event.currency || event.currencyDraftId || String(event.id || "").startsWith("neo-assist-currency-")).map((event) => ({
     id: event.currencyDraftId || event.sctRequestId || event.id,
     event,
@@ -105538,6 +105588,7 @@ This cannot be undone.`,
     if (renderedAssistSection === "taskings") {
       const localRows = visibleAssistTaskRequests.map((request) => ({
         id: request.id,
+        events: [],
         tasking: request.tasking || "Directed event",
         date: request.date,
         takeoff: request.takeoff,
@@ -105547,86 +105598,117 @@ This cannot be undone.`,
         arrivalPoint: request.arrivalPoint,
         aircraftCount: request.aircraftCount,
         aircraftConfigId: request.aircraftConfigId,
+        priority: request.isMandatory === false ? "Medium" : "High",
         saved: Boolean(request.saved),
         scheduled: Boolean(request.submitted),
         ignored: Boolean(request.ignored),
         source: "local"
       }));
       const visibleRemoteRows = highestPriorityTaskRows.filter((remote) => !visibleAssistTaskRequests.some((local) => local.id === remote.id));
-      const rows = [...localRows, ...visibleRemoteRows.map((row) => ({ ...row, ignored: false, source: "remote" }))];
+      const rows = [...localRows, ...visibleRemoteRows.map((row) => ({ ...row, saved: true, ignored: false, source: "remote" }))];
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-40 space-y-1 overflow-y-auto pr-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-56 overflow-auto rounded border border-slate-700 bg-slate-950/45", children: [
           rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No directed task requests entered." }),
-          rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: row.tasking }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-2 text-slate-400", children: [
-                formatAssistCurrencyDate(row.date || date),
-                " ",
-                formatTime2(row.takeoff)
-              ] })
+          rows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[980px] table-fixed text-[10px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[76px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[88px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[130px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[112px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[74px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[70px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[86px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[94px]" })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex items-center gap-2 text-[9px]", children: row.source === "local" && !row.saved ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => saveAssistTaskRequest(row.id),
-                className: "rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700",
-                children: "Save"
-              }
-            ) : isAirCombatTileMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-cyan-100", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: selectedAssistPrioritySource?.kind === "task" && selectedAssistPrioritySource.id === row.id,
-                  onChange: (event) => {
-                    if (event.target.checked) {
-                      selectAirCombatTileTask(row);
-                    } else if (selectedAssistPrioritySource?.kind === "task" && selectedAssistPrioritySource.id === row.id) {
-                      setSelectedAssistPrioritySource(null);
-                      setSelectedTaskProfile("");
-                    }
-                  }
-                }
-              ),
-              "Select"
-            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-emerald-200", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "radio",
-                    name: `neo-assist-task-schedule-${row.source}-${row.id}`,
-                    checked: row.scheduled && !row.ignored,
-                    onChange: () => {
-                      selectAssistTask(row.tasking);
-                      if (row.source === "local") submitAssistTaskRequest(row.id);
-                    }
-                  }
-                ),
-                "Schedule"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-rose-200", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "radio",
-                    name: `neo-assist-task-schedule-${row.source}-${row.id}`,
-                    checked: row.ignored || !row.scheduled,
-                    onChange: () => {
-                      if (row.source === "local") ignoreAssistTaskRequest(row.id);
-                      else {
-                        const remote = highestPriorityTaskRows.find((item) => item.id === row.id);
-                        if (remote) ignorePriorityEvents(remote.events);
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-900 text-[8px] uppercase tracking-[0.12em] text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Type" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Solo/Dual" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Date" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Event" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Route" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Time" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Aircraft" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "CONFIG" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Priority" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Status" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-center", children: "Edit" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-slate-800", children: rows.map((row) => {
+              const rowKey = `${row.source}-${row.id}`;
+              const isEditingRow = editingAssistTaskRowId === rowKey;
+              const updateLocal = (updates) => updateAssistTaskRequestRow(row.id, updates);
+              const updateRemote = (updates) => updateAssistTaskPriorityRow(row.events, updates);
+              const updateRow = (updates, eventUpdates) => row.source === "local" ? updateLocal(updates) : updateRemote(eventUpdates || updates);
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: isEditingRow ? "bg-cyan-950/60" : "bg-slate-950/35", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-cyan-100", children: "Directed Task" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: isEditingRow ? /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: row.flightType, onChange: (event) => updateRow({ flightType: event.target.value }, { flightType: event.target.value, soloOrDual: event.target.value }), className: fieldClass2, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
+                ] }) : row.flightType }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-mono", children: isEditingRow ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: row.date || date, onChange: (event) => updateRow({ date: event.target.value }, { date: event.target.value }), className: fieldClass2 }) : formatAssistCurrencyDate(row.date || date) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: isEditingRow ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: row.tasking, onChange: (event) => {
+                  const tasking = event.target.value;
+                  const label = taskProfileAbbreviations[tasking] || tasking || "Directed Task";
+                  updateRow({ tasking }, { taskingName: tasking, taskingDisplayLabel: label, flightNumber: label });
+                }, className: fieldClass2 }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate font-semibold text-slate-100", children: row.tasking }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: isEditingRow ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: row.depPoint, onChange: (event) => updateRow({ depPoint: event.target.value.toUpperCase() }, { origin: event.target.value.toUpperCase() }), className: fieldClass2 }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: row.arrivalPoint, onChange: (event) => updateRow({ arrivalPoint: event.target.value.toUpperCase() }, { destination: event.target.value.toUpperCase() }), className: fieldClass2 })
+                ] }) : `${row.depPoint}-${row.arrivalPoint}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-mono", children: isEditingRow ? /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: row.takeoff, onChange: (event) => updateRow({ takeoff: Number(event.target.value) }, { startTime: Number(event.target.value) }), className: fieldClass2, children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `assist-task-row-${rowKey}-${option.label}`)) }) : formatTime2(row.takeoff) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-mono", children: isEditingRow ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: 1, max: 24, value: row.aircraftCount, onChange: (event) => {
+                  const aircraftCount = normaliseAssistAircraftCount(event.target.value);
+                  updateRow(
+                    { aircraftCount },
+                    { aircraftCount, taskingAircraftCount: aircraftCount, formationSize: aircraftCount > 1 ? aircraftCount : void 0, isFormation: aircraftCount > 1 }
+                  );
+                }, className: fieldClass2 }) : row.aircraftCount }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: isEditingRow ? /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: row.aircraftConfigId, onChange: (event) => updateRow({ aircraftConfigId: event.target.value }, { aircraftConfigId: event.target.value, acceptableAircraftConfigs: [event.target.value] }), className: fieldClass2, children: aircraftConfigurationDefinitions.map((definition) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: definition.id, children: definition.label }, `assist-task-row-config-${rowKey}-${definition.id}`)) }) : aircraftConfigurationDefinitions.find((definition) => definition.id === row.aircraftConfigId)?.label || row.aircraftConfigId }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: isEditingRow ? /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: row.priority, onChange: (event) => {
+                  const priority = event.target.value;
+                  updateRow(
+                    { isMandatory: priority === "High", priority },
+                    { priority, isMandatoryTasking: priority === "High" }
+                  );
+                }, className: fieldClass2, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
+                ] }) : row.priority }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: row.ignored ? "Ignored" : row.scheduled ? "Scheduled" : row.saved ? "Saved" : "Draft" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setEditingAssistTaskRowId((current) => current === rowKey ? null : rowKey), className: "rounded border border-cyan-400/50 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10", children: isEditingRow ? "Done" : "Edit" }),
+                  row.source === "local" && !row.saved && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => saveAssistTaskRequest(row.id), className: "rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700", children: "Save" }),
+                  isAirCombatTileMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-cyan-100", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: selectedAssistPrioritySource?.kind === "task" && selectedAssistPrioritySource.id === row.id,
+                        onChange: (event) => {
+                          if (event.target.checked) selectAirCombatTileTask(row);
+                          else if (selectedAssistPrioritySource?.kind === "task" && selectedAssistPrioritySource.id === row.id) {
+                            setSelectedAssistPrioritySource(null);
+                            setSelectedTaskProfile("");
+                          }
+                        }
                       }
+                    ),
+                    "Select"
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => {
+                    if (row.source === "local") {
+                      row.scheduled && !row.ignored ? ignoreAssistTaskRequest(row.id) : submitAssistTaskRequest(row.id);
+                    } else {
+                      ignorePriorityEvents(row.events);
                     }
-                  }
-                ),
-                "Ignore"
-              ] })
-            ] }) })
-          ] }, `${row.source}-${row.id}`))
+                  }, className: `rounded border px-2 py-1 font-semibold ${row.scheduled && !row.ignored ? "border-rose-400/50 text-rose-200 hover:bg-rose-500/10" : "border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10"}`, children: row.scheduled && !row.ignored ? "Ignore" : "Schedule" })
+                ] }) })
+              ] }, rowKey);
+            }) })
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
