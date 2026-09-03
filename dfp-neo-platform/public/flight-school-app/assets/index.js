@@ -103514,20 +103514,6 @@ const DfpSidePanelTimeline = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 flex flex-wrap gap-1.5", children: assistPrioritySourceTabs.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "button",
-        {
-          type: "button",
-          onClick: () => setAssistPrioritySourceView(option.value),
-          className: `rounded-md border px-2.5 py-1.5 text-[11px] font-semibold shadow-sm transition ${getAssistPrioritySourceClass(option.value)}`,
-          children: [
-            option.value === "all" && assistPriorityTypeFilter === "all" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "neo-assist-all-priority-source-dot mr-1 inline-block h-2 w-2 rounded-full" }),
-            option.label,
-            option.count === null ? "" : ` (${option.count})`
-          ]
-        },
-        `assist-priority-tab-${option.value}`
-      )) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-priority-event-options", children: priorityEventOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option }, `assist-priority-event-option-${option}`)) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-priority-person-options", children: staffListNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name }, `assist-priority-person-option-${name}`)) }),
       assistPriorityTypeFilter === "bulk-currency" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-3", children: [

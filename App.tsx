@@ -3438,19 +3438,6 @@ const DfpSidePanelTimeline: React.FC<{
                         </select>
                     </label>
                 </div>
-                <div className="mb-3 flex flex-wrap gap-1.5">
-                    {assistPrioritySourceTabs.map(option => (
-                        <button
-                            key={`assist-priority-tab-${option.value}`}
-                            type="button"
-                            onClick={() => setAssistPrioritySourceView(option.value)}
-                            className={`rounded-md border px-2.5 py-1.5 text-[11px] font-semibold shadow-sm transition ${getAssistPrioritySourceClass(option.value)}`}
-                        >
-                            {option.value === 'all' && assistPriorityTypeFilter === 'all' && <span className="neo-assist-all-priority-source-dot mr-1 inline-block h-2 w-2 rounded-full" />}
-                            {option.label}{option.count === null ? '' : ` (${option.count})`}
-                        </button>
-                    ))}
-                </div>
                 <datalist id="neo-assist-priority-event-options">
                     {priorityEventOptions.map(option => <option key={`assist-priority-event-option-${option}`} value={option} />)}
                 </datalist>
