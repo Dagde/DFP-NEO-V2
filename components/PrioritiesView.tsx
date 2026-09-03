@@ -5117,9 +5117,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   sectionId: 'standard-missions',
                   focusSubsectionId: 'platform-standard-missions',
                 })}
-                className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight"
+                className="btn-aluminium-brushed flex h-[41px] w-[68px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight"
               >
-                Edit
+                Add/delete
               </button>
             </div>
             {renderSavedSpecialEvents()}
