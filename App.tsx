@@ -3279,7 +3279,10 @@ const DfpSidePanelTimeline: React.FC<{
             return { label: 'Other date', className: 'neo-assist-status-pill-warning border-amber-200 bg-amber-50 text-amber-800' };
         }
         if ((event as any).isSctSourceOnly) {
-            return { label: 'Submitted', className: 'neo-assist-status-pill-ready border-sky-200 bg-sky-50 text-sky-700' };
+            return {
+                label: (event as any).isMandatoryTasking ? 'Submitted' : 'Saved',
+                className: 'neo-assist-status-pill-ready border-sky-200 bg-sky-50 text-sky-700',
+            };
         }
         if (!event.flightNumber && !event.taskingName && !event.currency) {
             return { label: 'Needs event', className: 'neo-assist-status-pill-error border-rose-200 bg-rose-50 text-rose-700' };
@@ -3328,6 +3331,10 @@ const DfpSidePanelTimeline: React.FC<{
             isSctSourceOnly: true,
         } as ScheduleEvent;
     };
+    const isAssistSctCurrencyRequestVisible = (request: SctRequest): boolean => Boolean(
+        String(request.event || request.currency || '').trim() ||
+        String(request.name || request.crewIndividual || request.crewDisplayLabel || '').trim()
+    );
     const assistBuildQueueRows = useMemo(() => {
         const queuedSctRequestIds = new Set(
             highestPriorityEvents
@@ -3344,7 +3351,7 @@ const DfpSidePanelTimeline: React.FC<{
             ...sctFlights.map(request => ({ request, type: 'flight' as const })),
             ...sctFtds.map(request => ({ request, type: 'ftd' as const })),
         ]
-            .filter(({ request }) => request.submitted || request.includeInBuild || request.priority === 'High')
+            .filter(({ request }) => isAssistSctCurrencyRequestVisible(request))
             .filter(({ request, type }) => {
                 const requestId = String(request.id || '').trim();
                 if (!requestId) return false;
