@@ -2449,6 +2449,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [taskProfilesUnlocked, setTaskProfilesUnlocked] = useState(false);
   const [sectionEditUnlocked, setSectionEditUnlocked] = useState<Record<string, boolean>>({});
   const [expandedMasterLmpAccessScopes, setExpandedMasterLmpAccessScopes] = useState<Set<string>>(new Set());
+  const [expandedStandardMissionIds, setExpandedStandardMissionIds] = useState<Set<string>>(new Set());
   const [masterLmpCatalogueDraft, setMasterLmpCatalogueDraft] = useState<{
     code: string;
     name: string;
@@ -7443,6 +7444,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const saved = await save(undefined, sectionId);
     if (saved) {
       setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
+      if (sectionId === 'platform-standard-missions') setExpandedStandardMissionIds(new Set());
     }
   };
   const renderSectionEditSaveButton = (sectionId: string) => {
@@ -7471,6 +7473,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ...settings,
       standardMissionProfiles: { profiles: normaliseStandardMissionProfiles({ profiles }) },
     }));
+  };
+
+  const toggleStandardMissionExpanded = (profileId: string) => {
+    setExpandedStandardMissionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(profileId)) next.delete(profileId);
+      else next.add(profileId);
+      return next;
+    });
   };
 
   const addStandardMissionProfile = () => {
@@ -7512,6 +7523,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ...standardMissionProfiles,
       ...targetUnitCodes.map(createProfileForUnit),
     ]);
+    setExpandedStandardMissionIds((prev) => new Set([
+      ...Array.from(prev),
+      ...targetUnitCodes.map((unitCode) => combinedContext ? `${baseId}-${unitCode.toLowerCase()}` : baseId),
+    ]));
   };
 
   const updateStandardMissionProfile = (profileId: string, changes: Partial<StandardMissionProfile>) => {
@@ -7536,6 +7551,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateStandardMissionProfiles(standardMissionProfiles.filter((profile) => (
       profile.id !== profileId && (!compositeProfileId || profile.compositeProfileId !== compositeProfileId)
     )));
+    setExpandedStandardMissionIds((prev) => {
+      const next = new Set(prev);
+      next.delete(profileId);
+      if (compositeProfileId) {
+        standardMissionProfiles
+          .filter((profile) => profile.compositeProfileId === compositeProfileId)
+          .forEach((profile) => next.delete(profile.id));
+      }
+      return next;
+    });
   };
 
   const updateStandardMissionCrewSelection = (profile: StandardMissionProfile, optionId: string, selected: boolean) => {
@@ -9793,18 +9818,31 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     const selectedCrewCompositionId = profile.selectedCrewCompositionId || profile.acceptableCrewCompositionIds[0] || missionCrewOptions[0]?.id || '';
                     const crewMode = profile.crewCompositionMode || (selectedCrewCompositionId.startsWith('alternate:') ? 'ALTERNATE' : selectedCrewCompositionId ? 'STANDARD' : 'CUSTOM');
                     const selectedCrewOption = missionCrewOptions.find((option) => option.id === selectedCrewCompositionId);
+                    const isExpanded = expandedStandardMissionIds.has(profile.id);
                     return (
                     <div id={`platform-standard-mission-${getSettingsFocusAnchor(profile.id || profile.shortTitle || profile.missionName)}`} key={profile.id} className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900/85 shadow-lg">
                       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-800 bg-gray-950/70 px-4 py-3">
-                        <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => toggleStandardMissionExpanded(profile.id)}
+                          className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                          aria-expanded={isExpanded}
+                        >
+                          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/30 bg-cyan-500/10 text-xs font-black text-cyan-100">
+                            {isExpanded ? 'v' : '>'}
+                          </span>
+                          <span className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100">{profile.shortTitle || 'TASK'}</span>
                             <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Directed Task Setup'}</h4>
                             <span className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">{profile.resourceType}</span>
                           </div>
-                          <p className="mt-1 text-xs text-gray-500">{profile.description || 'No description entered.'}</p>
-                        </div>
-                        <div className="flex flex-wrap justify-end gap-[1px]">
+                          <p className="mt-1 text-xs text-gray-500">
+                            {profile.description || `${profile.departureLocationCode || activeHomeLocationCode} to ${profile.arrivalLocationCode || activeHomeLocationCode} - ${profile.durationMinutes || 0} min - ${profile.isFormation ? `${profile.formationAircraft || 1} aircraft` : 'single aircraft'}`}
+                          </p>
+                          </span>
+                        </button>
+                        <div className="flex flex-wrap justify-end gap-3">
                           <SelectField label="Status" value={profile.status} disabled={!canEditSection('platform-standard-missions')} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateStandardMissionProfile(profile.id, { status: value === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE' })} />
                           <button type="button" onClick={() => removeStandardMissionProfile(profile.id)} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>
                             <span className="text-[9px] leading-tight text-red-600">Delete</span>
@@ -9812,7 +9850,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       </div>
 
-                      <div className="grid gap-4 p-4 xl:grid-cols-[1.1fr_0.9fr]">
+                      {isExpanded && <div className="grid gap-4 p-4 xl:grid-cols-[1.1fr_0.9fr]">
                         <div className="space-y-4">
                           <div className={resourceSectionPanelClass}>
                             <div className={resourceSectionPanelHeaderClass}>
@@ -9984,7 +10022,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </div>}
                     </div>
                     );
                   })}

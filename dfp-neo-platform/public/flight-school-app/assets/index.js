@@ -78310,6 +78310,7 @@ const PlatformConfigurationSettings = ({
   const [taskProfilesUnlocked, setTaskProfilesUnlocked] = reactExports.useState(false);
   const [sectionEditUnlocked, setSectionEditUnlocked] = reactExports.useState({});
   const [expandedMasterLmpAccessScopes, setExpandedMasterLmpAccessScopes] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [expandedStandardMissionIds, setExpandedStandardMissionIds] = reactExports.useState(/* @__PURE__ */ new Set());
   const [masterLmpCatalogueDraft, setMasterLmpCatalogueDraft] = reactExports.useState(null);
   const [masterLmpAccessDraft, setMasterLmpAccessDraft] = reactExports.useState(null);
   const [taskProfileDrafts, setTaskProfileDrafts] = reactExports.useState({});
@@ -82302,6 +82303,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     const saved = await save(void 0, sectionId);
     if (saved) {
       setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
+      if (sectionId === "platform-standard-missions") setExpandedStandardMissionIds(/* @__PURE__ */ new Set());
     }
   };
   const renderSectionEditSaveButton = (sectionId) => {
@@ -82329,6 +82331,14 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       ...settings,
       standardMissionProfiles: { profiles: normaliseStandardMissionProfiles({ profiles }) }
     }));
+  };
+  const toggleStandardMissionExpanded = (profileId) => {
+    setExpandedStandardMissionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(profileId)) next.delete(profileId);
+      else next.add(profileId);
+      return next;
+    });
   };
   const addStandardMissionProfile = () => {
     const missionIndex = standardMissionProfiles.length + 1;
@@ -82369,6 +82379,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       ...standardMissionProfiles,
       ...targetUnitCodes.map(createProfileForUnit)
     ]);
+    setExpandedStandardMissionIds((prev) => /* @__PURE__ */ new Set([
+      ...Array.from(prev),
+      ...targetUnitCodes.map((unitCode) => combinedContext ? `${baseId}-${unitCode.toLowerCase()}` : baseId)
+    ]));
   };
   const updateStandardMissionProfile = (profileId, changes) => {
     const targetProfile = standardMissionProfiles.find((profile) => profile.id === profileId);
@@ -82385,6 +82399,14 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     const targetProfile = standardMissionProfiles.find((profile) => profile.id === profileId);
     const compositeProfileId = targetProfile?.compositeProfileId || "";
     updateStandardMissionProfiles(standardMissionProfiles.filter((profile) => profile.id !== profileId && (!compositeProfileId || profile.compositeProfileId !== compositeProfileId)));
+    setExpandedStandardMissionIds((prev) => {
+      const next = new Set(prev);
+      next.delete(profileId);
+      if (compositeProfileId) {
+        standardMissionProfiles.filter((profile) => profile.compositeProfileId === compositeProfileId).forEach((profile) => next.delete(profile.id));
+      }
+      return next;
+    });
   };
   const updateStandardMissionCrewSelection = (profile, optionId, selected) => {
     updateStandardMissionProfile(profile.id, {
@@ -84400,22 +84422,35 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               const selectedCrewCompositionId = profile.selectedCrewCompositionId || profile.acceptableCrewCompositionIds[0] || missionCrewOptions[0]?.id || "";
               const crewMode = profile.crewCompositionMode || (selectedCrewCompositionId.startsWith("alternate:") ? "ALTERNATE" : selectedCrewCompositionId ? "STANDARD" : "CUSTOM");
               const selectedCrewOption = missionCrewOptions.find((option) => option.id === selectedCrewCompositionId);
+              const isExpanded = expandedStandardMissionIds.has(profile.id);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-standard-mission-${getSettingsFocusAnchor(profile.id || profile.shortTitle || profile.missionName)}`, className: "overflow-hidden rounded-lg border border-gray-700 bg-gray-900/85 shadow-lg", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-800 bg-gray-950/70 px-4 py-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: profile.shortTitle || "TASK" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Directed Task Setup" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: profile.resourceType })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: profile.description || "No description entered." })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => toggleStandardMissionExpanded(profile.id),
+                      className: "flex min-w-0 flex-1 items-start gap-3 text-left",
+                      "aria-expanded": isExpanded,
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/30 bg-cyan-500/10 text-xs font-black text-cyan-100", children: isExpanded ? "v" : ">" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: profile.shortTitle || "TASK" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Directed Task Setup" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: profile.resourceType })
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: profile.description || `${profile.departureLocationCode || activeHomeLocationCode} to ${profile.arrivalLocationCode || activeHomeLocationCode} - ${profile.durationMinutes || 0} min - ${profile.isFormation ? `${profile.formationAircraft || 1} aircraft` : "single aircraft"}` })
+                        ] })
+                      ]
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: profile.status, disabled: !canEditSection("platform-standard-missions"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateStandardMissionProfile(profile.id, { status: value === "INACTIVE" ? "INACTIVE" : "ACTIVE" }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeStandardMissionProfile(profile.id), disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) })
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 xl:grid-cols-[1.1fr_0.9fr]", children: [
+                isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 xl:grid-cols-[1.1fr_0.9fr]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
