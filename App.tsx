@@ -5229,7 +5229,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <div key={`${row.source}-${row.id}`} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
                                 <span className="min-w-0 truncate">
                                     <span className="font-semibold text-slate-100">{row.tasking}</span>
-                                    <span className="ml-2 text-slate-400">{row.date || date} {formatTime(row.takeoff)}</span>
+                                    <span className="ml-2 text-slate-400">{formatAssistCurrencyDate(row.date || date)} {formatTime(row.takeoff)}</span>
                                 </span>
                                 <span className="flex items-center gap-2 text-[9px]">
                                     {row.source === 'local' && !row.saved ? (

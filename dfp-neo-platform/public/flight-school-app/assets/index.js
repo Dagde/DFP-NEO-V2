@@ -105211,7 +105211,7 @@ const DfpSidePanelTimeline = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: row.tasking }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-2 text-slate-400", children: [
-                row.date || date,
+                formatAssistCurrencyDate(row.date || date),
                 " ",
                 formatTime2(row.takeoff)
               ] })
