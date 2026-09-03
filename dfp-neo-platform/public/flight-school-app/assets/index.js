@@ -105609,8 +105609,9 @@ This cannot be undone.`,
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-56 overflow-auto rounded border border-slate-700 bg-slate-950/45", children: [
           rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No directed task requests entered." }),
-          rows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[980px] table-fixed text-[10px]", children: [
+          rows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1036px] table-fixed text-[10px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[150px]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[76px]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[88px]" }),
@@ -105620,10 +105621,10 @@ This cannot be undone.`,
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[70px]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[86px]" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[94px]" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-900 text-[8px] uppercase tracking-[0.12em] text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Actions" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Type" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Solo/Dual" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Date" }),
@@ -105633,8 +105634,7 @@ This cannot be undone.`,
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Aircraft" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "CONFIG" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Priority" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Status" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-center", children: "Edit" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Status" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-slate-800", children: rows.map((row) => {
               const rowKey = `${row.source}-${row.id}`;
@@ -105643,6 +105643,39 @@ This cannot be undone.`,
               const updateRemote = (updates) => updateAssistTaskPriorityRow(row.events, updates);
               const updateRow = (updates, eventUpdates) => row.source === "local" ? updateLocal(updates) : updateRemote(eventUpdates || updates);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: isEditingRow ? "bg-cyan-950/60" : "bg-slate-950/35", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-top", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setEditingAssistTaskRowId((current) => current === rowKey ? null : rowKey), className: "w-[48px] rounded border border-cyan-400/50 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10", children: isEditingRow ? "Done" : "Edit" }),
+                  row.source === "local" && !row.saved && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => saveAssistTaskRequest(row.id), className: "w-[64px] rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700", children: "Save" }),
+                  isAirCombatTileMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex w-[64px] items-center justify-center gap-1 rounded border border-cyan-400/50 px-2 py-1 text-cyan-100", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: selectedAssistPrioritySource?.kind === "task" && selectedAssistPrioritySource.id === row.id,
+                        onChange: (event) => {
+                          if (event.target.checked) selectAirCombatTileTask(row);
+                          else if (selectedAssistPrioritySource?.kind === "task" && selectedAssistPrioritySource.id === row.id) {
+                            setSelectedAssistPrioritySource(null);
+                            setSelectedTaskProfile("");
+                          }
+                        }
+                      }
+                    ),
+                    "Select"
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => {
+                      selectAssistTask(row.tasking);
+                      if (row.source === "local") submitAssistTaskRequest(row.id);
+                    }, className: `w-[64px] rounded border px-2 py-1 font-semibold ${row.scheduled && !row.ignored ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-100" : "border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10"}`, children: "Schedule" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => {
+                      if (row.source === "local") {
+                        ignoreAssistTaskRequest(row.id);
+                      } else {
+                        ignorePriorityEvents(row.events);
+                      }
+                    }, className: `w-[64px] rounded border px-2 py-1 font-semibold ${row.ignored || !row.scheduled ? "border-rose-400/60 bg-rose-500/15 text-rose-100" : "border-rose-400/50 text-rose-200 hover:bg-rose-500/10"}`, children: "Ignore" })
+                  ] })
+                ] }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-cyan-100", children: "Directed Task" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: isEditingRow ? /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: row.flightType, onChange: (event) => updateRow({ flightType: event.target.value }, { flightType: event.target.value, soloOrDual: event.target.value }), className: fieldClass2, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
@@ -105678,34 +105711,7 @@ This cannot be undone.`,
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
                 ] }) : row.priority }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: row.ignored ? "Ignored" : row.scheduled ? "Scheduled" : row.saved ? "Saved" : "Draft" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setEditingAssistTaskRowId((current) => current === rowKey ? null : rowKey), className: "rounded border border-cyan-400/50 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10", children: isEditingRow ? "Done" : "Edit" }),
-                  row.source === "local" && !row.saved && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => saveAssistTaskRequest(row.id), className: "rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700", children: "Save" }),
-                  isAirCombatTileMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-1 text-cyan-100", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        checked: selectedAssistPrioritySource?.kind === "task" && selectedAssistPrioritySource.id === row.id,
-                        onChange: (event) => {
-                          if (event.target.checked) selectAirCombatTileTask(row);
-                          else if (selectedAssistPrioritySource?.kind === "task" && selectedAssistPrioritySource.id === row.id) {
-                            setSelectedAssistPrioritySource(null);
-                            setSelectedTaskProfile("");
-                          }
-                        }
-                      }
-                    ),
-                    "Select"
-                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => {
-                    if (row.source === "local") {
-                      row.scheduled && !row.ignored ? ignoreAssistTaskRequest(row.id) : submitAssistTaskRequest(row.id);
-                    } else {
-                      ignorePriorityEvents(row.events);
-                    }
-                  }, className: `rounded border px-2 py-1 font-semibold ${row.scheduled && !row.ignored ? "border-rose-400/50 text-rose-200 hover:bg-rose-500/10" : "border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10"}`, children: row.scheduled && !row.ignored ? "Ignore" : "Schedule" })
-                ] }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: row.ignored ? "Ignored" : row.scheduled ? "Scheduled" : row.saved ? "Saved" : "Draft" })
               ] }, rowKey);
             }) })
           ] })

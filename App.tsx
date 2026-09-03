@@ -5639,8 +5639,9 @@ const DfpSidePanelTimeline: React.FC<{
                     <div className="max-h-56 overflow-auto rounded border border-slate-700 bg-slate-950/45">
                         {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No directed task requests entered.</p>}
                         {rows.length > 0 && (
-                            <table className="w-full min-w-[980px] table-fixed text-[10px]">
+                            <table className="w-full min-w-[1036px] table-fixed text-[10px]">
                                 <colgroup>
+                                    <col className="w-[150px]" />
                                     <col className="w-[90px]" />
                                     <col className="w-[76px]" />
                                     <col className="w-[88px]" />
@@ -5651,10 +5652,10 @@ const DfpSidePanelTimeline: React.FC<{
                                     <col className="w-[90px]" />
                                     <col className="w-[86px]" />
                                     <col className="w-[90px]" />
-                                    <col className="w-[94px]" />
                                 </colgroup>
                                 <thead className="sticky top-0 z-10 bg-slate-900 text-[8px] uppercase tracking-[0.12em] text-slate-400">
                                     <tr>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Actions</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Type</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Solo/Dual</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Date</th>
@@ -5665,7 +5666,6 @@ const DfpSidePanelTimeline: React.FC<{
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">CONFIG</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Priority</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Status</th>
-                                        <th className="border-b border-slate-700 px-2 py-2 text-center">Edit</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800">
@@ -5679,6 +5679,50 @@ const DfpSidePanelTimeline: React.FC<{
                                         );
                                         return (
                                             <tr key={rowKey} className={isEditingRow ? 'bg-cyan-950/60' : 'bg-slate-950/35'}>
+                                                <td className="px-2 py-2 align-top">
+                                                    <div className="flex flex-wrap items-center gap-1">
+                                                        <button type="button" onClick={() => setEditingAssistTaskRowId(current => current === rowKey ? null : rowKey)} className="w-[48px] rounded border border-cyan-400/50 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10">
+                                                            {isEditingRow ? 'Done' : 'Edit'}
+                                                        </button>
+                                                        {row.source === 'local' && !row.saved && (
+                                                            <button type="button" onClick={() => saveAssistTaskRequest(row.id)} className="w-[64px] rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700">Save</button>
+                                                        )}
+                                                        {isAirCombatTileMode ? (
+                                                            <label className="inline-flex w-[64px] items-center justify-center gap-1 rounded border border-cyan-400/50 px-2 py-1 text-cyan-100">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedAssistPrioritySource?.kind === 'task' && selectedAssistPrioritySource.id === row.id}
+                                                                    onChange={event => {
+                                                                        if (event.target.checked) selectAirCombatTileTask(row);
+                                                                        else if (selectedAssistPrioritySource?.kind === 'task' && selectedAssistPrioritySource.id === row.id) {
+                                                                            setSelectedAssistPrioritySource(null);
+                                                                            setSelectedTaskProfile('');
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                Select
+                                                            </label>
+                                                        ) : (
+                                                            <>
+                                                                <button type="button" onClick={() => {
+                                                                    selectAssistTask(row.tasking);
+                                                                    if (row.source === 'local') submitAssistTaskRequest(row.id);
+                                                                }} className={`w-[64px] rounded border px-2 py-1 font-semibold ${row.scheduled && !row.ignored ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-100' : 'border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10'}`}>
+                                                                    Schedule
+                                                                </button>
+                                                                <button type="button" onClick={() => {
+                                                                    if (row.source === 'local') {
+                                                                        ignoreAssistTaskRequest(row.id);
+                                                                    } else {
+                                                                        ignorePriorityEvents(row.events);
+                                                                    }
+                                                                }} className={`w-[64px] rounded border px-2 py-1 font-semibold ${row.ignored || !row.scheduled ? 'border-rose-400/60 bg-rose-500/15 text-rose-100' : 'border-rose-400/50 text-rose-200 hover:bg-rose-500/10'}`}>
+                                                                    Ignore
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
                                                 <td className="px-2 py-2 font-semibold text-cyan-100">Directed Task</td>
                                                 <td className="px-2 py-2">
                                                     {isEditingRow ? (
@@ -5752,42 +5796,6 @@ const DfpSidePanelTimeline: React.FC<{
                                                 </td>
                                                 <td className="px-2 py-2">
                                                     {row.ignored ? 'Ignored' : row.scheduled ? 'Scheduled' : row.saved ? 'Saved' : 'Draft'}
-                                                </td>
-                                                <td className="px-2 py-2 text-center">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button type="button" onClick={() => setEditingAssistTaskRowId(current => current === rowKey ? null : rowKey)} className="rounded border border-cyan-400/50 px-2 py-1 font-semibold text-cyan-100 hover:bg-cyan-500/10">
-                                                            {isEditingRow ? 'Done' : 'Edit'}
-                                                        </button>
-                                                        {row.source === 'local' && !row.saved && (
-                                                            <button type="button" onClick={() => saveAssistTaskRequest(row.id)} className="rounded bg-green-600 px-2 py-1 font-semibold text-white hover:bg-green-700">Save</button>
-                                                        )}
-                                                        {isAirCombatTileMode ? (
-                                                            <label className="inline-flex items-center gap-1 text-cyan-100">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={selectedAssistPrioritySource?.kind === 'task' && selectedAssistPrioritySource.id === row.id}
-                                                                    onChange={event => {
-                                                                        if (event.target.checked) selectAirCombatTileTask(row);
-                                                                        else if (selectedAssistPrioritySource?.kind === 'task' && selectedAssistPrioritySource.id === row.id) {
-                                                                            setSelectedAssistPrioritySource(null);
-                                                                            setSelectedTaskProfile('');
-                                                                        }
-                                                                    }}
-                                                                />
-                                                                Select
-                                                            </label>
-                                                        ) : (
-                                                            <button type="button" onClick={() => {
-                                                                if (row.source === 'local') {
-                                                                    row.scheduled && !row.ignored ? ignoreAssistTaskRequest(row.id) : submitAssistTaskRequest(row.id);
-                                                                } else {
-                                                                    ignorePriorityEvents(row.events);
-                                                                }
-                                                            }} className={`rounded border px-2 py-1 font-semibold ${row.scheduled && !row.ignored ? 'border-rose-400/50 text-rose-200 hover:bg-rose-500/10' : 'border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10'}`}>
-                                                                {row.scheduled && !row.ignored ? 'Ignore' : 'Schedule'}
-                                                            </button>
-                                                        )}
-                                                    </div>
                                                 </td>
                                             </tr>
                                         );
