@@ -3627,6 +3627,13 @@ const DfpSidePanelTimeline: React.FC<{
             isMandatoryTasking: scheduler === 'Mandatory',
         });
     };
+    const updateAssistBuildQueueRequestedDate = (event: ScheduleEvent, value: string) => {
+        const nextDate = normaliseAssistDateKey(value);
+        if (!nextDate) return;
+        if (!patchAssistBuildQueueSctEvent(event, { dateRequested: nextDate })) {
+            onUpdatePriorityEvent(event.id, { date: nextDate });
+        }
+    };
     const updateAssistBuildQueueEventLabel = (event: ScheduleEvent, group: 'tasking' | 'currency' | 'trainee-currency' | 'special', value: string) => {
         const updates: Partial<ScheduleEvent> & Record<string, any> = { flightNumber: value };
         if (group === 'tasking') {
@@ -3889,13 +3896,13 @@ const DfpSidePanelTimeline: React.FC<{
                                         <td className="px-2 py-2 align-middle font-mono text-slate-700">
                                             {isEditing ? (
                                                 <input
-                                                    type="date"
-                                                    value={requestedDateInputValue}
-                                                    onChange={event => {
-                                                        const nextDate = event.target.value;
-                                                        if (!patchAssistBuildQueueSctEvent(row.event, { dateRequested: nextDate })) {
-                                                            onUpdatePriorityEvent(row.event.id, { date: nextDate });
-                                                        }
+                                                    key={`priority-date-input-${row.event.id}-${requestedDateInputValue}`}
+                                                    type="text"
+                                                    defaultValue={formatAssistCurrencyDate(requestedDateInputValue)}
+                                                    placeholder="DD Mmm YY"
+                                                    onBlur={event => updateAssistBuildQueueRequestedDate(row.event, event.target.value)}
+                                                    onKeyDown={event => {
+                                                        if (event.key === 'Enter') event.currentTarget.blur();
                                                     }}
                                                     className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
                                                 />

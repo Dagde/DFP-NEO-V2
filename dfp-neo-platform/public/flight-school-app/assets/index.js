@@ -103688,6 +103688,13 @@ const DfpSidePanelTimeline = ({
       isMandatoryTasking: scheduler === "Mandatory"
     });
   };
+  const updateAssistBuildQueueRequestedDate = (event, value) => {
+    const nextDate = normaliseAssistDateKey(value);
+    if (!nextDate) return;
+    if (!patchAssistBuildQueueSctEvent(event, { dateRequested: nextDate })) {
+      onUpdatePriorityEvent(event.id, { date: nextDate });
+    }
+  };
   const updateAssistBuildQueueEventLabel = (event, group, value) => {
     const updates = { flightNumber: value };
     if (group === "tasking") {
@@ -103917,16 +103924,16 @@ const DfpSidePanelTimeline = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
-                  type: "date",
-                  value: requestedDateInputValue,
-                  onChange: (event) => {
-                    const nextDate = event.target.value;
-                    if (!patchAssistBuildQueueSctEvent(row.event, { dateRequested: nextDate })) {
-                      onUpdatePriorityEvent(row.event.id, { date: nextDate });
-                    }
+                  type: "text",
+                  defaultValue: formatAssistCurrencyDate(requestedDateInputValue),
+                  placeholder: "DD Mmm YY",
+                  onBlur: (event) => updateAssistBuildQueueRequestedDate(row.event, event.target.value),
+                  onKeyDown: (event) => {
+                    if (event.key === "Enter") event.currentTarget.blur();
                   },
                   className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
-                }
+                },
+                `priority-date-input-${row.event.id}-${requestedDateInputValue}`
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "span",
                 {
