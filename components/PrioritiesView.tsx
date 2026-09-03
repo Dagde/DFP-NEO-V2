@@ -5109,7 +5109,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         </div>
 
         <div className="saved-special-events-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
-            <h2 className="text-xl font-semibold text-sky-400">Saved Special Events</h2>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-sky-400">Saved Special Events</h2>
+              <button
+                type="button"
+                onClick={() => onNavigateToSettingsSection?.({
+                  sectionId: 'standard-missions',
+                  focusSubsectionId: 'platform-standard-missions',
+                })}
+                className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight"
+              >
+                Edit
+              </button>
+            </div>
             {renderSavedSpecialEvents()}
         </div>
 
