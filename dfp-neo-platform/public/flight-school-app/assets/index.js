@@ -103301,6 +103301,17 @@ const DfpSidePanelTimeline = ({
     if (people.length > 0) return people.slice(0, 2).join(", ");
     return event.fixedCrewPic || event.pilot || event.instructor || event.student || event.crew || event.group || "TBA";
   };
+  const getAssistBuildQueueCrewDisplay = (event, group) => {
+    const flightType = event.flightType || event.soloOrDual || "";
+    const people = getPersonnel(event).filter(Boolean);
+    const primary = String(event.fixedCrewPic || event.pilot || event.instructor || people[0] || event.group || "TBA").trim() || "TBA";
+    const fallbackSecondary = people.find((name) => normalisePersonName(name) !== normalisePersonName(primary)) || "";
+    const secondary = String(event.crew || event.student || fallbackSecondary || "").trim();
+    if (group === "currency" && normalisedAssistOperationalModel === "flight_school" && flightType === "Dual" && secondary) {
+      return { primary, secondary };
+    }
+    return { primary: getAssistBuildQueuePerson(event), secondary: "" };
+  };
   const getAssistBuildQueueRequestedBy = (event) => {
     const raw = event.requestedByName || event.requestedBy || event.createdByName || event.createdBy || event.requesterName || "";
     if (String(raw || "").trim()) return String(raw).trim();
@@ -103327,6 +103338,7 @@ const DfpSidePanelTimeline = ({
     group: getAssistBuildQueueGroup(event),
     label: getAssistBuildQueueLabel(event),
     person: getAssistBuildQueuePerson(event),
+    crewDisplay: getAssistBuildQueueCrewDisplay(event, getAssistBuildQueueGroup(event)),
     requestedBy: getAssistBuildQueueRequestedBy(event),
     unit: getAssistBuildQueueUnit(event),
     scheduler: getAssistBuildQueueScheduler(event),
@@ -103581,7 +103593,10 @@ const DfpSidePanelTimeline = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, 1), className: "leading-none text-slate-500 hover:text-cyan-700", children: "▼" })
                 ] })
               ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`, children: groupLabels[row.group] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`, children: groupLabels[row.group] }),
+                normalisedAssistOperationalModel === "flight_school" && row.group === "currency" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block w-fit rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-600", children: row.event.flightType === "Dual" || row.event.soloOrDual === "Dual" ? "Dual" : "Solo" })
+              ] }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -103609,7 +103624,10 @@ const DfpSidePanelTimeline = ({
                   className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
                   placeholder: "PIC, crew or trainee"
                 }
-              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: row.person }) }),
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: row.crewDisplay.primary }),
+                row.crewDisplay.secondary && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[11px] text-slate-500", children: row.crewDisplay.secondary })
+              ] }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle text-slate-700", title: row.requestedBy, children: row.requestedBy }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "select",
@@ -103619,10 +103637,7 @@ const DfpSidePanelTimeline = ({
                   className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
                   children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `priority-inline-time-${row.event.id}-${option.label}`))
                 }
-              ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: formatCompactTime(row.event.startTime || 0) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[10px] text-slate-500", children: row.unit })
-              ] }) }),
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: formatCompactTime(row.event.startTime || 0) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "select",
                 {

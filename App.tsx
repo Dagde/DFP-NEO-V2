@@ -3208,6 +3208,17 @@ const DfpSidePanelTimeline: React.FC<{
         if (people.length > 0) return people.slice(0, 2).join(', ');
         return event.fixedCrewPic || event.pilot || event.instructor || event.student || event.crew || event.group || 'TBA';
     };
+    const getAssistBuildQueueCrewDisplay = (event: ScheduleEvent, group: 'tasking' | 'currency' | 'trainee-currency' | 'special'): { primary: string; secondary: string } => {
+        const flightType = event.flightType || event.soloOrDual || '';
+        const people = getPersonnel(event).filter(Boolean);
+        const primary = String(event.fixedCrewPic || event.pilot || event.instructor || people[0] || event.group || 'TBA').trim() || 'TBA';
+        const fallbackSecondary = people.find(name => normalisePersonName(name) !== normalisePersonName(primary)) || '';
+        const secondary = String(event.crew || event.student || fallbackSecondary || '').trim();
+        if (group === 'currency' && normalisedAssistOperationalModel === 'flight_school' && flightType === 'Dual' && secondary) {
+            return { primary, secondary };
+        }
+        return { primary: getAssistBuildQueuePerson(event), secondary: '' };
+    };
     const getAssistBuildQueueRequestedBy = (event: ScheduleEvent): string => {
         const raw = (event as any).requestedByName || (event as any).requestedBy || (event as any).createdByName || (event as any).createdBy || (event as any).requesterName || '';
         if (String(raw || '').trim()) return String(raw).trim();
@@ -3241,6 +3252,7 @@ const DfpSidePanelTimeline: React.FC<{
                 group: getAssistBuildQueueGroup(event),
                 label: getAssistBuildQueueLabel(event),
                 person: getAssistBuildQueuePerson(event),
+                crewDisplay: getAssistBuildQueueCrewDisplay(event, getAssistBuildQueueGroup(event)),
                 requestedBy: getAssistBuildQueueRequestedBy(event),
                 unit: getAssistBuildQueueUnit(event),
                 scheduler: getAssistBuildQueueScheduler(event),
@@ -3526,9 +3538,16 @@ const DfpSidePanelTimeline: React.FC<{
                                             </div>
                                         </td>
                                         <td className="px-2 py-2 align-middle">
-                                            <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`}>
-                                                {groupLabels[row.group]}
-                                            </span>
+                                            <div className="space-y-1">
+                                                <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`}>
+                                                    {groupLabels[row.group]}
+                                                </span>
+                                                {normalisedAssistOperationalModel === 'flight_school' && row.group === 'currency' && (
+                                                    <span className="block w-fit rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-600">
+                                                        {row.event.flightType === 'Dual' || row.event.soloOrDual === 'Dual' ? 'Dual' : 'Solo'}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-2 py-2 align-middle font-mono text-slate-700">
                                             {isEditing ? (
@@ -3562,7 +3581,12 @@ const DfpSidePanelTimeline: React.FC<{
                                                     placeholder="PIC, crew or trainee"
                                                 />
                                             ) : (
-                                                <span className="block truncate">{row.person}</span>
+                                                <span className="block">
+                                                    <span className="block truncate">{row.crewDisplay.primary}</span>
+                                                    {row.crewDisplay.secondary && (
+                                                        <span className="block truncate text-[11px] text-slate-500">{row.crewDisplay.secondary}</span>
+                                                    )}
+                                                </span>
                                             )}
                                         </td>
                                         <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.requestedBy}>{row.requestedBy}</td>
@@ -3576,10 +3600,7 @@ const DfpSidePanelTimeline: React.FC<{
                                                     {timeOptions.map(option => <option key={`priority-inline-time-${row.event.id}-${option.label}`} value={option.value}>{option.label}</option>)}
                                                 </select>
                                             ) : (
-                                                <>
-                                                    <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
-                                                    <span className="block truncate text-[10px] text-slate-500">{row.unit}</span>
-                                                </>
+                                                <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
                                             )}
                                         </td>
                                         <td className="px-2 py-2 align-middle">
