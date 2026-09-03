@@ -1061,6 +1061,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistPriorityUnitFilter, setAssistPriorityUnitFilter] = useState('all');
     const [assistPrioritySchedulerFilter, setAssistPrioritySchedulerFilter] = useState('all');
     const [editingAssistPriorityEventId, setEditingAssistPriorityEventId] = useState<string | null>(null);
+    const [assistPriorityDateDrafts, setAssistPriorityDateDrafts] = useState<Record<string, string>>({});
     const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('flying');
     const [isAssistTileDragging, setIsAssistTileDragging] = useState(false);
     const [showAssistCurrencyInfo, setShowAssistCurrencyInfo] = useState(false);
@@ -3454,6 +3455,15 @@ const DfpSidePanelTimeline: React.FC<{
             }
         });
     };
+    const applyAssistPriorityDateInputStyle = (input: HTMLInputElement, value: string) => {
+        if (isAssistDatePastOrToday(value)) {
+            input.style.setProperty('color', '#b91c1c', 'important');
+            input.style.setProperty('font-weight', '700', 'important');
+        } else {
+            input.style.removeProperty('color');
+            input.style.removeProperty('font-weight');
+        }
+    };
     const lastAssistPriorityDateTraceSignatureRef = useRef('');
     useEffect(() => {
         if (activeAssistPage !== 'priority') return;
@@ -3633,6 +3643,11 @@ const DfpSidePanelTimeline: React.FC<{
         if (!patchAssistBuildQueueSctEvent(event, { dateRequested: nextDate })) {
             onUpdatePriorityEvent(event.id, { date: nextDate });
         }
+        setAssistPriorityDateDrafts(prev => {
+            const next = { ...prev };
+            delete next[event.id];
+            return next;
+        });
     };
     const updateAssistBuildQueueEventLabel = (event: ScheduleEvent, group: 'tasking' | 'currency' | 'trainee-currency' | 'special', value: string) => {
         const updates: Partial<ScheduleEvent> & Record<string, any> = { flightNumber: value };
@@ -3857,6 +3872,8 @@ const DfpSidePanelTimeline: React.FC<{
                                 const requestedDate = getAssistPriorityRequestedDate(row);
                                 const requestedDateInputValue = normaliseAssistDateKey(requestedDate) || normaliseAssistDateKey(row.event.date) || date;
                                 const isRequestedDatePastOrToday = isAssistDatePastOrToday(requestedDate);
+                                const requestedDateDraftValue = assistPriorityDateDrafts[row.event.id] ?? formatAssistCurrencyDate(requestedDateInputValue);
+                                const isEditRequestedDatePastOrToday = isAssistDatePastOrToday(requestedDateDraftValue);
                                 return (
                                     <tr key={row.event.id} className={isEditing ? 'bg-emerald-50/80 ring-1 ring-inset ring-emerald-300' : 'hover:bg-cyan-50'}>
                                         <td className="px-2 py-2 align-middle text-slate-600">
@@ -3899,13 +3916,24 @@ const DfpSidePanelTimeline: React.FC<{
                                                     <input
                                                         key={`priority-date-input-${row.event.id}-${requestedDateInputValue}`}
                                                         type="text"
-                                                        defaultValue={formatAssistCurrencyDate(requestedDateInputValue)}
+                                                        value={requestedDateDraftValue}
                                                         placeholder="DD Mmm YY"
+                                                        data-neo-assist-priority-date="true"
+                                                        data-row-id={row.event.id}
+                                                        data-requested-date={requestedDateDraftValue}
+                                                        data-date-key={normaliseAssistDateKey(requestedDateDraftValue)}
+                                                        data-today-key={getLocalDateKey()}
+                                                        data-stale-or-today={isEditRequestedDatePastOrToday ? 'true' : 'false'}
+                                                        onChange={event => {
+                                                            setAssistPriorityDateDrafts(prev => ({ ...prev, [row.event.id]: event.target.value }));
+                                                            applyAssistPriorityDateInputStyle(event.currentTarget, event.target.value);
+                                                        }}
                                                         onClick={event => {
                                                             const picker = event.currentTarget.parentElement?.querySelector('input[type="date"]') as HTMLInputElement | null;
                                                             picker?.showPicker?.();
                                                         }}
                                                         onFocus={event => {
+                                                            applyAssistPriorityDateInputStyle(event.currentTarget, requestedDateDraftValue);
                                                             const picker = event.currentTarget.parentElement?.querySelector('input[type="date"]') as HTMLInputElement | null;
                                                             picker?.showPicker?.();
                                                         }}
@@ -3913,13 +3941,18 @@ const DfpSidePanelTimeline: React.FC<{
                                                         onKeyDown={event => {
                                                             if (event.key === 'Enter') event.currentTarget.blur();
                                                         }}
-                                                        className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                        className={`w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900 ${isEditRequestedDatePastOrToday ? 'neo-assist-priority-date-stale font-bold' : ''}`}
+                                                        style={isEditRequestedDatePastOrToday ? { color: '#b91c1c', fontWeight: 700 } : undefined}
                                                     />
                                                     <input
                                                         type="date"
                                                         aria-label="Pick requested date"
                                                         value={requestedDateInputValue}
-                                                        onChange={event => updateAssistBuildQueueRequestedDate(row.event, event.target.value)}
+                                                        onChange={event => {
+                                                            const nextDate = event.target.value;
+                                                            setAssistPriorityDateDrafts(prev => ({ ...prev, [row.event.id]: formatAssistCurrencyDate(nextDate) }));
+                                                            updateAssistBuildQueueRequestedDate(row.event, nextDate);
+                                                        }}
                                                         className="pointer-events-none absolute right-0 top-0 h-px w-px opacity-0 [color-scheme:light]"
                                                         tabIndex={-1}
                                                     />

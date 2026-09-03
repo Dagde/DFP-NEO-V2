@@ -101622,6 +101622,7 @@ const DfpSidePanelTimeline = ({
   const [assistPriorityUnitFilter, setAssistPriorityUnitFilter] = reactExports.useState("all");
   const [assistPrioritySchedulerFilter, setAssistPrioritySchedulerFilter] = reactExports.useState("all");
   const [editingAssistPriorityEventId, setEditingAssistPriorityEventId] = reactExports.useState(null);
+  const [assistPriorityDateDrafts, setAssistPriorityDateDrafts] = reactExports.useState({});
   const [activeAssistSection, setActiveAssistSection] = reactExports.useState("flying");
   const [isAssistTileDragging, setIsAssistTileDragging] = reactExports.useState(false);
   const [showAssistCurrencyInfo, setShowAssistCurrencyInfo] = reactExports.useState(false);
@@ -103531,6 +103532,15 @@ const DfpSidePanelTimeline = ({
       }
     });
   };
+  const applyAssistPriorityDateInputStyle = (input, value) => {
+    if (isAssistDatePastOrToday(value)) {
+      input.style.setProperty("color", "#b91c1c", "important");
+      input.style.setProperty("font-weight", "700", "important");
+    } else {
+      input.style.removeProperty("color");
+      input.style.removeProperty("font-weight");
+    }
+  };
   const lastAssistPriorityDateTraceSignatureRef = reactExports.useRef("");
   reactExports.useEffect(() => {
     if (activeAssistPage !== "priority") return;
@@ -103694,6 +103704,11 @@ const DfpSidePanelTimeline = ({
     if (!patchAssistBuildQueueSctEvent(event, { dateRequested: nextDate })) {
       onUpdatePriorityEvent(event.id, { date: nextDate });
     }
+    setAssistPriorityDateDrafts((prev) => {
+      const next = { ...prev };
+      delete next[event.id];
+      return next;
+    });
   };
   const updateAssistBuildQueueEventLabel = (event, group, value) => {
     const updates = { flightNumber: value };
@@ -103900,6 +103915,8 @@ const DfpSidePanelTimeline = ({
             const requestedDate = getAssistPriorityRequestedDate(row);
             const requestedDateInputValue = normaliseAssistDateKey(requestedDate) || normaliseAssistDateKey(row.event.date) || date;
             const isRequestedDatePastOrToday = isAssistDatePastOrToday(requestedDate);
+            const requestedDateDraftValue = assistPriorityDateDrafts[row.event.id] ?? formatAssistCurrencyDate(requestedDateInputValue);
+            const isEditRequestedDatePastOrToday = isAssistDatePastOrToday(requestedDateDraftValue);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: isEditing ? "bg-emerald-50/80 ring-1 ring-inset ring-emerald-300" : "hover:bg-cyan-50", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-5 font-mono", children: row.index + 1 }),
@@ -103926,13 +103943,24 @@ const DfpSidePanelTimeline = ({
                   "input",
                   {
                     type: "text",
-                    defaultValue: formatAssistCurrencyDate(requestedDateInputValue),
+                    value: requestedDateDraftValue,
                     placeholder: "DD Mmm YY",
+                    "data-neo-assist-priority-date": "true",
+                    "data-row-id": row.event.id,
+                    "data-requested-date": requestedDateDraftValue,
+                    "data-date-key": normaliseAssistDateKey(requestedDateDraftValue),
+                    "data-today-key": getLocalDateKey(),
+                    "data-stale-or-today": isEditRequestedDatePastOrToday ? "true" : "false",
+                    onChange: (event) => {
+                      setAssistPriorityDateDrafts((prev) => ({ ...prev, [row.event.id]: event.target.value }));
+                      applyAssistPriorityDateInputStyle(event.currentTarget, event.target.value);
+                    },
                     onClick: (event) => {
                       const picker = event.currentTarget.parentElement?.querySelector('input[type="date"]');
                       picker?.showPicker?.();
                     },
                     onFocus: (event) => {
+                      applyAssistPriorityDateInputStyle(event.currentTarget, requestedDateDraftValue);
                       const picker = event.currentTarget.parentElement?.querySelector('input[type="date"]');
                       picker?.showPicker?.();
                     },
@@ -103940,7 +103968,8 @@ const DfpSidePanelTimeline = ({
                     onKeyDown: (event) => {
                       if (event.key === "Enter") event.currentTarget.blur();
                     },
-                    className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                    className: `w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900 ${isEditRequestedDatePastOrToday ? "neo-assist-priority-date-stale font-bold" : ""}`,
+                    style: isEditRequestedDatePastOrToday ? { color: "#b91c1c", fontWeight: 700 } : void 0
                   },
                   `priority-date-input-${row.event.id}-${requestedDateInputValue}`
                 ),
@@ -103950,7 +103979,11 @@ const DfpSidePanelTimeline = ({
                     type: "date",
                     "aria-label": "Pick requested date",
                     value: requestedDateInputValue,
-                    onChange: (event) => updateAssistBuildQueueRequestedDate(row.event, event.target.value),
+                    onChange: (event) => {
+                      const nextDate = event.target.value;
+                      setAssistPriorityDateDrafts((prev) => ({ ...prev, [row.event.id]: formatAssistCurrencyDate(nextDate) }));
+                      updateAssistBuildQueueRequestedDate(row.event, nextDate);
+                    },
                     className: "pointer-events-none absolute right-0 top-0 h-px w-px opacity-0 [color-scheme:light]",
                     tabIndex: -1
                   }
