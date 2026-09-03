@@ -103573,156 +103573,95 @@ const DfpSidePanelTimeline = ({
           filteredAssistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 11, className: "px-3 py-8 text-center text-slate-500", children: "No matching NEO Build priority items are in this view." }) }),
           filteredAssistBuildQueueRows.map((row) => {
             const isEditing = editingAssistPriorityEventId === row.event.id;
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: isEditing ? "bg-emerald-50/70" : "hover:bg-cyan-50", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-5 font-mono", children: row.index + 1 }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, -1), className: "leading-none text-slate-500 hover:text-cyan-700", children: "▲" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, 1), className: "leading-none text-slate-500 hover:text-cyan-700", children: "▼" })
-                  ] })
-                ] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`, children: groupLabels[row.group] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: formatAssistCurrencyDate(row.event.date || date) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle font-semibold text-slate-950", title: row.label, children: row.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle text-slate-700", title: row.person, children: row.person }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle text-slate-700", title: row.requestedBy, children: row.requestedBy }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: formatCompactTime(row.event.startTime || 0) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[10px] text-slate-500", children: row.unit })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "select",
-                  {
-                    value: row.event.priority || "High",
-                    onChange: (event) => setAssistBuildQueuePriority(row.event, event.target.value),
-                    className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
-                    ]
-                  }
-                ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "select",
-                  {
-                    value: row.scheduler,
-                    onChange: (event) => setAssistBuildQueueScheduler(row.event, event.target.value),
-                    className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mandatory", children: "Mandatory" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Desirable", children: "Desirable" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ignore", children: "Ignore" })
-                    ]
-                  }
-                ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${row.status.className}`, children: row.status.label }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => {
-                      selectAssistBuildQueueEvent(row.event);
-                      setEditingAssistPriorityEventId((current) => current === row.event.id ? null : row.event.id);
-                    },
-                    className: `rounded border px-2 py-1 text-[10px] font-semibold ${isEditing ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100" : "border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100"}`,
-                    children: isEditing ? "Done" : "Edit"
-                  }
-                ) })
-              ] }),
-              isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { className: "bg-emerald-50/60", children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 11, className: "border-t border-emerald-200 px-3 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(120px,0.8fr)_minmax(180px,1.2fr)_minmax(180px,1fr)_minmax(110px,0.65fr)_minmax(120px,0.7fr)_minmax(130px,0.75fr)_auto] gap-2 rounded-md border border-emerald-200 bg-white p-3 shadow-sm", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
-                  "Date",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "date",
-                      value: row.event.date || date,
-                      onChange: (event) => onUpdatePriorityEvent(row.event.id, { date: event.target.value }),
-                      className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
-                  "Event",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      list: "neo-assist-priority-event-options",
-                      value: row.label,
-                      onChange: (event) => updateAssistBuildQueueEventLabel(row.event, row.group, event.target.value),
-                      className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
-                  "Crew",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      list: "neo-assist-priority-person-options",
-                      value: row.person === "TBA" ? "" : row.person,
-                      onChange: (event) => updateAssistBuildQueueEventCrew(row.event, event.target.value),
-                      className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900",
-                      placeholder: "PIC, crew or trainee"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
-                  "Time",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "select",
-                    {
-                      value: row.event.startTime || 0,
-                      onChange: (event) => onUpdatePriorityEvent(row.event.id, { startTime: Number(event.target.value) }),
-                      className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900",
-                      children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `priority-edit-time-${row.event.id}-${option.label}`))
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
-                  "Priority",
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      value: row.event.priority || "High",
-                      onChange: (event) => setAssistBuildQueuePriority(row.event, event.target.value),
-                      className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900",
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
-                      ]
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500", children: [
-                  "Scheduler",
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      value: row.scheduler,
-                      onChange: (event) => setAssistBuildQueueScheduler(row.event, event.target.value),
-                      className: "mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900",
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mandatory", children: "Mandatory" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Desirable", children: "Desirable" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ignore", children: "Ignore" })
-                      ]
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setEditingAssistPriorityEventId(null),
-                    className: "w-full rounded border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100",
-                    children: "Done"
-                  }
-                ) })
-              ] }) }) })
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: isEditing ? "bg-emerald-50/80 ring-1 ring-inset ring-emerald-300" : "hover:bg-cyan-50", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-5 font-mono", children: row.index + 1 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, -1), className: "leading-none text-slate-500 hover:text-cyan-700", children: "▲" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => moveAssistBuildQueueEvent(row.event.id, 1), className: "leading-none text-slate-500 hover:text-cyan-700", children: "▼" })
+                ] })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`, children: groupLabels[row.group] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "date",
+                  value: row.event.date || date,
+                  onChange: (event) => onUpdatePriorityEvent(row.event.id, { date: event.target.value }),
+                  className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                }
+              ) : formatAssistCurrencyDate(row.event.date || date) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-semibold text-slate-950", title: row.label, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  list: "neo-assist-priority-event-options",
+                  value: row.label,
+                  onChange: (event) => updateAssistBuildQueueEventLabel(row.event, row.group, event.target.value),
+                  className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] font-semibold text-slate-900"
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: row.label }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-700", title: row.person, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  list: "neo-assist-priority-person-options",
+                  value: row.person === "TBA" ? "" : row.person,
+                  onChange: (event) => updateAssistBuildQueueEventCrew(row.event, event.target.value),
+                  className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
+                  placeholder: "PIC, crew or trainee"
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: row.person }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "truncate px-2 py-2 align-middle text-slate-700", title: row.requestedBy, children: row.requestedBy }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-mono text-slate-700", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: row.event.startTime || 0,
+                  onChange: (event) => onUpdatePriorityEvent(row.event.id, { startTime: Number(event.target.value) }),
+                  className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
+                  children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `priority-inline-time-${row.event.id}-${option.label}`))
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: formatCompactTime(row.event.startTime || 0) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[10px] text-slate-500", children: row.unit })
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: row.event.priority || "High",
+                  onChange: (event) => setAssistBuildQueuePriority(row.event, event.target.value),
+                  className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Medium", children: "Medium" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
+                  ]
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700", children: row.event.priority || "High" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: row.scheduler,
+                  onChange: (event) => setAssistBuildQueueScheduler(row.event, event.target.value),
+                  className: "w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mandatory", children: "Mandatory" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Desirable", children: "Desirable" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ignore", children: "Ignore" })
+                  ]
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700", children: row.scheduler }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${row.status.className}`, children: row.status.label }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => {
+                    if (!isEditing) selectAssistBuildQueueEvent(row.event);
+                    setEditingAssistPriorityEventId((current) => current === row.event.id ? null : row.event.id);
+                  },
+                  className: `rounded border px-2 py-1 text-[10px] font-semibold ${isEditing ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100" : "border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100"}`,
+                  children: isEditing ? "Done" : "Edit"
+                }
+              ) })
             ] }, row.event.id);
           })
         ] })

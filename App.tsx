@@ -3515,31 +3515,75 @@ const DfpSidePanelTimeline: React.FC<{
                             {filteredAssistBuildQueueRows.map(row => {
                                 const isEditing = editingAssistPriorityEventId === row.event.id;
                                 return (
-                                    <React.Fragment key={row.event.id}>
-                                        <tr className={isEditing ? 'bg-emerald-50/70' : 'hover:bg-cyan-50'}>
-                                            <td className="px-2 py-2 align-middle text-slate-600">
-                                                <div className="flex items-center gap-1">
-                                                    <span className="w-5 font-mono">{row.index + 1}</span>
-                                                    <span className="flex flex-col">
-                                                        <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, -1)} className="leading-none text-slate-500 hover:text-cyan-700">▲</button>
-                                                        <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, 1)} className="leading-none text-slate-500 hover:text-cyan-700">▼</button>
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-2 py-2 align-middle">
-                                                <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`}>
-                                                    {groupLabels[row.group]}
+                                    <tr key={row.event.id} className={isEditing ? 'bg-emerald-50/80 ring-1 ring-inset ring-emerald-300' : 'hover:bg-cyan-50'}>
+                                        <td className="px-2 py-2 align-middle text-slate-600">
+                                            <div className="flex items-center gap-1">
+                                                <span className="w-5 font-mono">{row.index + 1}</span>
+                                                <span className="flex flex-col">
+                                                    <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, -1)} className="leading-none text-slate-500 hover:text-cyan-700">▲</button>
+                                                    <button type="button" onClick={() => moveAssistBuildQueueEvent(row.event.id, 1)} className="leading-none text-slate-500 hover:text-cyan-700">▼</button>
                                                 </span>
-                                            </td>
-                                            <td className="px-2 py-2 align-middle font-mono text-slate-700">{formatAssistCurrencyDate(row.event.date || date)}</td>
-                                            <td className="truncate px-2 py-2 align-middle font-semibold text-slate-950" title={row.label}>{row.label}</td>
-                                            <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.person}>{row.person}</td>
-                                            <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.requestedBy}>{row.requestedBy}</td>
-                                            <td className="px-2 py-2 align-middle font-mono text-slate-700">
-                                                <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
-                                                <span className="block truncate text-[10px] text-slate-500">{row.unit}</span>
-                                            </td>
-                                            <td className="px-2 py-2 align-middle">
+                                            </div>
+                                        </td>
+                                        <td className="px-2 py-2 align-middle">
+                                            <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${groupStyles[row.group]}`}>
+                                                {groupLabels[row.group]}
+                                            </span>
+                                        </td>
+                                        <td className="px-2 py-2 align-middle font-mono text-slate-700">
+                                            {isEditing ? (
+                                                <input
+                                                    type="date"
+                                                    value={row.event.date || date}
+                                                    onChange={event => onUpdatePriorityEvent(row.event.id, { date: event.target.value })}
+                                                    className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                />
+                                            ) : formatAssistCurrencyDate(row.event.date || date)}
+                                        </td>
+                                        <td className="px-2 py-2 align-middle font-semibold text-slate-950" title={row.label}>
+                                            {isEditing ? (
+                                                <input
+                                                    list="neo-assist-priority-event-options"
+                                                    value={row.label}
+                                                    onChange={event => updateAssistBuildQueueEventLabel(row.event, row.group, event.target.value)}
+                                                    className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] font-semibold text-slate-900"
+                                                />
+                                            ) : (
+                                                <span className="block truncate">{row.label}</span>
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-2 align-middle text-slate-700" title={row.person}>
+                                            {isEditing ? (
+                                                <input
+                                                    list="neo-assist-priority-person-options"
+                                                    value={row.person === 'TBA' ? '' : row.person}
+                                                    onChange={event => updateAssistBuildQueueEventCrew(row.event, event.target.value)}
+                                                    className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                    placeholder="PIC, crew or trainee"
+                                                />
+                                            ) : (
+                                                <span className="block truncate">{row.person}</span>
+                                            )}
+                                        </td>
+                                        <td className="truncate px-2 py-2 align-middle text-slate-700" title={row.requestedBy}>{row.requestedBy}</td>
+                                        <td className="px-2 py-2 align-middle font-mono text-slate-700">
+                                            {isEditing ? (
+                                                <select
+                                                    value={row.event.startTime || 0}
+                                                    onChange={event => onUpdatePriorityEvent(row.event.id, { startTime: Number(event.target.value) })}
+                                                    className="w-full rounded border border-slate-300 bg-white px-1 py-1 text-[12px] text-slate-900"
+                                                >
+                                                    {timeOptions.map(option => <option key={`priority-inline-time-${row.event.id}-${option.label}`} value={option.value}>{option.label}</option>)}
+                                                </select>
+                                            ) : (
+                                                <>
+                                                    <span className="block">{formatCompactTime(row.event.startTime || 0)}</span>
+                                                    <span className="block truncate text-[10px] text-slate-500">{row.unit}</span>
+                                                </>
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-2 align-middle">
+                                            {isEditing ? (
                                                 <select
                                                     value={row.event.priority || 'High'}
                                                     onChange={event => setAssistBuildQueuePriority(row.event, event.target.value as 'High' | 'Medium' | 'Low')}
@@ -3549,8 +3593,14 @@ const DfpSidePanelTimeline: React.FC<{
                                                     <option value="Medium">Medium</option>
                                                     <option value="Low">Low</option>
                                                 </select>
-                                            </td>
-                                            <td className="px-2 py-2 align-middle">
+                                            ) : (
+                                                <span className="inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700">
+                                                    {row.event.priority || 'High'}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-2 align-middle">
+                                            {isEditing ? (
                                                 <select
                                                     value={row.scheduler}
                                                     onChange={event => setAssistBuildQueueScheduler(row.event, event.target.value as 'Mandatory' | 'Desirable' | 'Ignore')}
@@ -3560,109 +3610,34 @@ const DfpSidePanelTimeline: React.FC<{
                                                     <option value="Desirable">Desirable</option>
                                                     <option value="Ignore">Ignore</option>
                                                 </select>
-                                            </td>
-                                            <td className="px-2 py-2 align-middle">
-                                                <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${row.status.className}`}>
-                                                    {row.status.label}
+                                            ) : (
+                                                <span className="inline-flex rounded border border-slate-300 bg-white px-1.5 py-1 text-[10px] font-semibold text-slate-700">
+                                                    {row.scheduler}
                                                 </span>
-                                            </td>
-                                            <td className="px-2 py-2 text-center align-middle">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        selectAssistBuildQueueEvent(row.event);
-                                                        setEditingAssistPriorityEventId(current => current === row.event.id ? null : row.event.id);
-                                                    }}
-                                                    className={`rounded border px-2 py-1 text-[10px] font-semibold ${
-                                                        isEditing
-                                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                                                            : 'border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
-                                                    }`}
-                                                >
-                                                    {isEditing ? 'Done' : 'Edit'}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        {isEditing && (
-                                            <tr className="bg-emerald-50/60">
-                                                <td colSpan={11} className="border-t border-emerald-200 px-3 py-3">
-                                                    <div className="grid grid-cols-[minmax(120px,0.8fr)_minmax(180px,1.2fr)_minmax(180px,1fr)_minmax(110px,0.65fr)_minmax(120px,0.7fr)_minmax(130px,0.75fr)_auto] gap-2 rounded-md border border-emerald-200 bg-white p-3 shadow-sm">
-                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                                            Date
-                                                            <input
-                                                                type="date"
-                                                                value={row.event.date || date}
-                                                                onChange={event => onUpdatePriorityEvent(row.event.id, { date: event.target.value })}
-                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
-                                                            />
-                                                        </label>
-                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                                            Event
-                                                            <input
-                                                                list="neo-assist-priority-event-options"
-                                                                value={row.label}
-                                                                onChange={event => updateAssistBuildQueueEventLabel(row.event, row.group, event.target.value)}
-                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
-                                                            />
-                                                        </label>
-                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                                            Crew
-                                                            <input
-                                                                list="neo-assist-priority-person-options"
-                                                                value={row.person === 'TBA' ? '' : row.person}
-                                                                onChange={event => updateAssistBuildQueueEventCrew(row.event, event.target.value)}
-                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
-                                                                placeholder="PIC, crew or trainee"
-                                                            />
-                                                        </label>
-                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                                            Time
-                                                            <select
-                                                                value={row.event.startTime || 0}
-                                                                onChange={event => onUpdatePriorityEvent(row.event.id, { startTime: Number(event.target.value) })}
-                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
-                                                            >
-                                                                {timeOptions.map(option => <option key={`priority-edit-time-${row.event.id}-${option.label}`} value={option.value}>{option.label}</option>)}
-                                                            </select>
-                                                        </label>
-                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                                            Priority
-                                                            <select
-                                                                value={row.event.priority || 'High'}
-                                                                onChange={event => setAssistBuildQueuePriority(row.event, event.target.value as 'High' | 'Medium' | 'Low')}
-                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
-                                                            >
-                                                                <option value="High">High</option>
-                                                                <option value="Medium">Medium</option>
-                                                                <option value="Low">Low</option>
-                                                            </select>
-                                                        </label>
-                                                        <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                                            Scheduler
-                                                            <select
-                                                                value={row.scheduler}
-                                                                onChange={event => setAssistBuildQueueScheduler(row.event, event.target.value as 'Mandatory' | 'Desirable' | 'Ignore')}
-                                                                className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-[12px] normal-case tracking-normal text-slate-900"
-                                                            >
-                                                                <option value="Mandatory">Mandatory</option>
-                                                                <option value="Desirable">Desirable</option>
-                                                                <option value="Ignore">Ignore</option>
-                                                            </select>
-                                                        </label>
-                                                        <div className="flex items-end">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setEditingAssistPriorityEventId(null)}
-                                                                className="w-full rounded border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100"
-                                                            >
-                                                                Done
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </React.Fragment>
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-2 align-middle">
+                                            <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-semibold ${row.status.className}`}>
+                                                {row.status.label}
+                                            </span>
+                                        </td>
+                                        <td className="px-2 py-2 text-center align-middle">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (!isEditing) selectAssistBuildQueueEvent(row.event);
+                                                    setEditingAssistPriorityEventId(current => current === row.event.id ? null : row.event.id);
+                                                }}
+                                                className={`rounded border px-2 py-1 text-[10px] font-semibold ${
+                                                    isEditing
+                                                        ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                                                        : 'border-cyan-300 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
+                                                }`}
+                                            >
+                                                {isEditing ? 'Done' : 'Edit'}
+                                            </button>
+                                        </td>
+                                    </tr>
                                 );
                             })}
                         </tbody>
