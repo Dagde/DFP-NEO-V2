@@ -6479,8 +6479,8 @@ const DfpSidePanelTimeline: React.FC<{
                                             Open Priorities
                                         </button>
                                     </div>
-                                    <div className="grid grid-cols-[190px_minmax(0,1fr)] gap-4">
-                                        <div className="space-y-1.5">
+                                    <div className="grid grid-cols-[190px_minmax(0,1fr)] gap-4 rounded-md border border-slate-200 bg-[#eef6fb] p-3">
+                                        <div className="space-y-1.5 rounded-md border border-slate-200 bg-white/70 p-2">
                                             <p className="px-1 pt-2 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">NEO Build Inputs</p>
                                             {assistSections.map(section => (
                                                 <button
@@ -6498,7 +6498,7 @@ const DfpSidePanelTimeline: React.FC<{
                                             ))}
                                         </div>
                                         <div className="min-w-0 space-y-3">
-                                            <div className="rounded-md border border-slate-300 bg-white p-3 shadow-sm">
+                                            <div className="rounded-md border border-slate-300 bg-[#f8fbfd] p-3 shadow-sm">
                                                 <div className="mb-2 border-b border-slate-200 pb-2">
                                                     <p className="text-[11px] font-semibold text-slate-900">
                                                         {assistSections.find(section => section.id === activeAssistSection)?.label || 'NEO Build Inputs'}
