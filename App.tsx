@@ -1089,6 +1089,8 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedCrewName, setSelectedCrewName] = useState('');
     const [selectedCrewNames, setSelectedCrewNames] = useState<string[]>([]);
     const [selectedResourceKind, setSelectedResourceKind] = useState<NeoAssistResourceKind>('flight');
+    const [assistManualFlightType, setAssistManualFlightType] = useState<'Solo' | 'Dual'>('Solo');
+    const [assistManualEventSource, setAssistManualEventSource] = useState<'lmp' | 'currency' | 'course' | 'package'>('lmp');
     const [selectedResourceNumber, setSelectedResourceNumber] = useState(1);
     const [selectedAircraftNumber, setSelectedAircraftNumber] = useState('TBA');
     const [assistDepPoint, setAssistDepPoint] = useState(locationCode);
@@ -1099,6 +1101,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [activeAssistAirfieldField, setActiveAssistAirfieldField] = useState<'dep' | 'arrive' | null>(null);
     const [assistWindProfiles, setAssistWindProfiles] = useState<Array<{ lat: number; lon: number; flightLevel: number; windFrom: number; windSpeed: number }>>([]);
     const [assistCallsign, setAssistCallsign] = useState('');
+    const lastAutoAssistCallsignRef = useRef('');
     const [assistUnitCallsignBase, setAssistUnitCallsignBase] = useState('');
     const [assistUnitCallsignNumber, setAssistUnitCallsignNumber] = useState(0);
     const [selectedFixedCrewGroup, setSelectedFixedCrewGroup] = useState('');
@@ -1378,6 +1381,17 @@ const DfpSidePanelTimeline: React.FC<{
     const selectedCrewRecord = useMemo(() => (
         instructors.find(person => person.name === selectedCrewName) || null
     ), [instructors, selectedCrewName]);
+    useEffect(() => {
+        if (isFixedCrewNeoAssist) return;
+        const nextCallsign = String(selectedCrewRecord?.callsign || '').trim().toUpperCase();
+        if (!nextCallsign) return;
+        setAssistCallsign(current => {
+            const currentValue = String(current || '').trim();
+            if (currentValue && currentValue !== lastAutoAssistCallsignRef.current) return current;
+            lastAutoAssistCallsignRef.current = nextCallsign;
+            return nextCallsign;
+        });
+    }, [isFixedCrewNeoAssist, selectedCrewRecord?.callsign]);
 
     const selectedCrewAssignments = useMemo(() => (
         selectedCrewRecord
@@ -1426,6 +1440,12 @@ const DfpSidePanelTimeline: React.FC<{
             setSelectedPackageName(selectedCrewPackageOptions[0].key);
         }
     }, [selectedCrewPackageOptions, selectedPackageName]);
+    const selectedManualCourseOption = selectedCrewCourseOptions.find(option => option.key === selectedCourseName) || selectedCrewCourseOptions[0] || null;
+    const selectedManualPackageOption = selectedCrewPackageOptions.find(option => option.key === selectedPackageName) || selectedCrewPackageOptions[0] || null;
+    const manualCoursePackageSourcesEnabled = isAirCombatNeoAssist || isFixedCrewNeoAssist;
+    const effectiveAssistManualEventSource = manualCoursePackageSourcesEnabled || (assistManualEventSource !== 'course' && assistManualEventSource !== 'package')
+        ? assistManualEventSource
+        : 'lmp';
 
     const diagnosticCrewPriority = useMemo(() => {
         if (typeof window === 'undefined') return [];
@@ -1733,6 +1753,7 @@ const DfpSidePanelTimeline: React.FC<{
     };
     useEffect(() => {
         if (!isSingleSeatFlightResource) return;
+        setAssistManualFlightType('Solo');
         setAssistTaskFlightType('Solo');
         setAssistCurrencyFlightType('Solo');
     }, [isSingleSeatFlightResource]);
@@ -1821,6 +1842,12 @@ const DfpSidePanelTimeline: React.FC<{
 
     const assistEventLabel = useMemo(() => {
         if (selectedResourceKind === 'deployment') return 'DEPLOYMENT';
+        if (activeAssistSection === 'details') {
+            if (effectiveAssistManualEventSource === 'currency') return selectedCurrencyName || 'Currency';
+            if (effectiveAssistManualEventSource === 'course') return selectedManualCourseOption?.code || selectedManualCourseOption?.label || selectedSyllabusItem?.code || 'Course';
+            if (effectiveAssistManualEventSource === 'package') return selectedManualPackageOption?.code || selectedManualPackageOption?.label || selectedSyllabusItem?.code || 'Package';
+            return selectedSyllabusItem?.code || 'Event';
+        }
         if (activeAssistSection === 'taskings' && selectedTaskProfile) {
             const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || '';
             if (isAirCombatTileMode) return abbreviation || selectedTaskProfile || 'Directed Task';
@@ -1830,7 +1857,7 @@ const DfpSidePanelTimeline: React.FC<{
             return selectedCurrencyName;
         }
         return selectedSyllabusItem?.code || 'Event';
-    }, [activeAssistSection, isAirCombatTileMode, selectedCurrencyName, selectedResourceKind, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
+    }, [activeAssistSection, effectiveAssistManualEventSource, isAirCombatTileMode, selectedCurrencyName, selectedManualCourseOption?.code, selectedManualCourseOption?.label, selectedManualPackageOption?.code, selectedManualPackageOption?.label, selectedResourceKind, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
 
     const assistDuration = Math.max(
         0.1,
@@ -1859,11 +1886,12 @@ const DfpSidePanelTimeline: React.FC<{
     }, [defaultAssistManualDuration]);
     const effectiveAssistTaskFlightType = isSingleSeatFlightResource ? 'Solo' : assistTaskFlightType;
     const effectiveAssistCurrencyFlightType = isSingleSeatFlightResource ? 'Solo' : assistCurrencyFlightType;
+    const effectiveAssistManualFlightType = isSingleSeatFlightResource ? 'Solo' : assistManualFlightType;
     const assistFlightType = activeAssistSection === 'taskings'
         ? effectiveAssistTaskFlightType
         : activeAssistSection === 'currency'
             ? effectiveAssistCurrencyFlightType
-            : 'Solo';
+            : effectiveAssistManualFlightType;
     const assistOrigin = activeAssistSection === 'taskings'
         ? assistTaskDepPoint.trim().toUpperCase()
         : activeAssistSection === 'currency'
@@ -1897,6 +1925,18 @@ const DfpSidePanelTimeline: React.FC<{
         return color.startsWith('bg-') ? '#047857' : color;
     };
     const assistPreviewTilePink = '#be185d';
+    const assistManualEventCode = effectiveAssistManualEventSource === 'course'
+        ? selectedManualCourseOption?.code
+        : effectiveAssistManualEventSource === 'package'
+            ? selectedManualPackageOption?.code
+            : effectiveAssistManualEventSource === 'currency'
+                ? undefined
+                : selectedSyllabusItem?.code;
+    const assistManualCrewSelectionOrder = isFixedCrewNeoAssist
+        ? selectedCrewNames
+        : effectiveAssistManualFlightType === 'Dual'
+            ? selectedCrewNames
+            : (selectedPilotCrewName ? [selectedPilotCrewName] : []);
 
     const assistDraftEvent: ScheduleEvent = useMemo(() => ({
         id: `neo-assist-draft-${Date.now()}`,
@@ -1908,14 +1948,20 @@ const DfpSidePanelTimeline: React.FC<{
         type: isDeploymentAssistTile ? 'deployment' : selectedResourceKind === 'ftd' ? 'ftd' : selectedResourceKind === 'cpt' ? 'cpt' : 'flight',
         pilot: isDeploymentAssistTile ? '' : selectedPilotCrewName || 'Bloggs, Joe',
         instructor: isDeploymentAssistTile ? '' : selectedPilotCrewName || 'Bloggs, Joe',
-        crew: isDeploymentAssistTile ? '' : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : selectedSupportCrewName,
+        crew: isDeploymentAssistTile
+            ? ''
+            : isFixedCrewNeoAssist && selectedFixedCrewGroup
+                ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup)
+                : activeAssistSection === 'details' && effectiveAssistManualFlightType !== 'Dual'
+                    ? ''
+                    : selectedSupportCrewName,
         group: isDeploymentAssistTile ? undefined : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : undefined,
         flightNumber: assistEventLabel,
-        eventCode: isDeploymentAssistTile ? undefined : selectedSyllabusItem?.code,
+        eventCode: isDeploymentAssistTile ? undefined : activeAssistSection === 'details' ? assistManualEventCode : selectedSyllabusItem?.code,
         taskingName: !isDeploymentAssistTile && activeAssistSection === 'taskings' ? selectedTaskProfile : undefined,
         taskingDisplayLabel: !isDeploymentAssistTile && activeAssistSection === 'taskings' ? assistEventLabel : undefined,
         isTaskingRequest: !isDeploymentAssistTile && activeAssistSection === 'taskings',
-        currency: !isDeploymentAssistTile && activeAssistSection === 'currency' ? selectedCurrencyName : undefined,
+        currency: !isDeploymentAssistTile && (activeAssistSection === 'currency' || (activeAssistSection === 'details' && effectiveAssistManualEventSource === 'currency')) ? selectedCurrencyName : undefined,
         duration: assistDuration,
         startTime: assistStartTime,
         resourceId: assistResourceId,
@@ -1931,7 +1977,7 @@ const DfpSidePanelTimeline: React.FC<{
         formationType: !isDeploymentAssistTile && assistFormationSize > 1 ? 'NEO Assist Formation' : undefined,
         formationPosition: !isDeploymentAssistTile && assistFormationSize > 1 ? 1 : undefined,
         formationSize: !isDeploymentAssistTile && assistFormationSize > 1 ? assistFormationSize : undefined,
-        crewSelectionOrder: isDeploymentAssistTile ? [] : selectedCrewNames,
+        crewSelectionOrder: isDeploymentAssistTile ? [] : activeAssistSection === 'details' ? assistManualCrewSelectionOrder : selectedCrewNames,
         fixedCrewGroup: !isDeploymentAssistTile && isFixedCrewNeoAssist ? selectedFixedCrewGroup || undefined : undefined,
         fixedCrewPic: !isDeploymentAssistTile && isFixedCrewNeoAssist ? selectedFixedCrewPic || undefined : undefined,
         fixedCrewManifestStatus: !isDeploymentAssistTile && isFixedCrewNeoAssist && selectedFixedCrewGroup && selectedFixedCrewPic ? 'complete' : !isDeploymentAssistTile && isFixedCrewNeoAssist ? 'pending' : undefined,
@@ -1948,6 +1994,8 @@ const DfpSidePanelTimeline: React.FC<{
         deploymentAircraftCount: isDeploymentAssistTile ? 1 : undefined,
     }), [
         activeAssistSection,
+        assistManualCrewSelectionOrder,
+        assistManualEventCode,
         assistCallsign,
         assistConfigId,
         assistCurrencyDate,
@@ -1958,6 +2006,8 @@ const DfpSidePanelTimeline: React.FC<{
         assistDuration,
         assistEventLabel,
         assistFlightType,
+        effectiveAssistManualEventSource,
+        effectiveAssistManualFlightType,
         assistOrigin,
         assistDestination,
         assistGeneralDuration,
@@ -5076,8 +5126,48 @@ const DfpSidePanelTimeline: React.FC<{
         const renderedAssistSection = sectionOverride || activeAssistSection;
         if (renderedAssistSection === 'details') {
             const showFlightOnlyDetails = selectedResourceKind !== 'deployment' && (!isAirCombatTileMode || selectedResourceKind === 'flight');
+            const compactFieldClass = 'mt-0.5 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] normal-case tracking-normal text-slate-100';
+            const mutedCompactFieldClass = 'mt-0.5 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1 text-[11px] normal-case tracking-normal text-slate-300';
+            const selectedManualCrewName = selectedCrewNames.find(name => name && name !== selectedCrewName) || '';
+            const renderManualEventPicker = () => {
+                if (effectiveAssistManualEventSource === 'currency') {
+                    return (
+                        <select value={selectedCurrencyName} onChange={event => setSelectedCurrencyName(event.target.value)} className={compactFieldClass}>
+                            {currencyNames.length === 0 && <option value="">No currency configured</option>}
+                            {currencyNames.map(name => <option key={`assist-manual-currency-${name}`} value={name}>{name}</option>)}
+                        </select>
+                    );
+                }
+                if (effectiveAssistManualEventSource === 'course') {
+                    return (
+                        <select value={selectedCourseName} onChange={event => setSelectedCourseName(event.target.value)} className={compactFieldClass}>
+                            {selectedCrewCourseOptions.length === 0 && <option value="">No course assigned</option>}
+                            {selectedCrewCourseOptions.map(option => (
+                                <option key={`assist-manual-course-${option.key}`} value={option.key}>{option.code} - {option.label}</option>
+                            ))}
+                        </select>
+                    );
+                }
+                if (effectiveAssistManualEventSource === 'package') {
+                    return (
+                        <select value={selectedPackageName} onChange={event => setSelectedPackageName(event.target.value)} className={compactFieldClass}>
+                            {selectedCrewPackageOptions.length === 0 && <option value="">No package assigned</option>}
+                            {selectedCrewPackageOptions.map(option => (
+                                <option key={`assist-manual-package-${option.key}`} value={option.key}>{option.code} - {option.label}</option>
+                            ))}
+                        </select>
+                    );
+                }
+                return (
+                    <select value={selectedEventCode} onChange={event => setSelectedEventCode(event.target.value)} className={compactFieldClass}>
+                        {filteredEventOptions.map(item => (
+                            <option key={`assist-manual-lmp-${item.id || item.code}`} value={item.code}>{item.code} - {item.title}</option>
+                        ))}
+                    </select>
+                );
+            };
             return (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-4 gap-1.5">
                     <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                         Tile Type / Resource
                         <select
@@ -5092,7 +5182,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     setAssistDeploymentEndTime(end.time);
                                 }
                             }}
-                            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                            className={compactFieldClass}
                         >
                             <option value="flight">Flight</option>
                             <option value="ftd">{simulatorResourceLabel}</option>
@@ -5100,8 +5190,154 @@ const DfpSidePanelTimeline: React.FC<{
                             <option value="deployment">Deployment</option>
                         </select>
                     </label>
-                    {isDeploymentAssistTile && <div aria-hidden="true" />}
-                    <div className="col-span-2 grid grid-cols-4 gap-2">
+                    {!isDeploymentAssistTile && (
+                        <>
+                            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                Event From
+                                <select
+                                    value={effectiveAssistManualEventSource}
+                                    onChange={event => setAssistManualEventSource(event.target.value as 'lmp' | 'currency' | 'course' | 'package')}
+                                    className={compactFieldClass}
+                                >
+                                    <option value="lmp">LMP</option>
+                                    <option value="currency">Currency</option>
+                                    {manualCoursePackageSourcesEnabled && <option value="course">Course</option>}
+                                    {manualCoursePackageSourcesEnabled && <option value="package">Package</option>}
+                                </select>
+                            </label>
+                            <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                Event
+                                {renderManualEventPicker()}
+                            </label>
+                            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                Solo/Dual
+                                {isSingleSeatFlightResource ? (
+                                    <div className={`${mutedCompactFieldClass} border-amber-400/50 bg-amber-500/10 text-amber-100`}>
+                                        Solo
+                                    </div>
+                                ) : (
+                                    <select value={assistManualFlightType} onChange={event => setAssistManualFlightType(event.target.value as 'Solo' | 'Dual')} className={compactFieldClass}>
+                                        <option value="Solo">Solo</option>
+                                        <option value="Dual">Dual</option>
+                                    </select>
+                                )}
+                            </label>
+                            {isFixedCrewNeoAssist ? (
+                                <>
+                                    <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                        Crew
+                                        <select value={selectedFixedCrewGroup} onChange={event => handleFixedCrewAssistGroupChange(event.target.value)} className={compactFieldClass}>
+                                            <option value="">Select crew</option>
+                                            {fixedCrewAssistGroups.map(group => (
+                                                <option key={`assist-manual-fixed-crew-${group}`} value={group}>{formatFixedCrewDisplayGroup(group)}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                        PIC
+                                        <select value={selectedFixedCrewPic} onChange={event => handleFixedCrewAssistPicChange(event.target.value)} className={compactFieldClass}>
+                                            <option value="">Select PIC</option>
+                                            {(fixedCrewPicCandidates.length > 0 ? fixedCrewPicCandidates : fixedCrewAssistMembers).map(staff => (
+                                                <option key={`assist-manual-fixed-pic-${staff.name}`} value={staff.name}>{staff.name}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </>
+                            ) : (
+                                <>
+                                    <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                        PIC
+                                        <select
+                                            value={selectedCrewName}
+                                            onChange={event => {
+                                                const picName = event.target.value;
+                                                const crewName = selectedManualCrewName && selectedManualCrewName !== picName ? selectedManualCrewName : '';
+                                                setSelectedCrewName(picName);
+                                                setSelectedCrewNames([picName, crewName].filter(Boolean));
+                                            }}
+                                            className={compactFieldClass}
+                                        >
+                                            <option value="">Select PIC</option>
+                                            {renderCrewOptionsByUnit('assist-manual-pic')}
+                                        </select>
+                                    </label>
+                                    <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                        Crew
+                                        {effectiveAssistManualFlightType === 'Dual' ? (
+                                            <select
+                                                value={selectedManualCrewName}
+                                                onChange={event => setSelectedCrewNames([selectedCrewName, event.target.value].filter(Boolean))}
+                                                disabled={!selectedCrewName}
+                                                className={`${compactFieldClass} disabled:cursor-not-allowed disabled:opacity-60`}
+                                            >
+                                                <option value="">Select crew</option>
+                                                {renderCrewOptionsByUnit('assist-manual-crew', new Set([selectedCrewName].filter(Boolean)))}
+                                            </select>
+                                        ) : (
+                                            <div className={mutedCompactFieldClass}>N/A</div>
+                                        )}
+                                    </label>
+                                </>
+                            )}
+                            {isFixedCrewNeoAssist ? (
+                                <div className="col-span-2">
+                                    <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Callsign</span>
+                                    <div className="mt-0.5 grid grid-cols-[minmax(0,1fr)_58px] gap-1.5">
+                                        <select
+                                            value={assistUnitCallsignBase || defaultAssistUnitCallsign}
+                                            onChange={event => {
+                                                setAssistUnitCallsignBase(event.target.value);
+                                                setAssistCallsign(buildUnitEventCallsign(event.target.value, assistUnitCallsignNumber));
+                                            }}
+                                            className={`${compactFieldClass} mt-0 disabled:cursor-not-allowed disabled:opacity-60`}
+                                            disabled={assistUnitCallsignEntries.length === 0}
+                                        >
+                                            {assistUnitCallsignEntries.length === 0 ? (
+                                                <option value="">Configure unit callsigns</option>
+                                            ) : assistUnitCallsignEntries.map(entry => (
+                                                <option key={entry.id} value={entry.callsign}>
+                                                    {activeAssistCallsignUnitCodes.length > 1 ? `${entry.callsign} (${entry.unitCode})` : entry.callsign}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            value={assistUnitCallsignNumber}
+                                            onChange={event => {
+                                                const nextNumber = Number(event.target.value);
+                                                setAssistUnitCallsignNumber(nextNumber);
+                                                setAssistCallsign(buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, nextNumber));
+                                            }}
+                                            className={`${compactFieldClass} mt-0 disabled:cursor-not-allowed disabled:opacity-60`}
+                                            disabled={assistUnitCallsignEntries.length === 0}
+                                        >
+                                            {assistCallsignNumberOptions.map(option => (
+                                                <option key={`neo-assist-fixed-callsign-${option.value}`} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            ) : (
+                                <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                    Callsign
+                                    <input
+                                        list="neo-assist-callsign-options"
+                                        value={assistCallsign}
+                                        onChange={event => {
+                                            lastAutoAssistCallsignRef.current = '';
+                                            setAssistCallsign(event.target.value);
+                                        }}
+                                        className={compactFieldClass}
+                                        placeholder="Auto from PIC"
+                                    />
+                                    <datalist id="neo-assist-callsign-options">
+                                        {callsignOptions.map(callsign => <option key={callsign} value={callsign} />)}
+                                    </datalist>
+                                </label>
+                            )}
+                        </>
+                    )}
+                    {isDeploymentAssistTile && <div className="col-span-3" aria-hidden="true" />}
+                    <div className="col-span-4 grid grid-cols-4 gap-1.5">
                         {renderAssistAirfieldCodeControl('dep', 'Dep', assistDepPoint, setAssistDepPoint)}
                         {renderAssistAirfieldCodeControl('arrive', 'Arrive', assistArrivalPoint, setAssistArrivalPoint)}
                         <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -5120,7 +5356,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         setAssistDeploymentEndTime(end.time);
                                     }
                                 }}
-                                className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                className={compactFieldClass}
                             />
                         </label>
                         <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -5132,12 +5368,12 @@ const DfpSidePanelTimeline: React.FC<{
                                 value={activeAircraftCruiseFlightLevel}
                                 readOnly
                                 title="Set this in Settings -> Resources & Configuration -> Aircraft Setup -> Cruise Level (FL)."
-                                className="mt-1 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-300"
+                                className={mutedCompactFieldClass}
                             />
                         </label>
                     </div>
                     {assistRouteDurationCalc && (
-                        <div className={`col-span-2 rounded border px-2 py-1 text-[10px] font-semibold normal-case tracking-normal ${
+                        <div className={`col-span-4 rounded border px-2 py-1 text-[10px] font-semibold normal-case tracking-normal ${
                             assistRouteDurationCalc.status === 'ok'
                                 ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
                                 : 'border-amber-400/30 bg-amber-500/10 text-amber-100'
@@ -5161,7 +5397,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         setAssistDeploymentEndDate(end.date);
                                         setAssistDeploymentEndTime(end.time);
                                     }}
-                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                    className={compactFieldClass}
                                 />
                             </label>
                             <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -5175,7 +5411,7 @@ const DfpSidePanelTimeline: React.FC<{
                                         setAssistDeploymentEndDate(end.date);
                                         setAssistDeploymentEndTime(end.time);
                                     }}
-                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                    className={compactFieldClass}
                                 >
                                     {timeOptions.map(option => <option key={`assist-deploy-start-${option.label}`} value={option.value}>{option.label}</option>)}
                                 </select>
@@ -5187,7 +5423,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     min={assistDeploymentStartDate}
                                     value={assistDeploymentEndDate}
                                     onChange={event => setAssistDeploymentEndDate(event.target.value)}
-                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                    className={compactFieldClass}
                                 />
                             </label>
                             <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -5195,7 +5431,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 <select
                                     value={assistDeploymentEndTime}
                                     onChange={event => setAssistDeploymentEndTime(Number(event.target.value))}
-                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                    className={compactFieldClass}
                                 >
                                     {timeOptions.map(option => <option key={`assist-deploy-end-${option.label}`} value={option.value}>{option.label}</option>)}
                                 </select>
@@ -5212,79 +5448,24 @@ const DfpSidePanelTimeline: React.FC<{
                                     max={resourceNumberLimit}
                                     value={selectedResourceNumber}
                                     onChange={event => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1)))}
-                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                    className={compactFieldClass}
                                 />
                             </label>
-                            <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                                 {aircraftResourceLabel} Number
                                 <input
                                     value={selectedAircraftNumber}
                                     onChange={event => setSelectedAircraftNumber(event.target.value)}
-                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                    className={compactFieldClass}
                                     placeholder="TBA"
                                 />
                             </label>
-                            {isFixedCrewNeoAssist ? (
-                                <div className="col-span-2">
-                                    <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Callsign</span>
-                                    <div className="mt-1 grid grid-cols-[minmax(0,1fr)_72px] gap-2">
-                                        <select
-                                            value={assistUnitCallsignBase || defaultAssistUnitCallsign}
-                                            onChange={event => {
-                                                setAssistUnitCallsignBase(event.target.value);
-                                                setAssistCallsign(buildUnitEventCallsign(event.target.value, assistUnitCallsignNumber));
-                                            }}
-                                            className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                            disabled={assistUnitCallsignEntries.length === 0}
-                                        >
-                                            {assistUnitCallsignEntries.length === 0 ? (
-                                                <option value="">Configure unit callsigns in Settings</option>
-                                            ) : assistUnitCallsignEntries.map(entry => (
-                                                <option key={entry.id} value={entry.callsign}>
-                                                    {activeAssistCallsignUnitCodes.length > 1 ? `${entry.callsign} (${entry.unitCode})` : entry.callsign}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <select
-                                            value={assistUnitCallsignNumber}
-                                            onChange={event => {
-                                                const nextNumber = Number(event.target.value);
-                                                setAssistUnitCallsignNumber(nextNumber);
-                                                setAssistCallsign(buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, nextNumber));
-                                            }}
-                                            className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                            disabled={assistUnitCallsignEntries.length === 0}
-                                        >
-                                            {assistCallsignNumberOptions.map(option => (
-                                                <option key={`neo-assist-fixed-callsign-${option.value}`} value={option.value}>{option.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <span className="mt-1 block text-[9px] font-semibold normal-case tracking-normal text-cyan-100/80">
-                                        {fixedCrewAssistCallsign || 'No unit callsign configured'}
-                                    </span>
-                                </div>
-                            ) : (
-                                <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                    Callsign
-                                    <input
-                                        list="neo-assist-callsign-options"
-                                        value={assistCallsign}
-                                        onChange={event => setAssistCallsign(event.target.value)}
-                                        className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
-                                        placeholder="CSIGN"
-                                    />
-                                    <datalist id="neo-assist-callsign-options">
-                                        {callsignOptions.map(callsign => <option key={callsign} value={callsign} />)}
-                                    </datalist>
-                                </label>
-                            )}
                             <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                                 Assigned Area
                                 <select
                                     value={selectedAssignedArea}
                                     onChange={event => setSelectedAssignedArea(event.target.value)}
-                                    className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                                    className={compactFieldClass}
                                 >
                                     <option value="TBA" disabled hidden>TBA</option>
                                     {assignedAreaOptions.map(area => (

@@ -101704,6 +101704,8 @@ const DfpSidePanelTimeline = ({
   const [selectedCrewName, setSelectedCrewName] = reactExports.useState("");
   const [selectedCrewNames, setSelectedCrewNames] = reactExports.useState([]);
   const [selectedResourceKind, setSelectedResourceKind] = reactExports.useState("flight");
+  const [assistManualFlightType, setAssistManualFlightType] = reactExports.useState("Solo");
+  const [assistManualEventSource, setAssistManualEventSource] = reactExports.useState("lmp");
   const [selectedResourceNumber, setSelectedResourceNumber] = reactExports.useState(1);
   const [selectedAircraftNumber, setSelectedAircraftNumber] = reactExports.useState("TBA");
   const [assistDepPoint, setAssistDepPoint] = reactExports.useState(locationCode);
@@ -101714,6 +101716,7 @@ const DfpSidePanelTimeline = ({
   const [activeAssistAirfieldField, setActiveAssistAirfieldField] = reactExports.useState(null);
   const [assistWindProfiles, setAssistWindProfiles] = reactExports.useState([]);
   const [assistCallsign, setAssistCallsign] = reactExports.useState("");
+  const lastAutoAssistCallsignRef = reactExports.useRef("");
   const [assistUnitCallsignBase, setAssistUnitCallsignBase] = reactExports.useState("");
   const [assistUnitCallsignNumber, setAssistUnitCallsignNumber] = reactExports.useState(0);
   const [selectedFixedCrewGroup, setSelectedFixedCrewGroup] = reactExports.useState("");
@@ -101915,6 +101918,17 @@ const DfpSidePanelTimeline = ({
     };
   }, [date, flyingStartTime, locationCode]);
   const selectedCrewRecord = reactExports.useMemo(() => instructors.find((person) => person.name === selectedCrewName) || null, [instructors, selectedCrewName]);
+  reactExports.useEffect(() => {
+    if (isFixedCrewNeoAssist) return;
+    const nextCallsign = String(selectedCrewRecord?.callsign || "").trim().toUpperCase();
+    if (!nextCallsign) return;
+    setAssistCallsign((current) => {
+      const currentValue = String(current || "").trim();
+      if (currentValue && currentValue !== lastAutoAssistCallsignRef.current) return current;
+      lastAutoAssistCallsignRef.current = nextCallsign;
+      return nextCallsign;
+    });
+  }, [isFixedCrewNeoAssist, selectedCrewRecord?.callsign]);
   const selectedCrewAssignments = reactExports.useMemo(() => selectedCrewRecord ? normaliseAirCombatTrainingAssignments(selectedCrewRecord.preferences) : { courses: [], trainingPackages: [] }, [selectedCrewRecord]);
   const selectedCrewTrainingReports = reactExports.useMemo(() => selectedCrewRecord ? normaliseAirCombatTrainingReports(selectedCrewRecord.preferences) : [], [selectedCrewRecord]);
   const selectedCrewCourseOptions = reactExports.useMemo(() => selectedCrewAssignments.courses.map((assignment, index) => ({
@@ -101947,6 +101961,10 @@ const DfpSidePanelTimeline = ({
       setSelectedPackageName(selectedCrewPackageOptions[0].key);
     }
   }, [selectedCrewPackageOptions, selectedPackageName]);
+  const selectedManualCourseOption = selectedCrewCourseOptions.find((option) => option.key === selectedCourseName) || selectedCrewCourseOptions[0] || null;
+  const selectedManualPackageOption = selectedCrewPackageOptions.find((option) => option.key === selectedPackageName) || selectedCrewPackageOptions[0] || null;
+  const manualCoursePackageSourcesEnabled = isAirCombatNeoAssist || isFixedCrewNeoAssist;
+  const effectiveAssistManualEventSource = manualCoursePackageSourcesEnabled || assistManualEventSource !== "course" && assistManualEventSource !== "package" ? assistManualEventSource : "lmp";
   const diagnosticCrewPriority = reactExports.useMemo(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -102198,6 +102216,7 @@ const DfpSidePanelTimeline = ({
   };
   reactExports.useEffect(() => {
     if (!isSingleSeatFlightResource) return;
+    setAssistManualFlightType("Solo");
     setAssistTaskFlightType("Solo");
     setAssistCurrencyFlightType("Solo");
   }, [isSingleSeatFlightResource]);
@@ -102271,6 +102290,12 @@ const DfpSidePanelTimeline = ({
   `DEPLOYMENT ${formatDeploymentAssistClock(assistDeploymentStartTime).replace(":", "")} ${formatDeploymentAssistDateLabel(assistDeploymentStartDate)} - ${formatDeploymentAssistClock(assistDeploymentEndTime).replace(":", "")} ${formatDeploymentAssistDateLabel(assistDeploymentEndDate)}`;
   const assistEventLabel = reactExports.useMemo(() => {
     if (selectedResourceKind === "deployment") return "DEPLOYMENT";
+    if (activeAssistSection === "details") {
+      if (effectiveAssistManualEventSource === "currency") return selectedCurrencyName || "Currency";
+      if (effectiveAssistManualEventSource === "course") return selectedManualCourseOption?.code || selectedManualCourseOption?.label || selectedSyllabusItem?.code || "Course";
+      if (effectiveAssistManualEventSource === "package") return selectedManualPackageOption?.code || selectedManualPackageOption?.label || selectedSyllabusItem?.code || "Package";
+      return selectedSyllabusItem?.code || "Event";
+    }
     if (activeAssistSection === "taskings" && selectedTaskProfile) {
       const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || "";
       if (isAirCombatTileMode) return abbreviation || selectedTaskProfile || "Directed Task";
@@ -102280,7 +102305,7 @@ const DfpSidePanelTimeline = ({
       return selectedCurrencyName;
     }
     return selectedSyllabusItem?.code || "Event";
-  }, [activeAssistSection, isAirCombatTileMode, selectedCurrencyName, selectedResourceKind, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
+  }, [activeAssistSection, effectiveAssistManualEventSource, isAirCombatTileMode, selectedCurrencyName, selectedManualCourseOption?.code, selectedManualCourseOption?.label, selectedManualPackageOption?.code, selectedManualPackageOption?.label, selectedResourceKind, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
   const assistDuration = Math.max(
     0.1,
     isDeploymentAssistTile ? assistDeploymentDuration : activeAssistSection === "taskings" ? Number(assistTaskDuration) || defaultAssistTaskDuration : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration : Number(assistGeneralDuration) || defaultAssistManualDuration
@@ -102293,7 +102318,8 @@ const DfpSidePanelTimeline = ({
   }, [defaultAssistManualDuration]);
   const effectiveAssistTaskFlightType = isSingleSeatFlightResource ? "Solo" : assistTaskFlightType;
   const effectiveAssistCurrencyFlightType = isSingleSeatFlightResource ? "Solo" : assistCurrencyFlightType;
-  const assistFlightType = activeAssistSection === "taskings" ? effectiveAssistTaskFlightType : activeAssistSection === "currency" ? effectiveAssistCurrencyFlightType : "Solo";
+  const effectiveAssistManualFlightType = isSingleSeatFlightResource ? "Solo" : assistManualFlightType;
+  const assistFlightType = activeAssistSection === "taskings" ? effectiveAssistTaskFlightType : activeAssistSection === "currency" ? effectiveAssistCurrencyFlightType : effectiveAssistManualFlightType;
   const assistOrigin = activeAssistSection === "taskings" ? assistTaskDepPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyDepPoint.trim().toUpperCase() : assistDepPoint.trim().toUpperCase();
   const assistDestination = activeAssistSection === "taskings" ? assistTaskArrivalPoint.trim().toUpperCase() : activeAssistSection === "currency" ? assistCurrencyArrivalPoint.trim().toUpperCase() : assistArrivalPoint.trim().toUpperCase();
   const assistConfigId = activeAssistSection === "taskings" ? assistTaskConfigId : activeAssistSection === "currency" ? assistCurrencyConfigId : selectedSyllabusItem?.acceptableAircraftConfigs?.[0];
@@ -102307,20 +102333,22 @@ const DfpSidePanelTimeline = ({
     return color.startsWith("bg-") ? "#047857" : color;
   };
   const assistPreviewTilePink = "#be185d";
+  const assistManualEventCode = effectiveAssistManualEventSource === "course" ? selectedManualCourseOption?.code : effectiveAssistManualEventSource === "package" ? selectedManualPackageOption?.code : effectiveAssistManualEventSource === "currency" ? void 0 : selectedSyllabusItem?.code;
+  const assistManualCrewSelectionOrder = isFixedCrewNeoAssist ? selectedCrewNames : effectiveAssistManualFlightType === "Dual" ? selectedCrewNames : selectedPilotCrewName ? [selectedPilotCrewName] : [];
   const assistDraftEvent = reactExports.useMemo(() => ({
     id: `neo-assist-draft-${Date.now()}`,
     date: activeAssistSection === "taskings" ? assistTaskDate : activeAssistSection === "currency" ? assistCurrencyDate : date,
     type: isDeploymentAssistTile ? "deployment" : selectedResourceKind === "ftd" ? "ftd" : selectedResourceKind === "cpt" ? "cpt" : "flight",
     pilot: isDeploymentAssistTile ? "" : selectedPilotCrewName || "Bloggs, Joe",
     instructor: isDeploymentAssistTile ? "" : selectedPilotCrewName || "Bloggs, Joe",
-    crew: isDeploymentAssistTile ? "" : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : selectedSupportCrewName,
+    crew: isDeploymentAssistTile ? "" : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : activeAssistSection === "details" && effectiveAssistManualFlightType !== "Dual" ? "" : selectedSupportCrewName,
     group: isDeploymentAssistTile ? void 0 : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : void 0,
     flightNumber: assistEventLabel,
-    eventCode: isDeploymentAssistTile ? void 0 : selectedSyllabusItem?.code,
+    eventCode: isDeploymentAssistTile ? void 0 : activeAssistSection === "details" ? assistManualEventCode : selectedSyllabusItem?.code,
     taskingName: !isDeploymentAssistTile && activeAssistSection === "taskings" ? selectedTaskProfile : void 0,
     taskingDisplayLabel: !isDeploymentAssistTile && activeAssistSection === "taskings" ? assistEventLabel : void 0,
     isTaskingRequest: !isDeploymentAssistTile && activeAssistSection === "taskings",
-    currency: !isDeploymentAssistTile && activeAssistSection === "currency" ? selectedCurrencyName : void 0,
+    currency: !isDeploymentAssistTile && (activeAssistSection === "currency" || activeAssistSection === "details" && effectiveAssistManualEventSource === "currency") ? selectedCurrencyName : void 0,
     duration: assistDuration,
     startTime: assistStartTime,
     resourceId: assistResourceId,
@@ -102336,7 +102364,7 @@ const DfpSidePanelTimeline = ({
     formationType: !isDeploymentAssistTile && assistFormationSize > 1 ? "NEO Assist Formation" : void 0,
     formationPosition: !isDeploymentAssistTile && assistFormationSize > 1 ? 1 : void 0,
     formationSize: !isDeploymentAssistTile && assistFormationSize > 1 ? assistFormationSize : void 0,
-    crewSelectionOrder: isDeploymentAssistTile ? [] : selectedCrewNames,
+    crewSelectionOrder: isDeploymentAssistTile ? [] : activeAssistSection === "details" ? assistManualCrewSelectionOrder : selectedCrewNames,
     fixedCrewGroup: !isDeploymentAssistTile && isFixedCrewNeoAssist ? selectedFixedCrewGroup || void 0 : void 0,
     fixedCrewPic: !isDeploymentAssistTile && isFixedCrewNeoAssist ? selectedFixedCrewPic || void 0 : void 0,
     fixedCrewManifestStatus: !isDeploymentAssistTile && isFixedCrewNeoAssist && selectedFixedCrewGroup && selectedFixedCrewPic ? "complete" : !isDeploymentAssistTile && isFixedCrewNeoAssist ? "pending" : void 0,
@@ -102353,6 +102381,8 @@ const DfpSidePanelTimeline = ({
     deploymentAircraftCount: isDeploymentAssistTile ? 1 : void 0
   }), [
     activeAssistSection,
+    assistManualCrewSelectionOrder,
+    assistManualEventCode,
     assistCallsign,
     assistConfigId,
     assistCurrencyDate,
@@ -102363,6 +102393,8 @@ const DfpSidePanelTimeline = ({
     assistDuration,
     assistEventLabel,
     assistFlightType,
+    effectiveAssistManualEventSource,
+    effectiveAssistManualFlightType,
     assistOrigin,
     assistDestination,
     assistGeneralDuration,
@@ -105137,7 +105169,43 @@ This cannot be undone.`,
     const renderedAssistSection = sectionOverride || activeAssistSection;
     if (renderedAssistSection === "details") {
       const showFlightOnlyDetails = selectedResourceKind !== "deployment" && (!isAirCombatTileMode || selectedResourceKind === "flight");
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+      const compactFieldClass = "mt-0.5 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] normal-case tracking-normal text-slate-100";
+      const mutedCompactFieldClass = "mt-0.5 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1 text-[11px] normal-case tracking-normal text-slate-300";
+      const selectedManualCrewName = selectedCrewNames.find((name) => name && name !== selectedCrewName) || "";
+      const renderManualEventPicker = () => {
+        if (effectiveAssistManualEventSource === "currency") {
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedCurrencyName, onChange: (event) => setSelectedCurrencyName(event.target.value), className: compactFieldClass, children: [
+            currencyNames.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No currency configured" }),
+            currencyNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, `assist-manual-currency-${name}`))
+          ] });
+        }
+        if (effectiveAssistManualEventSource === "course") {
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedCourseName, onChange: (event) => setSelectedCourseName(event.target.value), className: compactFieldClass, children: [
+            selectedCrewCourseOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No course assigned" }),
+            selectedCrewCourseOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: option.key, children: [
+              option.code,
+              " - ",
+              option.label
+            ] }, `assist-manual-course-${option.key}`))
+          ] });
+        }
+        if (effectiveAssistManualEventSource === "package") {
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedPackageName, onChange: (event) => setSelectedPackageName(event.target.value), className: compactFieldClass, children: [
+            selectedCrewPackageOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No package assigned" }),
+            selectedCrewPackageOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: option.key, children: [
+              option.code,
+              " - ",
+              option.label
+            ] }, `assist-manual-package-${option.key}`))
+          ] });
+        }
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: selectedEventCode, onChange: (event) => setSelectedEventCode(event.target.value), className: compactFieldClass, children: filteredEventOptions.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: item.code, children: [
+          item.code,
+          " - ",
+          item.title
+        ] }, `assist-manual-lmp-${item.id || item.code}`)) });
+      };
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-4 gap-1.5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
           "Tile Type / Resource",
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -105154,7 +105222,7 @@ This cannot be undone.`,
                   setAssistDeploymentEndTime(end.time);
                 }
               },
-              className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+              className: compactFieldClass,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "flight", children: "Flight" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ftd", children: simulatorResourceLabel }),
@@ -105164,8 +105232,139 @@ This cannot be undone.`,
             }
           )
         ] }),
-        isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "aria-hidden": "true" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2 grid grid-cols-4 gap-2", children: [
+        !isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Event From",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: effectiveAssistManualEventSource,
+                onChange: (event) => setAssistManualEventSource(event.target.value),
+                className: compactFieldClass,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "lmp", children: "LMP" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "currency", children: "Currency" }),
+                  manualCoursePackageSourcesEnabled && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "course", children: "Course" }),
+                  manualCoursePackageSourcesEnabled && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "package", children: "Package" })
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Event",
+            renderManualEventPicker()
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Solo/Dual",
+            isSingleSeatFlightResource ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${mutedCompactFieldClass} border-amber-400/50 bg-amber-500/10 text-amber-100`, children: "Solo" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: assistManualFlightType, onChange: (event) => setAssistManualFlightType(event.target.value), className: compactFieldClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" })
+            ] })
+          ] }),
+          isFixedCrewNeoAssist ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+              "Crew",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedFixedCrewGroup, onChange: (event) => handleFixedCrewAssistGroupChange(event.target.value), className: compactFieldClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
+                fixedCrewAssistGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group, children: formatFixedCrewDisplayGroup(group) }, `assist-manual-fixed-crew-${group}`))
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+              "PIC",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedFixedCrewPic, onChange: (event) => handleFixedCrewAssistPicChange(event.target.value), className: compactFieldClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
+                (fixedCrewPicCandidates.length > 0 ? fixedCrewPicCandidates : fixedCrewAssistMembers).map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: staff.name }, `assist-manual-fixed-pic-${staff.name}`))
+              ] })
+            ] })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+              "PIC",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: selectedCrewName,
+                  onChange: (event) => {
+                    const picName = event.target.value;
+                    const crewName = selectedManualCrewName && selectedManualCrewName !== picName ? selectedManualCrewName : "";
+                    setSelectedCrewName(picName);
+                    setSelectedCrewNames([picName, crewName].filter(Boolean));
+                  },
+                  className: compactFieldClass,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
+                    renderCrewOptionsByUnit("assist-manual-pic")
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+              "Crew",
+              effectiveAssistManualFlightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: selectedManualCrewName,
+                  onChange: (event) => setSelectedCrewNames([selectedCrewName, event.target.value].filter(Boolean)),
+                  disabled: !selectedCrewName,
+                  className: `${compactFieldClass} disabled:cursor-not-allowed disabled:opacity-60`,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
+                    renderCrewOptionsByUnit("assist-manual-crew", new Set([selectedCrewName].filter(Boolean)))
+                  ]
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: mutedCompactFieldClass, children: "N/A" })
+            ] })
+          ] }),
+          isFixedCrewNeoAssist ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: "Callsign" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-0.5 grid grid-cols-[minmax(0,1fr)_58px] gap-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: assistUnitCallsignBase || defaultAssistUnitCallsign,
+                  onChange: (event) => {
+                    setAssistUnitCallsignBase(event.target.value);
+                    setAssistCallsign(buildUnitEventCallsign(event.target.value, assistUnitCallsignNumber));
+                  },
+                  className: `${compactFieldClass} mt-0 disabled:cursor-not-allowed disabled:opacity-60`,
+                  disabled: assistUnitCallsignEntries.length === 0,
+                  children: assistUnitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Configure unit callsigns" }) : assistUnitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: activeAssistCallsignUnitCodes.length > 1 ? `${entry.callsign} (${entry.unitCode})` : entry.callsign }, entry.id))
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: assistUnitCallsignNumber,
+                  onChange: (event) => {
+                    const nextNumber = Number(event.target.value);
+                    setAssistUnitCallsignNumber(nextNumber);
+                    setAssistCallsign(buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, nextNumber));
+                  },
+                  className: `${compactFieldClass} mt-0 disabled:cursor-not-allowed disabled:opacity-60`,
+                  disabled: assistUnitCallsignEntries.length === 0,
+                  children: assistCallsignNumberOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `neo-assist-fixed-callsign-${option.value}`))
+                }
+              )
+            ] })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            "Callsign",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                list: "neo-assist-callsign-options",
+                value: assistCallsign,
+                onChange: (event) => {
+                  lastAutoAssistCallsignRef.current = "";
+                  setAssistCallsign(event.target.value);
+                },
+                className: compactFieldClass,
+                placeholder: "Auto from PIC"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-callsign-options", children: callsignOptions.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: callsign }, callsign)) })
+          ] })
+        ] }),
+        isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-span-3", "aria-hidden": "true" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-4 grid grid-cols-4 gap-1.5", children: [
           renderAssistAirfieldCodeControl("dep", "Dep", assistDepPoint, setAssistDepPoint),
           renderAssistAirfieldCodeControl("arrive", "Arrive", assistArrivalPoint, setAssistArrivalPoint),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
@@ -105186,7 +105385,7 @@ This cannot be undone.`,
                     setAssistDeploymentEndTime(end.time);
                   }
                 },
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                className: compactFieldClass
               }
             )
           ] }),
@@ -105201,12 +105400,12 @@ This cannot be undone.`,
                 value: activeAircraftCruiseFlightLevel,
                 readOnly: true,
                 title: "Set this in Settings -> Resources & Configuration -> Aircraft Setup -> Cruise Level (FL).",
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-300"
+                className: mutedCompactFieldClass
               }
             )
           ] })
         ] }),
-        assistRouteDurationCalc && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `col-span-2 rounded border px-2 py-1 text-[10px] font-semibold normal-case tracking-normal ${assistRouteDurationCalc.status === "ok" ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100" : "border-amber-400/30 bg-amber-500/10 text-amber-100"}`, children: assistRouteDurationCalc.status === "ok" ? `Calculated route duration: ${assistRouteDurationCalc.message}` : assistRouteDurationCalc.message }),
+        assistRouteDurationCalc && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `col-span-4 rounded border px-2 py-1 text-[10px] font-semibold normal-case tracking-normal ${assistRouteDurationCalc.status === "ok" ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100" : "border-amber-400/30 bg-amber-500/10 text-amber-100"}`, children: assistRouteDurationCalc.status === "ok" ? `Calculated route duration: ${assistRouteDurationCalc.message}` : assistRouteDurationCalc.message }),
         isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Begin Date",
@@ -105222,7 +105421,7 @@ This cannot be undone.`,
                   setAssistDeploymentEndDate(end.date);
                   setAssistDeploymentEndTime(end.time);
                 },
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                className: compactFieldClass
               }
             )
           ] }),
@@ -105239,7 +105438,7 @@ This cannot be undone.`,
                   setAssistDeploymentEndDate(end.date);
                   setAssistDeploymentEndTime(end.time);
                 },
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                className: compactFieldClass,
                 children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `assist-deploy-start-${option.label}`))
               }
             )
@@ -105253,7 +105452,7 @@ This cannot be undone.`,
                 min: assistDeploymentStartDate,
                 value: assistDeploymentEndDate,
                 onChange: (event) => setAssistDeploymentEndDate(event.target.value),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                className: compactFieldClass
               }
             )
           ] }),
@@ -105264,7 +105463,7 @@ This cannot be undone.`,
               {
                 value: assistDeploymentEndTime,
                 onChange: (event) => setAssistDeploymentEndTime(Number(event.target.value)),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                className: compactFieldClass,
                 children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `assist-deploy-end-${option.label}`))
               }
             )
@@ -105281,11 +105480,11 @@ This cannot be undone.`,
                 max: resourceNumberLimit,
                 value: selectedResourceNumber,
                 onChange: (event) => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1))),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100"
+                className: compactFieldClass
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             aircraftResourceLabel,
             " Number",
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -105293,56 +105492,10 @@ This cannot be undone.`,
               {
                 value: selectedAircraftNumber,
                 onChange: (event) => setSelectedAircraftNumber(event.target.value),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                className: compactFieldClass,
                 placeholder: "TBA"
               }
             )
-          ] }),
-          isFixedCrewNeoAssist ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: "Callsign" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 grid grid-cols-[minmax(0,1fr)_72px] gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "select",
-                {
-                  value: assistUnitCallsignBase || defaultAssistUnitCallsign,
-                  onChange: (event) => {
-                    setAssistUnitCallsignBase(event.target.value);
-                    setAssistCallsign(buildUnitEventCallsign(event.target.value, assistUnitCallsignNumber));
-                  },
-                  className: "w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100 disabled:cursor-not-allowed disabled:opacity-60",
-                  disabled: assistUnitCallsignEntries.length === 0,
-                  children: assistUnitCallsignEntries.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Configure unit callsigns in Settings" }) : assistUnitCallsignEntries.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: entry.callsign, children: activeAssistCallsignUnitCodes.length > 1 ? `${entry.callsign} (${entry.unitCode})` : entry.callsign }, entry.id))
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "select",
-                {
-                  value: assistUnitCallsignNumber,
-                  onChange: (event) => {
-                    const nextNumber = Number(event.target.value);
-                    setAssistUnitCallsignNumber(nextNumber);
-                    setAssistCallsign(buildUnitEventCallsign(assistUnitCallsignBase || defaultAssistUnitCallsign, nextNumber));
-                  },
-                  className: "w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100 disabled:cursor-not-allowed disabled:opacity-60",
-                  disabled: assistUnitCallsignEntries.length === 0,
-                  children: assistCallsignNumberOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, `neo-assist-fixed-callsign-${option.value}`))
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[9px] font-semibold normal-case tracking-normal text-cyan-100/80", children: fixedCrewAssistCallsign || "No unit callsign configured" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Callsign",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                list: "neo-assist-callsign-options",
-                value: assistCallsign,
-                onChange: (event) => setAssistCallsign(event.target.value),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
-                placeholder: "CSIGN"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-callsign-options", children: callsignOptions.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: callsign }, callsign)) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Assigned Area",
@@ -105351,7 +105504,7 @@ This cannot be undone.`,
               {
                 value: selectedAssignedArea,
                 onChange: (event) => setSelectedAssignedArea(event.target.value),
-                className: "mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-100",
+                className: compactFieldClass,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "TBA", disabled: true, hidden: true, children: "TBA" }),
                   assignedAreaOptions.map((area) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: area, children: area || "Blank" }, area || "__blank"))
