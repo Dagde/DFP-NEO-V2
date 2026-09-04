@@ -46137,11 +46137,29 @@ const TaskingRequestTable = ({
     if (!confirmed) return;
     onRemoveTaskingRequest(request.id);
   };
+  const canScheduleTaskingRequest = (request) => Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
+  const setAllTaskingSchedule = (scheduled) => {
+    taskingRequests.forEach((request) => {
+      if (scheduled) {
+        if (!canScheduleTaskingRequest(request)) return;
+        const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
+        onSetTaskingSchedulerPriority(request.id, schedulerPriority);
+        return;
+      }
+      onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true });
+    });
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
     taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
     taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[1152px] space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryHeaderClass, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Schedule" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `${taskingSummaryHeaderCellClass} flex flex-col items-center justify-center gap-1`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Schedule" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setAllTaskingSchedule(true), className: "px-1.5 py-0.5 text-cyan-100 hover:bg-cyan-500/15", children: "All" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setAllTaskingSchedule(false), className: "border-l border-slate-600 px-1.5 py-0.5 text-slate-200 hover:bg-slate-700/60", children: "None" })
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Type" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Solo/Dual" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Date" }),
@@ -46156,7 +46174,7 @@ const TaskingRequestTable = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, "aria-label": "Delete" })
       ] }),
       taskingRequests.map((request) => {
-        const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
+        const canSubmit = canScheduleTaskingRequest(request);
         const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
         const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
         const selectedConfig = aircraftConfigOptions.find((definition) => definition.id === request.aircraftConfigId);

@@ -814,6 +814,20 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
     if (!confirmed) return;
     onRemoveTaskingRequest(request.id);
   };
+  const canScheduleTaskingRequest = (request: TaskingRequest) => (
+    Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim())
+  );
+  const setAllTaskingSchedule = (scheduled: boolean) => {
+    taskingRequests.forEach(request => {
+      if (scheduled) {
+        if (!canScheduleTaskingRequest(request)) return;
+        const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
+        onSetTaskingSchedulerPriority(request.id, schedulerPriority);
+        return;
+      }
+      onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true });
+    });
+  };
 
   return (
   <div className="space-y-3 pb-24">
@@ -826,7 +840,13 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45">
         <div className="min-w-[1152px] space-y-3">
           <div className={taskingSummaryHeaderClass}>
-            <span className={taskingSummaryHeaderCellClass}>Schedule</span>
+            <span className={`${taskingSummaryHeaderCellClass} flex flex-col items-center justify-center gap-1`}>
+              <span>Schedule</span>
+              <span className="inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal">
+                <button type="button" onClick={() => setAllTaskingSchedule(true)} className="px-1.5 py-0.5 text-cyan-100 hover:bg-cyan-500/15">All</button>
+                <button type="button" onClick={() => setAllTaskingSchedule(false)} className="border-l border-slate-600 px-1.5 py-0.5 text-slate-200 hover:bg-slate-700/60">None</button>
+              </span>
+            </span>
             <span className={taskingSummaryHeaderCellClass}>Type</span>
             <span className={taskingSummaryHeaderCellClass}>Solo/Dual</span>
             <span className={taskingSummaryHeaderCellClass}>Date</span>
@@ -841,7 +861,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <span className={taskingSummaryHeaderCellClass} aria-label="Delete"></span>
           </div>
     {taskingRequests.map(request => {
-      const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
+      const canSubmit = canScheduleTaskingRequest(request);
       const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
       const arrivalPointSuggestions = getTaskingAirfieldSuggestions(request.arrivalPoint, airfieldLookup);
       const selectedConfig = aircraftConfigOptions.find(definition => definition.id === request.aircraftConfigId);
