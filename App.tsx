@@ -1446,6 +1446,19 @@ const DfpSidePanelTimeline: React.FC<{
     const effectiveAssistManualEventSource = manualCoursePackageSourcesEnabled || (assistManualEventSource !== 'course' && assistManualEventSource !== 'package')
         ? assistManualEventSource
         : 'lmp';
+    const manualLmpEventOptions = useMemo(() => (
+        selectedResourceKind === 'deployment'
+            ? filteredEventOptions
+            : filteredEventOptions.filter(item => item.type !== 'Academics')
+    ), [filteredEventOptions, selectedResourceKind]);
+    const selectedManualLmpEventItem = useMemo(() => (
+        manualLmpEventOptions.find(item => item.code === selectedEventCode) || manualLmpEventOptions[0] || null
+    ), [manualLmpEventOptions, selectedEventCode]);
+    useEffect(() => {
+        if (activeAssistSection !== 'details' || effectiveAssistManualEventSource !== 'lmp') return;
+        if (selectedEventCode && manualLmpEventOptions.some(item => item.code === selectedEventCode)) return;
+        if (manualLmpEventOptions[0]) setSelectedEventCode(manualLmpEventOptions[0].code);
+    }, [activeAssistSection, effectiveAssistManualEventSource, manualLmpEventOptions, selectedEventCode]);
 
     const diagnosticCrewPriority = useMemo(() => {
         if (typeof window === 'undefined') return [];
@@ -1617,11 +1630,16 @@ const DfpSidePanelTimeline: React.FC<{
     }, [compareAssistTraineeNames, getAssistTraineeCourseLabel, getAssistTraineeUnitLabel, traineeByAssistName]);
     useEffect(() => {
         if (activeAssistSection !== 'details' || effectiveAssistManualEventSource !== 'lmp') return;
-        const nextSelection = selectedCrewNames.map(name => name && traineeByAssistName.has(name) ? name : '');
+        const nextSelection = selectedCrewNames.map((name, index) => {
+            if (!name) return '';
+            return index % 2 === 0
+                ? (staffByAssistName.has(name) ? name : '')
+                : (traineeByAssistName.has(name) ? name : '');
+        });
         if (nextSelection.join('|') === selectedCrewNames.join('|')) return;
         setSelectedCrewName(nextSelection[0] || '');
         setSelectedCrewNames(nextSelection);
-    }, [activeAssistSection, effectiveAssistManualEventSource, selectedCrewNames, traineeByAssistName]);
+    }, [activeAssistSection, effectiveAssistManualEventSource, selectedCrewNames, staffByAssistName, traineeByAssistName]);
     const getAssistStaffUnitLabel = useCallback((nameOrStaff: string | Instructor | undefined): string => {
         const staff = typeof nameOrStaff === 'string' ? staffByAssistName.get(nameOrStaff) : nameOrStaff;
         return String(staff?.unit || '').trim().toUpperCase() || 'Unassigned';
@@ -1819,7 +1837,7 @@ const DfpSidePanelTimeline: React.FC<{
         }
     }, [assistUnitCallsignBase, assistUnitCallsignNumber, defaultAssistUnitCallsign, isFixedCrewNeoAssist]);
     const manualAssistCrewSlotCount = activeAssistSection === 'details' && selectedResourceKind === 'flight' && !isFixedCrewNeoAssist
-        ? Math.max(1, assistFormationSize) * (isSingleSeatFlightResource || assistManualFlightType !== 'Dual' ? 1 : 2)
+        ? Math.max(1, assistFormationSize) * (effectiveAssistManualEventSource === 'lmp' || (!isSingleSeatFlightResource && assistManualFlightType === 'Dual') ? 2 : 1)
         : 1;
     useEffect(() => {
         setSelectedCrewNames(prev => {
@@ -1905,7 +1923,7 @@ const DfpSidePanelTimeline: React.FC<{
             if (effectiveAssistManualEventSource === 'currency') return selectedCurrencyName || 'Currency';
             if (effectiveAssistManualEventSource === 'course') return selectedManualCourseOption?.code || selectedManualCourseOption?.label || selectedSyllabusItem?.code || 'Course';
             if (effectiveAssistManualEventSource === 'package') return selectedManualPackageOption?.code || selectedManualPackageOption?.label || selectedSyllabusItem?.code || 'Package';
-            return selectedSyllabusItem?.code || 'Event';
+            return selectedManualLmpEventItem?.code || 'Event';
         }
         if (activeAssistSection === 'taskings' && selectedTaskProfile) {
             const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || '';
@@ -1916,7 +1934,7 @@ const DfpSidePanelTimeline: React.FC<{
             return selectedCurrencyName;
         }
         return selectedSyllabusItem?.code || 'Event';
-    }, [activeAssistSection, effectiveAssistManualEventSource, isAirCombatTileMode, selectedCurrencyName, selectedManualCourseOption?.code, selectedManualCourseOption?.label, selectedManualPackageOption?.code, selectedManualPackageOption?.label, selectedResourceKind, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
+    }, [activeAssistSection, effectiveAssistManualEventSource, isAirCombatTileMode, selectedCurrencyName, selectedManualCourseOption?.code, selectedManualCourseOption?.label, selectedManualLmpEventItem?.code, selectedManualPackageOption?.code, selectedManualPackageOption?.label, selectedResourceKind, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
 
     const assistDuration = Math.max(
         0.1,
@@ -1961,11 +1979,14 @@ const DfpSidePanelTimeline: React.FC<{
         : activeAssistSection === 'currency'
             ? assistCurrencyArrivalPoint.trim().toUpperCase()
             : assistArrivalPoint.trim().toUpperCase();
+    const assistSyllabusItem = activeAssistSection === 'details' && effectiveAssistManualEventSource === 'lmp'
+        ? selectedManualLmpEventItem
+        : selectedSyllabusItem;
     const assistConfigId = activeAssistSection === 'taskings'
         ? assistTaskConfigId
         : activeAssistSection === 'currency'
             ? assistCurrencyConfigId
-            : selectedSyllabusItem?.acceptableAircraftConfigs?.[0];
+            : assistSyllabusItem?.acceptableAircraftConfigs?.[0];
     const selectedCrewRecords = useMemo(() => (
         selectedCrewNames
             .map(name => instructors.find(instructor => instructor.name === name))
@@ -1990,19 +2011,20 @@ const DfpSidePanelTimeline: React.FC<{
             ? selectedManualPackageOption?.code
             : effectiveAssistManualEventSource === 'currency'
                 ? undefined
-                : selectedSyllabusItem?.code;
+                : selectedManualLmpEventItem?.code;
     const assistManualCrewSelectionOrder = isFixedCrewNeoAssist
         ? selectedCrewNames
-        : effectiveAssistManualFlightType === 'Dual'
+        : effectiveAssistManualEventSource === 'lmp' || effectiveAssistManualFlightType === 'Dual'
             ? selectedCrewNames
             : (selectedPilotCrewName ? [selectedPilotCrewName] : []);
     const assistManualCrewPairs = activeAssistSection === 'details' && !isDeploymentAssistTile && !isFixedCrewNeoAssist
         ? Array.from({ length: Math.max(1, assistFormationSize) }, (_, index) => {
-            const picIndex = effectiveAssistManualFlightType === 'Dual' ? index * 2 : index;
+            const hasSecondSeat = effectiveAssistManualEventSource === 'lmp' || effectiveAssistManualFlightType === 'Dual';
+            const picIndex = hasSecondSeat ? index * 2 : index;
             const crewIndex = picIndex + 1;
             return {
                 pic: selectedCrewNames[picIndex] || '',
-                crew: effectiveAssistManualFlightType === 'Dual' ? selectedCrewNames[crewIndex] || '' : '',
+                crew: hasSecondSeat ? selectedCrewNames[crewIndex] || '' : '',
             };
         })
         : [];
@@ -2053,9 +2075,9 @@ const DfpSidePanelTimeline: React.FC<{
         fixedCrewManifestStatus: !isDeploymentAssistTile && isFixedCrewNeoAssist && selectedFixedCrewGroup && selectedFixedCrewPic ? 'complete' : !isDeploymentAssistTile && isFixedCrewNeoAssist ? 'pending' : undefined,
         aircraftConfigId: isDeploymentAssistTile ? undefined : assistConfigId,
         acceptableAircraftConfigs: !isDeploymentAssistTile && assistConfigId ? [assistConfigId] : undefined,
-        crewRequirement: isDeploymentAssistTile ? undefined : selectedSyllabusItem?.crewRequirement || { mode: 'aircraft_default' },
-        preStart: !isDeploymentAssistTile && selectedSyllabusItem ? Math.max(0, assistStartTime - ((selectedSyllabusItem.preFlightTime || 0) / 60)) : undefined,
-        postEnd: !isDeploymentAssistTile && selectedSyllabusItem ? assistStartTime + assistDuration + ((selectedSyllabusItem.postFlightTime || 0) / 60) : undefined,
+        crewRequirement: isDeploymentAssistTile ? undefined : assistSyllabusItem?.crewRequirement || { mode: 'aircraft_default' },
+        preStart: !isDeploymentAssistTile && assistSyllabusItem ? Math.max(0, assistStartTime - ((assistSyllabusItem.preFlightTime || 0) / 60)) : undefined,
+        postEnd: !isDeploymentAssistTile && assistSyllabusItem ? assistStartTime + assistDuration + ((assistSyllabusItem.postFlightTime || 0) / 60) : undefined,
         isDeploy: isDeploymentAssistTile ? true : undefined,
         deploymentStartDate: isDeploymentAssistTile ? assistDeploymentStartDate : undefined,
         deploymentStartTime: isDeploymentAssistTile ? formatDeploymentAssistClock(assistStartTime) : undefined,
@@ -2083,6 +2105,7 @@ const DfpSidePanelTimeline: React.FC<{
         assistDestination,
         assistGeneralDuration,
         assistResourceId,
+        assistSyllabusItem,
         assistStartTime,
         assistTaskDate,
         assistFormationSize,
@@ -5201,8 +5224,9 @@ const DfpSidePanelTimeline: React.FC<{
             const mutedCompactFieldClass = 'mt-0.5 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1 text-[11px] normal-case tracking-normal text-slate-300';
             const isManualLmpEventSource = effectiveAssistManualEventSource === 'lmp';
             const manualCrewPairCount = selectedResourceKind === 'flight' ? Math.max(1, assistFormationSize) : 1;
+            const manualRequiresSecondSeat = isManualLmpEventSource || effectiveAssistManualFlightType === 'Dual';
             const getManualCrewSlotIndex = (positionIndex: number, role: 'pic' | 'crew') => (
-                effectiveAssistManualFlightType === 'Dual'
+                manualRequiresSecondSeat
                     ? (positionIndex * 2) + (role === 'crew' ? 1 : 0)
                     : positionIndex
             );
@@ -5232,7 +5256,6 @@ const DfpSidePanelTimeline: React.FC<{
                         </optgroup>
                     );
                 });
-                if (isManualLmpEventSource) return traineeGroups;
                 return (
                     <>
                         {renderCrewOptionsByUnit(optionKeyPrefix, namesToExclude)}
@@ -5240,6 +5263,19 @@ const DfpSidePanelTimeline: React.FC<{
                     </>
                 );
             };
+            const renderManualTraineeOptions = (optionKeyPrefix: string, namesToExclude = new Set<string>()) => (
+                displayedTraineeOptionGroups.map(group => {
+                    const names = group.names.filter(name => !namesToExclude.has(name));
+                    if (names.length === 0) return null;
+                    return (
+                        <optgroup key={`${optionKeyPrefix}-${group.unit}`} label={group.unit}>
+                            {names.map(name => (
+                                <option key={`${optionKeyPrefix}-${name}`} value={name}>{formatTraineeOptionLabel(name)}</option>
+                            ))}
+                        </optgroup>
+                    );
+                })
+            );
             const renderManualEventPicker = () => {
                 if (effectiveAssistManualEventSource === 'currency') {
                     return (
@@ -5271,7 +5307,7 @@ const DfpSidePanelTimeline: React.FC<{
                 }
                 return (
                     <select value={selectedEventCode} onChange={event => setSelectedEventCode(event.target.value)} className={compactFieldClass}>
-                        {filteredEventOptions.map(item => (
+                        {manualLmpEventOptions.map(item => (
                             <option key={`assist-manual-lmp-${item.id || item.code}`} value={item.code}>{item.code} - {item.title}</option>
                         ))}
                     </select>
@@ -5368,27 +5404,29 @@ const DfpSidePanelTimeline: React.FC<{
                                                     {manualCrewPairCount > 1 ? `#${positionIndex + 1}` : 'Crew'}
                                                 </div>
                                                 <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                                    {isManualLmpEventSource ? 'Trainee' : 'PIC'}
+                                                    PIC
                                                     <select
                                                         value={picValue}
                                                         onChange={event => updateManualCrewSlot(positionIndex, 'pic', event.target.value)}
                                                         className={compactFieldClass}
                                                     >
-                                                        <option value="">{isManualLmpEventSource ? 'Select trainee' : 'Select PIC'}</option>
-                                                        {renderManualCrewOptions(`assist-manual-pic-${positionIndex}`, excludedForPic)}
+                                                        <option value="">Select PIC</option>
+                                                        {renderCrewOptionsByUnit(`assist-manual-pic-${positionIndex}`, excludedForPic)}
                                                     </select>
                                                 </label>
                                                 <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                                    Crew
-                                                    {effectiveAssistManualFlightType === 'Dual' ? (
+                                                    {isManualLmpEventSource ? 'Trainee' : 'Crew'}
+                                                    {manualRequiresSecondSeat ? (
                                                         <select
                                                             value={crewValue}
                                                             onChange={event => updateManualCrewSlot(positionIndex, 'crew', event.target.value)}
                                                             disabled={!picValue}
                                                             className={`${compactFieldClass} disabled:cursor-not-allowed disabled:opacity-60`}
                                                         >
-                                                            <option value="">Select crew</option>
-                                                            {renderManualCrewOptions(`assist-manual-crew-${positionIndex}`, excludedForCrew)}
+                                                            <option value="">{isManualLmpEventSource ? 'Select trainee' : 'Select crew'}</option>
+                                                            {isManualLmpEventSource
+                                                                ? renderManualTraineeOptions(`assist-manual-trainee-${positionIndex}`, excludedForCrew)
+                                                                : renderManualCrewOptions(`assist-manual-crew-${positionIndex}`, excludedForCrew)}
                                                         </select>
                                                     ) : (
                                                         <div className={mutedCompactFieldClass}>N/A</div>
