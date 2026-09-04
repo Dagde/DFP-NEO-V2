@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useTheme } from './context/ThemeContext';
 import { useSystemFreeze } from './context/SystemFreezeContext';
 import LoginModal, { AuthUser, checkSession, logoutUser } from './components/LoginModal';

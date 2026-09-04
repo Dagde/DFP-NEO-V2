@@ -103234,7 +103234,7 @@ const DfpSidePanelTimeline = ({
       left: getLeft(constrainedTime)
     });
   };
-  useLayoutEffect(() => {
+  reactExports.useLayoutEffect(() => {
     if (!isOpen) return void 0;
     const scroller = scrollRef.current;
     if (!scroller) return void 0;
