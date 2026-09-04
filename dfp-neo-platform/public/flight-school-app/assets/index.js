@@ -103602,12 +103602,12 @@ const DfpSidePanelTimeline = ({
   const getAssistBuildQueuePerson = (event) => {
     const people = getPersonnel(event).filter(Boolean);
     if (people.length > 0) return people.slice(0, 2).join(", ");
-    return event.fixedCrewPic || event.pilot || event.instructor || event.student || event.crew || event.group || "TBA";
+    return event.fixedCrewPic || event.pilot || event.instructor || event.student || event.crew || "TBA";
   };
   const getAssistBuildQueueCrewDisplay = (event, group) => {
     const flightType = event.flightType || event.soloOrDual || "";
     const people = getPersonnel(event).filter(Boolean);
-    const primary = String(event.fixedCrewPic || event.pilot || event.instructor || people[0] || event.group || "TBA").trim() || "TBA";
+    const primary = String(event.fixedCrewPic || event.pilot || event.instructor || people[0] || "TBA").trim() || "TBA";
     const fallbackSecondary = people.find((name) => normalisePersonName(name) !== normalisePersonName(primary)) || "";
     const secondary = String(event.crew || event.student || fallbackSecondary || "").trim();
     if (group === "currency" && normalisedAssistOperationalModel === "flight_school" && flightType === "Dual" && secondary) {
