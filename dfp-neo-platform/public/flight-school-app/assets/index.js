@@ -47659,8 +47659,6 @@ const PrioritiesView = ({
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = reactExports.useState(false);
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = reactExports.useState(null);
   const [editingCurrencyDraftIds, setEditingCurrencyDraftIds] = reactExports.useState(/* @__PURE__ */ new Set());
-  const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = reactExports.useState(false);
-  const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const legacyCurrencyDraftStorageKey = "neoCurrencyDraftEvents";
   const currencyDraftStorageKey = "neoCurrencyDraftEvents.v2";
   const [taskingAirfieldCatalogue, setTaskingAirfieldCatalogue] = reactExports.useState([]);
@@ -48220,12 +48218,31 @@ const PrioritiesView = ({
       });
     });
   };
+  const removeCurrencyDraftPriorityEvents = (draftId) => {
+    highestPriorityEvents.filter((event) => event.currencyDraftId === draftId).forEach((event) => onDeletePriorityEvent(event.id));
+  };
+  const syncCurrencyDraftToPriority = (draft, scheduled = draft.selected === true) => {
+    removeCurrencyDraftPriorityEvents(draft.id);
+    if (scheduled) {
+      const priorityEvents = buildCurrencyPriorityEventsFromDrafts([{ ...draft, selected: true, pushed: true }]);
+      if (priorityEvents.length > 0) onAddPriorityEvents(priorityEvents);
+    }
+    setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: scheduled, pushed: scheduled } : event));
+  };
+  const addCurrencyDraftEvents = (events, auditDescription) => {
+    if (events.length === 0) return;
+    const stagedEvents = events.map((event) => event.selected ? { ...event, pushed: true } : event);
+    setCurrencyDraftEvents((prev) => [...prev, ...stagedEvents]);
+    const scheduledEvents = stagedEvents.filter((event) => event.selected);
+    if (scheduledEvents.length > 0) {
+      onAddPriorityEvents(buildCurrencyPriorityEventsFromDrafts(scheduledEvents));
+    }
+    logAudit("Priorities", "Build", auditDescription, `${events.length} Currency event(s) staged`);
+  };
   const addTraineeCurrencyEventsToPriority = () => {
     const selectedPeople = traineeCurrencyRows.filter((row) => traineeCurrencySelection.has(row.trainee.idNumber)).map((row) => ({ idNumber: row.trainee.idNumber, personKey: String(row.trainee.idNumber), name: row.trainee.name, fullName: row.trainee.fullName, course: row.trainee.course, dueCurrencies: row.dueCurrencies }));
     const events = buildCurrencyDraftEvents("trainee", selectedPeople, traineeCurrencyIncludeFlights, traineeCurrencyIncludeSims, traineeCurrencyCrewMode);
-    if (events.length === 0) return;
-    setCurrencyDraftEvents((prev) => [...prev, ...events]);
-    logAudit("Priorities", "Build", "Built trainee currency event review list", `${events.length} Currency event(s) staged`);
+    addCurrencyDraftEvents(events, "Built trainee currency event review list");
   };
   const addStaffCurrencyEventsToPriority = () => {
     const selectedRows = staffCurrencyRows.filter((row) => staffCurrencySelection.has(row.personKey));
@@ -48249,48 +48266,23 @@ const PrioritiesView = ({
       };
     });
     const events = buildCurrencyDraftEvents("staff", selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
-    if (events.length === 0) return;
-    setCurrencyDraftEvents((prev) => [...prev, ...events]);
-    logAudit("Priorities", "Build", "Built staff currency event review list", `${events.length} Currency event(s) staged`);
-  };
-  const pushSelectedCurrencyDraftsToPriority = () => {
-    const selectedDrafts = currencyDraftEvents.filter((event) => event.selected);
-    const priorityEvents = buildCurrencyPriorityEventsFromDrafts(selectedDrafts);
-    if (priorityEvents.length === 0) return;
-    onAddPriorityEvents(priorityEvents);
-    const pushedIds = new Set(selectedDrafts.map((event) => event.id));
-    setCurrencyDraftEvents((prev) => prev.map(
-      (event) => pushedIds.has(event.id) ? { ...event, selected: false, pushed: true } : event
-    ));
-    setOpenCurrencyDraftId(null);
-    logAudit("Priorities", "Add", "Added reviewed currency events to Highest Priority queue", `${priorityEvents.length} Currency event(s) added`);
+    addCurrencyDraftEvents(events, "Built staff currency event review list");
   };
   const setAllCurrencyDraftSchedule = (scheduled) => {
-    setCurrencyDraftEvents((prev) => prev.map((event) => activeCurrencyDraftIds.has(event.id) ? event : { ...event, selected: scheduled }));
+    currencyDraftEvents.filter((event) => !activeCurrencyDraftIds.has(event.id)).forEach((event) => syncCurrencyDraftToPriority(event, scheduled));
   };
   const toggleCurrencyDraftEditing = (draftId) => {
+    const wasEditing = editingCurrencyDraftIds.has(draftId);
     setEditingCurrencyDraftIds((prev) => {
       const next = new Set(prev);
       if (next.has(draftId)) next.delete(draftId);
       else next.add(draftId);
       return next;
     });
-  };
-  const currencyAircraftConfigChoices = reactExports.useMemo(() => [
-    { id: ANY_AIRCRAFT_CONFIG, label: "ANY", definition: "Any aircraft configuration is acceptable." },
-    ...aircraftConfigOptions
-  ], [aircraftConfigOptions]);
-  const applyCurrencyAircraftConfigToDrafts = () => {
-    const targetConfigId = bulkCurrencyAircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
-    let updatedCount = 0;
-    setCurrencyDraftEvents((prev) => prev.map((event) => {
-      if (activeCurrencyDraftIds.has(event.id)) return event;
-      updatedCount += 1;
-      return { ...event, aircraftConfigId: targetConfigId };
-    }));
-    setIsCurrencyConfigApplyOpen(false);
-    const configLabel = currencyAircraftConfigChoices.find((choice) => choice.id === targetConfigId)?.label || targetConfigId;
-    logAudit("Priorities", "Edit", "Applied aircraft CONFIG to consolidated currency events", `${configLabel} applied to ${updatedCount} staged Currency event(s)`);
+    if (wasEditing) {
+      const draft = currencyDraftEvents.find((event) => event.id === draftId);
+      if (draft?.selected) syncCurrencyDraftToPriority(draft, true);
+    }
   };
   const toggleDraftCurrency = (draftId, currencyName) => {
     setCurrencyDraftEvents((prev) => prev.map((event) => {
@@ -50410,73 +50402,10 @@ const PrioritiesView = ({
         ] })
       ] }),
       !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "consolidated-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-start justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Consolidated Currency Event Build" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-400", children: "Review built Currency events, optionally tick the currencies being satisfied, then send selected rows to Higher Priority." })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex shrink-0 flex-wrap justify-end gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => setIsCurrencyConfigApplyOpen((prev) => !prev),
-                  disabled: currencyDraftEvents.length === 0,
-                  className: "rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500",
-                  children: "Apply CONFIG"
-                }
-              ),
-              isCurrencyConfigApplyOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute right-0 z-30 mt-2 w-72 rounded-lg border border-slate-600 bg-slate-950 p-3 text-left shadow-xl", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-semibold uppercase tracking-wide text-cyan-200", children: "Apply CONFIG to staged Currency events" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 space-y-2 overflow-y-auto pr-1", children: currencyAircraftConfigChoices.map((choice) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-start gap-2 rounded border border-slate-800 bg-slate-900/70 px-2 py-2 text-xs text-slate-200 hover:border-cyan-500/40", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: bulkCurrencyAircraftConfigId === choice.id,
-                      onChange: () => setBulkCurrencyAircraftConfigId(choice.id),
-                      className: "mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold text-slate-100", children: choice.label }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[11px] leading-snug text-slate-400", children: choice.definition || "No definition has been entered." })
-                  ] })
-                ] }, choice.id)) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex justify-end gap-2 border-t border-slate-800 pt-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => setIsCurrencyConfigApplyOpen(false),
-                      className: "rounded-md border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800",
-                      children: "Cancel"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: applyCurrencyAircraftConfigToDrafts,
-                      className: "rounded-md bg-cyan-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-cyan-400",
-                      children: "Apply"
-                    }
-                  )
-                ] })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: pushSelectedCurrencyDraftsToPriority,
-                disabled: currencyDraftEvents.filter((event) => event.selected).length === 0,
-                className: "rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400",
-                children: "Push to Higher Priority"
-              }
-            )
-          ] })
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex items-start justify-between gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Consolidated Currency Event Build" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-400", children: "Review built Currency events. Schedule, edit and delete changes sync directly to Highest Priority Events." })
+        ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: currencyDraftEvents.length === 0 ? "space-y-3" : buildPriorityTableShellClass, children: [
           currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }),
           currencyDraftEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1162px] space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${buildPriorityTableHeaderClass} grid-cols-[116px_170px_94px_90px_180px_82px_113px_113px_96px_66px_60px]`, children: [
@@ -50522,7 +50451,7 @@ const PrioritiesView = ({
                           name: `currency-draft-schedule-${draft.id}`,
                           checked: draft.selected === true,
                           disabled: isPublishedInActiveSchedule,
-                          onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: true } : event)),
+                          onChange: () => syncCurrencyDraftToPriority(draft, true),
                           className: "h-4 w-4 accent-cyan-400"
                         }
                       ),
@@ -50536,7 +50465,7 @@ const PrioritiesView = ({
                           name: `currency-draft-schedule-${draft.id}`,
                           checked: draft.selected !== true,
                           disabled: isPublishedInActiveSchedule,
-                          onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: false } : event)),
+                          onChange: () => syncCurrencyDraftToPriority(draft, false),
                           className: "h-4 w-4 accent-cyan-400"
                         }
                       ),
@@ -50649,7 +50578,15 @@ const PrioritiesView = ({
                     "button",
                     {
                       type: "button",
-                      onClick: () => setCurrencyDraftEvents((prev) => prev.filter((event) => event.id !== draft.id)),
+                      onClick: () => {
+                        removeCurrencyDraftPriorityEvents(draft.id);
+                        setCurrencyDraftEvents((prev) => prev.filter((event) => event.id !== draft.id));
+                        setEditingCurrencyDraftIds((prev) => {
+                          const next = new Set(prev);
+                          next.delete(draft.id);
+                          return next;
+                        });
+                      },
                       className: "inline-flex h-6 w-6 shrink-0 items-center justify-center transition-opacity hover:opacity-75 focus:outline-none focus:ring-1 focus:ring-red-500/60",
                       "aria-label": "Remove currency event",
                       children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { className: "h-4 w-4", style: { color: "#dc2626", stroke: "#dc2626" } })
