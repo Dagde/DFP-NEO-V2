@@ -818,7 +818,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
     {taskingRequests.length > 0 && (
       <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45">
         <div className={taskingSummaryHeaderClass}>
-          <span className={taskingSummaryCellClass}>Actions</span>
+          <span className={taskingSummaryCellClass}>Schedule</span>
           <span className={taskingSummaryCellClass}>Type</span>
           <span className={taskingSummaryCellClass}>Solo/Dual</span>
           <span className={taskingSummaryCellClass}>Date</span>
@@ -855,22 +855,30 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
         <div key={request.id} className="overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
           <div className="overflow-x-auto bg-cyan-950/80 transition hover:bg-cyan-900/80">
             <div className={taskingSummaryRowClass}>
-              <div className={`${taskingSummaryCellClass} flex flex-wrap items-center gap-1`}>
-                <button
-                  type="button"
-                  disabled={!canSubmit}
-                  onClick={() => onSetTaskingSchedulerPriority(request.id, schedulerPriority)}
-                  className={`w-[64px] rounded border px-2 py-1 text-[10px] font-semibold ${request.submitted && !request.ignored ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-100' : canSubmit ? 'border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10' : 'cursor-not-allowed border-slate-600 text-slate-500'}`}
-                >
-                  Schedule
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true })}
-                  className={`w-[64px] rounded border px-2 py-1 text-[10px] font-semibold ${request.ignored || !request.submitted ? 'border-rose-400/60 bg-rose-500/15 text-rose-100' : 'border-rose-400/50 text-rose-200 hover:bg-rose-500/10'}`}
-                >
-                  Ignore
-                </button>
+              <div className={`${taskingSummaryCellClass} flex items-center justify-center`}>
+                <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[10px] font-semibold text-slate-100">
+                  <label className={`inline-flex items-center gap-0.5 ${canSubmit ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                    <input
+                      type="radio"
+                      name={`build-task-schedule-${request.id}`}
+                      checked={request.submitted && !request.ignored}
+                      disabled={!canSubmit}
+                      onChange={() => onSetTaskingSchedulerPriority(request.id, schedulerPriority)}
+                      className="h-3 w-3 accent-cyan-400"
+                    />
+                    Y
+                  </label>
+                  <label className="inline-flex cursor-pointer items-center gap-0.5">
+                    <input
+                      type="radio"
+                      name={`build-task-schedule-${request.id}`}
+                      checked={request.ignored || !request.submitted}
+                      onChange={() => onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true })}
+                      className="h-3 w-3 accent-cyan-400"
+                    />
+                    N
+                  </label>
+                </div>
               </div>
               <div className={`${taskingSummaryCellClass} font-semibold text-cyan-100`}>Directed Task</div>
               <div className={`${taskingSummaryCellClass} text-slate-100`}>{request.flightType}</div>

@@ -46133,7 +46133,7 @@ const TaskingRequestTable = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
     taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
     taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryHeaderClass, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Actions" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Schedule" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Type" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Solo/Dual" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Date" }),
@@ -46170,27 +46170,35 @@ const TaskingRequestTable = ({
       ] });
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto bg-cyan-950/80 transition hover:bg-cyan-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryRowClass, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${taskingSummaryCellClass} flex flex-wrap items-center gap-1`, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                disabled: !canSubmit,
-                onClick: () => onSetTaskingSchedulerPriority(request.id, schedulerPriority),
-                className: `w-[64px] rounded border px-2 py-1 text-[10px] font-semibold ${request.submitted && !request.ignored ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-100" : canSubmit ? "border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10" : "cursor-not-allowed border-slate-600 text-slate-500"}`,
-                children: "Schedule"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true }),
-                className: `w-[64px] rounded border px-2 py-1 text-[10px] font-semibold ${request.ignored || !request.submitted ? "border-rose-400/60 bg-rose-500/15 text-rose-100" : "border-rose-400/50 text-rose-200 hover:bg-rose-500/10"}`,
-                children: "Ignore"
-              }
-            )
-          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} flex items-center justify-center`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[10px] font-semibold text-slate-100", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `inline-flex items-center gap-0.5 ${canSubmit ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  name: `build-task-schedule-${request.id}`,
+                  checked: request.submitted && !request.ignored,
+                  disabled: !canSubmit,
+                  onChange: () => onSetTaskingSchedulerPriority(request.id, schedulerPriority),
+                  className: "h-3 w-3 accent-cyan-400"
+                }
+              ),
+              "Y"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex cursor-pointer items-center gap-0.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  name: `build-task-schedule-${request.id}`,
+                  checked: request.ignored || !request.submitted,
+                  onChange: () => onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true }),
+                  className: "h-3 w-3 accent-cyan-400"
+                }
+              ),
+              "N"
+            ] })
+          ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-semibold text-cyan-100`, children: "Directed Task" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} text-slate-100`, children: request.flightType }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-mono text-slate-100`, children: formatTaskingSummaryDate(taskingHeaderDate || void 0) }),
@@ -106233,7 +106241,7 @@ This cannot be undone.`,
               /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[56px]" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-900 text-[8px] uppercase tracking-[0.12em] text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Actions" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Schedule" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Type" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Solo/Dual" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-700 px-2 py-2 text-left", children: "Date" }),
@@ -106271,18 +106279,42 @@ This cannot be undone.`,
                       }
                     ),
                     "Select"
-                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => {
-                      selectAssistTask(row.tasking);
-                      if (row.source === "local") submitAssistTaskRequest(row.id);
-                    }, className: `w-[64px] rounded border px-2 py-1 font-semibold ${row.scheduled && !row.ignored ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-100" : "border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10"}`, children: "Schedule" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => {
-                      if (row.source === "local") {
-                        ignoreAssistTaskRequest(row.id);
-                      } else {
-                        ignorePriorityEvents(row.events);
-                      }
-                    }, className: `w-[64px] rounded border px-2 py-1 font-semibold ${row.ignored || !row.scheduled ? "border-rose-400/60 bg-rose-500/15 text-rose-100" : "border-rose-400/50 text-rose-200 hover:bg-rose-500/10"}`, children: "Ignore" })
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[10px] font-semibold text-slate-100", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex cursor-pointer items-center gap-0.5", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: `neo-assist-task-schedule-${rowKey}`,
+                          checked: row.scheduled && !row.ignored,
+                          onChange: () => {
+                            selectAssistTask(row.tasking);
+                            if (row.source === "local") submitAssistTaskRequest(row.id);
+                          },
+                          className: "h-3 w-3 accent-cyan-400"
+                        }
+                      ),
+                      "Y"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex cursor-pointer items-center gap-0.5", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: `neo-assist-task-schedule-${rowKey}`,
+                          checked: row.ignored || !row.scheduled,
+                          onChange: () => {
+                            if (row.source === "local") {
+                              ignoreAssistTaskRequest(row.id);
+                            } else {
+                              ignorePriorityEvents(row.events);
+                            }
+                          },
+                          className: "h-3 w-3 accent-cyan-400"
+                        }
+                      ),
+                      "N"
+                    ] })
                   ] })
                 ] }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-cyan-100", children: "Directed Task" }),

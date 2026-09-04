@@ -6188,7 +6188,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 </colgroup>
                                 <thead className="sticky top-0 z-10 bg-slate-900 text-[8px] uppercase tracking-[0.12em] text-slate-400">
                                     <tr>
-                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Actions</th>
+                                        <th className="border-b border-slate-700 px-2 py-2 text-left">Schedule</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Type</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Solo/Dual</th>
                                         <th className="border-b border-slate-700 px-2 py-2 text-left">Date</th>
@@ -6234,23 +6234,37 @@ const DfpSidePanelTimeline: React.FC<{
                                                                 Select
                                                             </label>
                                                         ) : (
-                                                            <>
-                                                                <button type="button" onClick={() => {
-                                                                    selectAssistTask(row.tasking);
-                                                                    if (row.source === 'local') submitAssistTaskRequest(row.id);
-                                                                }} className={`w-[64px] rounded border px-2 py-1 font-semibold ${row.scheduled && !row.ignored ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-100' : 'border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10'}`}>
-                                                                    Schedule
-                                                                </button>
-                                                                <button type="button" onClick={() => {
-                                                                    if (row.source === 'local') {
-                                                                        ignoreAssistTaskRequest(row.id);
-                                                                    } else {
-                                                                        ignorePriorityEvents(row.events);
-                                                                    }
-                                                                }} className={`w-[64px] rounded border px-2 py-1 font-semibold ${row.ignored || !row.scheduled ? 'border-rose-400/60 bg-rose-500/15 text-rose-100' : 'border-rose-400/50 text-rose-200 hover:bg-rose-500/10'}`}>
-                                                                    Ignore
-                                                                </button>
-                                                            </>
+                                                            <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[10px] font-semibold text-slate-100">
+                                                                <label className="inline-flex cursor-pointer items-center gap-0.5">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name={`neo-assist-task-schedule-${rowKey}`}
+                                                                        checked={row.scheduled && !row.ignored}
+                                                                        onChange={() => {
+                                                                            selectAssistTask(row.tasking);
+                                                                            if (row.source === 'local') submitAssistTaskRequest(row.id);
+                                                                        }}
+                                                                        className="h-3 w-3 accent-cyan-400"
+                                                                    />
+                                                                    Y
+                                                                </label>
+                                                                <label className="inline-flex cursor-pointer items-center gap-0.5">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name={`neo-assist-task-schedule-${rowKey}`}
+                                                                        checked={row.ignored || !row.scheduled}
+                                                                        onChange={() => {
+                                                                            if (row.source === 'local') {
+                                                                                ignoreAssistTaskRequest(row.id);
+                                                                            } else {
+                                                                                ignorePriorityEvents(row.events);
+                                                                            }
+                                                                        }}
+                                                                        className="h-3 w-3 accent-cyan-400"
+                                                                    />
+                                                                    N
+                                                                </label>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </td>
