@@ -5314,7 +5314,7 @@ const DfpSidePanelTimeline: React.FC<{
                 );
             };
             return (
-                <div className="grid grid-cols-4 gap-1.5">
+                <div className="grid grid-cols-5 gap-1.5">
                     <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                         Tile Type / Resource
                         <select
@@ -5404,7 +5404,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     </label>
                                 </>
                             ) : (
-                                <div className="col-span-4 grid grid-cols-1 gap-1">
+                                <div className="col-span-5 grid grid-cols-1 gap-1">
                                     {Array.from({ length: manualCrewPairCount }, (_, positionIndex) => {
                                         const picValue = getManualCrewSlotValue(positionIndex, 'pic');
                                         const crewValue = getManualCrewSlotValue(positionIndex, 'crew');
@@ -5507,8 +5507,8 @@ const DfpSidePanelTimeline: React.FC<{
                             )}
                         </>
                     )}
-                    {isDeploymentAssistTile && <div className="col-span-3" aria-hidden="true" />}
-                    <div className="col-span-4 grid grid-cols-4 gap-1.5">
+                    {isDeploymentAssistTile && <div className="col-span-4" aria-hidden="true" />}
+                    <div className="col-span-5 grid grid-cols-4 gap-1.5">
                         {renderAssistAirfieldCodeControl('dep', 'Dep', assistDepPoint, setAssistDepPoint)}
                         {renderAssistAirfieldCodeControl('arrive', 'Arrive', assistArrivalPoint, setAssistArrivalPoint)}
                         <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -5544,7 +5544,7 @@ const DfpSidePanelTimeline: React.FC<{
                         </label>
                     </div>
                     {assistRouteDurationCalc && (
-                        <div className={`col-span-4 rounded border px-2 py-1 text-[10px] font-semibold normal-case tracking-normal ${
+                        <div className={`col-span-5 rounded border px-2 py-1 text-[10px] font-semibold normal-case tracking-normal ${
                             assistRouteDurationCalc.status === 'ok'
                                 ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100'
                                 : 'border-amber-400/30 bg-amber-500/10 text-amber-100'

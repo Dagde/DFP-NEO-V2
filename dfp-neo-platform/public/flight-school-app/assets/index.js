@@ -105305,7 +105305,7 @@ This cannot be undone.`,
           item.title
         ] }, `assist-manual-lmp-${item.id || item.code}`)) });
       };
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-4 gap-1.5", children: [
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-5 gap-1.5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
           "Tile Type / Resource",
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -105390,7 +105390,7 @@ This cannot be undone.`,
                 (fixedCrewPicCandidates.length > 0 ? fixedCrewPicCandidates : fixedCrewAssistMembers).map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: staff.name }, `assist-manual-fixed-pic-${staff.name}`))
               ] })
             ] })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-span-4 grid grid-cols-1 gap-1", children: Array.from({ length: manualCrewPairCount }, (_, positionIndex) => {
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-span-5 grid grid-cols-1 gap-1", children: Array.from({ length: manualCrewPairCount }, (_, positionIndex) => {
             const picValue = getManualCrewSlotValue(positionIndex, "pic");
             const crewValue = getManualCrewSlotValue(positionIndex, "crew");
             const excludedForPic = new Set(selectedCrewNames.filter((name, index) => Boolean(name) && index !== getManualCrewSlotIndex(positionIndex, "pic")));
@@ -105480,8 +105480,8 @@ This cannot be undone.`,
             /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-callsign-options", children: callsignOptions.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: callsign }, callsign)) })
           ] })
         ] }),
-        isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-span-3", "aria-hidden": "true" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-4 grid grid-cols-4 gap-1.5", children: [
+        isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-span-4", "aria-hidden": "true" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-5 grid grid-cols-4 gap-1.5", children: [
           renderAssistAirfieldCodeControl("dep", "Dep", assistDepPoint, setAssistDepPoint),
           renderAssistAirfieldCodeControl("arrive", "Arrive", assistArrivalPoint, setAssistArrivalPoint),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
@@ -105522,7 +105522,7 @@ This cannot be undone.`,
             )
           ] })
         ] }),
-        assistRouteDurationCalc && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `col-span-4 rounded border px-2 py-1 text-[10px] font-semibold normal-case tracking-normal ${assistRouteDurationCalc.status === "ok" ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100" : "border-amber-400/30 bg-amber-500/10 text-amber-100"}`, children: assistRouteDurationCalc.status === "ok" ? `Calculated route duration: ${assistRouteDurationCalc.message}` : assistRouteDurationCalc.message }),
+        assistRouteDurationCalc && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `col-span-5 rounded border px-2 py-1 text-[10px] font-semibold normal-case tracking-normal ${assistRouteDurationCalc.status === "ok" ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100" : "border-amber-400/30 bg-amber-500/10 text-amber-100"}`, children: assistRouteDurationCalc.status === "ok" ? `Calculated route duration: ${assistRouteDurationCalc.message}` : assistRouteDurationCalc.message }),
         isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Begin Date",
