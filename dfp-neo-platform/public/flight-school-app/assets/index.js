@@ -46058,8 +46058,8 @@ const taskingPanelClass = "flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18em] text-slate-500";
 const taskingPanelHintClass = "mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500";
 const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
-const taskingSummaryHeaderClass = "grid min-w-[1124px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px_32px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
-const taskingSummaryRowClass = "grid min-w-[1124px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px_32px] gap-0 text-[12px]";
+const taskingSummaryHeaderClass = "grid min-w-[1102px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
+const taskingSummaryRowClass = "grid min-w-[1102px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px] gap-0 text-[12px]";
 const taskingSummaryCellClass = "border border-slate-700/70 px-2 py-2";
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const formatTaskingSummaryDate = (dateString) => {
@@ -46151,8 +46151,7 @@ const TaskingRequestTable = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "CONFIG" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Priority" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Status" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Edit" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, "aria-label": "Delete" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Edit" })
     ] }) }),
     taskingRequests.map((request) => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
@@ -46221,30 +46220,32 @@ const TaskingRequestTable = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} truncate text-slate-100`, title: selectedConfig?.label || request.aircraftConfigId, children: selectedConfig?.label || request.aircraftConfigId || "-" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-semibold ${schedulerPriority === "High" ? "text-red-300" : schedulerPriority === "Medium" ? "text-amber-300" : "text-green-300"}`, children: schedulerPriority }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} text-slate-100`, children: taskingStatus }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} text-center`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: () => toggleTaskingExpanded(request.id),
-              className: "w-[48px] rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10",
-              "aria-expanded": isExpanded,
-              children: isExpanded ? "Done" : "Edit"
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} flex items-center justify-center px-1`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              "aria-label": "Delete directed task",
-              title: "Delete directed task",
-              onClick: (event) => {
-                event.stopPropagation();
-                void confirmRemoveTaskingRequest(request);
-              },
-              className: "inline-flex h-6 w-6 items-center justify-center transition-opacity hover:opacity-75 focus:outline-none focus:ring-1 focus:ring-red-500/60",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-4 w-4", style: { color: "#dc2626", stroke: "#dc2626" } })
-            }
-          ) })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${taskingSummaryCellClass} flex items-center justify-center gap-1 px-1`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => toggleTaskingExpanded(request.id),
+                className: "w-[48px] rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10",
+                "aria-expanded": isExpanded,
+                children: isExpanded ? "Done" : "Edit"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                "aria-label": "Delete directed task",
+                title: "Delete directed task",
+                onClick: (event) => {
+                  event.stopPropagation();
+                  void confirmRemoveTaskingRequest(request);
+                },
+                className: "inline-flex h-5 w-4 shrink-0 items-center justify-center transition-opacity hover:opacity-75 focus:outline-none focus:ring-1 focus:ring-red-500/60",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-3.5 w-3.5", style: { color: "#dc2626", stroke: "#dc2626" } })
+              }
+            )
+          ] })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
