@@ -45826,6 +45826,26 @@ const FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS$1 = 4;
 const FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS$1 = 2;
 const normaliseTaskingUnitCode = (value) => String(value || "").trim().toUpperCase();
 const splitTaskingCompositeUnitCode = (value) => normaliseTaskingUnitCode(value).split(/[+/]/).map((code) => code.trim()).filter(Boolean);
+const normaliseTaskingResourceKind = (value) => {
+  const normalised = String(value || "").trim().toLowerCase();
+  if (normalised === "ftd" || normalised === "sim" || normalised === "simulator") return "FTD";
+  if (normalised === "cpt" || normalised === "procedural" || normalised === "procedural trainer") return "CPT";
+  if (normalised === "ground" || normalised === "ground school") return "Ground";
+  return "Flight";
+};
+const getTaskingResourceKindLabel = (kind) => {
+  const normalised = normaliseTaskingResourceKind(kind);
+  if (normalised === "FTD") return "Simulator";
+  if (normalised === "CPT") return "Procedural Trainer";
+  return normalised;
+};
+const getTaskingScheduleEventType = (kind) => {
+  const normalised = normaliseTaskingResourceKind(kind);
+  if (normalised === "FTD") return "ftd";
+  if (normalised === "CPT") return "cpt";
+  if (normalised === "Ground") return "ground";
+  return "flight";
+};
 const AircraftConfigSelect = ({ value, definitions, disabled = false, includeAny = false, onChange }) => {
   const selectedValue = value || BASE_AIRCRAFT_CONFIG.id;
   const selectedDefinition = definitions.find((definition) => definition.id === selectedValue);
@@ -46058,8 +46078,8 @@ const taskingPanelClass = "flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18em] text-slate-500";
 const taskingPanelHintClass = "mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500";
 const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
-const taskingSummaryHeaderClass = "grid min-w-[1152px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
-const taskingSummaryRowClass = "grid min-w-[1152px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 text-[12px]";
+const taskingSummaryHeaderClass = "grid min-w-[1238px] grid-cols-[136px_90px_86px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
+const taskingSummaryRowClass = "grid min-w-[1238px] grid-cols-[136px_90px_86px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 text-[12px]";
 const taskingSummaryCellClass = "border border-slate-700/70 px-2 py-2";
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const buildPriorityTableShellClass = "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45";
@@ -46156,7 +46176,7 @@ const TaskingRequestTable = ({
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
     taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
-    taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[1152px] space-y-3", children: [
+    taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[1238px] space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryHeaderClass, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `${taskingSummaryHeaderCellClass} flex flex-col items-center justify-center gap-2`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Schedule" }),
@@ -46166,6 +46186,7 @@ const TaskingRequestTable = ({
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Type" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Kind" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Solo/Dual" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Date" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Event" }),
@@ -46186,6 +46207,8 @@ const TaskingRequestTable = ({
         const callsignEntriesForRequest = request.isFormation === true && formationCallsignEntries.length > 0 ? formationCallsignEntries : unitCallsignEntries;
         const showCallsignUnitLabels = new Set(callsignEntriesForRequest.map((entry) => entry.unitCode)).size > 1;
         const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
+        const resourceKind = normaliseTaskingResourceKind(request.resourceType);
+        const resourceKindLabel = getTaskingResourceKindLabel(resourceKind);
         const isExpanded = expandedTaskingIds.has(request.id);
         const taskingHeaderTitle = request.tasking.trim() || "New directed task request";
         const taskingHeaderDate = request.date || "";
@@ -46232,6 +46255,7 @@ const TaskingRequestTable = ({
               ] })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-semibold text-cyan-100`, children: "Directed Task" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} truncate text-slate-100`, title: resourceKindLabel, children: resourceKindLabel }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} text-slate-100`, children: request.flightType }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-mono text-slate-100`, children: formatTaskingSummaryDate(taskingHeaderDate || void 0) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} truncate font-semibold text-slate-100`, title: taskingHeaderTitle, children: taskingHeaderTitle }),
@@ -46271,7 +46295,7 @@ const TaskingRequestTable = ({
             ) })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.5fr)_minmax(8rem,0.78fr)_minmax(10rem,1fr)_minmax(6.5rem,0.62fr)_minmax(6.5rem,0.62fr)]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Directed Task", hint: directedTaskHint, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 TaskingProfileInput,
                 {
@@ -46280,6 +46304,20 @@ const TaskingRequestTable = ({
                   operationalModelLabel,
                   onOpenDirectedTaskLists: openDirectedTaskSettings,
                   onChange: (tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false, saved: false })
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Kind", hint: resourceKindLabel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: resourceKind,
+                  onChange: (event) => onUpdateTaskingRequest(request.id, { resourceType: normaliseTaskingResourceKind(event.target.value), submitted: false, saved: false }),
+                  className: taskingControlClass,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: "Simulator" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "CPT", children: "Procedural Trainer" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ground", children: "Ground" })
+                  ]
                 }
               ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Date", hint: request.date || "Required", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -47635,6 +47673,7 @@ const PrioritiesView = ({
       date: request.date || buildDfpDate,
       takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
       duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : defaultTaskingDuration,
+      resourceType: normaliseTaskingResourceKind(request.resourceType || request.type),
       flightType: request.flightType === "Solo" ? "Solo" : "Dual",
       depPoint: request.depPoint || school,
       arrivalPoint: request.arrivalPoint || school,
@@ -47660,6 +47699,7 @@ const PrioritiesView = ({
       String(request.tasking || "").trim().toUpperCase().replace(/\s+/g, " "),
       Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff).toFixed(3) : "",
       Number.isFinite(Number(request.duration)) ? Number(request.duration).toFixed(3) : "",
+      normaliseTaskingResourceKind(request.resourceType),
       Math.max(1, Math.floor(Number(request.aircraftCount) || 1)),
       aircraftIndex,
       request.isFormation === true ? "FORMATION" : "STANDARD",
@@ -47826,6 +47866,7 @@ const PrioritiesView = ({
       date: buildDfpDate,
       takeoff: flyingStartTime,
       duration: defaultTaskingDuration,
+      resourceType: "Flight",
       flightType: isSingleSeatAircraft ? "Solo" : "Dual",
       depPoint: school,
       arrivalPoint: school,
@@ -47918,6 +47959,7 @@ const PrioritiesView = ({
     const callsignNumber = Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0;
     const eventCallsign = request.callsign || (callsignBase ? buildUnitEventCallsign(callsignBase, callsignNumber) : "");
     const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
+    const eventType = getTaskingScheduleEventType(request.resourceType);
     const flightType = isSingleSeatAircraft || request.flightType === "Solo" ? "Solo" : "Dual";
     const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
     const notes = [
@@ -47925,6 +47967,7 @@ const PrioritiesView = ({
       `Date: ${request.date || "Any build date"}`,
       `Takeoff: ${formatTimeLabel(startTime)}`,
       `Duration: ${request.duration.toFixed(1)}`,
+      `Kind: ${getTaskingResourceKindLabel(request.resourceType)}`,
       `Scheduler priority: ${schedulerPriority}`,
       `Dep Point: ${depPoint}`,
       `Arrival Point: ${arrivalPoint}`,
@@ -47938,7 +47981,7 @@ const PrioritiesView = ({
       return {
         id: isFormation ? `tasking-${request.id}-formation` : `tasking-${request.id}-${aircraftIndex}`,
         date: request.date || "",
-        type: "flight",
+        type: eventType,
         instructor: "",
         student: "",
         pilot: "",
@@ -47983,7 +48026,7 @@ const PrioritiesView = ({
       };
     });
   };
-  const taskingPriorityEventNeedsSync = (expected, actual) => !actual || actual.date !== expected.date || actual.flightNumber !== expected.flightNumber || actual.taskingName !== expected.taskingName || actual.taskingDisplayLabel !== expected.taskingDisplayLabel || actual.startTime !== expected.startTime || actual.duration !== expected.duration || actual.priority !== expected.priority || actual.isMandatoryTasking !== expected.isMandatoryTasking || actual.origin !== expected.origin || actual.destination !== expected.destination || actual.callsign !== expected.callsign || actual.aircraftConfigId !== expected.aircraftConfigId || actual.taskingAircraftCount !== expected.taskingAircraftCount || actual.isFormation !== expected.isFormation || actual.formationId !== expected.formationId || actual.formationPosition !== expected.formationPosition || actual.formationSize !== expected.formationSize || actual.pushToNeoBuild !== expected.pushToNeoBuild || JSON.stringify(actual.crewRequirement || null) !== JSON.stringify(expected.crewRequirement || null);
+  const taskingPriorityEventNeedsSync = (expected, actual) => !actual || actual.date !== expected.date || actual.flightNumber !== expected.flightNumber || actual.taskingName !== expected.taskingName || actual.taskingDisplayLabel !== expected.taskingDisplayLabel || actual.startTime !== expected.startTime || actual.duration !== expected.duration || actual.type !== expected.type || actual.priority !== expected.priority || actual.isMandatoryTasking !== expected.isMandatoryTasking || actual.origin !== expected.origin || actual.destination !== expected.destination || actual.callsign !== expected.callsign || actual.aircraftConfigId !== expected.aircraftConfigId || actual.taskingAircraftCount !== expected.taskingAircraftCount || actual.isFormation !== expected.isFormation || actual.formationId !== expected.formationId || actual.formationPosition !== expected.formationPosition || actual.formationSize !== expected.formationSize || actual.pushToNeoBuild !== expected.pushToNeoBuild || JSON.stringify(actual.crewRequirement || null) !== JSON.stringify(expected.crewRequirement || null);
   reactExports.useEffect(() => {
     visibleTaskingRequests.filter((request) => request.submitted && !request.ignored).forEach((request) => {
       const expectedEvents = buildTaskingPriorityEvents(request);
@@ -48321,9 +48364,10 @@ const PrioritiesView = ({
       }, type);
     };
     const isFlightSchoolCurrencyRequestTable = priorityAllocationModel === "flight_school";
-    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? "min-w-[1192px]" : "min-w-[1278px]";
-    const sctTableHeaderColumnsClass = isFlightSchoolCurrencyRequestTable ? "grid-cols-[136px_140px_140px_150px_82px_113px_113px_96px_96px_66px_60px]" : "grid-cols-[136px_132px_132px_140px_150px_74px_105px_105px_90px_88px_66px_60px]";
-    const sctTableBodyColumnsClass = isFlightSchoolCurrencyRequestTable ? "grid-cols-[136px_140px_140px_150px_82px_113px_113px_96px_96px_66px_60px]" : "grid-cols-[136px_132px_132px_140px_150px_74px_105px_105px_90px_88px_66px_60px]";
+    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? "min-w-[1196px]" : "min-w-[1298px]";
+    const sctTableHeaderColumnsClass = isFlightSchoolCurrencyRequestTable ? "grid-cols-[136px_190px_94px_150px_82px_113px_113px_96px_96px_66px_60px]" : "grid-cols-[136px_190px_94px_140px_150px_74px_105px_105px_90px_88px_66px_60px]";
+    const sctTableBodyColumnsClass = isFlightSchoolCurrencyRequestTable ? "grid-cols-[136px_190px_94px_150px_82px_113px_113px_96px_96px_66px_60px]" : "grid-cols-[136px_190px_94px_140px_150px_74px_105px_105px_90px_88px_66px_60px]";
+    const sctRequestKindLabel = type === "ftd" ? "Simulator" : "Flight";
     const getSctEditKey = (request) => `${type}:${request.id}`;
     const toggleSctRequestEditing = (request) => {
       const key = getSctEditKey(request);
@@ -48423,8 +48467,8 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setAllSctRequestSchedule(false), className: "border-l border-slate-600 px-1.5 py-0.5 text-slate-200 hover:bg-slate-700/60", children: "None" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: isFixedCrewModel ? "Crew" : isFlightSchoolCurrencyRequestTable ? "Pilot" : "Staff" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: isFlightSchoolCurrencyRequestTable ? "Second Pilot" : "PIC" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Crew" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Kind" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Event" }),
         !isFlightSchoolCurrencyRequestTable && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Crew Composition" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Aircraft" }),
@@ -48462,6 +48506,8 @@ const PrioritiesView = ({
         const stageSpecificCurrencyRequest = () => scheduleSpecificCurrencyRequest(req);
         const crewDisplay = isFixedCrewModel ? selectedCrewGroup?.label || req.crewDisplayLabel || req.crewGroup || "TBA" : req.name || "TBA";
         const picDisplay = isFixedCrewModel ? req.crewIndividual || "TBA" : isFlightSchoolCurrencyRequest ? flightSchoolSecondPilot || "TBA" : "N/A";
+        const crewTopDisplay = isFixedCrewModel ? picDisplay : crewDisplay;
+        const crewSecondDisplay = isFixedCrewModel ? crewDisplay : isFlightSchoolCurrencyRequest ? flightSchoolSecondPilot === "Solo" || req.flightType === "Solo" ? "Solo" : flightSchoolSecondPilot || "TBA" : "N/A";
         const eventDisplay = String(req.event || req.currency || "Select profile").trim();
         return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid auto-rows-fr ${sctTableBodyColumnsClass} items-stretch gap-0`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100", children: [
@@ -48494,8 +48540,33 @@ const PrioritiesView = ({
             ] })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: isFlightSchoolCurrencyRequest ? "Pilot" : "Crew" }),
-            !isEditingRequest ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate font-semibold text-cyan-100", title: crewDisplay, children: crewDisplay }) : isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Crew" }),
+            !isEditingRequest ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-0.5 leading-snug", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate font-semibold text-cyan-100", title: crewTopDisplay, children: crewTopDisplay }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-slate-100", title: crewSecondDisplay, children: crewSecondDisplay })
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: aircraftCount > 1 ? "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2" : "", children: [
+                aircraftCount > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center text-[10px] font-bold text-sky-300", children: "1" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    value: req.crewIndividual || "",
+                    onChange: (e) => {
+                      onPatchSctRequest(req.id, {
+                        crewIndividual: e.target.value,
+                        name: e.target.value
+                      }, type);
+                    },
+                    disabled: !selectedCrewGroup,
+                    className: controlClass,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: selectedCrewGroup ? "Select PIC" : "Select crew first" }),
+                      selectedCrewPicCandidates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: selectedCrewGroup?.label || "Selected Crew", children: selectedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: formatRequestPicOptionLabel(member, requestAvailabilityWindow) }, member.id || member.idNumber || member.name)) }),
+                      otherPicCandidates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: "OTHER", children: otherPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: formatRequestPicOptionLabel(member, requestAvailabilityWindow) }, member.id || member.idNumber || member.name)) })
+                    ]
+                  }
+                )
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: aircraftCount > 1 ? "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2" : "", children: [
                 aircraftCount > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center text-[10px] font-bold text-sky-300", children: "1" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -48526,116 +48597,92 @@ const PrioritiesView = ({
               ] }),
               aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
                 const assignmentCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === assignment.crewGroupKey || group.crewValue === String(assignment.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(assignment.crewUnitCode || "").trim().toUpperCase());
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center text-[10px] font-bold text-sky-300", children: assignmentIndex + 2 }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      value: assignmentCrewGroup?.key || "",
-                      onChange: (e) => {
-                        const group = fixedCrewRequestCrewGroups.find((candidate) => candidate.key === e.target.value);
-                        const picCandidates = (group?.members || []).filter((member) => staffHasPicQualification(member));
-                        const defaultPic = picCandidates.length === 1 ? picCandidates[0].name : "";
-                        updateFormationAssignment(assignmentIndex, {
-                          crewGroupKey: group?.key || "",
-                          crewGroup: group?.crewValue || "",
-                          crewUnitCode: group?.unitCode || "",
-                          crewDisplayLabel: group?.label || "",
-                          crewIndividual: defaultPic
-                        });
-                      },
-                      className: controlClass,
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                        Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: groups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group.key, children: formatRequestCrewOptionLabel(group, requestAvailabilityWindow) }, group.key)) }, unitCode))
-                      ]
-                    }
-                  )
-                ] }, `${req.id}-formation-crew-${assignmentIndex}`);
+                const assignmentPicCandidates = (assignmentCrewGroup?.members || []).filter((member) => staffHasPicQualification(member));
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1rem_minmax(0,1fr)] items-start gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-1 text-center text-[10px] font-bold text-sky-300", children: assignmentIndex + 2 }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: assignment.crewIndividual || "",
+                        onChange: (e) => updateFormationAssignment(assignmentIndex, { crewIndividual: e.target.value }),
+                        disabled: !assignmentCrewGroup,
+                        className: controlClass,
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: assignmentCrewGroup ? "Select PIC" : "Select crew first" }),
+                          assignmentPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: formatRequestPicOptionLabel(member, requestAvailabilityWindow) }, member.id || member.idNumber || member.name))
+                        ]
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: assignmentCrewGroup?.key || "",
+                        onChange: (e) => {
+                          const group = fixedCrewRequestCrewGroups.find((candidate) => candidate.key === e.target.value);
+                          const picCandidates = (group?.members || []).filter((member) => staffHasPicQualification(member));
+                          const defaultPic = picCandidates.length === 1 ? picCandidates[0].name : "";
+                          updateFormationAssignment(assignmentIndex, {
+                            crewGroupKey: group?.key || "",
+                            crewGroup: group?.crewValue || "",
+                            crewUnitCode: group?.unitCode || "",
+                            crewDisplayLabel: group?.label || "",
+                            crewIndividual: defaultPic
+                          });
+                        },
+                        className: controlClass,
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
+                          Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unitCode, children: groups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: group.key, children: formatRequestCrewOptionLabel(group, requestAvailabilityWindow) }, group.key)) }, unitCode))
+                        ]
+                      }
+                    )
+                  ] })
+                ] }, `${req.id}-formation-crew-combined-${assignmentIndex}`);
               })
-            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: req.name,
-                onChange: (e) => {
-                  const nextName = e.target.value;
-                  onPatchSctRequest(req.id, {
-                    name: nextName,
-                    ...req.crewMember === nextName ? { crewMember: "", flightType: "Dual" } : {}
-                  }, type);
-                },
-                className: controlClass,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: isFlightSchoolCurrencyRequest ? "Select pilot" : `Select ${instructorLabel2.toLowerCase()}` }),
-                  instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
-                ]
-              }
-            )
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: req.name,
+                  onChange: (e) => {
+                    const nextName = e.target.value;
+                    onPatchSctRequest(req.id, {
+                      name: nextName,
+                      ...req.crewMember === nextName ? { crewMember: "", flightType: "Dual" } : {}
+                    }, type);
+                  },
+                  className: controlClass,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: isFlightSchoolCurrencyRequest ? "Select PIC" : `Select ${instructorLabel2.toLowerCase()}` }),
+                    instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+                  ]
+                }
+              ),
+              isFlightSchoolCurrencyRequest ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: flightSchoolSecondPilot,
+                  onChange: (e) => {
+                    const nextSecondPilot = e.target.value;
+                    onPatchSctRequest(req.id, {
+                      crewMember: nextSecondPilot,
+                      flightType: nextSecondPilot === "Solo" ? "Solo" : "Dual"
+                    }, type);
+                  },
+                  className: controlClass,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select second pilot / Solo" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
+                    instructorNames.filter((name) => name !== req.name).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+                  ]
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-500", children: "N/A" })
+            ] }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: isFlightSchoolCurrencyRequest ? "Second Pilot" : "PIC" }),
-            !isEditingRequest ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-slate-100", title: picDisplay, children: picDisplay }) : isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: aircraftCount > 1 ? "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2" : "", children: [
-                aircraftCount > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center text-[10px] font-bold text-sky-300", children: "1" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "select",
-                  {
-                    value: req.crewIndividual || "",
-                    onChange: (e) => {
-                      onPatchSctRequest(req.id, {
-                        crewIndividual: e.target.value,
-                        name: e.target.value
-                      }, type);
-                    },
-                    disabled: !selectedCrewGroup,
-                    className: controlClass,
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: selectedCrewGroup ? "Select PIC" : "Select crew first" }),
-                      selectedCrewPicCandidates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: selectedCrewGroup?.label || "Selected Crew", children: selectedCrewPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: formatRequestPicOptionLabel(member, requestAvailabilityWindow) }, member.id || member.idNumber || member.name)) }),
-                      otherPicCandidates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: "OTHER", children: otherPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: formatRequestPicOptionLabel(member, requestAvailabilityWindow) }, member.id || member.idNumber || member.name)) })
-                    ]
-                  }
-                )
-              ] }),
-              aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
-                const assignmentCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === assignment.crewGroupKey || group.crewValue === String(assignment.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(assignment.crewUnitCode || "").trim().toUpperCase());
-                const assignmentPicCandidates = (assignmentCrewGroup?.members || []).filter((member) => staffHasPicQualification(member));
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center text-[10px] font-bold text-sky-300", children: assignmentIndex + 2 }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      value: assignment.crewIndividual || "",
-                      onChange: (e) => updateFormationAssignment(assignmentIndex, { crewIndividual: e.target.value }),
-                      disabled: !assignmentCrewGroup,
-                      className: controlClass,
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: assignmentCrewGroup ? "Select PIC" : "Select crew first" }),
-                        assignmentPicCandidates.map((member) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: member.name, children: formatRequestPicOptionLabel(member, requestAvailabilityWindow) }, member.id || member.idNumber || member.name))
-                      ]
-                    }
-                  )
-                ] }, `${req.id}-formation-pic-${assignmentIndex}`);
-              })
-            ] }) : isFlightSchoolCurrencyRequest ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: flightSchoolSecondPilot,
-                onChange: (e) => {
-                  const nextSecondPilot = e.target.value;
-                  onPatchSctRequest(req.id, {
-                    crewMember: nextSecondPilot,
-                    flightType: nextSecondPilot === "Solo" ? "Solo" : "Dual"
-                  }, type);
-                },
-                className: controlClass,
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select second pilot / Solo" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" }),
-                  instructorNames.filter((name) => name !== req.name).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
-                ]
-              }
-            ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-500", children: "N/A" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Kind" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate font-semibold text-slate-100", title: sctRequestKindLabel, children: sctRequestKindLabel })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Event" }),

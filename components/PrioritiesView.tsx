@@ -327,6 +327,31 @@ const splitTaskingCompositeUnitCode = (value?: string | null): string[] => (
     .filter(Boolean)
 );
 
+type TaskingResourceKind = 'Flight' | 'FTD' | 'CPT' | 'Ground';
+
+const normaliseTaskingResourceKind = (value?: string | null): TaskingResourceKind => {
+  const normalised = String(value || '').trim().toLowerCase();
+  if (normalised === 'ftd' || normalised === 'sim' || normalised === 'simulator') return 'FTD';
+  if (normalised === 'cpt' || normalised === 'procedural' || normalised === 'procedural trainer') return 'CPT';
+  if (normalised === 'ground' || normalised === 'ground school') return 'Ground';
+  return 'Flight';
+};
+
+const getTaskingResourceKindLabel = (kind?: string | null): string => {
+  const normalised = normaliseTaskingResourceKind(kind);
+  if (normalised === 'FTD') return 'Simulator';
+  if (normalised === 'CPT') return 'Procedural Trainer';
+  return normalised;
+};
+
+const getTaskingScheduleEventType = (kind?: string | null): ScheduleEvent['type'] => {
+  const normalised = normaliseTaskingResourceKind(kind);
+  if (normalised === 'FTD') return 'ftd';
+  if (normalised === 'CPT') return 'cpt';
+  if (normalised === 'Ground') return 'ground';
+  return 'flight';
+};
+
 const AircraftConfigSelect: React.FC<{
   value?: string;
   definitions: AircraftConfigurationDefinition[];
@@ -376,6 +401,7 @@ interface TaskingRequest {
   date: string;
   takeoff: number;
   duration: number;
+  resourceType?: TaskingResourceKind;
   flightType: 'Solo' | 'Dual';
   depPoint: string;
   arrivalPoint: string;
@@ -725,8 +751,8 @@ const taskingPanelClass = 'flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = 'text-[10px] font-black uppercase tracking-[0.18em] text-slate-500';
 const taskingPanelHintClass = 'mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500';
 const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500';
-const taskingSummaryHeaderClass = 'grid min-w-[1152px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400';
-const taskingSummaryRowClass = 'grid min-w-[1152px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 text-[12px]';
+const taskingSummaryHeaderClass = 'grid min-w-[1238px] grid-cols-[136px_90px_86px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400';
+const taskingSummaryRowClass = 'grid min-w-[1238px] grid-cols-[136px_90px_86px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 text-[12px]';
 const taskingSummaryCellClass = 'border border-slate-700/70 px-2 py-2';
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const buildPriorityTableShellClass = 'overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45';
@@ -843,7 +869,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
     )}
     {taskingRequests.length > 0 && (
       <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45">
-        <div className="min-w-[1152px] space-y-3">
+        <div className="min-w-[1238px] space-y-3">
           <div className={taskingSummaryHeaderClass}>
             <span className={`${taskingSummaryHeaderCellClass} flex flex-col items-center justify-center gap-2`}>
               <span>Schedule</span>
@@ -853,6 +879,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
               </span>
             </span>
             <span className={taskingSummaryHeaderCellClass}>Type</span>
+            <span className={taskingSummaryHeaderCellClass}>Kind</span>
             <span className={taskingSummaryHeaderCellClass}>Solo/Dual</span>
             <span className={taskingSummaryHeaderCellClass}>Date</span>
             <span className={taskingSummaryHeaderCellClass}>Event</span>
@@ -875,6 +902,8 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
         : unitCallsignEntries;
       const showCallsignUnitLabels = new Set(callsignEntriesForRequest.map(entry => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
+      const resourceKind = normaliseTaskingResourceKind(request.resourceType);
+      const resourceKindLabel = getTaskingResourceKindLabel(resourceKind);
       const isExpanded = expandedTaskingIds.has(request.id);
       const taskingHeaderTitle = request.tasking.trim() || 'New directed task request';
       const taskingHeaderDate = request.date || '';
@@ -913,6 +942,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 </div>
               </div>
               <div className={`${taskingSummaryCellClass} font-semibold text-cyan-100`}>Directed Task</div>
+              <div className={`${taskingSummaryCellClass} truncate text-slate-100`} title={resourceKindLabel}>{resourceKindLabel}</div>
               <div className={`${taskingSummaryCellClass} text-slate-100`}>{request.flightType}</div>
               <div className={`${taskingSummaryCellClass} font-mono text-slate-100`}>{formatTaskingSummaryDate(taskingHeaderDate || undefined)}</div>
               <div className={`${taskingSummaryCellClass} truncate font-semibold text-slate-100`} title={taskingHeaderTitle}>{taskingHeaderTitle}</div>
@@ -952,7 +982,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
           <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
             <div className="min-h-0 overflow-hidden">
               <div className="p-3">
-          <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.5fr)_minmax(8rem,0.78fr)_minmax(10rem,1fr)_minmax(6.5rem,0.62fr)_minmax(6.5rem,0.62fr)]">
             <TaskingFieldPanel label="Directed Task" hint={directedTaskHint}>
               <TaskingProfileInput
                 value={request.tasking}
@@ -961,6 +991,18 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 onOpenDirectedTaskLists={openDirectedTaskSettings}
                 onChange={(tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false, saved: false })}
               />
+            </TaskingFieldPanel>
+            <TaskingFieldPanel label="Kind" hint={resourceKindLabel}>
+              <select
+                value={resourceKind}
+                onChange={event => onUpdateTaskingRequest(request.id, { resourceType: normaliseTaskingResourceKind(event.target.value), submitted: false, saved: false })}
+                className={taskingControlClass}
+              >
+                <option value="Flight">Flight</option>
+                <option value="FTD">Simulator</option>
+                <option value="CPT">Procedural Trainer</option>
+                <option value="Ground">Ground</option>
+              </select>
             </TaskingFieldPanel>
             <TaskingFieldPanel label="Date" hint={request.date || 'Required'}>
               <input
@@ -2546,6 +2588,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       date: request.date || buildDfpDate,
       takeoff: Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime,
       duration: Number.isFinite(Number(request.duration)) && Number(request.duration) > 0 ? Number(request.duration) : defaultTaskingDuration,
+      resourceType: normaliseTaskingResourceKind(request.resourceType || request.type),
       flightType: request.flightType === 'Solo' ? 'Solo' : 'Dual',
       depPoint: request.depPoint || school,
       arrivalPoint: request.arrivalPoint || school,
@@ -2575,6 +2618,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       String(request.tasking || '').trim().toUpperCase().replace(/\s+/g, ' '),
       Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff).toFixed(3) : '',
       Number.isFinite(Number(request.duration)) ? Number(request.duration).toFixed(3) : '',
+      normaliseTaskingResourceKind(request.resourceType),
       Math.max(1, Math.floor(Number(request.aircraftCount) || 1)),
       aircraftIndex,
       request.isFormation === true ? 'FORMATION' : 'STANDARD',
@@ -2809,6 +2853,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       date: buildDfpDate,
       takeoff: flyingStartTime,
       duration: defaultTaskingDuration,
+      resourceType: 'Flight',
       flightType: isSingleSeatAircraft ? 'Solo' : 'Dual',
       depPoint: school,
       arrivalPoint: school,
@@ -2944,6 +2989,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const callsignNumber = Number.isFinite(Number(request.callsignNumber)) ? Number(request.callsignNumber) : 0;
     const eventCallsign = request.callsign || (callsignBase ? buildUnitEventCallsign(callsignBase, callsignNumber) : '');
     const startTime = Number.isFinite(Number(request.takeoff)) ? Number(request.takeoff) : flyingStartTime;
+    const eventType = getTaskingScheduleEventType(request.resourceType);
     const flightType = isSingleSeatAircraft || request.flightType === 'Solo' ? 'Solo' : 'Dual';
     const schedulerPriority: TaskingSchedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
     const notes = [
@@ -2951,6 +2997,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       `Date: ${request.date || 'Any build date'}`,
       `Takeoff: ${formatTimeLabel(startTime)}`,
       `Duration: ${request.duration.toFixed(1)}`,
+      `Kind: ${getTaskingResourceKindLabel(request.resourceType)}`,
       `Scheduler priority: ${schedulerPriority}`,
       `Dep Point: ${depPoint}`,
       `Arrival Point: ${arrivalPoint}`,
@@ -2965,7 +3012,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       return {
         id: isFormation ? `tasking-${request.id}-formation` : `tasking-${request.id}-${aircraftIndex}`,
         date: request.date || '',
-        type: 'flight',
+        type: eventType,
         instructor: '',
         student: '',
         pilot: '',
@@ -3019,6 +3066,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     actual.taskingDisplayLabel !== expected.taskingDisplayLabel ||
     actual.startTime !== expected.startTime ||
     actual.duration !== expected.duration ||
+    actual.type !== expected.type ||
     actual.priority !== expected.priority ||
     actual.isMandatoryTasking !== expected.isMandatoryTasking ||
     actual.origin !== expected.origin ||
@@ -3451,13 +3499,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       }, type);
     };
     const isFlightSchoolCurrencyRequestTable = priorityAllocationModel === 'flight_school';
-    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? 'min-w-[1192px]' : 'min-w-[1278px]';
+    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? 'min-w-[1196px]' : 'min-w-[1298px]';
     const sctTableHeaderColumnsClass = isFlightSchoolCurrencyRequestTable
-      ? 'grid-cols-[136px_140px_140px_150px_82px_113px_113px_96px_96px_66px_60px]'
-      : 'grid-cols-[136px_132px_132px_140px_150px_74px_105px_105px_90px_88px_66px_60px]';
+      ? 'grid-cols-[136px_190px_94px_150px_82px_113px_113px_96px_96px_66px_60px]'
+      : 'grid-cols-[136px_190px_94px_140px_150px_74px_105px_105px_90px_88px_66px_60px]';
     const sctTableBodyColumnsClass = isFlightSchoolCurrencyRequestTable
-      ? 'grid-cols-[136px_140px_140px_150px_82px_113px_113px_96px_96px_66px_60px]'
-      : 'grid-cols-[136px_132px_132px_140px_150px_74px_105px_105px_90px_88px_66px_60px]';
+      ? 'grid-cols-[136px_190px_94px_150px_82px_113px_113px_96px_96px_66px_60px]'
+      : 'grid-cols-[136px_190px_94px_140px_150px_74px_105px_105px_90px_88px_66px_60px]';
+    const sctRequestKindLabel = type === 'ftd' ? 'Simulator' : 'Flight';
     const getSctEditKey = (request: SctRequest) => `${type}:${request.id}`;
     const toggleSctRequestEditing = (request: SctRequest) => {
       const key = getSctEditKey(request);
@@ -3580,8 +3629,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                           <button type="button" onClick={() => setAllSctRequestSchedule(false)} className="border-l border-slate-600 px-1.5 py-0.5 text-slate-200 hover:bg-slate-700/60">None</button>
                       </span>
                   </span>
-                  <span className={buildPriorityTableHeaderCellClass}>{isFixedCrewModel ? 'Crew' : isFlightSchoolCurrencyRequestTable ? 'Pilot' : 'Staff'}</span>
-                  <span className={buildPriorityTableHeaderCellClass}>{isFlightSchoolCurrencyRequestTable ? 'Second Pilot' : 'PIC'}</span>
+                  <span className={buildPriorityTableHeaderCellClass}>Crew</span>
+                  <span className={buildPriorityTableHeaderCellClass}>Kind</span>
                   <span className={buildPriorityTableHeaderCellClass}>Event</span>
                   {!isFlightSchoolCurrencyRequestTable && <span className={buildPriorityTableHeaderCellClass}>Crew Composition</span>}
                   <span className={buildPriorityTableHeaderCellClass}>Aircraft</span>
@@ -3638,6 +3687,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     : isFlightSchoolCurrencyRequest
                       ? (flightSchoolSecondPilot || 'TBA')
                       : 'N/A';
+                  const crewTopDisplay = isFixedCrewModel ? picDisplay : crewDisplay;
+                  const crewSecondDisplay = isFixedCrewModel
+                    ? crewDisplay
+                    : isFlightSchoolCurrencyRequest
+                      ? (flightSchoolSecondPilot === 'Solo' || req.flightType === 'Solo' ? 'Solo' : flightSchoolSecondPilot || 'TBA')
+                      : 'N/A';
                   const eventDisplay = String(req.event || req.currency || 'Select profile').trim();
                   return (
                       <div key={req.id} className="overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
@@ -3668,182 +3723,177 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                       </div>
                                   </div>
                                   <div className={tileBaseClass}>
-                                      <div className={tileLabelClass}>{isFlightSchoolCurrencyRequest ? 'Pilot' : 'Crew'}</div>
+                                      <div className={tileLabelClass}>Crew</div>
                                       {!isEditingRequest ? (
-                                        <div className="truncate font-semibold text-cyan-100" title={crewDisplay}>{crewDisplay}</div>
-                                      ) : isFixedCrewModel ? (
+                                        <div className="min-w-0 space-y-0.5 leading-snug">
+                                          <div className="truncate font-semibold text-cyan-100" title={crewTopDisplay}>{crewTopDisplay}</div>
+                                          <div className="truncate text-slate-100" title={crewSecondDisplay}>{crewSecondDisplay}</div>
+                                        </div>
+                                      ) : (
                                         <div className="space-y-2">
-                                          <div className={aircraftCount > 1 ? 'grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2' : ''}>
-                                            {aircraftCount > 1 && <div className="text-center text-[10px] font-bold text-sky-300">1</div>}
-                                          <select
-                                              value={selectedCrewGroup?.key || ''}
-                                              onChange={e => {
-                                                  const group = fixedCrewRequestCrewGroups.find(candidate => candidate.key === e.target.value);
-                                                  const picCandidates = (group?.members || []).filter(member => staffHasPicQualification(member));
-                                                  const defaultPic = picCandidates.length === 1 ? picCandidates[0].name : '';
-                                                  onPatchSctRequest(req.id, {
-                                                      crewGroupKey: group?.key || '',
-                                                      crewGroup: group?.crewValue || '',
-                                                      crewUnitCode: group?.unitCode || '',
-                                                      crewDisplayLabel: group?.label || '',
-                                                      crewIndividual: defaultPic,
-                                                      name: defaultPic,
-                                                  }, type);
-                                              }}
-                                              className={controlClass}
-                                          >
-                                              <option value="">Select crew</option>
-                                              {Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => (
-                                                  <optgroup key={unitCode} label={unitCode}>
-                                                      {groups.map(group => (
-                                                          <option key={group.key} value={group.key}>{formatRequestCrewOptionLabel(group, requestAvailabilityWindow)}</option>
-                                                      ))}
-                                                  </optgroup>
-                                              ))}
-                                          </select>
-                                          {selectedCrewUnavailableSummary && (
-                                            <div className="rounded border border-red-500/30 bg-red-950/25 px-2 py-1 text-[10px] font-semibold leading-snug text-red-200">
-                                              {selectedCrewUnavailableSummary}
-                                            </div>
-                                          )}
-                                          </div>
-                                          {aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
-                                              const assignmentCrewGroup = fixedCrewRequestCrewGroups.find(group => (
+                                          {isFixedCrewModel ? (
+                                            <>
+                                              <div className={aircraftCount > 1 ? 'grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2' : ''}>
+                                                {aircraftCount > 1 && <div className="text-center text-[10px] font-bold text-sky-300">1</div>}
+                                                <select
+                                                    value={req.crewIndividual || ''}
+                                                    onChange={e => {
+                                                        onPatchSctRequest(req.id, {
+                                                            crewIndividual: e.target.value,
+                                                            name: e.target.value,
+                                                        }, type);
+                                                    }}
+                                                    disabled={!selectedCrewGroup}
+                                                    className={controlClass}
+                                                >
+                                                    <option value="">{selectedCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
+                                                    {selectedCrewPicCandidates.length > 0 && (
+                                                        <optgroup label={selectedCrewGroup?.label || 'Selected Crew'}>
+                                                            {selectedCrewPicCandidates.map(member => (
+                                                                <option key={member.id || member.idNumber || member.name} value={member.name}>{formatRequestPicOptionLabel(member, requestAvailabilityWindow)}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                    )}
+                                                    {otherPicCandidates.length > 0 && (
+                                                        <optgroup label="OTHER">
+                                                            {otherPicCandidates.map(member => (
+                                                                <option key={member.id || member.idNumber || member.name} value={member.name}>{formatRequestPicOptionLabel(member, requestAvailabilityWindow)}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                    )}
+                                                </select>
+                                              </div>
+                                              <div className={aircraftCount > 1 ? 'grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2' : ''}>
+                                                {aircraftCount > 1 && <div className="text-center text-[10px] font-bold text-sky-300">1</div>}
+                                                <select
+                                                    value={selectedCrewGroup?.key || ''}
+                                                    onChange={e => {
+                                                        const group = fixedCrewRequestCrewGroups.find(candidate => candidate.key === e.target.value);
+                                                        const picCandidates = (group?.members || []).filter(member => staffHasPicQualification(member));
+                                                        const defaultPic = picCandidates.length === 1 ? picCandidates[0].name : '';
+                                                        onPatchSctRequest(req.id, {
+                                                            crewGroupKey: group?.key || '',
+                                                            crewGroup: group?.crewValue || '',
+                                                            crewUnitCode: group?.unitCode || '',
+                                                            crewDisplayLabel: group?.label || '',
+                                                            crewIndividual: defaultPic,
+                                                            name: defaultPic,
+                                                        }, type);
+                                                    }}
+                                                    className={controlClass}
+                                                >
+                                                    <option value="">Select crew</option>
+                                                    {Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => (
+                                                        <optgroup key={unitCode} label={unitCode}>
+                                                            {groups.map(group => (
+                                                                <option key={group.key} value={group.key}>{formatRequestCrewOptionLabel(group, requestAvailabilityWindow)}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                    ))}
+                                                </select>
+                                                {selectedCrewUnavailableSummary && (
+                                                  <div className="rounded border border-red-500/30 bg-red-950/25 px-2 py-1 text-[10px] font-semibold leading-snug text-red-200">
+                                                    {selectedCrewUnavailableSummary}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              {aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
+                                                const assignmentCrewGroup = fixedCrewRequestCrewGroups.find(group => (
                                                   group.key === assignment.crewGroupKey
                                                   || (group.crewValue === String(assignment.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
-                                                      && group.unitCode === String(assignment.crewUnitCode || '').trim().toUpperCase())
-                                              ));
-                                              return (
-                                                <div key={`${req.id}-formation-crew-${assignmentIndex}`} className="grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2">
-                                                  <div className="text-center text-[10px] font-bold text-sky-300">{assignmentIndex + 2}</div>
-                                                  <select
-                                                      value={assignmentCrewGroup?.key || ''}
-                                                      onChange={e => {
+                                                    && group.unitCode === String(assignment.crewUnitCode || '').trim().toUpperCase())
+                                                ));
+                                                const assignmentPicCandidates = (assignmentCrewGroup?.members || []).filter(member => staffHasPicQualification(member));
+                                                return (
+                                                  <div key={`${req.id}-formation-crew-combined-${assignmentIndex}`} className="grid grid-cols-[1rem_minmax(0,1fr)] items-start gap-2">
+                                                    <div className="pt-1 text-center text-[10px] font-bold text-sky-300">{assignmentIndex + 2}</div>
+                                                    <div className="space-y-2">
+                                                      <select
+                                                        value={assignment.crewIndividual || ''}
+                                                        onChange={e => updateFormationAssignment(assignmentIndex, { crewIndividual: e.target.value })}
+                                                        disabled={!assignmentCrewGroup}
+                                                        className={controlClass}
+                                                      >
+                                                        <option value="">{assignmentCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
+                                                        {assignmentPicCandidates.map(member => (
+                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{formatRequestPicOptionLabel(member, requestAvailabilityWindow)}</option>
+                                                        ))}
+                                                      </select>
+                                                      <select
+                                                        value={assignmentCrewGroup?.key || ''}
+                                                        onChange={e => {
                                                           const group = fixedCrewRequestCrewGroups.find(candidate => candidate.key === e.target.value);
                                                           const picCandidates = (group?.members || []).filter(member => staffHasPicQualification(member));
                                                           const defaultPic = picCandidates.length === 1 ? picCandidates[0].name : '';
                                                           updateFormationAssignment(assignmentIndex, {
-                                                              crewGroupKey: group?.key || '',
-                                                              crewGroup: group?.crewValue || '',
-                                                              crewUnitCode: group?.unitCode || '',
-                                                              crewDisplayLabel: group?.label || '',
-                                                              crewIndividual: defaultPic,
+                                                            crewGroupKey: group?.key || '',
+                                                            crewGroup: group?.crewValue || '',
+                                                            crewUnitCode: group?.unitCode || '',
+                                                            crewDisplayLabel: group?.label || '',
+                                                            crewIndividual: defaultPic,
                                                           });
-                                                      }}
-                                                      className={controlClass}
-                                                  >
-                                                      <option value="">Select crew</option>
-                                                      {Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => (
+                                                        }}
+                                                        className={controlClass}
+                                                      >
+                                                        <option value="">Select crew</option>
+                                                        {Array.from(fixedCrewRequestCrewGroupsByUnit.entries()).map(([unitCode, groups]) => (
                                                           <optgroup key={unitCode} label={unitCode}>
-                                                              {groups.map(group => (
-                                                                  <option key={group.key} value={group.key}>{formatRequestCrewOptionLabel(group, requestAvailabilityWindow)}</option>
-                                                              ))}
+                                                            {groups.map(group => (
+                                                              <option key={group.key} value={group.key}>{formatRequestCrewOptionLabel(group, requestAvailabilityWindow)}</option>
+                                                            ))}
                                                           </optgroup>
-                                                      ))}
-                                                  </select>
-                                                </div>
-                                              );
-                                          })}
+                                                        ))}
+                                                      </select>
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })}
+                                            </>
+                                          ) : (
+                                            <>
+                                              <select
+                                                  value={req.name}
+                                                  onChange={e => {
+                                                      const nextName = e.target.value;
+                                                      onPatchSctRequest(req.id, {
+                                                          name: nextName,
+                                                          ...(req.crewMember === nextName ? { crewMember: '', flightType: 'Dual' as const } : {}),
+                                                      }, type);
+                                                  }}
+                                                  className={controlClass}
+                                              >
+                                                  <option value="">{isFlightSchoolCurrencyRequest ? 'Select PIC' : `Select ${instructorLabel.toLowerCase()}`}</option>
+                                                  {instructorNames.map(name => <option key={name} value={name}>{name}</option>)}
+                                              </select>
+                                              {isFlightSchoolCurrencyRequest ? (
+                                                <select
+                                                    value={flightSchoolSecondPilot}
+                                                    onChange={e => {
+                                                        const nextSecondPilot = e.target.value;
+                                                        onPatchSctRequest(req.id, {
+                                                            crewMember: nextSecondPilot,
+                                                            flightType: nextSecondPilot === 'Solo' ? 'Solo' : 'Dual',
+                                                        }, type);
+                                                    }}
+                                                    className={controlClass}
+                                                >
+                                                    <option value="">Select second pilot / Solo</option>
+                                                    <option value="Solo">Solo</option>
+                                                    {instructorNames
+                                                        .filter(name => name !== req.name)
+                                                        .map(name => <option key={name} value={name}>{name}</option>)}
+                                                </select>
+                                              ) : (
+                                                <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-500">N/A</div>
+                                              )}
+                                            </>
+                                          )}
                                         </div>
-                                      ) : (
-                                          <select
-                                              value={req.name}
-                                              onChange={e => {
-                                                  const nextName = e.target.value;
-                                                  onPatchSctRequest(req.id, {
-                                                      name: nextName,
-                                                      ...(req.crewMember === nextName ? { crewMember: '', flightType: 'Dual' as const } : {}),
-                                                  }, type);
-                                              }}
-                                              className={controlClass}
-                                          >
-                                              <option value="">{isFlightSchoolCurrencyRequest ? 'Select pilot' : `Select ${instructorLabel.toLowerCase()}`}</option>
-                                              {instructorNames.map(name => <option key={name} value={name}>{name}</option>)}
-                                          </select>
                                       )}
                                   </div>
                                   <div className={tileBaseClass}>
-                                      <div className={tileLabelClass}>{isFlightSchoolCurrencyRequest ? 'Second Pilot' : 'PIC'}</div>
-                                      {!isEditingRequest ? (
-                                        <div className="truncate text-slate-100" title={picDisplay}>{picDisplay}</div>
-                                      ) : isFixedCrewModel ? (
-                                        <div className="space-y-2">
-                                          <div className={aircraftCount > 1 ? 'grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2' : ''}>
-                                            {aircraftCount > 1 && <div className="text-center text-[10px] font-bold text-sky-300">1</div>}
-                                          <select
-                                              value={req.crewIndividual || ''}
-                                              onChange={e => {
-                                                  onPatchSctRequest(req.id, {
-                                                      crewIndividual: e.target.value,
-                                                      name: e.target.value,
-                                                  }, type);
-                                              }}
-                                              disabled={!selectedCrewGroup}
-                                              className={controlClass}
-                                          >
-                                              <option value="">{selectedCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
-                                              {selectedCrewPicCandidates.length > 0 && (
-                                                  <optgroup label={selectedCrewGroup?.label || 'Selected Crew'}>
-                                                      {selectedCrewPicCandidates.map(member => (
-                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{formatRequestPicOptionLabel(member, requestAvailabilityWindow)}</option>
-                                                      ))}
-                                                  </optgroup>
-                                              )}
-                                              {otherPicCandidates.length > 0 && (
-                                                  <optgroup label="OTHER">
-                                                      {otherPicCandidates.map(member => (
-                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{formatRequestPicOptionLabel(member, requestAvailabilityWindow)}</option>
-                                                      ))}
-                                                  </optgroup>
-                                              )}
-                                          </select>
-                                          </div>
-                                          {aircraftCount > 1 && formationAssignments.map((assignment, assignmentIndex) => {
-                                              const assignmentCrewGroup = fixedCrewRequestCrewGroups.find(group => (
-                                                  group.key === assignment.crewGroupKey
-                                                  || (group.crewValue === String(assignment.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
-                                                      && group.unitCode === String(assignment.crewUnitCode || '').trim().toUpperCase())
-                                              ));
-                                              const assignmentPicCandidates = (assignmentCrewGroup?.members || []).filter(member => staffHasPicQualification(member));
-                                              return (
-                                                <div key={`${req.id}-formation-pic-${assignmentIndex}`} className="grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2">
-                                                  <div className="text-center text-[10px] font-bold text-sky-300">{assignmentIndex + 2}</div>
-                                                  <select
-                                                      value={assignment.crewIndividual || ''}
-                                                      onChange={e => updateFormationAssignment(assignmentIndex, { crewIndividual: e.target.value })}
-                                                      disabled={!assignmentCrewGroup}
-                                                      className={controlClass}
-                                                  >
-                                                      <option value="">{assignmentCrewGroup ? 'Select PIC' : 'Select crew first'}</option>
-                                                      {assignmentPicCandidates.map(member => (
-                                                          <option key={member.id || member.idNumber || member.name} value={member.name}>{formatRequestPicOptionLabel(member, requestAvailabilityWindow)}</option>
-                                                      ))}
-                                                  </select>
-                                                </div>
-                                              );
-                                          })}
-                                        </div>
-                                      ) : isFlightSchoolCurrencyRequest ? (
-                                          <select
-                                              value={flightSchoolSecondPilot}
-                                              onChange={e => {
-                                                  const nextSecondPilot = e.target.value;
-                                                  onPatchSctRequest(req.id, {
-                                                      crewMember: nextSecondPilot,
-                                                      flightType: nextSecondPilot === 'Solo' ? 'Solo' : 'Dual',
-                                                  }, type);
-                                              }}
-                                              className={controlClass}
-                                          >
-                                              <option value="">Select second pilot / Solo</option>
-                                              <option value="Solo">Solo</option>
-                                              {instructorNames
-                                                  .filter(name => name !== req.name)
-                                                  .map(name => <option key={name} value={name}>{name}</option>)}
-                                          </select>
-                                      ) : (
-                                          <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-500">N/A</div>
-                                      )}
+                                      <div className={tileLabelClass}>Kind</div>
+                                      <div className="truncate font-semibold text-slate-100" title={sctRequestKindLabel}>{sctRequestKindLabel}</div>
                                   </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Event</div>
