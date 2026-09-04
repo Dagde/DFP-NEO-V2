@@ -4642,7 +4642,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
     const renderEmptyGroupRow = (group: typeof groups[number]) => (
       <tr key={`${group.key}-empty`} className="bg-slate-900/55">
-        <td className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`}>
+        <td className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-[14px] font-black ${priorityEventGroupStyles[group.key]}`}>
           {group.label}
         </td>
         <td colSpan={11} className="border border-slate-700/80 px-2 py-3 text-slate-600">&nbsp;</td>
@@ -4668,7 +4668,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       return (
         <tr key={event.id} onClick={() => !isEditing && onSelectEvent(event)} className={`${rowClass} ${isEditing ? 'ring-1 ring-inset ring-emerald-300/70' : 'cursor-pointer'}`}>
           {index === 0 && (
-            <td rowSpan={group.events.length} className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`}>
+            <td rowSpan={group.events.length} className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-[14px] font-black ${priorityEventGroupStyles[group.key]}`}>
               {group.label}
             </td>
           )}
@@ -4740,13 +4740,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>
           </td>
           <td className="border border-slate-700/80 px-1 py-1.5 text-center">
-            <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[10px] font-bold text-slate-100">
-              <label className="inline-flex cursor-pointer items-center gap-0.5">
-                <input type="radio" name={`hpe-push-${event.id}`} checked={pushEnabled} onClick={e => e.stopPropagation()} onChange={() => setPush(event, true)} className="h-3 w-3 accent-cyan-400" />
+            <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100">
+              <label className="inline-flex cursor-pointer items-center gap-1 leading-none">
+                <input type="radio" name={`hpe-push-${event.id}`} checked={pushEnabled} onClick={e => e.stopPropagation()} onChange={() => setPush(event, true)} className="h-4 w-4 accent-cyan-400" />
                 Y
               </label>
-              <label className="inline-flex cursor-pointer items-center gap-0.5">
-                <input type="radio" name={`hpe-push-${event.id}`} checked={!pushEnabled} onClick={e => e.stopPropagation()} onChange={() => setPush(event, false)} className="h-3 w-3 accent-cyan-400" />
+              <label className="inline-flex cursor-pointer items-center gap-1 leading-none">
+                <input type="radio" name={`hpe-push-${event.id}`} checked={!pushEnabled} onClick={e => e.stopPropagation()} onChange={() => setPush(event, false)} className="h-4 w-4 accent-cyan-400" />
                 N
               </label>
             </div>
@@ -4790,7 +4790,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <th className="border border-slate-700/90 px-1 py-1 text-center">
                       <div className="flex flex-col items-center gap-1">
                         <span>Push</span>
-                        <span className="inline-flex overflow-hidden rounded border border-slate-600 bg-slate-950 text-[9px] font-bold normal-case tracking-normal">
+                        <span className="inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal">
                           <button type="button" onClick={() => setAllPush(true)} className="px-1.5 py-0.5 text-cyan-100 hover:bg-cyan-500/15">All</button>
                           <button type="button" onClick={() => setAllPush(false)} className="border-l border-slate-600 px-1.5 py-0.5 text-slate-200 hover:bg-slate-700/60">None</button>
                         </span>
