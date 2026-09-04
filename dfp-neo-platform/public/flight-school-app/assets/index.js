@@ -46087,6 +46087,23 @@ const buildPriorityTableHeaderClass = "grid gap-0 bg-slate-900 px-0 text-[12px] 
 const buildPriorityTableRowClass = "grid gap-0 text-[12px]";
 const buildPriorityTableCellClass = "border border-slate-700/70 px-2 py-2";
 const buildPriorityTableHeaderCellClass = `${buildPriorityTableCellClass} text-center`;
+const PRIORITY_TRACE_STORAGE_KEY = "neo_assist_currency_persistence_trace";
+const appendPriorityTableTrace = (stage, details = {}) => {
+  try {
+    if (typeof window === "undefined") return;
+    const existing = JSON.parse(window.localStorage.getItem(PRIORITY_TRACE_STORAGE_KEY) || "[]");
+    const entries = Array.isArray(existing) ? existing : [];
+    entries.push({
+      stage,
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      url: window.location.href,
+      ...details
+    });
+    window.localStorage.setItem(PRIORITY_TRACE_STORAGE_KEY, JSON.stringify(entries.slice(-250)));
+  } catch (error) {
+    console.warn("[PRIORITY_TABLE_TRACE] Failed to record trace entry:", error);
+  }
+};
 const formatTaskingSummaryDate = (dateString) => {
   if (!dateString) return "Any";
   const parsedDate = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
@@ -49264,7 +49281,41 @@ const PrioritiesView = ({
     const isPushEnabled = (event) => event.id in priorityPushDrafts ? priorityPushDrafts[event.id] : event.pushToNeoBuild !== false;
     const setAllPush = (pushToNeoBuild) => visibleEvents.forEach((event) => setPush(event, pushToNeoBuild));
     const deletePriorityEvent = (event) => {
-      onDeletePriorityEvent(event.id);
+      let freezeState = null;
+      try {
+        freezeState = JSON.parse(window.localStorage.getItem("systemFreezeState") || "null");
+      } catch {
+        freezeState = "unreadable";
+      }
+      const matchingBefore = highestPriorityEvents.filter((priorityEvent) => priorityEvent.id === event.id);
+      appendPriorityTableTrace("HIGHEST_PRIORITY_DELETE_CLICK", {
+        eventId: event.id,
+        eventLabel: getPriorityEventLabel(event),
+        eventDate: event.date,
+        group: getPriorityEventGroup(event),
+        pic: getPriorityEventPicName(event),
+        crew: event.crew || event.student || "",
+        sctRequestId: event.sctRequestId || "",
+        currencyDraftId: event.currencyDraftId || "",
+        taskingRequestId: event.taskingRequestId || "",
+        priorityEventCountBefore: highestPriorityEvents.length,
+        matchingEventIdsBefore: matchingBefore.map((priorityEvent) => priorityEvent.id),
+        matchingEventCountBefore: matchingBefore.length,
+        freezeState
+      });
+      const deleteResult = onDeletePriorityEvent(event.id);
+      Promise.resolve(deleteResult).then(() => {
+        appendPriorityTableTrace("HIGHEST_PRIORITY_DELETE_CALLBACK_RESOLVED", {
+          eventId: event.id,
+          eventLabel: getPriorityEventLabel(event)
+        });
+      }).catch((error) => {
+        appendPriorityTableTrace("HIGHEST_PRIORITY_DELETE_CALLBACK_REJECTED", {
+          eventId: event.id,
+          eventLabel: getPriorityEventLabel(event),
+          error: error instanceof Error ? error.message : String(error)
+        });
+      });
       if (event.taskingRequestId) {
         setTaskingRequests((prev) => prev.map((request) => request.id === event.taskingRequestId ? {
           ...request,
@@ -49273,13 +49324,27 @@ const PrioritiesView = ({
           includeInBuild: false,
           ignored: true
         } : request));
+        appendPriorityTableTrace("HIGHEST_PRIORITY_DELETE_TASKING_SOURCE_IGNORED", {
+          eventId: event.id,
+          taskingRequestId: event.taskingRequestId
+        });
         return;
       }
       if (event.sctRequestId) {
-        onPatchSctRequest(event.sctRequestId, { submitted: false, includeInBuild: false, pushToNeoBuild: false }, getSctRequestType(event));
+        onPatchSctRequest(event.sctRequestId, { submitted: false, ignored: true, includeInBuild: false, pushToNeoBuild: false }, getSctRequestType(event));
+        appendPriorityTableTrace("HIGHEST_PRIORITY_DELETE_SCT_SOURCE_IGNORED", {
+          eventId: event.id,
+          sctRequestId: event.sctRequestId,
+          requestType: getSctRequestType(event)
+        });
       }
       if (event.currencyDraftId) {
         setCurrencyDraftEvents((prev) => prev.map((draft) => draft.id === event.currencyDraftId ? { ...draft, selected: false, pushed: false } : draft));
+        appendPriorityTableTrace("HIGHEST_PRIORITY_DELETE_CURRENCY_DRAFT_UNSCHEDULED", {
+          eventId: event.id,
+          currencyDraftId: event.currencyDraftId,
+          matchingDraftCountBefore: currencyDraftEvents.filter((draft) => draft.id === event.currencyDraftId).length
+        });
       }
     };
     const renderEmptyGroupRow = (group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "bg-slate-900/55", children: [
@@ -103902,7 +103967,7 @@ const DfpSidePanelTimeline = ({
     [
       ...sctFlights.map((request) => ({ request, type: "flight" })),
       ...sctFtds.map((request) => ({ request, type: "ftd" }))
-    ].filter(({ request }) => request.submitted || request.includeInBuild || request.priority === "High").forEach(({ request, type }) => {
+    ].filter(({ request }) => !request.ignored && (request.submitted || request.includeInBuild || request.priority === "High")).forEach(({ request, type }) => {
       const identity = request.id;
       const alreadyInHighest = highestPriorityEvents.some((event) => event.sctRequestId === identity || String(event.id || "") === `sct-${type}-${identity}` || String(event.id || "") === `sct-${type === "flight" ? "flight" : "ftd"}-${identity}` || String(event.id || "") === `neo-assist-currency-${identity}`);
       addRow(identity, {
@@ -136098,10 +136163,10 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     const hasSctParticipant = (sctReq) => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
     logRoutineAppDebug(`🔍 ${continuationShortLabel} Sync - buildDfpDate:`, buildDfpDate);
     const highPrioritySctFlights = sctFlights.filter(
-      (req) => req.pushToNeoBuild !== false && (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
+      (req) => !req.ignored && req.pushToNeoBuild !== false && (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
     const highPrioritySctFtds = sctFtds.filter(
-      (req) => req.pushToNeoBuild !== false && (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
+      (req) => !req.ignored && req.pushToNeoBuild !== false && (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
     logRoutineAppDebug(`🔍 Found ${continuationShortLabel} flights to include:`, highPrioritySctFlights.length, "| FTDs:", highPrioritySctFtds.length);
     const fixedCrewCurrencyEventDuration = isFixedCrewLikeOperationalModel(activeOperationalModel) ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : null;
@@ -144158,7 +144223,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 const requests = type === "flight" ? sctFlights : sctFtds;
                 const request = requests.find((r) => r.id === id);
                 const updatedRequest = request ? { ...request, [field]: effectiveValue } : null;
-                if (updatedRequest && (updatedRequest.priority === "High" || updatedRequest.includeInBuild)) {
+                if (updatedRequest && !updatedRequest.ignored && (updatedRequest.priority === "High" || updatedRequest.includeInBuild)) {
                   syncPriorityEventsWithSctAndRemedial();
                 }
               }, 100);
@@ -144185,7 +144250,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 const requests = type === "flight" ? sctFlights : sctFtds;
                 const request = requests.find((r) => r.id === id);
                 const updatedRequest = request ? { ...request, ...normalisedUpdates } : null;
-                if (updatedRequest && (updatedRequest.priority === "High" || updatedRequest.includeInBuild)) {
+                if (updatedRequest && !updatedRequest.ignored && (updatedRequest.priority === "High" || updatedRequest.includeInBuild)) {
                   syncPriorityEventsWithSctAndRemedial();
                 }
               }, 100);

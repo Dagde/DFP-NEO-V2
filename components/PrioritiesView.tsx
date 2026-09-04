@@ -760,6 +760,23 @@ const buildPriorityTableHeaderClass = 'grid gap-0 bg-slate-900 px-0 text-[12px] 
 const buildPriorityTableRowClass = 'grid gap-0 text-[12px]';
 const buildPriorityTableCellClass = 'border border-slate-700/70 px-2 py-2';
 const buildPriorityTableHeaderCellClass = `${buildPriorityTableCellClass} text-center`;
+const PRIORITY_TRACE_STORAGE_KEY = 'neo_assist_currency_persistence_trace';
+const appendPriorityTableTrace = (stage: string, details: Record<string, unknown> = {}) => {
+  try {
+    if (typeof window === 'undefined') return;
+    const existing = JSON.parse(window.localStorage.getItem(PRIORITY_TRACE_STORAGE_KEY) || '[]');
+    const entries = Array.isArray(existing) ? existing : [];
+    entries.push({
+      stage,
+      at: new Date().toISOString(),
+      url: window.location.href,
+      ...details,
+    });
+    window.localStorage.setItem(PRIORITY_TRACE_STORAGE_KEY, JSON.stringify(entries.slice(-250)));
+  } catch (error) {
+    console.warn('[PRIORITY_TABLE_TRACE] Failed to record trace entry:', error);
+  }
+};
 const formatTaskingSummaryDate = (dateString: string | undefined): string => {
   if (!dateString) return 'Any';
   const parsedDate = new Date(`${dateString}T00:00:00Z`);
@@ -4628,7 +4645,41 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     );
     const setAllPush = (pushToNeoBuild: boolean) => visibleEvents.forEach(event => setPush(event, pushToNeoBuild));
     const deletePriorityEvent = (event: ScheduleEvent) => {
-      onDeletePriorityEvent(event.id);
+      let freezeState: any = null;
+      try {
+        freezeState = JSON.parse(window.localStorage.getItem('systemFreezeState') || 'null');
+      } catch {
+        freezeState = 'unreadable';
+      }
+      const matchingBefore = highestPriorityEvents.filter(priorityEvent => priorityEvent.id === event.id);
+      appendPriorityTableTrace('HIGHEST_PRIORITY_DELETE_CLICK', {
+        eventId: event.id,
+        eventLabel: getPriorityEventLabel(event),
+        eventDate: event.date,
+        group: getPriorityEventGroup(event),
+        pic: getPriorityEventPicName(event),
+        crew: event.crew || event.student || '',
+        sctRequestId: event.sctRequestId || '',
+        currencyDraftId: event.currencyDraftId || '',
+        taskingRequestId: event.taskingRequestId || '',
+        priorityEventCountBefore: highestPriorityEvents.length,
+        matchingEventIdsBefore: matchingBefore.map(priorityEvent => priorityEvent.id),
+        matchingEventCountBefore: matchingBefore.length,
+        freezeState,
+      });
+      const deleteResult = onDeletePriorityEvent(event.id) as unknown;
+      Promise.resolve(deleteResult).then(() => {
+        appendPriorityTableTrace('HIGHEST_PRIORITY_DELETE_CALLBACK_RESOLVED', {
+          eventId: event.id,
+          eventLabel: getPriorityEventLabel(event),
+        });
+      }).catch(error => {
+        appendPriorityTableTrace('HIGHEST_PRIORITY_DELETE_CALLBACK_REJECTED', {
+          eventId: event.id,
+          eventLabel: getPriorityEventLabel(event),
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
       if (event.taskingRequestId) {
         setTaskingRequests(prev => prev.map(request => request.id === event.taskingRequestId ? {
           ...request,
@@ -4637,15 +4688,29 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           includeInBuild: false,
           ignored: true,
         } : request));
+        appendPriorityTableTrace('HIGHEST_PRIORITY_DELETE_TASKING_SOURCE_IGNORED', {
+          eventId: event.id,
+          taskingRequestId: event.taskingRequestId,
+        });
         return;
       }
       if (event.sctRequestId) {
-        onPatchSctRequest(event.sctRequestId, { submitted: false, includeInBuild: false, pushToNeoBuild: false }, getSctRequestType(event));
+        onPatchSctRequest(event.sctRequestId, { submitted: false, ignored: true, includeInBuild: false, pushToNeoBuild: false }, getSctRequestType(event));
+        appendPriorityTableTrace('HIGHEST_PRIORITY_DELETE_SCT_SOURCE_IGNORED', {
+          eventId: event.id,
+          sctRequestId: event.sctRequestId,
+          requestType: getSctRequestType(event),
+        });
       }
       if (event.currencyDraftId) {
         setCurrencyDraftEvents(prev => prev.map(draft => (
           draft.id === event.currencyDraftId ? { ...draft, selected: false, pushed: false } : draft
         )));
+        appendPriorityTableTrace('HIGHEST_PRIORITY_DELETE_CURRENCY_DRAFT_UNSCHEDULED', {
+          eventId: event.id,
+          currencyDraftId: event.currencyDraftId,
+          matchingDraftCountBefore: currencyDraftEvents.filter(draft => draft.id === event.currencyDraftId).length,
+        });
       }
     };
 

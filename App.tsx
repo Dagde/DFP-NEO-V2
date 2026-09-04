@@ -3440,7 +3440,7 @@ const DfpSidePanelTimeline: React.FC<{
             ...sctFlights.map(request => ({ request, type: 'flight' as const })),
             ...sctFtds.map(request => ({ request, type: 'ftd' as const })),
         ]
-            .filter(({ request }) => request.submitted || request.includeInBuild || request.priority === 'High')
+            .filter(({ request }) => !request.ignored && (request.submitted || request.includeInBuild || request.priority === 'High'))
             .forEach(({ request, type }) => {
                 const identity = request.id;
                 const alreadyInHighest = highestPriorityEvents.some(event => (
@@ -42953,10 +42953,10 @@ const App: React.FC = () => {
         // 1. Auto-add high-priority continuation/currency requests and medium/low requests with includeInBuild=true.
         logRoutineAppDebug(`🔍 ${continuationShortLabel} Sync - buildDfpDate:`, buildDfpDate);
         const highPrioritySctFlights = sctFlights.filter(req =>
-            req.pushToNeoBuild !== false && (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
+            !req.ignored && req.pushToNeoBuild !== false && (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
         const highPrioritySctFtds = sctFtds.filter(req =>
-            req.pushToNeoBuild !== false && (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
+            !req.ignored && req.pushToNeoBuild !== false && (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
         logRoutineAppDebug(`🔍 Found ${continuationShortLabel} flights to include:`, highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
         const fixedCrewCurrencyEventDuration = isFixedCrewLikeOperationalModel(activeOperationalModel)
@@ -52599,7 +52599,7 @@ appliedUpdates.forEach(update => {
                         const requests = type === 'flight' ? sctFlights : sctFtds;
                         const request = requests.find(r => r.id === id);
                         const updatedRequest = request ? { ...request, [field]: effectiveValue } : null;
-                        if (updatedRequest && (updatedRequest.priority === 'High' || updatedRequest.includeInBuild)) {
+                        if (updatedRequest && !updatedRequest.ignored && (updatedRequest.priority === 'High' || updatedRequest.includeInBuild)) {
                           syncPriorityEventsWithSctAndRemedial();
                         }
                       }, 100);
@@ -52624,7 +52624,7 @@ appliedUpdates.forEach(update => {
                         const requests = type === 'flight' ? sctFlights : sctFtds;
                         const request = requests.find(r => r.id === id);
                         const updatedRequest = request ? { ...request, ...normalisedUpdates } : null;
-                        if (updatedRequest && (updatedRequest.priority === 'High' || updatedRequest.includeInBuild)) {
+                        if (updatedRequest && !updatedRequest.ignored && (updatedRequest.priority === 'High' || updatedRequest.includeInBuild)) {
                           syncPriorityEventsWithSctAndRemedial();
                         }
                       }, 100);

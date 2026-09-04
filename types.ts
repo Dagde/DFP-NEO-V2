@@ -739,6 +739,7 @@ export interface SctRequest {
     requestedTime?: string; // Format: "HH:MM" (e.g., "15:00")
     dayNight?: 'Day' | 'Night' | 'Day/Night';
     submitted?: boolean;
+    ignored?: boolean;
     includeInBuild?: boolean; // For MEDIUM/LOW priority - user can manually include in build
     pushToNeoBuild?: boolean;
     aircraftConfigId?: string;
