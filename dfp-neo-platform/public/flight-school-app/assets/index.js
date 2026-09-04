@@ -101694,6 +101694,10 @@ const DfpSidePanelTimeline = ({
   const [showAssistCurrencyInfo, setShowAssistCurrencyInfo] = reactExports.useState(false);
   const filteredEventOptions = reactExports.useMemo(() => syllabusDetails.filter((item) => !isSyllabusCourseShell(item)).filter((item) => ["Flight", "FTD", "Academics"].includes(item.type)).slice(0, 160), [syllabusDetails]);
   const fullAssistEventOptions = reactExports.useMemo(() => syllabusDetails, [syllabusDetails]);
+  const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel);
+  const isAirCombatNeoAssist = normalisedAssistOperationalModel === "air_combat";
+  const isFixedCrewNeoAssist = isFixedCrewLikeOperationalModel(normalisedAssistOperationalModel);
+  const defaultAssistManualDuration = normalisedAssistOperationalModel === "flight_school" || normalisedAssistOperationalModel === "air_combat" ? 1.2 : 4;
   const [selectedEventCode, setSelectedEventCode] = reactExports.useState("");
   const [selectedTaskProfile, setSelectedTaskProfile] = reactExports.useState("");
   const [selectedCurrencyName, setSelectedCurrencyName] = reactExports.useState("");
@@ -101704,7 +101708,8 @@ const DfpSidePanelTimeline = ({
   const [selectedAircraftNumber, setSelectedAircraftNumber] = reactExports.useState("TBA");
   const [assistDepPoint, setAssistDepPoint] = reactExports.useState(locationCode);
   const [assistArrivalPoint, setAssistArrivalPoint] = reactExports.useState(locationCode);
-  const [assistGeneralDuration, setAssistGeneralDuration] = reactExports.useState(4);
+  const [assistGeneralDuration, setAssistGeneralDuration] = reactExports.useState(defaultAssistManualDuration);
+  const previousDefaultAssistManualDurationRef = reactExports.useRef(defaultAssistManualDuration);
   const [assistAirfieldCatalogue, setAssistAirfieldCatalogue] = reactExports.useState([]);
   const [activeAssistAirfieldField, setActiveAssistAirfieldField] = reactExports.useState(null);
   const [assistWindProfiles, setAssistWindProfiles] = reactExports.useState([]);
@@ -101719,9 +101724,6 @@ const DfpSidePanelTimeline = ({
   const [selectedPackageEventCode, setSelectedPackageEventCode] = reactExports.useState("");
   const [selectedCourseName, setSelectedCourseName] = reactExports.useState("");
   const [selectedPackageName, setSelectedPackageName] = reactExports.useState("");
-  const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel);
-  const isAirCombatNeoAssist = normalisedAssistOperationalModel === "air_combat";
-  const isFixedCrewNeoAssist = isFixedCrewLikeOperationalModel(normalisedAssistOperationalModel);
   const defaultAssistTaskDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : 1.2;
   const defaultAssistCurrencyDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : 1.2;
   const [assistTaskDate, setAssistTaskDate] = reactExports.useState(date);
@@ -102281,9 +102283,14 @@ const DfpSidePanelTimeline = ({
   }, [activeAssistSection, isAirCombatTileMode, selectedCurrencyName, selectedResourceKind, selectedSyllabusItem?.code, selectedTaskProfile, taskProfileAbbreviations]);
   const assistDuration = Math.max(
     0.1,
-    isDeploymentAssistTile ? assistDeploymentDuration : activeAssistSection === "taskings" ? Number(assistTaskDuration) || defaultAssistTaskDuration : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration : Number(assistGeneralDuration) || 4
+    isDeploymentAssistTile ? assistDeploymentDuration : activeAssistSection === "taskings" ? Number(assistTaskDuration) || defaultAssistTaskDuration : activeAssistSection === "currency" ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration : Number(assistGeneralDuration) || defaultAssistManualDuration
   );
   const assistStartTime = isDeploymentAssistTile ? assistDeploymentStartTime : activeAssistSection === "taskings" ? assistTaskTakeoff : activeAssistSection === "currency" ? assistCurrencyTakeoff : flyingStartTime;
+  reactExports.useEffect(() => {
+    const previousDefault = previousDefaultAssistManualDurationRef.current;
+    previousDefaultAssistManualDurationRef.current = defaultAssistManualDuration;
+    setAssistGeneralDuration((current) => Math.abs(Number(current) - previousDefault) < 1e-3 ? defaultAssistManualDuration : current);
+  }, [defaultAssistManualDuration]);
   const effectiveAssistTaskFlightType = isSingleSeatFlightResource ? "Solo" : assistTaskFlightType;
   const effectiveAssistCurrencyFlightType = isSingleSeatFlightResource ? "Solo" : assistCurrencyFlightType;
   const assistFlightType = activeAssistSection === "taskings" ? effectiveAssistTaskFlightType : activeAssistSection === "currency" ? effectiveAssistCurrencyFlightType : "Solo";

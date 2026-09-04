@@ -1079,6 +1079,10 @@ const DfpSidePanelTimeline: React.FC<{
             .slice(0, 160)
     ), [syllabusDetails]);
     const fullAssistEventOptions = useMemo(() => syllabusDetails, [syllabusDetails]);
+    const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel);
+    const isAirCombatNeoAssist = normalisedAssistOperationalModel === 'air_combat';
+    const isFixedCrewNeoAssist = isFixedCrewLikeOperationalModel(normalisedAssistOperationalModel);
+    const defaultAssistManualDuration = normalisedAssistOperationalModel === 'flight_school' || normalisedAssistOperationalModel === 'air_combat' ? 1.2 : 4;
     const [selectedEventCode, setSelectedEventCode] = useState('');
     const [selectedTaskProfile, setSelectedTaskProfile] = useState('');
     const [selectedCurrencyName, setSelectedCurrencyName] = useState('');
@@ -1089,7 +1093,8 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedAircraftNumber, setSelectedAircraftNumber] = useState('TBA');
     const [assistDepPoint, setAssistDepPoint] = useState(locationCode);
     const [assistArrivalPoint, setAssistArrivalPoint] = useState(locationCode);
-    const [assistGeneralDuration, setAssistGeneralDuration] = useState(4);
+    const [assistGeneralDuration, setAssistGeneralDuration] = useState(defaultAssistManualDuration);
+    const previousDefaultAssistManualDurationRef = useRef(defaultAssistManualDuration);
     const [assistAirfieldCatalogue, setAssistAirfieldCatalogue] = useState<Array<{ c?: string; i?: string; l?: string; n?: string; m?: string; y?: string; a?: number; o?: number }>>([]);
     const [activeAssistAirfieldField, setActiveAssistAirfieldField] = useState<'dep' | 'arrive' | null>(null);
     const [assistWindProfiles, setAssistWindProfiles] = useState<Array<{ lat: number; lon: number; flightLevel: number; windFrom: number; windSpeed: number }>>([]);
@@ -1104,9 +1109,6 @@ const DfpSidePanelTimeline: React.FC<{
     const [selectedPackageEventCode, setSelectedPackageEventCode] = useState('');
     const [selectedCourseName, setSelectedCourseName] = useState('');
     const [selectedPackageName, setSelectedPackageName] = useState('');
-    const normalisedAssistOperationalModel = normaliseOperationalModel(operationalModel);
-    const isAirCombatNeoAssist = normalisedAssistOperationalModel === 'air_combat';
-    const isFixedCrewNeoAssist = isFixedCrewLikeOperationalModel(normalisedAssistOperationalModel);
     const defaultAssistTaskDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_TASKING_DURATION_HOURS : 1.2;
     const defaultAssistCurrencyDuration = isFixedCrewNeoAssist ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : 1.2;
     const [assistTaskDate, setAssistTaskDate] = useState(date);
@@ -1838,7 +1840,7 @@ const DfpSidePanelTimeline: React.FC<{
             ? Number(assistTaskDuration) || defaultAssistTaskDuration
             : activeAssistSection === 'currency'
                 ? Number(assistCurrencyDuration) || defaultAssistCurrencyDuration
-                : Number(assistGeneralDuration) || 4,
+                : Number(assistGeneralDuration) || defaultAssistManualDuration,
     );
 
     const assistStartTime = isDeploymentAssistTile
@@ -1848,6 +1850,13 @@ const DfpSidePanelTimeline: React.FC<{
         : activeAssistSection === 'currency'
             ? assistCurrencyTakeoff
             : flyingStartTime;
+    useEffect(() => {
+        const previousDefault = previousDefaultAssistManualDurationRef.current;
+        previousDefaultAssistManualDurationRef.current = defaultAssistManualDuration;
+        setAssistGeneralDuration(current => (
+            Math.abs(Number(current) - previousDefault) < 0.001 ? defaultAssistManualDuration : current
+        ));
+    }, [defaultAssistManualDuration]);
     const effectiveAssistTaskFlightType = isSingleSeatFlightResource ? 'Solo' : assistTaskFlightType;
     const effectiveAssistCurrencyFlightType = isSingleSeatFlightResource ? 'Solo' : assistCurrencyFlightType;
     const assistFlightType = activeAssistSection === 'taskings'
