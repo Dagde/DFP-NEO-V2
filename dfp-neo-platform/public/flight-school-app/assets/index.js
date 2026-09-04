@@ -101669,6 +101669,7 @@ const DfpSidePanelTimeline = ({
   onRunNeoBuild,
   onNavigateToCurrencySettings,
   onNavigateToSavedSpecialSettings,
+  onManualTileDragStart,
   onOpenPrioritiesSection
 }) => {
   const timelineStartHour = 6;
@@ -102513,11 +102514,11 @@ const DfpSidePanelTimeline = ({
     return ghost;
   };
   const startAssistTileDrag = (event) => {
+    clearAssistDragPreview();
     setIsAssistTileDragging(true);
     event.dataTransfer.effectAllowed = "copy";
     event.dataTransfer.setData("application/neo-assist-event", JSON.stringify(assistDraftEvent));
     event.dataTransfer.setData("text/plain", assistEventLabel);
-    clearAssistDragPreview();
     const dragPreview = createAssistDragImage();
     assistDragPreviewRef.current = dragPreview;
     positionAssistDragPreview(event.clientX, event.clientY);
@@ -102525,6 +102526,7 @@ const DfpSidePanelTimeline = ({
     transparentImage.width = 1;
     transparentImage.height = 1;
     event.dataTransfer.setDragImage(transparentImage, 0, 0);
+    onManualTileDragStart?.();
   };
   const updateAssistTileDrag = (event) => {
     positionAssistDragPreview(event.clientX, event.clientY);
@@ -145780,6 +145782,7 @@ Do you want to replace the existing entry?`,
                         onRunNeoBuild: handleBuildDfp,
                         onNavigateToCurrencySettings: () => handleNavigateToSettingsSection({ sectionId: "sct-events", unitCode: activeUnitCode }),
                         onNavigateToSavedSpecialSettings: () => handleNavigateToSettingsSection({ sectionId: "platform-task-profiles", unitCode: activeUnitCode }),
+                        onManualTileDragStart: () => setShowDfpSidePanel(false),
                         onOpenPrioritiesExclusions: () => {
                           try {
                             localStorage.setItem("neo_open_departure_arrival_exclusions", "1");

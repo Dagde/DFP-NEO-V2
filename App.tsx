@@ -971,6 +971,7 @@ const DfpSidePanelTimeline: React.FC<{
     onRunNeoBuild?: () => void;
     onNavigateToCurrencySettings?: () => void;
     onNavigateToSavedSpecialSettings?: () => void;
+    onManualTileDragStart?: () => void;
     onOpenPrioritiesSection?: (target: string) => void;
 }> = ({
     flyingStartTime,
@@ -1048,6 +1049,7 @@ const DfpSidePanelTimeline: React.FC<{
     onRunNeoBuild,
     onNavigateToCurrencySettings,
     onNavigateToSavedSpecialSettings,
+    onManualTileDragStart,
     onOpenPrioritiesSection,
 }) => {
     const timelineStartHour = 6;
@@ -2127,11 +2129,11 @@ const DfpSidePanelTimeline: React.FC<{
     };
 
     const startAssistTileDrag = (event: React.DragEvent<HTMLDivElement>) => {
+        clearAssistDragPreview();
         setIsAssistTileDragging(true);
         event.dataTransfer.effectAllowed = 'copy';
         event.dataTransfer.setData('application/neo-assist-event', JSON.stringify(assistDraftEvent));
         event.dataTransfer.setData('text/plain', assistEventLabel);
-        clearAssistDragPreview();
         const dragPreview = createAssistDragImage();
         assistDragPreviewRef.current = dragPreview;
         positionAssistDragPreview(event.clientX, event.clientY);
@@ -2139,6 +2141,7 @@ const DfpSidePanelTimeline: React.FC<{
         transparentImage.width = 1;
         transparentImage.height = 1;
         event.dataTransfer.setDragImage(transparentImage, 0, 0);
+        onManualTileDragStart?.();
     };
 
     const updateAssistTileDrag = (event: React.DragEvent<HTMLDivElement>) => {
@@ -54730,6 +54733,7 @@ appliedUpdates.forEach(update => {
                                     onRunNeoBuild={handleBuildDfp}
                                     onNavigateToCurrencySettings={() => handleNavigateToSettingsSection({ sectionId: 'sct-events', unitCode: activeUnitCode })}
                                     onNavigateToSavedSpecialSettings={() => handleNavigateToSettingsSection({ sectionId: 'platform-task-profiles', unitCode: activeUnitCode })}
+                                    onManualTileDragStart={() => setShowDfpSidePanel(false)}
                                     onOpenPrioritiesExclusions={() => {
                                         try {
                                             localStorage.setItem('neo_open_departure_arrival_exclusions', '1');
