@@ -5818,8 +5818,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </div>
                 )}
                 {currencyDraftEvents.length > 0 && (
-                    <div className="min-w-[1162px] space-y-3">
-                        <div className={`${buildPriorityTableHeaderClass} grid-cols-[116px_170px_94px_90px_180px_82px_113px_113px_96px_66px_60px]`}>
+                    <div className="min-w-[1172px] space-y-3">
+                        <div className={`${buildPriorityTableHeaderClass} grid-cols-[116px_170px_94px_90px_180px_82px_113px_113px_96px_66px_70px]`}>
                             <span className={`${buildPriorityTableHeaderCellClass} flex flex-col items-center justify-center gap-2`}>
                                 <span>Schedule</span>
                                 <span className="inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal">
@@ -5836,10 +5836,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                             <span className={buildPriorityTableHeaderCellClass}>Date Requested</span>
                             <span className={buildPriorityTableHeaderCellClass}>Priority</span>
                             <span className={buildPriorityTableHeaderCellClass}>Edit</span>
-                            <span className={buildPriorityTableHeaderCellClass} aria-label="Delete"></span>
+                            <span className={buildPriorityTableHeaderCellClass} aria-hidden="true"></span>
                         </div>
-                    </div>
-                )}
                 {currencyDraftEvents.map(draft => {
                     const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
                     const isCurrencyMenuOpen = openCurrencyDraftId === draft.id;
@@ -5855,9 +5853,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     return (
                         <div
                             key={draft.id}
-                            className={`min-w-[1162px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? 'pb-64' : ''} ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
+                            className={`min-w-[1172px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? 'pb-64' : ''} ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
                         >
-                            <div className={`${buildPriorityTableRowClass} grid-cols-[116px_170px_94px_90px_180px_82px_113px_113px_96px_66px_60px]`}>
+                            <div className={`${buildPriorityTableRowClass} grid-cols-[116px_170px_94px_90px_180px_82px_113px_113px_96px_66px_70px]`}>
                                 <div className={`${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80`}>
                                     <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100">
                                         <label className={`inline-flex items-center gap-1 text-[12px] leading-none ${isPublishedInActiveSchedule ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
@@ -6000,14 +5998,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <div className={`${buildPriorityTableCellClass} flex min-h-[58px] items-center justify-center bg-cyan-950/80 px-1`}>
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            removeCurrencyDraftPriorityEvents(draft.id);
+                                        onClick={(event) => {
+                                            event.preventDefault();
+                                            event.stopPropagation();
                                             setCurrencyDraftEvents(prev => prev.filter(event => event.id !== draft.id));
+                                            setOpenCurrencyDraftId(prev => prev === draft.id ? null : prev);
                                             setEditingCurrencyDraftIds(prev => {
                                                 const next = new Set(prev);
                                                 next.delete(draft.id);
                                                 return next;
                                             });
+                                            removeCurrencyDraftPriorityEvents(draft.id);
                                         }}
                                         className="inline-flex h-6 w-6 shrink-0 items-center justify-center transition-opacity hover:opacity-75 focus:outline-none focus:ring-1 focus:ring-red-500/60"
                                         aria-label="Remove currency event"
@@ -6019,6 +6020,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         </div>
                     );
                 })}
+                    </div>
+                )}
             </div>
         </div>
         )}
