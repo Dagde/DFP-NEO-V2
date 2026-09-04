@@ -139135,41 +139135,6 @@ ${conflictLines.join("\n")}${moreText}`,
     const publishedSctRequestIdsFromEvents = new Set(
       newEventsForDate.map((event) => String(event.sctRequestId || "").trim()).filter(Boolean)
     );
-    const publishedSpecificCurrencyRequestIdsByType = newEventsForDate.reduce((map, event) => {
-      const draftId = String(event.currencyDraftId || "").trim();
-      const parsedMatch = draftId.match(/^specific-currency-(flight|ftd)-(.+)$/);
-      if (!parsedMatch) return map;
-      map[parsedMatch[1]].add(parsedMatch[2]);
-      return map;
-    }, { flight: /* @__PURE__ */ new Set(), ftd: /* @__PURE__ */ new Set() });
-    const publishedSctRequestIdsByType = newEventsForDate.reduce((map, event) => {
-      const explicitId = String(event.sctRequestId || "").trim();
-      const parsedMatch = !explicitId ? String(event.id || "").match(/^sct-(flight|ftd)-(.+)$/) : null;
-      const requestId = explicitId || parsedMatch?.[2] || "";
-      const requestType = String(event.sctRequestType || parsedMatch?.[1] || "").trim();
-      if (!requestId || requestType !== "flight" && requestType !== "ftd") return map;
-      map[requestType].add(requestId);
-      return map;
-    }, { flight: /* @__PURE__ */ new Set(), ftd: /* @__PURE__ */ new Set() });
-    publishedSpecificCurrencyRequestIdsByType.flight.forEach((requestId) => publishedSctRequestIdsByType.flight.add(requestId));
-    publishedSpecificCurrencyRequestIdsByType.ftd.forEach((requestId) => publishedSctRequestIdsByType.ftd.add(requestId));
-    const publishedSctRequestIds = [
-      ...Array.from(publishedSctRequestIdsByType.flight),
-      ...Array.from(publishedSctRequestIdsByType.ftd)
-    ];
-    if (publishedSctRequestIdsByType.flight.size > 0) {
-      setSctFlights((prev) => prev.filter((request) => !publishedSctRequestIdsByType.flight.has(request.id)));
-    }
-    if (publishedSctRequestIdsByType.ftd.size > 0) {
-      setSctFtds((prev) => prev.filter((request) => !publishedSctRequestIdsByType.ftd.has(request.id)));
-    }
-    if (publishedSctRequestIds.length > 0) {
-      const currentUserId2 = getCurrentUserId();
-      publishedSctRequestIds.forEach((requestId) => {
-        const query = currentUserId2 ? `?userId=${encodeURIComponent(currentUserId2)}` : "";
-        fetch(`${getAppApiBase()}/sct-requests/${encodeURIComponent(requestId)}${query}`, { method: "DELETE" }).catch((err) => console.error("Failed to delete published continuation request:", err));
-      });
-    }
     if (publishedPriorityEventIds.size > 0 || publishedCurrencyDraftIds.size > 0 || publishedTaskingRequestIds.size > 0 || publishedSctRequestIdsFromEvents.size > 0) {
       setHighestPriorityEvents(
         (prevEvents) => prevEvents.filter((event) => {
