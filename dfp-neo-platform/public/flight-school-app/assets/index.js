@@ -49299,7 +49299,6 @@ const PrioritiesView = ({
       const priorityTextClass = event.priority === "Medium" ? "text-amber-300" : event.priority === "Low" ? "text-green-300" : "text-red-300";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { onClick: () => !isEditing && onSelectEvent(event), className: `${rowClass} ${isEditing ? "ring-1 ring-inset ring-emerald-300/70" : "cursor-pointer"}`, children: [
         index === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { rowSpan: group.events.length, className: `border border-slate-700/80 px-2 py-3 text-center align-middle text-[14px] font-black ${priorityEventGroupStyles[group.key]}`, children: group.label }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 font-mono ${rowText}`, children: events.indexOf(event) + 1 }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 ${rowText}`, children: flightType }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`, title: matchesBuildDate ? formatPriorityDate(event.date) : `${formatPriorityDate(event.date)} - not scheduled for this build date`, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: event.date || buildDfpDate, onClick: (e) => e.stopPropagation(), onChange: (e) => updateEvent(event, { date: e.target.value }), style: { colorScheme: "dark" }, className: "h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: formatPriorityDate(event.date) }),
@@ -49344,14 +49343,13 @@ const PrioritiesView = ({
         ] }) })
       ] }, event.id);
     };
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1280px] table-fixed border-collapse text-[11px] leading-tight", children: [
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1192px] table-fixed border-collapse text-[11px] leading-tight", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[118px]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[48px]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[70px]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[106px]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[120px]" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[170px]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[130px]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[126px]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[72px]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[68px]" }),
@@ -49362,11 +49360,10 @@ const PrioritiesView = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Type" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Order" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Solo/Dual" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Date" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Event" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Person/Crew" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Crew" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Requested By" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Time" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Aircraft" }),

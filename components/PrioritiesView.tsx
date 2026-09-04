@@ -4672,7 +4672,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               {group.label}
             </td>
           )}
-          <td className={`border border-slate-700/80 px-2 py-2 font-mono ${rowText}`}>{events.indexOf(event) + 1}</td>
           <td className={`border border-slate-700/80 px-2 py-2 ${rowText}`}>{flightType}</td>
           <td className={`border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`} title={matchesBuildDate ? formatPriorityDate(event.date) : `${formatPriorityDate(event.date)} - not scheduled for this build date`}>
             {isEditing ? (
@@ -4757,14 +4756,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
     return (
       <div className="overflow-x-auto rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20">
-        <table className="w-full min-w-[1280px] table-fixed border-collapse text-[11px] leading-tight">
+        <table className="w-full min-w-[1192px] table-fixed border-collapse text-[11px] leading-tight">
             <colgroup>
                 <col className="w-[118px]" />
-                <col className="w-[48px]" />
                 <col className="w-[70px]" />
                 <col className="w-[106px]" />
                 <col className="w-[120px]" />
-                <col className="w-[170px]" />
+                <col className="w-[130px]" />
                 <col className="w-[126px]" />
                 <col className="w-[72px]" />
                 <col className="w-[68px]" />
@@ -4776,11 +4774,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <thead className="bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300">
                 <tr>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Type</th>
-                    <th className="border border-slate-700/90 px-2 py-2 text-left">Order</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Solo/Dual</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Date</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Event</th>
-                    <th className="border border-slate-700/90 px-2 py-2 text-left">Person/Crew</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Crew</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Requested By</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Time</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Aircraft</th>
