@@ -387,6 +387,7 @@ interface TaskingRequest {
   callsignNumber?: number;
   callsign?: string;
   schedulerPriority?: 'High' | 'Medium' | 'Low';
+  pushToNeoBuild?: boolean;
   isMandatory: boolean;
   saved: boolean;
   submitted: boolean;
@@ -1234,6 +1235,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [pendingStandardMissionSaveId, setPendingStandardMissionSaveId] = useState<string | null>(null);
   const [standardMissionDrafts, setStandardMissionDrafts] = useState<Record<string, Partial<StandardMissionProfile>>>({});
   const [temporaryStandardMissionOverrides, setTemporaryStandardMissionOverrides] = useState<Record<string, Partial<StandardMissionProfile>>>({});
+  const [editingPriorityEventId, setEditingPriorityEventId] = useState<string | null>(null);
+  const [priorityPushDrafts, setPriorityPushDrafts] = useState<Record<string, boolean>>({});
   const priorityAllocationModel: PriorityAllocationModel = isAirCombatModel ? 'air_combat' : isFixedCrewModel ? 'fixed_crew' : 'flight_school';
   const normalisedAirCombatWeights = useMemo(
     () => normaliseAirCombatSchedulingWeights(airCombatSchedulingWeights),
@@ -2903,6 +2906,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         aircraftConfigId,
         acceptableAircraftConfigs: [aircraftConfigId],
         crewRequirement: request.crewRequirement || { mode: 'aircraft_default' },
+        pushToNeoBuild: request.pushToNeoBuild !== false,
       };
     });
   };
@@ -2926,6 +2930,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     actual.formationId !== expected.formationId ||
     actual.formationPosition !== expected.formationPosition ||
     actual.formationSize !== expected.formationSize ||
+    actual.pushToNeoBuild !== expected.pushToNeoBuild ||
     JSON.stringify(actual.crewRequirement || null) !== JSON.stringify(expected.crewRequirement || null)
   );
 
@@ -3785,7 +3790,66 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       Number(event.formationPosition || 0) > 0 &&
       String(event.id || '').startsWith('tasking-')
   );
-  const displayPriorityEvents = highestPriorityEvents.filter(event => !isGeneratedTaskingFormationMember(event));
+  const buildPriorityEventFromSctRequest = (request: SctRequest, requestType: 'flight' | 'ftd'): ScheduleEvent => {
+    const requestedTime = request.requestedTime || formatTimeLabel(requestType === 'ftd' ? ftdStartTime : flyingStartTime);
+    const primaryName = String(request.name || request.crewIndividual || request.crewDisplayLabel || '').trim();
+    const secondaryCrew = String(request.crewMember || request.crewDisplayLabel || '').trim();
+    const eventCode = String(request.event || request.currency || 'Currency').trim();
+    const flightType = request.flightType === 'Dual' ? 'Dual' : 'Solo';
+    return {
+      id: `sct-source-${requestType}-${request.id}`,
+      sctRequestId: request.id,
+      sctRequestType: requestType,
+      date: request.dateRequested || buildDfpDate,
+      type: requestType,
+      instructor: primaryName,
+      pilot: primaryName,
+      student: '',
+      crew: flightType === 'Dual' ? secondaryCrew : '',
+      flightNumber: eventCode,
+      duration: defaultCurrencyDuration,
+      startTime: Number(timeFieldToHours(requestedTime, requestType === 'ftd' ? ftdStartTime : flyingStartTime)) || 0,
+      resourceId: '',
+      color: 'bg-amber-500/80',
+      flightType,
+      soloOrDual: flightType,
+      locationType: 'Local',
+      origin: school,
+      destination: school,
+      eventCategory: 'currency',
+      currency: eventCode,
+      currencyAudience: 'staff',
+      priority: request.priority || 'High',
+      notes: request.notes || '',
+      aircraftConfigId: request.aircraftConfigId,
+      aircraftCount: Math.max(1, Math.min(24, Math.floor(Number(request.aircraftCount) || 1))),
+      isTimeFixed: false,
+      isMandatoryTasking: request.priority === 'High',
+      pushToNeoBuild: request.pushToNeoBuild !== false,
+      requestedByName: String((request as any).requestedByName || (request as any).createdByName || request.name || primaryName || 'Requester').trim(),
+      isSctSourceOnly: true,
+      ...(requestType === 'flight' && request.aircraftConfigId ? { acceptableAircraftConfigs: [request.aircraftConfigId] } : {}),
+    } as ScheduleEvent;
+  };
+  const displayPriorityEvents = useMemo(() => {
+    const baseEvents = highestPriorityEvents.filter(event => !isGeneratedTaskingFormationMember(event));
+    const queuedSctRequestIds = new Set(baseEvents.map(event => String(event.sctRequestId || '').trim()).filter(Boolean));
+    const queuedEventIds = new Set(baseEvents.map(event => String(event.id || '').trim()).filter(Boolean));
+    const sourceCurrencyEvents = [
+      ...sctFlights.map(request => ({ request, type: 'flight' as const })),
+      ...sctFtds.map(request => ({ request, type: 'ftd' as const })),
+    ]
+      .filter(({ request }) => String(request.id || '').trim())
+      .filter(({ request }) => String(request.event || request.currency || request.name || request.crewIndividual || request.crewDisplayLabel || '').trim())
+      .filter(({ request, type }) => {
+        const requestId = String(request.id || '').trim();
+        if (queuedSctRequestIds.has(requestId)) return false;
+        if (queuedEventIds.has(`sct-${type}-${requestId}`) || queuedEventIds.has(`neo-assist-currency-${requestId}`)) return false;
+        return true;
+      })
+      .map(({ request, type }) => buildPriorityEventFromSctRequest(request, type));
+    return [...baseEvents, ...sourceCurrencyEvents];
+  }, [buildDfpDate, defaultCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, school, sctFlights, sctFtds]);
   const standardPriorityEvents = displayPriorityEvents;
   const stalePriorityEvents = displayPriorityEvents.filter(event => !priorityEventMatchesBuildDate(event));
   
@@ -3841,42 +3905,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const getPriorityEventPicName = (event: ScheduleEvent): string => (
-    String(event.fixedCrewPic || event.pilot || event.instructor || '').trim() || 'N/A'
+    String(event.fixedCrewPic || event.pilot || event.instructor || '').trim() || 'TBA'
   );
-
-  const getPriorityEventSchedulerValue = (event: ScheduleEvent): 'Mandatory' | 'Desirable' => (
-    event.isMandatoryTasking || event.priority === 'High' ? 'Mandatory' : 'Desirable'
-  );
-
-  const updatePriorityEventScheduler = (event: ScheduleEvent, schedulerValue: 'Mandatory' | 'Desirable' | 'Ignore') => {
-    if (schedulerValue === 'Ignore') {
-      if (event.taskingRequestId) {
-        ignoreTaskingRequest(event.taskingRequestId);
-        return;
-      }
-      onDeletePriorityEvent(event.id);
-      return;
-    }
-    const schedulerPriority: TaskingSchedulerPriority = schedulerValue === 'Mandatory' ? 'High' : 'Medium';
-    onUpdatePriorityEvent(event.id, {
-      priority: schedulerPriority,
-      isMandatoryTasking: schedulerValue === 'Mandatory',
-    });
-    if (event.taskingRequestId) {
-      setTaskingRequests(prev => prev.map(request => (
-        request.id === event.taskingRequestId
-          ? {
-              ...request,
-              schedulerPriority,
-              isMandatory: schedulerValue === 'Mandatory',
-              saved: true,
-              submitted: true,
-              ignored: false,
-            }
-          : request
-      )));
-    }
-  };
 
   const getPriorityEventLabel = (event: ScheduleEvent): string => {
     if (event.isTaskingRequest) {
@@ -3891,15 +3921,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return String(event.flightNumber || event.eventCode || 'N/A').trim() || 'N/A';
   };
 
-  const getPriorityEventGroup = (event: ScheduleEvent): 'tasking' | 'currency' | 'remedial' => {
+  const getPriorityEventGroup = (event: ScheduleEvent): 'tasking' | 'currency' | 'trainee-currency' | 'special' | 'remedial' => {
     if (isRemedialEvent(event) || event.isRemedialForceSchedule) return 'remedial';
-    if (event.isTaskingRequest) return 'tasking';
+    if ((event as any).standardMissionProfileId || event.eventCategory === 'special') return 'special';
+    if (event.isTaskingRequest || event.taskingRequestId) return 'tasking';
+    if (event.currencyAudience === 'trainee') return 'trainee-currency';
     return 'currency';
   };
 
-  const priorityEventGroupStyles: Record<'tasking' | 'currency' | 'remedial', string> = {
+  const priorityEventGroupStyles: Record<'tasking' | 'currency' | 'trainee-currency' | 'special' | 'remedial', string> = {
     tasking: 'bg-cyan-900 text-cyan-50',
     currency: 'bg-indigo-900 text-indigo-50',
+    'trainee-currency': 'bg-violet-900 text-violet-50',
+    special: 'bg-fuchsia-900 text-fuchsia-50',
     remedial: 'bg-amber-900 text-amber-50',
   };
 
@@ -4229,143 +4263,243 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   };
 
   const PriorityEventTable: React.FC<{ events: ScheduleEvent[] }> = ({ events }) => {
-    const groupedEvents = {
-      tasking: events.filter(event => getPriorityEventGroup(event) === 'tasking'),
-      currency: events.filter(event => getPriorityEventGroup(event) === 'currency'),
-      remedial: events.filter(event => getPriorityEventGroup(event) === 'remedial'),
-    };
-    const groups: Array<{ key: 'tasking' | 'currency' | 'remedial'; label: string; events: ScheduleEvent[] }> = [
-      { key: 'tasking', label: 'Directed Tasks', events: groupedEvents.tasking },
-      { key: 'currency', label: 'Currency', events: groupedEvents.currency },
-      { key: 'remedial', label: 'Remedial', events: groupedEvents.remedial },
+    type PriorityGroupKey = 'tasking' | 'currency' | 'special' | 'trainee-currency' | 'remedial';
+    const groups: Array<{ key: PriorityGroupKey; label: string; events: ScheduleEvent[] }> = [
+      { key: 'tasking', label: 'Directed Tasks', events: events.filter(event => getPriorityEventGroup(event) === 'tasking') },
+      { key: 'currency', label: 'Staff Currency Events', events: events.filter(event => getPriorityEventGroup(event) === 'currency') },
+      { key: 'special', label: 'Saved Special Events', events: events.filter(event => getPriorityEventGroup(event) === 'special') },
+      { key: 'trainee-currency', label: 'Trainee Currency Events', events: events.filter(event => getPriorityEventGroup(event) === 'trainee-currency') },
+      { key: 'remedial', label: 'Remedial', events: events.filter(event => getPriorityEventGroup(event) === 'remedial') },
     ];
+    const visibleEvents = groups.flatMap(group => group.events);
+    const getSctRequestType = (event: ScheduleEvent): 'flight' | 'ftd' => (
+      String(event.sctRequestType || event.type || '').toLowerCase() === 'ftd' ? 'ftd' : 'flight'
+    );
+    const getAircraftCount = (event: ScheduleEvent): number => Math.max(1, Math.min(24, Math.floor(Number(event.aircraftCount ?? (event as any).formationSize ?? event.taskingAircraftCount ?? 1) || 1)));
+    const getCrewDisplay = (event: ScheduleEvent): { primary: string; secondary: string } => {
+      const primary = getPriorityEventPicName(event);
+      const secondary = String(event.crew || event.student || '').trim();
+      if ((event.flightType || event.soloOrDual) === 'Dual' && secondary) return { primary, secondary };
+      return { primary: primary || 'TBA', secondary: '' };
+    };
+    const getRequestedBy = (event: ScheduleEvent): string => {
+      const raw = (event as any).requestedByName || (event as any).requestedBy || (event as any).createdByName || (event as any).requesterName || '';
+      if (String(raw || '').trim()) return String(raw).trim();
+      if (event.sctRequestId || event.currencyDraftId || event.currency) return getPriorityEventPicName(event) || 'Requester';
+      return 'Operations';
+    };
+    const getStatus = (event: ScheduleEvent): { label: string; className: string } => {
+      if (event.pushToNeoBuild === false) return { label: 'Not pushed', className: 'border-slate-500/40 bg-slate-700/40 text-slate-200' };
+      if (isPriorityEventScheduled(event)) return { label: 'Scheduled', className: 'border-emerald-300/40 bg-emerald-500/15 text-emerald-100' };
+      if (!priorityEventMatchesBuildDate(event)) return { label: 'Other date', className: 'border-amber-300/40 bg-amber-500/15 text-amber-100' };
+      return { label: 'Ready', className: 'border-cyan-300/40 bg-cyan-500/15 text-cyan-100' };
+    };
+    const updateEvent = (event: ScheduleEvent, updates: Partial<ScheduleEvent>) => {
+      onUpdatePriorityEvent(event.id, updates);
+      if (event.taskingRequestId) {
+        setTaskingRequests(prev => prev.map(request => request.id === event.taskingRequestId ? {
+          ...request,
+          ...(updates.date !== undefined ? { date: String(updates.date || '') } : {}),
+          ...(updates.startTime !== undefined ? { takeoff: Number(updates.startTime) || 0 } : {}),
+          ...(updates.duration !== undefined ? { duration: Number(updates.duration) || defaultTaskingDuration } : {}),
+          ...(updates.flightNumber !== undefined ? { tasking: String(updates.flightNumber || '') } : {}),
+          ...(updates.aircraftCount !== undefined ? { aircraftCount: getAircraftCount({ ...event, ...updates }) } : {}),
+          ...(updates.priority !== undefined ? { schedulerPriority: updates.priority, isMandatory: updates.priority === 'High' } : {}),
+          ...(updates.pushToNeoBuild !== undefined ? { pushToNeoBuild: updates.pushToNeoBuild } : {}),
+          saved: true,
+          submitted: true,
+          ignored: false,
+        } : request));
+      }
+      if (event.sctRequestId) {
+        const sctUpdates: Partial<SctRequest> = {};
+        if (updates.date !== undefined) sctUpdates.dateRequested = String(updates.date || '');
+        if (updates.startTime !== undefined) sctUpdates.requestedTime = formatTimeLabel(Number(updates.startTime) || 0);
+        if (updates.flightNumber !== undefined) sctUpdates.event = String(updates.flightNumber || '');
+        if (updates.priority !== undefined) sctUpdates.priority = updates.priority;
+        if (updates.aircraftCount !== undefined) sctUpdates.aircraftCount = getAircraftCount({ ...event, ...updates });
+        if (updates.pushToNeoBuild !== undefined) {
+          sctUpdates.pushToNeoBuild = updates.pushToNeoBuild;
+          sctUpdates.includeInBuild = updates.pushToNeoBuild;
+        }
+        if (Object.keys(sctUpdates).length > 0) onPatchSctRequest(event.sctRequestId, sctUpdates, getSctRequestType(event));
+      }
+    };
+    const setPush = (event: ScheduleEvent, pushToNeoBuild: boolean) => {
+      setPriorityPushDrafts(prev => ({ ...prev, [event.id]: pushToNeoBuild }));
+      updateEvent(event, { pushToNeoBuild });
+    };
+    const isPushEnabled = (event: ScheduleEvent): boolean => (
+      event.id in priorityPushDrafts ? priorityPushDrafts[event.id] : event.pushToNeoBuild !== false
+    );
+    const setAllPush = (pushToNeoBuild: boolean) => visibleEvents.forEach(event => setPush(event, pushToNeoBuild));
+    const deletePriorityEvent = (event: ScheduleEvent) => {
+      if (event.taskingRequestId) {
+        removeTaskingRequest(event.taskingRequestId);
+        return;
+      }
+      if (event.sctRequestId) {
+        onPatchSctRequest(event.sctRequestId, { submitted: false, includeInBuild: false, pushToNeoBuild: false }, getSctRequestType(event));
+      }
+      onDeletePriorityEvent(event.id);
+    };
 
     const renderEmptyGroupRow = (group: typeof groups[number]) => (
       <tr key={`${group.key}-empty`} className="bg-slate-900/55">
-        <td
-          className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`}
-        >
+        <td className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`}>
           {group.label}
         </td>
-        {Array.from({ length: 9 }).map((_, index) => (
-          <td key={`${group.key}-empty-${index}`} className="border border-slate-700/80 px-2 py-3 text-slate-600">&nbsp;</td>
-        ))}
+        <td colSpan={11} className="border border-slate-700/80 px-2 py-3 text-slate-600">&nbsp;</td>
       </tr>
     );
 
     const renderEventRow = (event: ScheduleEvent, group: typeof groups[number], index: number) => {
+      const isEditing = editingPriorityEventId === event.id;
       const isScheduledInBuild = isPriorityEventScheduled(event);
       const matchesBuildDate = priorityEventMatchesBuildDate(event);
-      const rowText = isScheduledInBuild
-        ? 'text-emerald-200'
-        : matchesBuildDate
-          ? 'text-slate-100'
-          : 'text-slate-400';
+      const rowText = isScheduledInBuild ? 'text-emerald-200' : matchesBuildDate ? 'text-slate-100' : 'text-slate-400';
       const rowClass = isScheduledInBuild
-        ? 'cursor-pointer bg-emerald-950/60 transition-colors odd:bg-emerald-900/35 hover:bg-emerald-900/55'
+        ? 'bg-emerald-950/60 transition-colors odd:bg-emerald-900/35 hover:bg-emerald-900/55'
         : matchesBuildDate
-          ? 'cursor-pointer bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50'
-          : 'cursor-pointer bg-slate-950/65 transition-colors odd:bg-slate-900/65 hover:bg-slate-800/70';
+          ? 'bg-slate-900/70 transition-colors odd:bg-slate-800/80 hover:bg-cyan-950/50'
+          : 'bg-slate-950/65 transition-colors odd:bg-slate-900/65 hover:bg-slate-800/70';
       const eventLabel = getPriorityEventLabel(event);
-      const crewRequirementName = getPriorityEventCrewRequirementName(event);
-      const picName = getPriorityEventPicName(event);
-      const aircraftConfigSummary = getAircraftConfigSummary(event);
-      const eventDateLabel = formatPriorityDate(event.date);
-      const isDirectedTaskPriorityEvent = getPriorityEventGroup(event) === 'tasking';
-      const deletePriorityEvent = () => {
-        if (isDirectedTaskPriorityEvent && event.taskingRequestId) {
-          removeTaskingRequest(event.taskingRequestId);
-          return;
-        }
-        onDeletePriorityEvent(event.id);
-      };
-
+      const crew = getCrewDisplay(event);
+      const status = getStatus(event);
+      const flightType = event.flightType === 'Dual' || event.soloOrDual === 'Dual' ? 'Dual' : event.flightType === 'Solo' || event.soloOrDual === 'Solo' ? 'Solo' : '-';
+      const pushEnabled = isPushEnabled(event);
+      const priorityTextClass = event.priority === 'Medium' ? 'text-amber-300' : event.priority === 'Low' ? 'text-green-300' : 'text-red-300';
       return (
-        <tr key={event.id} onClick={() => onSelectEvent(event)} className={rowClass}>
+        <tr key={event.id} onClick={() => !isEditing && onSelectEvent(event)} className={`${rowClass} ${isEditing ? 'ring-1 ring-inset ring-emerald-300/70' : 'cursor-pointer'}`}>
           {index === 0 && (
-            <td
-              rowSpan={group.events.length}
-              className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`}
-            >
+            <td rowSpan={group.events.length} className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`}>
               {group.label}
             </td>
           )}
-          <td className={`truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`} title={eventLabel}>{eventLabel}</td>
-          <td className={`border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`} title={matchesBuildDate ? eventDateLabel : `${eventDateLabel} - not scheduled for this build date`}>
-            <span className="block truncate">{eventDateLabel}</span>
-            {!matchesBuildDate && <span className="block truncate text-[9px] font-black uppercase tracking-[0.12em] text-amber-300/80">Not this build</span>}
+          <td className={`border border-slate-700/80 px-2 py-2 font-mono ${rowText}`}>{events.indexOf(event) + 1}</td>
+          <td className={`border border-slate-700/80 px-2 py-2 ${rowText}`}>{flightType}</td>
+          <td className={`border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`} title={matchesBuildDate ? formatPriorityDate(event.date) : `${formatPriorityDate(event.date)} - not scheduled for this build date`}>
+            {isEditing ? (
+              <input type="date" value={event.date || buildDfpDate} onClick={e => e.stopPropagation()} onChange={e => updateEvent(event, { date: e.target.value })} style={{ colorScheme: 'dark' }} className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" />
+            ) : (
+              <>
+                <span className="block truncate">{formatPriorityDate(event.date)}</span>
+                {!matchesBuildDate && <span className="block truncate text-[9px] font-black uppercase tracking-[0.12em] text-amber-300/80">Not this build</span>}
+              </>
+            )}
           </td>
-          <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={picName}>{picName}</td>
-          <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={crewRequirementName}>{crewRequirementName}</td>
-          <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={event.currency || 'N/A'}>{event.currency || 'N/A'}</td>
-          <td className={`truncate border border-slate-700/80 px-2 py-2 font-semibold ${rowText}`} title={aircraftConfigSummary}>{aircraftConfigSummary}</td>
-          <td className={`border border-slate-700/80 px-2 py-2 font-black ${
-            event.priority === 'Medium'
-              ? 'text-amber-300'
-              : event.priority === 'Low'
-                ? 'text-green-300'
-                : 'text-red-300'
-          }`}>{event.priority || 'High'}</td>
-          <td className="border border-slate-700/80 px-1.5 py-1.5">
-            <select
-              value={getPriorityEventSchedulerValue(event)}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                e.stopPropagation();
-                updatePriorityEventScheduler(event, e.target.value as 'Mandatory' | 'Desirable' | 'Ignore');
-              }}
-              className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1.5 text-[11px] font-bold text-white focus:ring-cyan-500"
-            >
-              <option value="Mandatory">Mandatory</option>
-              <option value="Desirable">Desirable</option>
-              <option value="Ignore">Ignore</option>
-            </select>
+          <td className={`truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`} title={eventLabel}>
+            {isEditing ? (
+              <input value={eventLabel} onClick={e => e.stopPropagation()} onChange={e => updateEvent(event, { flightNumber: e.target.value, taskingName: e.target.value, taskingDisplayLabel: e.target.value, currency: group.key.includes('currency') ? e.target.value : event.currency })} className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" />
+            ) : eventLabel}
+          </td>
+          <td className={`border border-slate-700/80 px-2 py-2 ${rowText}`} title={`${crew.primary}${crew.secondary ? `, ${crew.secondary}` : ''}`}>
+            {isEditing ? (
+              <div className="space-y-1">
+                <input value={crew.primary === 'TBA' ? '' : crew.primary} placeholder="PIC or crew" onClick={e => e.stopPropagation()} onChange={e => updateEvent(event, { pilot: e.target.value, fixedCrewPic: e.target.value })} className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" />
+                {(event.flightType === 'Dual' || event.soloOrDual === 'Dual') && (
+                  <input value={crew.secondary} placeholder="Second crew" onClick={e => e.stopPropagation()} onChange={e => updateEvent(event, { crew: e.target.value, student: e.target.value })} className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" />
+                )}
+              </div>
+            ) : (
+              <>
+                <span className="block truncate">{crew.primary}</span>
+                {crew.secondary && <span className="block truncate text-[10px] text-slate-400">{crew.secondary}</span>}
+              </>
+            )}
+          </td>
+          <td className={`truncate border border-slate-700/80 px-2 py-2 ${rowText}`} title={getRequestedBy(event)}>{getRequestedBy(event)}</td>
+          <td className={`border border-slate-700/80 px-2 py-2 font-mono ${rowText}`}>
+            {isEditing ? (
+              <select value={event.startTime || 0} onClick={e => e.stopPropagation()} onChange={e => updateEvent(event, { startTime: Number(e.target.value) })} className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100">
+                {timeOptions.map(option => <option key={`hpe-time-${event.id}-${option.label}`} value={option.value}>{option.label.replace(':', '')}</option>)}
+              </select>
+            ) : formatCompactTimeLabel(event.startTime || 0)}
+          </td>
+          <td className={`border border-slate-700/80 px-2 py-2 font-mono ${rowText}`}>
+            {isEditing ? (
+              <input type="number" min={1} max={24} value={getAircraftCount(event)} onClick={e => e.stopPropagation()} onChange={e => updateEvent(event, { aircraftCount: getAircraftCount({ ...event, aircraftCount: e.target.value as any }) })} className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" />
+            ) : getAircraftCount(event)}
+          </td>
+          <td className={`border border-slate-700/80 px-2 py-2 font-black ${priorityTextClass}`}>
+            {isEditing ? (
+              <select value={event.priority || 'High'} onClick={e => e.stopPropagation()} onChange={e => updateEvent(event, { priority: e.target.value as 'High' | 'Medium' | 'Low', isMandatoryTasking: e.target.value === 'High' })} className="h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100">
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            ) : event.priority || 'High'}
+          </td>
+          <td className="border border-slate-700/80 px-2 py-2">
+            <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-black ${status.className}`}>{status.label}</span>
           </td>
           <td className="border border-slate-700/80 px-1.5 py-1.5 text-center">
-            <button
-              type="button"
-              aria-label={isDirectedTaskPriorityEvent ? 'Delete directed task' : 'Delete priority event'}
-              title={isDirectedTaskPriorityEvent ? 'Delete directed task' : 'Delete priority event'}
-              onClick={(e) => {
-                e.stopPropagation();
-                deletePriorityEvent();
-              }}
-              className="inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100"
-            >
-              <TrashIcon aria-hidden="true" className="h-4 w-4" />
-            </button>
+            <div className="flex items-center justify-center gap-1">
+              <button type="button" onClick={(e) => { e.stopPropagation(); setEditingPriorityEventId(current => current === event.id ? null : event.id); }} className="rounded border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold text-cyan-100 hover:bg-cyan-500/20">
+                {isEditing ? 'Done' : 'Edit'}
+              </button>
+              <button type="button" aria-label="Delete priority event" title="Delete priority event" onClick={(e) => { e.stopPropagation(); deletePriorityEvent(event); }} className="inline-flex h-7 w-6 items-center justify-center text-red-300 transition-colors hover:text-red-100">
+                <TrashIcon aria-hidden="true" className="h-4 w-4" />
+              </button>
+            </div>
+          </td>
+          <td className="border border-slate-700/80 px-1 py-1.5 text-center">
+            <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[10px] font-bold text-slate-100">
+              <label className="inline-flex cursor-pointer items-center gap-0.5">
+                <input type="radio" name={`hpe-push-${event.id}`} checked={pushEnabled} onClick={e => e.stopPropagation()} onChange={() => setPush(event, true)} className="h-3 w-3 accent-cyan-400" />
+                Y
+              </label>
+              <label className="inline-flex cursor-pointer items-center gap-0.5">
+                <input type="radio" name={`hpe-push-${event.id}`} checked={!pushEnabled} onClick={e => e.stopPropagation()} onChange={() => setPush(event, false)} className="h-3 w-3 accent-cyan-400" />
+                N
+              </label>
+            </div>
           </td>
         </tr>
       );
     };
 
     return (
-      <div className="overflow-hidden rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20">
-        <table className="w-full table-fixed border-collapse text-[11px] leading-tight">
+      <div className="overflow-x-auto rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20">
+        <table className="w-full min-w-[1280px] table-fixed border-collapse text-[11px] leading-tight">
             <colgroup>
-                <col className="w-[10%]" />
-                <col className="w-[18%]" />
-                <col className="w-[8%]" />
-                <col className="w-[12%]" />
-                <col className="w-[14%]" />
-                <col className="w-[8%]" />
-                <col className="w-[12%]" />
-                <col className="w-[7%]" />
-                <col className="w-[7%]" />
-                <col className="w-[4%]" />
+                <col className="w-[118px]" />
+                <col className="w-[48px]" />
+                <col className="w-[70px]" />
+                <col className="w-[106px]" />
+                <col className="w-[120px]" />
+                <col className="w-[170px]" />
+                <col className="w-[126px]" />
+                <col className="w-[72px]" />
+                <col className="w-[68px]" />
+                <col className="w-[88px]" />
+                <col className="w-[86px]" />
+                <col className="w-[80px]" />
+                <col className="w-[80px]" />
             </colgroup>
             <thead className="bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300">
                 <tr>
-                    <th className="border border-slate-700/90 px-2 py-2 text-left">Name</th>
-                    <th className="border border-slate-700/90 px-2 py-2 text-left">Event</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Type</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Order</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Solo/Dual</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Date</th>
-                    <th className="border border-slate-700/90 px-2 py-2 text-left">PIC</th>
-                    <th className="border border-slate-700/90 px-2 py-2 text-left">Crew Required</th>
-                    <th className="border border-slate-700/90 px-2 py-2 text-left">Currency</th>
-                    <th className="border border-slate-700/90 px-2 py-2 text-left">Config</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Event</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Person/Crew</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Requested By</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Time</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Aircraft</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Priority</th>
-                    <th className="border border-slate-700/90 px-2 py-2 text-left">Scheduler</th>
-                    <th className="border border-slate-700/90 px-1 py-2 text-center">Del</th>
+                    <th className="border border-slate-700/90 px-2 py-2 text-left">Status</th>
+                    <th className="border border-slate-700/90 px-1 py-2 text-center">Edit</th>
+                    <th className="border border-slate-700/90 px-1 py-1 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <span>Push</span>
+                        <span className="inline-flex overflow-hidden rounded border border-slate-600 bg-slate-950 text-[9px] font-bold normal-case tracking-normal">
+                          <button type="button" onClick={() => setAllPush(true)} className="px-1.5 py-0.5 text-cyan-100 hover:bg-cyan-500/15">All</button>
+                          <button type="button" onClick={() => setAllPush(false)} className="border-l border-slate-600 px-1.5 py-0.5 text-slate-200 hover:bg-slate-700/60">None</button>
+                        </span>
+                      </div>
+                    </th>
                 </tr>
             </thead>
             <tbody>
