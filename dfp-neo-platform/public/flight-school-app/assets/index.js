@@ -46058,9 +46058,10 @@ const taskingPanelClass = "flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18em] text-slate-500";
 const taskingPanelHintClass = "mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500";
 const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
-const taskingSummaryHeaderClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400";
+const taskingSummaryHeaderClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
 const taskingSummaryRowClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0";
 const taskingSummaryCellClass = "border border-slate-700/70 px-2 py-2";
+const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const formatTaskingSummaryDate = (dateString) => {
   if (!dateString) return "Any";
   const parsedDate = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
@@ -46133,18 +46134,18 @@ const TaskingRequestTable = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
     taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
     taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryHeaderClass, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Schedule" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Type" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Solo/Dual" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Date" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Event" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Route" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Time" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Aircraft" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "CONFIG" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Priority" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Status" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${taskingSummaryCellClass} text-center`, children: "Edit" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Schedule" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Type" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Solo/Dual" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Date" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Event" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Route" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Time" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Aircraft" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "CONFIG" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Priority" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Status" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Edit" })
     ] }) }),
     taskingRequests.map((request) => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
@@ -46170,7 +46171,7 @@ const TaskingRequestTable = ({
       ] });
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto bg-cyan-950/80 transition hover:bg-cyan-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryRowClass, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} flex items-center justify-center`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[11px] font-semibold text-slate-100", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} flex items-center justify-center`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `inline-flex items-center gap-0.5 ${canSubmit ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",

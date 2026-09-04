@@ -725,9 +725,10 @@ const taskingPanelClass = 'flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = 'text-[10px] font-black uppercase tracking-[0.18em] text-slate-500';
 const taskingPanelHintClass = 'mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500';
 const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500';
-const taskingSummaryHeaderClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400';
+const taskingSummaryHeaderClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400';
 const taskingSummaryRowClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0';
 const taskingSummaryCellClass = 'border border-slate-700/70 px-2 py-2';
+const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const formatTaskingSummaryDate = (dateString: string | undefined): string => {
   if (!dateString) return 'Any';
   const parsedDate = new Date(`${dateString}T00:00:00Z`);
@@ -818,18 +819,18 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
     {taskingRequests.length > 0 && (
       <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45">
         <div className={taskingSummaryHeaderClass}>
-          <span className={taskingSummaryCellClass}>Schedule</span>
-          <span className={taskingSummaryCellClass}>Type</span>
-          <span className={taskingSummaryCellClass}>Solo/Dual</span>
-          <span className={taskingSummaryCellClass}>Date</span>
-          <span className={taskingSummaryCellClass}>Event</span>
-          <span className={taskingSummaryCellClass}>Route</span>
-          <span className={taskingSummaryCellClass}>Time</span>
-          <span className={taskingSummaryCellClass}>Aircraft</span>
-          <span className={taskingSummaryCellClass}>CONFIG</span>
-          <span className={taskingSummaryCellClass}>Priority</span>
-          <span className={taskingSummaryCellClass}>Status</span>
-          <span className={`${taskingSummaryCellClass} text-center`}>Edit</span>
+          <span className={taskingSummaryHeaderCellClass}>Schedule</span>
+          <span className={taskingSummaryHeaderCellClass}>Type</span>
+          <span className={taskingSummaryHeaderCellClass}>Solo/Dual</span>
+          <span className={taskingSummaryHeaderCellClass}>Date</span>
+          <span className={taskingSummaryHeaderCellClass}>Event</span>
+          <span className={taskingSummaryHeaderCellClass}>Route</span>
+          <span className={taskingSummaryHeaderCellClass}>Time</span>
+          <span className={taskingSummaryHeaderCellClass}>Aircraft</span>
+          <span className={taskingSummaryHeaderCellClass}>CONFIG</span>
+          <span className={taskingSummaryHeaderCellClass}>Priority</span>
+          <span className={taskingSummaryHeaderCellClass}>Status</span>
+          <span className={taskingSummaryHeaderCellClass}>Edit</span>
         </div>
       </div>
     )}
@@ -856,7 +857,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
           <div className="overflow-x-auto bg-cyan-950/80 transition hover:bg-cyan-900/80">
             <div className={taskingSummaryRowClass}>
               <div className={`${taskingSummaryCellClass} flex items-center justify-center`}>
-                <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[11px] font-semibold text-slate-100">
+                <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100">
                   <label className={`inline-flex items-center gap-0.5 ${canSubmit ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                     <input
                       type="radio"
