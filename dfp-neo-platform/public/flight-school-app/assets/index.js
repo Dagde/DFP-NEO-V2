@@ -48172,7 +48172,7 @@ const PrioritiesView = ({
         return null;
       }
     };
-    const statusButtonClass = "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed";
+    const statusButtonClass = "btn-aluminium-brushed flex h-8 w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed";
     const crewRequirementFromPreset = (preset) => preset.kind === "standard" ? { mode: "aircraft_default" } : { mode: "custom", roles: preset.roles || [] };
     const crewRequirementPresetIdFor = (requirement) => {
       const normalised = normaliseCrewRequirement(requirement);
@@ -48229,8 +48229,8 @@ const PrioritiesView = ({
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: requests.map((req) => {
       const expiryInfo = calculateDaysToExpire(req.currencyExpire);
-      const tileLabelClass = "mb-2 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500";
-      const tileBaseClass = "min-h-[140px] w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 p-2 text-left shadow-sm";
+      const tileLabelClass = "mb-1 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500";
+      const tileBaseClass = "flex h-full min-h-[64px] w-full min-w-0 flex-col rounded-md border border-slate-600 bg-slate-950/75 p-2 text-left shadow-sm";
       const controlClass = "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500";
       const selectedCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === req.crewGroupKey || group.crewValue === String(req.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(req.crewUnitCode || "").trim().toUpperCase());
       const selectedCrewPicCandidates = (selectedCrewGroup?.members || []).filter((member) => staffHasPicQualification(member));
@@ -48304,9 +48304,9 @@ const PrioritiesView = ({
         });
         onSubmitSctRequest(req.id, type);
       };
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-5 gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto overflow-y-visible rounded-lg border-2 border-cyan-300/70 bg-slate-950/55 p-3 shadow-[0_0_0_1px_rgba(14,165,233,0.24),0_14px_28px_rgba(0,0,0,0.28)]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] items-stretch gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid auto-rows-fr grid-cols-5 items-stretch gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: isFlightSchoolCurrencyRequest ? "Pilot" : "Crew" }),
             isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: aircraftCount > 1 ? "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2" : "", children: [
@@ -48385,7 +48385,7 @@ const PrioritiesView = ({
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: isFlightSchoolCurrencyRequest ? "Second Pilot" : "PIC" }),
             isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: aircraftCount > 1 ? "grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2" : "", children: [
@@ -48450,14 +48450,14 @@ const PrioritiesView = ({
               }
             ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500", children: "N/A" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Event" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.event, onChange: (e) => applyCurrencyProfile(req, e.target.value), className: controlClass, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select profile" }),
               sctEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: e, children: currencyProfileNameLabels[e] || e }, e))
             ] })
           ] }),
-          !isFlightSchoolCurrencyRequest && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+          !isFlightSchoolCurrencyRequest && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Crew Composition" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "select",
@@ -48476,7 +48476,7 @@ const PrioritiesView = ({
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "CONFIG" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               AircraftConfigSelect,
@@ -48487,7 +48487,7 @@ const PrioritiesView = ({
               }
             ) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "No. of A/C" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -48501,19 +48501,19 @@ const PrioritiesView = ({
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Currency Expire" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.currencyExpire, onChange: (e) => onUpdateSctRequest(req.id, "currencyExpire", e.target.value, type), style: { colorScheme: "dark" }, className: controlClass })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Date Requested" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: req.dateRequested, onChange: (e) => onUpdateSctRequest(req.id, "dateRequested", e.target.value, type), style: { colorScheme: "dark" }, className: controlClass })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Days to Expire" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs", children: expiryInfo ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-bold ${expiryInfo.color}`, children: expiryInfo.days }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "-" }) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Priority" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: req.priority, onChange: (e) => onUpdateSctRequest(req.id, "priority", e.target.value, type), className: controlClass, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "High", children: "High" }),
@@ -48522,7 +48522,7 @@ const PrioritiesView = ({
             ] })
           ] })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[288px] w-16 flex-col items-center justify-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full min-h-[64px] w-16 flex-col items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-950/75 p-1", children: [
           req.submitted ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: statusButtonClass, style: { color: "#22c55e" }, children: "Submitted" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {

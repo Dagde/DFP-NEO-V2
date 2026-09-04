@@ -3276,7 +3276,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         }
     };
 
-    const statusButtonClass = 'btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed';
+    const statusButtonClass = 'btn-aluminium-brushed flex h-8 w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed';
     const crewRequirementFromPreset = (preset: CrewRequirementPreset): CrewRequirement => (
       preset.kind === 'standard'
         ? { mode: 'aircraft_default' }
@@ -3357,8 +3357,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           <div className="space-y-3">
               {requests.map(req => {
                   const expiryInfo = calculateDaysToExpire(req.currencyExpire);
-                  const tileLabelClass = 'mb-2 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
-                  const tileBaseClass = 'min-h-[140px] w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 p-2 text-left shadow-sm';
+                  const tileLabelClass = 'mb-1 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
+                  const tileBaseClass = 'flex h-full min-h-[64px] w-full min-w-0 flex-col rounded-md border border-slate-600 bg-slate-950/75 p-2 text-left shadow-sm';
                   const controlClass = 'w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500';
                   const selectedCrewGroup = fixedCrewRequestCrewGroups.find(group => (
                     group.key === req.crewGroupKey
@@ -3460,11 +3460,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       onSubmitSctRequest(req.id, type);
                   };
                   return (
-                      <div key={req.id} className="overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/45 p-3 shadow-inner shadow-black/20">
-                          <div className="grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] gap-2">
+                      <div key={req.id} className="overflow-x-auto overflow-y-visible rounded-lg border-2 border-cyan-300/70 bg-slate-950/55 p-3 shadow-[0_0_0_1px_rgba(14,165,233,0.24),0_14px_28px_rgba(0,0,0,0.28)]">
+                          <div className="grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] items-stretch gap-2">
                               <div className="space-y-3">
-                              <div className="grid grid-cols-5 gap-2">
-                                  <div className={`${tileBaseClass} flex flex-col`}>
+                              <div className="grid auto-rows-fr grid-cols-5 items-stretch gap-2">
+                                  <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>{isFlightSchoolCurrencyRequest ? 'Pilot' : 'Crew'}</div>
                                       {isFixedCrewModel ? (
                                         <div className="space-y-2">
@@ -3557,7 +3557,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           </select>
                                       )}
                                   </div>
-                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                  <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>{isFlightSchoolCurrencyRequest ? 'Second Pilot' : 'PIC'}</div>
                                       {isFixedCrewModel ? (
                                         <div className="space-y-2">
@@ -3638,7 +3638,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500">N/A</div>
                                       )}
                                   </div>
-                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                  <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Event</div>
                                       <select value={req.event} onChange={e => applyCurrencyProfile(req, e.target.value)} className={controlClass}>
                                           <option value="">Select profile</option>
@@ -3646,7 +3646,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                       </select>
                                   </div>
                                   {!isFlightSchoolCurrencyRequest && (
-                                      <div className={`${tileBaseClass} flex flex-col`}>
+                                      <div className={tileBaseClass}>
                                           <div className={tileLabelClass}>Crew Composition</div>
                                           <select
                                               value={crewRequirementPresetIdFor(req.crewRequirement)}
@@ -3668,7 +3668,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           </select>
                                       </div>
                                   )}
-                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                  <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>CONFIG</div>
                                       <div className="[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white">
                                           <AircraftConfigSelect
@@ -3678,7 +3678,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           />
                                       </div>
                                   </div>
-                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                  <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>No. of A/C</div>
                                       <input
                                           type="number"
@@ -3689,21 +3689,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           className={controlClass}
                                       />
                                   </div>
-                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                  <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Currency Expire</div>
                                       <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
                                   </div>
-                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                  <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Date Requested</div>
                                       <input type="date" value={req.dateRequested} onChange={e => onUpdateSctRequest(req.id, 'dateRequested', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
                                   </div>
-                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                  <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Days to Expire</div>
                                       <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs">
                                           {expiryInfo ? <span className={`font-bold ${expiryInfo.color}`}>{expiryInfo.days}</span> : <span className="text-gray-500">-</span>}
                                       </div>
                                   </div>
-                                  <div className={`${tileBaseClass} flex flex-col`}>
+                                  <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Priority</div>
                                       <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className={controlClass}>
                                           <option value="High">High</option>
@@ -3713,7 +3713,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </div>
                               </div>
                               </div>
-                              <div className="flex h-[288px] w-16 flex-col items-center justify-center gap-3">
+                              <div className="flex h-full min-h-[64px] w-16 flex-col items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-950/75 p-1">
                                   {req.submitted ? (
                                       <span className={statusButtonClass} style={{ color: '#22c55e' }}>Submitted</span>
                                   ) : (
