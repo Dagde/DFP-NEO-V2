@@ -1101,7 +1101,9 @@ const DfpSidePanelTimeline: React.FC<{
     const [activeAssistAirfieldField, setActiveAssistAirfieldField] = useState<'dep' | 'arrive' | null>(null);
     const [assistWindProfiles, setAssistWindProfiles] = useState<Array<{ lat: number; lon: number; flightLevel: number; windFrom: number; windSpeed: number }>>([]);
     const [assistCallsign, setAssistCallsign] = useState('');
+    const [assistManualCallsigns, setAssistManualCallsigns] = useState<string[]>([]);
     const lastAutoAssistCallsignRef = useRef('');
+    const lastAutoAssistManualCallsignsRef = useRef<string[]>([]);
     const [assistUnitCallsignBase, setAssistUnitCallsignBase] = useState('');
     const [assistUnitCallsignNumber, setAssistUnitCallsignNumber] = useState(0);
     const [selectedFixedCrewGroup, setSelectedFixedCrewGroup] = useState('');
@@ -1581,6 +1583,30 @@ const DfpSidePanelTimeline: React.FC<{
         });
         return map;
     }, [instructors]);
+    useEffect(() => {
+        if (activeAssistSection !== 'details' || isFixedCrewNeoAssist || selectedResourceKind === 'deployment') return;
+        const hasSecondSeat = effectiveAssistManualEventSource === 'lmp' || (!isSingleSeatFlightResource && assistManualFlightType === 'Dual');
+        const nextLength = selectedResourceKind === 'flight' ? Math.max(1, assistFormationSize) : 1;
+        setAssistManualCallsigns(prev => {
+            let changed = prev.length !== nextLength;
+            const next = Array.from({ length: nextLength }, (_, positionIndex) => {
+                const picIndex = hasSecondSeat ? positionIndex * 2 : positionIndex;
+                const picName = selectedCrewNames[picIndex] || '';
+                const autoCallsign = String(staffByAssistName.get(picName)?.callsign || '').trim().toUpperCase();
+                const current = String(prev[positionIndex] || '').trim();
+                const previousAuto = lastAutoAssistManualCallsignsRef.current[positionIndex] || '';
+                if (autoCallsign && (!current || current === previousAuto)) {
+                    if (current !== autoCallsign) changed = true;
+                    lastAutoAssistManualCallsignsRef.current[positionIndex] = autoCallsign;
+                    return autoCallsign;
+                }
+                return current;
+            });
+            lastAutoAssistManualCallsignsRef.current = lastAutoAssistManualCallsignsRef.current.slice(0, nextLength);
+            if (!changed && next.join('|') === prev.join('|')) return prev;
+            return next;
+        });
+    }, [activeAssistSection, assistFormationSize, assistManualFlightType, effectiveAssistManualEventSource, isFixedCrewNeoAssist, isSingleSeatFlightResource, selectedCrewNames, selectedResourceKind, staffByAssistName]);
     const getAssistTraineeName = useCallback((person: any): string => (
         String(person?.name || person?.fullName || '').trim()
     ), []);
@@ -2025,6 +2051,7 @@ const DfpSidePanelTimeline: React.FC<{
             return {
                 pic: selectedCrewNames[picIndex] || '',
                 crew: hasSecondSeat ? selectedCrewNames[crewIndex] || '' : '',
+                callsign: String(assistManualCallsigns[index] || '').trim(),
             };
         })
         : [];
@@ -2043,7 +2070,7 @@ const DfpSidePanelTimeline: React.FC<{
             ? ''
             : isFixedCrewNeoAssist && selectedFixedCrewGroup
                 ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup)
-                : activeAssistSection === 'details' && effectiveAssistManualFlightType !== 'Dual'
+                : activeAssistSection === 'details' && effectiveAssistManualEventSource !== 'lmp' && effectiveAssistManualFlightType !== 'Dual'
                     ? ''
                     : selectedSupportCrewName,
         group: isDeploymentAssistTile ? undefined : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : undefined,
@@ -2062,7 +2089,7 @@ const DfpSidePanelTimeline: React.FC<{
         locationType: isDeploymentAssistTile ? 'Land Away' : assistOrigin !== assistDestination ? 'Land Away' : 'Local',
         origin: isDeploymentAssistTile ? 'DEPLOY' : assistOrigin,
         destination: isDeploymentAssistTile ? 'DEPLOY' : assistDestination,
-        callsign: isDeploymentAssistTile ? '' : isFixedCrewNeoAssist ? fixedCrewAssistCallsign : getAssistFormationCallsign(1),
+        callsign: isDeploymentAssistTile ? '' : isFixedCrewNeoAssist ? fixedCrewAssistCallsign : (assistManualCrewPairs[0]?.callsign || getAssistFormationCallsign(1)),
         aircraftNumber: selectedResourceKind === 'flight' ? (selectedAircraftNumber.trim() || 'TBA') : undefined,
         area: selectedAssignedArea && selectedAssignedArea !== 'TBA' ? selectedAssignedArea : undefined,
         formationType: !isDeploymentAssistTile && assistFormationSize > 1 ? 'NEO Assist Formation' : undefined,
@@ -2089,6 +2116,7 @@ const DfpSidePanelTimeline: React.FC<{
         assistManualCrewSelectionOrder,
         assistManualCrewPairs,
         assistManualEventCode,
+        assistManualCallsigns,
         assistCallsign,
         assistConfigId,
         assistCurrencyDate,
@@ -2218,7 +2246,8 @@ const DfpSidePanelTimeline: React.FC<{
             time.style.whiteSpace = 'nowrap';
 
             const name = document.createElement('span');
-            name.textContent = previewCrewName;
+            const manualPreviewPair = (assistDraftEvent as any).manualCrewPairs?.[position - 1] || null;
+            name.textContent = manualPreviewPair?.pic || previewCrewName;
             name.style.overflow = 'hidden';
             name.style.textOverflow = 'ellipsis';
             name.style.whiteSpace = 'nowrap';
@@ -2260,7 +2289,9 @@ const DfpSidePanelTimeline: React.FC<{
             flightType.style.color = '#ffffff';
 
             const areaCallsign = document.createElement('span');
-            const previewFormationCallsign = isDeploymentAssistTile ? 'DEPLOY' : assistFormationSize > 1 ? getAssistFormationCallsign(position) : previewCallsign;
+            const previewFormationCallsign = isDeploymentAssistTile
+                ? 'DEPLOY'
+                : manualPreviewPair?.callsign || (assistFormationSize > 1 ? getAssistFormationCallsign(position) : previewCallsign);
             areaCallsign.textContent = `${selectedAssignedArea && selectedAssignedArea !== 'TBA' ? `${selectedAssignedArea} ` : ''}${previewFormationCallsign || 'CSIGN'}`;
             areaCallsign.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
             areaCallsign.style.textAlign = 'right';
@@ -5233,6 +5264,19 @@ const DfpSidePanelTimeline: React.FC<{
             const getManualCrewSlotValue = (positionIndex: number, role: 'pic' | 'crew') => (
                 selectedCrewNames[getManualCrewSlotIndex(positionIndex, role)] || ''
             );
+            const getManualCallsignValue = (positionIndex: number) => (
+                assistManualCallsigns[positionIndex] || ''
+            );
+            const updateManualCallsign = (positionIndex: number, value: string) => {
+                const nextValue = value.toUpperCase();
+                lastAutoAssistManualCallsignsRef.current[positionIndex] = '';
+                setAssistManualCallsigns(prev => {
+                    const next = Array.from({ length: Math.max(1, manualCrewPairCount) }, (_, index) => prev[index] || '');
+                    next[positionIndex] = nextValue;
+                    if (positionIndex === 0) setAssistCallsign(nextValue);
+                    return next;
+                });
+            };
             const updateManualCrewSlot = (positionIndex: number, role: 'pic' | 'crew', value: string) => {
                 const slotIndex = getManualCrewSlotIndex(positionIndex, role);
                 setSelectedCrewNames(prev => {
@@ -5408,11 +5452,12 @@ const DfpSidePanelTimeline: React.FC<{
                                     {Array.from({ length: manualCrewPairCount }, (_, positionIndex) => {
                                         const picValue = getManualCrewSlotValue(positionIndex, 'pic');
                                         const crewValue = getManualCrewSlotValue(positionIndex, 'crew');
+                                        const callsignValue = getManualCallsignValue(positionIndex);
                                         const excludedForPic = new Set(selectedCrewNames.filter((name, index) => Boolean(name) && index !== getManualCrewSlotIndex(positionIndex, 'pic')));
                                         const excludedForCrew = new Set(selectedCrewNames.filter((name, index) => Boolean(name) && index !== getManualCrewSlotIndex(positionIndex, 'crew')));
                                         if (picValue) excludedForCrew.add(picValue);
                                         return (
-                                            <div key={`assist-manual-crew-row-${positionIndex}`} className="grid grid-cols-[42px_minmax(0,1fr)_minmax(0,1fr)] items-end gap-1.5">
+                                            <div key={`assist-manual-crew-row-${positionIndex}`} className="grid grid-cols-[42px_minmax(0,1fr)_minmax(0,1fr)_minmax(96px,0.72fr)] items-end gap-1.5">
                                                 <div className="pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                                                     {manualCrewPairCount > 1 ? `#${positionIndex + 1}` : 'Crew'}
                                                 </div>
@@ -5444,6 +5489,16 @@ const DfpSidePanelTimeline: React.FC<{
                                                     ) : (
                                                         <div className={mutedCompactFieldClass}>N/A</div>
                                                     )}
+                                                </label>
+                                                <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                                    Callsign
+                                                    <input
+                                                        list="neo-assist-callsign-options"
+                                                        value={callsignValue}
+                                                        onChange={event => updateManualCallsign(positionIndex, event.target.value)}
+                                                        className={compactFieldClass}
+                                                        placeholder={positionIndex === 0 ? 'Auto from PIC' : 'CSIGN'}
+                                                    />
                                                 </label>
                                             </div>
                                         );
@@ -5487,23 +5542,11 @@ const DfpSidePanelTimeline: React.FC<{
                                         </select>
                                     </div>
                                 </div>
-                            ) : (
-                                <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                    Callsign
-                                    <input
-                                        list="neo-assist-callsign-options"
-                                        value={assistCallsign}
-                                        onChange={event => {
-                                            lastAutoAssistCallsignRef.current = '';
-                                            setAssistCallsign(event.target.value);
-                                        }}
-                                        className={compactFieldClass}
-                                        placeholder="Auto from PIC"
-                                    />
-                                    <datalist id="neo-assist-callsign-options">
-                                        {callsignOptions.map(callsign => <option key={callsign} value={callsign} />)}
-                                    </datalist>
-                                </label>
+                            ) : null}
+                            {!isFixedCrewNeoAssist && (
+                                <datalist id="neo-assist-callsign-options">
+                                    {callsignOptions.map(callsign => <option key={callsign} value={callsign} />)}
+                                </datalist>
                             )}
                         </>
                     )}
@@ -47401,6 +47444,7 @@ appliedUpdates.forEach(update => {
             ? (draft as any).manualCrewPairs.map((pair: any) => ({
                 pic: String(pair?.pic || '').trim(),
                 crew: String(pair?.crew || '').trim(),
+                callsign: String(pair?.callsign || '').trim(),
             }))
             : [];
 
@@ -47429,7 +47473,7 @@ appliedUpdates.forEach(update => {
                 preStart: preOffset > 0 ? startTime - preOffset : undefined,
                 postEnd: postOffset > 0 ? startTime + draft.duration + postOffset : undefined,
                 aircraftNumber: isActiveAircraftResource(resourceId) ? draft.aircraftNumber : undefined,
-                callsign: formationSize > 1 ? `${callsignBase}${index + 1}` : draft.callsign,
+                callsign: manualCrewPair?.callsign || (formationSize > 1 ? `${callsignBase}${index + 1}` : draft.callsign),
                 formationId,
                 formationType: formationSize > 1 ? 'NEO Assist Formation' : draft.formationType,
                 formationPosition: formationSize > 1 ? index + 1 : draft.formationPosition,

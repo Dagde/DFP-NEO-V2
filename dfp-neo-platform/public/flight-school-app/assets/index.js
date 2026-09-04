@@ -101716,7 +101716,9 @@ const DfpSidePanelTimeline = ({
   const [activeAssistAirfieldField, setActiveAssistAirfieldField] = reactExports.useState(null);
   const [assistWindProfiles, setAssistWindProfiles] = reactExports.useState([]);
   const [assistCallsign, setAssistCallsign] = reactExports.useState("");
+  const [assistManualCallsigns, setAssistManualCallsigns] = reactExports.useState([]);
   const lastAutoAssistCallsignRef = reactExports.useRef("");
+  const lastAutoAssistManualCallsignsRef = reactExports.useRef([]);
   const [assistUnitCallsignBase, setAssistUnitCallsignBase] = reactExports.useState("");
   const [assistUnitCallsignNumber, setAssistUnitCallsignNumber] = reactExports.useState(0);
   const [selectedFixedCrewGroup, setSelectedFixedCrewGroup] = reactExports.useState("");
@@ -102080,6 +102082,30 @@ const DfpSidePanelTimeline = ({
     });
     return map;
   }, [instructors]);
+  reactExports.useEffect(() => {
+    if (activeAssistSection !== "details" || isFixedCrewNeoAssist || selectedResourceKind === "deployment") return;
+    const hasSecondSeat = effectiveAssistManualEventSource === "lmp" || !isSingleSeatFlightResource && assistManualFlightType === "Dual";
+    const nextLength = selectedResourceKind === "flight" ? Math.max(1, assistFormationSize) : 1;
+    setAssistManualCallsigns((prev) => {
+      let changed = prev.length !== nextLength;
+      const next = Array.from({ length: nextLength }, (_, positionIndex) => {
+        const picIndex = hasSecondSeat ? positionIndex * 2 : positionIndex;
+        const picName = selectedCrewNames[picIndex] || "";
+        const autoCallsign = String(staffByAssistName.get(picName)?.callsign || "").trim().toUpperCase();
+        const current = String(prev[positionIndex] || "").trim();
+        const previousAuto = lastAutoAssistManualCallsignsRef.current[positionIndex] || "";
+        if (autoCallsign && (!current || current === previousAuto)) {
+          if (current !== autoCallsign) changed = true;
+          lastAutoAssistManualCallsignsRef.current[positionIndex] = autoCallsign;
+          return autoCallsign;
+        }
+        return current;
+      });
+      lastAutoAssistManualCallsignsRef.current = lastAutoAssistManualCallsignsRef.current.slice(0, nextLength);
+      if (!changed && next.join("|") === prev.join("|")) return prev;
+      return next;
+    });
+  }, [activeAssistSection, assistFormationSize, assistManualFlightType, effectiveAssistManualEventSource, isFixedCrewNeoAssist, isSingleSeatFlightResource, selectedCrewNames, selectedResourceKind, staffByAssistName]);
   const getAssistTraineeName = reactExports.useCallback((person) => String(person?.name || person?.fullName || "").trim(), []);
   const traineeByAssistName = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
@@ -102398,7 +102424,8 @@ const DfpSidePanelTimeline = ({
     const crewIndex = picIndex + 1;
     return {
       pic: selectedCrewNames[picIndex] || "",
-      crew: hasSecondSeat ? selectedCrewNames[crewIndex] || "" : ""
+      crew: hasSecondSeat ? selectedCrewNames[crewIndex] || "" : "",
+      callsign: String(assistManualCallsigns[index] || "").trim()
     };
   }) : [];
   const assistDraftEvent = reactExports.useMemo(() => ({
@@ -102407,7 +102434,7 @@ const DfpSidePanelTimeline = ({
     type: isDeploymentAssistTile ? "deployment" : selectedResourceKind === "ftd" ? "ftd" : selectedResourceKind === "cpt" ? "cpt" : "flight",
     pilot: isDeploymentAssistTile ? "" : selectedPilotCrewName || "Bloggs, Joe",
     instructor: isDeploymentAssistTile ? "" : selectedPilotCrewName || "Bloggs, Joe",
-    crew: isDeploymentAssistTile ? "" : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : activeAssistSection === "details" && effectiveAssistManualFlightType !== "Dual" ? "" : selectedSupportCrewName,
+    crew: isDeploymentAssistTile ? "" : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : activeAssistSection === "details" && effectiveAssistManualEventSource !== "lmp" && effectiveAssistManualFlightType !== "Dual" ? "" : selectedSupportCrewName,
     group: isDeploymentAssistTile ? void 0 : isFixedCrewNeoAssist && selectedFixedCrewGroup ? formatFixedCrewDisplayGroup(selectedFixedCrewGroup) : void 0,
     flightNumber: assistEventLabel,
     eventCode: isDeploymentAssistTile ? void 0 : activeAssistSection === "details" ? assistManualEventCode : selectedSyllabusItem?.code,
@@ -102424,7 +102451,7 @@ const DfpSidePanelTimeline = ({
     locationType: isDeploymentAssistTile ? "Land Away" : assistOrigin !== assistDestination ? "Land Away" : "Local",
     origin: isDeploymentAssistTile ? "DEPLOY" : assistOrigin,
     destination: isDeploymentAssistTile ? "DEPLOY" : assistDestination,
-    callsign: isDeploymentAssistTile ? "" : isFixedCrewNeoAssist ? fixedCrewAssistCallsign : getAssistFormationCallsign(1),
+    callsign: isDeploymentAssistTile ? "" : isFixedCrewNeoAssist ? fixedCrewAssistCallsign : assistManualCrewPairs[0]?.callsign || getAssistFormationCallsign(1),
     aircraftNumber: selectedResourceKind === "flight" ? selectedAircraftNumber.trim() || "TBA" : void 0,
     area: selectedAssignedArea && selectedAssignedArea !== "TBA" ? selectedAssignedArea : void 0,
     formationType: !isDeploymentAssistTile && assistFormationSize > 1 ? "NEO Assist Formation" : void 0,
@@ -102451,6 +102478,7 @@ const DfpSidePanelTimeline = ({
     assistManualCrewSelectionOrder,
     assistManualCrewPairs,
     assistManualEventCode,
+    assistManualCallsigns,
     assistCallsign,
     assistConfigId,
     assistCurrencyDate,
@@ -102571,7 +102599,8 @@ const DfpSidePanelTimeline = ({
       time.style.color = "rgba(255,255,255,0.72)";
       time.style.whiteSpace = "nowrap";
       const name = document.createElement("span");
-      name.textContent = previewCrewName;
+      const manualPreviewPair = assistDraftEvent.manualCrewPairs?.[position - 1] || null;
+      name.textContent = manualPreviewPair?.pic || previewCrewName;
       name.style.overflow = "hidden";
       name.style.textOverflow = "ellipsis";
       name.style.whiteSpace = "nowrap";
@@ -102603,7 +102632,7 @@ const DfpSidePanelTimeline = ({
       flightType.style.padding = "1px 4px";
       flightType.style.color = "#ffffff";
       const areaCallsign = document.createElement("span");
-      const previewFormationCallsign = isDeploymentAssistTile ? "DEPLOY" : assistFormationSize > 1 ? getAssistFormationCallsign(position) : previewCallsign;
+      const previewFormationCallsign = isDeploymentAssistTile ? "DEPLOY" : manualPreviewPair?.callsign || (assistFormationSize > 1 ? getAssistFormationCallsign(position) : previewCallsign);
       areaCallsign.textContent = `${selectedAssignedArea && selectedAssignedArea !== "TBA" ? `${selectedAssignedArea} ` : ""}${previewFormationCallsign || "CSIGN"}`;
       areaCallsign.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
       areaCallsign.style.textAlign = "right";
@@ -105245,6 +105274,17 @@ This cannot be undone.`,
       const manualRequiresSecondSeat = isManualLmpEventSource || effectiveAssistManualFlightType === "Dual";
       const getManualCrewSlotIndex = (positionIndex, role) => manualRequiresSecondSeat ? positionIndex * 2 + (role === "crew" ? 1 : 0) : positionIndex;
       const getManualCrewSlotValue = (positionIndex, role) => selectedCrewNames[getManualCrewSlotIndex(positionIndex, role)] || "";
+      const getManualCallsignValue = (positionIndex) => assistManualCallsigns[positionIndex] || "";
+      const updateManualCallsign = (positionIndex, value) => {
+        const nextValue = value.toUpperCase();
+        lastAutoAssistManualCallsignsRef.current[positionIndex] = "";
+        setAssistManualCallsigns((prev) => {
+          const next = Array.from({ length: Math.max(1, manualCrewPairCount) }, (_, index) => prev[index] || "");
+          next[positionIndex] = nextValue;
+          if (positionIndex === 0) setAssistCallsign(nextValue);
+          return next;
+        });
+      };
       const updateManualCrewSlot = (positionIndex, role, value) => {
         const slotIndex = getManualCrewSlotIndex(positionIndex, role);
         setSelectedCrewNames((prev) => {
@@ -105393,10 +105433,11 @@ This cannot be undone.`,
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-span-5 grid grid-cols-1 gap-1", children: Array.from({ length: manualCrewPairCount }, (_, positionIndex) => {
             const picValue = getManualCrewSlotValue(positionIndex, "pic");
             const crewValue = getManualCrewSlotValue(positionIndex, "crew");
+            const callsignValue = getManualCallsignValue(positionIndex);
             const excludedForPic = new Set(selectedCrewNames.filter((name, index) => Boolean(name) && index !== getManualCrewSlotIndex(positionIndex, "pic")));
             const excludedForCrew = new Set(selectedCrewNames.filter((name, index) => Boolean(name) && index !== getManualCrewSlotIndex(positionIndex, "crew")));
             if (picValue) excludedForCrew.add(picValue);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[42px_minmax(0,1fr)_minmax(0,1fr)] items-end gap-1.5", children: [
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[42px_minmax(0,1fr)_minmax(0,1fr)_minmax(96px,0.72fr)] items-end gap-1.5", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: manualCrewPairCount > 1 ? `#${positionIndex + 1}` : "Crew" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
                 "PIC",
@@ -105428,6 +105469,19 @@ This cannot be undone.`,
                     ]
                   }
                 ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: mutedCompactFieldClass, children: "N/A" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+                "Callsign",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    list: "neo-assist-callsign-options",
+                    value: callsignValue,
+                    onChange: (event) => updateManualCallsign(positionIndex, event.target.value),
+                    className: compactFieldClass,
+                    placeholder: positionIndex === 0 ? "Auto from PIC" : "CSIGN"
+                  }
+                )
               ] })
             ] }, `assist-manual-crew-row-${positionIndex}`);
           }) }),
@@ -105462,23 +105516,8 @@ This cannot be undone.`,
                 }
               )
             ] })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Callsign",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                list: "neo-assist-callsign-options",
-                value: assistCallsign,
-                onChange: (event) => {
-                  lastAutoAssistCallsignRef.current = "";
-                  setAssistCallsign(event.target.value);
-                },
-                className: compactFieldClass,
-                placeholder: "Auto from PIC"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-callsign-options", children: callsignOptions.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: callsign }, callsign)) })
-          ] })
+          ] }) : null,
+          !isFixedCrewNeoAssist && /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "neo-assist-callsign-options", children: callsignOptions.map((callsign) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: callsign }, callsign)) })
         ] }),
         isDeploymentAssistTile && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-span-4", "aria-hidden": "true" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-span-5 grid grid-cols-4 gap-1.5", children: [
@@ -139427,7 +139466,8 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     const crewSelectionOrder = Array.isArray(draft.crewSelectionOrder) ? draft.crewSelectionOrder.filter((name) => typeof name === "string" && name.trim().length > 0) : [];
     const manualCrewPairs = Array.isArray(draft.manualCrewPairs) ? draft.manualCrewPairs.map((pair) => ({
       pic: String(pair?.pic || "").trim(),
-      crew: String(pair?.crew || "").trim()
+      crew: String(pair?.crew || "").trim(),
+      callsign: String(pair?.callsign || "").trim()
     })) : [];
     return Array.from({ length: formationSize }, (_, index) => {
       const resourceId = formationSize > 1 ? availableFormationResources[index] || firstResourceId : firstResourceId;
@@ -139447,7 +139487,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         preStart: preOffset > 0 ? startTime - preOffset : void 0,
         postEnd: postOffset > 0 ? startTime + draft.duration + postOffset : void 0,
         aircraftNumber: isActiveAircraftResource(resourceId) ? draft.aircraftNumber : void 0,
-        callsign: formationSize > 1 ? `${callsignBase}${index + 1}` : draft.callsign,
+        callsign: manualCrewPair?.callsign || (formationSize > 1 ? `${callsignBase}${index + 1}` : draft.callsign),
         formationId,
         formationType: formationSize > 1 ? "NEO Assist Formation" : draft.formationType,
         formationPosition: formationSize > 1 ? index + 1 : draft.formationPosition,
