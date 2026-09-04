@@ -46172,7 +46172,7 @@ const TaskingRequestTable = ({
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto bg-cyan-950/80 transition hover:bg-cyan-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryRowClass, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} flex items-center justify-center`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `inline-flex items-center gap-0.5 ${canSubmit ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `inline-flex items-center gap-1 text-[12px] leading-none ${canSubmit ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -46181,12 +46181,12 @@ const TaskingRequestTable = ({
                   checked: request.submitted && !request.ignored,
                   disabled: !canSubmit,
                   onChange: () => onSetTaskingSchedulerPriority(request.id, schedulerPriority),
-                  className: "h-3 w-3 accent-cyan-400"
+                  className: "h-4 w-4 accent-cyan-400"
                 }
               ),
               "Y"
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex cursor-pointer items-center gap-0.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex cursor-pointer items-center gap-1 text-[12px] leading-none", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -46194,7 +46194,7 @@ const TaskingRequestTable = ({
                   name: `build-task-schedule-${request.id}`,
                   checked: request.ignored || !request.submitted,
                   onChange: () => onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true }),
-                  className: "h-3 w-3 accent-cyan-400"
+                  className: "h-4 w-4 accent-cyan-400"
                 }
               ),
               "N"

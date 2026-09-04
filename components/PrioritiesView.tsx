@@ -858,24 +858,24 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <div className={taskingSummaryRowClass}>
               <div className={`${taskingSummaryCellClass} flex items-center justify-center`}>
                 <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100">
-                  <label className={`inline-flex items-center gap-0.5 ${canSubmit ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                  <label className={`inline-flex items-center gap-1 text-[12px] leading-none ${canSubmit ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                     <input
                       type="radio"
                       name={`build-task-schedule-${request.id}`}
                       checked={request.submitted && !request.ignored}
                       disabled={!canSubmit}
                       onChange={() => onSetTaskingSchedulerPriority(request.id, schedulerPriority)}
-                      className="h-3 w-3 accent-cyan-400"
+                      className="h-4 w-4 accent-cyan-400"
                     />
                     Y
                   </label>
-                  <label className="inline-flex cursor-pointer items-center gap-0.5">
+                  <label className="inline-flex cursor-pointer items-center gap-1 text-[12px] leading-none">
                     <input
                       type="radio"
                       name={`build-task-schedule-${request.id}`}
                       checked={request.ignored || !request.submitted}
                       onChange={() => onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true })}
-                      className="h-3 w-3 accent-cyan-400"
+                      className="h-4 w-4 accent-cyan-400"
                     />
                     N
                   </label>
