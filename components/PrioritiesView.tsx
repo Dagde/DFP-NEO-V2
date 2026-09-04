@@ -60,7 +60,7 @@ import {
 } from '../utils/fixedCrewAvailability';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
-import { showDarkAlert } from './DarkMessageModal';
+import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 
 type FixedCrewTrainingStreamDisplay = FixedCrewTrainingStreamPriority & { eventCount?: number };
 type PriorityAllocationModel = 'flight_school' | 'air_combat' | 'fixed_crew';
@@ -725,8 +725,8 @@ const taskingPanelClass = 'flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = 'text-[10px] font-black uppercase tracking-[0.18em] text-slate-500';
 const taskingPanelHintClass = 'mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500';
 const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500';
-const taskingSummaryHeaderClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400';
-const taskingSummaryRowClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 text-[12px]';
+const taskingSummaryHeaderClass = 'grid min-w-[1124px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px_32px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400';
+const taskingSummaryRowClass = 'grid min-w-[1124px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px_32px] gap-0 text-[12px]';
 const taskingSummaryCellClass = 'border border-slate-700/70 px-2 py-2';
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const formatTaskingSummaryDate = (dateString: string | undefined): string => {
@@ -808,6 +808,12 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       return next;
     });
   };
+  const confirmRemoveTaskingRequest = async (request: TaskingRequest) => {
+    const label = request.tasking.trim() || 'this directed task';
+    const confirmed = await showDarkConfirm(`Delete ${label} from Directed Tasks? This cannot be undone.`, 'Delete Directed Task', 'warning');
+    if (!confirmed) return;
+    onRemoveTaskingRequest(request.id);
+  };
 
   return (
   <div className="space-y-3 pb-24">
@@ -831,6 +837,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
           <span className={taskingSummaryHeaderCellClass}>Priority</span>
           <span className={taskingSummaryHeaderCellClass}>Status</span>
           <span className={taskingSummaryHeaderCellClass}>Edit</span>
+          <span className={taskingSummaryHeaderCellClass} aria-label="Delete"></span>
         </div>
       </div>
     )}
@@ -899,6 +906,20 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                   aria-expanded={isExpanded}
                 >
                   {isExpanded ? 'Done' : 'Edit'}
+                </button>
+              </div>
+              <div className={`${taskingSummaryCellClass} flex items-center justify-center px-1`}>
+                <button
+                  type="button"
+                  aria-label="Delete directed task"
+                  title="Delete directed task"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void confirmRemoveTaskingRequest(request);
+                  }}
+                  className="inline-flex h-6 w-6 items-center justify-center transition-opacity hover:opacity-75 focus:outline-none focus:ring-1 focus:ring-red-500/60"
+                >
+                  <TrashIcon aria-hidden="true" className="h-4 w-4" style={{ color: '#dc2626', stroke: '#dc2626' }} />
                 </button>
               </div>
             </div>

@@ -46058,8 +46058,8 @@ const taskingPanelClass = "flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18em] text-slate-500";
 const taskingPanelHintClass = "mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500";
 const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
-const taskingSummaryHeaderClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
-const taskingSummaryRowClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 text-[12px]";
+const taskingSummaryHeaderClass = "grid min-w-[1124px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px_32px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
+const taskingSummaryRowClass = "grid min-w-[1124px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px_32px] gap-0 text-[12px]";
 const taskingSummaryCellClass = "border border-slate-700/70 px-2 py-2";
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const formatTaskingSummaryDate = (dateString) => {
@@ -46131,6 +46131,12 @@ const TaskingRequestTable = ({
       return next;
     });
   };
+  const confirmRemoveTaskingRequest = async (request) => {
+    const label = request.tasking.trim() || "this directed task";
+    const confirmed = await showDarkConfirm(`Delete ${label} from Directed Tasks? This cannot be undone.`, "Delete Directed Task", "warning");
+    if (!confirmed) return;
+    onRemoveTaskingRequest(request.id);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
     taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
     taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryHeaderClass, children: [
@@ -46145,7 +46151,8 @@ const TaskingRequestTable = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "CONFIG" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Priority" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Status" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Edit" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Edit" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, "aria-label": "Delete" })
     ] }) }),
     taskingRequests.map((request) => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
@@ -46222,6 +46229,20 @@ const TaskingRequestTable = ({
               className: "w-[48px] rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10",
               "aria-expanded": isExpanded,
               children: isExpanded ? "Done" : "Edit"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} flex items-center justify-center px-1`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              "aria-label": "Delete directed task",
+              title: "Delete directed task",
+              onClick: (event) => {
+                event.stopPropagation();
+                void confirmRemoveTaskingRequest(request);
+              },
+              className: "inline-flex h-6 w-6 items-center justify-center transition-opacity hover:opacity-75 focus:outline-none focus:ring-1 focus:ring-red-500/60",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-4 w-4", style: { color: "#dc2626", stroke: "#dc2626" } })
             }
           ) })
         ] }) }),
