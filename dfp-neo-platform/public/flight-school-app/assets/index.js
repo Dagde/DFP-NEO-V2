@@ -49331,11 +49331,18 @@ const PrioritiesView = ({
         return;
       }
       if (event.sctRequestId) {
-        onPatchSctRequest(event.sctRequestId, { submitted: false, ignored: true, includeInBuild: false, pushToNeoBuild: false }, getSctRequestType(event));
+        const requestType = getSctRequestType(event);
+        onPatchSctRequest(event.sctRequestId, { submitted: false, ignored: true, includeInBuild: false, pushToNeoBuild: false }, requestType);
+        onRemoveSctRequest(event.sctRequestId, requestType);
         appendPriorityTableTrace("HIGHEST_PRIORITY_DELETE_SCT_SOURCE_IGNORED", {
           eventId: event.id,
           sctRequestId: event.sctRequestId,
-          requestType: getSctRequestType(event)
+          requestType
+        });
+        appendPriorityTableTrace("HIGHEST_PRIORITY_DELETE_SCT_SOURCE_DELETE_REQUESTED", {
+          eventId: event.id,
+          sctRequestId: event.sctRequestId,
+          requestType
         });
       }
       if (event.currencyDraftId) {
