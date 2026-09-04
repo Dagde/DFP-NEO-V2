@@ -7098,6 +7098,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 <div className="flex justify-center rounded-lg border border-slate-300 bg-white p-3 shadow-sm">
                                     <div
                                         draggable
+                                        onPointerDown={onManualTileDragStart}
                                         onDragStart={startAssistTileDrag}
                                         onDrag={updateAssistTileDrag}
                                         onDragOver={updateAssistTileDrag}
@@ -54548,7 +54549,7 @@ appliedUpdates.forEach(update => {
                     </div>
                     {activeView === 'Program Schedule' && (
                         <aside
-                            className={`absolute inset-y-0 right-0 z-[1000] w-[calc(100%-160px)] max-w-none border-l border-slate-300 bg-slate-100 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-300 ease-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
+                            className={`absolute inset-y-0 right-0 z-[1000] w-[calc(100%-160px)] max-w-none border-l border-slate-300 bg-slate-100 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-500 ease-in-out ${showDfpSidePanel ? 'translate-x-0' : 'translate-x-full'}`}
                             aria-hidden={!showDfpSidePanel}
                         >
                             <button

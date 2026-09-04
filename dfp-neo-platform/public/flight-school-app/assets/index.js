@@ -106978,6 +106978,7 @@ This cannot be undone.`,
           "div",
           {
             draggable: true,
+            onPointerDown: onManualTileDragStart,
             onDragStart: startAssistTileDrag,
             onDrag: updateAssistTileDrag,
             onDragOver: updateAssistTileDrag,
@@ -145590,7 +145591,7 @@ Do you want to replace the existing entry?`,
               activeView === "Program Schedule" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "aside",
                 {
-                  className: `absolute inset-y-0 right-0 z-[1000] w-[calc(100%-160px)] max-w-none border-l border-slate-300 bg-slate-100 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-300 ease-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
+                  className: `absolute inset-y-0 right-0 z-[1000] w-[calc(100%-160px)] max-w-none border-l border-slate-300 bg-slate-100 shadow-[-18px_0_36px_rgba(0,0,0,0.28)] transition-transform duration-500 ease-in-out ${showDfpSidePanel ? "translate-x-0" : "translate-x-full"}`,
                   "aria-hidden": !showDfpSidePanel,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(
