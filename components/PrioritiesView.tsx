@@ -3451,13 +3451,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       }, type);
     };
     const isFlightSchoolCurrencyRequestTable = priorityAllocationModel === 'flight_school';
-    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? 'min-w-[1206px]' : 'min-w-[1292px]';
+    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? 'min-w-[1192px]' : 'min-w-[1278px]';
     const sctTableHeaderColumnsClass = isFlightSchoolCurrencyRequestTable
-      ? 'grid-cols-[136px_140px_140px_150px_82px_120px_120px_96px_96px_66px_60px]'
-      : 'grid-cols-[136px_132px_132px_140px_150px_74px_112px_112px_90px_88px_66px_60px]';
+      ? 'grid-cols-[136px_140px_140px_150px_82px_113px_113px_96px_96px_66px_60px]'
+      : 'grid-cols-[136px_132px_132px_140px_150px_74px_105px_105px_90px_88px_66px_60px]';
     const sctTableBodyColumnsClass = isFlightSchoolCurrencyRequestTable
-      ? 'grid-cols-[136px_140px_140px_150px_82px_120px_120px_96px_96px_66px_60px]'
-      : 'grid-cols-[136px_132px_132px_140px_150px_74px_112px_112px_90px_88px_66px_60px]';
+      ? 'grid-cols-[136px_140px_140px_150px_82px_113px_113px_96px_96px_66px_60px]'
+      : 'grid-cols-[136px_132px_132px_140px_150px_74px_105px_105px_90px_88px_66px_60px]';
     const getSctEditKey = (request: SctRequest) => `${type}:${request.id}`;
     const toggleSctRequestEditing = (request: SctRequest) => {
       const key = getSctEditKey(request);
