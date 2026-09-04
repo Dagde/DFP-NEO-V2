@@ -2182,26 +2182,32 @@ const DfpSidePanelTimeline: React.FC<{
         if (endHour <= startHour) endHour = Math.min(timelineEndHour, endHour + 24);
         return Math.max(0.35, ((Math.min(timelineEndHour, endHour) - startHour) / timelineSpanHours) * 100);
     };
-    const miniTimelineResourceIndex = useMemo(() => (
-        new Map(resources.map((resourceId, index) => [resourceId, index] as const))
-    ), [resources]);
     const miniTimelineEvents = useMemo(() => {
-        const rowCount = Math.max(resources.length, 1);
+        const previewEvents = (activeDfpEvents || [])
+            .filter(event => {
+                if (!event) return false;
+                if (event.type !== 'flight') return false;
+                if (event.date && event.date !== date) return false;
+                if (!String(event.resourceId || '').trim()) return false;
+                return (
+                    Number.isFinite(Number(event.startTime)) &&
+                    Number.isFinite(Number(event.duration)) &&
+                    Number(event.duration) > 0
+                );
+            });
+        const resourceOrder = new Map(resources.map((resourceId, index) => [resourceId, index] as const));
+        const visibleResourceIds = Array.from(new Set(previewEvents.map(event => event.resourceId)))
+            .sort((left, right) => (resourceOrder.get(left) ?? Number.MAX_SAFE_INTEGER) - (resourceOrder.get(right) ?? Number.MAX_SAFE_INTEGER));
+        const visibleResourceIndex = new Map(visibleResourceIds.map((resourceId, index) => [resourceId, index] as const));
+        const rowCount = Math.max(visibleResourceIds.length, 1);
         const tileHeight = Math.max(3, Math.min(7, Math.floor((miniTimelineBodyHeight - 10) / rowCount) - 1 || 3));
         const usableHeight = Math.max(1, miniTimelineBodyHeight - tileHeight - 6);
-        return (activeDfpEvents || [])
-            .filter(event =>
-                event &&
-                Number.isFinite(Number(event.startTime)) &&
-                Number.isFinite(Number(event.duration)) &&
-                Number(event.duration) > 0 &&
-                event.type === 'flight'
-            )
+        return previewEvents
             .map((event, index) => {
                 const start = Math.max(timelineStartHour, Number(event.startTime));
                 const end = Math.min(timelineEndHour, Number(event.startTime) + Number(event.duration));
                 if (end <= timelineStartHour || start >= timelineEndHour || end <= start) return null;
-                const resourceIndex = miniTimelineResourceIndex.get(event.resourceId);
+                const resourceIndex = visibleResourceIndex.get(event.resourceId);
                 const rowIndex = resourceIndex ?? Math.min(rowCount - 1, index % rowCount);
                 const top = 3 + (rowCount <= 1 ? usableHeight / 2 : (rowIndex / Math.max(1, rowCount - 1)) * usableHeight);
                 const color = event.color || 'bg-emerald-500';
@@ -2227,7 +2233,7 @@ const DfpSidePanelTimeline: React.FC<{
                 color: string;
                 isInlineColor: boolean;
             }>;
-    }, [activeDfpEvents, getLeft, getWidth, miniTimelineResourceIndex, resources.length]);
+    }, [activeDfpEvents, date, getLeft, getWidth, resources]);
 
     const formatTime = (decimalHour: number): string => {
         const bounded = Math.max(0, Math.min(23 + 59 / 60, Number(decimalHour) || 0));
