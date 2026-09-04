@@ -102081,6 +102081,7 @@ const DfpSidePanelTimeline = ({
   unitCallsignSettings,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   scheduleZoomLevel = 1,
+  isOpen = false,
   onRunNeoBuild,
   onNavigateToCurrencySettings,
   onNavigateToSavedSpecialSettings,
@@ -103233,13 +103234,21 @@ const DfpSidePanelTimeline = ({
       left: getLeft(constrainedTime)
     });
   };
-  reactExports.useEffect(() => {
+  useLayoutEffect(() => {
+    if (!isOpen) return void 0;
     const scroller = scrollRef.current;
-    if (!scroller) return;
-    const targetHour = Math.max(timelineStartHour, normalizeHour(flyingStartTime) - 0.75);
-    const ratio = (targetHour - timelineStartHour) / timelineSpanHours;
-    scroller.scrollLeft = Math.max(0, ratio * scroller.scrollWidth - scroller.clientWidth * 0.15);
-  }, []);
+    if (!scroller) return void 0;
+    let frame = 0;
+    const centerNoon = () => {
+      const targetHour = normalizeHour(12);
+      const ratio = (targetHour - timelineStartHour) / timelineSpanHours;
+      const targetLeft = ratio * scroller.scrollWidth - scroller.clientWidth / 2;
+      scroller.scrollLeft = Math.max(0, Math.min(scroller.scrollWidth - scroller.clientWidth, targetLeft));
+    };
+    centerNoon();
+    frame = window.requestAnimationFrame(centerNoon);
+    return () => window.cancelAnimationFrame(frame);
+  }, [isOpen, date, timelineSpanHours]);
   reactExports.useEffect(() => {
     if (!activeDrag) return void 0;
     const handlePointerMove = (event) => {
@@ -129333,6 +129342,11 @@ ${"=".repeat(60)}`);
   const [pauseOriginalEvents, setPauseOriginalEvents] = reactExports.useState([]);
   const [pauseOverlayStart, setPauseOverlayStart] = reactExports.useState(null);
   const [pauseOverlayEnd, setPauseOverlayEnd] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (activeView !== "Program Schedule" && showDfpSidePanel) {
+      setShowDfpSidePanel(false);
+    }
+  }, [activeView, showDfpSidePanel]);
   const [selectedPersonForProfile, setSelectedPersonForProfile] = reactExports.useState(null);
   const [profileInitialTab, setProfileInitialTab] = reactExports.useState(null);
   const [traineeProfileInitialTab, setTraineeProfileInitialTab] = reactExports.useState(null);
@@ -146565,6 +146579,7 @@ Do you want to replace the existing entry?`,
                         unitCallsignSettings: activeUnitCallsignSettings,
                         personnelDisplaySettings,
                         scheduleZoomLevel: zoomLevel,
+                        isOpen: showDfpSidePanel,
                         onRunNeoBuild: handleBuildDfp,
                         onNavigateToCurrencySettings: () => handleNavigateToSettingsSection({ sectionId: "sct-events", unitCode: activeUnitCode }),
                         onNavigateToSavedSpecialSettings: () => handleNavigateToSettingsSection({ sectionId: "platform-task-profiles", unitCode: activeUnitCode }),

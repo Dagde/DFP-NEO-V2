@@ -968,6 +968,7 @@ const DfpSidePanelTimeline: React.FC<{
     unitCallsignSettings?: UnitCallsignSettings;
     personnelDisplaySettings?: Partial<PersonnelDisplaySettings>;
     scheduleZoomLevel?: number;
+    isOpen?: boolean;
     onRunNeoBuild?: () => void;
     onNavigateToCurrencySettings?: () => void;
     onNavigateToSavedSpecialSettings?: () => void;
@@ -1046,6 +1047,7 @@ const DfpSidePanelTimeline: React.FC<{
     unitCallsignSettings,
     personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
     scheduleZoomLevel = 1,
+    isOpen = false,
     onRunNeoBuild,
     onNavigateToCurrencySettings,
     onNavigateToSavedSpecialSettings,
@@ -2519,13 +2521,21 @@ const DfpSidePanelTimeline: React.FC<{
         });
     };
 
-    useEffect(() => {
+    useLayoutEffect(() => {
+        if (!isOpen) return undefined;
         const scroller = scrollRef.current;
-        if (!scroller) return;
-        const targetHour = Math.max(timelineStartHour, normalizeHour(flyingStartTime) - 0.75);
-        const ratio = (targetHour - timelineStartHour) / timelineSpanHours;
-        scroller.scrollLeft = Math.max(0, ratio * scroller.scrollWidth - scroller.clientWidth * 0.15);
-    }, []);
+        if (!scroller) return undefined;
+        let frame = 0;
+        const centerNoon = () => {
+            const targetHour = normalizeHour(12);
+            const ratio = (targetHour - timelineStartHour) / timelineSpanHours;
+            const targetLeft = ratio * scroller.scrollWidth - scroller.clientWidth / 2;
+            scroller.scrollLeft = Math.max(0, Math.min(scroller.scrollWidth - scroller.clientWidth, targetLeft));
+        };
+        centerNoon();
+        frame = window.requestAnimationFrame(centerNoon);
+        return () => window.cancelAnimationFrame(frame);
+    }, [isOpen, date, timelineSpanHours]);
 
     useEffect(() => {
         if (!activeDrag) return undefined;
@@ -34396,6 +34406,12 @@ const App: React.FC = () => {
     const [pauseOverlayStart, setPauseOverlayStart] = useState<number | null>(null);
     const [pauseOverlayEnd,   setPauseOverlayEnd]   = useState<number | null>(null);
 
+    useEffect(() => {
+        if (activeView !== 'Program Schedule' && showDfpSidePanel) {
+            setShowDfpSidePanel(false);
+        }
+    }, [activeView, showDfpSidePanel]);
+
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
     const [profileInitialTab, setProfileInitialTab] = useState<'currency' | 'trainingReports' | null>(null);
@@ -55183,6 +55199,7 @@ appliedUpdates.forEach(update => {
                                     unitCallsignSettings={activeUnitCallsignSettings}
                                     personnelDisplaySettings={personnelDisplaySettings}
                                     scheduleZoomLevel={zoomLevel}
+                                    isOpen={showDfpSidePanel}
                                     onRunNeoBuild={handleBuildDfp}
                                     onNavigateToCurrencySettings={() => handleNavigateToSettingsSection({ sectionId: 'sct-events', unitCode: activeUnitCode })}
                                     onNavigateToSavedSpecialSettings={() => handleNavigateToSettingsSection({ sectionId: 'platform-task-profiles', unitCode: activeUnitCode })}
