@@ -102073,6 +102073,51 @@ const DfpSidePanelTimeline = ({
     });
     return map;
   }, [instructors]);
+  const getAssistTraineeName = reactExports.useCallback((person) => String(person?.name || person?.fullName || "").trim(), []);
+  const traineeByAssistName = reactExports.useMemo(() => {
+    const map = /* @__PURE__ */ new Map();
+    traineeRecords.forEach((person) => {
+      const name = getAssistTraineeName(person);
+      if (name && !map.has(name)) map.set(name, person);
+    });
+    return map;
+  }, [getAssistTraineeName, traineeRecords]);
+  const getAssistTraineeUnitLabel = reactExports.useCallback((nameOrTrainee) => {
+    const trainee = typeof nameOrTrainee === "string" ? traineeByAssistName.get(nameOrTrainee) : nameOrTrainee;
+    return String(trainee?.unit || trainee?.unitCode || "").trim().toUpperCase() || "Unassigned";
+  }, [traineeByAssistName]);
+  const getAssistTraineeCourseLabel = reactExports.useCallback((nameOrTrainee) => {
+    const trainee = typeof nameOrTrainee === "string" ? traineeByAssistName.get(nameOrTrainee) : nameOrTrainee;
+    return String(trainee?.course || trainee?.courseNumber || trainee?.courseNo || "No Course").trim() || "No Course";
+  }, [traineeByAssistName]);
+  const getAssistTraineeCourseSortValue = reactExports.useCallback((nameOrTrainee) => {
+    const course = getAssistTraineeCourseLabel(nameOrTrainee);
+    const numeric = Number(course.replace(/[^0-9.]/g, ""));
+    return Number.isFinite(numeric) ? numeric : Number.MAX_SAFE_INTEGER;
+  }, [getAssistTraineeCourseLabel]);
+  const compareAssistTraineeNames = reactExports.useCallback((leftName, rightName) => getAssistTraineeUnitLabel(leftName).localeCompare(getAssistTraineeUnitLabel(rightName), void 0, { numeric: true, sensitivity: "base" }) || getAssistTraineeCourseSortValue(leftName) - getAssistTraineeCourseSortValue(rightName) || getAssistTraineeCourseLabel(leftName).localeCompare(getAssistTraineeCourseLabel(rightName), void 0, { numeric: true, sensitivity: "base" }) || String(leftName || "").localeCompare(String(rightName || ""), void 0, { numeric: true, sensitivity: "base" }), [getAssistTraineeCourseLabel, getAssistTraineeCourseSortValue, getAssistTraineeUnitLabel]);
+  const formatTraineeOptionLabel = reactExports.useCallback((name) => {
+    const course = getAssistTraineeCourseLabel(name);
+    return course && course !== "No Course" ? `${name} (${course})` : name;
+  }, [getAssistTraineeCourseLabel]);
+  const displayedTraineeOptionGroups = reactExports.useMemo(() => {
+    const groups = /* @__PURE__ */ new Map();
+    Array.from(traineeByAssistName.keys()).sort(compareAssistTraineeNames).forEach((name) => {
+      const unit = getAssistTraineeUnitLabel(name);
+      const course = getAssistTraineeCourseLabel(name);
+      const label = `${unit} Trainees - ${course}`;
+      if (!groups.has(label)) groups.set(label, []);
+      groups.get(label).push(name);
+    });
+    return Array.from(groups.entries()).map(([unit, names]) => ({ unit, names }));
+  }, [compareAssistTraineeNames, getAssistTraineeCourseLabel, getAssistTraineeUnitLabel, traineeByAssistName]);
+  reactExports.useEffect(() => {
+    if (activeAssistSection !== "details" || effectiveAssistManualEventSource !== "lmp") return;
+    const nextSelection = selectedCrewNames.filter((name) => traineeByAssistName.has(name));
+    if (nextSelection.join("|") === selectedCrewNames.join("|")) return;
+    setSelectedCrewName(nextSelection[0] || "");
+    setSelectedCrewNames(nextSelection);
+  }, [activeAssistSection, effectiveAssistManualEventSource, selectedCrewNames, traineeByAssistName]);
   const getAssistStaffUnitLabel = reactExports.useCallback((nameOrStaff) => {
     const staff = typeof nameOrStaff === "string" ? staffByAssistName.get(nameOrStaff) : nameOrStaff;
     return String(staff?.unit || "").trim().toUpperCase() || "Unassigned";
@@ -102325,7 +102370,7 @@ const DfpSidePanelTimeline = ({
   const assistConfigId = activeAssistSection === "taskings" ? assistTaskConfigId : activeAssistSection === "currency" ? assistCurrencyConfigId : selectedSyllabusItem?.acceptableAircraftConfigs?.[0];
   const selectedCrewRecords = reactExports.useMemo(() => selectedCrewNames.map((name) => instructors.find((instructor) => instructor.name === name)).filter((staff) => Boolean(staff)), [instructors, selectedCrewNames]);
   const selectedPilotCrewName = isFixedCrewNeoAssist ? selectedFixedCrewPic : selectedCrewRecords.find(isStaffPilotCrewPosition)?.name || selectedCrewName || "";
-  const selectedSupportCrewName = isFixedCrewNeoAssist ? "" : selectedCrewRecords.find((staff) => staff.name !== selectedPilotCrewName)?.name || "";
+  const selectedSupportCrewName = isFixedCrewNeoAssist ? "" : selectedCrewNames.find((name) => name && name !== selectedPilotCrewName) || "";
   const getAssistTileDisplayColor = (color) => {
     if (!color) return "#047857";
     if (color === "bg-emerald-500/70") return "rgba(16,185,129,0.42)";
@@ -105172,6 +105217,19 @@ This cannot be undone.`,
       const compactFieldClass = "mt-0.5 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] normal-case tracking-normal text-slate-100";
       const mutedCompactFieldClass = "mt-0.5 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1 text-[11px] normal-case tracking-normal text-slate-300";
       const selectedManualCrewName = selectedCrewNames.find((name) => name && name !== selectedCrewName) || "";
+      const isManualLmpEventSource = effectiveAssistManualEventSource === "lmp";
+      const renderManualCrewOptions = (optionKeyPrefix, namesToExclude = /* @__PURE__ */ new Set()) => {
+        const traineeGroups = displayedTraineeOptionGroups.map((group) => {
+          const names = group.names.filter((name) => !namesToExclude.has(name));
+          if (names.length === 0) return null;
+          return /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: names.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: formatTraineeOptionLabel(name) }, `${optionKeyPrefix}-${name}`)) }, `${optionKeyPrefix}-${group.unit}`);
+        });
+        if (isManualLmpEventSource) return traineeGroups;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          renderCrewOptionsByUnit(optionKeyPrefix, namesToExclude),
+          traineeGroups
+        ] });
+      };
       const renderManualEventPicker = () => {
         if (effectiveAssistManualEventSource === "currency") {
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: selectedCurrencyName, onChange: (event) => setSelectedCurrencyName(event.target.value), className: compactFieldClass, children: [
@@ -105278,7 +105336,7 @@ This cannot be undone.`,
             ] })
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-              "PIC",
+              isManualLmpEventSource ? "Trainee" : "PIC",
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "select",
                 {
@@ -105291,8 +105349,8 @@ This cannot be undone.`,
                   },
                   className: compactFieldClass,
                   children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
-                    renderCrewOptionsByUnit("assist-manual-pic")
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: isManualLmpEventSource ? "Select trainee" : "Select PIC" }),
+                    renderManualCrewOptions("assist-manual-pic")
                   ]
                 }
               )
@@ -105308,7 +105366,7 @@ This cannot be undone.`,
                   className: `${compactFieldClass} disabled:cursor-not-allowed disabled:opacity-60`,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select crew" }),
-                    renderCrewOptionsByUnit("assist-manual-crew", new Set([selectedCrewName].filter(Boolean)))
+                    renderManualCrewOptions("assist-manual-crew", new Set([selectedCrewName].filter(Boolean)))
                   ]
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: mutedCompactFieldClass, children: "N/A" })
