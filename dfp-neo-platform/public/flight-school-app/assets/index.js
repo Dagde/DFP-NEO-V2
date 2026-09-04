@@ -46078,8 +46078,8 @@ const taskingPanelClass = "flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18em] text-slate-500";
 const taskingPanelHintClass = "mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500";
 const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
-const taskingSummaryHeaderClass = "grid min-w-[1208px] grid-cols-[116px_90px_86px_76px_88px_110px_112px_74px_80px_90px_86px_90px_66px_60px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
-const taskingSummaryRowClass = "grid min-w-[1208px] grid-cols-[116px_90px_86px_76px_88px_110px_112px_74px_80px_90px_86px_90px_66px_60px] gap-0 text-[12px]";
+const taskingSummaryHeaderClass = "grid min-w-[1193px] grid-cols-[111px_90px_86px_76px_88px_95px_112px_74px_85px_90px_86px_90px_66px_60px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
+const taskingSummaryRowClass = "grid min-w-[1193px] grid-cols-[111px_90px_86px_76px_88px_95px_112px_74px_85px_90px_86px_90px_66px_60px] gap-0 text-[12px]";
 const taskingSummaryCellClass = "border border-slate-700/70 px-2 py-2";
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const buildPriorityTableShellClass = "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45";
@@ -46176,7 +46176,7 @@ const TaskingRequestTable = ({
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
     taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
-    taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[1208px] space-y-3", children: [
+    taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[1193px] space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryHeaderClass, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `${taskingSummaryHeaderCellClass} flex flex-col items-center justify-center gap-2`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Schedule" }),
