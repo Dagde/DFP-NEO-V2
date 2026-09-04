@@ -3451,13 +3451,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       }, type);
     };
     const isFlightSchoolCurrencyRequestTable = priorityAllocationModel === 'flight_school';
-    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? 'min-w-[1322px]' : 'min-w-[1396px]';
+    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? 'min-w-[1206px]' : 'min-w-[1292px]';
     const sctTableHeaderColumnsClass = isFlightSchoolCurrencyRequestTable
-      ? 'grid-cols-[136px_140px_140px_150px_116px_82px_120px_120px_96px_96px_66px_60px]'
-      : 'grid-cols-[136px_132px_132px_140px_150px_104px_74px_112px_112px_90px_88px_66px_60px]';
+      ? 'grid-cols-[136px_140px_140px_150px_82px_120px_120px_96px_96px_66px_60px]'
+      : 'grid-cols-[136px_132px_132px_140px_150px_74px_112px_112px_90px_88px_66px_60px]';
     const sctTableBodyColumnsClass = isFlightSchoolCurrencyRequestTable
-      ? 'grid-cols-[136px_140px_140px_150px_116px_82px_120px_120px_96px_96px_66px_60px]'
-      : 'grid-cols-[136px_132px_132px_140px_150px_104px_74px_112px_112px_90px_88px_66px_60px]';
+      ? 'grid-cols-[136px_140px_140px_150px_82px_120px_120px_96px_96px_66px_60px]'
+      : 'grid-cols-[136px_132px_132px_140px_150px_74px_112px_112px_90px_88px_66px_60px]';
     const getSctEditKey = (request: SctRequest) => `${type}:${request.id}`;
     const toggleSctRequestEditing = (request: SctRequest) => {
       const key = getSctEditKey(request);
@@ -3584,7 +3584,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   <span className={buildPriorityTableHeaderCellClass}>{isFlightSchoolCurrencyRequestTable ? 'Second Pilot' : 'PIC'}</span>
                   <span className={buildPriorityTableHeaderCellClass}>Event</span>
                   {!isFlightSchoolCurrencyRequestTable && <span className={buildPriorityTableHeaderCellClass}>Crew Composition</span>}
-                  <span className={buildPriorityTableHeaderCellClass}>CONFIG</span>
                   <span className={buildPriorityTableHeaderCellClass}>Aircraft</span>
                   <span className={buildPriorityTableHeaderCellClass}>Currency Expire</span>
                   <span className={buildPriorityTableHeaderCellClass}>Date Requested</span>
@@ -3640,7 +3639,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       ? (flightSchoolSecondPilot || 'TBA')
                       : 'N/A';
                   const eventDisplay = String(req.event || req.currency || 'Select profile').trim();
-                  const configDisplay = String(aircraftConfigOptions.find(definition => definition.id === req.aircraftConfigId)?.label || req.aircraftConfigId || 'CONFIG 0').trim();
                   return (
                       <div key={req.id} className="overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
                               <div className={`grid auto-rows-fr ${sctTableBodyColumnsClass} items-stretch gap-0`}>
@@ -3881,18 +3879,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                           </select>}
                                       </div>
                                   )}
-                                  <div className={tileBaseClass}>
-                                      <div className={tileLabelClass}>CONFIG</div>
-                                      {!isEditingRequest ? (
-                                        <div className="truncate text-slate-100" title={configDisplay}>{configDisplay}</div>
-                                      ) : <div className="[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white">
-                                          <AircraftConfigSelect
-                                              value={req.aircraftConfigId}
-                                              definitions={aircraftConfigOptions}
-                                              onChange={(aircraftConfigId) => onUpdateSctRequest(req.id, 'aircraftConfigId', aircraftConfigId, type)}
-                                          />
-                                      </div>}
-                                  </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>No. of A/C</div>
                                       {!isEditingRequest ? (

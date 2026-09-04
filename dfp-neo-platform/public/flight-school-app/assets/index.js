@@ -48321,9 +48321,9 @@ const PrioritiesView = ({
       }, type);
     };
     const isFlightSchoolCurrencyRequestTable = priorityAllocationModel === "flight_school";
-    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? "min-w-[1322px]" : "min-w-[1396px]";
-    const sctTableHeaderColumnsClass = isFlightSchoolCurrencyRequestTable ? "grid-cols-[136px_140px_140px_150px_116px_82px_120px_120px_96px_96px_66px_60px]" : "grid-cols-[136px_132px_132px_140px_150px_104px_74px_112px_112px_90px_88px_66px_60px]";
-    const sctTableBodyColumnsClass = isFlightSchoolCurrencyRequestTable ? "grid-cols-[136px_140px_140px_150px_116px_82px_120px_120px_96px_96px_66px_60px]" : "grid-cols-[136px_132px_132px_140px_150px_104px_74px_112px_112px_90px_88px_66px_60px]";
+    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? "min-w-[1206px]" : "min-w-[1292px]";
+    const sctTableHeaderColumnsClass = isFlightSchoolCurrencyRequestTable ? "grid-cols-[136px_140px_140px_150px_82px_120px_120px_96px_96px_66px_60px]" : "grid-cols-[136px_132px_132px_140px_150px_74px_112px_112px_90px_88px_66px_60px]";
+    const sctTableBodyColumnsClass = isFlightSchoolCurrencyRequestTable ? "grid-cols-[136px_140px_140px_150px_82px_120px_120px_96px_96px_66px_60px]" : "grid-cols-[136px_132px_132px_140px_150px_74px_112px_112px_90px_88px_66px_60px]";
     const getSctEditKey = (request) => `${type}:${request.id}`;
     const toggleSctRequestEditing = (request) => {
       const key = getSctEditKey(request);
@@ -48427,7 +48427,6 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: isFlightSchoolCurrencyRequestTable ? "Second Pilot" : "PIC" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Event" }),
         !isFlightSchoolCurrencyRequestTable && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Crew Composition" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "CONFIG" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Aircraft" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Currency Expire" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Date Requested" }),
@@ -48464,7 +48463,6 @@ const PrioritiesView = ({
         const crewDisplay = isFixedCrewModel ? selectedCrewGroup?.label || req.crewDisplayLabel || req.crewGroup || "TBA" : req.name || "TBA";
         const picDisplay = isFixedCrewModel ? req.crewIndividual || "TBA" : isFlightSchoolCurrencyRequest ? flightSchoolSecondPilot || "TBA" : "N/A";
         const eventDisplay = String(req.event || req.currency || "Select profile").trim();
-        const configDisplay = String(aircraftConfigOptions.find((definition) => definition.id === req.aircraftConfigId)?.label || req.aircraftConfigId || "CONFIG 0").trim();
         return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid auto-rows-fr ${sctTableBodyColumnsClass} items-stretch gap-0`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `inline-flex items-center gap-1 text-[12px] leading-none ${canSubmitRequest ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`, children: [
@@ -48664,17 +48662,6 @@ const PrioritiesView = ({
                 ]
               }
             )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "CONFIG" }),
-            !isEditingRequest ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-slate-100", title: configDisplay, children: configDisplay }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              AircraftConfigSelect,
-              {
-                value: req.aircraftConfigId,
-                definitions: aircraftConfigOptions,
-                onChange: (aircraftConfigId) => onUpdateSctRequest(req.id, "aircraftConfigId", aircraftConfigId, type)
-              }
-            ) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "No. of A/C" }),
