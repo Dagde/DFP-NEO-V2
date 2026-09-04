@@ -47658,6 +47658,7 @@ const PrioritiesView = ({
   const [staffCurrencyRoleFilter, setStaffCurrencyRoleFilter] = reactExports.useState("Pilot");
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = reactExports.useState(false);
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = reactExports.useState(null);
+  const [editingCurrencyDraftIds, setEditingCurrencyDraftIds] = reactExports.useState(/* @__PURE__ */ new Set());
   const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = reactExports.useState(false);
   const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const legacyCurrencyDraftStorageKey = "neoCurrencyDraftEvents";
@@ -48263,6 +48264,17 @@ const PrioritiesView = ({
     ));
     setOpenCurrencyDraftId(null);
     logAudit("Priorities", "Add", "Added reviewed currency events to Highest Priority queue", `${priorityEvents.length} Currency event(s) added`);
+  };
+  const setAllCurrencyDraftSchedule = (scheduled) => {
+    setCurrencyDraftEvents((prev) => prev.map((event) => activeCurrencyDraftIds.has(event.id) ? event : { ...event, selected: scheduled }));
+  };
+  const toggleCurrencyDraftEditing = (draftId) => {
+    setEditingCurrencyDraftIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(draftId)) next.delete(draftId);
+      else next.add(draftId);
+      return next;
+    });
   };
   const currencyAircraftConfigChoices = reactExports.useMemo(() => [
     { id: ANY_AIRCRAFT_CONFIG, label: "ANY", definition: "Any aircraft configuration is acceptable." },
@@ -50470,43 +50482,97 @@ const PrioritiesView = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: currencyDraftEvents.length === 0 ? "space-y-3" : buildPriorityTableShellClass, children: [
           currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }),
-          currencyDraftEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1152px] space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${buildPriorityTableHeaderClass} grid-cols-[70px_190px_170px_160px_130px_360px_72px]`, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Push" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Person" }),
+          currencyDraftEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1262px] space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${buildPriorityTableHeaderClass} grid-cols-[136px_190px_94px_150px_180px_82px_113px_113px_96px_66px_60px]`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `${buildPriorityTableHeaderCellClass} flex flex-col items-center justify-center gap-2`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Schedule" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setAllCurrencyDraftSchedule(true), className: "px-1.5 py-0.5 text-cyan-100 hover:bg-cyan-500/15", children: "All" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setAllCurrencyDraftSchedule(false), className: "border-l border-slate-600 px-1.5 py-0.5 text-slate-200 hover:bg-slate-700/60", children: "None" })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Crew" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Kind" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Event" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Currencies" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "CONFIG" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Crew" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Aircraft" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Currency Expire" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Date Requested" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Priority" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, children: "Edit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: buildPriorityTableHeaderCellClass, "aria-label": "Delete" })
           ] }) }),
           currencyDraftEvents.map((draft) => {
             const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
             const isCurrencyMenuOpen = openCurrencyDraftId === draft.id;
-            const tileBaseClass = `${buildPriorityTableCellClass} flex min-h-[58px] w-full min-w-0 flex-col justify-center text-left shadow-sm ${isPublishedInActiveSchedule ? "bg-green-950/20" : "bg-cyan-950/80"}`;
+            const isEditingDraft = editingCurrencyDraftIds.has(draft.id);
+            const draftKindLabel = draft.eventType === "ftd" ? "Simulator" : "Flight";
+            const draftPicDisplay = draft.picName || (draft.crewMode === "solo" ? draft.personName : "TBA");
+            const draftSecondCrewDisplay = draft.crewMode === "solo" ? "Solo" : draft.fixedCrewDisplayLabel || draft.personName || "TBA";
+            const draftPriority = "Medium";
+            const tileBaseClass = `${buildPriorityTableCellClass} flex min-h-[58px] w-full min-w-0 flex-col justify-center text-left text-[12px] shadow-sm ${isPublishedInActiveSchedule ? "bg-green-950/20" : "bg-cyan-950/80"}`;
             const tileLabelClass = "mb-2 hidden text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
             return /* @__PURE__ */ jsxRuntimeExports.jsx(
               "div",
               {
-                className: `min-w-[1152px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? "pb-64" : ""} ${isPublishedInActiveSchedule ? "text-green-300" : ""}`,
-                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${buildPriorityTableRowClass} grid-cols-[70px_190px_170px_160px_130px_360px_72px]`, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: draft.selected,
-                      disabled: isPublishedInActiveSchedule,
-                      onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: !event.selected } : event)),
-                      className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40",
-                      "aria-label": "Select currency event for Higher Priority"
-                    }
-                  ) }),
+                className: `min-w-[1262px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? "pb-64" : ""} ${isPublishedInActiveSchedule ? "text-green-300" : ""}`,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${buildPriorityTableRowClass} grid-cols-[136px_190px_94px_150px_180px_82px_113px_113px_96px_66px_60px]`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `inline-flex items-center gap-1 text-[12px] leading-none ${isPublishedInActiveSchedule ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: `currency-draft-schedule-${draft.id}`,
+                          checked: draft.selected === true,
+                          disabled: isPublishedInActiveSchedule,
+                          onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: true } : event)),
+                          className: "h-4 w-4 accent-cyan-400"
+                        }
+                      ),
+                      "Y"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `inline-flex items-center gap-1 text-[12px] leading-none ${isPublishedInActiveSchedule ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: `currency-draft-schedule-${draft.id}`,
+                          checked: draft.selected !== true,
+                          disabled: isPublishedInActiveSchedule,
+                          onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: false } : event)),
+                          className: "h-4 w-4 accent-cyan-400"
+                        }
+                      ),
+                      "N"
+                    ] })
+                  ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Person" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `min-w-0 truncate text-[12px] font-semibold leading-snug ${isPublishedInActiveSchedule ? "text-green-300" : "text-white"}`, title: draft.personName, children: draft.personName })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Crew" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 space-y-0.5 leading-snug", children: isEditingDraft ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "text",
+                          value: draft.picName || "",
+                          disabled: isPublishedInActiveSchedule || draft.crewMode === "solo",
+                          onChange: (event) => setCurrencyDraftEvents((prev) => prev.map((item) => item.id === draft.id ? { ...item, picName: event.target.value } : item)),
+                          className: "w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] font-semibold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60",
+                          placeholder: draft.crewMode === "solo" ? draft.personName : "PIC"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-slate-100", title: draftSecondCrewDisplay, children: draftSecondCrewDisplay })
+                    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `truncate font-semibold ${isPublishedInActiveSchedule ? "text-green-300" : "text-cyan-100"}`, title: draftPicDisplay, children: draftPicDisplay }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-slate-100", title: draftSecondCrewDisplay, children: draftSecondCrewDisplay })
+                    ] }) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Kind" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate font-semibold text-slate-100", title: draftKindLabel, children: draftKindLabel })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Event" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    isEditingDraft ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "select",
                       {
                         value: draft.currencyProfileName,
@@ -50518,7 +50584,7 @@ const PrioritiesView = ({
                           sctEvents.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: currencyProfileNameLabels[name] || name }, `${draft.id}-${name}`))
                         ]
                       }
-                    )
+                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate font-semibold text-slate-100", title: draft.currencyProfileName || draft.currencyProfileCode || "Currency", children: draft.currencyProfileCode || draft.currencyProfileName || "Currency" })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Currencies" }),
@@ -50527,7 +50593,8 @@ const PrioritiesView = ({
                         "button",
                         {
                           onClick: () => setOpenCurrencyDraftId((prev) => prev === draft.id ? null : draft.id),
-                          className: "w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 hover:border-cyan-500/60",
+                          disabled: !isEditingDraft || isPublishedInActiveSchedule,
+                          className: "w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 hover:border-cyan-500/60 disabled:cursor-not-allowed disabled:opacity-60",
                           children: draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : "Select"
                         }
                       ),
@@ -50546,38 +50613,42 @@ const PrioritiesView = ({
                     ] })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${tileBaseClass} flex flex-col`, children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "CONFIG" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      AircraftConfigSelect,
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Aircraft" }),
+                    isEditingDraft ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
                       {
-                        value: draft.aircraftConfigId,
-                        definitions: aircraftConfigOptions,
-                        includeAny: true,
-                        disabled: isPublishedInActiveSchedule || draft.eventType !== "flight",
-                        onChange: (aircraftConfigId) => setCurrencyDraftEvents((prev) => prev.map(
-                          (event) => event.id === draft.id ? { ...event, aircraftConfigId } : event
-                        ))
+                        type: "number",
+                        min: "1",
+                        max: "24",
+                        value: Math.max(1, Number(draft.aircraftCount) || 1),
+                        disabled: isPublishedInActiveSchedule,
+                        onChange: (event) => setCurrencyDraftEvents((prev) => prev.map((item) => item.id === draft.id ? { ...item, aircraftCount: Math.max(1, Math.min(24, Math.floor(Number(event.target.value) || 1))) } : item)),
+                        className: "w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] font-semibold text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                       }
-                    )
+                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-slate-100", children: Math.max(1, Number(draft.aircraftCount) || 1) })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${tileBaseClass} overflow-hidden`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    CrewRequirementEditor,
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Currency Expire" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-slate-500", children: "-" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Date Requested" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-slate-500", children: "-" })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Priority" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-amber-300", children: draftPriority })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${buildPriorityTableCellClass} flex min-h-[58px] items-center justify-center bg-cyan-950/80 px-1`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
                     {
-                      value: draft.crewRequirement,
-                      aircraftCrewComposition,
-                      crewPositionTerminology,
-                      operationalModel,
-                      compact: true,
-                      showSummary: false,
-                      showAircraftDefaultSummary: false,
-                      headerClassName: "text-center",
-                      aircraftDefaultOptionLabel: "A/C default",
-                      onChange: (crewRequirement) => setCurrencyDraftEvents((prev) => prev.map(
-                        (event) => event.id === draft.id ? { ...event, crewRequirement } : event
-                      ))
+                      type: "button",
+                      onClick: () => toggleCurrencyDraftEditing(draft.id),
+                      className: "w-[48px] rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10",
+                      children: isEditingDraft ? "Done" : "Edit"
                     }
                   ) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${buildPriorityTableCellClass} flex min-h-[58px] items-center justify-center bg-cyan-950/80`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${buildPriorityTableCellClass} flex min-h-[58px] items-center justify-center bg-cyan-950/80 px-1`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
                       type: "button",

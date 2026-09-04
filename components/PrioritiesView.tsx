@@ -2573,6 +2573,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [staffCurrencyRoleFilter, setStaffCurrencyRoleFilter] = useState('Pilot');
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = useState(false);
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = useState<string | null>(null);
+  const [editingCurrencyDraftIds, setEditingCurrencyDraftIds] = useState<Set<string>>(new Set());
   const [isCurrencyConfigApplyOpen, setIsCurrencyConfigApplyOpen] = useState(false);
   const [bulkCurrencyAircraftConfigId, setBulkCurrencyAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
   const legacyCurrencyDraftStorageKey = 'neoCurrencyDraftEvents';
@@ -3368,6 +3369,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     ));
     setOpenCurrencyDraftId(null);
     logAudit('Priorities', 'Add', 'Added reviewed currency events to Highest Priority queue', `${priorityEvents.length} Currency event(s) added`);
+  };
+
+  const setAllCurrencyDraftSchedule = (scheduled: boolean) => {
+    setCurrencyDraftEvents(prev => prev.map(event => (
+      activeCurrencyDraftIds.has(event.id) ? event : { ...event, selected: scheduled }
+    )));
+  };
+
+  const toggleCurrencyDraftEditing = (draftId: string) => {
+    setEditingCurrencyDraftIds(prev => {
+      const next = new Set(prev);
+      if (next.has(draftId)) next.delete(draftId);
+      else next.add(draftId);
+      return next;
+    });
   };
 
   const currencyAircraftConfigChoices = useMemo(() => ([
@@ -5863,65 +5879,126 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </div>
                 )}
                 {currencyDraftEvents.length > 0 && (
-                    <div className="min-w-[1152px] space-y-3">
-                        <div className={`${buildPriorityTableHeaderClass} grid-cols-[70px_190px_170px_160px_130px_360px_72px]`}>
-                            <span className={buildPriorityTableHeaderCellClass}>Push</span>
-                            <span className={buildPriorityTableHeaderCellClass}>Person</span>
+                    <div className="min-w-[1262px] space-y-3">
+                        <div className={`${buildPriorityTableHeaderClass} grid-cols-[136px_190px_94px_150px_180px_82px_113px_113px_96px_66px_60px]`}>
+                            <span className={`${buildPriorityTableHeaderCellClass} flex flex-col items-center justify-center gap-2`}>
+                                <span>Schedule</span>
+                                <span className="inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal">
+                                    <button type="button" onClick={() => setAllCurrencyDraftSchedule(true)} className="px-1.5 py-0.5 text-cyan-100 hover:bg-cyan-500/15">All</button>
+                                    <button type="button" onClick={() => setAllCurrencyDraftSchedule(false)} className="border-l border-slate-600 px-1.5 py-0.5 text-slate-200 hover:bg-slate-700/60">None</button>
+                                </span>
+                            </span>
+                            <span className={buildPriorityTableHeaderCellClass}>Crew</span>
+                            <span className={buildPriorityTableHeaderCellClass}>Kind</span>
                             <span className={buildPriorityTableHeaderCellClass}>Event</span>
                             <span className={buildPriorityTableHeaderCellClass}>Currencies</span>
-                            <span className={buildPriorityTableHeaderCellClass}>CONFIG</span>
-                            <span className={buildPriorityTableHeaderCellClass}>Crew</span>
-                            <span className={buildPriorityTableHeaderCellClass}></span>
+                            <span className={buildPriorityTableHeaderCellClass}>Aircraft</span>
+                            <span className={buildPriorityTableHeaderCellClass}>Currency Expire</span>
+                            <span className={buildPriorityTableHeaderCellClass}>Date Requested</span>
+                            <span className={buildPriorityTableHeaderCellClass}>Priority</span>
+                            <span className={buildPriorityTableHeaderCellClass}>Edit</span>
+                            <span className={buildPriorityTableHeaderCellClass} aria-label="Delete"></span>
                         </div>
                     </div>
                 )}
                 {currencyDraftEvents.map(draft => {
                     const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
                     const isCurrencyMenuOpen = openCurrencyDraftId === draft.id;
-                    const tileBaseClass = `${buildPriorityTableCellClass} flex min-h-[58px] w-full min-w-0 flex-col justify-center text-left shadow-sm ${isPublishedInActiveSchedule ? 'bg-green-950/20' : 'bg-cyan-950/80'}`;
+                    const isEditingDraft = editingCurrencyDraftIds.has(draft.id);
+                    const draftKindLabel = draft.eventType === 'ftd' ? 'Simulator' : 'Flight';
+                    const draftPicDisplay = draft.picName || (draft.crewMode === 'solo' ? draft.personName : 'TBA');
+                    const draftSecondCrewDisplay = draft.crewMode === 'solo'
+                      ? 'Solo'
+                      : draft.fixedCrewDisplayLabel || draft.personName || 'TBA';
+                    const draftPriority = 'Medium';
+                    const tileBaseClass = `${buildPriorityTableCellClass} flex min-h-[58px] w-full min-w-0 flex-col justify-center text-left text-[12px] shadow-sm ${isPublishedInActiveSchedule ? 'bg-green-950/20' : 'bg-cyan-950/80'}`;
                     const tileLabelClass = "mb-2 hidden text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
                     return (
                         <div
                             key={draft.id}
-                            className={`min-w-[1152px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? 'pb-64' : ''} ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
+                            className={`min-w-[1262px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? 'pb-64' : ''} ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
                         >
-                            <div className={`${buildPriorityTableRowClass} grid-cols-[70px_190px_170px_160px_130px_360px_72px]`}>
+                            <div className={`${buildPriorityTableRowClass} grid-cols-[136px_190px_94px_150px_180px_82px_113px_113px_96px_66px_60px]`}>
                                 <div className={`${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80`}>
-                                    <input
-                                        type="checkbox"
-                                        checked={draft.selected}
-                                        disabled={isPublishedInActiveSchedule}
-                                        onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
-                                        className="h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
-                                        aria-label="Select currency event for Higher Priority"
-                                    />
-                                </div>
-                                <div className={`${tileBaseClass} flex flex-col`}>
-                                    <div className={tileLabelClass}>Person</div>
-                                    <div className={`min-w-0 truncate text-[12px] font-semibold leading-snug ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-white'}`} title={draft.personName}>
-                                        {draft.personName}
+                                    <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100">
+                                        <label className={`inline-flex items-center gap-1 text-[12px] leading-none ${isPublishedInActiveSchedule ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+                                            <input
+                                                type="radio"
+                                                name={`currency-draft-schedule-${draft.id}`}
+                                                checked={draft.selected === true}
+                                                disabled={isPublishedInActiveSchedule}
+                                                onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: true } : event))}
+                                                className="h-4 w-4 accent-cyan-400"
+                                            />
+                                            Y
+                                        </label>
+                                        <label className={`inline-flex items-center gap-1 text-[12px] leading-none ${isPublishedInActiveSchedule ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+                                            <input
+                                                type="radio"
+                                                name={`currency-draft-schedule-${draft.id}`}
+                                                checked={draft.selected !== true}
+                                                disabled={isPublishedInActiveSchedule}
+                                                onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: false } : event))}
+                                                className="h-4 w-4 accent-cyan-400"
+                                            />
+                                            N
+                                        </label>
                                     </div>
                                 </div>
                                 <div className={`${tileBaseClass} flex flex-col`}>
+                                    <div className={tileLabelClass}>Crew</div>
+                                    <div className="min-w-0 space-y-0.5 leading-snug">
+                                      {isEditingDraft ? (
+                                        <>
+                                          <input
+                                            type="text"
+                                            value={draft.picName || ''}
+                                            disabled={isPublishedInActiveSchedule || draft.crewMode === 'solo'}
+                                            onChange={(event) => setCurrencyDraftEvents(prev => prev.map(item => item.id === draft.id ? { ...item, picName: event.target.value } : item))}
+                                            className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] font-semibold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                            placeholder={draft.crewMode === 'solo' ? draft.personName : 'PIC'}
+                                          />
+                                          <div className="truncate text-slate-100" title={draftSecondCrewDisplay}>{draftSecondCrewDisplay}</div>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div className={`truncate font-semibold ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-cyan-100'}`} title={draftPicDisplay}>{draftPicDisplay}</div>
+                                          <div className="truncate text-slate-100" title={draftSecondCrewDisplay}>{draftSecondCrewDisplay}</div>
+                                        </>
+                                      )}
+                                    </div>
+                                </div>
+                                <div className={tileBaseClass}>
+                                    <div className={tileLabelClass}>Kind</div>
+                                    <div className="truncate font-semibold text-slate-100" title={draftKindLabel}>{draftKindLabel}</div>
+                                </div>
+                                <div className={`${tileBaseClass} flex flex-col`}>
                                     <div className={tileLabelClass}>Event</div>
-                                    <select
-                                        value={draft.currencyProfileName}
-                                        disabled={isPublishedInActiveSchedule}
-                                        onChange={(event) => applyCurrencyProfileToDraftEvent(draft.id, event.target.value)}
-                                        className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        <option value="">{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</option>
-                                        {sctEvents.map(name => (
-                                            <option key={`${draft.id}-${name}`} value={name}>{currencyProfileNameLabels[name] || name}</option>
-                                        ))}
-                                    </select>
+                                    {isEditingDraft ? (
+                                        <select
+                                            value={draft.currencyProfileName}
+                                            disabled={isPublishedInActiveSchedule}
+                                            onChange={(event) => applyCurrencyProfileToDraftEvent(draft.id, event.target.value)}
+                                            className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            <option value="">{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</option>
+                                            {sctEvents.map(name => (
+                                                <option key={`${draft.id}-${name}`} value={name}>{currencyProfileNameLabels[name] || name}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div className="truncate font-semibold text-slate-100" title={draft.currencyProfileName || draft.currencyProfileCode || 'Currency'}>
+                                            {draft.currencyProfileCode || draft.currencyProfileName || 'Currency'}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className={`${tileBaseClass} flex flex-col`}>
                                     <div className={tileLabelClass}>Currencies</div>
                                     <div className="relative">
                                         <button
                                             onClick={() => setOpenCurrencyDraftId(prev => prev === draft.id ? null : draft.id)}
-                                            className="w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 hover:border-cyan-500/60"
+                                            disabled={!isEditingDraft || isPublishedInActiveSchedule}
+                                            className="w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-[11px] font-semibold text-slate-200 hover:border-cyan-500/60 disabled:cursor-not-allowed disabled:opacity-60"
                                         >
                                             {draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : 'Select'}
                                         </button>
@@ -5945,34 +6022,43 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </div>
                                 </div>
                                 <div className={`${tileBaseClass} flex flex-col`}>
-                                    <div className={tileLabelClass}>CONFIG</div>
-                                    <AircraftConfigSelect
-                                        value={draft.aircraftConfigId}
-                                        definitions={aircraftConfigOptions}
-                                        includeAny
-                                        disabled={isPublishedInActiveSchedule || draft.eventType !== 'flight'}
-                                        onChange={(aircraftConfigId) => setCurrencyDraftEvents(prev => prev.map(event =>
-                                            event.id === draft.id ? { ...event, aircraftConfigId } : event
-                                        ))}
-                                    />
+                                    <div className={tileLabelClass}>Aircraft</div>
+                                    {isEditingDraft ? (
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="24"
+                                            value={Math.max(1, Number(draft.aircraftCount) || 1)}
+                                            disabled={isPublishedInActiveSchedule}
+                                            onChange={(event) => setCurrencyDraftEvents(prev => prev.map(item => item.id === draft.id ? { ...item, aircraftCount: Math.max(1, Math.min(24, Math.floor(Number(event.target.value) || 1))) } : item))}
+                                            className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-[11px] font-semibold text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                        />
+                                    ) : (
+                                        <div className="font-mono text-slate-100">{Math.max(1, Number(draft.aircraftCount) || 1)}</div>
+                                    )}
                                 </div>
-                                <div className={`${tileBaseClass} overflow-hidden`}>
-                                    <CrewRequirementEditor
-                                        value={draft.crewRequirement}
-                                        aircraftCrewComposition={aircraftCrewComposition}
-                                        crewPositionTerminology={crewPositionTerminology}
-                                        operationalModel={operationalModel}
-                                        compact
-                                        showSummary={false}
-                                        showAircraftDefaultSummary={false}
-                                        headerClassName="text-center"
-                                        aircraftDefaultOptionLabel="A/C default"
-                                        onChange={(crewRequirement) => setCurrencyDraftEvents(prev => prev.map(event =>
-                                            event.id === draft.id ? { ...event, crewRequirement } : event
-                                        ))}
-                                    />
+                                <div className={tileBaseClass}>
+                                    <div className={tileLabelClass}>Currency Expire</div>
+                                    <div className="font-mono text-slate-500">-</div>
                                 </div>
-                                <div className={`${buildPriorityTableCellClass} flex min-h-[58px] items-center justify-center bg-cyan-950/80`}>
+                                <div className={tileBaseClass}>
+                                    <div className={tileLabelClass}>Date Requested</div>
+                                    <div className="font-mono text-slate-500">-</div>
+                                </div>
+                                <div className={tileBaseClass}>
+                                    <div className={tileLabelClass}>Priority</div>
+                                    <div className="font-semibold text-amber-300">{draftPriority}</div>
+                                </div>
+                                <div className={`${buildPriorityTableCellClass} flex min-h-[58px] items-center justify-center bg-cyan-950/80 px-1`}>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleCurrencyDraftEditing(draft.id)}
+                                        className="w-[48px] rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10"
+                                    >
+                                        {isEditingDraft ? 'Done' : 'Edit'}
+                                    </button>
+                                </div>
+                                <div className={`${buildPriorityTableCellClass} flex min-h-[58px] items-center justify-center bg-cyan-950/80 px-1`}>
                                     <button
                                         type="button"
                                         onClick={() => setCurrencyDraftEvents(prev => prev.filter(event => event.id !== draft.id))}
