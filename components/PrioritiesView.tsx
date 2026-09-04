@@ -725,7 +725,7 @@ const taskingPanelClass = 'flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = 'text-[10px] font-black uppercase tracking-[0.18em] text-slate-500';
 const taskingPanelHintClass = 'mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500';
 const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500';
-const taskingSummaryHeaderClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[8px] font-black uppercase tracking-[0.12em] text-slate-400';
+const taskingSummaryHeaderClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400';
 const taskingSummaryRowClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0';
 const taskingSummaryCellClass = 'border border-slate-700/70 px-2 py-2';
 const formatTaskingSummaryDate = (dateString: string | undefined): string => {
@@ -856,7 +856,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
           <div className="overflow-x-auto bg-cyan-950/80 transition hover:bg-cyan-900/80">
             <div className={taskingSummaryRowClass}>
               <div className={`${taskingSummaryCellClass} flex items-center justify-center`}>
-                <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[10px] font-semibold text-slate-100">
+                <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[11px] font-semibold text-slate-100">
                   <label className={`inline-flex items-center gap-0.5 ${canSubmit ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                     <input
                       type="radio"
