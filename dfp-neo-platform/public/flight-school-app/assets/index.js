@@ -46153,7 +46153,7 @@ const TaskingRequestTable = ({
     taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
     taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[1152px] space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryHeaderClass, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `${taskingSummaryHeaderCellClass} flex flex-col items-center justify-center gap-1`, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `${taskingSummaryHeaderCellClass} flex flex-col items-center justify-center gap-2`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Schedule" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => setAllTaskingSchedule(true), className: "px-1.5 py-0.5 text-cyan-100 hover:bg-cyan-500/15", children: "All" }),

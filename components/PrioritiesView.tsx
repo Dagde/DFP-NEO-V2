@@ -840,7 +840,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45">
         <div className="min-w-[1152px] space-y-3">
           <div className={taskingSummaryHeaderClass}>
-            <span className={`${taskingSummaryHeaderCellClass} flex flex-col items-center justify-center gap-1`}>
+            <span className={`${taskingSummaryHeaderCellClass} flex flex-col items-center justify-center gap-2`}>
               <span>Schedule</span>
               <span className="inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal">
                 <button type="button" onClick={() => setAllTaskingSchedule(true)} className="px-1.5 py-0.5 text-cyan-100 hover:bg-cyan-500/15">All</button>
