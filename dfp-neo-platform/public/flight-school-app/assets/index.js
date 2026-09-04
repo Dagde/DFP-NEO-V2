@@ -46059,7 +46059,7 @@ const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18e
 const taskingPanelHintClass = "mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500";
 const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
 const taskingSummaryHeaderClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
-const taskingSummaryRowClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0";
+const taskingSummaryRowClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 text-[12px]";
 const taskingSummaryCellClass = "border border-slate-700/70 px-2 py-2";
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const formatTaskingSummaryDate = (dateString) => {
