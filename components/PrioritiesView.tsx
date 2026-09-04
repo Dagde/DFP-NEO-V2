@@ -3595,7 +3595,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               {requests.map(req => {
                   const expiryInfo = calculateDaysToExpire(req.currencyExpire);
                   const tileLabelClass = 'mb-1 hidden text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
-                  const tileBaseClass = `${buildPriorityTableCellClass} flex h-full min-h-[52px] w-full min-w-0 flex-col justify-center bg-cyan-950/80 text-left`;
+                  const tileBaseClass = `${buildPriorityTableCellClass} flex h-full min-h-[52px] w-full min-w-0 flex-col justify-center bg-cyan-950/80 text-left text-[12px]`;
                   const controlClass = 'w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-[12px] text-white focus:ring-sky-500';
                   const selectedCrewGroup = fixedCrewRequestCrewGroups.find(group => (
                     group.key === req.crewGroupKey
