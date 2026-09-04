@@ -2195,7 +2195,7 @@ const DfpSidePanelTimeline: React.FC<{
                 Number.isFinite(Number(event.startTime)) &&
                 Number.isFinite(Number(event.duration)) &&
                 Number(event.duration) > 0 &&
-                event.type !== 'deployment'
+                event.type === 'flight'
             )
             .map((event, index) => {
                 const start = Math.max(timelineStartHour, Number(event.startTime));

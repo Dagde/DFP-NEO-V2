@@ -102569,7 +102569,7 @@ const DfpSidePanelTimeline = ({
     const tileHeight = Math.max(3, Math.min(7, Math.floor((miniTimelineBodyHeight - 10) / rowCount) - 1 || 3));
     const usableHeight = Math.max(1, miniTimelineBodyHeight - tileHeight - 6);
     return (activeDfpEvents || []).filter(
-      (event) => event && Number.isFinite(Number(event.startTime)) && Number.isFinite(Number(event.duration)) && Number(event.duration) > 0 && event.type !== "deployment"
+      (event) => event && Number.isFinite(Number(event.startTime)) && Number.isFinite(Number(event.duration)) && Number(event.duration) > 0 && event.type === "flight"
     ).map((event, index) => {
       const start = Math.max(timelineStartHour, Number(event.startTime));
       const end = Math.min(timelineEndHour, Number(event.startTime) + Number(event.duration));
