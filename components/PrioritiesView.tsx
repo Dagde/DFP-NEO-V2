@@ -725,6 +725,9 @@ const taskingPanelClass = 'flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = 'text-[10px] font-black uppercase tracking-[0.18em] text-slate-500';
 const taskingPanelHintClass = 'mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500';
 const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500';
+const taskingSummaryHeaderClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[8px] font-black uppercase tracking-[0.12em] text-slate-400';
+const taskingSummaryRowClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0';
+const taskingSummaryCellClass = 'border border-slate-700/70 px-2 py-2';
 
 const TaskingFieldPanel: React.FC<{
   label: string;
@@ -803,6 +806,24 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
         No directed task requests configured.
       </div>
     )}
+    {taskingRequests.length > 0 && (
+      <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45">
+        <div className={taskingSummaryHeaderClass}>
+          <span className={taskingSummaryCellClass}>Actions</span>
+          <span className={taskingSummaryCellClass}>Type</span>
+          <span className={taskingSummaryCellClass}>Solo/Dual</span>
+          <span className={taskingSummaryCellClass}>Date</span>
+          <span className={taskingSummaryCellClass}>Event</span>
+          <span className={taskingSummaryCellClass}>Route</span>
+          <span className={taskingSummaryCellClass}>Time</span>
+          <span className={taskingSummaryCellClass}>Aircraft</span>
+          <span className={taskingSummaryCellClass}>CONFIG</span>
+          <span className={taskingSummaryCellClass}>Priority</span>
+          <span className={taskingSummaryCellClass}>Status</span>
+          <span className={`${taskingSummaryCellClass} text-center`}>Edit</span>
+        </div>
+      </div>
+    )}
     {taskingRequests.map(request => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
       const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
@@ -815,42 +836,54 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
       const isExpanded = expandedTaskingIds.has(request.id);
       const taskingHeaderTitle = request.tasking.trim() || 'New directed task request';
-      const taskingHeaderDate = request.date || 'Date TBA';
-      const taskingHeaderTime = timeOptions.find(opt => opt.value === request.takeoff)?.label || 'Time TBA';
+      const taskingHeaderDate = request.date || '';
+      const taskingHeaderTime = timeOptions.find(opt => opt.value === request.takeoff)?.label || '';
+      const taskingStatus = request.ignored ? 'Ignored' : request.submitted ? 'Scheduled' : request.saved ? 'Saved' : 'Draft';
       const directedTaskHint = taskProfiles.some(profile => String(profile || '').trim())
         ? <>Names come from {renderDirectedTaskSettingsLink()}; you can also type a task.</>
         : <>Add names in {renderDirectedTaskSettingsLink()}, or type a task.</>;
       return (
         <div key={request.id} className="overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
-          <div className="flex w-full items-center gap-3 bg-cyan-950/80 px-4 py-3 transition hover:bg-cyan-900/80">
-            <button
-              type="button"
-              onClick={() => toggleTaskingExpanded(request.id)}
-              className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
-              aria-expanded={isExpanded}
-            >
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-black text-cyan-50">{taskingHeaderTitle}</span>
-                <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Directed Task Request</span>
-              </span>
-              <span className="flex shrink-0 items-center gap-2 text-right">
-                <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderDate}</span>
-                <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderTime}</span>
-                <span className={`text-sm font-black text-cyan-100 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>v</span>
-              </span>
-            </button>
-            <button
-                type="button"
-                aria-label="Delete directed task"
-                title="Delete directed task"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onRemoveTaskingRequest(request.id);
-                }}
-                className="inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100 focus:outline-none focus:ring-2 focus:ring-red-400/60"
-              >
-                <TrashIcon aria-hidden="true" className="h-4 w-4" />
-            </button>
+          <div className="overflow-x-auto bg-cyan-950/80 transition hover:bg-cyan-900/80">
+            <div className={taskingSummaryRowClass}>
+              <div className={`${taskingSummaryCellClass} flex flex-wrap items-center gap-1`}>
+                <button
+                  type="button"
+                  disabled={!canSubmit}
+                  onClick={() => onSetTaskingSchedulerPriority(request.id, schedulerPriority)}
+                  className={`w-[64px] rounded border px-2 py-1 text-[10px] font-semibold ${request.submitted && !request.ignored ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-100' : canSubmit ? 'border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10' : 'cursor-not-allowed border-slate-600 text-slate-500'}`}
+                >
+                  Schedule
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true })}
+                  className={`w-[64px] rounded border px-2 py-1 text-[10px] font-semibold ${request.ignored || !request.submitted ? 'border-rose-400/60 bg-rose-500/15 text-rose-100' : 'border-rose-400/50 text-rose-200 hover:bg-rose-500/10'}`}
+                >
+                  Ignore
+                </button>
+              </div>
+              <div className={`${taskingSummaryCellClass} font-semibold text-cyan-100`}>Directed Task</div>
+              <div className={`${taskingSummaryCellClass} text-slate-100`}>{request.flightType}</div>
+              <div className={`${taskingSummaryCellClass} font-mono text-slate-100`}>{formatPriorityDate(taskingHeaderDate || undefined)}</div>
+              <div className={`${taskingSummaryCellClass} truncate font-semibold text-slate-100`} title={taskingHeaderTitle}>{taskingHeaderTitle}</div>
+              <div className={`${taskingSummaryCellClass} truncate text-slate-100`} title={`${request.depPoint}-${request.arrivalPoint}`}>{request.depPoint || '-'}-{request.arrivalPoint || '-'}</div>
+              <div className={`${taskingSummaryCellClass} font-mono text-slate-100`}>{taskingHeaderTime.replace(':', '') || '-'}</div>
+              <div className={`${taskingSummaryCellClass} font-mono text-slate-100`}>{request.aircraftCount || 1}</div>
+              <div className={`${taskingSummaryCellClass} truncate text-slate-100`} title={selectedConfig?.label || request.aircraftConfigId}>{selectedConfig?.label || request.aircraftConfigId || '-'}</div>
+              <div className={`${taskingSummaryCellClass} font-semibold ${schedulerPriority === 'High' ? 'text-red-300' : schedulerPriority === 'Medium' ? 'text-amber-300' : 'text-green-300'}`}>{schedulerPriority}</div>
+              <div className={`${taskingSummaryCellClass} text-slate-100`}>{taskingStatus}</div>
+              <div className={`${taskingSummaryCellClass} text-center`}>
+                <button
+                  type="button"
+                  onClick={() => toggleTaskingExpanded(request.id)}
+                  className="w-[48px] rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10"
+                  aria-expanded={isExpanded}
+                >
+                  {isExpanded ? 'Done' : 'Edit'}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>

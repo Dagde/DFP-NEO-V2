@@ -46058,6 +46058,9 @@ const taskingPanelClass = "flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18em] text-slate-500";
 const taskingPanelHintClass = "mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500";
 const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
+const taskingSummaryHeaderClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[8px] font-black uppercase tracking-[0.12em] text-slate-400";
+const taskingSummaryRowClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0";
+const taskingSummaryCellClass = "border border-slate-700/70 px-2 py-2";
 const TaskingFieldPanel = ({ label, hint, className = "", contentClassName = "", children }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${taskingPanelClass} ${className}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: taskingPanelLabelClass, children: label }),
@@ -46120,6 +46123,20 @@ const TaskingRequestTable = ({
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
     taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
+    taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryHeaderClass, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Actions" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Type" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Solo/Dual" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Date" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Event" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Route" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Time" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Aircraft" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "CONFIG" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Priority" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryCellClass, children: "Status" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${taskingSummaryCellClass} text-center`, children: "Edit" })
+    ] }) }),
     taskingRequests.map((request) => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
       const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
@@ -46130,8 +46147,9 @@ const TaskingRequestTable = ({
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
       const isExpanded = expandedTaskingIds.has(request.id);
       const taskingHeaderTitle = request.tasking.trim() || "New directed task request";
-      const taskingHeaderDate = request.date || "Date TBA";
-      const taskingHeaderTime = timeOptions.find((opt) => opt.value === request.takeoff)?.label || "Time TBA";
+      const taskingHeaderDate = request.date || "";
+      const taskingHeaderTime = timeOptions.find((opt) => opt.value === request.takeoff)?.label || "";
+      const taskingStatus = request.ignored ? "Ignored" : request.submitted ? "Scheduled" : request.saved ? "Saved" : "Draft";
       const directedTaskHint = taskProfiles.some((profile) => String(profile || "").trim()) ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         "Names come from ",
         renderDirectedTaskSettingsLink(),
@@ -46142,42 +46160,53 @@ const TaskingRequestTable = ({
         ", or type a task."
       ] });
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-full items-center gap-3 bg-cyan-950/80 px-4 py-3 transition hover:bg-cyan-900/80", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto bg-cyan-950/80 transition hover:bg-cyan-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryRowClass, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${taskingSummaryCellClass} flex flex-wrap items-center gap-1`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                disabled: !canSubmit,
+                onClick: () => onSetTaskingSchedulerPriority(request.id, schedulerPriority),
+                className: `w-[64px] rounded border px-2 py-1 text-[10px] font-semibold ${request.submitted && !request.ignored ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-100" : canSubmit ? "border-emerald-400/50 text-emerald-200 hover:bg-emerald-500/10" : "cursor-not-allowed border-slate-600 text-slate-500"}`,
+                children: "Schedule"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => onUpdateTaskingRequest(request.id, { saved: true, submitted: false, ignored: true }),
+                className: `w-[64px] rounded border px-2 py-1 text-[10px] font-semibold ${request.ignored || !request.submitted ? "border-rose-400/60 bg-rose-500/15 text-rose-100" : "border-rose-400/50 text-rose-200 hover:bg-rose-500/10"}`,
+                children: "Ignore"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-semibold text-cyan-100`, children: "Directed Task" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} text-slate-100`, children: request.flightType }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-mono text-slate-100`, children: formatPriorityDate(taskingHeaderDate || void 0) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} truncate font-semibold text-slate-100`, title: taskingHeaderTitle, children: taskingHeaderTitle }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${taskingSummaryCellClass} truncate text-slate-100`, title: `${request.depPoint}-${request.arrivalPoint}`, children: [
+            request.depPoint || "-",
+            "-",
+            request.arrivalPoint || "-"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-mono text-slate-100`, children: taskingHeaderTime.replace(":", "") || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-mono text-slate-100`, children: request.aircraftCount || 1 }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} truncate text-slate-100`, title: selectedConfig?.label || request.aircraftConfigId, children: selectedConfig?.label || request.aircraftConfigId || "-" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-semibold ${schedulerPriority === "High" ? "text-red-300" : schedulerPriority === "Medium" ? "text-amber-300" : "text-green-300"}`, children: schedulerPriority }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} text-slate-100`, children: taskingStatus }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} text-center`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
               onClick: () => toggleTaskingExpanded(request.id),
-              className: "flex min-w-0 flex-1 items-center justify-between gap-3 text-left",
+              className: "w-[48px] rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10",
               "aria-expanded": isExpanded,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-black text-cyan-50", children: taskingHeaderTitle }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Directed Task Request" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex shrink-0 items-center gap-2 text-right", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white", children: taskingHeaderDate }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white", children: taskingHeaderTime }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-black text-cyan-100 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`, children: "v" })
-                ] })
-              ]
+              children: isExpanded ? "Done" : "Edit"
             }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              "aria-label": "Delete directed task",
-              title: "Delete directed task",
-              onClick: (event) => {
-                event.stopPropagation();
-                onRemoveTaskingRequest(request.id);
-              },
-              className: "inline-flex h-7 w-7 items-center justify-center rounded border border-red-500/35 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-100 focus:outline-none focus:ring-2 focus:ring-red-400/60",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-4 w-4" })
-            }
-          )
-        ] }),
+          ) })
+        ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Directed Task", hint: directedTaskHint, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -47322,7 +47351,7 @@ const PrioritiesView = ({
     const minutes = Math.round((bounded - hours) * 60);
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   };
-  const formatPriorityDate = (dateString) => {
+  const formatPriorityDate2 = (dateString) => {
     if (!dateString) return "Any";
     try {
       const parsedDate = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
@@ -49037,8 +49066,8 @@ const PrioritiesView = ({
         index === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { rowSpan: group.events.length, className: `border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`, children: group.label }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 font-mono ${rowText}`, children: events.indexOf(event) + 1 }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 ${rowText}`, children: flightType }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`, title: matchesBuildDate ? formatPriorityDate(event.date) : `${formatPriorityDate(event.date)} - not scheduled for this build date`, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: event.date || buildDfpDate, onClick: (e) => e.stopPropagation(), onChange: (e) => updateEvent(event, { date: e.target.value }), style: { colorScheme: "dark" }, className: "h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: formatPriorityDate(event.date) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`, title: matchesBuildDate ? formatPriorityDate2(event.date) : `${formatPriorityDate2(event.date)} - not scheduled for this build date`, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: event.date || buildDfpDate, onClick: (e) => e.stopPropagation(), onChange: (e) => updateEvent(event, { date: e.target.value }), style: { colorScheme: "dark" }, className: "h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: formatPriorityDate2(event.date) }),
           !matchesBuildDate && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[9px] font-black uppercase tracking-[0.12em] text-amber-300/80", children: "Not this build" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`, title: eventLabel, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: eventLabel, onClick: (e) => e.stopPropagation(), onChange: (e) => updateEvent(event, { flightNumber: e.target.value, taskingName: e.target.value, taskingDisplayLabel: e.target.value, currency: group.key.includes("currency") ? e.target.value : event.currency }), className: "h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" }) : eventLabel }),
@@ -50344,7 +50373,7 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Highest Priority Events" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: [
               "Build date ",
-              formatPriorityDate(buildDfpDate)
+              formatPriorityDate2(buildDfpDate)
             ] })
           ] }),
           stalePriorityEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-right text-[11px] font-semibold text-amber-100", children: [
