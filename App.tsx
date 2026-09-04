@@ -970,6 +970,7 @@ const DfpSidePanelTimeline: React.FC<{
     scheduleZoomLevel?: number;
     onRunNeoBuild?: () => void;
     onNavigateToCurrencySettings?: () => void;
+    onNavigateToSavedSpecialSettings?: () => void;
     onOpenPrioritiesSection?: (target: string) => void;
 }> = ({
     flyingStartTime,
@@ -1046,6 +1047,7 @@ const DfpSidePanelTimeline: React.FC<{
     scheduleZoomLevel = 1,
     onRunNeoBuild,
     onNavigateToCurrencySettings,
+    onNavigateToSavedSpecialSettings,
     onOpenPrioritiesSection,
 }) => {
     const timelineStartHour = 6;
@@ -6192,9 +6194,18 @@ const DfpSidePanelTimeline: React.FC<{
             };
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
-                    <div className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2">
-                        <p className="font-semibold text-slate-100">Saved Special Events</p>
-                        <p className="mt-1 text-[9px] text-slate-400">Saved non-standard events are listed here. They only enter the Priority Table after Schedule is selected.</p>
+                    <div className="flex items-start justify-between gap-3 rounded border border-slate-700 bg-slate-950/45 px-2 py-2">
+                        <div>
+                            <p className="font-semibold text-slate-100">Saved Special Events</p>
+                            <p className="mt-1 text-[9px] text-slate-400">Saved non-standard events are listed here. They only enter the Priority Table after Schedule is selected.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => onNavigateToSavedSpecialSettings?.()}
+                            className="shrink-0 rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10"
+                        >
+                            Edit
+                        </button>
                     </div>
                     <div className="max-h-56 overflow-y-auto rounded border border-slate-700">
                         <table className="w-full min-w-[960px] table-fixed text-[10px]">
@@ -54712,6 +54723,7 @@ appliedUpdates.forEach(update => {
                                     scheduleZoomLevel={zoomLevel}
                                     onRunNeoBuild={handleBuildDfp}
                                     onNavigateToCurrencySettings={() => handleNavigateToSettingsSection({ sectionId: 'sct-events', unitCode: activeUnitCode })}
+                                    onNavigateToSavedSpecialSettings={() => handleNavigateToSettingsSection({ sectionId: 'platform-task-profiles', unitCode: activeUnitCode })}
                                     onOpenPrioritiesExclusions={() => {
                                         try {
                                             localStorage.setItem('neo_open_departure_arrival_exclusions', '1');

@@ -101659,6 +101659,7 @@ const DfpSidePanelTimeline = ({
   scheduleZoomLevel = 1,
   onRunNeoBuild,
   onNavigateToCurrencySettings,
+  onNavigateToSavedSpecialSettings,
   onOpenPrioritiesSection
 }) => {
   const timelineStartHour = 6;
@@ -106128,9 +106129,20 @@ This cannot be undone.`,
         return "Standard crew";
       };
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-slate-100", children: "Saved Special Events" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[9px] text-slate-400", children: "Saved non-standard events are listed here. They only enter the Priority Table after Schedule is selected." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3 rounded border border-slate-700 bg-slate-950/45 px-2 py-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-slate-100", children: "Saved Special Events" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[9px] text-slate-400", children: "Saved non-standard events are listed here. They only enter the Priority Table after Schedule is selected." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => onNavigateToSavedSpecialSettings?.(),
+              className: "shrink-0 rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10",
+              children: "Edit"
+            }
+          )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-56 overflow-y-auto rounded border border-slate-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[960px] table-fixed text-[10px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
@@ -145751,6 +145763,7 @@ Do you want to replace the existing entry?`,
                         scheduleZoomLevel: zoomLevel,
                         onRunNeoBuild: handleBuildDfp,
                         onNavigateToCurrencySettings: () => handleNavigateToSettingsSection({ sectionId: "sct-events", unitCode: activeUnitCode }),
+                        onNavigateToSavedSpecialSettings: () => handleNavigateToSettingsSection({ sectionId: "platform-task-profiles", unitCode: activeUnitCode }),
                         onOpenPrioritiesExclusions: () => {
                           try {
                             localStorage.setItem("neo_open_departure_arrival_exclusions", "1");
