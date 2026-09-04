@@ -1334,6 +1334,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [pendingStandardMissionSaveId, setPendingStandardMissionSaveId] = useState<string | null>(null);
   const [standardMissionDrafts, setStandardMissionDrafts] = useState<Record<string, Partial<StandardMissionProfile>>>({});
   const [temporaryStandardMissionOverrides, setTemporaryStandardMissionOverrides] = useState<Record<string, Partial<StandardMissionProfile>>>({});
+  const [editingSctRequestIds, setEditingSctRequestIds] = useState<Set<string>>(new Set());
   const [editingPriorityEventId, setEditingPriorityEventId] = useState<string | null>(null);
   const [priorityPushDrafts, setPriorityPushDrafts] = useState<Record<string, boolean>>({});
   const priorityAllocationModel: PriorityAllocationModel = isAirCombatModel ? 'air_combat' : isFixedCrewModel ? 'fixed_crew' : 'flight_school';
@@ -3375,7 +3376,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         }
     };
 
-    const statusButtonClass = 'btn-aluminium-brushed flex h-8 w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold disabled:cursor-not-allowed';
     const crewRequirementFromPreset = (preset: CrewRequirementPreset): CrewRequirement => (
       preset.kind === 'standard'
         ? { mode: 'aircraft_default' }
@@ -3451,18 +3451,135 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       }, type);
     };
     const isFlightSchoolCurrencyRequestTable = priorityAllocationModel === 'flight_school';
-    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? 'min-w-[1152px]' : 'min-w-[1220px]';
+    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? 'min-w-[1322px]' : 'min-w-[1396px]';
     const sctTableHeaderColumnsClass = isFlightSchoolCurrencyRequestTable
-      ? 'grid-cols-[140px_140px_150px_116px_82px_120px_120px_96px_96px_72px]'
-      : 'grid-cols-[132px_132px_140px_150px_104px_74px_112px_112px_90px_88px_72px]';
+      ? 'grid-cols-[136px_140px_140px_150px_116px_82px_120px_120px_96px_96px_66px_60px]'
+      : 'grid-cols-[136px_132px_132px_140px_150px_104px_74px_112px_112px_90px_88px_66px_60px]';
     const sctTableBodyColumnsClass = isFlightSchoolCurrencyRequestTable
-      ? 'grid-cols-[140px_140px_150px_116px_82px_120px_120px_96px_96px]'
-      : 'grid-cols-[132px_132px_140px_150px_104px_74px_112px_112px_90px_88px]';
+      ? 'grid-cols-[136px_140px_140px_150px_116px_82px_120px_120px_96px_96px_66px_60px]'
+      : 'grid-cols-[136px_132px_132px_140px_150px_104px_74px_112px_112px_90px_88px_66px_60px]';
+    const getSctEditKey = (request: SctRequest) => `${type}:${request.id}`;
+    const toggleSctRequestEditing = (request: SctRequest) => {
+      const key = getSctEditKey(request);
+      setEditingSctRequestIds(prev => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    };
+    const unstageSpecificCurrencyRequest = (request: SctRequest) => {
+      const requestDraftId = `specific-currency-${type}-${request.id}`;
+      setCurrencyDraftEvents(prev => prev.filter(event => event.id !== requestDraftId));
+      highestPriorityEvents
+        .filter(event => event.sctRequestId === request.id || event.currencyDraftId === requestDraftId)
+        .forEach(event => onDeletePriorityEvent(event.id));
+      onPatchSctRequest(request.id, { submitted: false, includeInBuild: false, pushToNeoBuild: false }, type);
+    };
+    const canSubmitSpecificCurrencyRequest = (request: SctRequest): boolean => {
+      const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
+      const formationAssignments = Array.from({ length: Math.max(0, aircraftCount - 1) }, (_, index) => request.formationCrew?.[index] || {});
+      const isFlightSchoolCurrencyRequest = priorityAllocationModel === 'flight_school';
+      const hasFlightSchoolSecondPilotOrSolo = !isFlightSchoolCurrencyRequest || Boolean(String(request.crewMember || '').trim());
+      const formationAssignmentsComplete = !isFixedCrewModel || aircraftCount <= 1 || formationAssignments.every(assignment => (
+        (assignment.crewGroupKey || assignment.crewDisplayLabel) && assignment.crewIndividual
+      ));
+      return Boolean(request.event && (isFixedCrewModel ? (request.crewGroupKey || request.crewDisplayLabel) : request.name) && hasFlightSchoolSecondPilotOrSolo && formationAssignmentsComplete);
+    };
+    const scheduleSpecificCurrencyRequest = (request: SctRequest) => {
+      if (!canSubmitSpecificCurrencyRequest(request)) return;
+      const selectedCrewGroup = fixedCrewRequestCrewGroups.find(group => (
+        group.key === request.crewGroupKey
+        || (group.crewValue === String(request.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
+          && group.unitCode === String(request.crewUnitCode || '').trim().toUpperCase())
+      ));
+      const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
+      const formationAssignments = Array.from({ length: Math.max(0, aircraftCount - 1) }, (_, index) => request.formationCrew?.[index] || {});
+      const isFlightSchoolCurrencyRequest = priorityAllocationModel === 'flight_school';
+      const flightSchoolSecondPilot = String(request.crewMember || '').trim();
+      const profile = currencyProfilesForContext.find(candidate => (
+        String(candidate.name || candidate.currency || '').trim() === String(request.event || '').trim()
+        || String(candidate.currency || '').trim() === String(request.event || '').trim()
+      ));
+      const profileCode = String(request.eventCode || profile?.code || '').trim().toUpperCase().slice(0, 8);
+      const requestDraftId = `specific-currency-${type}-${request.id}`;
+      const displayName = isFixedCrewModel
+        ? (request.crewIndividual || selectedCrewGroup?.label || request.crewDisplayLabel || request.crewGroup || 'Fixed Crew')
+        : (request.name || 'Currency request');
+      const flightSchoolIsSolo = isFlightSchoolCurrencyRequest && flightSchoolSecondPilot === 'Solo';
+      const draftEvent = {
+        id: requestDraftId,
+        audience: 'staff' as const,
+        personId: 0,
+        personKey: request.id,
+        personName: displayName,
+        eventType: type,
+        currencyProfileName: String(request.event || '').trim(),
+        currencyProfileCode: profileCode,
+        crewMode: flightSchoolIsSolo || request.flightType === 'Solo' ? 'solo' as const : 'withOtherPilot' as const,
+        dueCurrencies: request.currency ? [request.currency] : currencyNames,
+        selectedCurrencies: request.currency ? [request.currency] : [],
+        aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
+        aircraftCount,
+        crewRequirement: request.crewRequirement || { mode: 'aircraft_default' as const },
+        picName: isFixedCrewModel
+          ? (request.crewIndividual || '')
+          : flightSchoolIsSolo
+            ? ''
+            : flightSchoolSecondPilot,
+        fixedCrewGroupKey: request.crewGroupKey || selectedCrewGroup?.key || '',
+        fixedCrewDisplayLabel: selectedCrewGroup?.label || request.crewDisplayLabel || '',
+        formationCrew: formationAssignments.map(assignment => ({
+          crewGroup: assignment.crewGroup || '',
+          crewGroupKey: assignment.crewGroupKey || '',
+          crewUnitCode: assignment.crewUnitCode || '',
+          crewDisplayLabel: assignment.crewDisplayLabel || '',
+          crewIndividual: assignment.crewIndividual || '',
+        })),
+        selected: true,
+        pushed: false,
+      };
+      if (isFixedCrewModel) {
+        highestPriorityEvents
+          .filter(event => event.currencyDraftId === requestDraftId)
+          .forEach(event => onDeletePriorityEvent(event.id));
+        const priorityEvents = buildCurrencyPriorityEventsFromDrafts([draftEvent])
+          .map(event => ({
+            ...event,
+            priority: request.priority || event.priority,
+          }));
+        onAddPriorityEvents(priorityEvents);
+        onSubmitSctRequest(request.id, type);
+        logAudit('Priorities', 'Submit', 'Submitted specific currency request to Highest Priority', `${displayName} ${request.event || 'Currency'} (${priorityEvents.length} event${priorityEvents.length === 1 ? '' : 's'})`);
+        return;
+      }
+      setCurrencyDraftEvents(prev => {
+        if (prev.some(event => event.id === requestDraftId)) return prev;
+        return [...prev, draftEvent];
+      });
+      onSubmitSctRequest(request.id, type);
+    };
+    const setAllSctRequestSchedule = (scheduled: boolean) => {
+      requests.forEach(request => {
+        if (scheduled) {
+          scheduleSpecificCurrencyRequest(request);
+          return;
+        }
+        unstageSpecificCurrencyRequest(request);
+      });
+    };
     
       return (
       <div className={buildPriorityTableShellClass}>
           <div className={`${sctTableMinWidthClass} space-y-3`}>
               <div className={`${buildPriorityTableHeaderClass} ${sctTableHeaderColumnsClass}`}>
+                  <span className={`${buildPriorityTableHeaderCellClass} flex flex-col items-center justify-center gap-2`}>
+                      <span>Schedule</span>
+                      <span className="inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal">
+                          <button type="button" onClick={() => setAllSctRequestSchedule(true)} className="px-1.5 py-0.5 text-cyan-100 hover:bg-cyan-500/15">All</button>
+                          <button type="button" onClick={() => setAllSctRequestSchedule(false)} className="border-l border-slate-600 px-1.5 py-0.5 text-slate-200 hover:bg-slate-700/60">None</button>
+                      </span>
+                  </span>
                   <span className={buildPriorityTableHeaderCellClass}>{isFixedCrewModel ? 'Crew' : isFlightSchoolCurrencyRequestTable ? 'Pilot' : 'Staff'}</span>
                   <span className={buildPriorityTableHeaderCellClass}>{isFlightSchoolCurrencyRequestTable ? 'Second Pilot' : 'PIC'}</span>
                   <span className={buildPriorityTableHeaderCellClass}>Event</span>
@@ -3473,7 +3590,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   <span className={buildPriorityTableHeaderCellClass}>Date Requested</span>
                   <span className={buildPriorityTableHeaderCellClass}>Days</span>
                   <span className={buildPriorityTableHeaderCellClass}>Priority</span>
-                  <span className={buildPriorityTableHeaderCellClass}>Action</span>
+                  <span className={buildPriorityTableHeaderCellClass}>Edit</span>
+                  <span className={buildPriorityTableHeaderCellClass} aria-label="Delete"></span>
               </div>
               {requests.map(req => {
                   const expiryInfo = calculateDaysToExpire(req.currencyExpire);
@@ -3504,89 +3622,58 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   const formationAssignments = Array.from({ length: Math.max(0, aircraftCount - 1) }, (_, index) => req.formationCrew?.[index] || {});
                   const isFlightSchoolCurrencyRequest = priorityAllocationModel === 'flight_school';
                   const flightSchoolSecondPilot = String(req.crewMember || '').trim();
-                  const hasFlightSchoolSecondPilotOrSolo = !isFlightSchoolCurrencyRequest || Boolean(flightSchoolSecondPilot);
                   const updateFormationAssignment = (index: number, updates: Partial<FixedCrewFormationAssignment>) => {
                     const nextAssignments = formationAssignments.map((assignment, assignmentIndex) => (
                       assignmentIndex === index ? { ...assignment, ...updates } : assignment
                     ));
                     onPatchSctRequest(req.id, { formationCrew: nextAssignments }, type);
                   };
-                  const formationAssignmentsComplete = !isFixedCrewModel || aircraftCount <= 1 || formationAssignments.every(assignment => (
-                      (assignment.crewGroupKey || assignment.crewDisplayLabel) && assignment.crewIndividual
-                  ));
-                  const canSubmitRequest = Boolean(req.event && (isFixedCrewModel ? (req.crewGroupKey || req.crewDisplayLabel) : req.name) && hasFlightSchoolSecondPilotOrSolo && formationAssignmentsComplete);
-                  const stageSpecificCurrencyRequest = () => {
-                      if (!canSubmitRequest) return;
-                      const profile = currencyProfilesForContext.find(candidate => (
-                          String(candidate.name || candidate.currency || '').trim() === String(req.event || '').trim()
-                          || String(candidate.currency || '').trim() === String(req.event || '').trim()
-                      ));
-                      const profileCode = String(req.eventCode || profile?.code || '').trim().toUpperCase().slice(0, 8);
-                      const requestDraftId = `specific-currency-${type}-${req.id}`;
-                      const displayName = isFixedCrewModel
-                          ? (req.crewIndividual || selectedCrewGroup?.label || req.crewDisplayLabel || req.crewGroup || 'Fixed Crew')
-                          : (req.name || 'Currency request');
-                      const flightSchoolIsSolo = isFlightSchoolCurrencyRequest && flightSchoolSecondPilot === 'Solo';
-                      const draftEvent = {
-                          id: requestDraftId,
-                          audience: 'staff' as const,
-                          personId: 0,
-                          personKey: req.id,
-                          personName: displayName,
-                          eventType: type,
-                          currencyProfileName: String(req.event || '').trim(),
-                          currencyProfileCode: profileCode,
-                          crewMode: flightSchoolIsSolo || req.flightType === 'Solo' ? 'solo' as const : 'withOtherPilot' as const,
-                          dueCurrencies: req.currency ? [req.currency] : currencyNames,
-                          selectedCurrencies: req.currency ? [req.currency] : [],
-                          aircraftConfigId: req.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
-                          aircraftCount: Math.max(1, Math.floor(Number(req.aircraftCount) || 1)),
-                          crewRequirement: req.crewRequirement || { mode: 'aircraft_default' as const },
-                          picName: isFixedCrewModel
-                              ? (req.crewIndividual || '')
-                              : flightSchoolIsSolo
-                                  ? ''
-                                  : flightSchoolSecondPilot,
-                          fixedCrewGroupKey: req.crewGroupKey || selectedCrewGroup?.key || '',
-                          fixedCrewDisplayLabel: selectedCrewGroup?.label || req.crewDisplayLabel || '',
-                          formationCrew: formationAssignments.map(assignment => ({
-                              crewGroup: assignment.crewGroup || '',
-                              crewGroupKey: assignment.crewGroupKey || '',
-                              crewUnitCode: assignment.crewUnitCode || '',
-                              crewDisplayLabel: assignment.crewDisplayLabel || '',
-                              crewIndividual: assignment.crewIndividual || '',
-                          })),
-                          selected: true,
-                          pushed: false,
-                      };
-                      if (isFixedCrewModel) {
-                          highestPriorityEvents
-                              .filter(event => event.currencyDraftId === requestDraftId)
-                              .forEach(event => onDeletePriorityEvent(event.id));
-                          const priorityEvents = buildCurrencyPriorityEventsFromDrafts([draftEvent])
-                              .map(event => ({
-                                  ...event,
-                                  priority: req.priority || event.priority,
-                              }));
-                          onAddPriorityEvents(priorityEvents);
-                          onSubmitSctRequest(req.id, type);
-                          logAudit('Priorities', 'Submit', 'Submitted specific currency request to Highest Priority', `${displayName} ${req.event || 'Currency'} (${priorityEvents.length} event${priorityEvents.length === 1 ? '' : 's'})`);
-                          return;
-                      }
-                      setCurrencyDraftEvents(prev => {
-                          if (prev.some(event => event.id === requestDraftId)) return prev;
-                          return [...prev, draftEvent];
-                      });
-                      onSubmitSctRequest(req.id, type);
-                  };
+                  const canSubmitRequest = canSubmitSpecificCurrencyRequest(req);
+                  const isEditingRequest = editingSctRequestIds.has(getSctEditKey(req));
+                  const stageSpecificCurrencyRequest = () => scheduleSpecificCurrencyRequest(req);
+                  const crewDisplay = isFixedCrewModel
+                    ? (selectedCrewGroup?.label || req.crewDisplayLabel || req.crewGroup || 'TBA')
+                    : (req.name || 'TBA');
+                  const picDisplay = isFixedCrewModel
+                    ? (req.crewIndividual || 'TBA')
+                    : isFlightSchoolCurrencyRequest
+                      ? (flightSchoolSecondPilot || 'TBA')
+                      : 'N/A';
+                  const eventDisplay = String(req.event || req.currency || 'Select profile').trim();
+                  const configDisplay = String(aircraftConfigOptions.find(definition => definition.id === req.aircraftConfigId)?.label || req.aircraftConfigId || 'CONFIG 0').trim();
                   return (
                       <div key={req.id} className="overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
-                          <div className="grid w-full grid-cols-[minmax(0,1fr)_72px] items-stretch gap-0">
-                              <div className="space-y-3">
                               <div className={`grid auto-rows-fr ${sctTableBodyColumnsClass} items-stretch gap-0`}>
+                                  <div className={`${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80`}>
+                                      <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100">
+                                          <label className={`inline-flex items-center gap-1 text-[12px] leading-none ${canSubmitRequest ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                                              <input
+                                                  type="radio"
+                                                  name={`sct-schedule-${type}-${req.id}`}
+                                                  checked={req.submitted === true}
+                                                  disabled={!canSubmitRequest}
+                                                  onChange={stageSpecificCurrencyRequest}
+                                                  className="h-4 w-4 accent-cyan-400"
+                                              />
+                                              Y
+                                          </label>
+                                          <label className="inline-flex cursor-pointer items-center gap-1 text-[12px] leading-none">
+                                              <input
+                                                  type="radio"
+                                                  name={`sct-schedule-${type}-${req.id}`}
+                                                  checked={req.submitted !== true}
+                                                  onChange={() => unstageSpecificCurrencyRequest(req)}
+                                                  className="h-4 w-4 accent-cyan-400"
+                                              />
+                                              N
+                                          </label>
+                                      </div>
+                                  </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>{isFlightSchoolCurrencyRequest ? 'Pilot' : 'Crew'}</div>
-                                      {isFixedCrewModel ? (
+                                      {!isEditingRequest ? (
+                                        <div className="truncate font-semibold text-cyan-100" title={crewDisplay}>{crewDisplay}</div>
+                                      ) : isFixedCrewModel ? (
                                         <div className="space-y-2">
                                           <div className={aircraftCount > 1 ? 'grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2' : ''}>
                                             {aircraftCount > 1 && <div className="text-center text-[10px] font-bold text-sky-300">1</div>}
@@ -3679,7 +3766,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>{isFlightSchoolCurrencyRequest ? 'Second Pilot' : 'PIC'}</div>
-                                      {isFixedCrewModel ? (
+                                      {!isEditingRequest ? (
+                                        <div className="truncate text-slate-100" title={picDisplay}>{picDisplay}</div>
+                                      ) : isFixedCrewModel ? (
                                         <div className="space-y-2">
                                           <div className={aircraftCount > 1 ? 'grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-2' : ''}>
                                             {aircraftCount > 1 && <div className="text-center text-[10px] font-bold text-sky-300">1</div>}
@@ -3760,15 +3849,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Event</div>
-                                      <select value={req.event} onChange={e => applyCurrencyProfile(req, e.target.value)} className={controlClass}>
+                                      {!isEditingRequest ? (
+                                        <div className="truncate font-semibold text-slate-100" title={eventDisplay}>{eventDisplay}</div>
+                                      ) : <select value={req.event} onChange={e => applyCurrencyProfile(req, e.target.value)} className={controlClass}>
                                           <option value="">Select profile</option>
                                           {sctEvents.map(e => <option key={e} value={e}>{currencyProfileNameLabels[e] || e}</option>)}
-                                      </select>
+                                      </select>}
                                   </div>
                                   {!isFlightSchoolCurrencyRequest && (
                                       <div className={tileBaseClass}>
                                           <div className={tileLabelClass}>Crew Composition</div>
-                                          <select
+                                          {!isEditingRequest ? (
+                                            <div className="truncate text-slate-100" title={crewRequirementPresetIdFor(req.crewRequirement) || 'A/C default'}>{crewRequirementPresetIdFor(req.crewRequirement) || 'A/C default'}</div>
+                                          ) : <select
                                               value={crewRequirementPresetIdFor(req.crewRequirement)}
                                               onChange={e => {
                                                   const preset = crewRequirementPresets.find(candidate => candidate.id === e.target.value);
@@ -3785,37 +3878,45 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                       ))}
                                                   </optgroup>
                                               ))}
-                                          </select>
+                                          </select>}
                                       </div>
                                   )}
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>CONFIG</div>
-                                      <div className="[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white">
+                                      {!isEditingRequest ? (
+                                        <div className="truncate text-slate-100" title={configDisplay}>{configDisplay}</div>
+                                      ) : <div className="[&_select]:w-full [&_select]:rounded [&_select]:border-gray-600 [&_select]:bg-gray-700 [&_select]:px-2 [&_select]:py-1 [&_select]:text-xs [&_select]:text-white">
                                           <AircraftConfigSelect
                                               value={req.aircraftConfigId}
                                               definitions={aircraftConfigOptions}
                                               onChange={(aircraftConfigId) => onUpdateSctRequest(req.id, 'aircraftConfigId', aircraftConfigId, type)}
                                           />
-                                      </div>
+                                      </div>}
                                   </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>No. of A/C</div>
-                                      <input
+                                      {!isEditingRequest ? (
+                                        <div className="font-mono text-slate-100">{aircraftCount}</div>
+                                      ) : <input
                                           type="number"
                                           min="1"
                                           max="24"
                                           value={Math.max(1, Number(req.aircraftCount) || 1)}
                                           onChange={e => onPatchSctRequest(req.id, { aircraftCount: Math.max(1, Math.min(24, Math.floor(Number(e.target.value) || 1))) }, type)}
                                           className={controlClass}
-                                      />
+                                      />}
                                   </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Currency Expire</div>
-                                      <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
+                                      {!isEditingRequest ? (
+                                        <div className="font-mono text-slate-100">{formatPriorityDate(req.currencyExpire) || '-'}</div>
+                                      ) : <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />}
                                   </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Date Requested</div>
-                                      <input type="date" value={req.dateRequested} onChange={e => onUpdateSctRequest(req.id, 'dateRequested', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />
+                                      {!isEditingRequest ? (
+                                        <div className="font-mono text-slate-100">{formatPriorityDate(req.dateRequested) || '-'}</div>
+                                      ) : <input type="date" value={req.dateRequested} onChange={e => onUpdateSctRequest(req.id, 'dateRequested', e.target.value, type)} style={{colorScheme: 'dark'}} className={controlClass} />}
                                   </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Days to Expire</div>
@@ -3825,31 +3926,35 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Priority</div>
-                                      <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className={controlClass}>
+                                      {!isEditingRequest ? (
+                                        <div className={`font-semibold ${req.priority === 'High' ? 'text-red-300' : req.priority === 'Medium' ? 'text-amber-300' : 'text-green-300'}`}>{req.priority || 'High'}</div>
+                                      ) : <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className={controlClass}>
                                           <option value="High">High</option>
                                           <option value="Medium">Medium</option>
                                           <option value="Low">Low</option>
-                                      </select>
+                                      </select>}
+                                  </div>
+                                  <div className={`${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80 px-1`}>
+                                      <button
+                                          type="button"
+                                          onClick={() => toggleSctRequestEditing(req)}
+                                          className="w-[48px] rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10"
+                                      >
+                                          {isEditingRequest ? 'Done' : 'Edit'}
+                                      </button>
+                                  </div>
+                                  <div className={`${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80 px-1`}>
+                                      <button
+                                          type="button"
+                                          onClick={() => onRemoveSctRequest(req.id, type)}
+                                          className="inline-flex h-6 w-6 shrink-0 items-center justify-center transition-opacity hover:opacity-75 focus:outline-none focus:ring-1 focus:ring-red-500/60"
+                                          aria-label="Delete crew currency request"
+                                          title="Delete crew currency request"
+                                      >
+                                          <TrashIcon aria-hidden="true" className="h-4 w-4" style={{ color: '#dc2626', stroke: '#dc2626' }} />
+                                      </button>
                                   </div>
                               </div>
-                              </div>
-                              <div className={`${buildPriorityTableCellClass} flex h-full min-h-[52px] flex-col items-center justify-center gap-2 bg-cyan-950/80 p-1`}>
-                                  {req.submitted ? (
-                                      <span className={statusButtonClass} style={{ color: '#22c55e' }}>Submitted</span>
-                                  ) : (
-                                      <button
-                                          onClick={stageSpecificCurrencyRequest}
-                                          disabled={!canSubmitRequest}
-                                          className={`${statusButtonClass} ${canSubmitRequest ? 'text-slate-900' : 'text-gray-500'}`}
-                                      >
-                                          Submit
-                                      </button>
-                                  )}
-                                  <button onClick={() => onRemoveSctRequest(req.id, type)} className={`${statusButtonClass} text-red-500`} aria-label="Delete crew currency request">
-                                      Delete
-                                  </button>
-                              </div>
-                          </div>
                       </div>
                   );
               })}
