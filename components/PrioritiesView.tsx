@@ -751,8 +751,8 @@ const taskingPanelClass = 'flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = 'text-[10px] font-black uppercase tracking-[0.18em] text-slate-500';
 const taskingPanelHintClass = 'mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500';
 const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500';
-const taskingSummaryHeaderClass = 'grid min-w-[1238px] grid-cols-[136px_90px_86px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400';
-const taskingSummaryRowClass = 'grid min-w-[1238px] grid-cols-[136px_90px_86px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 text-[12px]';
+const taskingSummaryHeaderClass = 'grid min-w-[1208px] grid-cols-[116px_90px_86px_76px_88px_110px_112px_74px_80px_90px_86px_90px_66px_60px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400';
+const taskingSummaryRowClass = 'grid min-w-[1208px] grid-cols-[116px_90px_86px_76px_88px_110px_112px_74px_80px_90px_86px_90px_66px_60px] gap-0 text-[12px]';
 const taskingSummaryCellClass = 'border border-slate-700/70 px-2 py-2';
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const buildPriorityTableShellClass = 'overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45';
@@ -869,7 +869,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
     )}
     {taskingRequests.length > 0 && (
       <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45">
-        <div className="min-w-[1238px] space-y-3">
+        <div className="min-w-[1208px] space-y-3">
           <div className={taskingSummaryHeaderClass}>
             <span className={`${taskingSummaryHeaderCellClass} flex flex-col items-center justify-center gap-2`}>
               <span>Schedule</span>
