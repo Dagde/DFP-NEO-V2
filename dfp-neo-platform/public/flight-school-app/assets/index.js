@@ -48439,7 +48439,7 @@ const PrioritiesView = ({
         const expiryInfo = calculateDaysToExpire(req.currencyExpire);
         const tileLabelClass = "mb-1 hidden text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500";
         const tileBaseClass = `${buildPriorityTableCellClass} flex h-full min-h-[52px] w-full min-w-0 flex-col justify-center bg-cyan-950/80 text-left`;
-        const controlClass = "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500";
+        const controlClass = "w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-[12px] text-white focus:ring-sky-500";
         const selectedCrewGroup = fixedCrewRequestCrewGroups.find((group) => group.key === req.crewGroupKey || group.crewValue === String(req.crewGroup || "").replace(/^CREW\s*/i, "").trim().toUpperCase() && group.unitCode === String(req.crewUnitCode || "").trim().toUpperCase());
         const selectedCrewPicCandidates = (selectedCrewGroup?.members || []).filter((member) => staffHasPicQualification(member));
         const selectedCrewPicNames = new Set(selectedCrewPicCandidates.map((member) => member.name));
@@ -48635,7 +48635,7 @@ const PrioritiesView = ({
                   instructorNames.filter((name) => name !== req.name).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
                 ]
               }
-            ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500", children: "N/A" })
+            ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-500", children: "N/A" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Event" }),
@@ -48687,7 +48687,7 @@ const PrioritiesView = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Days to Expire" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs", children: expiryInfo ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-bold ${expiryInfo.color}`, children: expiryInfo.days }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "-" }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[12px]", children: expiryInfo ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-bold ${expiryInfo.color}`, children: expiryInfo.days }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "-" }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: tileBaseClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: tileLabelClass, children: "Priority" }),

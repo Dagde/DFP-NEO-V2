@@ -3596,7 +3596,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   const expiryInfo = calculateDaysToExpire(req.currencyExpire);
                   const tileLabelClass = 'mb-1 hidden text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
                   const tileBaseClass = `${buildPriorityTableCellClass} flex h-full min-h-[52px] w-full min-w-0 flex-col justify-center bg-cyan-950/80 text-left`;
-                  const controlClass = 'w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500';
+                  const controlClass = 'w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-[12px] text-white focus:ring-sky-500';
                   const selectedCrewGroup = fixedCrewRequestCrewGroups.find(group => (
                     group.key === req.crewGroupKey
                     || (group.crewValue === String(req.crewGroup || '').replace(/^CREW\s*/i, '').trim().toUpperCase()
@@ -3842,7 +3842,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                   .map(name => <option key={name} value={name}>{name}</option>)}
                                           </select>
                                       ) : (
-                                          <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-500">N/A</div>
+                                          <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-500">N/A</div>
                                       )}
                                   </div>
                                   <div className={tileBaseClass}>
@@ -3906,7 +3906,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </div>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>Days to Expire</div>
-                                      <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-xs">
+                                      <div className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[12px]">
                                           {expiryInfo ? <span className={`font-bold ${expiryInfo.color}`}>{expiryInfo.days}</span> : <span className="text-gray-500">-</span>}
                                       </div>
                                   </div>
