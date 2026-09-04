@@ -103536,7 +103536,7 @@ const DfpSidePanelTimeline = ({
     const eventType = resourceType === "FTD" ? "ftd" : resourceType === "Ground" ? "ground" : resourceType === "CPT" ? "cpt" : "flight";
     const aircraftCount = Math.max(1, Math.floor(Number(profile.isFormation ? profile.formationAircraft : 1) || 1));
     return {
-      id: `standard-mission-source-${profile.id}`,
+      id: `standard-mission-${profile.id}-${date}`,
       date,
       type: eventType,
       instructor: "",
@@ -103565,8 +103565,7 @@ const DfpSidePanelTimeline = ({
       isFormation: aircraftCount > 1,
       formationSize: aircraftCount > 1 ? aircraftCount : void 0,
       requestedByName: "Settings",
-      standardMissionProfileId: profile.id,
-      isStandardMissionSourceOnly: true
+      standardMissionProfileId: profile.id
     };
   };
   const isAssistSctCurrencyRequestVisible = (request) => Boolean(
@@ -103580,9 +103579,6 @@ const DfpSidePanelTimeline = ({
       highestPriorityEvents.map((event) => String(event.currencyDraftId || "").trim()).filter(Boolean)
     );
     const queuedEventIds = new Set(highestPriorityEvents.map((event) => String(event.id || "").trim()).filter(Boolean));
-    const queuedStandardMissionIds = new Set(
-      highestPriorityEvents.map((event) => String(event.standardMissionProfileId || "").trim()).filter(Boolean)
-    );
     const sourceCurrencyEvents = [
       ...sctFlights.map((request) => ({ request, type: "flight" })),
       ...sctFtds.map((request) => ({ request, type: "ftd" }))
@@ -103593,11 +103589,9 @@ const DfpSidePanelTimeline = ({
       if (queuedEventIds.has(`sct-${type}-${requestId}`) || queuedEventIds.has(`neo-assist-currency-${requestId}`)) return false;
       return true;
     }).map(({ request, type }) => buildAssistPriorityEventFromSctRequest(request, type));
-    const sourceStandardMissionEvents = standardMissionProfiles.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((profile) => !queuedStandardMissionIds.has(profile.id)).filter((profile) => !queuedEventIds.has(`standard-mission-source-${profile.id}`)).map((profile) => buildAssistPriorityEventFromStandardMission(profile));
     return [
       ...highestPriorityEvents,
-      ...sourceCurrencyEvents,
-      ...sourceStandardMissionEvents
+      ...sourceCurrencyEvents
     ].filter((event) => !String(event.id || "").startsWith("tasking-formation-member-")).map((event, index) => {
       const group = getAssistBuildQueueGroup(event);
       return {
@@ -103614,7 +103608,7 @@ const DfpSidePanelTimeline = ({
         status: getAssistBuildQueueStatus(event)
       };
     });
-  }, [activeUnitCode, date, defaultAssistCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, locationCode, normalisedAssistOperationalModel, sctFlights, sctFtds, standardMissionProfiles]);
+  }, [activeUnitCode, date, defaultAssistCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, locationCode, normalisedAssistOperationalModel, sctFlights, sctFtds]);
   const filteredAssistBuildQueueRows = reactExports.useMemo(() => {
     const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
     return assistBuildQueueRows.filter((row) => {
@@ -106121,30 +106115,99 @@ This cannot be undone.`,
       ] });
     }
     if (renderedAssistSection === "saved-special") {
-      const rows = assistBuildQueueRows.filter((row) => row.group === "special");
+      const scheduledProfileIds = new Set(
+        highestPriorityEvents.map((event) => String(event.standardMissionProfileId || "").trim()).filter(Boolean)
+      );
+      const getProfileAircraftCount = (profile) => Math.max(1, Math.floor(Number(profile.isFormation ? profile.formationAircraft : 1) || 1));
+      const getProfileCrewLabel = (profile) => {
+        if (profile.crewCompositionMode === "CUSTOM") {
+          const roleText = profile.roleRequirements.map((role) => `${role.count} ${role.role}`).join(", ");
+          return roleText || "Custom crew";
+        }
+        if (profile.crewCompositionMode === "ALTERNATE") return "Alternate crew";
+        return "Standard crew";
+      };
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-slate-100", children: "Saved Special Events" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[9px] text-slate-400", children: "Saved non-standard events that NEO Build can consider with the directed build priorities." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-[9px] text-slate-400", children: "Saved non-standard events are listed here. They only enter the Priority Table after Schedule is selected." })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-40 space-y-1 overflow-y-auto pr-1", children: [
-          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No saved special events are currently in the build priority list." }),
-          rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: row.label }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-slate-400", children: row.person })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => selectAssistBuildQueueEvent(row.event),
-                className: "rounded border border-cyan-400/45 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/10",
-                children: "Edit"
-              }
-            )
-          ] }, `assist-special-${row.event.id}`))
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-56 overflow-y-auto rounded border border-slate-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[960px] table-fixed text-[10px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[118px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[68px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[68px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[92px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[112px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[64px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[72px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[74px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[118px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[78px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[84px]" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-[9px] uppercase tracking-[0.12em] text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Event" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Unit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Route" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Duration" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "A/C" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "CONFIG" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Callsign" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Crew" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Status" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-center", children: "Action" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-800 bg-slate-950/45", children: [
+            standardMissionProfiles.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 11, className: "px-3 py-4 text-center text-slate-500", children: "No saved special events are configured for this unit." }) }),
+            standardMissionProfiles.map((profile) => {
+              const isScheduled = scheduledProfileIds.has(profile.id);
+              const aircraftCount = getProfileAircraftCount(profile);
+              const eventLabel = profile.shortTitle || profile.missionName || "Special";
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-slate-900/80", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-2 py-2 align-middle", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate font-semibold text-slate-100", title: profile.missionName, children: eventLabel }),
+                  profile.description && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[9px] text-slate-500", title: profile.description, children: profile.description })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-300", children: profile.unitCode || profile.compositeUnitCode || activeUnitCode || "Unit" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-300", children: profile.resourceType }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-2 py-2 align-middle font-mono text-slate-300", children: [
+                  profile.departureLocationCode || locationCode,
+                  "-",
+                  profile.arrivalLocationCode || locationCode
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-2 py-2 align-middle text-slate-300", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block", children: [
+                    profile.durationMinutes,
+                    " min"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-[9px] text-slate-500", children: [
+                    "+",
+                    profile.preFlightMinutes,
+                    "/+",
+                    profile.postFlightMinutes
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle font-mono text-slate-300", children: aircraftCount }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-300", children: profile.config && profile.config !== "ANY" ? profile.config : "Any" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-300", children: profile.defaultCallsignPrefix || "-" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-300", title: getProfileCrewLabel(profile), children: getProfileCrewLabel(profile) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${isScheduled ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100" : "border-slate-600 bg-slate-900 text-slate-300"}`, children: isScheduled ? "Scheduled" : "Saved" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    disabled: isScheduled,
+                    onClick: () => onAddPriorityEvents([buildAssistPriorityEventFromStandardMission(profile)]),
+                    className: `rounded border px-2 py-1 text-[9px] font-semibold ${isScheduled ? "cursor-not-allowed border-slate-700 bg-slate-900 text-slate-500" : "border-cyan-400/45 text-cyan-100 hover:bg-cyan-500/10"}`,
+                    children: isScheduled ? "Scheduled" : "Schedule"
+                  }
+                ) })
+              ] }, `assist-special-profile-${profile.id}`);
+            })
+          ] })
+        ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {

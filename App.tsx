@@ -3408,7 +3408,7 @@ const DfpSidePanelTimeline: React.FC<{
         const eventType = resourceType === 'FTD' ? 'ftd' : resourceType === 'Ground' ? 'ground' : resourceType === 'CPT' ? 'cpt' : 'flight';
         const aircraftCount = Math.max(1, Math.floor(Number(profile.isFormation ? profile.formationAircraft : 1) || 1));
         return {
-            id: `standard-mission-source-${profile.id}`,
+            id: `standard-mission-${profile.id}-${date}`,
             date,
             type: eventType as ScheduleEvent['type'],
             instructor: '',
@@ -3438,7 +3438,6 @@ const DfpSidePanelTimeline: React.FC<{
             formationSize: aircraftCount > 1 ? aircraftCount : undefined,
             requestedByName: 'Settings',
             standardMissionProfileId: profile.id,
-            isStandardMissionSourceOnly: true,
         } as ScheduleEvent;
     };
     const isAssistSctCurrencyRequestVisible = (request: SctRequest): boolean => Boolean(
@@ -3457,11 +3456,6 @@ const DfpSidePanelTimeline: React.FC<{
                 .filter(Boolean)
         );
         const queuedEventIds = new Set(highestPriorityEvents.map(event => String(event.id || '').trim()).filter(Boolean));
-        const queuedStandardMissionIds = new Set(
-            highestPriorityEvents
-                .map(event => String((event as any).standardMissionProfileId || '').trim())
-                .filter(Boolean)
-        );
         const sourceCurrencyEvents = [
             ...sctFlights.map(request => ({ request, type: 'flight' as const })),
             ...sctFtds.map(request => ({ request, type: 'ftd' as const })),
@@ -3475,15 +3469,9 @@ const DfpSidePanelTimeline: React.FC<{
                 return true;
             })
             .map(({ request, type }) => buildAssistPriorityEventFromSctRequest(request, type));
-        const sourceStandardMissionEvents = standardMissionProfiles
-            .filter(profile => String(profile.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
-            .filter(profile => !queuedStandardMissionIds.has(profile.id))
-            .filter(profile => !queuedEventIds.has(`standard-mission-source-${profile.id}`))
-            .map(profile => buildAssistPriorityEventFromStandardMission(profile));
         return [
             ...highestPriorityEvents,
             ...sourceCurrencyEvents,
-            ...sourceStandardMissionEvents,
         ]
             .filter(event => !String(event.id || '').startsWith('tasking-formation-member-'))
             .map((event, index) => {
@@ -3502,7 +3490,7 @@ const DfpSidePanelTimeline: React.FC<{
                     status: getAssistBuildQueueStatus(event),
                 };
             });
-    }, [activeUnitCode, date, defaultAssistCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, locationCode, normalisedAssistOperationalModel, sctFlights, sctFtds, standardMissionProfiles]);
+    }, [activeUnitCode, date, defaultAssistCurrencyDuration, flyingStartTime, ftdStartTime, highestPriorityEvents, locationCode, normalisedAssistOperationalModel, sctFlights, sctFtds]);
     const filteredAssistBuildQueueRows = useMemo(() => {
         const personNeedle = assistPriorityPersonFilter.trim().toLowerCase();
         return assistBuildQueueRows.filter(row => {
@@ -6186,30 +6174,111 @@ const DfpSidePanelTimeline: React.FC<{
             );
         }
         if (renderedAssistSection === 'saved-special') {
-            const rows = assistBuildQueueRows.filter(row => row.group === 'special');
+            const scheduledProfileIds = new Set(
+                highestPriorityEvents
+                    .map(event => String((event as any).standardMissionProfileId || '').trim())
+                    .filter(Boolean)
+            );
+            const getProfileAircraftCount = (profile: StandardMissionProfile): number => Math.max(1, Math.floor(Number(profile.isFormation ? profile.formationAircraft : 1) || 1));
+            const getProfileCrewLabel = (profile: StandardMissionProfile): string => {
+                if (profile.crewCompositionMode === 'CUSTOM') {
+                    const roleText = profile.roleRequirements
+                        .map(role => `${role.count} ${role.role}`)
+                        .join(', ');
+                    return roleText || 'Custom crew';
+                }
+                if (profile.crewCompositionMode === 'ALTERNATE') return 'Alternate crew';
+                return 'Standard crew';
+            };
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
                     <div className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2">
                         <p className="font-semibold text-slate-100">Saved Special Events</p>
-                        <p className="mt-1 text-[9px] text-slate-400">Saved non-standard events that NEO Build can consider with the directed build priorities.</p>
+                        <p className="mt-1 text-[9px] text-slate-400">Saved non-standard events are listed here. They only enter the Priority Table after Schedule is selected.</p>
                     </div>
-                    <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
-                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No saved special events are currently in the build priority list.</p>}
-                        {rows.map(row => (
-                            <div key={`assist-special-${row.event.id}`} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
-                                <span className="min-w-0 truncate">
-                                    <span className="font-semibold text-slate-100">{row.label}</span>
-                                    <span className="ml-2 text-slate-400">{row.person}</span>
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={() => selectAssistBuildQueueEvent(row.event)}
-                                    className="rounded border border-cyan-400/45 px-2 py-1 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/10"
-                                >
-                                    Edit
-                                </button>
-                            </div>
-                        ))}
+                    <div className="max-h-56 overflow-y-auto rounded border border-slate-700">
+                        <table className="w-full min-w-[960px] table-fixed text-[10px]">
+                            <colgroup>
+                                <col className="w-[118px]" />
+                                <col className="w-[68px]" />
+                                <col className="w-[68px]" />
+                                <col className="w-[92px]" />
+                                <col className="w-[112px]" />
+                                <col className="w-[64px]" />
+                                <col className="w-[72px]" />
+                                <col className="w-[74px]" />
+                                <col className="w-[118px]" />
+                                <col className="w-[78px]" />
+                                <col className="w-[84px]" />
+                            </colgroup>
+                            <thead className="bg-slate-950/80 text-[9px] uppercase tracking-[0.12em] text-slate-400">
+                                <tr>
+                                    <th className="px-2 py-2 text-left">Event</th>
+                                    <th className="px-2 py-2 text-left">Unit</th>
+                                    <th className="px-2 py-2 text-left">Type</th>
+                                    <th className="px-2 py-2 text-left">Route</th>
+                                    <th className="px-2 py-2 text-left">Duration</th>
+                                    <th className="px-2 py-2 text-left">A/C</th>
+                                    <th className="px-2 py-2 text-left">CONFIG</th>
+                                    <th className="px-2 py-2 text-left">Callsign</th>
+                                    <th className="px-2 py-2 text-left">Crew</th>
+                                    <th className="px-2 py-2 text-left">Status</th>
+                                    <th className="px-2 py-2 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800 bg-slate-950/45">
+                                {standardMissionProfiles.length === 0 && (
+                                    <tr>
+                                        <td colSpan={11} className="px-3 py-4 text-center text-slate-500">
+                                            No saved special events are configured for this unit.
+                                        </td>
+                                    </tr>
+                                )}
+                                {standardMissionProfiles.map(profile => {
+                                    const isScheduled = scheduledProfileIds.has(profile.id);
+                                    const aircraftCount = getProfileAircraftCount(profile);
+                                    const eventLabel = profile.shortTitle || profile.missionName || 'Special';
+                                    return (
+                                        <tr key={`assist-special-profile-${profile.id}`} className="hover:bg-slate-900/80">
+                                            <td className="px-2 py-2 align-middle">
+                                                <span className="block truncate font-semibold text-slate-100" title={profile.missionName}>{eventLabel}</span>
+                                                {profile.description && <span className="block truncate text-[9px] text-slate-500" title={profile.description}>{profile.description}</span>}
+                                            </td>
+                                            <td className="px-2 py-2 align-middle text-slate-300">{profile.unitCode || profile.compositeUnitCode || activeUnitCode || 'Unit'}</td>
+                                            <td className="px-2 py-2 align-middle text-slate-300">{profile.resourceType}</td>
+                                            <td className="px-2 py-2 align-middle font-mono text-slate-300">{profile.departureLocationCode || locationCode}-{profile.arrivalLocationCode || locationCode}</td>
+                                            <td className="px-2 py-2 align-middle text-slate-300">
+                                                <span className="block">{profile.durationMinutes} min</span>
+                                                <span className="block text-[9px] text-slate-500">+{profile.preFlightMinutes}/+{profile.postFlightMinutes}</span>
+                                            </td>
+                                            <td className="px-2 py-2 align-middle font-mono text-slate-300">{aircraftCount}</td>
+                                            <td className="px-2 py-2 align-middle text-slate-300">{profile.config && profile.config !== 'ANY' ? profile.config : 'Any'}</td>
+                                            <td className="px-2 py-2 align-middle text-slate-300">{profile.defaultCallsignPrefix || '-'}</td>
+                                            <td className="px-2 py-2 align-middle text-slate-300" title={getProfileCrewLabel(profile)}>{getProfileCrewLabel(profile)}</td>
+                                            <td className="px-2 py-2 align-middle">
+                                                <span className={`inline-flex rounded border px-1.5 py-1 text-[9px] font-semibold ${isScheduled ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100' : 'border-slate-600 bg-slate-900 text-slate-300'}`}>
+                                                    {isScheduled ? 'Scheduled' : 'Saved'}
+                                                </span>
+                                            </td>
+                                            <td className="px-2 py-2 text-center align-middle">
+                                                <button
+                                                    type="button"
+                                                    disabled={isScheduled}
+                                                    onClick={() => onAddPriorityEvents([buildAssistPriorityEventFromStandardMission(profile)])}
+                                                    className={`rounded border px-2 py-1 text-[9px] font-semibold ${
+                                                        isScheduled
+                                                            ? 'cursor-not-allowed border-slate-700 bg-slate-900 text-slate-500'
+                                                            : 'border-cyan-400/45 text-cyan-100 hover:bg-cyan-500/10'
+                                                    }`}
+                                                >
+                                                    {isScheduled ? 'Scheduled' : 'Schedule'}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                     <button
                         type="button"
