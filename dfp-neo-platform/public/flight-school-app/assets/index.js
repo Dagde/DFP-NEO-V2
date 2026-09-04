@@ -46061,6 +46061,15 @@ const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-s
 const taskingSummaryHeaderClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[8px] font-black uppercase tracking-[0.12em] text-slate-400";
 const taskingSummaryRowClass = "grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0";
 const taskingSummaryCellClass = "border border-slate-700/70 px-2 py-2";
+const formatTaskingSummaryDate = (dateString) => {
+  if (!dateString) return "Any";
+  const parsedDate = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
+  if (Number.isNaN(parsedDate.getTime())) return "Any";
+  const day = String(parsedDate.getUTCDate()).padStart(2, "0");
+  const month = parsedDate.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
+  const year = String(parsedDate.getUTCFullYear()).slice(-2);
+  return `${day} ${month} ${year}`;
+};
 const TaskingFieldPanel = ({ label, hint, className = "", contentClassName = "", children }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${taskingPanelClass} ${className}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: taskingPanelLabelClass, children: label }),
@@ -46184,7 +46193,7 @@ const TaskingRequestTable = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-semibold text-cyan-100`, children: "Directed Task" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} text-slate-100`, children: request.flightType }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-mono text-slate-100`, children: formatPriorityDate(taskingHeaderDate || void 0) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} font-mono text-slate-100`, children: formatTaskingSummaryDate(taskingHeaderDate || void 0) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${taskingSummaryCellClass} truncate font-semibold text-slate-100`, title: taskingHeaderTitle, children: taskingHeaderTitle }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${taskingSummaryCellClass} truncate text-slate-100`, title: `${request.depPoint}-${request.arrivalPoint}`, children: [
             request.depPoint || "-",
@@ -47351,7 +47360,7 @@ const PrioritiesView = ({
     const minutes = Math.round((bounded - hours) * 60);
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   };
-  const formatPriorityDate2 = (dateString) => {
+  const formatPriorityDate = (dateString) => {
     if (!dateString) return "Any";
     try {
       const parsedDate = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
@@ -49066,8 +49075,8 @@ const PrioritiesView = ({
         index === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { rowSpan: group.events.length, className: `border border-slate-700/80 px-2 py-3 text-center align-middle text-sm font-black ${priorityEventGroupStyles[group.key]}`, children: group.label }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 font-mono ${rowText}`, children: events.indexOf(event) + 1 }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 ${rowText}`, children: flightType }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`, title: matchesBuildDate ? formatPriorityDate2(event.date) : `${formatPriorityDate2(event.date)} - not scheduled for this build date`, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: event.date || buildDfpDate, onClick: (e) => e.stopPropagation(), onChange: (e) => updateEvent(event, { date: e.target.value }), style: { colorScheme: "dark" }, className: "h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: formatPriorityDate2(event.date) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-2 font-mono font-black ${rowText}`, title: matchesBuildDate ? formatPriorityDate(event.date) : `${formatPriorityDate(event.date)} - not scheduled for this build date`, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", value: event.date || buildDfpDate, onClick: (e) => e.stopPropagation(), onChange: (e) => updateEvent(event, { date: e.target.value }), style: { colorScheme: "dark" }, className: "h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: formatPriorityDate(event.date) }),
           !matchesBuildDate && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-[9px] font-black uppercase tracking-[0.12em] text-amber-300/80", children: "Not this build" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `truncate border border-slate-700/80 px-2 py-2 font-black ${rowText}`, title: eventLabel, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: eventLabel, onClick: (e) => e.stopPropagation(), onChange: (e) => updateEvent(event, { flightNumber: e.target.value, taskingName: e.target.value, taskingDisplayLabel: e.target.value, currency: group.key.includes("currency") ? e.target.value : event.currency }), className: "h-7 w-full rounded border border-slate-600 bg-slate-950 px-1 text-[11px] text-slate-100" }) : eventLabel }),
@@ -50373,7 +50382,7 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Highest Priority Events" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: [
               "Build date ",
-              formatPriorityDate2(buildDfpDate)
+              formatPriorityDate(buildDfpDate)
             ] })
           ] }),
           stalePriorityEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-right text-[11px] font-semibold text-amber-100", children: [

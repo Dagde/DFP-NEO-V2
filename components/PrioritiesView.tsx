@@ -728,6 +728,15 @@ const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-s
 const taskingSummaryHeaderClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0 bg-slate-900 px-0 text-[8px] font-black uppercase tracking-[0.12em] text-slate-400';
 const taskingSummaryRowClass = 'grid min-w-[1092px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_56px] gap-0';
 const taskingSummaryCellClass = 'border border-slate-700/70 px-2 py-2';
+const formatTaskingSummaryDate = (dateString: string | undefined): string => {
+  if (!dateString) return 'Any';
+  const parsedDate = new Date(`${dateString}T00:00:00Z`);
+  if (Number.isNaN(parsedDate.getTime())) return 'Any';
+  const day = String(parsedDate.getUTCDate()).padStart(2, '0');
+  const month = parsedDate.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
+  const year = String(parsedDate.getUTCFullYear()).slice(-2);
+  return `${day} ${month} ${year}`;
+};
 
 const TaskingFieldPanel: React.FC<{
   label: string;
@@ -865,7 +874,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
               </div>
               <div className={`${taskingSummaryCellClass} font-semibold text-cyan-100`}>Directed Task</div>
               <div className={`${taskingSummaryCellClass} text-slate-100`}>{request.flightType}</div>
-              <div className={`${taskingSummaryCellClass} font-mono text-slate-100`}>{formatPriorityDate(taskingHeaderDate || undefined)}</div>
+              <div className={`${taskingSummaryCellClass} font-mono text-slate-100`}>{formatTaskingSummaryDate(taskingHeaderDate || undefined)}</div>
               <div className={`${taskingSummaryCellClass} truncate font-semibold text-slate-100`} title={taskingHeaderTitle}>{taskingHeaderTitle}</div>
               <div className={`${taskingSummaryCellClass} truncate text-slate-100`} title={`${request.depPoint}-${request.arrivalPoint}`}>{request.depPoint || '-'}-{request.arrivalPoint || '-'}</div>
               <div className={`${taskingSummaryCellClass} font-mono text-slate-100`}>{taskingHeaderTime.replace(':', '') || '-'}</div>
