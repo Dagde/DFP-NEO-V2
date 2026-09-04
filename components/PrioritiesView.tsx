@@ -729,6 +729,11 @@ const taskingSummaryHeaderClass = 'grid min-w-[1152px] grid-cols-[136px_90px_76p
 const taskingSummaryRowClass = 'grid min-w-[1152px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 text-[12px]';
 const taskingSummaryCellClass = 'border border-slate-700/70 px-2 py-2';
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
+const buildPriorityTableShellClass = 'overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45';
+const buildPriorityTableHeaderClass = 'grid gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400';
+const buildPriorityTableRowClass = 'grid gap-0 text-[12px]';
+const buildPriorityTableCellClass = 'border border-slate-700/70 px-2 py-2';
+const buildPriorityTableHeaderCellClass = `${buildPriorityTableCellClass} text-center`;
 const formatTaskingSummaryDate = (dateString: string | undefined): string => {
   if (!dateString) return 'Any';
   const parsedDate = new Date(`${dateString}T00:00:00Z`);
@@ -3445,14 +3450,35 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         ...(isFixedCrewModel && profile.crew ? { crewMember: profile.crew } : {}),
       }, type);
     };
+    const isFlightSchoolCurrencyRequestTable = priorityAllocationModel === 'flight_school';
+    const sctTableMinWidthClass = isFlightSchoolCurrencyRequestTable ? 'min-w-[1152px]' : 'min-w-[1220px]';
+    const sctTableHeaderColumnsClass = isFlightSchoolCurrencyRequestTable
+      ? 'grid-cols-[140px_140px_150px_116px_82px_120px_120px_96px_96px_72px]'
+      : 'grid-cols-[132px_132px_140px_150px_104px_74px_112px_112px_90px_88px_72px]';
+    const sctTableBodyColumnsClass = isFlightSchoolCurrencyRequestTable
+      ? 'grid-cols-[140px_140px_150px_116px_82px_120px_120px_96px_96px]'
+      : 'grid-cols-[132px_132px_140px_150px_104px_74px_112px_112px_90px_88px]';
     
       return (
-      <div>
-          <div className="space-y-3">
+      <div className={buildPriorityTableShellClass}>
+          <div className={`${sctTableMinWidthClass} space-y-3`}>
+              <div className={`${buildPriorityTableHeaderClass} ${sctTableHeaderColumnsClass}`}>
+                  <span className={buildPriorityTableHeaderCellClass}>{isFixedCrewModel ? 'Crew' : isFlightSchoolCurrencyRequestTable ? 'Pilot' : 'Staff'}</span>
+                  <span className={buildPriorityTableHeaderCellClass}>{isFlightSchoolCurrencyRequestTable ? 'Second Pilot' : 'PIC'}</span>
+                  <span className={buildPriorityTableHeaderCellClass}>Event</span>
+                  {!isFlightSchoolCurrencyRequestTable && <span className={buildPriorityTableHeaderCellClass}>Crew Composition</span>}
+                  <span className={buildPriorityTableHeaderCellClass}>CONFIG</span>
+                  <span className={buildPriorityTableHeaderCellClass}>Aircraft</span>
+                  <span className={buildPriorityTableHeaderCellClass}>Currency Expire</span>
+                  <span className={buildPriorityTableHeaderCellClass}>Date Requested</span>
+                  <span className={buildPriorityTableHeaderCellClass}>Days</span>
+                  <span className={buildPriorityTableHeaderCellClass}>Priority</span>
+                  <span className={buildPriorityTableHeaderCellClass}>Action</span>
+              </div>
               {requests.map(req => {
                   const expiryInfo = calculateDaysToExpire(req.currencyExpire);
-                  const tileLabelClass = 'mb-1 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
-                  const tileBaseClass = 'flex h-full min-h-[64px] w-full min-w-0 flex-col rounded-md border border-slate-600 bg-slate-950/75 p-2 text-left shadow-sm';
+                  const tileLabelClass = 'mb-1 hidden text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
+                  const tileBaseClass = `${buildPriorityTableCellClass} flex h-full min-h-[52px] w-full min-w-0 flex-col justify-center bg-cyan-950/80 text-left`;
                   const controlClass = 'w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs text-white focus:ring-sky-500';
                   const selectedCrewGroup = fixedCrewRequestCrewGroups.find(group => (
                     group.key === req.crewGroupKey
@@ -3554,10 +3580,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       onSubmitSctRequest(req.id, type);
                   };
                   return (
-                      <div key={req.id} className="overflow-x-auto overflow-y-visible rounded-lg border-2 border-cyan-300/70 bg-slate-950/55 p-3 shadow-[0_0_0_1px_rgba(14,165,233,0.24),0_14px_28px_rgba(0,0,0,0.28)]">
-                          <div className="grid w-full min-w-[704px] max-w-[1304px] grid-cols-[minmax(632px,1232px)_4rem] items-stretch gap-2">
+                      <div key={req.id} className="overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
+                          <div className="grid w-full grid-cols-[minmax(0,1fr)_72px] items-stretch gap-0">
                               <div className="space-y-3">
-                              <div className="grid auto-rows-fr grid-cols-5 items-stretch gap-2">
+                              <div className={`grid auto-rows-fr ${sctTableBodyColumnsClass} items-stretch gap-0`}>
                                   <div className={tileBaseClass}>
                                       <div className={tileLabelClass}>{isFlightSchoolCurrencyRequest ? 'Pilot' : 'Crew'}</div>
                                       {isFixedCrewModel ? (
@@ -3807,7 +3833,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                   </div>
                               </div>
                               </div>
-                              <div className="flex h-full min-h-[64px] w-16 flex-col items-center justify-center gap-2 rounded-md border border-slate-600 bg-slate-950/75 p-1">
+                              <div className={`${buildPriorityTableCellClass} flex h-full min-h-[52px] flex-col items-center justify-center gap-2 bg-cyan-950/80 p-1`}>
                                   {req.submitted ? (
                                       <span className={statusButtonClass} style={{ color: '#22c55e' }}>Submitted</span>
                                   ) : (
@@ -4081,7 +4107,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     }
 
     return (
-      <div className="mt-4 space-y-3">
+      <div className={`${buildPriorityTableShellClass} mt-4`}>
+        <div className="min-w-[1152px] space-y-3">
+          <div className={`${buildPriorityTableHeaderClass} grid-cols-[56px_190px_84px_96px_136px_94px_92px_116px_150px_84px]`}>
+            <span className={buildPriorityTableHeaderCellClass}></span>
+            <span className={buildPriorityTableHeaderCellClass}>Event</span>
+            <span className={buildPriorityTableHeaderCellClass}>Unit</span>
+            <span className={buildPriorityTableHeaderCellClass}>Type</span>
+            <span className={buildPriorityTableHeaderCellClass}>Route</span>
+            <span className={buildPriorityTableHeaderCellClass}>Duration</span>
+            <span className={buildPriorityTableHeaderCellClass}>Aircraft</span>
+            <span className={buildPriorityTableHeaderCellClass}>CONFIG</span>
+            <span className={buildPriorityTableHeaderCellClass}>Callsign</span>
+            <span className={buildPriorityTableHeaderCellClass}>Edit</span>
+          </div>
         {displayedStandardMissionProfiles.map((profile) => {
           const isOpen = openStandardMissionIds.has(profile.id);
           const isEditing = editingStandardMissionId === profile.id;
@@ -4112,24 +4151,29 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           ))?.id || '';
 
           return (
-            <div key={profile.id} className="rounded-lg border border-slate-700 bg-slate-950/55">
-              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <div key={profile.id} className="overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
+              <div className={`${buildPriorityTableRowClass} grid-cols-[56px_190px_84px_96px_136px_94px_92px_116px_150px_84px] bg-cyan-950/80 transition hover:bg-cyan-900/80`}>
+                <div className={`${buildPriorityTableCellClass} flex items-center justify-center`}>
                 <button
                   type="button"
                   onClick={() => toggleStandardMissionOpen(profile.id)}
-                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/30 bg-cyan-500/10 text-xs font-bold text-cyan-200"
+                  aria-expanded={isOpen}
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/30 bg-cyan-500/10 text-xs font-bold text-cyan-200">
-                    {isOpen ? 'v' : '>'}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-slate-100">{missionName || 'Unnamed Directed Task Setup'}</span>
-                    <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/70">{unitLabel}</span>
-                  </span>
+                  {isOpen ? 'v' : '>'}
                 </button>
-                <div className="flex items-center gap-2">
+                </div>
+                <div className={`${buildPriorityTableCellClass} truncate font-semibold text-cyan-100`} title={missionName || 'Unnamed Directed Task Setup'}>{missionName || 'Unnamed Directed Task Setup'}</div>
+                <div className={`${buildPriorityTableCellClass} font-semibold uppercase tracking-[0.08em] text-cyan-200/80`}>{unitLabel}</div>
+                <div className={`${buildPriorityTableCellClass} text-slate-100`}>{resourceType}</div>
+                <div className={`${buildPriorityTableCellClass} truncate text-slate-100`} title={`${departureLocationCode || '-'}-${arrivalLocationCode || '-'}`}>{departureLocationCode || '-'}-{arrivalLocationCode || '-'}</div>
+                <div className={`${buildPriorityTableCellClass} font-mono text-slate-100`}>{formatMissionMinutes(durationMinutes)}</div>
+                <div className={`${buildPriorityTableCellClass} font-mono text-slate-100`}>{formationAircraft}</div>
+                <div className={`${buildPriorityTableCellClass} truncate text-slate-100`} title={config}>{config}</div>
+                <div className={`${buildPriorityTableCellClass} truncate text-slate-100`} title={callsignPrefix || 'No callsign prefix'}>{callsignPrefix || '-'}</div>
+                <div className={`${buildPriorityTableCellClass} flex items-center justify-center gap-2 px-1`}>
                   {temporaryStandardMissionOverrides[profile.id] && (
-                    <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200">
+                    <span className="rounded border border-amber-300/40 bg-amber-400/10 px-1.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-200">
                       Today only
                     </span>
                   )}
@@ -4138,14 +4182,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setPendingStandardMissionSaveId(profile.id)}
-                        className="rounded-md border border-emerald-400/50 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/25"
+                        className="rounded border border-emerald-400/50 bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-100 hover:bg-emerald-500/25"
                       >
                         Save
                       </button>
                       <button
                         type="button"
                         onClick={() => cancelStandardMissionEdit(profile.id)}
-                        className="rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
+                        className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-200 hover:bg-slate-700"
                       >
                         Cancel
                       </button>
@@ -4154,7 +4198,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <button
                       type="button"
                       onClick={() => beginStandardMissionEdit(profile)}
-                      className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold"
+                      className="w-[48px] rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-500/10"
                     >
                       Edit
                     </button>
@@ -4352,6 +4396,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>
           );
         })}
+        </div>
       </div>
     );
   };
@@ -5670,26 +5715,49 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </button>
                 </div>
             </div>
-            <div className="space-y-3">
+            <div className={currencyDraftEvents.length === 0 ? 'space-y-3' : buildPriorityTableShellClass}>
                 {currencyDraftEvents.length === 0 && (
                     <div className="rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
                         No Currency events built yet. Open a trainee or staff builder above to create the review list.
                     </div>
                 )}
+                {currencyDraftEvents.length > 0 && (
+                    <div className="min-w-[1152px] space-y-3">
+                        <div className={`${buildPriorityTableHeaderClass} grid-cols-[70px_190px_170px_160px_130px_360px_72px]`}>
+                            <span className={buildPriorityTableHeaderCellClass}>Push</span>
+                            <span className={buildPriorityTableHeaderCellClass}>Person</span>
+                            <span className={buildPriorityTableHeaderCellClass}>Event</span>
+                            <span className={buildPriorityTableHeaderCellClass}>Currencies</span>
+                            <span className={buildPriorityTableHeaderCellClass}>CONFIG</span>
+                            <span className={buildPriorityTableHeaderCellClass}>Crew</span>
+                            <span className={buildPriorityTableHeaderCellClass}></span>
+                        </div>
+                    </div>
+                )}
                 {currencyDraftEvents.map(draft => {
                     const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
                     const isCurrencyMenuOpen = openCurrencyDraftId === draft.id;
-                    const tileBaseClass = `h-[80px] w-full min-w-0 rounded-lg border p-2 text-left shadow-sm ${isPublishedInActiveSchedule ? 'border-green-400/40 bg-green-950/20' : 'border-slate-700 bg-slate-950/70'}`;
-                    const tileLabelClass = "mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
+                    const tileBaseClass = `${buildPriorityTableCellClass} flex min-h-[58px] w-full min-w-0 flex-col justify-center text-left shadow-sm ${isPublishedInActiveSchedule ? 'bg-green-950/20' : 'bg-cyan-950/80'}`;
+                    const tileLabelClass = "mb-2 hidden text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
                     return (
                         <div
                             key={draft.id}
-                            className={`overflow-x-auto overflow-y-visible rounded-lg border border-slate-700/80 bg-slate-950/35 p-3 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? 'pb-64' : ''} ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
+                            className={`min-w-[1152px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? 'pb-64' : ''} ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
                         >
-                            <div className="grid w-full min-w-[680px] max-w-[1280px] grid-cols-[repeat(5,minmax(0,1fr))_2rem] gap-2">
+                            <div className={`${buildPriorityTableRowClass} grid-cols-[70px_190px_170px_160px_130px_360px_72px]`}>
+                                <div className={`${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={draft.selected}
+                                        disabled={isPublishedInActiveSchedule}
+                                        onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
+                                        className="h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
+                                        aria-label="Select currency event for Higher Priority"
+                                    />
+                                </div>
                                 <div className={`${tileBaseClass} flex flex-col`}>
                                     <div className={tileLabelClass}>Person</div>
-                                    <div className={`min-w-0 text-sm font-semibold leading-snug ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-white'}`}>
+                                    <div className={`min-w-0 truncate text-[12px] font-semibold leading-snug ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-white'}`} title={draft.personName}>
                                         {draft.personName}
                                     </div>
                                 </div>
@@ -5763,25 +5831,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         ))}
                                     />
                                 </div>
-                                <div className="flex h-[80px] w-8 flex-col items-center justify-between pb-1 pt-2">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Push</div>
-                                        <input
-                                            type="checkbox"
-                                            checked={draft.selected}
-                                            disabled={isPublishedInActiveSchedule}
-                                            onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
-                                            className="h-3 w-3 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
-                                            aria-label="Select currency event for Higher Priority"
-                                        />
-                                    </div>
+                                <div className={`${buildPriorityTableCellClass} flex min-h-[58px] items-center justify-center bg-cyan-950/80`}>
                                     <button
                                         type="button"
                                         onClick={() => setCurrencyDraftEvents(prev => prev.filter(event => event.id !== draft.id))}
-                                        className="rounded-md border border-red-500/30 p-1.5 text-red-300 hover:bg-red-500/10"
+                                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center transition-opacity hover:opacity-75 focus:outline-none focus:ring-1 focus:ring-red-500/60"
                                         aria-label="Remove currency event"
                                     >
-                                        <TrashIcon className="h-4 w-4" />
+                                        <TrashIcon className="h-4 w-4" style={{ color: '#dc2626', stroke: '#dc2626' }} />
                                     </button>
                                 </div>
                             </div>
