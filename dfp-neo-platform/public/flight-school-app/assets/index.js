@@ -46058,8 +46058,8 @@ const taskingPanelClass = "flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = "text-[10px] font-black uppercase tracking-[0.18em] text-slate-500";
 const taskingPanelHintClass = "mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500";
 const taskingControlClass = "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500";
-const taskingSummaryHeaderClass = "grid min-w-[1134px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_42px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
-const taskingSummaryRowClass = "grid min-w-[1134px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_42px] gap-0 text-[12px]";
+const taskingSummaryHeaderClass = "grid min-w-[1152px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400";
+const taskingSummaryRowClass = "grid min-w-[1152px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 text-[12px]";
 const taskingSummaryCellClass = "border border-slate-700/70 px-2 py-2";
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const formatTaskingSummaryDate = (dateString) => {
@@ -46139,7 +46139,7 @@ const TaskingRequestTable = ({
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
     taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
-    taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[1134px] space-y-3", children: [
+    taskingRequests.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[1152px] space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: taskingSummaryHeaderClass, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Schedule" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Type" }),
@@ -46153,7 +46153,7 @@ const TaskingRequestTable = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Priority" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Status" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, children: "Edit" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${taskingSummaryHeaderCellClass} flex items-center justify-center`, "aria-label": "Delete", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-3.5 w-3.5", style: { color: "#dc2626", stroke: "#dc2626" } }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: taskingSummaryHeaderCellClass, "aria-label": "Delete" })
       ] }),
       taskingRequests.map((request) => {
         const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());

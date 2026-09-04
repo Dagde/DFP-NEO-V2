@@ -725,8 +725,8 @@ const taskingPanelClass = 'flex min-h-[8rem] min-w-0 flex-col justify-between ro
 const taskingPanelLabelClass = 'text-[10px] font-black uppercase tracking-[0.18em] text-slate-500';
 const taskingPanelHintClass = 'mt-2 min-h-[2rem] text-[11px] leading-snug text-slate-500';
 const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500';
-const taskingSummaryHeaderClass = 'grid min-w-[1134px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_42px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400';
-const taskingSummaryRowClass = 'grid min-w-[1134px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_42px] gap-0 text-[12px]';
+const taskingSummaryHeaderClass = 'grid min-w-[1152px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 bg-slate-900 px-0 text-[12px] font-black uppercase tracking-[0.12em] text-slate-400';
+const taskingSummaryRowClass = 'grid min-w-[1152px] grid-cols-[136px_90px_76px_88px_130px_112px_74px_70px_90px_86px_90px_66px_60px] gap-0 text-[12px]';
 const taskingSummaryCellClass = 'border border-slate-700/70 px-2 py-2';
 const taskingSummaryHeaderCellClass = `${taskingSummaryCellClass} text-center`;
 const formatTaskingSummaryDate = (dateString: string | undefined): string => {
@@ -824,7 +824,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
     )}
     {taskingRequests.length > 0 && (
       <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-950/45">
-        <div className="min-w-[1134px] space-y-3">
+        <div className="min-w-[1152px] space-y-3">
           <div className={taskingSummaryHeaderClass}>
             <span className={taskingSummaryHeaderCellClass}>Schedule</span>
             <span className={taskingSummaryHeaderCellClass}>Type</span>
@@ -838,9 +838,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <span className={taskingSummaryHeaderCellClass}>Priority</span>
             <span className={taskingSummaryHeaderCellClass}>Status</span>
             <span className={taskingSummaryHeaderCellClass}>Edit</span>
-            <span className={`${taskingSummaryHeaderCellClass} flex items-center justify-center`} aria-label="Delete">
-              <TrashIcon aria-hidden="true" className="h-3.5 w-3.5" style={{ color: '#dc2626', stroke: '#dc2626' }} />
-            </span>
+            <span className={taskingSummaryHeaderCellClass} aria-label="Delete"></span>
           </div>
     {taskingRequests.map(request => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
