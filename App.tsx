@@ -1069,6 +1069,7 @@ const DfpSidePanelTimeline: React.FC<{
     const [assistPriorityUnitFilter, setAssistPriorityUnitFilter] = useState('all');
     const [editingAssistPriorityEventId, setEditingAssistPriorityEventId] = useState<string | null>(null);
     const [assistPriorityDateDrafts, setAssistPriorityDateDrafts] = useState<Record<string, string>>({});
+    const [assistPriorityPushDrafts, setAssistPriorityPushDrafts] = useState<Record<string, boolean>>({});
     const [activeAssistSection, setActiveAssistSection] = useState<NeoAssistSection>('flying');
     const [isAssistTileDragging, setIsAssistTileDragging] = useState(false);
     const [showAssistCurrencyInfo, setShowAssistCurrencyInfo] = useState(false);
@@ -3592,6 +3593,7 @@ const DfpSidePanelTimeline: React.FC<{
             aircraftCount: normaliseAssistAircraftCount(request.aircraftCount),
             isTimeFixed: false,
             isMandatoryTasking: request.priority === 'High',
+            pushToNeoBuild: request.pushToNeoBuild !== false,
             ...(requestType === 'flight' && request.aircraftConfigId ? { acceptableAircraftConfigs: [request.aircraftConfigId] } : {}),
             requestedByName: String((request as any).requestedByName || (request as any).createdByName || (request as any).submittedByName || request.name || primaryName || 'Requester').trim(),
             sctRequestType: requestType,
@@ -3921,6 +3923,22 @@ const DfpSidePanelTimeline: React.FC<{
         patchAssistCurrencyRequestAndQueue(requestId, updates, requestType);
         return true;
     };
+    const isAssistBuildQueuePushEnabled = (event: ScheduleEvent): boolean => (
+        event.id in assistPriorityPushDrafts ? assistPriorityPushDrafts[event.id] : event.pushToNeoBuild !== false
+    );
+    const setAssistBuildQueuePush = (event: ScheduleEvent, pushToNeoBuild: boolean) => {
+        setAssistPriorityPushDrafts(prev => ({ ...prev, [event.id]: pushToNeoBuild }));
+        if (patchAssistBuildQueueSctEvent(event, { pushToNeoBuild, includeInBuild: pushToNeoBuild })) {
+            onUpdatePriorityEvent(event.id, { pushToNeoBuild });
+            return;
+        }
+        onUpdatePriorityEvent(event.id, { pushToNeoBuild });
+    };
+    const setFilteredAssistBuildQueuePush = (pushToNeoBuild: boolean) => {
+        filteredAssistBuildQueueRows
+            .filter(row => !(row.event as any).isStandardMissionSourceOnly)
+            .forEach(row => setAssistBuildQueuePush(row.event, pushToNeoBuild));
+    };
     const setAssistBuildQueuePriority = (event: ScheduleEvent, priority: 'High' | 'Medium' | 'Low') => {
         if ((event as any).isStandardMissionSourceOnly) return;
         if (patchAssistBuildQueueSctEvent(event, { priority, includeInBuild: true, submitted: true })) return;
@@ -4154,7 +4172,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                 )}
                 <div className="overflow-x-auto rounded-md border border-slate-300">
-                    <table className="w-full min-w-[1184px] table-fixed text-[12px]">
+                    <table className="w-full min-w-[1264px] table-fixed text-[12px]">
                         <colgroup>
                             <col className="w-[46px]" />
                             <col className="w-[126px]" />
@@ -4168,6 +4186,7 @@ const DfpSidePanelTimeline: React.FC<{
                             <col className="w-[90px]" />
                             <col className="w-[72px]" />
                             <col className="w-[76px]" />
+                            <col className="w-[80px]" />
                         </colgroup>
                         <thead className="sticky top-0 z-10 bg-slate-100 text-[10px] uppercase tracking-[0.12em] text-slate-500">
                             <tr>
@@ -4183,12 +4202,33 @@ const DfpSidePanelTimeline: React.FC<{
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Priority</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-left">Status</th>
                                 <th className="border-b border-slate-300 px-2 py-2 text-center">Edit</th>
+                                <th className="border-b border-slate-300 px-1 py-1 text-center">
+                                    <div className="flex flex-col items-center gap-1">
+                                        <span>Push</span>
+                                        <span className="inline-flex overflow-hidden rounded border border-slate-300 bg-white text-[9px] font-semibold normal-case tracking-normal">
+                                            <button
+                                                type="button"
+                                                onClick={() => setFilteredAssistBuildQueuePush(true)}
+                                                className="px-1.5 py-0.5 text-cyan-800 hover:bg-cyan-50"
+                                            >
+                                                All
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFilteredAssistBuildQueuePush(false)}
+                                                className="border-l border-slate-300 px-1.5 py-0.5 text-slate-600 hover:bg-slate-50"
+                                            >
+                                                None
+                                            </button>
+                                        </span>
+                                    </div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
                             {filteredAssistBuildQueueRows.length === 0 && (
                                 <tr>
-                                    <td colSpan={12} className="px-3 py-8 text-center text-slate-500">
+                                    <td colSpan={13} className="px-3 py-8 text-center text-slate-500">
                                         No matching NEO Build priority items are in this view.
                                     </td>
                                 </tr>
@@ -4203,6 +4243,8 @@ const DfpSidePanelTimeline: React.FC<{
                                 const isRequestedDatePastOrToday = isAssistDatePastOrToday(requestedDate);
                                 const requestedDateDraftValue = assistPriorityDateDrafts[row.event.id] ?? formatAssistCurrencyDate(requestedDateInputValue);
                                 const isEditRequestedDatePastOrToday = isAssistDatePastOrToday(requestedDateDraftValue);
+                                const pushEnabled = isAssistBuildQueuePushEnabled(row.event);
+                                const pushDisabled = Boolean((row.event as any).isStandardMissionSourceOnly);
                                 return (
                                     <tr key={row.event.id} className={isEditing ? 'bg-emerald-50/80 ring-1 ring-inset ring-emerald-300' : 'hover:bg-cyan-50'}>
                                         <td className="px-2 py-2 align-middle text-slate-600">
@@ -4454,6 +4496,32 @@ const DfpSidePanelTimeline: React.FC<{
                                                         <path d="M14 11v5" />
                                                     </svg>
                                                 </button>
+                                            </div>
+                                        </td>
+                                        <td className="px-1 py-2 text-center align-middle">
+                                            <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-300 bg-white px-1 py-0.5 text-[10px] font-semibold text-slate-700">
+                                                <label className={`inline-flex items-center gap-0.5 ${pushDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+                                                    <input
+                                                        type="radio"
+                                                        name={`neo-assist-push-${row.event.id}`}
+                                                        checked={pushEnabled}
+                                                        disabled={pushDisabled}
+                                                        onChange={() => setAssistBuildQueuePush(row.event, true)}
+                                                        className="h-3 w-3 accent-cyan-700"
+                                                    />
+                                                    Y
+                                                </label>
+                                                <label className={`inline-flex items-center gap-0.5 ${pushDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+                                                    <input
+                                                        type="radio"
+                                                        name={`neo-assist-push-${row.event.id}`}
+                                                        checked={!pushEnabled}
+                                                        disabled={pushDisabled}
+                                                        onChange={() => setAssistBuildQueuePush(row.event, false)}
+                                                        className="h-3 w-3 accent-cyan-700"
+                                                    />
+                                                    N
+                                                </label>
                                             </div>
                                         </td>
                                     </tr>
@@ -42871,10 +42939,10 @@ const App: React.FC = () => {
         // 1. Auto-add high-priority continuation/currency requests and medium/low requests with includeInBuild=true.
         logRoutineAppDebug(`🔍 ${continuationShortLabel} Sync - buildDfpDate:`, buildDfpDate);
         const highPrioritySctFlights = sctFlights.filter(req =>
-            (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
+            req.pushToNeoBuild !== false && (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
         const highPrioritySctFtds = sctFtds.filter(req =>
-            (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
+            req.pushToNeoBuild !== false && (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
         logRoutineAppDebug(`🔍 Found ${continuationShortLabel} flights to include:`, highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
         const fixedCrewCurrencyEventDuration = isFixedCrewLikeOperationalModel(activeOperationalModel)
@@ -44420,8 +44488,10 @@ const App: React.FC = () => {
 
         // Use preserved events if provided, otherwise use state
         const eventsToUse = preservedEvents || highestPriorityEvents;
+        const eventsToPushToNeoBuild = eventsToUse.filter(event => event.pushToNeoBuild !== false);
         markNeoBuildTiming(timingReport, 'state:preserve-visible-draft-during-build', {
             eventsToUse: eventsToUse.length,
+            pushedEventsToUse: eventsToPushToNeoBuild.length,
             visibleDraftEvents: nextDayBuildEvents.length,
         });
 
@@ -45272,7 +45342,7 @@ const App: React.FC = () => {
             ceaseNightFlying,
             flyingWindowExclusions,
             buildDate: buildDfpDate,
-            highestPriorityEvents: eventsToUse,
+            highestPriorityEvents: eventsToPushToNeoBuild,
             instructorPriority: effectiveInstructorPriority,
             traineeLMPs: buildTraineeLMPs,
             flightTurnaround,

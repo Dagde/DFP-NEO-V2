@@ -418,6 +418,7 @@ export interface ScheduleEvent {
   currencyAudience?: 'staff' | 'trainee';
   aircraftCount?: number;
   priority?: 'High' | 'Medium' | 'Low';
+  pushToNeoBuild?: boolean;
       soloOrDual?: 'Solo' | 'Dual';
       isSctRequest?: boolean;
   isAcademic?: boolean;   // Academic (theory) events — never modified or deleted by NEO Build
@@ -739,6 +740,7 @@ export interface SctRequest {
     dayNight?: 'Day' | 'Night' | 'Day/Night';
     submitted?: boolean;
     includeInBuild?: boolean; // For MEDIUM/LOW priority - user can manually include in build
+    pushToNeoBuild?: boolean;
     aircraftConfigId?: string;
     acceptableAircraftConfigs?: string[];
     crewMember?: string;

@@ -101689,6 +101689,7 @@ const DfpSidePanelTimeline = ({
   const [assistPriorityUnitFilter, setAssistPriorityUnitFilter] = reactExports.useState("all");
   const [editingAssistPriorityEventId, setEditingAssistPriorityEventId] = reactExports.useState(null);
   const [assistPriorityDateDrafts, setAssistPriorityDateDrafts] = reactExports.useState({});
+  const [assistPriorityPushDrafts, setAssistPriorityPushDrafts] = reactExports.useState({});
   const [activeAssistSection, setActiveAssistSection] = reactExports.useState("flying");
   const [isAssistTileDragging, setIsAssistTileDragging] = reactExports.useState(false);
   const [showAssistCurrencyInfo, setShowAssistCurrencyInfo] = reactExports.useState(false);
@@ -103681,6 +103682,7 @@ const DfpSidePanelTimeline = ({
       aircraftCount: normaliseAssistAircraftCount(request.aircraftCount),
       isTimeFixed: false,
       isMandatoryTasking: request.priority === "High",
+      pushToNeoBuild: request.pushToNeoBuild !== false,
       ...requestType === "flight" && request.aircraftConfigId ? { acceptableAircraftConfigs: [request.aircraftConfigId] } : {},
       requestedByName: String(request.requestedByName || request.createdByName || request.submittedByName || request.name || primaryName || "Requester").trim(),
       sctRequestType: requestType,
@@ -103982,6 +103984,18 @@ const DfpSidePanelTimeline = ({
     patchAssistCurrencyRequestAndQueue(requestId, updates, requestType);
     return true;
   };
+  const isAssistBuildQueuePushEnabled = (event) => event.id in assistPriorityPushDrafts ? assistPriorityPushDrafts[event.id] : event.pushToNeoBuild !== false;
+  const setAssistBuildQueuePush = (event, pushToNeoBuild) => {
+    setAssistPriorityPushDrafts((prev) => ({ ...prev, [event.id]: pushToNeoBuild }));
+    if (patchAssistBuildQueueSctEvent(event, { pushToNeoBuild, includeInBuild: pushToNeoBuild })) {
+      onUpdatePriorityEvent(event.id, { pushToNeoBuild });
+      return;
+    }
+    onUpdatePriorityEvent(event.id, { pushToNeoBuild });
+  };
+  const setFilteredAssistBuildQueuePush = (pushToNeoBuild) => {
+    filteredAssistBuildQueueRows.filter((row) => !row.event.isStandardMissionSourceOnly).forEach((row) => setAssistBuildQueuePush(row.event, pushToNeoBuild));
+  };
   const setAssistBuildQueuePriority = (event, priority) => {
     if (event.isStandardMissionSourceOnly) return;
     if (patchAssistBuildQueueSctEvent(event, { priority, includeInBuild: true, submitted: true })) return;
@@ -104205,7 +104219,7 @@ This cannot be undone.`,
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1184px] table-fixed text-[12px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-md border border-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1264px] table-fixed text-[12px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[46px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[126px]" }),
@@ -104218,7 +104232,8 @@ This cannot be undone.`,
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[68px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[90px]" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[72px]" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[76px]" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[76px]" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[80px]" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 z-10 bg-slate-100 text-[10px] uppercase tracking-[0.12em] text-slate-500", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Order" }),
@@ -104232,10 +104247,33 @@ This cannot be undone.`,
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Aircraft" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Priority" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-left", children: "Status" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-center", children: "Edit" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-2 py-2 text-center", children: "Edit" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border-b border-slate-300 px-1 py-1 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Push" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex overflow-hidden rounded border border-slate-300 bg-white text-[9px] font-semibold normal-case tracking-normal", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setFilteredAssistBuildQueuePush(true),
+                  className: "px-1.5 py-0.5 text-cyan-800 hover:bg-cyan-50",
+                  children: "All"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setFilteredAssistBuildQueuePush(false),
+                  className: "border-l border-slate-300 px-1.5 py-0.5 text-slate-600 hover:bg-slate-50",
+                  children: "None"
+                }
+              )
+            ] })
+          ] }) })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-200 bg-white", children: [
-          filteredAssistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 12, className: "px-3 py-8 text-center text-slate-500", children: "No matching NEO Build priority items are in this view." }) }),
+          filteredAssistBuildQueueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 13, className: "px-3 py-8 text-center text-slate-500", children: "No matching NEO Build priority items are in this view." }) }),
           filteredAssistBuildQueueRows.map((row) => {
             const isEditing = editingAssistPriorityEventId === row.event.id;
             const showFlightType = normalisedAssistOperationalModel === "flight_school" && row.group === "currency";
@@ -104246,6 +104284,8 @@ This cannot be undone.`,
             const isRequestedDatePastOrToday = isAssistDatePastOrToday(requestedDate);
             const requestedDateDraftValue = assistPriorityDateDrafts[row.event.id] ?? formatAssistCurrencyDate(requestedDateInputValue);
             const isEditRequestedDatePastOrToday = isAssistDatePastOrToday(requestedDateDraftValue);
+            const pushEnabled = isAssistBuildQueuePushEnabled(row.event);
+            const pushDisabled = Boolean(row.event.isStandardMissionSourceOnly);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: isEditing ? "bg-emerald-50/80 ring-1 ring-inset ring-emerald-300" : "hover:bg-cyan-50", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 align-middle text-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-5 font-mono", children: row.index + 1 }),
@@ -104458,6 +104498,36 @@ This cannot be undone.`,
                     ] })
                   }
                 )
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-1 py-2 text-center align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-300 bg-white px-1 py-0.5 text-[10px] font-semibold text-slate-700", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `inline-flex items-center gap-0.5 ${pushDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      name: `neo-assist-push-${row.event.id}`,
+                      checked: pushEnabled,
+                      disabled: pushDisabled,
+                      onChange: () => setAssistBuildQueuePush(row.event, true),
+                      className: "h-3 w-3 accent-cyan-700"
+                    }
+                  ),
+                  "Y"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `inline-flex items-center gap-0.5 ${pushDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      name: `neo-assist-push-${row.event.id}`,
+                      checked: !pushEnabled,
+                      disabled: pushDisabled,
+                      onChange: () => setAssistBuildQueuePush(row.event, false),
+                      className: "h-3 w-3 accent-cyan-700"
+                    }
+                  ),
+                  "N"
+                ] })
               ] }) })
             ] }, row.event.id);
           })
@@ -135661,10 +135731,10 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     const hasSctParticipant = (sctReq) => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
     logRoutineAppDebug(`🔍 ${continuationShortLabel} Sync - buildDfpDate:`, buildDfpDate);
     const highPrioritySctFlights = sctFlights.filter(
-      (req) => (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
+      (req) => req.pushToNeoBuild !== false && (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
     const highPrioritySctFtds = sctFtds.filter(
-      (req) => (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
+      (req) => req.pushToNeoBuild !== false && (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
     logRoutineAppDebug(`🔍 Found ${continuationShortLabel} flights to include:`, highPrioritySctFlights.length, "| FTDs:", highPrioritySctFtds.length);
     const fixedCrewCurrencyEventDuration = isFixedCrewLikeOperationalModel(activeOperationalModel) ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : null;
@@ -136933,8 +137003,10 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       }))
     });
     const eventsToUse = preservedEvents || highestPriorityEvents;
+    const eventsToPushToNeoBuild = eventsToUse.filter((event) => event.pushToNeoBuild !== false);
     markNeoBuildTiming(timingReport, "state:preserve-visible-draft-during-build", {
       eventsToUse: eventsToUse.length,
+      pushedEventsToUse: eventsToPushToNeoBuild.length,
       visibleDraftEvents: nextDayBuildEvents.length
     });
     let dbElceMap;
@@ -137672,7 +137744,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       ceaseNightFlying,
       flyingWindowExclusions,
       buildDate: buildDfpDate,
-      highestPriorityEvents: eventsToUse,
+      highestPriorityEvents: eventsToPushToNeoBuild,
       instructorPriority: effectiveInstructorPriority,
       traineeLMPs: buildTraineeLMPs,
       flightTurnaround,
