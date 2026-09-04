@@ -82728,6 +82728,12 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       parentOrganisationCode: getUnitParentOrganisationCode(unit)
     });
   });
+  const visibleTaskTileLabelUnitRows = visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).filter(({ unit }) => {
+    const scopedUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activePrimaryUnitCode].filter(Boolean);
+    const scopedUnitSet = new Set(scopedUnitCodes.map(normaliseUnitCode2));
+    if (scopedUnitSet.size === 0) return true;
+    return scopedUnitSet.has(normaliseUnitCode2(unit.code));
+  });
   const getStrictUnitAircraftTypeCodeSet = (sourceConfig, scopedUnitCodes) => {
     const sourceUnits = Array.isArray(sourceConfig.units) ? sourceConfig.units : [];
     const sourcePools = Array.isArray(sourceConfig.resourcePools) ? sourceConfig.resourcePools : [];
@@ -84001,37 +84007,40 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-task-tile-abbreviations", className: "mt-5", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-sm font-bold text-white", children: "Unit Schedule Tile Labels" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
-                const unitIndex = config.units.findIndex((candidate) => candidate === unit);
-                const abbreviations = unit.settings?.taskProfileAbbreviations || {};
-                const unitDraftKey = getTaskProfileUnitDraftKey(unit, unitIndex);
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-task-tile-abbreviations-${getSettingsFocusAnchor(unit.code)}`, className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("h5", { className: "text-sm font-bold text-white", children: [
-                        unit.code,
-                        " - ",
-                        unit.name
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
+                visibleTaskTileLabelUnitRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3 text-sm text-gray-400", children: "No active unit schedule tile label lists match the current unit context." }),
+                visibleTaskTileLabelUnitRows.map(({ unit }) => {
+                  const unitIndex = config.units.findIndex((candidate) => candidate === unit);
+                  const abbreviations = unit.settings?.taskProfileAbbreviations || {};
+                  const unitDraftKey = getTaskProfileUnitDraftKey(unit, unitIndex);
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-task-tile-abbreviations-${getSettingsFocusAnchor(unit.code)}`, className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("h5", { className: "text-sm font-bold text-white", children: [
+                          unit.code,
+                          " - ",
+                          unit.name
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "These abbreviations apply only when this unit is the active DFP context." })
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "These abbreviations apply only when this unit is the active DFP context." })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
+                        Object.keys(abbreviations).length,
+                        " abbreviations"
+                      ] })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
-                      Object.keys(abbreviations).length,
-                      " abbreviations"
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    TextAreaField,
-                    {
-                      label: "Schedule Tile Labels",
-                      value: taskProfilesUnlocked ? taskProfileAbbreviationDrafts[unitDraftKey] ?? formatTaskProfileAbbreviationText(abbreviations) : formatTaskProfileAbbreviationText(abbreviations),
-                      disabled: !canEditTaskProfiles,
-                      onChange: (value) => setTaskProfileAbbreviationDrafts((drafts) => ({ ...drafts, [unitDraftKey]: value })),
-                      info: "One label per line, for example Task Name - TSK. Equals signs are also accepted."
-                    }
-                  )
-                ] }, unit.code);
-              }) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      TextAreaField,
+                      {
+                        label: "Schedule Tile Labels",
+                        value: taskProfilesUnlocked ? taskProfileAbbreviationDrafts[unitDraftKey] ?? formatTaskProfileAbbreviationText(abbreviations) : formatTaskProfileAbbreviationText(abbreviations),
+                        disabled: !canEditTaskProfiles,
+                        onChange: (value) => setTaskProfileAbbreviationDrafts((drafts) => ({ ...drafts, [unitDraftKey]: value })),
+                        info: "One label per line, for example Task Name - TSK. Equals signs are also accepted."
+                      }
+                    )
+                  ] }, unit.code);
+                })
+              ] })
             ] })
           ] })
         ] }),

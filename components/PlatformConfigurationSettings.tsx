@@ -7965,6 +7965,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         parentOrganisationCode: getUnitParentOrganisationCode(unit),
       });
     });
+  const visibleTaskTileLabelUnitRows = visibleUnitRows
+    .filter(({ unit }) => isActiveRecord(unit))
+    .filter(({ unit }) => {
+      const scopedUnitCodes = activeContextUnitCodes.length > 0
+        ? activeContextUnitCodes
+        : [activePrimaryUnitCode].filter(Boolean);
+      const scopedUnitSet = new Set(scopedUnitCodes.map(normaliseUnitCode));
+      if (scopedUnitSet.size === 0) return true;
+      return scopedUnitSet.has(normaliseUnitCode(unit.code));
+    });
   const getStrictUnitAircraftTypeCodeSet = (sourceConfig: PlatformConfig, scopedUnitCodes: string[]): Set<string> => {
     const sourceUnits = Array.isArray(sourceConfig.units) ? sourceConfig.units : [];
     const sourcePools = Array.isArray(sourceConfig.resourcePools) ? sourceConfig.resourcePools : [];
@@ -9427,7 +9437,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div id="platform-task-tile-abbreviations" className="mt-5">
             <h4 className="mb-2 text-sm font-bold text-white">Unit Schedule Tile Labels</h4>
             <div className="grid gap-4 lg:grid-cols-2">
-              {visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
+              {visibleTaskTileLabelUnitRows.length === 0 && (
+                <div className="rounded-lg border border-gray-700 bg-gray-900 p-3 text-sm text-gray-400">
+                  No active unit schedule tile label lists match the current unit context.
+                </div>
+              )}
+              {visibleTaskTileLabelUnitRows.map(({ unit }) => {
                 const unitIndex = config.units.findIndex((candidate) => candidate === unit);
                 const abbreviations = unit.settings?.taskProfileAbbreviations || {};
                 const unitDraftKey = getTaskProfileUnitDraftKey(unit, unitIndex);
