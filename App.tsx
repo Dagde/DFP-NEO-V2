@@ -5352,10 +5352,23 @@ const DfpSidePanelTimeline: React.FC<{
                                     {manualCoursePackageSourcesEnabled && <option value="package">Package</option>}
                                 </select>
                             </label>
-                            <label className="col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                            <label className={showFlightOnlyDetails ? 'text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400' : 'col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400'}>
                                 Event
                                 {renderManualEventPicker()}
                             </label>
+                            {showFlightOnlyDetails && (
+                                <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                    {isAirCombatTileMode ? 'No of A/C' : 'Number'}
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={resourceNumberLimit}
+                                        value={selectedResourceNumber}
+                                        onChange={event => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1)))}
+                                        className={compactFieldClass}
+                                    />
+                                </label>
+                            )}
                             <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                                 Solo/Dual
                                 {isSingleSeatFlightResource ? (
@@ -5598,17 +5611,6 @@ const DfpSidePanelTimeline: React.FC<{
                     )}
                     {showFlightOnlyDetails && (
                         <>
-                            <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                {isAirCombatTileMode ? 'No of A/C' : 'Number'}
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={resourceNumberLimit}
-                                    value={selectedResourceNumber}
-                                    onChange={event => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1)))}
-                                    className={compactFieldClass}
-                                />
-                            </label>
                             <label className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
                                 {aircraftResourceLabel} Number
                                 <input

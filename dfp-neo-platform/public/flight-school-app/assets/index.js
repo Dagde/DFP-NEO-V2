@@ -105350,9 +105350,23 @@ This cannot be undone.`,
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: showFlightOnlyDetails ? "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400" : "col-span-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Event",
             renderManualEventPicker()
+          ] }),
+          showFlightOnlyDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
+            isAirCombatTileMode ? "No of A/C" : "Number",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: 1,
+                max: resourceNumberLimit,
+                value: selectedResourceNumber,
+                onChange: (event) => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1))),
+                className: compactFieldClass
+              }
+            )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Solo/Dual",
@@ -105573,20 +105587,6 @@ This cannot be undone.`,
           ] })
         ] }),
         showFlightOnlyDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            isAirCombatTileMode ? "No of A/C" : "Number",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "number",
-                min: 1,
-                max: resourceNumberLimit,
-                value: selectedResourceNumber,
-                onChange: (event) => setSelectedResourceNumber(Math.max(1, Math.min(resourceNumberLimit, Number(event.target.value) || 1))),
-                className: compactFieldClass
-              }
-            )
-          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             aircraftResourceLabel,
             " Number",
