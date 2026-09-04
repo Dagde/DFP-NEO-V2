@@ -7025,7 +7025,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     }}
                                     className={`rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${
                                         activeAssistPage === 'inputs'
-                                            ? 'border-cyan-300 bg-cyan-50 text-slate-950'
+                                            ? 'border-blue-500 bg-cyan-50 text-slate-950 ring-2 ring-blue-500 ring-offset-1 ring-offset-slate-100'
                                             : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
                                     }`}
                                 >
@@ -7036,7 +7036,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     onClick={() => setActiveAssistPage('priority')}
                                     className={`rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${
                                         activeAssistPage === 'priority'
-                                            ? 'border-cyan-300 bg-cyan-50 text-slate-950'
+                                            ? 'border-blue-500 bg-cyan-50 text-slate-950 ring-2 ring-blue-500 ring-offset-1 ring-offset-slate-100'
                                             : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
                                     }`}
                                 >
@@ -7050,7 +7050,7 @@ const DfpSidePanelTimeline: React.FC<{
                                     }}
                                     className={`rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${
                                         activeAssistPage === 'manual'
-                                            ? 'border-cyan-300 bg-cyan-50 text-slate-950'
+                                            ? 'border-blue-500 bg-cyan-50 text-slate-950 ring-2 ring-blue-500 ring-offset-1 ring-offset-slate-100'
                                             : 'border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50'
                                     }`}
                                 >

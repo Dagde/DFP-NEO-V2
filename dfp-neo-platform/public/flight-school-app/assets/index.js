@@ -106928,7 +106928,7 @@ This cannot be undone.`,
                 setActiveAssistPage("inputs");
                 if (!assistSections.some((section) => section.id === activeAssistSection)) setActiveAssistSection("flying");
               },
-              className: `rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${activeAssistPage === "inputs" ? "border-cyan-300 bg-cyan-50 text-slate-950" : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50"}`,
+              className: `rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${activeAssistPage === "inputs" ? "border-blue-500 bg-cyan-50 text-slate-950 ring-2 ring-blue-500 ring-offset-1 ring-offset-slate-100" : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50"}`,
               children: "NEO Build Inputs"
             }
           ),
@@ -106937,7 +106937,7 @@ This cannot be undone.`,
             {
               type: "button",
               onClick: () => setActiveAssistPage("priority"),
-              className: `rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${activeAssistPage === "priority" ? "border-cyan-300 bg-cyan-50 text-slate-950" : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50"}`,
+              className: `rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${activeAssistPage === "priority" ? "border-blue-500 bg-cyan-50 text-slate-950 ring-2 ring-blue-500 ring-offset-1 ring-offset-slate-100" : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50"}`,
               children: "Priority Table"
             }
           ),
@@ -106949,7 +106949,7 @@ This cannot be undone.`,
                 setActiveAssistPage("manual");
                 setActiveAssistSection("details");
               },
-              className: `rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${activeAssistPage === "manual" ? "border-cyan-300 bg-cyan-50 text-slate-950" : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50"}`,
+              className: `rounded-md border px-3 py-2 text-[11px] font-semibold shadow-sm transition ${activeAssistPage === "manual" ? "border-blue-500 bg-cyan-50 text-slate-950 ring-2 ring-blue-500 ring-offset-1 ring-offset-slate-100" : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50"}`,
               children: "Manual Tile Creator"
             }
           )
