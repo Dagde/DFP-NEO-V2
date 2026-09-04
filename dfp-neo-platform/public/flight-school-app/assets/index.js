@@ -49264,18 +49264,27 @@ const PrioritiesView = ({
     const isPushEnabled = (event) => event.id in priorityPushDrafts ? priorityPushDrafts[event.id] : event.pushToNeoBuild !== false;
     const setAllPush = (pushToNeoBuild) => visibleEvents.forEach((event) => setPush(event, pushToNeoBuild));
     const deletePriorityEvent = (event) => {
+      onDeletePriorityEvent(event.id);
       if (event.taskingRequestId) {
-        removeTaskingRequest(event.taskingRequestId);
+        setTaskingRequests((prev) => prev.map((request) => request.id === event.taskingRequestId ? {
+          ...request,
+          submitted: false,
+          pushToNeoBuild: false,
+          includeInBuild: false,
+          ignored: true
+        } : request));
         return;
       }
       if (event.sctRequestId) {
         onPatchSctRequest(event.sctRequestId, { submitted: false, includeInBuild: false, pushToNeoBuild: false }, getSctRequestType(event));
       }
-      onDeletePriorityEvent(event.id);
+      if (event.currencyDraftId) {
+        setCurrencyDraftEvents((prev) => prev.map((draft) => draft.id === event.currencyDraftId ? { ...draft, selected: false, pushed: false } : draft));
+      }
     };
     const renderEmptyGroupRow = (group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "bg-slate-900/55", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border border-slate-700/80 px-2 py-3 text-center align-middle text-[14px] font-black ${priorityEventGroupStyles[group.key]}`, children: group.label }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 11, className: "border border-slate-700/80 px-2 py-3 text-slate-600", children: " " })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 12, className: "border border-slate-700/80 px-2 py-3 text-slate-600", children: " " })
     ] }, `${group.key}-empty`);
     const renderEventRow = (event, group, index) => {
       const isEditing = editingPriorityEventId === event.id;
@@ -49313,16 +49322,15 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Low", children: "Low" })
         ] }) : event.priority || "High" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-flex rounded border px-1.5 py-1 text-[10px] font-black ${status.className}`, children: status.label }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-1.5 py-1.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: (e) => {
-            e.stopPropagation();
-            setEditingPriorityEventId((current) => current === event.id ? null : event.id);
-          }, className: "rounded border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold text-cyan-100 hover:bg-cyan-500/20", children: isEditing ? "Done" : "Edit" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", "aria-label": "Delete priority event", title: "Delete priority event", onClick: (e) => {
-            e.stopPropagation();
-            deletePriorityEvent(event);
-          }, className: "inline-flex h-7 w-6 items-center justify-center text-red-300 transition-colors hover:text-red-100", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-4 w-4" }) })
-        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-1.5 py-1.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: (e) => {
+          e.stopPropagation();
+          setEditingPriorityEventId((current) => current === event.id ? null : event.id);
+        }, className: "rounded border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold text-cyan-100 hover:bg-cyan-500/20", children: isEditing ? "Done" : "Edit" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-1 py-1.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", "aria-label": "Delete priority event", title: "Delete priority event", onClick: (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          deletePriorityEvent(event);
+        }, className: "inline-flex h-7 w-7 items-center justify-center text-red-300 transition-colors hover:text-red-100 focus:outline-none focus:ring-1 focus:ring-red-500/60", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { "aria-hidden": "true", className: "h-4 w-4", style: { color: "#dc2626", stroke: "#dc2626" } }) }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "border border-slate-700/80 px-1 py-1.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex cursor-pointer items-center gap-1 leading-none", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: `hpe-push-${event.id}`, checked: pushEnabled, onClick: (e) => e.stopPropagation(), onChange: () => setPush(event, true), className: "h-4 w-4 accent-cyan-400" }),
@@ -49335,7 +49343,7 @@ const PrioritiesView = ({
         ] }) })
       ] }, event.id);
     };
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1192px] table-fixed border-collapse text-[11px] leading-tight", children: [
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[1234px] table-fixed border-collapse text-[11px] leading-tight", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[118px]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[70px]" }),
@@ -49348,6 +49356,7 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[88px]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[86px]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[80px]" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[42px]" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[80px]" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -49362,6 +49371,7 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Priority" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-2 py-2 text-left", children: "Status" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-1 py-2 text-center", children: "Edit" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-1 py-2 text-center", "aria-hidden": "true" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "border border-slate-700/90 px-1 py-1 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-1", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Push" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal", children: [

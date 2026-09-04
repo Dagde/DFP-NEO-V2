@@ -4628,14 +4628,25 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     );
     const setAllPush = (pushToNeoBuild: boolean) => visibleEvents.forEach(event => setPush(event, pushToNeoBuild));
     const deletePriorityEvent = (event: ScheduleEvent) => {
+      onDeletePriorityEvent(event.id);
       if (event.taskingRequestId) {
-        removeTaskingRequest(event.taskingRequestId);
+        setTaskingRequests(prev => prev.map(request => request.id === event.taskingRequestId ? {
+          ...request,
+          submitted: false,
+          pushToNeoBuild: false,
+          includeInBuild: false,
+          ignored: true,
+        } : request));
         return;
       }
       if (event.sctRequestId) {
         onPatchSctRequest(event.sctRequestId, { submitted: false, includeInBuild: false, pushToNeoBuild: false }, getSctRequestType(event));
       }
-      onDeletePriorityEvent(event.id);
+      if (event.currencyDraftId) {
+        setCurrencyDraftEvents(prev => prev.map(draft => (
+          draft.id === event.currencyDraftId ? { ...draft, selected: false, pushed: false } : draft
+        )));
+      }
     };
 
     const renderEmptyGroupRow = (group: typeof groups[number]) => (
@@ -4643,7 +4654,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         <td className={`border border-slate-700/80 px-2 py-3 text-center align-middle text-[14px] font-black ${priorityEventGroupStyles[group.key]}`}>
           {group.label}
         </td>
-        <td colSpan={11} className="border border-slate-700/80 px-2 py-3 text-slate-600">&nbsp;</td>
+        <td colSpan={12} className="border border-slate-700/80 px-2 py-3 text-slate-600">&nbsp;</td>
       </tr>
     );
 
@@ -4727,14 +4738,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <span className={`inline-flex rounded border px-1.5 py-1 text-[10px] font-black ${status.className}`}>{status.label}</span>
           </td>
           <td className="border border-slate-700/80 px-1.5 py-1.5 text-center">
-            <div className="flex items-center justify-center gap-1">
-              <button type="button" onClick={(e) => { e.stopPropagation(); setEditingPriorityEventId(current => current === event.id ? null : event.id); }} className="rounded border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold text-cyan-100 hover:bg-cyan-500/20">
-                {isEditing ? 'Done' : 'Edit'}
-              </button>
-              <button type="button" aria-label="Delete priority event" title="Delete priority event" onClick={(e) => { e.stopPropagation(); deletePriorityEvent(event); }} className="inline-flex h-7 w-6 items-center justify-center text-red-300 transition-colors hover:text-red-100">
-                <TrashIcon aria-hidden="true" className="h-4 w-4" />
-              </button>
-            </div>
+            <button type="button" onClick={(e) => { e.stopPropagation(); setEditingPriorityEventId(current => current === event.id ? null : event.id); }} className="rounded border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold text-cyan-100 hover:bg-cyan-500/20">
+              {isEditing ? 'Done' : 'Edit'}
+            </button>
+          </td>
+          <td className="border border-slate-700/80 px-1 py-1.5 text-center">
+            <button type="button" aria-label="Delete priority event" title="Delete priority event" onClick={(e) => { e.preventDefault(); e.stopPropagation(); deletePriorityEvent(event); }} className="inline-flex h-7 w-7 items-center justify-center text-red-300 transition-colors hover:text-red-100 focus:outline-none focus:ring-1 focus:ring-red-500/60">
+              <TrashIcon aria-hidden="true" className="h-4 w-4" style={{ color: '#dc2626', stroke: '#dc2626' }} />
+            </button>
           </td>
           <td className="border border-slate-700/80 px-1 py-1.5 text-center">
             <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100">
@@ -4754,7 +4765,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
     return (
       <div className="overflow-x-auto rounded-lg border border-slate-600/70 bg-slate-950/55 shadow-inner shadow-black/20">
-        <table className="w-full min-w-[1192px] table-fixed border-collapse text-[11px] leading-tight">
+        <table className="w-full min-w-[1234px] table-fixed border-collapse text-[11px] leading-tight">
             <colgroup>
                 <col className="w-[118px]" />
                 <col className="w-[70px]" />
@@ -4767,6 +4778,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <col className="w-[88px]" />
                 <col className="w-[86px]" />
                 <col className="w-[80px]" />
+                <col className="w-[42px]" />
                 <col className="w-[80px]" />
             </colgroup>
             <thead className="bg-slate-800/95 text-[9px] font-black uppercase tracking-[0.14em] text-slate-300">
@@ -4782,6 +4794,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Priority</th>
                     <th className="border border-slate-700/90 px-2 py-2 text-left">Status</th>
                     <th className="border border-slate-700/90 px-1 py-2 text-center">Edit</th>
+                    <th className="border border-slate-700/90 px-1 py-2 text-center" aria-hidden="true"></th>
                     <th className="border border-slate-700/90 px-1 py-1 text-center">
                       <div className="flex flex-col items-center gap-1">
                         <span>Push</span>
