@@ -50482,7 +50482,7 @@ const PrioritiesView = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: currencyDraftEvents.length === 0 ? "space-y-3" : buildPriorityTableShellClass, children: [
           currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }),
-          currencyDraftEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1262px] space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${buildPriorityTableHeaderClass} grid-cols-[136px_190px_94px_150px_180px_82px_113px_113px_96px_66px_60px]`, children: [
+          currencyDraftEvents.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1212px] space-y-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${buildPriorityTableHeaderClass} grid-cols-[126px_190px_94px_110px_180px_82px_113px_113px_96px_66px_60px]`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `${buildPriorityTableHeaderCellClass} flex flex-col items-center justify-center gap-2`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Schedule" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal", children: [
@@ -50514,8 +50514,8 @@ const PrioritiesView = ({
             return /* @__PURE__ */ jsxRuntimeExports.jsx(
               "div",
               {
-                className: `min-w-[1262px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? "pb-64" : ""} ${isPublishedInActiveSchedule ? "text-green-300" : ""}`,
-                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${buildPriorityTableRowClass} grid-cols-[136px_190px_94px_150px_180px_82px_113px_113px_96px_66px_60px]`, children: [
+                className: `min-w-[1212px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? "pb-64" : ""} ${isPublishedInActiveSchedule ? "text-green-300" : ""}`,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${buildPriorityTableRowClass} grid-cols-[126px_190px_94px_110px_180px_82px_113px_113px_96px_66px_60px]`, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `inline-flex items-center gap-1 text-[12px] leading-none ${isPublishedInActiveSchedule ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(

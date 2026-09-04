@@ -5879,8 +5879,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </div>
                 )}
                 {currencyDraftEvents.length > 0 && (
-                    <div className="min-w-[1262px] space-y-3">
-                        <div className={`${buildPriorityTableHeaderClass} grid-cols-[136px_190px_94px_150px_180px_82px_113px_113px_96px_66px_60px]`}>
+                    <div className="min-w-[1212px] space-y-3">
+                        <div className={`${buildPriorityTableHeaderClass} grid-cols-[126px_190px_94px_110px_180px_82px_113px_113px_96px_66px_60px]`}>
                             <span className={`${buildPriorityTableHeaderCellClass} flex flex-col items-center justify-center gap-2`}>
                                 <span>Schedule</span>
                                 <span className="inline-flex overflow-hidden rounded-md border border-slate-600 bg-slate-950 text-[10px] font-black normal-case tracking-normal">
@@ -5916,9 +5916,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     return (
                         <div
                             key={draft.id}
-                            className={`min-w-[1262px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? 'pb-64' : ''} ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
+                            className={`min-w-[1212px] overflow-visible rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10 transition-[padding-bottom] duration-200 ${isCurrencyMenuOpen ? 'pb-64' : ''} ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}
                         >
-                            <div className={`${buildPriorityTableRowClass} grid-cols-[136px_190px_94px_150px_180px_82px_113px_113px_96px_66px_60px]`}>
+                            <div className={`${buildPriorityTableRowClass} grid-cols-[126px_190px_94px_110px_180px_82px_113px_113px_96px_66px_60px]`}>
                                 <div className={`${buildPriorityTableCellClass} flex items-center justify-center bg-cyan-950/80`}>
                                     <div className="inline-flex items-center justify-center gap-1 rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-[12px] font-semibold text-slate-100">
                                         <label className={`inline-flex items-center gap-1 text-[12px] leading-none ${isPublishedInActiveSchedule ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
