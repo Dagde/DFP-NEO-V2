@@ -49214,7 +49214,7 @@ const PrioritiesView = ({
       })
     ] }) });
   };
-  const PriorityEventTable = ({ events }) => {
+  const renderPriorityEventTable = (events) => {
     const groups = [
       { key: "tasking", label: "Directed Tasks", events: events.filter((event) => getPriorityEventGroup(event) === "tasking") },
       { key: "currency", label: "Staff Currency Events", events: events.filter((event) => getPriorityEventGroup(event) === "currency") },
@@ -50702,7 +50702,7 @@ const PrioritiesView = ({
             " shown but only scheduled when the build date matches."
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(PriorityEventTable, { events: standardPriorityEvents })
+        renderPriorityEventTable(standardPriorityEvents)
       ] }),
       showOptionalCurrencyEventsSection,
       showRemedialPriorityQueue

@@ -4573,7 +4573,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     );
   };
 
-  const PriorityEventTable: React.FC<{ events: ScheduleEvent[] }> = ({ events }) => {
+  const renderPriorityEventTable = (events: ScheduleEvent[]) => {
     type PriorityGroupKey = 'tasking' | 'currency' | 'special' | 'trainee-currency' | 'remedial';
     const groups: Array<{ key: PriorityGroupKey; label: string; events: ScheduleEvent[] }> = [
       { key: 'tasking', label: 'Directed Tasks', events: events.filter(event => getPriorityEventGroup(event) === 'tasking') },
@@ -6125,7 +6125,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </div>
                 )}
             </div>
-            <PriorityEventTable events={standardPriorityEvents} />
+            {renderPriorityEventTable(standardPriorityEvents)}
         </div>
 
         {/* MEDIUM/LOW Priority Currency Events - hidden from the fixed crew planner for now; code retained for future reactivation. */}
