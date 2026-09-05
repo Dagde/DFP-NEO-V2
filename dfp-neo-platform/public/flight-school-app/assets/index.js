@@ -9714,7 +9714,6 @@ const RightSidebar = ({
   onBuildDfpClick,
   isSupervisor,
   onPublish,
-  onDownloadNeoBuildReport,
   currentUserRank,
   currentUserName,
   currentUserLocation,
@@ -9726,8 +9725,6 @@ const RightSidebar = ({
   modelUnavailableViews = [],
   operationalModel
 }) => {
-  const nextDayBuildSubViews = ["NextDayBuild", "Priorities", "ProgramData", "BuildAnalysis", "NextDayInstructorSchedule", "NextDayTraineeSchedule"];
-  const isNextDayBuildSectionActive = nextDayBuildSubViews.includes(activeView);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
   const { isFrozen } = useSystemFreeze();
   const [permissionNoticeRect, setPermissionNoticeRect] = reactExports.useState(null);
@@ -9860,19 +9857,6 @@ const RightSidebar = ({
           "aria-disabled": !canOpen("BuildIntelligence"),
           className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "BuildIntelligence" ? "active" : ""} ${accessButtonClass("BuildIntelligence")}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Build Intelligence" })
-        }
-      ) }),
-      isNextDayBuildSectionActive && onDownloadNeoBuildReport && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: onDownloadNeoBuildReport,
-          title: "Download the latest NEO Build diagnostic JSON report",
-          className: "w-[75px] h-[46px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md",
-          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
-            "Build",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-            "Report"
-          ] })
         }
       ) })
     ] }),
@@ -41801,17 +41785,6 @@ const fetchDashboardMessagesPayloadFromApi = async (userName, userId) => {
     deletionCutoffs: Array.isArray(data.deletionCutoffs) ? data.deletionCutoffs : []
   };
 };
-const fetchDashboardMessagesFromApi = async (userName, userId) => {
-  return (await fetchDashboardMessagesPayloadFromApi(userName, userId)).messages;
-};
-const fetchAllDashboardMessagesForTrace = async () => {
-  const response = await fetch("/api/dashboard-messages", {
-    credentials: "include"
-  });
-  if (!response.ok) throw new Error(`Dashboard messages trace fetch failed: ${response.status}`);
-  const data = await response.json();
-  return Array.isArray(data.messages) ? data.messages : [];
-};
 const sendDashboardMessagesToApi = async (messages) => {
   const response = await fetch("/api/dashboard-messages", {
     method: "POST",
@@ -42379,100 +42352,6 @@ const MyDashboard = ({
   reactExports.useEffect(() => {
     onUnreadMessageCountChange?.(unreadMessages.length);
   }, [onUnreadMessageCountChange, unreadMessages.length]);
-  const downloadDashboardMessageBadgeTrace = async () => {
-    let scopedMessages;
-    let allMessages;
-    let fetchError = "";
-    try {
-      scopedMessages = await fetchDashboardMessagesFromApi(dashboardMessageUserName, dashboardSenderContactId);
-    } catch (error) {
-      fetchError = `Scoped fetch: ${error instanceof Error ? error.message : String(error)}`;
-    }
-    try {
-      allMessages = await fetchAllDashboardMessagesForTrace();
-    } catch (error) {
-      fetchError = [fetchError, `All fetch: ${error instanceof Error ? error.message : String(error)}`].filter(Boolean).join(" | ");
-    }
-    const trace = {
-      ...buildDashboardMessageBadgeTrace(allMessages, scopedMessages),
-      fetchError: fetchError || null
-    };
-    if (typeof window !== "undefined") {
-      window.__dfpDashboardMessageBadgeTrace = trace;
-    }
-    const blob = new Blob([JSON.stringify(trace, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `dashboard-message-badge-trace-${normaliseDashboardContactName(dashboardMessageUserName).replace(/[^a-z0-9]+/g, "-") || "user"}-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
-  };
-  const downloadDashboardMessageTrackingReport = () => {
-    const trackingEvents = typeof window !== "undefined" && Array.isArray(window.__dfpDashboardMessageTracking) ? window.__dfpDashboardMessageTracking : [];
-    const report = {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      view: "MyDashboard",
-      reportType: "dashboard-message-tracking",
-      dashboardMessageUserName,
-      dashboardSenderContactId,
-      dashboardUserKey,
-      signedInUserLabel,
-      trackingEventCount: trackingEvents.length,
-      localMessageCount: dashboardMessages.length,
-      deletionCutoffCount: dashboardMessageDeletionCutoffs.length,
-      conversationCount: messageConversations.length,
-      unreadCount: unreadMessages.length,
-      selectedMessageContact: selectedMessageContact ? {
-        id: selectedMessageContact.id,
-        name: selectedMessageContact.name,
-        displayName: selectedMessageContact.displayName,
-        type: selectedMessageContact.type
-      } : null,
-      activeVisibleMessageCount: visibleActiveConversationMessages.length,
-      activeVisibleMessages: visibleActiveConversationMessages.map((message) => ({
-        id: message.id,
-        from: message.from,
-        to: message.to,
-        fromId: message.fromId,
-        toId: message.toId,
-        recipientIds: message.recipientIds,
-        groupId: message.groupId,
-        groupName: message.groupName,
-        groupMemberIds: message.groupMemberIds,
-        sentAt: message.sentAt,
-        body: message.body
-      })),
-      trackingEvents,
-      deletionCutoffs: dashboardMessageDeletionCutoffs,
-      conversations: messageConversations.map((conversation) => ({
-        conversationKey: conversation.conversationKey,
-        contactId: conversation.contact.id,
-        contactName: conversation.contact.name,
-        contactDisplayName: conversation.contact.displayName,
-        contactType: conversation.contact.type,
-        lastMessageId: conversation.lastMessage.id,
-        lastMessageFromId: conversation.lastMessage.fromId,
-        lastMessageToId: conversation.lastMessage.toId,
-        lastMessageSentAt: conversation.lastMessage.sentAt,
-        unreadCount: conversation.unreadCount
-      }))
-    };
-    if (typeof window !== "undefined") {
-      window.__dfpDashboardMessageTrackingReport = report;
-    }
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `dashboard-message-tracking-${normaliseDashboardContactName(dashboardMessageUserName).replace(/[^a-z0-9]+/g, "-") || "user"}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
-  };
   const activeConversationMessages = reactExports.useMemo(() => {
     if (!selectedMessageContact) return [];
     return dashboardMessages.filter((message) => {
@@ -43114,34 +42993,6 @@ const MyDashboard = ({
             children: [
               unreadMessages.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -left-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-px", children: Math.min(unreadMessages.length, 99) }) }),
               "Messages"
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "button",
-          {
-            type: "button",
-            onClick: downloadDashboardMessageBadgeTrace,
-            className: dashboardActionButtonClass,
-            title: "Download Messenger unread badge diagnostic trace",
-            children: [
-              "Badge",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Trace"
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "button",
-          {
-            type: "button",
-            onClick: downloadDashboardMessageTrackingReport,
-            className: dashboardActionButtonClass,
-            title: "Download Messenger timing and delete tracking JSON report",
-            children: [
-              "Msg",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Trace"
             ]
           }
         ),
@@ -75042,11 +74893,7 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
           className: "px-4 py-2 bg-red-700 hover:bg-red-600 text-white text-xs rounded transition-colors mb-3",
           children: "Retry"
         }
-      ),
-      debugInfo.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 bg-black/60 border border-gray-600 rounded p-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-yellow-400 text-xs font-semibold mb-2", children: "🔍 Debug Trace:" }),
-        debugInfo.map((line, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-green-300 text-xs font-mono break-all leading-5", children: line }, i))
-      ] })
+      )
     ] }) });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full", children: [
@@ -75399,11 +75246,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
           className: "px-4 py-2 bg-red-700 hover:bg-red-600 text-white text-xs rounded transition-colors mb-3",
           children: "Retry"
         }
-      ),
-      debugInfo.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 bg-black/60 border border-gray-600 rounded p-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-yellow-400 text-xs font-semibold mb-2", children: "🔍 Debug Trace:" }),
-        debugInfo.map((line, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-green-300 text-xs font-mono break-all leading-5", children: line }, i))
-      ] })
+      )
     ] }) });
   }
   if (traineeData.length === 0) {
@@ -83624,77 +83467,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const handleSettingsTracePointerDownCapture = (event) => {
     recordSettingsTraceEvent("pointerdown", event);
   };
-  const downloadSettingsPerformanceTrace = () => {
-    const navigationEntry = typeof performance !== "undefined" && typeof performance.getEntriesByType === "function" ? performance.getEntriesByType("navigation")[0] : null;
-    const report = {
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      activeContext: {
-        scrollTarget: scrollTarget || null,
-        sectionOnly,
-        visibleSectionTarget,
-        selectedAccessUserId,
-        selectedAccessDisplayName,
-        activeUnitCode,
-        activeUnitCodes,
-        activeCompositeUnitCode,
-        activeOperationalModel,
-        currentUserPermission
-      },
-      counts: {
-        organisations: configOrganisations.length,
-        locations: configLocations.length,
-        units: configUnits.length,
-        aircraftTypes: configAircraftTypes.length,
-        resourcePools: configResourcePools.length,
-        schedulingRuleSets: configSchedulingRuleSets.length,
-        platformUsers: configPlatformUsers.length,
-        userAccessRows: configUserAccess.length,
-        visibleUserAccessRows: visibleUserAccessRows.length,
-        visibleSelectedAccessRows: visibleSelectedAccessRows.length,
-        permissionProfiles: permissionProfiles.length,
-        selectedUserProfiles: selectedUserProfileIds.length,
-        selectedBasePermissions: selectedBasePermissionIds.length,
-        selectedAllowedExceptions: selectedUserPermissionAllowIds.length,
-        selectedDeniedExceptions: selectedUserPermissionDenyIds.length,
-        selectedEffectivePermissions: selectedEffectivePermissionIds.length,
-        instructors: instructorsData.length,
-        trainees: traineesData.length,
-        userOptions: userOptions.length,
-        bulkAccessUserOptions: bulkAccessUserOptions.length,
-        visibleBulkAccessUserOptions: visibleBulkAccessUserOptions.length,
-        renderedBulkAccessUserOptions: renderedBulkAccessUserOptions.length,
-        bulkAccessUserGroups: bulkAccessUserGroups.length,
-        selectedBulkUsers: bulkAccessUserIds.length,
-        selectedBulkProfiles: bulkAccessProfileIds.length
-      },
-      searchState: {
-        topUserSearchLength: userSearch.length,
-        bulkPeopleSearchLength: bulkAccessPeopleSearch.length,
-        hiddenBulkAccessUserCount
-      },
-      renderTrace: {
-        mountedAtIso: settingsTraceRef.current.mountedAtIso,
-        ageMs: Number((getTraceNow() - settingsTraceRef.current.mountedAtMs).toFixed(2)),
-        renderCount: settingsTraceRef.current.renderCount,
-        lastRenderAtMs: Number(settingsTraceRef.current.lastRenderAtMs.toFixed(2)),
-        maxRenderGapMs: settingsTraceRef.current.maxRenderGapMs
-      },
-      timingTrace: settingsTraceRef.current.timings,
-      recentEvents: settingsTraceRef.current.events,
-      browser: {
-        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
-        hardwareConcurrency: typeof navigator !== "undefined" ? navigator.hardwareConcurrency : void 0,
-        deviceMemory: typeof navigator !== "undefined" ? navigator.deviceMemory : void 0,
-        navigation: navigationEntry ? JSON.parse(JSON.stringify(navigationEntry)) : null
-      }
-    };
-    const dateStamp = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    downloadTextFile(
-      `settings-performance-trace-${dateStamp}.json`,
-      JSON.stringify(report, null, 2),
-      "application/json"
-    );
-  };
   const renderPlatformConfigError = () => {
     if (!error) return null;
     const canNavigate = Boolean(errorLink?.target && onNavigateToSettingsSection);
@@ -88334,21 +88106,14 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             {
               title: "Assign User Permissions",
               subtitle: "Search by user name, assign permission profiles, then define where those profiles apply.",
-              action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: downloadSettingsPerformanceTrace, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                  "Settings",
+              action: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                renderSectionEditSaveButton("platform-user-access"),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                  "Add",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "Trace"
-                ] }) }),
-                canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                  renderSectionEditSaveButton("platform-user-access"),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, disabled: !canEditSection("platform-user-access"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                    "Add",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                    "Scope"
-                  ] }) })
-                ] }) : null
-              ] })
+                  "Scope"
+                ] }) })
+              ] }) : null })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-user-access-records", className: "space-y-3 p-4", children: [
@@ -88376,16 +88141,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Access Scopes" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: visibleSelectedAccessRows.length })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: downloadSettingsPerformanceTrace,
-                    className: "rounded border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-500/20",
-                    children: "Settings Trace"
-                  }
-                ) })
+                ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Scope fields define where those profiles apply." })
             ] }),
@@ -102047,32 +101803,6 @@ const appendNeoAssistCurrencyTrace = (stage, details = {}) => {
     console.warn("[NEO_ASSIST_CURRENCY_TRACE] Failed to record trace entry:", error);
   }
 };
-const downloadNeoAssistCurrencyTrace = (context = {}) => {
-  try {
-    if (typeof window === "undefined") return;
-    const entries = JSON.parse(localStorage.getItem(NEO_ASSIST_CURRENCY_TRACE_KEY) || "[]");
-    const report = {
-      reportType: "NEO_ASSIST_CURRENCY_PERSISTENCE_TRACE",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      context,
-      entryCount: Array.isArray(entries) ? entries.length : 0,
-      entries: Array.isArray(entries) ? entries : []
-    };
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const safeUser = String(context.currentUserName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
-    const safeDate = String(context.date || "no-date").replace(/[^0-9-]/g, "") || "no-date";
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `neo-assist-currency-trace-${safeUser}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("[NEO_ASSIST_CURRENCY_TRACE] Failed to download trace:", error);
-  }
-};
 const TASKING_REQUEST_STORAGE_KEY = "neoTaskingRequests";
 const TASKING_REQUESTS_UPDATED_EVENT = "neoTaskingRequestsUpdated";
 const CURRENCY_DRAFT_STORAGE_KEY = "neoCurrencyDraftEvents.v2";
@@ -107727,64 +107457,6 @@ This cannot be undone.`,
           onClick: onOpenPrioritiesExclusions,
           className: "shrink-0 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-[11px] font-semibold text-cyan-50 transition hover:border-cyan-200",
           children: "Open Priorities"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: () => {
-            applyAssistPriorityDateDomStyles();
-            const priorityDateDiagnostics = buildAssistPriorityDateDiagnostics();
-            appendNeoAssistCurrencyTrace("NEO_ASSIST_CURRENCY_TRACE_DOWNLOAD_REQUESTED", {
-              date,
-              activeUnitCode,
-              operationalModel: normalisedAssistOperationalModel,
-              sctFlightCount: sctFlights.length,
-              sctFtdCount: sctFtds.length,
-              priorityDateDiagnostics
-            });
-            downloadNeoAssistCurrencyTrace({
-              date,
-              activeUnitCode,
-              operationalModel: normalisedAssistOperationalModel,
-              priorityDateDiagnostics,
-              sctFlights: sctFlights.map((request) => ({
-                id: request.id,
-                userId: request.userId,
-                name: request.name,
-                event: request.event,
-                currency: request.currency,
-                dateRequested: request.dateRequested,
-                requestedTime: request.requestedTime,
-                priority: request.priority,
-                submitted: request.submitted,
-                includeInBuild: request.includeInBuild,
-                requestType: request.requestType || "flight",
-                crewMember: request.crewMember,
-                crewIndividual: request.crewIndividual,
-                crewDisplayLabel: request.crewDisplayLabel
-              })),
-              sctFtds: sctFtds.map((request) => ({
-                id: request.id,
-                userId: request.userId,
-                name: request.name,
-                event: request.event,
-                currency: request.currency,
-                dateRequested: request.dateRequested,
-                requestedTime: request.requestedTime,
-                priority: request.priority,
-                submitted: request.submitted,
-                includeInBuild: request.includeInBuild,
-                requestType: request.requestType || "ftd",
-                crewMember: request.crewMember,
-                crewIndividual: request.crewIndividual,
-                crewDisplayLabel: request.crewDisplayLabel
-              }))
-            });
-          },
-          className: "shrink-0 rounded-md border border-slate-500/45 bg-slate-900/40 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 transition hover:border-cyan-300/60 hover:text-cyan-50",
-          children: "Request Trace"
         }
       )
     ] }),
@@ -137354,7 +137026,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     setShowDateWarning(false);
     void startBuildProcess();
   };
-  const handleDownloadNeoBuildReport = reactExports.useCallback(() => {
+  reactExports.useCallback(() => {
     if (typeof window === "undefined") return;
     const readJsonStorage = (key) => {
       try {
@@ -146775,7 +146447,6 @@ Do you want to replace the existing entry?`,
           onBuildDfpClick: handleBuildDfp,
           isSupervisor: true,
           onPublish: handlePublish,
-          onDownloadNeoBuildReport: handleDownloadNeoBuildReport,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "",
           currentUserName,
           currentUserLocation: school,

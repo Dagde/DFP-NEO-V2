@@ -13401,9 +13401,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
           action={(
             <div className="flex flex-wrap justify-end gap-[1px]">
-              <button type="button" onClick={downloadSettingsPerformanceTrace} className={platformActionButtonClass}>
-                <span className="text-[9px] leading-tight">Settings<br />Trace</span>
-              </button>
               {canEdit ? (
                 <>
                   {renderSectionEditSaveButton('platform-user-access')}
@@ -13441,15 +13438,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100">
                   {visibleSelectedAccessRows.length}
                 </div>
-              </div>
-              <div className="flex flex-col justify-end">
-                <button
-                  type="button"
-                  onClick={downloadSettingsPerformanceTrace}
-                  className="rounded border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-100 transition hover:border-violet-300/70 hover:bg-violet-500/20"
-                >
-                  Settings Trace
-                </button>
               </div>
             </div>
             <p className="mt-3 text-xs text-cyan-100/70">

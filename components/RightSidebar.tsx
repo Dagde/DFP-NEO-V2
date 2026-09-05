@@ -10,7 +10,6 @@ interface RightSidebarProps {
     onBuildDfpClick: () => void;
     isSupervisor: boolean;
     onPublish: () => void;
-    onDownloadNeoBuildReport?: () => void;
     currentUserRank: string;
     currentUserName: string;
     currentUserLocation?: string;
@@ -30,7 +29,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     onBuildDfpClick,
     isSupervisor,
     onPublish,
-    onDownloadNeoBuildReport,
     currentUserRank,
     currentUserName,
     currentUserLocation,
@@ -42,8 +40,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     modelUnavailableViews = [],
     operationalModel,
 }) => {
-  const nextDayBuildSubViews = ['NextDayBuild', 'Priorities', 'ProgramData', 'BuildAnalysis', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'];
-  const isNextDayBuildSectionActive = nextDayBuildSubViews.includes(activeView);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(operationalModel);
 
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
@@ -189,18 +185,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             <span className="text-center leading-tight">Build Intelligence</span>
           </button>
         </div>
-
-        {isNextDayBuildSectionActive && onDownloadNeoBuildReport && (
-          <div className="relative mt-2">
-            <button
-              onClick={onDownloadNeoBuildReport}
-              title="Download the latest NEO Build diagnostic JSON report"
-              className="w-[75px] h-[46px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md"
-            >
-              <span className="text-center leading-tight">Build<br/>Report</span>
-            </button>
-          </div>
-        )}
 
       </nav>
 

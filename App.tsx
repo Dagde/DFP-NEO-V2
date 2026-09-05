@@ -7417,62 +7417,6 @@ const DfpSidePanelTimeline: React.FC<{
                     >
                         Open Priorities
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            applyAssistPriorityDateDomStyles();
-                            const priorityDateDiagnostics = buildAssistPriorityDateDiagnostics();
-                            appendNeoAssistCurrencyTrace('NEO_ASSIST_CURRENCY_TRACE_DOWNLOAD_REQUESTED', {
-                                date,
-                                activeUnitCode,
-                                operationalModel: normalisedAssistOperationalModel,
-                                sctFlightCount: sctFlights.length,
-                                sctFtdCount: sctFtds.length,
-                                priorityDateDiagnostics,
-                            });
-                            downloadNeoAssistCurrencyTrace({
-                                date,
-                                activeUnitCode,
-                                operationalModel: normalisedAssistOperationalModel,
-                                priorityDateDiagnostics,
-                                sctFlights: sctFlights.map(request => ({
-                                    id: request.id,
-                                    userId: request.userId,
-                                    name: request.name,
-                                    event: request.event,
-                                    currency: request.currency,
-                                    dateRequested: request.dateRequested,
-                                    requestedTime: request.requestedTime,
-                                    priority: request.priority,
-                                    submitted: request.submitted,
-                                    includeInBuild: request.includeInBuild,
-                                    requestType: request.requestType || 'flight',
-                                    crewMember: request.crewMember,
-                                    crewIndividual: request.crewIndividual,
-                                    crewDisplayLabel: request.crewDisplayLabel,
-                                })),
-                                sctFtds: sctFtds.map(request => ({
-                                    id: request.id,
-                                    userId: request.userId,
-                                    name: request.name,
-                                    event: request.event,
-                                    currency: request.currency,
-                                    dateRequested: request.dateRequested,
-                                    requestedTime: request.requestedTime,
-                                    priority: request.priority,
-                                    submitted: request.submitted,
-                                    includeInBuild: request.includeInBuild,
-                                    requestType: request.requestType || 'ftd',
-                                    crewMember: request.crewMember,
-                                    crewIndividual: request.crewIndividual,
-                                    crewDisplayLabel: request.crewDisplayLabel,
-                                })),
-                            });
-                        }}
-                        className="shrink-0 rounded-md border border-slate-500/45 bg-slate-900/40 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 transition hover:border-cyan-300/60 hover:text-cyan-50"
-                    >
-                        Request Trace
-                    </button>
                 </div>
             )}
             {isNeoAssistWizardMode && renderAssistDfpOverview()}
@@ -55312,7 +55256,6 @@ appliedUpdates.forEach(update => {
                 onBuildDfpClick={handleBuildDfp}
                 isSupervisor={true}
                 onPublish={handlePublish}
-                onDownloadNeoBuildReport={handleDownloadNeoBuildReport}
                 currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
                 currentUserName={currentUserName}
                 currentUserLocation={school}

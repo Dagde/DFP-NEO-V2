@@ -2262,22 +2262,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     </button>
                     <button
                         type="button"
-                        onClick={downloadDashboardMessageBadgeTrace}
-                        className={dashboardActionButtonClass}
-                        title="Download Messenger unread badge diagnostic trace"
-                    >
-                        Badge<br />Trace
-                    </button>
-                    <button
-                        type="button"
-                        onClick={downloadDashboardMessageTrackingReport}
-                        className={dashboardActionButtonClass}
-                        title="Download Messenger timing and delete tracking JSON report"
-                    >
-                        Msg<br />Trace
-                    </button>
-                    <button
-                        type="button"
                         onClick={onShowChangePassword}
                         className={dashboardActionButtonClass}
                     >

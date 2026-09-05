@@ -331,16 +331,6 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
           >
             Retry
           </button>
-          {debugInfo.length > 0 && (
-            <div className="mt-3 bg-black/60 border border-gray-600 rounded p-3">
-              <div className="text-yellow-400 text-xs font-semibold mb-2">🔍 Debug Trace:</div>
-              {debugInfo.map((line, i) => (
-                <div key={i} className="text-green-300 text-xs font-mono break-all leading-5">
-                  {line}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     );
