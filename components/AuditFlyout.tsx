@@ -6,6 +6,7 @@ import {
   AUDIT_RECORDING_ACTIONS,
   getAuditLogs,
   getAuditRecordingSettingsForPage,
+  formatAuditPlainEnglishText,
   normaliseAuditAction,
   saveAuditRecordingSettingsForPage,
 } from '../utils/auditLogger';
@@ -62,15 +63,16 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   const summariseValue = (value: any): string => {
     if (value === null || value === undefined || value === '') return 'blank';
     if (Array.isArray(value)) return value.join(', ') || 'blank';
+    if (typeof value === 'boolean') return value ? 'On' : 'Off';
     if (typeof value === 'object') return JSON.stringify(value);
-    return String(value);
+    return formatAuditPlainEnglishText(value);
   };
 
   const formatChangedField = (field: any): string => {
     const label = field.label || field.field || 'Field';
     const beforeValue = field.displayBefore ?? summariseValue(field.before);
     const afterValue = field.displayAfter ?? summariseValue(field.after);
-    return `${label}: ${beforeValue} -> ${afterValue}`;
+    return formatAuditPlainEnglishText(`${label}: ${beforeValue} -> ${afterValue}`);
   };
 
   const humaniseEntityType = (entityType: string): string => {
@@ -127,14 +129,14 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   };
 
   const getAuditDescription = (entry: any, changes: any, affectedLabel: string): string => {
-    if (changes.description) return changes.description;
+    if (changes.description) return formatAuditPlainEnglishText(changes.description);
     if (entry.entityType === 'currency') return `Updated currency for ${affectedLabel}`;
     if (changes.label) return `${humaniseEntityType(entry.entityType || 'Record')}: ${changes.label}`;
     return `${humaniseEntityType(entry.entityType || 'Record')} ${String(entry.action || 'updated').toLowerCase()}`;
   };
 
   const splitLocalAuditDescription = (entry: AuditLog): { affectedLabel: string; description: string } => {
-    const description = String(entry.description || '').trim();
+    const description = formatAuditPlainEnglishText(String(entry.description || '').trim());
     const page = String(entry.page || '').trim();
     const patterns: Array<{ regex: RegExp; description: string }> = [
       { regex: /^Viewed staff profile for\s+(.+)$/i, description: 'Viewed staff profile' },
@@ -184,8 +186,8 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
       id: `db-${entry.id}`,
       user: entry.userName || 'Unknown User',
       action: normaliseAuditAction(entry.action || ''),
-      description: getAuditDescription(entry, changes, affectedLabel),
-      changes: changesText || '',
+      description: formatAuditPlainEnglishText(getAuditDescription(entry, changes, affectedLabel)),
+      changes: formatAuditPlainEnglishText(changesText || ''),
       timestamp: new Date(entry.createdAt),
       page: changes.source || entry.entityType || 'Database Audit',
       rawAction: entry.action || '',
@@ -206,7 +208,8 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
       ...entry,
       action: normaliseAuditAction(entry.action || ''),
       userRole: entry.userRole || '',
-      description: localLabels.description,
+      description: formatAuditPlainEnglishText(localLabels.description),
+      changes: entry.changes ? formatAuditPlainEnglishText(entry.changes) : entry.changes,
       affectedLabel: localLabels.affectedLabel,
     };
   };

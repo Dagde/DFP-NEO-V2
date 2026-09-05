@@ -114,6 +114,15 @@ export const normaliseAuditAction = (action: string | AuditAction): AuditAction 
   return 'Edit';
 };
 
+export const formatAuditPlainEnglishText = (value: unknown): string => {
+  const text = String(value ?? '');
+  return text
+    .replace(/\bfalse\s*(?:→|->|to)\s*true\b/gi, 'Off → On')
+    .replace(/\btrue\s*(?:→|->|to)\s*false\b/gi, 'On → Off')
+    .replace(/\bfalse\b/gi, 'Off')
+    .replace(/\btrue\b/gi, 'On');
+};
+
 // Get all audit logs from localStorage
 export const getAuditLogs = (page?: string): AuditLog[] => {
   try {
@@ -183,6 +192,9 @@ export function logAudit(
     if (!shouldRecordAuditAction(page, auditAction)) {
       return;
     }
+
+    auditDescription = formatAuditPlainEnglishText(auditDescription);
+    auditChanges = auditChanges === undefined ? undefined : formatAuditPlainEnglishText(auditChanges);
     
     const newLog: AuditLog = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -225,8 +237,8 @@ export const exportAuditLogsCSV = (page?: string): string => {
     log.timestamp.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
     log.user,
     log.action,
-    log.description,
-    log.changes || '',
+    formatAuditPlainEnglishText(log.description),
+    log.changes ? formatAuditPlainEnglishText(log.changes) : '',
     log.page
   ]);
   
