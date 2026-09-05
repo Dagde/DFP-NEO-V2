@@ -49974,8 +49974,8 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-3", children: aircraftConfigurationDefinitions.map((definition) => {
               const isCleanConfig = definition.id === "CONFIG-0";
               const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "" : aircraftConfigCapacities[definition.id] || "";
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block rounded-md border border-slate-700 bg-slate-900/60 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400", title: definition.definition || definition.label, children: [
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "grid grid-cols-[1fr_minmax(96px,25%)] items-center gap-3 rounded-md border border-slate-700 bg-slate-900/60 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400", title: definition.definition || definition.label, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: definition.label }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ConfigCapacityInfoHint, { definition })
                 ] }),
@@ -49994,7 +49994,7 @@ const PrioritiesView = ({
                     onChange: (e) => {
                       if (!isCleanConfig) handleAircraftConfigCapacityChange(definition.id, e.target.value);
                     },
-                    className: `mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? "cursor-not-allowed text-slate-400 opacity-80" : ""}`
+                    className: `w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-center text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? "cursor-not-allowed text-slate-400 opacity-80" : ""}`
                   }
                 )
               ] }, definition.id);
