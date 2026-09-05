@@ -683,7 +683,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                         >
                             <div className="flex items-start gap-3">
                                 <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${
-                                    isActive ? 'border-cyan-300/70 bg-cyan-300/15 text-cyan-100' : 'border-slate-600 bg-slate-800 text-slate-400'
+                                    isActive ? 'border-cyan-200 bg-cyan-100 text-slate-950' : 'border-cyan-200/80 bg-cyan-100/85 text-slate-800'
                                 }`}>
                                     {item.step}
                                 </span>

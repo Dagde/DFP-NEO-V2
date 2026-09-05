@@ -51262,7 +51262,7 @@ const PrioritiesViewWithMenu = (props) => {
               onClick: () => setActiveSection(item.id),
               className: `w-full rounded-lg border p-4 text-left transition-all ${isActive ? "border-cyan-400/70 bg-cyan-500/15 text-white shadow-lg shadow-cyan-950/30" : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
               children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${isActive ? "border-cyan-300/70 bg-cyan-300/15 text-cyan-100" : "border-slate-600 bg-slate-800 text-slate-400"}`, children: item.step }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${isActive ? "border-cyan-200 bg-cyan-100 text-slate-950" : "border-cyan-200/80 bg-cyan-100/85 text-slate-800"}`, children: item.step }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-semibold", children: item.label }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-5 text-slate-400", children: item.description })
