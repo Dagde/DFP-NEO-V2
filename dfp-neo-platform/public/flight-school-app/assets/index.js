@@ -50810,7 +50810,7 @@ const PrioritiesViewWithMenu = (props) => {
       step: "03",
       label: "Course Demand",
       shortLabel: "Courses",
-      description: "Weight the competing course demand after time and resources are known."
+      description: "Weight the competing course demand."
     },
     {
       id: "directed-events",
