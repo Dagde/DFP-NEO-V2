@@ -46592,6 +46592,10 @@ const PrioritiesView = ({
   onUpdateFtdStartTime,
   ftdEndTime,
   onUpdateFtdEndTime,
+  cptStartTime,
+  onUpdateCptStartTime,
+  cptEndTime,
+  onUpdateCptEndTime,
   allowNightFlying,
   onUpdateAllowNightFlying,
   commenceNightFlying,
@@ -46664,6 +46668,8 @@ const PrioritiesView = ({
   const aircraftCapacityMax = Math.max(0, Math.floor(Number(maxAircraftCount ?? availableAircraftCount) || 0));
   const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
+  const effectiveCptStartTime = Number.isFinite(Number(cptStartTime)) ? Number(cptStartTime) : ftdStartTime;
+  const effectiveCptEndTime = Number.isFinite(Number(cptEndTime)) ? Number(cptEndTime) : ftdEndTime;
   const locationDisplayName = String(school || "").trim() || "Selected location";
   const normalisedStaffQualificationCatalogue = reactExports.useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue2 || null),
@@ -49629,87 +49635,125 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flying-windows-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Time Input" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Flying Windows" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Flying Windows & Resource Availability" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-300", children: [
             "Set the time boundaries that govern where flight, ",
             ftdLabel,
+            ", ",
+            cptLabel,
             " and night events may be placed."
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 p-4 lg:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[20px]" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mt-2 block text-sm font-medium text-slate-300", children: "Day Flying Window" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center space-x-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: flyingStartTime, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} → ${parseFloat(e.target.value)}`);
-                onUpdateFlyingStartTime(parseFloat(e.target.value));
-              }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-slate-400", children: "to" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: flyingEndTime, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} → ${parseFloat(e.target.value)}`);
-                onUpdateFlyingEndTime(parseFloat(e.target.value));
-              }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-700 bg-slate-950/70", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[720px] table-fixed text-left text-sm text-slate-100", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "border-b border-slate-700 bg-slate-900 text-[11px] uppercase tracking-[0.16em] text-cyan-200/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[30%] px-4 py-3 font-semibold", children: "Window" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[18%] px-4 py-3 text-center font-semibold", children: "Enabled" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[22%] px-4 py-3 text-center font-semibold", children: "Start" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[22%] px-4 py-3 text-center font-semibold", children: "End" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[8%] px-4 py-3 text-center font-semibold", children: "Tools" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-slate-800", children: [
+            {
+              key: "flight",
+              label: "Day Flying",
+              enabled: true,
+              start: flyingStartTime,
+              end: flyingEndTime,
+              setStart: onUpdateFlyingStartTime,
+              setEnd: onUpdateFlyingEndTime,
+              auditStart: "Updated flying start time",
+              auditEnd: "Updated flying end time",
+              tools: true
+            },
+            {
+              key: "ftd",
+              label: `${ftdLabel} Operating`,
+              enabled: true,
+              start: ftdStartTime,
+              end: ftdEndTime,
+              setStart: onUpdateFtdStartTime,
+              setEnd: onUpdateFtdEndTime,
+              auditStart: `Updated ${ftdLabel} start time`,
+              auditEnd: `Updated ${ftdLabel} end time`
+            },
+            {
+              key: "cpt",
+              label: `${cptLabel} Operating`,
+              enabled: true,
+              start: effectiveCptStartTime,
+              end: effectiveCptEndTime,
+              setStart: onUpdateCptStartTime,
+              setEnd: onUpdateCptEndTime,
+              auditStart: `Updated ${cptLabel} start time`,
+              auditEnd: `Updated ${cptLabel} end time`
+            },
+            {
+              key: "night",
+              label: "Night Flying",
+              enabled: allowNightFlying,
+              start: commenceNightFlying,
+              end: ceaseNightFlying,
+              setStart: onUpdateCommenceNightFlying,
+              setEnd: onUpdateCeaseNightFlying,
+              auditStart: "Updated commence night flying time",
+              auditEnd: "Updated cease night flying time"
+            }
+          ].map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: row.enabled ? "bg-slate-950/30" : "bg-slate-950/15 opacity-70", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-white", children: row.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-center", children: row.key === "night" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-slate-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: allowNightFlying,
+                  onChange: (e) => {
+                    logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`);
+                    onUpdateAllowNightFlying(e.target.checked);
+                  },
+                  className: "h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500"
+                }
+              ),
+              allowNightFlying ? "Yes" : "No"
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex min-w-[46px] justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-100", children: "Yes" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: row.start,
+                disabled: !row.enabled || !row.setStart,
+                onChange: (e) => {
+                  const next = parseFloat(e.target.value);
+                  logAudit("Priorities", "Edit", row.auditStart, `${row.start} → ${next}`);
+                  row.setStart?.(next);
+                },
+                className: "w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed",
+                children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `${row.key}-start-${opt.value}`))
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: row.end,
+                disabled: !row.enabled || !row.setEnd,
+                onChange: (e) => {
+                  const next = parseFloat(e.target.value);
+                  logAudit("Priorities", "Edit", row.auditEnd, `${row.end} → ${next}`);
+                  row.setEnd?.(next);
+                },
+                className: "w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed",
+                children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `${row.key}-end-${opt.value}`))
+              }
+            ) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-center", children: row.tools ? /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 onClick: () => setShowExclusionPlanner((value) => !value),
-                className: "mt-3 w-full rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18",
-                children: showExclusionPlanner ? "Hide Exclusions" : "Manage Exclusions"
+                className: "rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18",
+                children: showExclusionPlanner ? "Hide" : "Exclusions"
               }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-[20px]" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mt-2 block text-sm font-medium text-slate-300", children: [
-              ftdLabel,
-              " Operating Window"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center space-x-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ftdStartTime, onChange: (e) => {
-                logAudit("Priorities", "Edit", `Updated ${ftdLabel} start time`, `${ftdStartTime} → ${parseFloat(e.target.value)}`);
-                onUpdateFtdStartTime(parseFloat(e.target.value));
-              }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-slate-400", children: "to" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ftdEndTime, onChange: (e) => {
-                logAudit("Priorities", "Edit", `Updated ${ftdLabel} end time`, `${ftdEndTime} → ${parseFloat(e.target.value)}`);
-                onUpdateFtdEndTime(parseFloat(e.target.value));
-              }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-h-[20px] items-center justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 whitespace-nowrap", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: allowNightFlying, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`);
-                onUpdateAllowNightFlying(e.target.checked);
-              }, className: "h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-cyan-300", children: "Allow Night Flying" })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mt-2 block text-sm font-medium text-slate-300", children: "Night Flying Window" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-2 transition-opacity duration-150 ${allowNightFlying ? "opacity-100" : "opacity-40 pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: commenceNightFlying, disabled: !allowNightFlying, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`);
-                onUpdateCommenceNightFlying(parseFloat(e.target.value));
-              }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-slate-400", children: "to" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ceaseNightFlying, disabled: !allowNightFlying, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} → ${parseFloat(e.target.value)}`);
-                onUpdateCeaseNightFlying(parseFloat(e.target.value));
-              }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => setShowExclusionPlanner((value) => !value),
-                className: "mt-3 w-full rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18",
-                children: showExclusionPlanner ? "Hide Exclusions" : "Manage Exclusions"
-              }
-            )
-          ] })
-        ] }),
+            ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-600", children: "-" }) })
+          ] }, row.key)) })
+        ] }) }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `overflow-hidden border-t border-slate-800 transition-all duration-300 ${showExclusionPlanner ? "max-h-[760px] opacity-100" : "max-h-0 opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4 pt-0", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-600 bg-slate-900/90 p-4 shadow-[0_14px_32px_rgba(0,0,0,0.22)]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -49886,21 +49930,51 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "resource-capacity-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Capacity Input" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Resource Capacity" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Resource Availability" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Declare the physical capacity available for this build before weighting the course demand." })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 p-4 md:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "aircraft-count", className: "block text-sm font-medium text-slate-300", children: "Total Aircraft Available" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", min: 0, max: aircraftCapacityMax, value: availableAircraftCount, onChange: (e) => handleAircraftCapacityChange(e.target.value), className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] text-slate-500", children: [
-              "Configured maximum: ",
-              aircraftCapacityMax
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-700 bg-slate-950/70", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[640px] table-fixed text-left text-sm text-slate-100", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "border-b border-slate-700 bg-slate-900 text-[11px] uppercase tracking-[0.16em] text-cyan-200/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[46%] px-4 py-3 font-semibold", children: "Resource" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[22%] px-4 py-3 text-center font-semibold", children: "Available" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[32%] px-4 py-3 text-center font-semibold", children: "Configured Maximum" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-800", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-white", children: aircraftLabel }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", min: 0, max: aircraftCapacityMax, value: availableAircraftCount, onChange: (e) => handleAircraftCapacityChange(e.target.value), className: "w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-center text-white focus:outline-none focus:ring-cyan-500" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-center text-slate-300", children: aircraftCapacityMax })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-white", children: ftdLabel }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "ftd-count", type: "number", min: 0, max: ftdCapacityMax, value: availableFtdCount, onChange: (e) => {
+                  const nextCount = Math.min(ftdCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0));
+                  logAudit("Priorities", "Edit", `Updated available ${ftdLabel} count`, `${availableFtdCount} → ${nextCount}`);
+                  onUpdateFtdCount(nextCount);
+                }, className: "w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-center text-white focus:outline-none focus:ring-cyan-500" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-center text-slate-300", children: ftdCapacityMax })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-white", children: cptLabel }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "cpt-count", type: "number", min: 0, max: cptCapacityMax, value: availableCptCount, onChange: (e) => {
+                  const nextCount = Math.min(cptCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0));
+                  logAudit("Priorities", "Edit", `Updated available ${cptLabel} count`, `${availableCptCount} → ${nextCount}`);
+                  onUpdateCptCount(nextCount);
+                }, className: "w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-center text-white focus:outline-none focus:ring-cyan-500" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-center text-slate-300", children: cptCapacityMax })
+              ] })
+            ] })
+          ] }) }),
+          aircraftConfigurationDefinitions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Aircraft CONFIG Capacity" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-400", children: "Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft." })
             ] }),
-            aircraftConfigurationDefinitions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 border-t border-slate-700 pt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2", children: aircraftConfigurationDefinitions.map((definition) => {
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3", children: aircraftConfigurationDefinitions.map((definition) => {
               const isCleanConfig = definition.id === "CONFIG-0";
               const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "" : aircraftConfigCapacities[definition.id] || "";
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block rounded-md border border-slate-700 bg-slate-900/60 p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400", title: definition.definition || definition.label, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: definition.label }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ConfigCapacityInfoHint, { definition })
@@ -49924,37 +49998,7 @@ const PrioritiesView = ({
                   }
                 )
               ] }, definition.id);
-            }) }) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "ftd-count", className: "block text-sm font-medium text-slate-300", children: [
-              ftdLabel,
-              " Available"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "ftd-count", type: "number", min: 0, max: ftdCapacityMax, value: availableFtdCount, onChange: (e) => {
-              const nextCount = Math.min(ftdCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0));
-              logAudit("Priorities", "Edit", `Updated available ${ftdLabel} count`, `${availableFtdCount} → ${nextCount}`);
-              onUpdateFtdCount(nextCount);
-            }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] text-slate-500", children: [
-              "Configured maximum: ",
-              ftdCapacityMax
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "cpt-count", className: "block text-sm font-medium text-slate-300", children: [
-              cptLabel,
-              " Available"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "cpt-count", type: "number", min: 0, max: cptCapacityMax, value: availableCptCount, onChange: (e) => {
-              const nextCount = Math.min(cptCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0));
-              logAudit("Priorities", "Edit", `Updated available ${cptLabel} count`, `${availableCptCount} → ${nextCount}`);
-              onUpdateCptCount(nextCount);
-            }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-[11px] text-slate-500", children: [
-              "Configured maximum: ",
-              cptCapacityMax
-            ] })
+            }) })
           ] })
         ] })
       ] })
@@ -128600,6 +128644,8 @@ const App = () => {
   const [flyingEndTime, setFlyingEndTime] = reactExports.useState(17);
   const [ftdStartTime, setFtdStartTime] = reactExports.useState(8);
   const [ftdEndTime, setFtdEndTime] = reactExports.useState(17);
+  const [cptStartTime, setCptStartTime] = reactExports.useState(8);
+  const [cptEndTime, setCptEndTime] = reactExports.useState(17);
   const [allowNightFlying, setAllowNightFlying] = reactExports.useState(true);
   const [commenceNightFlying, setCommenceNightFlying] = reactExports.useState(18.5);
   const [ceaseNightFlying, setCeaseNightFlying] = reactExports.useState(23.5);
@@ -129618,6 +129664,8 @@ ${"=".repeat(60)}`);
         if (saved.flyingEndTime != null) setFlyingEndTime(saved.flyingEndTime);
         if (saved.ftdStartTime != null) setFtdStartTime(saved.ftdStartTime);
         if (saved.ftdEndTime != null) setFtdEndTime(saved.ftdEndTime);
+        if (saved.cptStartTime != null) setCptStartTime(Number(saved.cptStartTime));
+        if (saved.cptEndTime != null) setCptEndTime(Number(saved.cptEndTime));
         if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
         if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
         if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
@@ -129855,6 +129903,8 @@ ${"=".repeat(60)}`);
     flyingEndTime,
     ftdStartTime,
     ftdEndTime,
+    cptStartTime,
+    cptEndTime,
     allowNightFlying,
     commenceNightFlying,
     ceaseNightFlying,
@@ -143161,7 +143211,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         menuItems.push({ label: "Add Staff", onSelect: () => handleNavigation("Instructors") });
       } else if (activeView === "Priorities") {
         menuItems.push(
-          { label: "Flying Windows & Capacity", onSelect: () => handleNavigation("Priorities") },
+          { label: "Flying Windows & Resource Availability", onSelect: () => handleNavigation("Priorities") },
           { label: `${instructorLabel2 || "Instructor"} Rules`, onSelect: () => handleNavigation("Priorities") },
           { label: "Course Demand", onSelect: () => handleNavigation("Priorities") },
           { label: "Directed Tasks", onSelect: () => handleNavigation("Priorities") }
@@ -144067,6 +144117,10 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateFtdStartTime: setFtdStartTime,
             ftdEndTime,
             onUpdateFtdEndTime: setFtdEndTime,
+            cptStartTime,
+            onUpdateCptStartTime: setCptStartTime,
+            cptEndTime,
+            onUpdateCptEndTime: setCptEndTime,
             allowNightFlying,
             onUpdateAllowNightFlying: setAllowNightFlying,
             commenceNightFlying,

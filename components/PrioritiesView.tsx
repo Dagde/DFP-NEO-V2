@@ -221,6 +221,10 @@ interface PrioritiesViewProps {
   onUpdateFtdStartTime: (time: number) => void;
   ftdEndTime: number;
   onUpdateFtdEndTime: (time: number) => void;
+  cptStartTime?: number;
+  onUpdateCptStartTime?: (time: number) => void;
+  cptEndTime?: number;
+  onUpdateCptEndTime?: (time: number) => void;
   allowNightFlying: boolean;
   onUpdateAllowNightFlying: (value: boolean) => void;
   commenceNightFlying: number;
@@ -1284,6 +1288,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onUpdateFtdStartTime,
   ftdEndTime,
   onUpdateFtdEndTime,
+  cptStartTime,
+  onUpdateCptStartTime,
+  cptEndTime,
+  onUpdateCptEndTime,
   allowNightFlying,
   onUpdateAllowNightFlying,
   commenceNightFlying,
@@ -1354,6 +1362,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const aircraftCapacityMax = Math.max(0, Math.floor(Number(maxAircraftCount ?? availableAircraftCount) || 0));
   const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
+  const effectiveCptStartTime = Number.isFinite(Number(cptStartTime)) ? Number(cptStartTime) : ftdStartTime;
+  const effectiveCptEndTime = Number.isFinite(Number(cptEndTime)) ? Number(cptEndTime) : ftdEndTime;
   const locationDisplayName = String(school || '').trim() || 'Selected location';
   const normalisedStaffQualificationCatalogue = useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue || null),
@@ -5122,71 +5132,134 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <div className="flying-windows-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Time Input</p>
-                        <h2 className="mt-1 text-xl font-semibold text-white">Flying Windows</h2>
-                        <p className="mt-1 text-sm text-slate-300">Set the time boundaries that govern where flight, {ftdLabel} and night events may be placed.</p>
+                        <h2 className="mt-1 text-xl font-semibold text-white">Flying Windows & Resource Availability</h2>
+                        <p className="mt-1 text-sm text-slate-300">Set the time boundaries that govern where flight, {ftdLabel}, {cptLabel} and night events may be placed.</p>
                     </div>
-                    <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-3">
-                        <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <div className="min-h-[20px]" />
-                            <label className="mt-2 block text-sm font-medium text-slate-300">Day Flying Window</label>
-                            <div className="mt-2 flex items-center space-x-2">
-                                <select value={flyingStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFlyingStartTime(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500">
-                                    {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                                <span className="shrink-0 text-slate-400">to</span>
-                                <select value={flyingEndTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFlyingEndTime(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500">
-                                    {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setShowExclusionPlanner(value => !value)}
-                                className="mt-3 w-full rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18"
-                            >
-                                {showExclusionPlanner ? 'Hide Exclusions' : 'Manage Exclusions'}
-                            </button>
-                        </div>
-
-                        <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <div className="min-h-[20px]" />
-                            <label className="mt-2 block text-sm font-medium text-slate-300">{ftdLabel} Operating Window</label>
-                            <div className="mt-2 flex items-center space-x-2">
-                                <select value={ftdStartTime} onChange={(e) => { logAudit("Priorities", "Edit", `Updated ${ftdLabel} start time`, `${ftdStartTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFtdStartTime(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500">
-                                    {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                                <span className="shrink-0 text-slate-400">to</span>
-                                <select value={ftdEndTime} onChange={(e) => { logAudit("Priorities", "Edit", `Updated ${ftdLabel} end time`, `${ftdEndTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFtdEndTime(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500">
-                                    {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <div className="flex min-h-[20px] items-center justify-end">
-                                <label className="flex cursor-pointer items-center space-x-2 whitespace-nowrap">
-                                    <input type="checkbox" checked={allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} \u2192 ${e.target.checked}`); onUpdateAllowNightFlying(e.target.checked); }} className="h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500" />
-                                    <span className="text-sm font-semibold text-cyan-300">Allow Night Flying</span>
-                                </label>
-                            </div>
-                            <label className="mt-2 block text-sm font-medium text-slate-300">Night Flying Window</label>
-                            <div className={`mt-2 transition-opacity duration-150 ${allowNightFlying ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                                <div className="flex items-center space-x-2">
-                                    <select value={commenceNightFlying} disabled={!allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} \u2192 ${parseFloat(e.target.value)}`); onUpdateCommenceNightFlying(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed">
-                                        {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                    </select>
-                                    <span className="shrink-0 text-slate-400">to</span>
-                                    <select value={ceaseNightFlying} disabled={!allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} \u2192 ${parseFloat(e.target.value)}`); onUpdateCeaseNightFlying(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed">
-                                        {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setShowExclusionPlanner(value => !value)}
-                                className="mt-3 w-full rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18"
-                            >
-                                {showExclusionPlanner ? 'Hide Exclusions' : 'Manage Exclusions'}
-                            </button>
+                    <div className="p-4">
+                        <div className="overflow-hidden rounded-lg border border-slate-700 bg-slate-950/70">
+                            <table className="w-full min-w-[720px] table-fixed text-left text-sm text-slate-100">
+                                <thead className="border-b border-slate-700 bg-slate-900 text-[11px] uppercase tracking-[0.16em] text-cyan-200/80">
+                                    <tr>
+                                        <th className="w-[30%] px-4 py-3 font-semibold">Window</th>
+                                        <th className="w-[18%] px-4 py-3 text-center font-semibold">Enabled</th>
+                                        <th className="w-[22%] px-4 py-3 text-center font-semibold">Start</th>
+                                        <th className="w-[22%] px-4 py-3 text-center font-semibold">End</th>
+                                        <th className="w-[8%] px-4 py-3 text-center font-semibold">Tools</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {[
+                                        {
+                                            key: 'flight',
+                                            label: 'Day Flying',
+                                            enabled: true,
+                                            start: flyingStartTime,
+                                            end: flyingEndTime,
+                                            setStart: onUpdateFlyingStartTime,
+                                            setEnd: onUpdateFlyingEndTime,
+                                            auditStart: 'Updated flying start time',
+                                            auditEnd: 'Updated flying end time',
+                                            tools: true,
+                                        },
+                                        {
+                                            key: 'ftd',
+                                            label: `${ftdLabel} Operating`,
+                                            enabled: true,
+                                            start: ftdStartTime,
+                                            end: ftdEndTime,
+                                            setStart: onUpdateFtdStartTime,
+                                            setEnd: onUpdateFtdEndTime,
+                                            auditStart: `Updated ${ftdLabel} start time`,
+                                            auditEnd: `Updated ${ftdLabel} end time`,
+                                        },
+                                        {
+                                            key: 'cpt',
+                                            label: `${cptLabel} Operating`,
+                                            enabled: true,
+                                            start: effectiveCptStartTime,
+                                            end: effectiveCptEndTime,
+                                            setStart: onUpdateCptStartTime,
+                                            setEnd: onUpdateCptEndTime,
+                                            auditStart: `Updated ${cptLabel} start time`,
+                                            auditEnd: `Updated ${cptLabel} end time`,
+                                        },
+                                        {
+                                            key: 'night',
+                                            label: 'Night Flying',
+                                            enabled: allowNightFlying,
+                                            start: commenceNightFlying,
+                                            end: ceaseNightFlying,
+                                            setStart: onUpdateCommenceNightFlying,
+                                            setEnd: onUpdateCeaseNightFlying,
+                                            auditStart: 'Updated commence night flying time',
+                                            auditEnd: 'Updated cease night flying time',
+                                        },
+                                    ].map((row) => (
+                                        <tr key={row.key} className={row.enabled ? 'bg-slate-950/30' : 'bg-slate-950/15 opacity-70'}>
+                                            <td className="px-4 py-3 font-semibold text-white">{row.label}</td>
+                                            <td className="px-4 py-3 text-center">
+                                                {row.key === 'night' ? (
+                                                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-slate-200">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={allowNightFlying}
+                                                            onChange={(e) => {
+                                                                logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} \u2192 ${e.target.checked}`);
+                                                                onUpdateAllowNightFlying(e.target.checked);
+                                                            }}
+                                                            className="h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500"
+                                                        />
+                                                        {allowNightFlying ? 'Yes' : 'No'}
+                                                    </label>
+                                                ) : (
+                                                    <span className="inline-flex min-w-[46px] justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-100">Yes</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <select
+                                                    value={row.start}
+                                                    disabled={!row.enabled || !row.setStart}
+                                                    onChange={(e) => {
+                                                        const next = parseFloat(e.target.value);
+                                                        logAudit("Priorities", "Edit", row.auditStart, `${row.start} \u2192 ${next}`);
+                                                        row.setStart?.(next);
+                                                    }}
+                                                    className="w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed"
+                                                >
+                                                    {timeOptions.map(opt => <option key={`${row.key}-start-${opt.value}`} value={opt.value}>{opt.label}</option>)}
+                                                </select>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <select
+                                                    value={row.end}
+                                                    disabled={!row.enabled || !row.setEnd}
+                                                    onChange={(e) => {
+                                                        const next = parseFloat(e.target.value);
+                                                        logAudit("Priorities", "Edit", row.auditEnd, `${row.end} \u2192 ${next}`);
+                                                        row.setEnd?.(next);
+                                                    }}
+                                                    className="w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed"
+                                                >
+                                                    {timeOptions.map(opt => <option key={`${row.key}-end-${opt.value}`} value={opt.value}>{opt.label}</option>)}
+                                                </select>
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                {row.tools ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowExclusionPlanner(value => !value)}
+                                                        className="rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18"
+                                                    >
+                                                        {showExclusionPlanner ? 'Hide' : 'Exclusions'}
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-slate-600">-</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                     <div className={`overflow-hidden border-t border-slate-800 transition-all duration-300 ${showExclusionPlanner ? 'max-h-[760px] opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -5351,60 +5424,83 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <div className="resource-capacity-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Capacity Input</p>
-                        <h2 className="mt-1 text-xl font-semibold text-white">Resource Capacity</h2>
+                        <h2 className="mt-1 text-xl font-semibold text-white">Resource Availability</h2>
                         <p className="mt-1 text-sm text-slate-300">Declare the physical capacity available for this build before weighting the course demand.</p>
                     </div>
-                    <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
-                        <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label htmlFor="aircraft-count" className="block text-sm font-medium text-slate-300">Total Aircraft Available</label>
-                            <input id="aircraft-count" type="number" min={0} max={aircraftCapacityMax} value={availableAircraftCount} onChange={(e) => handleAircraftCapacityChange(e.target.value)} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
-                            <p className="mt-1 text-[11px] text-slate-500">Configured maximum: {aircraftCapacityMax}</p>
-                            {aircraftConfigurationDefinitions.length > 0 && (
-                                <div className="mt-4 border-t border-slate-700 pt-3">
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {aircraftConfigurationDefinitions.map((definition) => {
-                                            const isCleanConfig = definition.id === 'CONFIG-0';
-                                            const displayValue = isCleanConfig
-                                                ? (hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : '')
-                                                : (aircraftConfigCapacities[definition.id] || '');
-                                            return (
-                                                <label key={definition.id} className="block">
-                                                    <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400" title={definition.definition || definition.label}>
-                                                        <span className="truncate">{definition.label}</span>
-                                                        <ConfigCapacityInfoHint definition={definition} />
-                                                    </span>
-                                                    <input
-                                                        type="number"
-                                                        min={0}
-                                                        max={Math.max(0, Math.min(availableAircraftCount, aircraftCapacityMax))}
-                                                        step={1}
-                                                        inputMode="numeric"
-                                                        value={displayValue}
-                                                        readOnly={isCleanConfig}
-                                                        disabled={isCleanConfig}
-                                                        placeholder=""
-                                                        onChange={(e) => {
-                                                            if (!isCleanConfig) handleAircraftConfigCapacityChange(definition.id, e.target.value);
-                                                        }}
-                                                        className={`mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? 'cursor-not-allowed text-slate-400 opacity-80' : ''}`}
-                                                    />
-                                                </label>
-                                            );
-                                        })}
-                                    </div>
+                    <div className="space-y-4 p-4">
+                        <div className="overflow-hidden rounded-lg border border-slate-700 bg-slate-950/70">
+                            <table className="w-full min-w-[640px] table-fixed text-left text-sm text-slate-100">
+                                <thead className="border-b border-slate-700 bg-slate-900 text-[11px] uppercase tracking-[0.16em] text-cyan-200/80">
+                                    <tr>
+                                        <th className="w-[46%] px-4 py-3 font-semibold">Resource</th>
+                                        <th className="w-[22%] px-4 py-3 text-center font-semibold">Available</th>
+                                        <th className="w-[32%] px-4 py-3 text-center font-semibold">Configured Maximum</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    <tr>
+                                        <td className="px-4 py-3 font-semibold text-white">{aircraftLabel}</td>
+                                        <td className="px-4 py-3">
+                                            <input id="aircraft-count" type="number" min={0} max={aircraftCapacityMax} value={availableAircraftCount} onChange={(e) => handleAircraftCapacityChange(e.target.value)} className="w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-center text-white focus:outline-none focus:ring-cyan-500"/>
+                                        </td>
+                                        <td className="px-4 py-3 text-center text-slate-300">{aircraftCapacityMax}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="px-4 py-3 font-semibold text-white">{ftdLabel}</td>
+                                        <td className="px-4 py-3">
+                                            <input id="ftd-count" type="number" min={0} max={ftdCapacityMax} value={availableFtdCount} onChange={(e) => { const nextCount = Math.min(ftdCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0)); logAudit("Priorities", "Edit", `Updated available ${ftdLabel} count`, `${availableFtdCount} \u2192 ${nextCount}`); onUpdateFtdCount(nextCount); }} className="w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-center text-white focus:outline-none focus:ring-cyan-500"/>
+                                        </td>
+                                        <td className="px-4 py-3 text-center text-slate-300">{ftdCapacityMax}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="px-4 py-3 font-semibold text-white">{cptLabel}</td>
+                                        <td className="px-4 py-3">
+                                            <input id="cpt-count" type="number" min={0} max={cptCapacityMax} value={availableCptCount} onChange={(e) => { const nextCount = Math.min(cptCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0)); logAudit("Priorities", "Edit", `Updated available ${cptLabel} count`, `${availableCptCount} \u2192 ${nextCount}`); onUpdateCptCount(nextCount); }} className="w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-center text-white focus:outline-none focus:ring-cyan-500"/>
+                                        </td>
+                                        <td className="px-4 py-3 text-center text-slate-300">{cptCapacityMax}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        {aircraftConfigurationDefinitions.length > 0 && (
+                            <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
+                                <div className="mb-3">
+                                    <h3 className="text-sm font-semibold text-white">Aircraft CONFIG Capacity</h3>
+                                    <p className="mt-1 text-xs text-slate-400">Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft.</p>
                                 </div>
-                            )}
-                        </div>
-                        <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label htmlFor="ftd-count" className="block text-sm font-medium text-slate-300">{ftdLabel} Available</label>
-                            <input id="ftd-count" type="number" min={0} max={ftdCapacityMax} value={availableFtdCount} onChange={(e) => { const nextCount = Math.min(ftdCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0)); logAudit("Priorities", "Edit", `Updated available ${ftdLabel} count`, `${availableFtdCount} \u2192 ${nextCount}`); onUpdateFtdCount(nextCount); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
-                            <p className="mt-1 text-[11px] text-slate-500">Configured maximum: {ftdCapacityMax}</p>
-                        </div>
-                        <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label htmlFor="cpt-count" className="block text-sm font-medium text-slate-300">{cptLabel} Available</label>
-                            <input id="cpt-count" type="number" min={0} max={cptCapacityMax} value={availableCptCount} onChange={(e) => { const nextCount = Math.min(cptCapacityMax, Math.max(0, parseInt(e.target.value, 10) || 0)); logAudit("Priorities", "Edit", `Updated available ${cptLabel} count`, `${availableCptCount} \u2192 ${nextCount}`); onUpdateCptCount(nextCount); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
-                            <p className="mt-1 text-[11px] text-slate-500">Configured maximum: {cptCapacityMax}</p>
-                        </div>
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                    {aircraftConfigurationDefinitions.map((definition) => {
+                                        const isCleanConfig = definition.id === 'CONFIG-0';
+                                        const displayValue = isCleanConfig
+                                            ? (hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : '')
+                                            : (aircraftConfigCapacities[definition.id] || '');
+                                        return (
+                                            <label key={definition.id} className="block rounded-md border border-slate-700 bg-slate-900/60 p-3">
+                                                <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400" title={definition.definition || definition.label}>
+                                                    <span className="truncate">{definition.label}</span>
+                                                    <ConfigCapacityInfoHint definition={definition} />
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={Math.max(0, Math.min(availableAircraftCount, aircraftCapacityMax))}
+                                                    step={1}
+                                                    inputMode="numeric"
+                                                    value={displayValue}
+                                                    readOnly={isCleanConfig}
+                                                    disabled={isCleanConfig}
+                                                    placeholder=""
+                                                    onChange={(e) => {
+                                                        if (!isCleanConfig) handleAircraftConfigCapacityChange(definition.id, e.target.value);
+                                                    }}
+                                                    className={`mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? 'cursor-not-allowed text-slate-400 opacity-80' : ''}`}
+                                                />
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
            </div>

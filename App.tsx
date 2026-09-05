@@ -33541,6 +33541,8 @@ const App: React.FC = () => {
     const [flyingEndTime, setFlyingEndTime] = useState(17.0); // 17:00
     const [ftdStartTime, setFtdStartTime] = useState(8.0); // 08:00
     const [ftdEndTime, setFtdEndTime] = useState(17.0); // 17:00
+    const [cptStartTime, setCptStartTime] = useState(8.0); // 08:00
+    const [cptEndTime, setCptEndTime] = useState(17.0); // 17:00
     const [allowNightFlying, setAllowNightFlying] = useState(true);
     const [commenceNightFlying, setCommenceNightFlying] = useState(18.5); // 18:30
     const [ceaseNightFlying, setCeaseNightFlying] = useState(23.5); // 23:30
@@ -34759,6 +34761,8 @@ const App: React.FC = () => {
                 if (saved.flyingEndTime != null) setFlyingEndTime(saved.flyingEndTime);
                 if (saved.ftdStartTime != null) setFtdStartTime(saved.ftdStartTime);
                 if (saved.ftdEndTime != null) setFtdEndTime(saved.ftdEndTime);
+                if ((saved as any).cptStartTime != null) setCptStartTime(Number((saved as any).cptStartTime));
+                if ((saved as any).cptEndTime != null) setCptEndTime(Number((saved as any).cptEndTime));
                 if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
                 if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
                 if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
@@ -34977,6 +34981,8 @@ const App: React.FC = () => {
             flyingEndTime,
             ftdStartTime,
             ftdEndTime,
+            cptStartTime,
+            cptEndTime,
             allowNightFlying,
             commenceNightFlying,
             ceaseNightFlying,
@@ -35019,7 +35025,7 @@ const App: React.FC = () => {
         dispatchRateWindowMinutes,
         flightTurnaround, ftdTurnaround, cptTurnaround,
         taxiGroundTime,
-        flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
+        flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
         flyingWindowExclusions, flyingWindowExclusionsByUnit, activeFlyingWindowExclusionUnitKey,
         availableAircraftCount, neoAvailableAircraftCount, neoAircraftConfigCapacities, neoAircraftCapacityByUnit, activeNeoAircraftCapacityUnitKey, availableFtdCount, availableCptCount,
@@ -51483,7 +51489,7 @@ appliedUpdates.forEach(update => {
                 menuItems.push({ label: 'Add Staff', onSelect: () => handleNavigation('Instructors') });
             } else if (activeView === 'Priorities') {
                 menuItems.push(
-                    { label: 'Flying Windows & Capacity', onSelect: () => handleNavigation('Priorities') },
+                    { label: 'Flying Windows & Resource Availability', onSelect: () => handleNavigation('Priorities') },
                     { label: `${instructorLabel || 'Instructor'} Rules`, onSelect: () => handleNavigation('Priorities') },
                     { label: 'Course Demand', onSelect: () => handleNavigation('Priorities') },
                     { label: 'Directed Tasks', onSelect: () => handleNavigation('Priorities') }
@@ -52435,6 +52441,10 @@ appliedUpdates.forEach(update => {
                     onUpdateFtdStartTime={setFtdStartTime}
                     ftdEndTime={ftdEndTime}
                     onUpdateFtdEndTime={setFtdEndTime}
+                    cptStartTime={cptStartTime}
+                    onUpdateCptStartTime={setCptStartTime}
+                    cptEndTime={cptEndTime}
+                    onUpdateCptEndTime={setCptEndTime}
                     allowNightFlying={allowNightFlying}
                     onUpdateAllowNightFlying={setAllowNightFlying}
                     commenceNightFlying={commenceNightFlying}
