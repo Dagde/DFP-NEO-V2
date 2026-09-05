@@ -5132,19 +5132,19 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <div className="flying-windows-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Time Input</p>
-                        <h2 className="mt-1 text-xl font-semibold text-white">Flying Windows & Resource Availability</h2>
+                        <h2 className="mt-1 text-xl font-semibold text-white">Flying Windows</h2>
                         <p className="mt-1 text-sm text-slate-300">Set the time boundaries that govern where flight, {ftdLabel}, {cptLabel} and night events may be placed.</p>
                     </div>
                     <div className="p-4">
                         <div className="overflow-hidden rounded-lg border border-slate-700 bg-slate-950/70">
-                            <table className="w-full min-w-[720px] table-fixed text-left text-sm text-slate-100">
+                            <table className="w-full table-fixed text-left text-sm text-slate-100">
                                 <thead className="border-b border-slate-700 bg-slate-900 text-[11px] uppercase tracking-[0.16em] text-cyan-200/80">
                                     <tr>
-                                        <th className="w-[30%] px-4 py-3 font-semibold">Window</th>
-                                        <th className="w-[18%] px-4 py-3 text-center font-semibold">Enabled</th>
-                                        <th className="w-[22%] px-4 py-3 text-center font-semibold">Start</th>
-                                        <th className="w-[22%] px-4 py-3 text-center font-semibold">End</th>
-                                        <th className="w-[8%] px-4 py-3 text-center font-semibold">Tools</th>
+                                        <th className="w-[28%] px-3 py-3 font-semibold">Window</th>
+                                        <th className="w-[14%] px-3 py-3 text-center font-semibold">Enabled</th>
+                                        <th className="w-[23%] px-3 py-3 text-center font-semibold">Start</th>
+                                        <th className="w-[23%] px-3 py-3 text-center font-semibold">End</th>
+                                        <th className="w-[12%] px-2 py-3 text-center font-semibold">Tools</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800">
@@ -5196,8 +5196,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         },
                                     ].map((row) => (
                                         <tr key={row.key} className={row.enabled ? 'bg-slate-950/30' : 'bg-slate-950/15 opacity-70'}>
-                                            <td className="px-4 py-3 font-semibold text-white">{row.label}</td>
-                                            <td className="px-4 py-3 text-center">
+                                            <td className="px-3 py-3 font-semibold text-white">{row.label}</td>
+                                            <td className="px-3 py-3 text-center">
                                                 {row.key === 'night' ? (
                                                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-slate-200">
                                                         <input
@@ -5215,7 +5215,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                     <span className="inline-flex min-w-[46px] justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-100">Yes</span>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-3 py-3">
                                                 <select
                                                     value={row.start}
                                                     disabled={!row.enabled || !row.setStart}
@@ -5229,7 +5229,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                     {timeOptions.map(opt => <option key={`${row.key}-start-${opt.value}`} value={opt.value}>{opt.label}</option>)}
                                                 </select>
                                             </td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-3 py-3">
                                                 <select
                                                     value={row.end}
                                                     disabled={!row.enabled || !row.setEnd}
@@ -5243,12 +5243,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                     {timeOptions.map(opt => <option key={`${row.key}-end-${opt.value}`} value={opt.value}>{opt.label}</option>)}
                                                 </select>
                                             </td>
-                                            <td className="px-4 py-3 text-center">
+                                            <td className="px-2 py-3 text-center">
                                                 {row.tools ? (
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowExclusionPlanner(value => !value)}
-                                                        className="rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18"
+                                                        className="w-full rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.04em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18"
                                                     >
                                                         {showExclusionPlanner ? 'Hide' : 'Exclusions'}
                                                     </button>

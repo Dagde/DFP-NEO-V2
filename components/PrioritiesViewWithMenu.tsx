@@ -139,9 +139,9 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         {
             id: 'build-timeline' as const,
             step: '01',
-            label: 'Flying Windows & Capacity',
+            label: 'Flying Windows & Resource Availability',
             shortLabel: 'Time & Resources',
-            description: `Set the day, ${resourceLabels.ftd} and night windows, then declare ${resourceLabels.aircraft}, ${resourceLabels.ftd} and ${resourceLabels.cpt} capacity before anything else.`,
+            description: `Set the day, ${resourceLabels.ftd}, ${resourceLabels.cpt} and night windows, then declare ${resourceLabels.aircraft}, ${resourceLabels.ftd} and ${resourceLabels.cpt} availability before anything else.`,
         },
         {
             id: 'people-rules' as const,
@@ -184,9 +184,9 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             { label: 'Deployment Builder', target: '.deployment-builder-card' },
         ],
         'build-priorities': [
-            { label: 'Flying Windows & Capacity', target: '.section-build-timeline' },
+            { label: 'Flying Windows & Resource Availability', target: '.section-build-timeline' },
             { label: 'Flying Windows', target: '.flying-windows-card' },
-            { label: 'Resource Capacity', target: '.resource-capacity-card' },
+            { label: 'Resource Availability', target: '.resource-capacity-card' },
             { label: 'Course Priority', target: '.course-priority-card' },
         ],
     };

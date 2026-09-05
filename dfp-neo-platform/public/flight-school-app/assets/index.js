@@ -49635,7 +49635,7 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flying-windows-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Time Input" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Flying Windows & Resource Availability" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Flying Windows" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-300", children: [
             "Set the time boundaries that govern where flight, ",
             ftdLabel,
@@ -49644,13 +49644,13 @@ const PrioritiesView = ({
             " and night events may be placed."
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-700 bg-slate-950/70", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[720px] table-fixed text-left text-sm text-slate-100", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-700 bg-slate-950/70", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full table-fixed text-left text-sm text-slate-100", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "border-b border-slate-700 bg-slate-900 text-[11px] uppercase tracking-[0.16em] text-cyan-200/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[30%] px-4 py-3 font-semibold", children: "Window" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[18%] px-4 py-3 text-center font-semibold", children: "Enabled" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[22%] px-4 py-3 text-center font-semibold", children: "Start" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[22%] px-4 py-3 text-center font-semibold", children: "End" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[8%] px-4 py-3 text-center font-semibold", children: "Tools" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[28%] px-3 py-3 font-semibold", children: "Window" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[14%] px-3 py-3 text-center font-semibold", children: "Enabled" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[23%] px-3 py-3 text-center font-semibold", children: "Start" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[23%] px-3 py-3 text-center font-semibold", children: "End" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "w-[12%] px-2 py-3 text-center font-semibold", children: "Tools" })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-slate-800", children: [
             {
@@ -49699,8 +49699,8 @@ const PrioritiesView = ({
               auditEnd: "Updated cease night flying time"
             }
           ].map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: row.enabled ? "bg-slate-950/30" : "bg-slate-950/15 opacity-70", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 font-semibold text-white", children: row.label }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-center", children: row.key === "night" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-slate-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 font-semibold text-white", children: row.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center", children: row.key === "night" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-slate-200", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -49715,7 +49715,7 @@ const PrioritiesView = ({
               ),
               allowNightFlying ? "Yes" : "No"
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex min-w-[46px] justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-100", children: "Yes" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               "select",
               {
                 value: row.start,
@@ -49729,7 +49729,7 @@ const PrioritiesView = ({
                 children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `${row.key}-start-${opt.value}`))
               }
             ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               "select",
               {
                 value: row.end,
@@ -49743,12 +49743,12 @@ const PrioritiesView = ({
                 children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, `${row.key}-end-${opt.value}`))
               }
             ) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-center", children: row.tools ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-3 text-center", children: row.tools ? /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 onClick: () => setShowExclusionPlanner((value) => !value),
-                className: "rounded-md border border-cyan-500/35 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18",
+                className: "w-full rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.04em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-500/18",
                 children: showExclusionPlanner ? "Hide" : "Exclusions"
               }
             ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-600", children: "-" }) })
@@ -50772,9 +50772,9 @@ const PrioritiesViewWithMenu = (props) => {
     {
       id: "build-timeline",
       step: "01",
-      label: "Flying Windows & Capacity",
+      label: "Flying Windows & Resource Availability",
       shortLabel: "Time & Resources",
-      description: `Set the day, ${resourceLabels.ftd} and night windows, then declare ${resourceLabels.aircraft}, ${resourceLabels.ftd} and ${resourceLabels.cpt} capacity before anything else.`
+      description: `Set the day, ${resourceLabels.ftd}, ${resourceLabels.cpt} and night windows, then declare ${resourceLabels.aircraft}, ${resourceLabels.ftd} and ${resourceLabels.cpt} availability before anything else.`
     },
     {
       id: "people-rules",
@@ -50815,9 +50815,9 @@ const PrioritiesViewWithMenu = (props) => {
       { label: "Deployment Builder", target: ".deployment-builder-card" }
     ],
     "build-priorities": [
-      { label: "Flying Windows & Capacity", target: ".section-build-timeline" },
+      { label: "Flying Windows & Resource Availability", target: ".section-build-timeline" },
       { label: "Flying Windows", target: ".flying-windows-card" },
-      { label: "Resource Capacity", target: ".resource-capacity-card" },
+      { label: "Resource Availability", target: ".resource-capacity-card" },
       { label: "Course Priority", target: ".course-priority-card" }
     ]
   };
