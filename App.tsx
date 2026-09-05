@@ -2526,14 +2526,14 @@ const DfpSidePanelTimeline: React.FC<{
         const scroller = scrollRef.current;
         if (!scroller) return undefined;
         let frame = 0;
-        const centerNoon = () => {
-            const targetHour = normalizeHour(12);
+        const centerTwelveThirty = () => {
+            const targetHour = normalizeHour(12.5);
             const ratio = (targetHour - timelineStartHour) / timelineSpanHours;
             const targetLeft = ratio * scroller.scrollWidth - scroller.clientWidth / 2;
             scroller.scrollLeft = Math.max(0, Math.min(scroller.scrollWidth - scroller.clientWidth, targetLeft));
         };
-        centerNoon();
-        frame = window.requestAnimationFrame(centerNoon);
+        centerTwelveThirty();
+        frame = window.requestAnimationFrame(centerTwelveThirty);
         return () => window.cancelAnimationFrame(frame);
     }, [isOpen, date, timelineSpanHours]);
 
