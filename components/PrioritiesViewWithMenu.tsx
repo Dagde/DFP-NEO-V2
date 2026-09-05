@@ -131,6 +131,15 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const mainScrollRef = useRef<HTMLElement | null>(null);
     const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
     const locationDisplayName = String(props.school || '').trim() || 'Selected location';
+    const buildSetupContextLabel = (
+        (Array.isArray(props.activeUnitCodes) && props.activeUnitCodes.length > 0
+            ? props.activeUnitCodes
+            : [props.activeUnitCode]
+        )
+            .map(unitCode => String(unitCode || '').trim())
+            .filter(Boolean)
+            .join('+')
+    ) || locationDisplayName;
     const isFixedCrewModel = isFixedCrewLikeOperationalModel(props.operationalModel);
     const effectiveInstructorPriority = isFixedCrewModel
         ? { ...props.instructorPriority, enabled: false }
@@ -777,7 +786,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                                 </div>
                             </div>
                             <span className="rounded-md border border-slate-600/70 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-300">
-                                {locationDisplayName} build setup
+                                {buildSetupContextLabel} build setup
                             </span>
                         </div>
                     </div>
