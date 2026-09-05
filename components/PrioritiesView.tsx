@@ -5468,7 +5468,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     <h3 className="text-sm font-semibold text-white">Aircraft CONFIG Capacity</h3>
                                     <p className="mt-1 text-xs text-slate-400">Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft.</p>
                                 </div>
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                <div className="grid grid-cols-1 gap-3">
                                     {aircraftConfigurationDefinitions.map((definition) => {
                                         const isCleanConfig = definition.id === 'CONFIG-0';
                                         const displayValue = isCleanConfig

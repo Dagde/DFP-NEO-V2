@@ -49971,7 +49971,7 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Aircraft CONFIG Capacity" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-400", children: "Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft." })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3", children: aircraftConfigurationDefinitions.map((definition) => {
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-3", children: aircraftConfigurationDefinitions.map((definition) => {
               const isCleanConfig = definition.id === "CONFIG-0";
               const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "" : aircraftConfigCapacities[definition.id] || "";
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block rounded-md border border-slate-700 bg-slate-900/60 p-3", children: [
