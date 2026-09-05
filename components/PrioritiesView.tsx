@@ -286,6 +286,7 @@ interface PrioritiesViewProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   instructorLabel?: string;
   continuationShortLabel?: string;
+  currentUserRole?: string;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
   onNavigateToSettingsSection?: (request: {
     sectionId: string;
@@ -1353,6 +1354,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   staffQualificationCatalogue,
   instructorLabel = 'Instructor',
   continuationShortLabel = 'ContT',
+  currentUserRole = '',
   onNavigateToSettingsSection,
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
@@ -1364,6 +1366,22 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
   const effectiveCptStartTime = Number.isFinite(Number(cptStartTime)) ? Number(cptStartTime) : ftdStartTime;
   const effectiveCptEndTime = Number.isFinite(Number(cptEndTime)) ? Number(cptEndTime) : ftdEndTime;
+  const canOpenResourceSettings = ['ADMIN', 'SUPER_ADMIN', 'ADMINISTRATOR', 'SUPERADMIN'].includes(
+    String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_'),
+  );
+  const resourceSettingsButtonClass = "rounded-md border border-cyan-400/45 bg-cyan-500/12 px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-cyan-50 transition hover:border-cyan-200 hover:bg-cyan-500/20";
+  const openResourceAvailabilitySettings = () => onNavigateToSettingsSection?.({
+    sectionId: 'platform-dfp-resource-rows',
+    unitCode: activeUnitCode,
+    aircraftTypeCode: aircraftTypeCode || undefined,
+    focusSubsectionId: 'platform-dfp-resource-rows',
+  });
+  const openAircraftConfigSettings = () => onNavigateToSettingsSection?.({
+    sectionId: 'platform-aircraft-type-settings',
+    unitCode: activeUnitCode,
+    aircraftTypeCode: aircraftTypeCode || undefined,
+    focusSubsectionId: 'platform-aircraft-type-settings',
+  });
   const locationDisplayName = String(school || '').trim() || 'Selected location';
   const normalisedStaffQualificationCatalogue = useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue || null),
@@ -5422,10 +5440,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 </div>
 
                 <div className="resource-capacity-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
-                    <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Capacity Input</p>
-                        <h2 className="mt-1 text-xl font-semibold text-white">Resource Availability</h2>
-                        <p className="mt-1 text-sm text-slate-300">Declare the physical capacity available for this build before weighting the course demand.</p>
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-cyan-500/20 bg-cyan-500/10 p-4">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Capacity Input</p>
+                            <h2 className="mt-1 text-xl font-semibold text-white">Resource Availability</h2>
+                            <p className="mt-1 text-sm text-slate-300">Declare the physical capacity available for this build before weighting the course demand.</p>
+                        </div>
+                        {canOpenResourceSettings && onNavigateToSettingsSection && (
+                            <button
+                                type="button"
+                                onClick={openResourceAvailabilitySettings}
+                                className={resourceSettingsButtonClass}
+                            >
+                                Settings
+                            </button>
+                        )}
                     </div>
                     <div className="space-y-4 p-4">
                         <div className="overflow-hidden rounded-lg border border-slate-700 bg-slate-950/70">
@@ -5464,9 +5493,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         </div>
                         {aircraftConfigurationDefinitions.length > 0 && (
                             <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                                <div className="mb-3">
-                                    <h3 className="text-sm font-semibold text-white">Aircraft CONFIG Capacity</h3>
-                                    <p className="mt-1 text-xs text-slate-400">Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft.</p>
+                                <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-white">Aircraft CONFIG Capacity</h3>
+                                        <p className="mt-1 text-xs text-slate-400">Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft.</p>
+                                    </div>
+                                    {canOpenResourceSettings && onNavigateToSettingsSection && (
+                                        <button
+                                            type="button"
+                                            onClick={openAircraftConfigSettings}
+                                            className={resourceSettingsButtonClass}
+                                        >
+                                            Settings
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="flex flex-col gap-3">
                                     {aircraftConfigurationDefinitions.map((definition) => {

@@ -104,6 +104,7 @@ interface PrioritiesViewWithMenuProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   instructorLabel?: string;
   continuationShortLabel?: string;
+  currentUserRole?: string;
   onNavigateToSettingsSection?: (request: {
     sectionId: string;
     unitCode?: string;

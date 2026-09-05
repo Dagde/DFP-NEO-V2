@@ -46659,6 +46659,7 @@ const PrioritiesView = ({
   staffQualificationCatalogue: staffQualificationCatalogue2,
   instructorLabel: instructorLabel2 = "Instructor",
   continuationShortLabel = "ContT",
+  currentUserRole: currentUserRole2 = "",
   onNavigateToSettingsSection
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
@@ -46670,6 +46671,22 @@ const PrioritiesView = ({
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
   const effectiveCptStartTime = Number.isFinite(Number(cptStartTime)) ? Number(cptStartTime) : ftdStartTime;
   const effectiveCptEndTime = Number.isFinite(Number(cptEndTime)) ? Number(cptEndTime) : ftdEndTime;
+  const canOpenResourceSettings = ["ADMIN", "SUPER_ADMIN", "ADMINISTRATOR", "SUPERADMIN"].includes(
+    String(currentUserRole2 || "").trim().toUpperCase().replace(/[\s-]+/g, "_")
+  );
+  const resourceSettingsButtonClass = "rounded-md border border-cyan-400/45 bg-cyan-500/12 px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-cyan-50 transition hover:border-cyan-200 hover:bg-cyan-500/20";
+  const openResourceAvailabilitySettings = () => onNavigateToSettingsSection?.({
+    sectionId: "platform-dfp-resource-rows",
+    unitCode: activeUnitCode,
+    aircraftTypeCode: aircraftTypeCode || void 0,
+    focusSubsectionId: "platform-dfp-resource-rows"
+  });
+  const openAircraftConfigSettings = () => onNavigateToSettingsSection?.({
+    sectionId: "platform-aircraft-type-settings",
+    unitCode: activeUnitCode,
+    aircraftTypeCode: aircraftTypeCode || void 0,
+    focusSubsectionId: "platform-aircraft-type-settings"
+  });
   const locationDisplayName = String(school || "").trim() || "Selected location";
   const normalisedStaffQualificationCatalogue = reactExports.useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue2 || null),
@@ -49928,10 +49945,21 @@ const PrioritiesView = ({
         ] }) }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "resource-capacity-card rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Capacity Input" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Resource Availability" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Declare the physical capacity available for this build before weighting the course demand." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Capacity Input" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Resource Availability" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Declare the physical capacity available for this build before weighting the course demand." })
+          ] }),
+          canOpenResourceSettings && onNavigateToSettingsSection && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: openResourceAvailabilitySettings,
+              className: resourceSettingsButtonClass,
+              children: "Settings"
+            }
+          )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-700 bg-slate-950/70", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full min-w-[640px] table-fixed text-left text-sm text-slate-100", children: [
@@ -49967,9 +49995,20 @@ const PrioritiesView = ({
             ] })
           ] }) }),
           aircraftConfigurationDefinitions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Aircraft CONFIG Capacity" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-400", children: "Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft." })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Aircraft CONFIG Capacity" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-400", children: "Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft." })
+              ] }),
+              canOpenResourceSettings && onNavigateToSettingsSection && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: openAircraftConfigSettings,
+                  className: resourceSettingsButtonClass,
+                  children: "Settings"
+                }
+              )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-3", children: aircraftConfigurationDefinitions.map((definition) => {
               const isCleanConfig = definition.id === "CONFIG-0";
@@ -144150,6 +144189,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             instructorLabel: instructorLabel2,
             continuationShortLabel: getSctTerminology(platformConfig, activeUnitCode).shortLabel,
+            currentUserRole: sessionUser?.role || authUser?.role || currentUserPermission,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             unitCallsignSettings: activeUnitCallsignSettings,

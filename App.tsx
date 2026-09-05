@@ -52474,6 +52474,7 @@ appliedUpdates.forEach(update => {
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                     instructorLabel={instructorLabel}
                     continuationShortLabel={getSctTerminology(platformConfig, activeUnitCode).shortLabel}
+                    currentUserRole={sessionUser?.role || authUser?.role || currentUserPermission}
                     onNavigateToSettingsSection={handleNavigateToSettingsSection}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     unitCallsignSettings={activeUnitCallsignSettings}
