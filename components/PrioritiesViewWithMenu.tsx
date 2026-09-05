@@ -142,7 +142,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             step: '01',
             label: 'Flying Windows & Resource Availability',
             shortLabel: 'Time & Resources',
-            description: `Set the day, ${resourceLabels.ftd}, ${resourceLabels.cpt} and night windows, then declare ${resourceLabels.aircraft}, ${resourceLabels.ftd} and ${resourceLabels.cpt} availability before anything else.`,
+            description: `Set the day, ${resourceLabels.ftd}, ${resourceLabels.cpt} and night windows, then declare ${resourceLabels.aircraft}, ${resourceLabels.ftd} and ${resourceLabels.cpt} availability.`,
         },
         {
             id: 'people-rules' as const,
