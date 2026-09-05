@@ -5475,7 +5475,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                             ? (hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : '')
                                             : (aircraftConfigCapacities[definition.id] || '');
                                         return (
-                                            <label key={definition.id} className="grid grid-cols-[1fr_minmax(96px,25%)] items-center gap-3 rounded-md border border-slate-700 bg-slate-900/60 p-3">
+                                            <label key={definition.id} className="grid grid-cols-[1fr_300px] items-center gap-3 rounded-md border border-slate-700 bg-slate-900/60 p-3">
                                                 <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400" title={definition.definition || definition.label}>
                                                     <span className="truncate">{definition.label}</span>
                                                     <ConfigCapacityInfoHint definition={definition} />
