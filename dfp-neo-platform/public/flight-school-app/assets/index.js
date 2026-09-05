@@ -49971,10 +49971,10 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Aircraft CONFIG Capacity" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-slate-400", children: "Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft." })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-3", children: aircraftConfigurationDefinitions.map((definition) => {
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-3", children: aircraftConfigurationDefinitions.map((definition) => {
               const isCleanConfig = definition.id === "CONFIG-0";
               const displayValue = isCleanConfig ? hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : "" : aircraftConfigCapacities[definition.id] || "";
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "grid grid-cols-[1fr_300px] items-center gap-3 rounded-md border border-slate-700 bg-slate-900/60 p-3", children: [
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block w-[300px] max-w-full rounded-md border border-slate-700 bg-slate-900/60 p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400", title: definition.definition || definition.label, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: definition.label }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ConfigCapacityInfoHint, { definition })
@@ -49994,7 +49994,7 @@ const PrioritiesView = ({
                     onChange: (e) => {
                       if (!isCleanConfig) handleAircraftConfigCapacityChange(definition.id, e.target.value);
                     },
-                    className: `w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-center text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? "cursor-not-allowed text-slate-400 opacity-80" : ""}`
+                    className: `mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-center text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? "cursor-not-allowed text-slate-400 opacity-80" : ""}`
                   }
                 )
               ] }, definition.id);

@@ -5468,14 +5468,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     <h3 className="text-sm font-semibold text-white">Aircraft CONFIG Capacity</h3>
                                     <p className="mt-1 text-xs text-slate-400">Shows how many aircraft are in each configuration. CONFIG 0 uses the remaining aircraft.</p>
                                 </div>
-                                <div className="grid grid-cols-1 gap-3">
+                                <div className="flex flex-col gap-3">
                                     {aircraftConfigurationDefinitions.map((definition) => {
                                         const isCleanConfig = definition.id === 'CONFIG-0';
                                         const displayValue = isCleanConfig
                                             ? (hasEnteredConfigCapacity ? String(derivedCleanConfigCapacity) : '')
                                             : (aircraftConfigCapacities[definition.id] || '');
                                         return (
-                                            <label key={definition.id} className="grid grid-cols-[1fr_300px] items-center gap-3 rounded-md border border-slate-700 bg-slate-900/60 p-3">
+                                            <label key={definition.id} className="block w-[300px] max-w-full rounded-md border border-slate-700 bg-slate-900/60 p-3">
                                                 <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400" title={definition.definition || definition.label}>
                                                     <span className="truncate">{definition.label}</span>
                                                     <ConfigCapacityInfoHint definition={definition} />
@@ -5493,7 +5493,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                     onChange={(e) => {
                                                         if (!isCleanConfig) handleAircraftConfigCapacityChange(definition.id, e.target.value);
                                                     }}
-                                                    className={`w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-center text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? 'cursor-not-allowed text-slate-400 opacity-80' : ''}`}
+                                                    className={`mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-center text-sm text-white focus:outline-none focus:ring-cyan-500 ${isCleanConfig ? 'cursor-not-allowed text-slate-400 opacity-80' : ''}`}
                                                 />
                                             </label>
                                         );
