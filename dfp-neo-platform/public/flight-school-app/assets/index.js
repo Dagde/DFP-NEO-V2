@@ -50050,11 +50050,7 @@ const PrioritiesView = ({
           " Allocation Rules"
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-300", children: [
-          "Set whether the build should prefer or require the trainee's assigned ",
-          instructorLabel2.toLowerCase(),
-          " chain before using a wider ",
-          instructorLabel2.toLowerCase(),
-          " pool for flight and ",
+          "Choose who NEO Build should try to place with each trainee for flight and ",
           ftdLabel,
           " events."
         ] })
@@ -50077,19 +50073,9 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: "Priority Mode" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1 ml-14", children: [
-            "When on, flight and ",
-            ftdLabel,
-            " events follow the ",
+            "When this is on, NEO Build uses the choices below to decide which ",
             instructorLabel2.toLowerCase(),
-            " groups selected below. Primary ",
-            instructorLabel2,
-            " tries to roster the trainee with their primary ",
-            instructorLabel2.toLowerCase(),
-            " first; fallback to the secondary ",
-            instructorLabel2.toLowerCase(),
-            " or an alternate ",
-            instructorLabel2.toLowerCase(),
-            " from the same flight only occurs when those options are also selected."
+            " to try first. Select the backup options you are happy for it to use if the first choice is not available."
           ] })
         ] }),
         instructorPriority.enabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 pl-2", children: [
@@ -50110,15 +50096,11 @@ const PrioritiesView = ({
             )) }),
             instructorPriority.mode === "soft" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Soft:" }),
-              " The scheduler attempts the selected ",
+              " NEO Build tries your selected ",
               instructorLabel2.toLowerCase(),
-              " chain first. If the primary ",
+              " options first. If none of them are available, it can still use another suitable ",
               instructorLabel2.toLowerCase(),
-              " is unavailable, it can fall back to selected secondary or same-flight ",
-              instructorLabel2.toLowerCase(),
-              " options; if none are available, it may use any otherwise eligible ",
-              instructorLabel2.toLowerCase(),
-              " so the event can still be placed."
+              " so the event is not missed."
             ] }),
             instructorPriority.mode === "hard" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 font-medium", children: "Hard:" }),

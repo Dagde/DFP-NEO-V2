@@ -5551,7 +5551,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Second Input</p>
                         <h2 className="mt-1 text-xl font-semibold text-white">{instructorLabel} Allocation Rules</h2>
-                        <p className="mt-1 text-sm text-slate-300">Set whether the build should prefer or require the trainee's assigned {instructorLabel.toLowerCase()} chain before using a wider {instructorLabel.toLowerCase()} pool for flight and {ftdLabel} events.</p>
+                        <p className="mt-1 text-sm text-slate-300">Choose who NEO Build should try to place with each trainee for flight and {ftdLabel} events.</p>
                     </div>
                     <div className="p-4 space-y-5">
 
@@ -5571,7 +5571,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <span className="font-semibold text-sky-400">Priority Mode</span>
                             </label>
                             <p className="text-xs text-gray-400 mt-1 ml-14">
-                                When on, flight and {ftdLabel} events follow the {instructorLabel.toLowerCase()} groups selected below. Primary {instructorLabel} tries to roster the trainee with their primary {instructorLabel.toLowerCase()} first; fallback to the secondary {instructorLabel.toLowerCase()} or an alternate {instructorLabel.toLowerCase()} from the same flight only occurs when those options are also selected.
+                                When this is on, NEO Build uses the choices below to decide which {instructorLabel.toLowerCase()} to try first. Select the backup options you are happy for it to use if the first choice is not available.
                             </p>
                         </div>
 
@@ -5602,7 +5602,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </div>
                                     {instructorPriority.mode === 'soft' && (
                                         <p className="text-xs text-gray-400 mt-1">
-                                            <span className="text-sky-400 font-medium">Soft:</span> The scheduler attempts the selected {instructorLabel.toLowerCase()} chain first. If the primary {instructorLabel.toLowerCase()} is unavailable, it can fall back to selected secondary or same-flight {instructorLabel.toLowerCase()} options; if none are available, it may use any otherwise eligible {instructorLabel.toLowerCase()} so the event can still be placed.
+                                            <span className="text-sky-400 font-medium">Soft:</span> NEO Build tries your selected {instructorLabel.toLowerCase()} options first. If none of them are available, it can still use another suitable {instructorLabel.toLowerCase()} so the event is not missed.
                                         </p>
                                     )}
                                     {instructorPriority.mode === 'hard' && (
