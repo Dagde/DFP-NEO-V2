@@ -51355,7 +51355,8 @@ appliedUpdates.forEach(update => {
             const rect = gridElement.getBoundingClientRect();
             const pixelsPerHour = Number(gridElement.dataset.schedulePixelsPerHour || 200);
             const startHour = Number(gridElement.dataset.scheduleStartHour || 0);
-            const time = startHour + Math.max(0, event.clientX - rect.left) / Math.max(1, pixelsPerHour);
+            const rawTime = startHour + Math.max(0, event.clientX - rect.left) / Math.max(1, pixelsPerHour);
+            const time = Math.max(6, Math.min(23.75, Math.round(rawTime * 4) / 4));
             const rowIndex = Math.floor(Math.max(0, event.clientY - rect.top) / 32);
             const gridResource = buildResources[rowIndex] || '';
             title = 'Empty Schedule Space';
@@ -51368,7 +51369,7 @@ appliedUpdates.forEach(update => {
                 ...(activeUnitHasTrainees ? [{ label: 'Trainee Schedule', onSelect: openTraineeScheduleFromContextMenu } as DfpContextMenuItem] : []),
                 { label: 'Add Flight Tile', detail: canAddFlightOnActiveDfp ? 'Create a new flight event.' : 'Add Flight Tile is not available for this profile or DFP.', disabled: !canAddFlightOnActiveDfp, onSelect: () => {
                     setIsAddingTile(true);
-                    handleOpenModal(null, { type: 'flight', oracleContext: isNeoBuildScheduleView ? 'nextDayBuild' : null });
+                    handleOpenModal(null, { type: 'flight', oracleContext: isNeoBuildScheduleView ? 'nextDayBuild' : null, startTime: time });
                 }},
                 { label: 'Add Ground Tile', detail: canAddGroundOnActiveDfp ? 'Create a new ground event.' : 'Add Ground Tile is not available for this profile or DFP.', disabled: !canAddGroundOnActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
                 { label: showValidation ? 'Validation Check OFF' : 'Validation Check ON', disabled: !canUseValidation, onSelect: toggleValidationFromContextMenu },
@@ -51740,10 +51741,6 @@ appliedUpdates.forEach(update => {
                            onOracleMouseDown={handleOracleMouseDown}
                            onOracleMouseMove={handleOracleMouseMove}
                            onOracleMouseUp={handleOracleMouseUp}
-                           onAddFlightTileAt={(startTime) => {
-                               setIsAddingTile(true);
-                               handleOpenModal(null, { type: 'flight', startTime });
-                           }}
                            showDepartureDensityOverlay={showDepartureDensityOverlay}
                            dispatchRateWindowMinutes={dispatchRateWindowMinutes}
                            showAircraftAvailability={showAircraftAvailability}

@@ -18293,7 +18293,6 @@ const ScheduleView = ({
   onOracleMouseDown,
   onOracleMouseMove,
   onOracleMouseUp,
-  onAddFlightTileAt,
   detectConflictsForEvent,
   showDepartureDensityOverlay,
   dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
@@ -18970,7 +18969,6 @@ const ScheduleView = ({
   }, []);
   const selectionStartPoint = reactExports.useRef(null);
   const [selectionRect, setSelectionRect] = reactExports.useState(null);
-  const [gridContextMenu, setGridContextMenu] = reactExports.useState(null);
   const [validateOverlayTime, setValidateOverlayTime] = reactExports.useState(null);
   reactExports.useEffect(() => {
     const handleGlobalMouseMove = (e) => {
@@ -19127,7 +19125,6 @@ const ScheduleView = ({
     return null;
   }, [syllabusDetails]);
   const handleMouseDown = (e, event) => {
-    setGridContextMenu(null);
     if (e.button !== 0) return;
     if (isReadOnly && event) {
       didDragRef.current = false;
@@ -19210,40 +19207,6 @@ const ScheduleView = ({
       setSelectionRect({ x, y, width: 0, height: 0 });
     }
   };
-  const getGridStartTimeFromPointer = (clientX) => {
-    if (!scheduleGridRef.current) return null;
-    const gridRect = scheduleGridRef.current.getBoundingClientRect();
-    const xInGrid = clientX - gridRect.left;
-    const rawStartTime = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
-    if (rawStartTime < START_HOUR$6 || rawStartTime > END_HOUR$6) return null;
-    const snappedStartTime = Math.round(rawStartTime * 4) / 4;
-    return Math.max(6, Math.min(23.75, snappedStartTime));
-  };
-  const handleGridContextMenu = (e) => {
-    const target = e.target;
-    if (target.closest('[data-is-flight-tile="true"]')) return;
-    if (!onAddFlightTileAt || isReadOnly || isOracleMode || isVisualAdjustMode || isPauseSelectMode) return;
-    const startTime = getGridStartTimeFromPointer(e.clientX);
-    if (startTime === null) return;
-    e.preventDefault();
-    setGridContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      startTime
-    });
-  };
-  reactExports.useEffect(() => {
-    if (!gridContextMenu) return;
-    const closeMenu = () => setGridContextMenu(null);
-    window.addEventListener("click", closeMenu);
-    window.addEventListener("keydown", closeMenu);
-    window.addEventListener("scroll", closeMenu, true);
-    return () => {
-      window.removeEventListener("click", closeMenu);
-      window.removeEventListener("keydown", closeMenu);
-      window.removeEventListener("scroll", closeMenu, true);
-    };
-  }, [gridContextMenu]);
   const handleMouseMove = (e) => {
     const moveStartedAt = performance.now();
     if (!scheduleGridRef.current) {
@@ -19878,690 +19841,666 @@ const ScheduleView = ({
       });
     });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: scrollContainerRef, "data-schedule-surface": "true", className: "flex-1 overflow-auto relative bg-gray-900 select-none", style: isPauseSelectMode ? { cursor: "crosshair" } : void 0, children: [
-      resourceSlideoutFrame && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          className: "fixed z-[35] pointer-events-none overflow-hidden",
-          style: {
-            left: `${resourceSlideoutFrame.left}px`,
-            top: `${resourceSlideoutFrame.top}px`,
-            height: `${resourceSlideoutFrame.height}px`,
-            width: "min(calc(clamp(360px, 40vw, 680px) + 472px), calc(100vw - 348px))"
-          },
-          "aria-hidden": !showResourceUnderlayPanel,
-          children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "aside",
-            {
-              className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full"}`,
-              style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, locationCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => setShowResourceUnderlayPanel((value) => {
-                      const nextValue = !value;
-                      if (nextValue) onOrganisationSlideoutOpen?.();
-                      return nextValue;
-                    }),
-                    "aria-label": showResourceUnderlayPanel ? "Close resource slideout" : "Open resource slideout",
-                    className: "pointer-events-auto absolute right-[-56px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "span",
-                        {
-                          className: "h-4 w-7 opacity-80",
-                          style: {
-                            backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                            backgroundSize: "8px 8px"
-                          }
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showResourceUnderlayPanel ? "v" : "^" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "span",
-                        {
-                          className: "h-4 w-7 opacity-80",
-                          style: {
-                            backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                            backgroundSize: "8px 8px"
-                          }
-                        }
-                      )
-                    ]
-                  }
-                )
-              ]
-            }
-          )
-        }
-      ),
-      resourceSlideoutFrame && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          className: "fixed z-[36] pointer-events-none",
-          style: {
-            left: `${resourceSlideoutFrame.left}px`,
-            bottom: `${resourceSlideoutFrame.bottom}px`,
-            width: `${resourceSlideoutFrame.width}px`,
-            height: `${flightLinePanelHeight + 28}px`
-          },
-          "aria-hidden": !isFlightLinePanelOpen,
-          children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "aside",
-            {
-              className: "absolute bottom-0 left-0 w-full pointer-events-auto border-t border-cyan-400/25 bg-slate-950/96 shadow-[0_-18px_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out",
-              style: {
-                height: `${flightLinePanelHeight}px`,
-                transform: isFlightLinePanelOpen ? "translateY(0)" : `translateY(${flightLinePanelHeight}px)`
-              },
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: onToggleFlightLinePanel,
-                    "aria-label": isFlightLinePanelOpen ? "Close flight line panel" : "Open flight line panel",
-                    className: "absolute left-1/2 top-[-28px] z-[1] flex h-7 w-[96px] -translate-x-1/2 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "span",
-                        {
-                          className: "h-4 w-7 opacity-80",
-                          style: {
-                            backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                            backgroundSize: "8px 8px"
-                          }
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: isFlightLinePanelOpen ? "v" : "^" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "span",
-                        {
-                          className: "h-4 w-7 opacity-80",
-                          style: {
-                            backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
-                            backgroundSize: "8px 8px"
-                          }
-                        }
-                      )
-                    ]
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-hidden border-t border-white/5 bg-gradient-to-r from-slate-900/85 via-slate-950/95 to-slate-900/85 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full min-w-0 items-stretch gap-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-[200px] max-w-[200px] shrink-0 flex-col border-r border-slate-700/70 pr-4", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300", children: "Aircraft Inventory" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-600/70 bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-slate-300", children: flightLinePoolContext.aircraftCount })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm font-semibold text-slate-100", children: [
-                      locationCode,
-                      " - ",
-                      unitCode
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex min-h-0 flex-1 flex-col", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 space-y-1 overflow-y-auto pr-1", children: flightLinePoolContext.numbers.length > 0 ? flightLinePoolContext.numbers.map((number, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "grid grid-cols-[34px_minmax(0,1fr)] items-center gap-1", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold uppercase tracking-wide text-slate-500", children: flightLinePoolContext.prefix || "No." }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "text",
-                          value: number,
-                          onChange: (event) => updateFlightLineAircraftNumber(index, event.target.value),
-                          disabled: !canEditFlightLineInventory || isReadOnly,
-                          className: `h-7 min-w-0 rounded border px-2 text-xs font-bold outline-none transition focus:border-cyan-300 ${canEditFlightLineInventory && !isReadOnly ? "border-slate-600/80 bg-slate-950/80 text-slate-100" : "cursor-not-allowed border-slate-700/70 bg-slate-900/70 text-slate-500"}`,
-                          title: canEditFlightLineInventory && !isReadOnly ? "Edit aircraft inventory number" : "Aircraft inventory edit permission required"
-                        }
-                      )
-                    ] }, `flight-line-aircraft-inventory-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700/80 bg-slate-950/60 px-2 py-2 text-[10px] font-semibold text-slate-500", children: "No aircraft rows configured." }) }) })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-0 flex-1 items-stretch", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Aircraft Tiles" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-end gap-2 text-[10px]", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                          "span",
-                          {
-                            className: `rounded border px-1.5 py-0.5 font-bold ${flightLineAvailabilityCheckOk ? "border-slate-700/80 text-slate-500" : "border-amber-400/50 bg-amber-500/10 text-amber-200"}`,
-                            title: "Inventory minus unavailable should equal the visible aircraft tiles and linked availability count.",
-                            children: [
-                              flightLineLinkedAvailabilityCount,
-                              " available"
-                            ]
-                          }
-                        ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                          "label",
-                          {
-                            className: `flex items-center gap-1.5 rounded border px-2 py-1 ${canEditFlightLineAvailabilityLink && !isReadOnly ? "cursor-pointer border-slate-700/80 bg-slate-950/45 text-slate-300 hover:border-cyan-400/50 hover:text-cyan-100" : "cursor-not-allowed border-slate-800 bg-slate-950/30 text-slate-600"}`,
-                            title: canEditFlightLineAvailabilityLink && !isReadOnly ? "When linked, the solid aircraft availability line follows aircraft tiles minus unavailable aircraft." : "Permission required to change linked aircraft availability",
-                            children: [
-                              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                                "input",
-                                {
-                                  type: "checkbox",
-                                  checked: flightLinePoolContext.linkAircraftAvailability,
-                                  disabled: !canEditFlightLineAvailabilityLink || isReadOnly,
-                                  onChange: (event) => setFlightLineLinkAircraftAvailability(event.target.checked),
-                                  className: "h-3 w-3 accent-cyan-400"
-                                }
-                              ),
-                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Link Aircraft Availability" })
-                            ]
-                          }
-                        )
-                      ] })
-                    ] }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: scrollContainerRef, "data-schedule-surface": "true", className: "flex-1 overflow-auto relative bg-gray-900 select-none", style: isPauseSelectMode ? { cursor: "crosshair" } : void 0, children: [
+    resourceSlideoutFrame && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "fixed z-[35] pointer-events-none overflow-hidden",
+        style: {
+          left: `${resourceSlideoutFrame.left}px`,
+          top: `${resourceSlideoutFrame.top}px`,
+          height: `${resourceSlideoutFrame.height}px`,
+          width: "min(calc(clamp(360px, 40vw, 680px) + 472px), calc(100vw - 348px))"
+        },
+        "aria-hidden": !showResourceUnderlayPanel,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "aside",
+          {
+            className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full"}`,
+            style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, locationCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setShowResourceUnderlayPanel((value) => {
+                    const nextValue = !value;
+                    if (nextValue) onOrganisationSlideoutOpen?.();
+                    return nextValue;
+                  }),
+                  "aria-label": showResourceUnderlayPanel ? "Close resource slideout" : "Open resource slideout",
+                  className: "pointer-events-auto absolute right-[-56px] top-1/2 z-[1] flex h-7 w-[96px] -translate-y-1/2 rotate-90 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+                  children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "div",
+                      "span",
                       {
-                        className: `mt-3 flex min-h-[88px] flex-wrap gap-2 rounded-md border px-2 py-2 pb-1 transition-all duration-300 ease-out ${isFlightLineAvailableDropActive ? "border-cyan-300/70 bg-cyan-500/10" : "border-transparent bg-transparent"}`,
-                        onDragOver: (event) => {
-                          if (!canEditFlightLineAvailability || isReadOnly) return;
-                          event.preventDefault();
-                          event.dataTransfer.dropEffect = "move";
-                          setIsFlightLineAvailableDropActive(true);
-                        },
-                        onDragLeave: (event) => {
-                          if (!event.currentTarget.contains(event.relatedTarget)) {
-                            setIsFlightLineAvailableDropActive(false);
-                          }
-                        },
-                        onDrop: (event) => {
-                          if (!canEditFlightLineAvailability || isReadOnly) return;
-                          event.preventDefault();
-                          const aircraftNumber = event.dataTransfer.getData("text/plain") || flightLineDraggedAircraftNumber || "";
-                          const sourceEventId = getFlightLineDragSourceEventId(event);
-                          moveFlightLineAircraftToAvailable(aircraftNumber, sourceEventId);
-                        },
-                        children: flightLinePoolContext.numbers.map((number) => {
-                          const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(" ");
-                          const isDragging = flightLineDraggedAircraftNumber === number;
-                          const isUnavailable = flightLineEffectiveUnavailableSet.has(number);
-                          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                            "div",
-                            {
-                              className: "relative h-[40px] w-[50px] shrink-0",
-                              title: tailNumber,
-                              children: [
-                                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                                  "div",
-                                  {
-                                    className: "absolute inset-0 flex flex-col items-center justify-center rounded-md border border-dashed border-slate-500/45 bg-[#4f5357]/25 px-1 text-center font-black text-slate-300/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)] transition-all duration-300 ease-out",
-                                    "data-dfp-context-kind": "aircraft-slot",
-                                    "data-dfp-aircraft-number": number,
-                                    "data-dfp-resource-label": tailNumber,
-                                    title: `${tailNumber} slot`,
-                                    children: [
-                                      flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-300/55", children: flightLinePoolContext.prefix }) : null,
-                                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-full truncate text-[12px] font-black leading-none text-slate-200/70", children: number })
-                                    ]
-                                  }
-                                ),
-                                !isUnavailable ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                                  "div",
-                                  {
-                                    "data-dfp-context-kind": "aircraft",
-                                    "data-dfp-aircraft-number": number,
-                                    "data-dfp-resource-label": tailNumber,
-                                    draggable: canEditTileAircraftNumber || canEditFlightLineAvailability,
-                                    onDragStart: (event) => {
-                                      if (!canEditTileAircraftNumber && !canEditFlightLineAvailability) {
-                                        event.preventDefault();
-                                        return;
-                                      }
-                                      setFlightLineDraggedAircraftNumber(number);
-                                      event.dataTransfer.effectAllowed = "move";
-                                      event.dataTransfer.setData("application/flight-line-aircraft", number);
-                                      event.dataTransfer.setData("text/plain", number);
-                                    },
-                                    onDragEnd: clearFlightLineDragState,
-                                    onContextMenu: (event) => openFlightLineAircraftContextMenu(event, number, tailNumber, false),
-                                    className: `absolute inset-0 flex flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${canEditTileAircraftNumber || canEditFlightLineAvailability ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed opacity-60"} ${isDragging ? "border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]" : "border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"}`,
-                                    title: tailNumber,
-                                    children: [
-                                      flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85", children: flightLinePoolContext.prefix }) : null,
-                                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-full truncate text-[12px] font-black leading-none text-white", children: number })
-                                    ]
-                                  }
-                                ) : null
-                              ]
-                            },
-                            `flight-line-aircraft-slot-${number}`
-                          );
-                        })
+                        className: "h-4 w-7 opacity-80",
+                        style: {
+                          backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                          backgroundSize: "8px 8px"
+                        }
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: showResourceUnderlayPanel ? "v" : "^" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "span",
+                      {
+                        className: "h-4 w-7 opacity-80",
+                        style: {
+                          backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                          backgroundSize: "8px 8px"
+                        }
                       }
                     )
-                  ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  ]
+                }
+              )
+            ]
+          }
+        )
+      }
+    ),
+    resourceSlideoutFrame && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "fixed z-[36] pointer-events-none",
+        style: {
+          left: `${resourceSlideoutFrame.left}px`,
+          bottom: `${resourceSlideoutFrame.bottom}px`,
+          width: `${resourceSlideoutFrame.width}px`,
+          height: `${flightLinePanelHeight + 28}px`
+        },
+        "aria-hidden": !isFlightLinePanelOpen,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "aside",
+          {
+            className: "absolute bottom-0 left-0 w-full pointer-events-auto border-t border-cyan-400/25 bg-slate-950/96 shadow-[0_-18px_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out",
+            style: {
+              height: `${flightLinePanelHeight}px`,
+              transform: isFlightLinePanelOpen ? "translateY(0)" : `translateY(${flightLinePanelHeight}px)`
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  onClick: onToggleFlightLinePanel,
+                  "aria-label": isFlightLinePanelOpen ? "Close flight line panel" : "Open flight line panel",
+                  className: "absolute left-1/2 top-[-28px] z-[1] flex h-7 w-[96px] -translate-x-1/2 items-center justify-between rounded-t-md border border-b-0 border-slate-500/60 bg-slate-950/92 px-2.5 text-slate-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-cyan-300/70 hover:text-cyan-100",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "span",
+                      {
+                        className: "h-4 w-7 opacity-80",
+                        style: {
+                          backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                          backgroundSize: "8px 8px"
+                        }
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-none", children: isFlightLinePanelOpen ? "v" : "^" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "span",
+                      {
+                        className: "h-4 w-7 opacity-80",
+                        style: {
+                          backgroundImage: "radial-gradient(circle, currentColor 1.5px, transparent 1.7px)",
+                          backgroundSize: "8px 8px"
+                        }
+                      }
+                    )
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-hidden border-t border-white/5 bg-gradient-to-r from-slate-900/85 via-slate-950/95 to-slate-900/85 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full min-w-0 items-stretch gap-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex w-[200px] max-w-[200px] shrink-0 flex-col border-r border-slate-700/70 pr-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300", children: "Aircraft Inventory" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-slate-600/70 bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-slate-300", children: flightLinePoolContext.aircraftCount })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm font-semibold text-slate-100", children: [
+                    locationCode,
+                    " - ",
+                    unitCode
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex min-h-0 flex-1 flex-col", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 space-y-1 overflow-y-auto pr-1", children: flightLinePoolContext.numbers.length > 0 ? flightLinePoolContext.numbers.map((number, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "grid grid-cols-[34px_minmax(0,1fr)] items-center gap-1", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold uppercase tracking-wide text-slate-500", children: flightLinePoolContext.prefix || "No." }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "text",
+                        value: number,
+                        onChange: (event) => updateFlightLineAircraftNumber(index, event.target.value),
+                        disabled: !canEditFlightLineInventory || isReadOnly,
+                        className: `h-7 min-w-0 rounded border px-2 text-xs font-bold outline-none transition focus:border-cyan-300 ${canEditFlightLineInventory && !isReadOnly ? "border-slate-600/80 bg-slate-950/80 text-slate-100" : "cursor-not-allowed border-slate-700/70 bg-slate-900/70 text-slate-500"}`,
+                        title: canEditFlightLineInventory && !isReadOnly ? "Edit aircraft inventory number" : "Aircraft inventory edit permission required"
+                      }
+                    )
+                  ] }, `flight-line-aircraft-inventory-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700/80 bg-slate-950/60 px-2 py-2 text-[10px] font-semibold text-slate-500", children: "No aircraft rows configured." }) }) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-0 flex-1 items-stretch", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Aircraft Tiles" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-end gap-2 text-[10px]", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "span",
+                        {
+                          className: `rounded border px-1.5 py-0.5 font-bold ${flightLineAvailabilityCheckOk ? "border-slate-700/80 text-slate-500" : "border-amber-400/50 bg-amber-500/10 text-amber-200"}`,
+                          title: "Inventory minus unavailable should equal the visible aircraft tiles and linked availability count.",
+                          children: [
+                            flightLineLinkedAvailabilityCount,
+                            " available"
+                          ]
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "label",
+                        {
+                          className: `flex items-center gap-1.5 rounded border px-2 py-1 ${canEditFlightLineAvailabilityLink && !isReadOnly ? "cursor-pointer border-slate-700/80 bg-slate-950/45 text-slate-300 hover:border-cyan-400/50 hover:text-cyan-100" : "cursor-not-allowed border-slate-800 bg-slate-950/30 text-slate-600"}`,
+                          title: canEditFlightLineAvailabilityLink && !isReadOnly ? "When linked, the solid aircraft availability line follows aircraft tiles minus unavailable aircraft." : "Permission required to change linked aircraft availability",
+                          children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "input",
+                              {
+                                type: "checkbox",
+                                checked: flightLinePoolContext.linkAircraftAvailability,
+                                disabled: !canEditFlightLineAvailabilityLink || isReadOnly,
+                                onChange: (event) => setFlightLineLinkAircraftAvailability(event.target.checked),
+                                className: "h-3 w-3 accent-cyan-400"
+                              }
+                            ),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Link Aircraft Availability" })
+                          ]
+                        }
+                      )
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "div",
                     {
-                      className: "flex w-[200px] max-w-[200px] shrink-0 flex-col border-l border-slate-700/70 pl-4",
+                      className: `mt-3 flex min-h-[88px] flex-wrap gap-2 rounded-md border px-2 py-2 pb-1 transition-all duration-300 ease-out ${isFlightLineAvailableDropActive ? "border-cyan-300/70 bg-cyan-500/10" : "border-transparent bg-transparent"}`,
                       onDragOver: (event) => {
                         if (!canEditFlightLineAvailability || isReadOnly) return;
                         event.preventDefault();
                         event.dataTransfer.dropEffect = "move";
-                        setIsFlightLineUnavailableDropActive(true);
+                        setIsFlightLineAvailableDropActive(true);
                       },
                       onDragLeave: (event) => {
                         if (!event.currentTarget.contains(event.relatedTarget)) {
-                          setIsFlightLineUnavailableDropActive(false);
+                          setIsFlightLineAvailableDropActive(false);
                         }
                       },
                       onDrop: (event) => {
                         if (!canEditFlightLineAvailability || isReadOnly) return;
                         event.preventDefault();
                         const aircraftNumber = event.dataTransfer.getData("text/plain") || flightLineDraggedAircraftNumber || "";
-                        moveFlightLineAircraftToUnavailable(aircraftNumber);
+                        const sourceEventId = getFlightLineDragSourceEventId(event);
+                        moveFlightLineAircraftToAvailable(aircraftNumber, sourceEventId);
                       },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Unavailable" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-3 min-h-[88px] rounded-md border px-2 py-2 transition-all duration-300 ease-out ${isFlightLineUnavailableDropActive ? "border-cyan-300/70 bg-cyan-500/10" : "border-slate-700/80 bg-slate-950/55"}`, children: flightLineEffectiveUnavailableNumbers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: flightLineEffectiveUnavailableNumbers.map((number) => {
-                          const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(" ");
-                          const unavailableReason = getFlightLineUnavailableReason(number);
-                          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                            "div",
-                            {
-                              "data-dfp-context-kind": "aircraft",
-                              "data-dfp-aircraft-number": number,
-                              "data-dfp-resource-label": tailNumber,
-                              draggable: canEditFlightLineAvailability,
-                              onDragStart: (event) => {
-                                if (!canEditFlightLineAvailability || isReadOnly) {
-                                  event.preventDefault();
-                                  return;
+                      children: flightLinePoolContext.numbers.map((number) => {
+                        const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(" ");
+                        const isDragging = flightLineDraggedAircraftNumber === number;
+                        const isUnavailable = flightLineEffectiveUnavailableSet.has(number);
+                        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                          "div",
+                          {
+                            className: "relative h-[40px] w-[50px] shrink-0",
+                            title: tailNumber,
+                            children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                                "div",
+                                {
+                                  className: "absolute inset-0 flex flex-col items-center justify-center rounded-md border border-dashed border-slate-500/45 bg-[#4f5357]/25 px-1 text-center font-black text-slate-300/70 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)] transition-all duration-300 ease-out",
+                                  "data-dfp-context-kind": "aircraft-slot",
+                                  "data-dfp-aircraft-number": number,
+                                  "data-dfp-resource-label": tailNumber,
+                                  title: `${tailNumber} slot`,
+                                  children: [
+                                    flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-300/55", children: flightLinePoolContext.prefix }) : null,
+                                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-full truncate text-[12px] font-black leading-none text-slate-200/70", children: number })
+                                  ]
                                 }
-                                setFlightLineDraggedAircraftNumber(number);
-                                event.dataTransfer.effectAllowed = "move";
-                                event.dataTransfer.setData("application/flight-line-aircraft", number);
-                                event.dataTransfer.setData("text/plain", number);
-                              },
-                              onDragEnd: clearFlightLineDragState,
-                              onContextMenu: (event) => openFlightLineAircraftContextMenu(event, number, tailNumber, true),
-                              className: `flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${canEditFlightLineAvailability && !isReadOnly ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed opacity-60"} ${flightLineDraggedAircraftNumber === number ? "border-dashed border-red-300/80 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(248,113,113,0.35)]" : "border-red-500/80 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"}`,
-                              title: unavailableReason ? `${tailNumber} unavailable: ${unavailableReason}` : `${tailNumber} unavailable: reason not allocated`,
-                              children: [
-                                flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85", children: flightLinePoolContext.prefix }) : null,
-                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-full truncate text-[12px] font-black leading-none text-white", children: number })
-                              ]
+                              ),
+                              !isUnavailable ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                                "div",
+                                {
+                                  "data-dfp-context-kind": "aircraft",
+                                  "data-dfp-aircraft-number": number,
+                                  "data-dfp-resource-label": tailNumber,
+                                  draggable: canEditTileAircraftNumber || canEditFlightLineAvailability,
+                                  onDragStart: (event) => {
+                                    if (!canEditTileAircraftNumber && !canEditFlightLineAvailability) {
+                                      event.preventDefault();
+                                      return;
+                                    }
+                                    setFlightLineDraggedAircraftNumber(number);
+                                    event.dataTransfer.effectAllowed = "move";
+                                    event.dataTransfer.setData("application/flight-line-aircraft", number);
+                                    event.dataTransfer.setData("text/plain", number);
+                                  },
+                                  onDragEnd: clearFlightLineDragState,
+                                  onContextMenu: (event) => openFlightLineAircraftContextMenu(event, number, tailNumber, false),
+                                  className: `absolute inset-0 flex flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${canEditTileAircraftNumber || canEditFlightLineAvailability ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed opacity-60"} ${isDragging ? "border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]" : "border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"}`,
+                                  title: tailNumber,
+                                  children: [
+                                    flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85", children: flightLinePoolContext.prefix }) : null,
+                                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-full truncate text-[12px] font-black leading-none text-white", children: number })
+                                  ]
+                                }
+                              ) : null
+                            ]
+                          },
+                          `flight-line-aircraft-slot-${number}`
+                        );
+                      })
+                    }
+                  )
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "flex w-[200px] max-w-[200px] shrink-0 flex-col border-l border-slate-700/70 pl-4",
+                    onDragOver: (event) => {
+                      if (!canEditFlightLineAvailability || isReadOnly) return;
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                      setIsFlightLineUnavailableDropActive(true);
+                    },
+                    onDragLeave: (event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget)) {
+                        setIsFlightLineUnavailableDropActive(false);
+                      }
+                    },
+                    onDrop: (event) => {
+                      if (!canEditFlightLineAvailability || isReadOnly) return;
+                      event.preventDefault();
+                      const aircraftNumber = event.dataTransfer.getData("text/plain") || flightLineDraggedAircraftNumber || "";
+                      moveFlightLineAircraftToUnavailable(aircraftNumber);
+                    },
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-slate-400", children: "Unavailable" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-3 min-h-[88px] rounded-md border px-2 py-2 transition-all duration-300 ease-out ${isFlightLineUnavailableDropActive ? "border-cyan-300/70 bg-cyan-500/10" : "border-slate-700/80 bg-slate-950/55"}`, children: flightLineEffectiveUnavailableNumbers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: flightLineEffectiveUnavailableNumbers.map((number) => {
+                        const tailNumber = [flightLinePoolContext.prefix, number].filter(Boolean).join(" ");
+                        const unavailableReason = getFlightLineUnavailableReason(number);
+                        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                          "div",
+                          {
+                            "data-dfp-context-kind": "aircraft",
+                            "data-dfp-aircraft-number": number,
+                            "data-dfp-resource-label": tailNumber,
+                            draggable: canEditFlightLineAvailability,
+                            onDragStart: (event) => {
+                              if (!canEditFlightLineAvailability || isReadOnly) {
+                                event.preventDefault();
+                                return;
+                              }
+                              setFlightLineDraggedAircraftNumber(number);
+                              event.dataTransfer.effectAllowed = "move";
+                              event.dataTransfer.setData("application/flight-line-aircraft", number);
+                              event.dataTransfer.setData("text/plain", number);
                             },
-                            `flight-line-unavailable-aircraft-tile-${number}`
-                          );
-                        }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-1 py-1 text-[10px] font-semibold leading-4 text-slate-500", children: "Drag aircraft here." }) })
-                      ]
-                    }
-                  )
-                ] }) })
-              ]
-            }
-          )
-        }
-      ),
-      flightLineAircraftContextMenu ? (() => {
-        const menuWidth = flightLineAircraftContextMenuSize.width || 278;
-        const menuHeight = flightLineAircraftContextMenuSize.height || (flightLineAircraftContextMenu.isUnavailable ? 214 : 146);
-        const viewportLeft = resourceSlideoutFrame?.left ?? 0;
-        const viewportTop = resourceSlideoutFrame?.top ?? 0;
-        const viewportWidth = resourceSlideoutFrame?.width ?? (typeof window !== "undefined" ? window.innerWidth : 1024);
-        const viewportHeight = resourceSlideoutFrame?.height ?? (typeof window !== "undefined" ? window.innerHeight : 768);
-        const menuPosition = getAdaptiveContextMenuPosition({
-          clickX: flightLineAircraftContextMenu.x,
-          clickY: flightLineAircraftContextMenu.y,
-          menuWidth,
-          menuHeight,
-          viewportLeft,
-          viewportTop,
-          viewportWidth,
-          viewportHeight,
-          margin: 12,
-          anchorGap: 8
-        });
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            ref: flightLineAircraftContextMenuRef,
-            className: "fixed z-[1200] w-[278px] overflow-visible rounded-md border border-slate-600/80 bg-slate-950 shadow-2xl shadow-black/50",
-            style: { left: menuPosition.left, top: menuPosition.top, transformOrigin: menuPosition.placement.replace("-", " ") },
-            onPointerDown: (event) => event.stopPropagation(),
-            onContextMenu: (event) => event.preventDefault(),
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-slate-700/80 px-3 py-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[11px] font-black uppercase tracking-[0.16em] text-slate-500", children: "Aircraft" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-sm font-black text-white", children: flightLineAircraftContextMenu.tailNumber })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 px-3 py-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500", children: "Status" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      className: `w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-black outline-none focus:border-cyan-400 ${flightLineAircraftContextMenu.isUnavailable ? "text-rose-300" : "text-emerald-300"}`,
-                      value: flightLineAircraftContextMenu.isUnavailable ? "unavailable" : "serviceable",
-                      onChange: (event) => {
-                        if (event.target.value === "unavailable") {
-                          moveFlightLineAircraftToUnavailable(flightLineAircraftContextMenu.aircraftNumber);
-                        } else {
-                          moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
-                        }
-                        closeFlightLineAircraftContextMenu();
-                      },
-                      onKeyDown: stopEditableKeyPropagation,
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { className: "text-emerald-700", value: "serviceable", children: "Aircraft Serviceable" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { className: "text-rose-700", value: "unavailable", children: "Unavailable" })
-                      ]
-                    }
-                  )
-                ] }),
-                flightLineAircraftContextMenu.isUnavailable ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500", children: "Reason" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "select",
-                    {
-                      className: "w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-semibold text-slate-100 outline-none focus:border-cyan-400",
-                      value: getFlightLineUnavailableReason(flightLineAircraftContextMenu.aircraftNumber),
-                      onChange: (event) => {
-                        setFlightLineAircraftUnavailableReason(flightLineAircraftContextMenu.aircraftNumber, event.target.value);
-                        closeFlightLineAircraftContextMenu();
-                      },
-                      onKeyDown: stopEditableKeyPropagation,
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Reason not allocated" }),
-                        flightLinePoolContext.unavailableReasonOptions.map((reason) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: reason, children: reason }, `flight-line-unavailable-reason-${reason}`))
-                      ]
-                    }
-                  )
-                ] }) : null
-              ] })
+                            onDragEnd: clearFlightLineDragState,
+                            onContextMenu: (event) => openFlightLineAircraftContextMenu(event, number, tailNumber, true),
+                            className: `flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${canEditFlightLineAvailability && !isReadOnly ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed opacity-60"} ${flightLineDraggedAircraftNumber === number ? "border-dashed border-red-300/80 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(248,113,113,0.35)]" : "border-red-500/80 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"}`,
+                            title: unavailableReason ? `${tailNumber} unavailable: ${unavailableReason}` : `${tailNumber} unavailable: reason not allocated`,
+                            children: [
+                              flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85", children: flightLinePoolContext.prefix }) : null,
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-full truncate text-[12px] font-black leading-none text-white", children: number })
+                            ]
+                          },
+                          `flight-line-unavailable-aircraft-tile-${number}`
+                        );
+                      }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-1 py-1 text-[10px] font-semibold leading-4 text-slate-500", children: "Drag aircraft here." }) })
+                    ]
+                  }
+                )
+              ] }) })
             ]
           }
-        );
-      })() : null,
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        )
+      }
+    ),
+    flightLineAircraftContextMenu ? (() => {
+      const menuWidth = flightLineAircraftContextMenuSize.width || 278;
+      const menuHeight = flightLineAircraftContextMenuSize.height || (flightLineAircraftContextMenu.isUnavailable ? 214 : 146);
+      const viewportLeft = resourceSlideoutFrame?.left ?? 0;
+      const viewportTop = resourceSlideoutFrame?.top ?? 0;
+      const viewportWidth = resourceSlideoutFrame?.width ?? (typeof window !== "undefined" ? window.innerWidth : 1024);
+      const viewportHeight = resourceSlideoutFrame?.height ?? (typeof window !== "undefined" ? window.innerHeight : 768);
+      const menuPosition = getAdaptiveContextMenuPosition({
+        clickX: flightLineAircraftContextMenu.x,
+        clickY: flightLineAircraftContextMenu.y,
+        menuWidth,
+        menuHeight,
+        viewportLeft,
+        viewportTop,
+        viewportWidth,
+        viewportHeight,
+        margin: 12,
+        anchorGap: 8
+      });
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
-          style: {
-            width: `${AIRFRAME_COLUMN_WIDTH$1 + TOTAL_HOURS$6 * PIXELS_PER_HOUR$6 * zoomLevel}px`,
-            height: `${TIME_HEADER_HEIGHT$6 + resources.length * ROW_HEIGHT$6}px`,
-            display: "grid",
-            gridTemplateColumns: `${AIRFRAME_COLUMN_WIDTH$1}px 1fr`,
-            gridTemplateRows: `${TIME_HEADER_HEIGHT$6}px 1fr`
-          },
+          ref: flightLineAircraftContextMenuRef,
+          className: "fixed z-[1200] w-[278px] overflow-visible rounded-md border border-slate-600/80 bg-slate-950 shadow-2xl shadow-black/50",
+          style: { left: menuPosition.left, top: menuPosition.top, transformOrigin: menuPosition.placement.replace("-", " ") },
+          onPointerDown: (event) => event.stopPropagation(),
+          onContextMenu: (event) => event.preventDefault(),
           children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-corner": "true", className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "div",
-                {
-                  "data-schedule-date-selector": "true",
-                  className: `relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer ${isNeoBuild ? "neo-build-date-indicator" : ""}`,
-                  style: { height: "100%", width: "100%" },
-                  onClick: () => setShowDatePicker((prev) => !prev),
-                  title: "Open date picker",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        onClick: (event) => {
-                          event.stopPropagation();
-                          onDateChange(-1);
-                        },
-                        "data-schedule-date-arrow": "true",
-                        className: "p-0.5",
-                        children: "←"
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-schedule-date-text": "true", className: "text-xs font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        onClick: (event) => {
-                          event.stopPropagation();
-                          onDateChange(1);
-                        },
-                        "data-schedule-date-arrow": "true",
-                        className: "p-0.5",
-                        children: "→"
-                      }
-                    ),
-                    showDatePicker && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "div",
-                      {
-                        className: "absolute top-full left-0 mt-2 w-64 rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-2xl",
-                        onClick: (event) => event.stopPropagation(),
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2", children: "Select DFP Date" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            "input",
-                            {
-                              type: "date",
-                              value: date,
-                              onChange: (event) => {
-                                const selectedDate = event.target.value;
-                                if (!selectedDate) return;
-                                if (onDateSelect) {
-                                  onDateSelect(selectedDate);
-                                } else {
-                                  const current = (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime();
-                                  const selected = (/* @__PURE__ */ new Date(`${selectedDate}T00:00:00Z`)).getTime();
-                                  const diff = Math.round((selected - current) / 864e5);
-                                  if (diff !== 0) onDateChange(diff);
-                                }
-                                setShowDatePicker(false);
-                              },
-                              className: "w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                            }
-                          ),
-                          snapshotDates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2", children: "Saved Records" }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-36 overflow-y-auto space-y-1", children: snapshotDates.slice(0, 60).map((snapshotDate) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                              "button",
-                              {
-                                type: "button",
-                                onClick: () => {
-                                  if (onDateSelect) {
-                                    onDateSelect(snapshotDate);
-                                  }
-                                  setShowDatePicker(false);
-                                },
-                                className: `w-full rounded px-2 py-1.5 text-left text-xs transition-colors ${snapshotDate === date ? "bg-sky-600 text-white" : "bg-gray-700/60 text-gray-300 hover:bg-gray-700"}`,
-                                children: formatSnapshotDate(snapshotDate)
-                              },
-                              snapshotDate
-                            )) })
-                          ] })
-                        ]
-                      }
-                    )
-                  ]
-                }
-              ),
-              isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: [
-              isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 top-1 z-30 flex items-center gap-2 rounded border border-amber-400/30 bg-gray-900/85 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200 shadow", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Read-only archive" }),
-                onOpenCurrentDfp && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-slate-700/80 px-3 py-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-[11px] font-black uppercase tracking-[0.16em] text-slate-500", children: "Aircraft" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-sm font-black text-white", children: flightLineAircraftContextMenu.tailNumber })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 px-3 py-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500", children: "Status" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
                   {
-                    type: "button",
-                    onClick: onOpenCurrentDfp,
-                    className: "normal-case tracking-normal text-sky-300/80 underline-offset-2 hover:text-sky-200 hover:underline",
-                    children: "Open current DFP"
+                    className: `w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-black outline-none focus:border-cyan-400 ${flightLineAircraftContextMenu.isUnavailable ? "text-rose-300" : "text-emerald-300"}`,
+                    value: flightLineAircraftContextMenu.isUnavailable ? "unavailable" : "serviceable",
+                    onChange: (event) => {
+                      if (event.target.value === "unavailable") {
+                        moveFlightLineAircraftToUnavailable(flightLineAircraftContextMenu.aircraftNumber);
+                      } else {
+                        moveFlightLineAircraftToAvailable(flightLineAircraftContextMenu.aircraftNumber);
+                      }
+                      closeFlightLineAircraftContextMenu();
+                    },
+                    onKeyDown: stopEditableKeyPropagation,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { className: "text-emerald-700", value: "serviceable", children: "Aircraft Serviceable" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { className: "text-rose-700", value: "unavailable", children: "Unavailable" })
+                    ]
                   }
                 )
               ] }),
-              renderTimeHeaders()
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-resource-column": "true", className: "sticky left-0 z-[70] bg-gray-800 border-r border-gray-700", style: { width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              AirframeColumn,
-              {
-                resources,
-                onReorder: onReorderResources,
-                rowHeight: ROW_HEIGHT$6,
-                airframeCount,
-                standbyCount,
-                ftdCount,
-                cptCount,
-                events,
-                formatResourceLabel: formatResourceLabel2,
-                aircraftConfigLabelsByResource
-              }
-            ) }),
+              flightLineAircraftContextMenu.isUnavailable ? /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500", children: "Reason" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "select",
+                  {
+                    className: "w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-2 text-xs font-semibold text-slate-100 outline-none focus:border-cyan-400",
+                    value: getFlightLineUnavailableReason(flightLineAircraftContextMenu.aircraftNumber),
+                    onChange: (event) => {
+                      setFlightLineAircraftUnavailableReason(flightLineAircraftContextMenu.aircraftNumber, event.target.value);
+                      closeFlightLineAircraftContextMenu();
+                    },
+                    onKeyDown: stopEditableKeyPropagation,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Reason not allocated" }),
+                      flightLinePoolContext.unavailableReasonOptions.map((reason) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: reason, children: reason }, `flight-line-unavailable-reason-${reason}`))
+                    ]
+                  }
+                )
+              ] }) : null
+            ] })
+          ]
+        }
+      );
+    })() : null,
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        style: {
+          width: `${AIRFRAME_COLUMN_WIDTH$1 + TOTAL_HOURS$6 * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+          height: `${TIME_HEADER_HEIGHT$6 + resources.length * ROW_HEIGHT$6}px`,
+          display: "grid",
+          gridTemplateColumns: `${AIRFRAME_COLUMN_WIDTH$1}px 1fr`,
+          gridTemplateRows: `${TIME_HEADER_HEIGHT$6}px 1fr`
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-corner": "true", className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "div",
               {
-                ref: scheduleGridRef,
-                "data-schedule-grid": "true",
-                "data-schedule-start-hour": START_HOUR$6,
-                "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$6 * zoomLevel,
-                className: "relative bg-gray-900",
-                onMouseDown: (e) => handleMouseDown(e),
-                onContextMenu: handleGridContextMenu,
-                onMouseMove: handleMouseMove,
-                onMouseUp: handleMouseUp,
-                onMouseLeave: handleMouseUp,
-                onDragOver: handleExternalDragOver,
-                onDragLeave: (event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget)) {
-                    setFlightLineScheduleDropPreview(null);
-                  }
-                },
-                onDrop: handleExternalDrop,
+                "data-schedule-date-selector": "true",
+                className: `relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer ${isNeoBuild ? "neo-build-date-indicator" : ""}`,
+                style: { height: "100%", width: "100%" },
+                onClick: () => setShowDatePicker((prev) => !prev),
+                title: "Open date picker",
                 children: [
-                  renderGridLines(),
-                  renderNightShade(),
-                  renderExclusionPeriods(),
-                  renderDaylightLines(),
-                  renderCategorySeparators(),
-                  renderCurrentTimeIndicator(),
-                  renderValidateOverlay(),
-                  showAircraftAvailability && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && date && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    AircraftAvailabilityOverlay,
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
                     {
-                      currentDate: new Date(date),
-                      dateString: date,
-                      totalAircraft: airframeCount,
-                      initialAvailability: initialAvailability ?? 15,
-                      apiBase,
-                      locationCode,
-                      unitCode,
-                      dayFlyingStart,
-                      dayFlyingEnd,
-                      gridHeight: resources.length * ROW_HEIGHT$6,
-                      rowHeight: ROW_HEIGHT$6,
-                      pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
-                      startHour: START_HOUR$6,
-                      onAvailabilityChange,
-                      onUserChange: isReadOnly ? void 0 : onUserAvailabilityChange,
-                      showLiveAvailabilityLine,
-                      isReadOnly,
-                      linkedAvailabilityCount: flightLinePoolContext.linkAircraftAvailability ? flightLineLinkedAvailabilityCount : null,
-                      isLinkedAvailability: flightLinePoolContext.linkAircraftAvailability
+                      onClick: (event) => {
+                        event.stopPropagation();
+                        onDateChange(-1);
+                      },
+                      "data-schedule-date-arrow": "true",
+                      className: "p-0.5",
+                      children: "←"
                     }
                   ),
-                  renderEvents(),
-                  renderFlightLineAircraftMarkers(),
-                  isVisualAdjustMode && visualAdjustEvent && onVisualAdjustTimeChange && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    VisualAdjustGuide,
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-schedule-date-text": "true", className: "text-xs font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
                     {
-                      event: visualAdjustEvent,
-                      onTimeChange: onVisualAdjustTimeChange,
-                      scheduleStartHour: START_HOUR$6,
-                      scheduleEndHour: END_HOUR$6,
-                      pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel
+                      onClick: (event) => {
+                        event.stopPropagation();
+                        onDateChange(1);
+                      },
+                      "data-schedule-date-arrow": "true",
+                      className: "p-0.5",
+                      children: "→"
                     }
                   ),
-                  isOracleMode && oraclePreviewEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      FlightTile,
-                      {
-                        isPreview: true,
-                        event: oraclePreviewEvent,
-                        onSelectEvent: () => {
-                        },
-                        onMouseDown: () => {
-                        },
-                        onMouseEnter: () => {
-                        },
-                        onMouseLeave: () => {
-                        },
-                        pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
-                        rowHeight: ROW_HEIGHT$6,
-                        startHour: START_HOUR$6,
-                        row: resources.indexOf(oraclePreviewEvent.resourceId),
-                        isDragging: false,
-                        traineesData,
-                        instructorsData,
-                        personnelData,
-                        seatConfigs: /* @__PURE__ */ new Map(),
-                        currentTime,
-                        aircraftNumberSettings,
-                        instructorLabel: schedulePersonnelDisplaySettings.instructorLabel || "Instructor"
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "div",
-                      {
-                        className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
-                        style: {
-                          left: `${(oraclePreviewEvent.startTime - (oraclePreviewEvent.preStart || 1) - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
-                          width: `${(oraclePreviewEvent.preStart || 1) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
-                          top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$6 + ROW_HEIGHT$6 / 2}px`
-                        }
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "div",
-                      {
-                        className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
-                        style: {
-                          left: `${(oraclePreviewEvent.startTime + oraclePreviewEvent.duration - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
-                          width: `${(oraclePreviewEvent.postEnd || 0.5) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
-                          top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$6 + ROW_HEIGHT$6 / 2}px`
-                        }
-                      }
-                    )
-                  ] }),
-                  selectionRect && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  showDatePicker && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "div",
                     {
-                      className: "absolute bg-sky-500/20 border border-sky-400 z-50 pointer-events-none",
-                      style: {
-                        left: selectionRect.x,
-                        top: selectionRect.y,
-                        width: selectionRect.width,
-                        height: selectionRect.height
-                      }
+                      className: "absolute top-full left-0 mt-2 w-64 rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-2xl",
+                      onClick: (event) => event.stopPropagation(),
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2", children: "Select DFP Date" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "date",
+                            value: date,
+                            onChange: (event) => {
+                              const selectedDate = event.target.value;
+                              if (!selectedDate) return;
+                              if (onDateSelect) {
+                                onDateSelect(selectedDate);
+                              } else {
+                                const current = (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime();
+                                const selected = (/* @__PURE__ */ new Date(`${selectedDate}T00:00:00Z`)).getTime();
+                                const diff = Math.round((selected - current) / 864e5);
+                                if (diff !== 0) onDateChange(diff);
+                              }
+                              setShowDatePicker(false);
+                            },
+                            className: "w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                          }
+                        ),
+                        snapshotDates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2", children: "Saved Records" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-36 overflow-y-auto space-y-1", children: snapshotDates.slice(0, 60).map((snapshotDate) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () => {
+                                if (onDateSelect) {
+                                  onDateSelect(snapshotDate);
+                                }
+                                setShowDatePicker(false);
+                              },
+                              className: `w-full rounded px-2 py-1.5 text-left text-xs transition-colors ${snapshotDate === date ? "bg-sky-600 text-white" : "bg-gray-700/60 text-gray-300 hover:bg-gray-700"}`,
+                              children: formatSnapshotDate(snapshotDate)
+                            },
+                            snapshotDate
+                          )) })
+                        ] })
+                      ]
                     }
                   )
                 ]
               }
-            )
-          ]
-        }
-      )
-    ] }),
-    gridContextMenu && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "div",
-      {
-        className: "fixed z-[10000] min-w-[150px] rounded-md border border-sky-500/40 bg-gray-900 py-1 shadow-2xl",
-        style: { left: gridContextMenu.x, top: gridContextMenu.y },
-        onClick: (event) => event.stopPropagation(),
-        onContextMenu: (event) => event.preventDefault(),
-        children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            className: "w-full px-3 py-2 text-left text-xs font-semibold text-gray-100 hover:bg-sky-500/20",
-            onClick: () => {
-              onAddFlightTileAt?.(gridContextMenu.startTime);
-              setGridContextMenu(null);
-            },
-            children: "Add Flight Tile"
-          }
-        )
+            ),
+            isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: [
+            isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute left-2 top-1 z-30 flex items-center gap-2 rounded border border-amber-400/30 bg-gray-900/85 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200 shadow", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Read-only archive" }),
+              onOpenCurrentDfp && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: onOpenCurrentDfp,
+                  className: "normal-case tracking-normal text-sky-300/80 underline-offset-2 hover:text-sky-200 hover:underline",
+                  children: "Open current DFP"
+                }
+              )
+            ] }),
+            renderTimeHeaders()
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-resource-column": "true", className: "sticky left-0 z-[70] bg-gray-800 border-r border-gray-700", style: { width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            AirframeColumn,
+            {
+              resources,
+              onReorder: onReorderResources,
+              rowHeight: ROW_HEIGHT$6,
+              airframeCount,
+              standbyCount,
+              ftdCount,
+              cptCount,
+              events,
+              formatResourceLabel: formatResourceLabel2,
+              aircraftConfigLabelsByResource
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              ref: scheduleGridRef,
+              "data-schedule-grid": "true",
+              "data-schedule-start-hour": START_HOUR$6,
+              "data-schedule-pixels-per-hour": PIXELS_PER_HOUR$6 * zoomLevel,
+              className: "relative bg-gray-900",
+              onMouseDown: (e) => handleMouseDown(e),
+              onMouseMove: handleMouseMove,
+              onMouseUp: handleMouseUp,
+              onMouseLeave: handleMouseUp,
+              onDragOver: handleExternalDragOver,
+              onDragLeave: (event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setFlightLineScheduleDropPreview(null);
+                }
+              },
+              onDrop: handleExternalDrop,
+              children: [
+                renderGridLines(),
+                renderNightShade(),
+                renderExclusionPeriods(),
+                renderDaylightLines(),
+                renderCategorySeparators(),
+                renderCurrentTimeIndicator(),
+                renderValidateOverlay(),
+                showAircraftAvailability && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && date && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  AircraftAvailabilityOverlay,
+                  {
+                    currentDate: new Date(date),
+                    dateString: date,
+                    totalAircraft: airframeCount,
+                    initialAvailability: initialAvailability ?? 15,
+                    apiBase,
+                    locationCode,
+                    unitCode,
+                    dayFlyingStart,
+                    dayFlyingEnd,
+                    gridHeight: resources.length * ROW_HEIGHT$6,
+                    rowHeight: ROW_HEIGHT$6,
+                    pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
+                    startHour: START_HOUR$6,
+                    onAvailabilityChange,
+                    onUserChange: isReadOnly ? void 0 : onUserAvailabilityChange,
+                    showLiveAvailabilityLine,
+                    isReadOnly,
+                    linkedAvailabilityCount: flightLinePoolContext.linkAircraftAvailability ? flightLineLinkedAvailabilityCount : null,
+                    isLinkedAvailability: flightLinePoolContext.linkAircraftAvailability
+                  }
+                ),
+                renderEvents(),
+                renderFlightLineAircraftMarkers(),
+                isVisualAdjustMode && visualAdjustEvent && onVisualAdjustTimeChange && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  VisualAdjustGuide,
+                  {
+                    event: visualAdjustEvent,
+                    onTimeChange: onVisualAdjustTimeChange,
+                    scheduleStartHour: START_HOUR$6,
+                    scheduleEndHour: END_HOUR$6,
+                    pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel
+                  }
+                ),
+                isOracleMode && oraclePreviewEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    FlightTile,
+                    {
+                      isPreview: true,
+                      event: oraclePreviewEvent,
+                      onSelectEvent: () => {
+                      },
+                      onMouseDown: () => {
+                      },
+                      onMouseEnter: () => {
+                      },
+                      onMouseLeave: () => {
+                      },
+                      pixelsPerHour: PIXELS_PER_HOUR$6 * zoomLevel,
+                      rowHeight: ROW_HEIGHT$6,
+                      startHour: START_HOUR$6,
+                      row: resources.indexOf(oraclePreviewEvent.resourceId),
+                      isDragging: false,
+                      traineesData,
+                      instructorsData,
+                      personnelData,
+                      seatConfigs: /* @__PURE__ */ new Map(),
+                      currentTime,
+                      aircraftNumberSettings,
+                      instructorLabel: schedulePersonnelDisplaySettings.instructorLabel || "Instructor"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
+                      style: {
+                        left: `${(oraclePreviewEvent.startTime - (oraclePreviewEvent.preStart || 1) - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                        width: `${(oraclePreviewEvent.preStart || 1) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                        top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$6 + ROW_HEIGHT$6 / 2}px`
+                      }
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "div",
+                    {
+                      className: "absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50",
+                      style: {
+                        left: `${(oraclePreviewEvent.startTime + oraclePreviewEvent.duration - START_HOUR$6) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                        width: `${(oraclePreviewEvent.postEnd || 0.5) * PIXELS_PER_HOUR$6 * zoomLevel}px`,
+                        top: `${resources.indexOf(oraclePreviewEvent.resourceId) * ROW_HEIGHT$6 + ROW_HEIGHT$6 / 2}px`
+                      }
+                    }
+                  )
+                ] }),
+                selectionRect && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    className: "absolute bg-sky-500/20 border border-sky-400 z-50 pointer-events-none",
+                    style: {
+                      left: selectionRect.x,
+                      top: selectionRect.y,
+                      width: selectionRect.width,
+                      height: selectionRect.height
+                    }
+                  }
+                )
+              ]
+            }
+          )
+        ]
       }
     )
   ] });
@@ -142898,7 +142837,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       const rect = gridElement.getBoundingClientRect();
       const pixelsPerHour = Number(gridElement.dataset.schedulePixelsPerHour || 200);
       const startHour = Number(gridElement.dataset.scheduleStartHour || 0);
-      const time = startHour + Math.max(0, event.clientX - rect.left) / Math.max(1, pixelsPerHour);
+      const rawTime = startHour + Math.max(0, event.clientX - rect.left) / Math.max(1, pixelsPerHour);
+      const time = Math.max(6, Math.min(23.75, Math.round(rawTime * 4) / 4));
       const rowIndex = Math.floor(Math.max(0, event.clientY - rect.top) / 32);
       const gridResource = buildResources[rowIndex] || "";
       title = "Empty Schedule Space";
@@ -142911,7 +142851,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         ...activeUnitHasTrainees ? [{ label: "Trainee Schedule", onSelect: openTraineeScheduleFromContextMenu }] : [],
         { label: "Add Flight Tile", detail: canAddFlightOnActiveDfp ? "Create a new flight event." : "Add Flight Tile is not available for this profile or DFP.", disabled: !canAddFlightOnActiveDfp, onSelect: () => {
           setIsAddingTile(true);
-          handleOpenModal(null, { type: "flight", oracleContext: isNeoBuildScheduleView ? "nextDayBuild" : null });
+          handleOpenModal(null, { type: "flight", oracleContext: isNeoBuildScheduleView ? "nextDayBuild" : null, startTime: time });
         } },
         { label: "Add Ground Tile", detail: canAddGroundOnActiveDfp ? "Create a new ground event." : "Add Ground Tile is not available for this profile or DFP.", disabled: !canAddGroundOnActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
         { label: showValidation ? "Validation Check OFF" : "Validation Check ON", disabled: !canUseValidation, onSelect: toggleValidationFromContextMenu },
@@ -143260,10 +143200,6 @@ ${error instanceof Error ? error.message : String(error)}`,
             onOracleMouseDown: handleOracleMouseDown,
             onOracleMouseMove: handleOracleMouseMove,
             onOracleMouseUp: handleOracleMouseUp,
-            onAddFlightTileAt: (startTime) => {
-              setIsAddingTile(true);
-              handleOpenModal(null, { type: "flight", startTime });
-            },
             showDepartureDensityOverlay,
             dispatchRateWindowMinutes,
             showAircraftAvailability,
