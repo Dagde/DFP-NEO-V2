@@ -1761,6 +1761,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     [aircraftCrewComposition],
   );
   const isSingleSeatAircraft = resolvedAircraftCrewComposition.crewCount === 1;
+  const initialModalStartTime = Number(initialEvent?.startTime);
+  const defaultStartTime = Number.isFinite(initialModalStartTime) ? initialModalStartTime : 8.0;
   const [eventCategory, setEventCategory] = useState<'lmp_event'|'lmp_currency'|'sct'|'staff_cat'|'twr_di'>('lmp_event');
   const [flightType,    setFlightType]    = useState<'Dual'|'Solo'>(isSingleSeatAircraft ? 'Solo' : 'Dual');
   const [picName,       setPicName]       = useState('');
@@ -1770,7 +1772,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [selectedPicRef, setSelectedPicRef] = useState<ScheduleEventPersonnelRef | null>(null);
   const [selectedStudentRef, setSelectedStudentRef] = useState<ScheduleEventPersonnelRef | null>(null);
   const [flightNumber,  setFlightNumber]  = useState('');
-  const [startTime,     setStartTime]     = useState(8.0);
+  const [startTime,     setStartTime]     = useState(defaultStartTime);
   const [duration,      setDuration]      = useState(1.2);
   const [area,          setArea]          = useState('');
   const [aircraftNumber,setAircraftNumber]= useState('001');
@@ -2789,7 +2791,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       return;
     }
     setPicName(''); setStudentName(''); setPicSelectionValue(''); setStudentSelectionValue(''); setSelectedPicRef(null); setSelectedStudentRef(null); setFlightNumber('');
-    setStartTime(8.0); setDuration(1.2);
+    setStartTime(defaultStartTime); setDuration(1.2);
     setArea(''); setAircraftNumber('001');
     setOrigin(school); setDestination(school);
     setAircraftCount(1); setFormationCrew([]);

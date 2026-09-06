@@ -87,6 +87,7 @@ interface ScheduleViewProps {
   onOracleMouseDown: (startTime: number, resourceId: string) => void;
   onOracleMouseMove: (startTime: number, resourceId: string) => void;
   onOracleMouseUp: () => void;
+  onAddFlightTileAt?: (startTime: number) => void;
   detectConflictsForEvent?: (event: ScheduleEvent, allEvents: ScheduleEvent[]) => { 
       hasConflict: boolean; 
       conflictingEventId: string | null; 
@@ -7308,6 +7309,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange,
     isOracleMode,
     isNeoBuild = false, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
+    onAddFlightTileAt,
     detectConflictsForEvent, showDepartureDensityOverlay, dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
     showAircraftAvailability, initialAvailability, apiBase, locationCode, unitCode, dayFlyingStart, dayFlyingEnd, onAvailabilityChange, onUserAvailabilityChange,
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
@@ -8048,6 +8050,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     // Multi-select State
     const selectionStartPoint = useRef<{ x: number, y: number } | null>(null);
     const [selectionRect, setSelectionRect] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
+    const [gridContextMenu, setGridContextMenu] = useState<{ x: number, y: number, startTime: number } | null>(null);
     
     // Validate mode overlay state
     const [validateOverlayTime, setValidateOverlayTime] = useState<number | null>(null);
@@ -8238,6 +8241,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [syllabusDetails]);
 
     const handleMouseDown = (e: MouseEvent<HTMLDivElement>, event?: ScheduleEvent) => {
+        setGridContextMenu(null);
         if (e.button !== 0) return;
         if (isReadOnly && event) {
             didDragRef.current = false;
@@ -8333,6 +8337,45 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             setSelectionRect({ x, y, width: 0, height: 0 });
         }
     };
+
+    const getGridStartTimeFromPointer = (clientX: number): number | null => {
+        if (!scheduleGridRef.current) return null;
+        const gridRect = scheduleGridRef.current.getBoundingClientRect();
+        const xInGrid = clientX - gridRect.left;
+        const rawStartTime = xInGrid / (PIXELS_PER_HOUR * zoomLevel) + START_HOUR;
+        if (rawStartTime < START_HOUR || rawStartTime > END_HOUR) return null;
+        const snappedStartTime = Math.round(rawStartTime * 4) / 4;
+        return Math.max(6, Math.min(23.75, snappedStartTime));
+    };
+
+    const handleGridContextMenu = (e: MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-is-flight-tile="true"]')) return;
+        if (!onAddFlightTileAt || isReadOnly || isOracleMode || isVisualAdjustMode || isPauseSelectMode) return;
+
+        const startTime = getGridStartTimeFromPointer(e.clientX);
+        if (startTime === null) return;
+
+        e.preventDefault();
+        setGridContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            startTime,
+        });
+    };
+
+    useEffect(() => {
+        if (!gridContextMenu) return;
+        const closeMenu = () => setGridContextMenu(null);
+        window.addEventListener('click', closeMenu);
+        window.addEventListener('keydown', closeMenu);
+        window.addEventListener('scroll', closeMenu, true);
+        return () => {
+            window.removeEventListener('click', closeMenu);
+            window.removeEventListener('keydown', closeMenu);
+            window.removeEventListener('scroll', closeMenu, true);
+        };
+    }, [gridContextMenu]);
 
     const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
         const moveStartedAt = performance.now();
@@ -9062,6 +9105,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     };
 
     return (
+        <>
         <div ref={scrollContainerRef} data-schedule-surface="true" className="flex-1 overflow-auto relative bg-gray-900 select-none" style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}>
             {resourceSlideoutFrame && (
                 <div
@@ -9581,6 +9625,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     data-schedule-pixels-per-hour={PIXELS_PER_HOUR * zoomLevel}
                     className="relative bg-gray-900"
                     onMouseDown={(e) => handleMouseDown(e)}
+                    onContextMenu={handleGridContextMenu}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
@@ -9695,6 +9740,26 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 </div>
             </div>
         </div>
+        {gridContextMenu && (
+            <div
+                className="fixed z-[10000] min-w-[150px] rounded-md border border-sky-500/40 bg-gray-900 py-1 shadow-2xl"
+                style={{ left: gridContextMenu.x, top: gridContextMenu.y }}
+                onClick={(event) => event.stopPropagation()}
+                onContextMenu={(event) => event.preventDefault()}
+            >
+                <button
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-xs font-semibold text-gray-100 hover:bg-sky-500/20"
+                    onClick={() => {
+                        onAddFlightTileAt?.(gridContextMenu.startTime);
+                        setGridContextMenu(null);
+                    }}
+                >
+                    Add Flight Tile
+                </button>
+            </div>
+        )}
+        </>
     );
 };
 

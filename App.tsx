@@ -41485,7 +41485,7 @@ const App: React.FC = () => {
         return relevantResources[0] || `${resourcePrefix}1`; // Fallback
     };
 
-    const handleOpenModal = (event: ScheduleEvent | null, options: { type?: 'flight' | 'ftd' | 'ground', isPriority?: boolean, oracleContext?: typeof oracleContextForModal } = {}) => {
+    const handleOpenModal = (event: ScheduleEvent | null, options: { type?: 'flight' | 'ftd' | 'ground', isPriority?: boolean, oracleContext?: typeof oracleContextForModal, startTime?: number } = {}) => {
         if (!event) { // Creating a new event
             const targetDate = oracleContext === 'nextDayBuild' || activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData' ? buildDfpDate : date;
             if (!options.isPriority && isPastDfpDate(targetDate)) {
@@ -41498,7 +41498,7 @@ const App: React.FC = () => {
                 type: options.type || 'flight',
                 flightNumber: '',
                 duration: 1.5,
-                startTime: 8.0,
+                startTime: options.startTime ?? 8.0,
                 resourceId: '', // Will be assigned on save
                 color: 'bg-gray-400/50',
                 flightType: 'Dual',
@@ -51740,6 +51740,10 @@ appliedUpdates.forEach(update => {
                            onOracleMouseDown={handleOracleMouseDown}
                            onOracleMouseMove={handleOracleMouseMove}
                            onOracleMouseUp={handleOracleMouseUp}
+                           onAddFlightTileAt={(startTime) => {
+                               setIsAddingTile(true);
+                               handleOpenModal(null, { type: 'flight', startTime });
+                           }}
                            showDepartureDensityOverlay={showDepartureDensityOverlay}
                            dispatchRateWindowMinutes={dispatchRateWindowMinutes}
                            showAircraftAvailability={showAircraftAvailability}
