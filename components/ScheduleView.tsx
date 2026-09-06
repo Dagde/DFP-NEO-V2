@@ -31,6 +31,7 @@ import { getResourceCategory as getConfiguredResourceCategory } from '../utils/r
 import { getEffectiveDispatchStaggerMinutes, type DispatchStaggerSettings } from '../utils/dispatchStagger';
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from '../utils/dispatchRate';
 import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, recordDfpDragMoveDiagnostic, startDfpDragDiagnostic } from '../utils/dfpDragDiagnostics';
+import { appendDfpMoveChangeTrace, isWatchingDfpMoveChangeEvent, summariseDfpMoveEvent, watchDfpMoveChangeEvents } from '../utils/dfpMoveChangeTrace';
 import { getAdaptiveContextMenuPosition } from '../utils/contextMenuPosition';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
 import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
@@ -8013,6 +8014,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     updateCount: lastDragCommitUpdatesRef.current.length,
                     signature: lastDragUpdateSignatureRef.current,
                 });
+                appendDfpMoveChangeTrace('drag:commit-last-update', {
+                    date,
+                    updates: lastDragCommitUpdatesRef.current,
+                });
                 onUpdateEvent(lastDragCommitUpdatesRef.current);
                 lastDragCommitUpdatesRef.current = null;
             }
@@ -8029,6 +8034,16 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 queuedAtMs: pending.queuedAtMs,
                 updateCount: pending.updates.length,
                 signature: pending.signature,
+            });
+            appendDfpMoveChangeTrace('drag:commit-to-schedule', {
+                date,
+                updates: pending.updates,
+                realtimeConflict: pending.realtimeConflict,
+                resourceConflictId: pending.resourceConflictId,
+                cptConflict: pending.cptConflict ? {
+                    conflictingEvent: summariseDfpMoveEvent(pending.cptConflict.conflictingEvent),
+                    newEvent: summariseDfpMoveEvent(pending.cptConflict.newEvent),
+                } : null,
             });
             onUpdateEvent(pending.updates);
             lastDragCommitUpdatesRef.current = null;
@@ -8312,6 +8327,20 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     resourceCount: resources.length,
                     zoomLevel,
                 });
+                watchDfpMoveChangeEvents(Array.from(initialPositions.keys()));
+                appendDfpMoveChangeTrace('drag:start', {
+                    date,
+                    event: summariseDfpMoveEvent(event),
+                    draggedEventIds: Array.from(initialPositions.keys()),
+                    initialPositions: Array.from(initialPositions.entries()).map(([eventId, position]) => ({
+                        eventId,
+                        startTime: position.startTime,
+                        resourceId: originalResourceIds.get(eventId) || null,
+                        rowIndex: position.rowIndex,
+                    })),
+                    eventCount: events.length,
+                    baselineEvent: summariseDfpMoveEvent(baselineEvents?.find((baseline) => baseline.id === event.id)),
+                });
                 setDraggingState({
                     mainEventId: event.id,
                     xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -8528,6 +8557,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 conflictMs,
                 signature: updateSignature,
             });
+            const watchedUpdates = updates.filter(update => isWatchingDfpMoveChangeEvent(update.eventId));
+            if (watchedUpdates.length > 0) {
+                appendDfpMoveChangeTrace('drag:move-preview', {
+                    date,
+                    updates: watchedUpdates,
+                });
+            }
             if (dragFrameRef.current === null) {
                 dragFrameRef.current = window.requestAnimationFrame(() => {
                     dragFrameRef.current = null;
@@ -8989,6 +9025,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         else if (statuses.some(s => s === 'rejected')) alertStatus = 'rejected';
                         else alertStatus = 'pending';
                     }
+                }
+                if (isWatchingDfpMoveChangeEvent(event.id)) {
+                    appendDfpMoveChangeTrace('render:tile-change-state', {
+                        date,
+                        event: summariseDfpMoveEvent(event),
+                        baselineEvent: summariseDfpMoveEvent(baselineEvents?.find((baseline) => baseline.id === event.id)),
+                        isChanged,
+                        alertStatus,
+                        isDraggedTile,
+                        isSelected,
+                    });
                 }
 
                 return (

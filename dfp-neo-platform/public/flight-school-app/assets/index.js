@@ -3689,6 +3689,124 @@ const getAdaptiveContextMenuPosition = ({
     placement: `${vertical}-${horizontal}`
   };
 };
+const TRACE_KEY = "dfp_move_change_bar_trace";
+const WATCH_KEY = "__dfpMoveChangeTraceWatchIds";
+const ENTRY_LIMIT = 500;
+const perfNow = () => {
+  if (typeof performance === "undefined" || typeof performance.now !== "function") return null;
+  return Math.round(performance.now());
+};
+const readEntries = () => {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(TRACE_KEY) || "[]");
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+};
+const summariseDfpMoveEvent = (event) => {
+  if (!event) return null;
+  return {
+    id: event.id || null,
+    date: event.date || null,
+    type: event.type || null,
+    flightNumber: event.flightNumber || null,
+    resourceId: event.resourceId || null,
+    startTime: typeof event.startTime === "number" ? event.startTime : null,
+    duration: typeof event.duration === "number" ? event.duration : null,
+    instructor: event.instructor || null,
+    student: event.student || null,
+    pilot: event.pilot || null,
+    aircraftNumber: event.aircraftNumber || null,
+    formationId: event.formationId || null,
+    area: event.area || null
+  };
+};
+const appendDfpMoveChangeTrace = (stage, details = {}) => {
+  if (typeof window === "undefined") return;
+  const entry = {
+    ts: (/* @__PURE__ */ new Date()).toISOString(),
+    perfMs: perfNow(),
+    stage,
+    details
+  };
+  try {
+    const next = [...readEntries(), entry].slice(-ENTRY_LIMIT);
+    window.localStorage.setItem(TRACE_KEY, JSON.stringify(next));
+    window.dfpMoveChangeBarTrace = next;
+  } catch {
+    try {
+      window.localStorage.setItem(TRACE_KEY, JSON.stringify([entry]));
+      window.dfpMoveChangeBarTrace = [entry];
+    } catch {
+    }
+  }
+};
+const watchDfpMoveChangeEvents = (eventIds, durationMs = 15e3) => {
+  if (typeof window === "undefined") return;
+  const now = Date.now();
+  const watchMap = window[WATCH_KEY] || {};
+  eventIds.map((eventId) => String(eventId || "").trim()).filter(Boolean).forEach((eventId) => {
+    watchMap[eventId] = now + durationMs;
+  });
+  Object.keys(watchMap).forEach((eventId) => {
+    if (watchMap[eventId] <= now) delete watchMap[eventId];
+  });
+  window[WATCH_KEY] = watchMap;
+};
+const isWatchingDfpMoveChangeEvent = (eventId) => {
+  if (typeof window === "undefined") return false;
+  const id = String(eventId || "").trim();
+  if (!id) return false;
+  const watchMap = window[WATCH_KEY] || {};
+  const expiresAt = watchMap[id] || 0;
+  if (expiresAt <= Date.now()) {
+    delete watchMap[id];
+    window[WATCH_KEY] = watchMap;
+    return false;
+  }
+  return true;
+};
+const readJsonStorage = (key) => {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+const downloadDfpMoveChangeTrace = (context = {}) => {
+  if (typeof window === "undefined") return;
+  const entries = readEntries();
+  const enrichedEntries = entries.map((entry, index) => {
+    const previous = index > 0 ? entries[index - 1] : null;
+    return {
+      index,
+      sincePreviousMs: typeof entry.perfMs === "number" && typeof previous?.perfMs === "number" ? entry.perfMs - previous.perfMs : null,
+      ...entry
+    };
+  });
+  const report = {
+    reportType: "DFP_MOVE_CHANGE_BAR_TRACE",
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    context,
+    entryCount: enrichedEntries.length,
+    entries: enrichedEntries,
+    dragDiagnostics: readJsonStorage("dfp_drag_diagnostics_report"),
+    dfpDataDiagnostics: readJsonStorage("neo_dfp_data_diag")
+  };
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const safeUser = String(context.currentUserName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
+  const safeDate = String(context.date || "no-date").replace(/[^0-9-]/g, "") || "no-date";
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `dfp-move-change-bar-trace-${safeUser}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
 const DEFAULT_TASK_PROFILE_CONFIG = {
   flight_school: [],
   air_combat: [],
@@ -18937,6 +19055,10 @@ const ScheduleView = ({
           updateCount: lastDragCommitUpdatesRef.current.length,
           signature: lastDragUpdateSignatureRef.current
         });
+        appendDfpMoveChangeTrace("drag:commit-last-update", {
+          date,
+          updates: lastDragCommitUpdatesRef.current
+        });
         onUpdateEvent(lastDragCommitUpdatesRef.current);
         lastDragCommitUpdatesRef.current = null;
       }
@@ -18953,6 +19075,16 @@ const ScheduleView = ({
         queuedAtMs: pending.queuedAtMs,
         updateCount: pending.updates.length,
         signature: pending.signature
+      });
+      appendDfpMoveChangeTrace("drag:commit-to-schedule", {
+        date,
+        updates: pending.updates,
+        realtimeConflict: pending.realtimeConflict,
+        resourceConflictId: pending.resourceConflictId,
+        cptConflict: pending.cptConflict ? {
+          conflictingEvent: summariseDfpMoveEvent(pending.cptConflict.conflictingEvent),
+          newEvent: summariseDfpMoveEvent(pending.cptConflict.newEvent)
+        } : null
       });
       onUpdateEvent(pending.updates);
       lastDragCommitUpdatesRef.current = null;
@@ -19189,6 +19321,20 @@ const ScheduleView = ({
           resourceCount: resources.length,
           zoomLevel
         });
+        watchDfpMoveChangeEvents(Array.from(initialPositions.keys()));
+        appendDfpMoveChangeTrace("drag:start", {
+          date,
+          event: summariseDfpMoveEvent(event),
+          draggedEventIds: Array.from(initialPositions.keys()),
+          initialPositions: Array.from(initialPositions.entries()).map(([eventId, position]) => ({
+            eventId,
+            startTime: position.startTime,
+            resourceId: originalResourceIds.get(eventId) || null,
+            rowIndex: position.rowIndex
+          })),
+          eventCount: events.length,
+          baselineEvent: summariseDfpMoveEvent(baselineEvents?.find((baseline) => baseline.id === event.id))
+        });
         setDraggingState({
           mainEventId: event.id,
           xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -19369,6 +19515,13 @@ const ScheduleView = ({
         conflictMs,
         signature: updateSignature
       });
+      const watchedUpdates = updates.filter((update) => isWatchingDfpMoveChangeEvent(update.eventId));
+      if (watchedUpdates.length > 0) {
+        appendDfpMoveChangeTrace("drag:move-preview", {
+          date,
+          updates: watchedUpdates
+        });
+      }
       if (dragFrameRef.current === null) {
         dragFrameRef.current = window.requestAnimationFrame(() => {
           dragFrameRef.current = null;
@@ -19773,6 +19926,17 @@ const ScheduleView = ({
             else if (statuses.some((s) => s === "rejected")) alertStatus = "rejected";
             else alertStatus = "pending";
           }
+        }
+        if (isWatchingDfpMoveChangeEvent(event.id)) {
+          appendDfpMoveChangeTrace("render:tile-change-state", {
+            date,
+            event: summariseDfpMoveEvent(event),
+            baselineEvent: summariseDfpMoveEvent(baselineEvents?.find((baseline) => baseline.id === event.id)),
+            isChanged,
+            alertStatus,
+            isDraggedTile,
+            isSelected
+          });
         }
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           FlightTile,
@@ -125517,10 +125681,10 @@ const App = () => {
     return query ? `${path}${joiner}${query}` : path;
   }, [platformDataScopeQuery]);
   function pushDfpDataDiag(stage, details = {}) {
-    const perfNow = typeof performance !== "undefined" && typeof performance.now === "function" ? Math.round(performance.now()) : null;
+    const perfNow2 = typeof performance !== "undefined" && typeof performance.now === "function" ? Math.round(performance.now()) : null;
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
-      perfMs: perfNow,
+      perfMs: perfNow2,
       stage,
       date,
       school,
@@ -125580,6 +125744,20 @@ const App = () => {
     } catch {
       return false;
     }
+  }
+  function downloadCurrentDfpMoveChangeTrace() {
+    downloadDfpMoveChangeTrace({
+      currentUserName,
+      date,
+      school,
+      unit: activeUnitCode,
+      activeView,
+      baselineKey: activeBaselineKey,
+      liveSyncEnabled,
+      selectedEventId: selectedEvent?.id || null,
+      currentEventCount: (publishedSchedulesRef.current[date] || []).length,
+      baselineEventCount: (baselineSchedules[activeBaselineKey] || []).length
+    });
   }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
@@ -126753,6 +126931,22 @@ const App = () => {
         student: event.student
       }))
     });
+    const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
+    const watchedSnapshotEvents = events2.filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+    const watchedCurrentEvents = (publishedSchedulesRef.current[targetDate] || []).filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+    if (watchedSnapshotEvents.length > 0 || watchedCurrentEvents.length > 0) {
+      appendDfpMoveChangeTrace("snapshot:apply-before-state", {
+        targetDate,
+        snapshotSchool,
+        snapshotUnit,
+        source,
+        replace,
+        snapKey: snap2.date,
+        incomingWatchedEvents: watchedSnapshotEvents.map(summariseDfpMoveEvent),
+        currentWatchedEvents: watchedCurrentEvents.map(summariseDfpMoveEvent),
+        incomingBaselineEvents: baselineEvts.filter((event) => isWatchingDfpMoveChangeEvent(event.id)).map(summariseDfpMoveEvent)
+      });
+    }
     setPublishedSchedules((prev) => {
       const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
       if (!replace && existingNonSeed.length > 0 && events2.length > 0) return prev;
@@ -126772,9 +126966,19 @@ const App = () => {
         const incomingSignature = getSnapshotEventsSignature(events2);
         if (existingSignature === incomingSignature) return prev;
       }
+      const watchedBefore = existingNonSeed.filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+      const watchedAfter = events2.filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+      if (watchedBefore.length > 0 || watchedAfter.length > 0) {
+        appendDfpMoveChangeTrace("snapshot:published-state-replace", {
+          targetDate,
+          source,
+          replace,
+          watchedBefore: watchedBefore.map(summariseDfpMoveEvent),
+          watchedAfter: watchedAfter.map(summariseDfpMoveEvent)
+        });
+      }
       return { ...prev, [targetDate]: events2 };
     });
-    const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
     setBaselineSchedules((prev) => {
       const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
       if (!replace && prev[baselineKey] && events2.length > 0) return prev;
@@ -126783,6 +126987,18 @@ const App = () => {
         const existingSignature = getSnapshotEventsSignature(prev[baselineKey] || []);
         const incomingSignature = getSnapshotEventsSignature(baselineEvts);
         if (existingSignature === incomingSignature) return prev;
+      }
+      const watchedBefore = (prev[baselineKey] || []).filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+      const watchedAfter = baselineEvts.filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+      if (watchedBefore.length > 0 || watchedAfter.length > 0) {
+        appendDfpMoveChangeTrace("snapshot:baseline-state-replace", {
+          targetDate,
+          baselineKey,
+          source,
+          replace,
+          watchedBefore: watchedBefore.map(summariseDfpMoveEvent),
+          watchedAfter: watchedAfter.map(summariseDfpMoveEvent)
+        });
       }
       return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
     });
@@ -135186,6 +135402,24 @@ ${error instanceof Error ? error.message : String(error)}`,
       return;
     }
     eventsToSave = eventsToSave.map(normaliseCrewFieldsForSave).map(annotateScheduleEventPersonnelRefs);
+    watchDfpMoveChangeEvents(eventsToSave.map((event) => event.id));
+    appendDfpMoveChangeTrace("flight-details-save:received", {
+      date,
+      school,
+      unit: activeUnitCode,
+      activeView,
+      eventCount: eventsToSave.length,
+      eventsToSave: eventsToSave.map(summariseDfpMoveEvent),
+      existingEvents: eventsToSave.map((event) => {
+        const eventDate = event.date || date;
+        return summariseDfpMoveEvent((publishedSchedulesRef.current[eventDate] || []).find((candidate) => candidate.id === event.id));
+      }),
+      baselineEvents: eventsToSave.map((event) => {
+        const eventDate = event.date || date;
+        const baselineKey = getDailySnapshotKey(eventDate, school, activeUnitCode);
+        return summariseDfpMoveEvent((baselineSchedules[baselineKey] || []).find((candidate) => candidate.id === event.id));
+      })
+    });
     const proposedMainEvent = eventsToSave[0];
     const isPotentialNextDayView = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
     const saveToNextDayBuildForConflict = oracleContextForModal ? oracleContext === "nextDayBuild" : proposedMainEvent.date === buildDfpDate && isPotentialNextDayView;
@@ -135346,6 +135580,13 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               student: savedEvent?.student,
               pilot: savedEvent?.pilot
             });
+            appendDfpMoveChangeTrace("flight-details-save:state-merge", {
+              date: eventDate,
+              savedEvents: events2.map(summariseDfpMoveEvent),
+              before: currentScheduleForDate.filter((candidate) => events2.some((saved) => saved.id === candidate.id)).map(summariseDfpMoveEvent),
+              after: newSchedules[eventDate].filter((candidate) => events2.some((saved) => saved.id === candidate.id)).map(summariseDfpMoveEvent),
+              baselineEvents: (baselineSchedules[getDailySnapshotKey(eventDate, school, activeUnitCode)] || []).filter((candidate) => events2.some((saved) => saved.id === candidate.id)).map(summariseDfpMoveEvent)
+            });
           });
           logScheduleDebug("🟢 setPublishedSchedules: COMPLETE");
           logScheduleDebug("🟢 New publishedSchedules keys:", Object.keys(newSchedules));
@@ -135369,7 +135610,18 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           const _removedConflictIds = removedPublishedConflictIdsByDate.get(d) || /* @__PURE__ */ new Set();
           const _otherEvents = _prevForDate.filter((e) => !_newEventIds.has(e.id) && !_removedConflictIds.has(e.id));
           const _newEventsForDate = eventsToSave.filter((e) => e.date === d);
-          persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate]);
+          appendDfpMoveChangeTrace("flight-details-save:persist-start", {
+            date: d,
+            savedEvents: _newEventsForDate.map(summariseDfpMoveEvent),
+            previousEvents: _prevForDate.filter((event) => _newEventIds.has(event.id)).map(summariseDfpMoveEvent)
+          });
+          persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate]).then((success) => {
+            appendDfpMoveChangeTrace("flight-details-save:persist-complete", {
+              date: d,
+              success,
+              savedEventIds: _newEventsForDate.map((event) => event.id)
+            });
+          });
         });
         setTimeout(() => {
           setPublishedSchedules((currentSchedules) => {
@@ -137030,7 +137282,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
   };
   reactExports.useCallback(() => {
     if (typeof window === "undefined") return;
-    const readJsonStorage = (key) => {
+    const readJsonStorage2 = (key) => {
       try {
         const raw = window.localStorage.getItem(key);
         return raw ? JSON.parse(raw) : null;
@@ -137042,7 +137294,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     };
     const getLatestNeoBuildDiagnosticReport = () => {
       const liveReport = window.__lastNeoBuildDiagnosticReport;
-      const storedReport = readJsonStorage("neo_build_diag_report");
+      const storedReport = readJsonStorage2("neo_build_diag_report");
       const liveUpdatedAt = Date.parse(String(liveReport?.updatedAt || liveReport?.timestamp || ""));
       const storedUpdatedAt = Date.parse(String(storedReport?.updatedAt || storedReport?.timestamp || ""));
       if (liveReport && (!storedReport || !Number.isFinite(storedUpdatedAt) || liveUpdatedAt >= storedUpdatedAt)) {
@@ -137092,12 +137344,12 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       },
       storedReports: {
         neoBuildDiagnostic: getLatestNeoBuildDiagnosticReport(),
-        neoBuildTiming: readJsonStorage("neo_build_timing_report"),
-        neoBuildRuntimeError: readJsonStorage("neo_build_runtime_error_report"),
-        neoBuildZeroTileTrace: readJsonStorage("neo_build_zero_tile_trace"),
-        neoBuildInputTrace: readJsonStorage("neo_build_input_trace"),
-        neoDfpDataTrace: readJsonStorage("neo_dfp_data_diag"),
-        flightSchoolPriority: readJsonStorage("flight_school_priority_diag_report")
+        neoBuildTiming: readJsonStorage2("neo_build_timing_report"),
+        neoBuildRuntimeError: readJsonStorage2("neo_build_runtime_error_report"),
+        neoBuildZeroTileTrace: readJsonStorage2("neo_build_zero_tile_trace"),
+        neoBuildInputTrace: readJsonStorage2("neo_build_input_trace"),
+        neoDfpDataTrace: readJsonStorage2("neo_dfp_data_diag"),
+        flightSchoolPriority: readJsonStorage2("flight_school_priority_diag_report")
       }
     };
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
@@ -139494,6 +139746,16 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     }
     let updatedEventsForDate = [];
     let appliedUpdates = updates;
+    watchDfpMoveChangeEvents(updates.map((update) => update.eventId));
+    appendDfpMoveChangeTrace("schedule-update:received", {
+      date,
+      school,
+      unit: activeUnitCode,
+      activeView,
+      updates,
+      currentEvents: (publishedSchedulesRef.current[date] || []).filter((event) => updates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent),
+      baselineEvents: (baselineSchedules[activeBaselineKey] || []).filter((event) => updates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent)
+    });
     setPublishedSchedules((prev) => {
       const scheduleForDate = prev[date] || [];
       appliedUpdates = expandFormationScheduleUpdates(scheduleForDate, updates);
@@ -139511,14 +139773,39 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         return event;
       });
       updatedEventsForDate = newScheduleForDate;
+      appendDfpMoveChangeTrace("schedule-update:state-merge", {
+        date,
+        appliedUpdates,
+        before: scheduleForDate.filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent),
+        after: newScheduleForDate.filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent),
+        baselineEvents: (baselineSchedules[activeBaselineKey] || []).filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent)
+      });
       return { ...prev, [date]: newScheduleForDate };
     });
     if (_scheduleUpdatePersistTimer.current) clearTimeout(_scheduleUpdatePersistTimer.current);
     _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
       if (updatedEventsForDate.length > 0) {
-        persistScheduleForDate(date, updatedEventsForDate);
+        appendDfpMoveChangeTrace("schedule-update:persist-start", {
+          date,
+          appliedUpdates,
+          watchedEvents: updatedEventsForDate.filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent),
+          baselineEvents: (baselineSchedules[activeBaselineKey] || []).filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent)
+        });
+        persistScheduleForDate(date, updatedEventsForDate).then((success) => {
+          appendDfpMoveChangeTrace("schedule-update:persist-complete", {
+            date,
+            success,
+            appliedUpdates
+          });
+        });
         setPublishedSchedules((prevSchedules) => {
           const allEvents = Object.values(prevSchedules).flat();
+          appendDfpMoveChangeTrace("schedule-update:deployment-check", {
+            date,
+            appliedUpdates,
+            watchedEvents: (prevSchedules[date] || []).filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent),
+            allEventCount: allEvents.length
+          });
           handleDeploymentUnavailability(allEvents);
           return prevSchedules;
         });
@@ -140686,6 +140973,16 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     if (dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty") {
       return;
     }
+    const watchedEventsBeforeSync = (publishedSchedulesRef.current[date] || []).filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+    if (watchedEventsBeforeSync.length > 0) {
+      appendDfpMoveChangeTrace("live-sync:published-schedule-refresh-start", {
+        date,
+        school,
+        unit: activeUnitCode,
+        watchedEvents: watchedEventsBeforeSync.map(summariseDfpMoveEvent),
+        liveSyncEnabled
+      });
+    }
     await loadSnapshotForDate(date, {
       force: true,
       replace: true,
@@ -140695,6 +140992,16 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       allowAdminFallbackContext: false,
       silent: true
     });
+    const watchedEventsAfterSync = (publishedSchedulesRef.current[date] || []).filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+    if (watchedEventsBeforeSync.length > 0 || watchedEventsAfterSync.length > 0) {
+      appendDfpMoveChangeTrace("live-sync:published-schedule-refresh-complete", {
+        date,
+        school,
+        unit: activeUnitCode,
+        watchedEventsBefore: watchedEventsBeforeSync.map(summariseDfpMoveEvent),
+        watchedEventsAfter: watchedEventsAfterSync.map(summariseDfpMoveEvent)
+      });
+    }
   }, [activeUnitCode, date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAddFlightTileModalOpen, isInitialSetupWizardActive, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent, setupTestProfile]);
   reactExports.useEffect(() => {
     const handleLiveDfpSnapshotChange = (event) => {
@@ -142544,6 +142851,14 @@ ${error instanceof Error ? error.message : String(error)}`,
       ...previousBaselineEvents.filter((baselineEvent) => !acknowledgedIds.has(baselineEvent.id)),
       ...acknowledgedEvents.map((event) => JSON.parse(JSON.stringify(event)))
     ];
+    watchDfpMoveChangeEvents(acknowledgedEvents.map((event) => event.id));
+    appendDfpMoveChangeTrace("change-bar:acknowledge", {
+      date,
+      baselineKey: activeBaselineKey,
+      acknowledgedEvents: acknowledgedEvents.map(summariseDfpMoveEvent),
+      previousBaselineEvents: previousBaselineEvents.filter((event) => acknowledgedIds.has(event.id)).map(summariseDfpMoveEvent),
+      nextBaselineEvents: nextBaselineEvents.filter((event) => acknowledgedIds.has(event.id)).map(summariseDfpMoveEvent)
+    });
     setBaselineSchedules((prev) => ({
       ...prev,
       [activeBaselineKey]: nextBaselineEvents
@@ -142804,6 +143119,11 @@ ${error instanceof Error ? error.message : String(error)}`,
           onSelect: () => handleRemoveChangeBarNotification(selectedChangeBarEvents)
         });
       }
+      menuItems.push({
+        label: "Download Move Trace",
+        detail: "Download diagnostic JSON for DFP move and change-bar behaviour.",
+        onSelect: downloadCurrentDfpMoveChangeTrace
+      });
     } else if (aircraftNumber || contextKind === "aircraft" || contextKind === "aircraft-slot") {
       title = aircraftNumber ? `Aircraft ${aircraftNumber}` : "Aircraft";
       subtitle = [resourceLabel || "Flight Line", selectedEvent2 ? selectedEvent2.flightNumber || eventLabel : ""].filter(Boolean).join(" | ");
@@ -142864,6 +143184,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           { label: "Directed Tasks", onSelect: () => handleNavigation("Priorities") },
           { label: "Emergency", onSelect: () => handleNavigateToSettingsSection({ sectionId: "emergency" }) }
         ],
+        { label: "Download Move Trace", detail: "Download diagnostic JSON for DFP move and change-bar behaviour.", onSelect: downloadCurrentDfpMoveChangeTrace },
         { label: "My Home", onSelect: () => handleNavigation("MyDashboard") }
       );
     } else {
