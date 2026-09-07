@@ -126908,6 +126908,9 @@ const App = () => {
     };
     loadSnapshotDates();
   }, [activeUnitCode, school, setupTestProfile]);
+  const [baselineSchedules, setBaselineSchedules] = reactExports.useState({});
+  const activeBaselineKey = getDailySnapshotKey(date);
+  const activeDfpSaveInFlightRef = reactExports.useRef(0);
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
     const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
@@ -129873,9 +129876,6 @@ ${"=".repeat(60)}`);
     fixedCrewTrainingPriorities,
     fixedCrewTileColourModeByUnit
   ]);
-  const [baselineSchedules, setBaselineSchedules] = reactExports.useState({});
-  const activeBaselineKey = getDailySnapshotKey(date);
-  const activeDfpSaveInFlightRef = reactExports.useRef(0);
   const [alertsDataByDate, setAlertsDataByDate] = reactExports.useState({});
   const isDirtyRef = reactExports.useRef(() => false);
   const onSaveRef = reactExports.useRef(() => {

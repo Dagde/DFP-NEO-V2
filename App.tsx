@@ -31593,6 +31593,11 @@ const App: React.FC = () => {
         loadSnapshotDates();
     }, [activeUnitCode, school, setupTestProfile]);
 
+    // Baseline schedule state
+    const [baselineSchedules, setBaselineSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+    const activeBaselineKey = getDailySnapshotKey(date);
+    const activeDfpSaveInFlightRef = useRef(0);
+
     const applyDailySnapshot = React.useCallback((
         targetDate: string,
         snapshotSchool: string,
@@ -35061,11 +35066,6 @@ const App: React.FC = () => {
         organisationSettings,
         coursePriorities, coursePercentages, fixedCrewTrainingPriorities, fixedCrewTileColourModeByUnit,
     ]);
-
-    // Baseline schedule state
-    const [baselineSchedules, setBaselineSchedules] = useState<Record<string, ScheduleEvent[]>>({});
-    const activeBaselineKey = getDailySnapshotKey(date);
-    const activeDfpSaveInFlightRef = useRef(0);
 
     // Alerts data state: { [date]: { [eventId]: alertEntry } }
     const [alertsDataByDate, setAlertsDataByDate] = useState<Record<string, Record<string, any>>>({});
