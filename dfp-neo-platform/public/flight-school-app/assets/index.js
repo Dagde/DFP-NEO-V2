@@ -10546,14 +10546,14 @@ const resolveScheduleTileBackgroundColor = (color, mode = "dark") => {
   if (isCssColor(value)) return value.startsWith("#") ? hexToRgba(value, mode === "light" ? 0.92 : 0.57, mode === "light") : value;
   return resolveTailwindBgClassToRgba(value, mode === "light" ? "tile-light" : "tile-dark");
 };
-const formatTime$7 = (time) => {
+const formatTime$8 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
 const formatDeploymentClock = (clock, fallbackHours) => {
   if (clock) return clock.replace(/:/g, "");
-  if (typeof fallbackHours === "number") return formatTime$7(fallbackHours).replace(/:/g, "");
+  if (typeof fallbackHours === "number") return formatTime$8(fallbackHours).replace(/:/g, "");
   return "";
 };
 const formatDeploymentDate = (dateString) => {
@@ -11118,9 +11118,9 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
                       desc && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#94a3b8", fontWeight: 400, marginLeft: 4 }, children: desc })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 10, color: "#64748b" }, children: [
-                      formatTime$7(t.startTime),
+                      formatTime$8(t.startTime),
                       " – ",
-                      formatTime$7(endTime),
+                      formatTime$8(endTime),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#475569", marginLeft: 6 }, children: [
                         "(",
                         durationStr,
@@ -11133,9 +11133,9 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { borderTop: "1px solid rgba(147,197,253,0.2)", marginTop: 4, paddingTop: 4, fontSize: 10, color: "#64748b", display: "flex", justifyContent: "space-between" }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                   "Session: ",
-                  formatTime$7(dayStart),
+                  formatTime$8(dayStart),
                   " – ",
-                  formatTime$7(dayStart + dayDuration)
+                  formatTime$8(dayStart + dayDuration)
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#475569" }, children: (() => {
                   const totalMins = Math.round(dayDuration * 60);
@@ -11280,7 +11280,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-6 w-px bg-gray-600" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono font-semibold text-sky-400", children: displayFlightNumber }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-400", children: formatTime$7(effectiveStartTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-400", children: formatTime$8(effectiveStartTime) })
       ] }),
       callsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-500 text-[10px]", children: callsign })
     ] }) });
@@ -11453,7 +11453,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
               {
                 className: "absolute top-1 left-1 font-mono text-white/60 pointer-events-none",
                 style: { fontSize: `${scaledFontSize * 0.825}px` },
-                children: formatTime$7(effectiveStartTime)
+                children: formatTime$8(effectiveStartTime)
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -11461,7 +11461,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
               {
                 className: "absolute top-1 right-1 font-mono text-white/60 pointer-events-none",
                 style: { fontSize: `${scaledFontSize * 0.825}px` },
-                children: formatTime$7(effectiveStartTime + effectiveDuration)
+                children: formatTime$8(effectiveStartTime + effectiveDuration)
               }
             )
           ] }) : !isSmallTile && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -11469,7 +11469,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
             {
               className: "absolute -top-px left-1 font-mono text-white/60 pointer-events-none",
               style: { fontSize: `${scaledFontSize * 0.75}px` },
-              children: formatTime$7(effectiveStartTime)
+              children: formatTime$8(effectiveStartTime)
             }
           ),
           renderContent(),
@@ -11623,7 +11623,7 @@ function calculateDailyAverageAvailability(availabilityTimeline, windowStart, wi
   const averageAvailability = totalAircraftHours / totalWindowDuration;
   return Math.round(averageAvailability * 10) / 10;
 }
-function formatDate$5(date) {
+function formatDate$6(date) {
   if (!date || isNaN(date.getTime())) {
     console.warn("[formatDate] Invalid date provided:", date);
     return "";
@@ -11692,7 +11692,7 @@ const AircraftAvailabilityOverlay = ({
   );
   reactExports.useEffect(() => {
     let cancelled = false;
-    const dateKey = dateString ?? formatDate$5(currentDate);
+    const dateKey = dateString ?? formatDate$6(currentDate);
     const contextKey = [locationCode || "default-location", unitCode || "default-unit", dateKey].join("|");
     const loadStoredSnapshots = () => {
       const stored = localStorage.getItem(`aircraft-availability-${contextKey}`);
@@ -11787,7 +11787,7 @@ const AircraftAvailabilityOverlay = ({
       dayFlyingStart.replace(":", ""),
       dayFlyingEnd.replace(":", "")
     );
-    const dateKey = dateString ?? formatDate$5(currentDate);
+    const dateKey = dateString ?? formatDate$6(currentDate);
     const contextKey = [locationCode || "default-location", unitCode || "default-unit", dateKey].join("|");
     const record = {
       date: dateKey,
@@ -23479,7 +23479,7 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
     }
   ) });
 };
-const normaliseName$2 = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+const normaliseName$3 = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 const inferRequestType = (request) => request.requestType === "ftd" || String(request.event || "").toUpperCase().includes("FTD") ? "ftd" : "flight";
 const formatRequestDate = (value) => {
   if (!value) return "Not set";
@@ -23499,12 +23499,12 @@ const MySctRequestsPanel = ({
   const [editingId, setEditingId] = reactExports.useState(null);
   const myRequests = reactExports.useMemo(() => {
     const currentId = String(currentUserId || "").trim();
-    const profileKey = normaliseName$2(profileName);
-    const reversedProfileKey = normaliseName$2(profileName.split(/\s+/).reverse().join(", "));
+    const profileKey = normaliseName$3(profileName);
+    const reversedProfileKey = normaliseName$3(profileName.split(/\s+/).reverse().join(", "));
     return requests.filter((request) => {
       const requestUserId = String(request.userId || "").trim();
       if (currentId && requestUserId) return requestUserId === currentId;
-      const requestName = normaliseName$2(request.name);
+      const requestName = normaliseName$3(request.name);
       return Boolean(profileKey) && (requestName === profileKey || requestName === reversedProfileKey);
     }).sort((a, b) => String(b.dateRequested || "").localeCompare(String(a.dateRequested || "")));
   }, [currentUserId, profileName, requests]);
@@ -25667,7 +25667,7 @@ const buildAssessmentStructure = (elements, phraseBank) => {
   const categories = categoryOrder.map((category) => ({ category, elements: grouped.get(category) || [] })).filter((category) => category.elements.length > 0);
   return categories.length > 0 ? categories : [];
 };
-const formatTime$6 = (time) => {
+const formatTime$7 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -26507,7 +26507,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
         ["Trainee", `${trainee.rank || ""} ${trainee.name || trainee.fullName || ""}`.trim()],
         ["Course", trainee.course || "N/A"],
         [printOverviewFields.date, displayReportDate || "N/A"],
-        [printOverviewFields.timing, `${formatTime$6(startTime)} - ${formatTime$6(endTime)}`],
+        [printOverviewFields.timing, `${formatTime$7(startTime)} - ${formatTime$7(endTime)}`],
         [printOverviewFields.assessor, formatTrainingReportInstructorDisplay(instructors, assessment.instructorName || event.instructor) || "N/A"],
         [printOverviewFields.resource, formatTrainingReportResource(currentEvent.resourceId || event.resourceId)],
         [printOverviewFields.callsign, currentEvent.callsign || event.callsign || "N/A"],
@@ -27724,7 +27724,7 @@ const pushTrainingReportNotesDiag = (stage, payload = {}) => {
   } catch {
   }
 };
-const formatDate$4 = (dateString) => {
+const formatDate$5 = (dateString) => {
   if (!dateString) return "";
   const date = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -29654,12 +29654,12 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: (unavailability || []).length > 0 ? (unavailability || []).map((p) => {
                   let periodDisplay = "";
                   if (p.allDay) {
-                    const sd = formatDate$4(p.startDate);
-                    const ed = formatDate$4(p.endDate);
+                    const sd = formatDate$5(p.startDate);
+                    const ed = formatDate$5(p.endDate);
                     periodDisplay = p.startDate !== p.endDate ? `${sd} – ${ed} @ All Day` : `${sd} @ All Day`;
                   } else {
-                    const sd = `${formatMilitaryTime2(p.startTime)} ${formatDate$4(p.startDate)}`;
-                    const ed = `${formatMilitaryTime2(p.endTime)} ${formatDate$4(p.endDate)}`;
+                    const sd = `${formatMilitaryTime2(p.startTime)} ${formatDate$5(p.startDate)}`;
+                    const ed = `${formatMilitaryTime2(p.endTime)} ${formatDate$5(p.endDate)}`;
                     periodDisplay = p.startDate !== p.endDate ? `${sd} to ${ed}` : `${sd} - ${ed}`;
                   }
                   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
@@ -32964,7 +32964,7 @@ const MassBriefConfirmationFlyout = ({
     ) })
   ] }) });
 };
-const formatTime$5 = (time) => {
+const formatTime$6 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round((time - hours) * 60);
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
@@ -32981,11 +32981,11 @@ const VisualAdjustModal = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "Start Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$5(startTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$6(startTime) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "End Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$5(endTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$6(endTime) })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end space-x-2 mt-4", children: [
@@ -33430,7 +33430,7 @@ const getEventTypeFromSyllabus = (syllabusId, syllabusDetails) => {
   if (detail.type === "Ground School") return "ground";
   return "flight";
 };
-const formatTime$4 = (time) => {
+const formatTime$5 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -33447,13 +33447,13 @@ const formatUnavailabilityDate = (dateValue) => {
   });
 };
 const formatUnavailabilityClock = (rawTime, fallbackTime) => {
-  if (typeof rawTime === "number") return formatTime$4(rawTime);
+  if (typeof rawTime === "number") return formatTime$5(rawTime);
   if (typeof rawTime === "string" && rawTime.trim()) {
     if (rawTime.includes(":")) return rawTime;
     const cleaned = rawTime.replace(/\D/g, "").padStart(4, "0").slice(-4);
     return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
   }
-  if (typeof fallbackTime === "number") return formatTime$4(fallbackTime);
+  if (typeof fallbackTime === "number") return formatTime$5(fallbackTime);
   return "-";
 };
 const getAllDayUnavailabilityEndDate = (dateValue) => {
@@ -33464,7 +33464,7 @@ const getAllDayUnavailabilityEndDate = (dateValue) => {
   return parsedDate.toISOString().slice(0, 10);
 };
 const normalizeStartTimeValue = (time) => {
-  if (typeof time === "number") return formatTime$4(time);
+  if (typeof time === "number") return formatTime$5(time);
   if (!time) return "00:00";
   if (time.includes(":")) return time;
   const cleaned = time.replace(/\D/g, "").padStart(4, "0").slice(-4);
@@ -33887,14 +33887,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         return unavailableStart < bookingWindow.end && bookingWindow.start < unavailableEnd;
       }).map((period) => ({
         type: "unavailability",
-        label: period.allDay ? `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable all day${period.reason ? ` because ${period.reason}` : ""}.` : `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable from ${formatTime$4(normaliseTimeFieldToHour(period.startTime, 0))} to ${formatTime$4(normaliseTimeFieldToHour(period.endTime, 24))}${period.reason ? ` because ${period.reason}` : ""}.`
+        label: period.allDay ? `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable all day${period.reason ? ` because ${period.reason}` : ""}.` : `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable from ${formatTime$5(normaliseTimeFieldToHour(period.startTime, 0))} to ${formatTime$5(normaliseTimeFieldToHour(period.endTime, 24))}${period.reason ? ` because ${period.reason}` : ""}.`
       }));
       const eventConflicts = (eventsForDate || []).filter((otherEvent) => !isSameDisplayedEvent(otherEvent)).filter((otherEvent) => getPersonnelForConflictCheck(otherEvent).includes(staff.name)).filter((otherEvent) => {
         const otherWindow = getEventBookingWindow2(otherEvent);
         return otherWindow.start < bookingWindow.end && bookingWindow.start < otherWindow.end;
       }).map((otherEvent) => ({
         type: "event",
-        label: `${[staff.rank, staff.name].filter(Boolean).join(" ")} is already assigned to ${otherEvent.flightNumber || "another event"} from ${formatTime$4(otherEvent.startTime)} to ${formatTime$4((otherEvent.startTime || 0) + (otherEvent.duration || 0))}.`
+        label: `${[staff.rank, staff.name].filter(Boolean).join(" ")} is already assigned to ${otherEvent.flightNumber || "another event"} from ${formatTime$5(otherEvent.startTime)} to ${formatTime$5((otherEvent.startTime || 0) + (otherEvent.duration || 0))}.`
       }));
       const conflicts = [...unavailabilityConflicts, ...eventConflicts];
       return {
@@ -33978,7 +33978,7 @@ Please select another substitute.`, "Substitution Not Available", "warning");
     ].map((name) => String(name || "").trim()).filter(Boolean))).map((name) => name === unavailableStaff.name ? substituteDisplayName : name);
     const nextPic = originalPic === unavailableStaff.name ? substituteDisplayName : originalPic;
     const existingNotes = String(event.fixedCrewManifestNotes || fixedCrewManifestNotes || "").trim();
-    const swapNote = `${formatTime$4(event.startTime)}: ${[unavailableStaff.rank, unavailableStaff.name].filter(Boolean).join(" ")} replaced by ${[substitute.rank, substitute.name].filter(Boolean).join(" ")}.`;
+    const swapNote = `${formatTime$5(event.startTime)}: ${[unavailableStaff.rank, unavailableStaff.name].filter(Boolean).join(" ")} replaced by ${[substitute.rank, substitute.name].filter(Boolean).join(" ")}.`;
     const updatedEvent = {
       ...event,
       attendees: updatedAttendees,
@@ -34003,9 +34003,9 @@ ${swapNote}` : swapNote
         !isPooledCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "rounded bg-emerald-500/15 px-2 py-1 text-sm font-bold text-emerald-200", children: formatFixedCrewDisplayGroup$2(fixedCrewGroup || event.fixedCrewGroup || "") || "Crew not assigned" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
           "Availability window ",
-          formatTime$4(Math.max(0, bookingWindow.start)),
+          formatTime$5(Math.max(0, bookingWindow.start)),
           "-",
-          formatTime$4(Math.min(24, bookingWindow.end))
+          formatTime$5(Math.min(24, bookingWindow.end))
         ] })
       ] }),
       fixedCrewRosterByRole.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-3 ${activeCrewConflict ? "grid-cols-[minmax(0,1fr)_12rem]" : "grid-cols-1"}`, children: [
@@ -34925,7 +34925,7 @@ ${swapNote}` : swapNote
     if (onVisualAdjustEnd) {
       onVisualAdjustEnd(updatedEvent);
     }
-    setStartTime(formatTime$4(visualAdjustStartTime));
+    setStartTime(formatTime$5(visualAdjustStartTime));
     setDuration(visualAdjustEndTime - visualAdjustStartTime);
   };
   const handleSave = async () => {
@@ -35109,7 +35109,7 @@ ${swapNote}` : swapNote
       for (let m = 0; m < 60; m += 5) {
         const totalHours = h + m / 60;
         const label = `${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}`;
-        options.push({ label, value: formatTime$4(totalHours) });
+        options.push({ label, value: formatTime$5(totalHours) });
       }
     }
     return options;
@@ -36208,7 +36208,7 @@ ${swapNote}` : swapNote
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Departure" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$4(event.startTime) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$5(event.startTime) })
             ] })
           ] }) }),
           isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2", children: [
@@ -36242,7 +36242,7 @@ ${swapNote}` : swapNote
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Start Time" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$4(event.startTime) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$5(event.startTime) })
               ] })
             ] }),
             renderFixedCrewRosterStatus()
@@ -36818,12 +36818,12 @@ ${swapNote}` : swapNote
   ] });
 };
 const CONTINUATION_COURSE_KEY = "__continuation_events__";
-const formatTime$3 = (time) => {
+const formatTime$4 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const formatDate$3 = (dateStr) => {
+const formatDate$4 = (dateStr) => {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
   return `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
@@ -37939,7 +37939,7 @@ const AddFlightTileModal = ({
     for (let h = 6; h <= 23; h++) {
       for (let m = 0; m < 60; m += 15) {
         const val = h + m / 60;
-        opts.push({ value: String(val), label: formatTime$3(val) });
+        opts.push({ value: String(val), label: formatTime$4(val) });
       }
     }
     return opts;
@@ -38554,9 +38554,9 @@ const AddFlightTileModal = ({
     setFixedCrewManifestStatus(initialEvent.fixedCrewManifestStatus || "pending");
     setFixedCrewManifestNotes(initialEvent.fixedCrewManifestNotes || "");
     setDeploymentStartDate(initialEvent.deploymentStartDate || initialEvent.date || date);
-    setDeploymentStartTime(initialEvent.deploymentStartTime || formatTime$3(Number(initialEvent.startTime) || 8));
+    setDeploymentStartTime(initialEvent.deploymentStartTime || formatTime$4(Number(initialEvent.startTime) || 8));
     setDeploymentEndDate(initialEvent.deploymentEndDate || initialEvent.date || date);
-    setDeploymentEndTime(initialEvent.deploymentEndTime || formatTime$3((Number(initialEvent.startTime) || 8) + (Number(initialEvent.duration) || 1)));
+    setDeploymentEndTime(initialEvent.deploymentEndTime || formatTime$4((Number(initialEvent.startTime) || 8) + (Number(initialEvent.duration) || 1)));
     setDeploymentAircraftCount(Math.max(1, Math.floor(Number(initialEvent.deploymentAircraftCount) || 1)));
     if (initialEvent.eventCategory === "sct") {
       const profile = fixedCrewCurrencyProfileOptions.find((candidate) => candidate.code === initialEvent.flightNumber || candidate.code === initialEvent.eventCode || candidate.name === initialEvent.flightNumber || candidate.currency === initialEvent.currency);
@@ -39130,7 +39130,7 @@ const AddFlightTileModal = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Date" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$3(date) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$4(date) })
                   ] })
                 ] }),
                 locationType === "Land Away" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
@@ -39628,7 +39628,7 @@ const AddFlightTileModal = ({
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Date" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$3(date) })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$4(date) })
                     ] })
                   ] }),
                   locationType === "Land Away" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mt-3", children: [
@@ -41627,12 +41627,12 @@ const DashboardIconTrash = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @_
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M10 11v6" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M14 11v6" })
 ] });
-const formatTime$2 = (time) => {
+const formatTime$3 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const formatDate$2 = (dateString) => {
+const formatDate$3 = (dateString) => {
   if (!dateString) return "-";
   try {
     const date = /* @__PURE__ */ new Date(dateString + "T00:00:00Z");
@@ -43089,9 +43089,9 @@ const MyDashboard = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-gray-300", children: [
-          formatTime$2(event.startTime),
+          formatTime$3(event.startTime),
           " - ",
-          formatTime$2(event.startTime + event.duration)
+          formatTime$3(event.startTime + event.duration)
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onSelectEvent(event), className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Details" })
       ] })
@@ -43709,7 +43709,7 @@ const MyDashboard = ({
         mySctRequests.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: mySctRequests.map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "p-2 bg-gray-700/50 rounded-md text-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: req.event }),
-            req.dateRequested && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: formatDate$2(req.dateRequested) })
+            req.dateRequested && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: formatDate$3(req.dateRequested) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
             "Expires: ",
@@ -43767,7 +43767,7 @@ const MyDashboard = ({
                   )
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "shrink-0 text-right", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$2(assessment.date) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 font-mono", children: formatDate$3(assessment.date) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block mt-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300", children: "Pending" })
                 ] })
               ] })
@@ -43789,7 +43789,7 @@ const MyDashboard = ({
                       children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: entry.report.eventCode }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center justify-end gap-1.5 text-right", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-nowrap text-[10px] font-mono text-gray-300", children: formatDate$2(entry.report.date) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-nowrap text-[10px] font-mono text-gray-300", children: formatDate$3(entry.report.date) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex h-5 items-center whitespace-nowrap rounded-full bg-amber-500/20 px-1.5 text-[9px] font-semibold text-amber-300", children: "Training Report" })
                         ] })
                       ] })
@@ -44126,7 +44126,7 @@ const FlightTrackingWidget = ({ school, locationName, locationProfile }) => {
     ] }) })
   ] });
 };
-const formatTime$1 = (time) => {
+const formatTime$2 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -44163,7 +44163,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "AUTH" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-3 flex-1", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$1(event.startTime) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$2(event.startTime) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white text-sm", children: event.flightNumber }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
@@ -53335,7 +53335,7 @@ const trendColor = (dir) => {
   if (dir === "worsening") return "text-red-400";
   return "text-gray-400";
 };
-const formatDate$1 = (iso) => {
+const formatDate$2 = (iso) => {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
 };
@@ -54908,7 +54908,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm leading-relaxed whitespace-pre-line", children: summary.narrativeSummary }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-600 text-xs mt-3", children: [
         "Last analysed: ",
-        formatDate$1(summary.completedAt),
+        formatDate$2(summary.completedAt),
         " · ",
         summary.recordsProcessed,
         " records processed"
@@ -55955,7 +55955,7 @@ const TrainingIntelligenceTab = ({ trainingReportDisplayName = "Training Reports
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: run.status === "complete" ? "text-emerald-500" : run.status === "failed" ? "text-red-500" : "text-yellow-500", children: "•" }),
         run.courseFilter || "All",
         " · ",
-        formatDate$1(run.completedAt),
+        formatDate$2(run.completedAt),
         " · ",
         run.recordsProcessed ?? "—",
         " records"
@@ -58377,7 +58377,7 @@ const dateLabel = (value) => {
   });
 };
 const normaliseRole = (value) => String(value || "Unassigned").trim() || "Unassigned";
-const normaliseName$1 = (value) => String(value || "").trim().toLowerCase();
+const normaliseName$2 = (value) => String(value || "").trim().toLowerCase();
 const isPlaceholderCrewValue = (value) => {
   const text = String(value || "").trim();
   return !text || /^TBA$/i.test(text) || /^Pooled Crew$/i.test(text) || /^Solo$/i.test(text);
@@ -58394,8 +58394,8 @@ const eventStaffNames = (event) => {
 };
 const eventPicName = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim();
 const eventPartnerNames = (event) => {
-  const picKey = normaliseName$1(eventPicName(event));
-  return eventStaffNames(event).filter((name) => normaliseName$1(name) !== picKey);
+  const picKey = normaliseName$2(eventPicName(event));
+  return eventStaffNames(event).filter((name) => normaliseName$2(name) !== picKey);
 };
 const eventCode = (event) => String(event.eventCode || event.flightNumber || event.taskingDisplayLabel || event.taskingName || "").trim().toUpperCase();
 const isTaskingEvent = (event) => Boolean(event.isTaskingRequest || event.taskingRequestId || event.taskingName);
@@ -58430,7 +58430,7 @@ const AirCombatIntelligenceTab = ({
     const scheduledRoleCounts = /* @__PURE__ */ new Map();
     const staffByName = /* @__PURE__ */ new Map();
     instructorsData.forEach((person) => {
-      staffByName.set(normaliseName$1(person.name), person);
+      staffByName.set(normaliseName$2(person.name), person);
       const role = normaliseRole(person.role);
       roleCounts.set(role, Number(roleCounts.get(role) || 0) + 1);
     });
@@ -58454,7 +58454,7 @@ const AirCombatIntelligenceTab = ({
     const soloAnomalies = isFixedCrewLike ? flightEvents.filter((event) => event.flightType === "Solo" || event.soloOrDual === "Solo" || /^Solo$/i.test(String(event.crew || "").trim()) || eventPartnerNames(event).length === 0) : [];
     const uniqueCrew = new Set(activeEvents.flatMap(eventStaffNames));
     uniqueCrew.forEach((name) => {
-      const staff = staffByName.get(normaliseName$1(name));
+      const staff = staffByName.get(normaliseName$2(name));
       if (!staff) return;
       const role = normaliseRole(staff.role);
       scheduledRoleCounts.set(role, Number(scheduledRoleCounts.get(role) || 0) + 1);
@@ -60956,7 +60956,7 @@ const CircularGauge = ({ title, mainValue, subItems, borderColor }) => {
     ] }, item.label)) })
   ] });
 };
-const formatDate = (dateString) => {
+const formatDate$1 = (dateString) => {
   if (!dateString) return "";
   const date = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -62106,12 +62106,12 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1 mb-4 max-h-64 overflow-y-auto", children: unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map((p) => {
               let periodDisplay = "";
               if (p.allDay) {
-                const startDisplay = formatDate(p.startDate);
-                const endDisplay = formatDate(p.endDate);
+                const startDisplay = formatDate$1(p.startDate);
+                const endDisplay = formatDate$1(p.endDate);
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} – ${endDisplay} @ All Day` : `${startDisplay} @ All Day`;
               } else {
-                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate(p.startDate)}`;
-                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate(p.endDate)}`;
+                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate$1(p.startDate)}`;
+                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate$1(p.endDate)}`;
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} to ${endDisplay}` : `${startDisplay} - ${endDisplay}`;
               }
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
@@ -63030,12 +63030,12 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1 max-h-32 overflow-y-auto", children: unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map((p) => {
               let periodDisplay = "";
               if (p.allDay) {
-                const startDisplay = formatDate(p.startDate);
-                const endDisplay = formatDate(p.endDate);
+                const startDisplay = formatDate$1(p.startDate);
+                const endDisplay = formatDate$1(p.endDate);
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} – ${endDisplay} @ All Day` : `${startDisplay} @ All Day`;
               } else {
-                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate(p.startDate)}`;
-                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate(p.endDate)}`;
+                const startDisplay = `${formatMilitaryTime2(p.startTime)} ${formatDate$1(p.startDate)}`;
+                const endDisplay = `${formatMilitaryTime2(p.endTime)} ${formatDate$1(p.endDate)}`;
                 periodDisplay = p.startDate !== p.endDate ? `${startDisplay} to ${endDisplay}` : `${startDisplay} - ${endDisplay}`;
               }
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
@@ -94146,7 +94146,7 @@ const isProgressEvent = (item) => {
   return (item.type === "Flight" || item.type === "FTD") && !item.isRemedial && !item.id.includes(" MB") && !item.code.includes(" MB");
 };
 const getEventCode = (item) => (item.code || item.id || "").trim();
-const normaliseName = (name) => name.replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").trim();
+const normaliseName$1 = (name) => name.replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").trim();
 const getAssessmentDate = (assessment) => {
   if (!assessment.date) return null;
   const date = /* @__PURE__ */ new Date(`${assessment.date}T00:00:00`);
@@ -94177,11 +94177,11 @@ const mergeLmpCompletedEventDates = (completed, items, validEventCodes, eventIdT
   });
 };
 const getCompletedEventDates = (trainee, individualLMP, validEventCodes, eventIdToCode, pt051Assessments) => {
-  const traineeNames = new Set([trainee.fullName, trainee.name, normaliseName(trainee.fullName), normaliseName(trainee.name)].filter(Boolean));
+  const traineeNames = new Set([trainee.fullName, trainee.name, normaliseName$1(trainee.fullName), normaliseName$1(trainee.name)].filter(Boolean));
   const completed = /* @__PURE__ */ new Map();
   pt051Assessments.forEach((assessment) => {
     if (!isCompletedTrainingReport(assessment)) return;
-    if (!traineeNames.has(assessment.traineeFullName) && !traineeNames.has(normaliseName(assessment.traineeFullName))) return;
+    if (!traineeNames.has(assessment.traineeFullName) && !traineeNames.has(normaliseName$1(assessment.traineeFullName))) return;
     const rawEventCode = getAssessmentEventCode(assessment);
     const eventCode2 = eventIdToCode.get(rawEventCode) || rawEventCode;
     if (!validEventCodes.has(eventCode2)) return;
@@ -96910,7 +96910,7 @@ const TrainingRecordsExportView = ({
     label: result.label || result.code
   })).filter((option) => option.value);
   const activeStatusCompletionOptions = statusCompletionOptions.length > 0 ? statusCompletionOptions : [{ value: getCompletionStatusFilterValue("DCO"), label: "Complete" }];
-  const exportCompletedStatusLabel = exportCompletionResultLabels[primaryCompletionResultCode] || primaryCompletionResult.label || "Complete";
+  exportCompletionResultLabels[primaryCompletionResultCode] || primaryCompletionResult.label || "Complete";
   const [recordType, setRecordType] = reactExports.useState("all");
   const [timePeriod, setTimePeriod] = reactExports.useState("all-time");
   const [singleDate, setSingleDate] = reactExports.useState("");
@@ -96937,11 +96937,6 @@ const TrainingRecordsExportView = ({
   const [exportProgress, setExportProgress] = reactExports.useState(0);
   const [exportStatus, setExportStatus] = reactExports.useState("");
   const [savedTemplates, setSavedTemplates] = reactExports.useState([]);
-  const [showMassComplete, setShowMassComplete] = reactExports.useState(false);
-  const [selectedForCompletion, setSelectedForCompletion] = reactExports.useState([]);
-  const [isCompleting, setIsCompleting] = reactExports.useState(false);
-  const [completionProgress, setCompletionProgress] = reactExports.useState(0);
-  const [completionStatus, setCompletionStatus] = reactExports.useState("");
   const canExportTraineeRecords = hasTraineesEnabled;
   reactExports.useEffect(() => {
     if (!canExportTraineeRecords && recordType === "trainees") {
@@ -97164,37 +97159,6 @@ const TrainingRecordsExportView = ({
     syllabusDetails,
     pt051AssessmentList
   ]);
-  const getScheduledTraineesForCompletion = reactExports.useMemo(() => {
-    if (selectedCourses.length === 0) return [];
-    const courseTrainees = allTrainees.filter((t) => selectedCourses.includes(t.course));
-    let eventsInDateRange = allEvents;
-    if (timePeriod === "single-date" && singleDate) {
-      eventsInDateRange = eventsInDateRange.filter((e) => e.date === singleDate);
-    } else if (timePeriod === "date-range" && startDate && endDate) {
-      eventsInDateRange = eventsInDateRange.filter((e) => e.date >= startDate && e.date <= endDate);
-    }
-    const courseEvents = eventsInDateRange.filter(
-      (e) => selectedCourses.some((course) => {
-        const studentName = e.student || e.pilot;
-        if (!studentName) return false;
-        const trainee = courseTrainees.find(
-          (t) => studentName === t.name || studentName.startsWith(t.name + " –") || studentName.startsWith(t.name + " -")
-        );
-        return trainee;
-      })
-    );
-    const scheduledTraineeNames = [...new Set(
-      courseEvents.map((e) => {
-        const studentName = e.student || e.pilot;
-        if (!studentName) return null;
-        const trainee = courseTrainees.find(
-          (t) => studentName === t.name || studentName.startsWith(t.name + " –") || studentName.startsWith(t.name + " -")
-        );
-        return trainee?.name;
-      }).filter(Boolean)
-    )];
-    return scheduledTraineeNames;
-  }, [allEvents, selectedCourses, timePeriod, singleDate, startDate, endDate, allTrainees]);
   const filteredData = reactExports.useMemo(() => {
     const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
     const exportTrainees = selectedCourses.length > 0 ? allTrainees.filter((t) => selectedCourseSet.has(normaliseCourseFilterValue(t.course))) : allTrainees;
@@ -97662,83 +97626,6 @@ const TrainingRecordsExportView = ({
     setStatusFilter(template.statusFilter);
     setRemedialFilter(template.remedialFilter);
     setShowTemplates(false);
-  };
-  const handleMassComplete = () => {
-    const scheduledTrainees = getScheduledTraineesForCompletion;
-    setSelectedForCompletion(scheduledTrainees);
-    setShowMassComplete(true);
-  };
-  const processMassCompletion = async () => {
-    if (selectedForCompletion.length === 0) {
-      await showDarkAlert("Please select at least one trainee for completion.", "Mass Completion", "warning");
-      return;
-    }
-    setIsCompleting(true);
-    setCompletionProgress(0);
-    setCompletionStatus("Processing trainees...");
-    try {
-      const currentDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-      let completedCount = 0;
-      for (let i = 0; i < selectedForCompletion.length; i++) {
-        const traineeName = selectedForCompletion[i];
-        const trainee = allTrainees.find((t) => t.name === traineeName);
-        if (!trainee) continue;
-        let eventsInDateRange = allEvents;
-        if (timePeriod === "single-date" && singleDate) {
-          eventsInDateRange = eventsInDateRange.filter((e) => e.date === singleDate);
-        } else if (timePeriod === "date-range" && startDate && endDate) {
-          eventsInDateRange = eventsInDateRange.filter((e) => e.date >= startDate && e.date <= endDate);
-        }
-        const traineeEvents = eventsInDateRange.filter((e) => {
-          const studentName = e.student || e.pilot;
-          if (!studentName) return false;
-          return studentName === traineeName || studentName.startsWith(traineeName + " –") || studentName.startsWith(traineeName + " -");
-        });
-        for (const event of traineeEvents) {
-          const assessmentId = `${trainee.name}_${event.id}_PT051`;
-          let assessment = pt051Assessments.get(assessmentId);
-          if (!assessment) {
-            assessment = {
-              id: assessmentId,
-              traineeFullName: trainee.name,
-              eventId: event.id,
-              flightNumber: event.flightNumber,
-              date: event.date,
-              instructorName: event.instructor || "",
-              overallGrade: "No Grade",
-              overallResult: "P",
-              dcoResult: primaryCompletionResultCode,
-              overallComments: "",
-              scores: [],
-              isCompleted: true,
-              groundSchoolAssessment: { isAssessment: false, result: void 0 }
-            };
-          } else {
-            assessment = {
-              ...assessment,
-              dcoResult: primaryCompletionResultCode,
-              overallGrade: "No Grade",
-              overallResult: "P",
-              isCompleted: true
-            };
-          }
-          onSavePT051Assessment(assessment);
-        }
-        completedCount++;
-        setCompletionProgress(Math.round((i + 1) / selectedForCompletion.length * 100));
-        setCompletionStatus(`Completed ${completedCount} of ${selectedForCompletion.length} trainees...`);
-      }
-      setCompletionStatus(`Successfully completed ${completedCount} trainees!`);
-      setTimeout(() => {
-        setShowMassComplete(false);
-        setSelectedForCompletion([]);
-      }, 2e3);
-    } catch (error) {
-      console.error("Error during mass completion:", error);
-      setCompletionStatus("Error occurred during completion. Please try again.");
-    } finally {
-      setIsCompleting(false);
-    }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto bg-gray-900 p-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-5xl mx-auto space-y-6", children: [
@@ -98290,14 +98177,6 @@ const TrainingRecordsExportView = ({
                 ]
               }
             ),
-            selectedCourses.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: handleMassComplete,
-                className: "px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded font-semibold",
-                children: "Mark as Complete"
-              }
-            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -98398,51 +98277,335 @@ const TrainingRecordsExportView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200 text-base mb-2", children: "There was an error exporting your data." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm", children: "Please check the browser console for details and try again." })
       ] })
-    ] }) }),
-    showMassComplete && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 bg-black/70 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border-2 border-green-500 rounded-lg shadow-2xl p-8 min-w-[600px] max-h-[80vh] overflow-y-auto", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-green-400 font-bold text-xl", children: "Mark Trainees as Complete" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => setShowMassComplete(false),
-            className: "text-gray-400 hover:text-white text-2xl",
-            children: "×"
-          }
-        )
-      ] }),
-      isCompleting ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700 rounded-full h-4 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "div",
-          {
-            className: "bg-green-500 h-full transition-all duration-300 flex items-center justify-center text-xs font-bold text-white",
-            style: { width: `${completionProgress}%` },
-            children: completionProgress > 10 && `${completionProgress}%`
-          }
-        ) }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-base", children: completionStatus })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-4", children: [
-          "Select trainees to mark as ",
-          exportCompletedStatusLabel.toLowerCase(),
-          ". This will update their ",
-          exportReportName,
-          " assessments with ",
-          exportCompletedStatusLabel,
-          "."
+    ] }) })
+  ] });
+};
+const todayIso = () => (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+const formatDate = (dateStr) => {
+  if (!dateStr) return "-";
+  const date = /* @__PURE__ */ new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = date.toLocaleString("en-GB", { month: "short" });
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day} ${month} ${year}`;
+};
+const formatTime$1 = (time) => {
+  if (typeof time !== "number" || Number.isNaN(time)) return "-";
+  const hours = Math.floor(time);
+  const minutes = Math.round((time - hours) * 60);
+  return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
+};
+const normaliseName = (name) => name.replace(/\s+[–-]\s+.*$/, "").replace(/\s+/g, " ").trim();
+const displayPerson = (event) => {
+  const people = [event.student, event.pilot, event.crew].filter(Boolean).map((person) => String(person)).filter((person, index, list) => list.indexOf(person) === index);
+  return people.length > 0 ? people.join(" / ") : "-";
+};
+const TrainingCompletionView = ({
+  traineesData,
+  archivedTraineesData,
+  courses,
+  archivedCourses,
+  publishedSchedules,
+  pt051Assessments,
+  onSavePT051Assessment,
+  trainingReportTemplate
+}) => {
+  const reportTemplate = reactExports.useMemo(
+    () => normaliseTrainingReportTemplate(trainingReportTemplate),
+    [trainingReportTemplate]
+  );
+  const reportName = reportTemplate.reportName || DEFAULT_TRAINING_REPORT_TEMPLATE.reportName || "Training Report";
+  const [selectedCourses, setSelectedCourses] = reactExports.useState([]);
+  const [courseSearch, setCourseSearch] = reactExports.useState("");
+  const [dateMode, setDateMode] = reactExports.useState("single-date");
+  const [singleDate, setSingleDate] = reactExports.useState(todayIso());
+  const [startDate, setStartDate] = reactExports.useState(todayIso());
+  const [endDate, setEndDate] = reactExports.useState(todayIso());
+  const [selectedEventId, setSelectedEventId] = reactExports.useState("");
+  const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
+  const [isCompleting, setIsCompleting] = reactExports.useState(false);
+  const [completionMessage, setCompletionMessage] = reactExports.useState("");
+  const allEvents = reactExports.useMemo(() => Object.values(publishedSchedules).flat(), [publishedSchedules]);
+  const allTrainees = reactExports.useMemo(() => [...traineesData, ...archivedTraineesData], [traineesData, archivedTraineesData]);
+  const courseNames = reactExports.useMemo(() => {
+    const activeCourses = courses.map((course) => course.name);
+    return [.../* @__PURE__ */ new Set([...activeCourses, ...Object.keys(archivedCourses)])].sort((a, b) => a.localeCompare(b));
+  }, [courses, archivedCourses]);
+  const filteredCourses = reactExports.useMemo(() => courseNames.filter((course) => course.toLowerCase().includes(courseSearch.toLowerCase())), [courseNames, courseSearch]);
+  const courseTrainees = reactExports.useMemo(() => allTrainees.filter((trainee) => selectedCourses.includes(trainee.course)), [allTrainees, selectedCourses]);
+  const getEventTrainees = (event) => {
+    if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
+      return courseTrainees.filter((trainee) => event.groupTraineeIds?.includes(trainee.idNumber));
+    }
+    const eventPeople = [
+      event.student,
+      event.pilot,
+      event.crew,
+      ...event.attendees || []
+    ].filter(Boolean).map((person) => normaliseName(String(person)));
+    return courseTrainees.filter((trainee) => eventPeople.includes(trainee.name) || eventPeople.includes(trainee.fullName));
+  };
+  const candidateEvents = reactExports.useMemo(() => {
+    if (selectedCourses.length === 0) return [];
+    let events = allEvents;
+    if (dateMode === "single-date" && singleDate) {
+      events = events.filter((event) => event.date === singleDate);
+    } else if (dateMode === "date-range" && startDate && endDate) {
+      events = events.filter((event) => event.date >= startDate && event.date <= endDate);
+    }
+    return events.filter((event) => getEventTrainees(event).length > 0).sort((a, b) => `${a.date}-${a.startTime}`.localeCompare(`${b.date}-${b.startTime}`));
+  }, [allEvents, courseTrainees, dateMode, endDate, selectedCourses.length, singleDate, startDate]);
+  const selectedEvent = reactExports.useMemo(() => candidateEvents.find((event) => event.id === selectedEventId) || null, [candidateEvents, selectedEventId]);
+  const traineesForSelectedEvent = reactExports.useMemo(() => selectedEvent ? getEventTrainees(selectedEvent).sort((a, b) => `${a.course}-${a.name}`.localeCompare(`${b.course}-${b.name}`)) : [], [courseTrainees, selectedEvent]);
+  const resetEventSelection = () => {
+    setSelectedEventId("");
+    setSelectedTrainees([]);
+    setCompletionMessage("");
+  };
+  const handleCourseChange = (coursesSelected) => {
+    setSelectedCourses(coursesSelected);
+    resetEventSelection();
+  };
+  const handleEventSelect = (eventId) => {
+    const event = candidateEvents.find((item) => item.id === eventId);
+    setSelectedEventId(eventId);
+    setCompletionMessage("");
+    setSelectedTrainees(event ? getEventTrainees(event).map((trainee) => trainee.name) : []);
+  };
+  const processCompletion = async () => {
+    if (!selectedEvent) {
+      setCompletionMessage("Select the event that is to be marked complete.");
+      return;
+    }
+    if (selectedTrainees.length === 0) {
+      setCompletionMessage("Select at least one trainee for this event.");
+      return;
+    }
+    setIsCompleting(true);
+    setCompletionMessage("Completing selected training records...");
+    try {
+      selectedTrainees.forEach((traineeName) => {
+        const trainee = allTrainees.find((item) => item.name === traineeName);
+        if (!trainee) return;
+        const assessmentId = `${trainee.name}_${selectedEvent.id}_PT051`;
+        const existingAssessment = pt051Assessments.get(assessmentId);
+        const assessment = existingAssessment ? {
+          ...existingAssessment,
+          dcoResult: "DCO",
+          overallGrade: "No Grade",
+          overallResult: "P",
+          isCompleted: true
+        } : {
+          id: assessmentId,
+          traineeFullName: trainee.name,
+          eventId: selectedEvent.id,
+          flightNumber: selectedEvent.flightNumber,
+          date: selectedEvent.date,
+          instructorName: selectedEvent.instructor || "",
+          overallGrade: "No Grade",
+          overallResult: "P",
+          dcoResult: "DCO",
+          overallComments: "",
+          scores: [],
+          isCompleted: true,
+          groundSchoolAssessment: { isAssessment: false, result: void 0 }
+        };
+        onSavePT051Assessment(assessment);
+      });
+      setCompletionMessage(`Marked ${selectedTrainees.length} trainee${selectedTrainees.length === 1 ? "" : "s"} as DCO for ${selectedEvent.flightNumber}.`);
+    } catch (error) {
+      console.error("Error during selected event completion:", error);
+      setCompletionMessage("The records could not be completed. Please try again.");
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full overflow-auto bg-gray-900 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-6xl mx-auto space-y-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white mb-2", children: "Complete Training" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "Select the course, choose the exact event, then select the trainees to mark as complete." })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700 space-y-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white mb-3", children: "Course" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: courseSearch,
+              onChange: (event) => setCourseSearch(event.target.value),
+              placeholder: "Search courses...",
+              className: "w-full px-3 py-2 mb-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "select",
+            {
+              multiple: true,
+              value: selectedCourses,
+              onChange: (event) => {
+                const options = Array.from(event.target.selectedOptions, (option) => option.value);
+                handleCourseChange(options);
+              },
+              className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white",
+              size: 8,
+              children: filteredCourses.map((courseName) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: courseName, children: [
+                courseName,
+                " ",
+                archivedCourses[courseName] ? "(Archived)" : ""
+              ] }, courseName))
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Hold Ctrl/Cmd to select multiple courses." })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm font-medium text-gray-300", children: [
-              "Trainees for Completion (",
-              selectedForCompletion.length,
-              " selected)"
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white mb-3", children: "Date" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 text-gray-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 cursor-pointer", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  checked: dateMode === "single-date",
+                  onChange: () => {
+                    setDateMode("single-date");
+                    resetEventSelection();
+                  },
+                  className: "w-4 h-4 text-sky-500"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Single date" })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-x-2", children: [
+            dateMode === "single-date" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "date",
+                value: singleDate,
+                onChange: (event) => {
+                  setSingleDate(event.target.value);
+                  resetEventSelection();
+                },
+                className: "ml-7 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 cursor-pointer", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  checked: dateMode === "date-range",
+                  onChange: () => {
+                    setDateMode("date-range");
+                    resetEventSelection();
+                  },
+                  className: "w-4 h-4 text-sky-500"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Date range" })
+            ] }),
+            dateMode === "date-range" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-7 space-y-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "date",
+                  value: startDate,
+                  onChange: (event) => {
+                    setStartDate(event.target.value);
+                    resetEventSelection();
+                  },
+                  className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "date",
+                  value: endDate,
+                  onChange: (event) => {
+                    setEndDate(event.target.value);
+                    resetEventSelection();
+                  },
+                  className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 cursor-pointer", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "radio",
+                  checked: dateMode === "all-time",
+                  onChange: () => {
+                    setDateMode("all-time");
+                    resetEventSelection();
+                  },
+                  className: "w-4 h-4 text-sky-500"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "All dates" })
+            ] })
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Select Event" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+              candidateEvents.length,
+              " matching event",
+              candidateEvents.length === 1 ? "" : "s"
+            ] })
+          ] }),
+          selectedCourses.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select a course to show matching training events." }) : candidateEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No training events match the selected course and date settings." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto border border-gray-700 rounded", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm text-left", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs uppercase bg-gray-700 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Select" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Date" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Time" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Type" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Event" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Trainee / Crew" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Instructor" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: candidateEvents.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "tr",
+              {
+                className: `border-b border-gray-700 ${selectedEventId === event.id ? "bg-sky-900/40" : "hover:bg-gray-700/40"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "radio",
+                      checked: selectedEventId === event.id,
+                      onChange: () => handleEventSelect(event.id),
+                      className: "w-4 h-4 text-sky-500"
+                    }
+                  ) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-200 whitespace-nowrap", children: formatDate(event.date) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-200 whitespace-nowrap", children: formatTime$1(event.startTime) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-200 capitalize", children: event.type }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-white font-medium", children: event.flightNumber || "-" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-200", children: displayPerson(event) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-200", children: event.instructor || "-" })
+                ]
+              },
+              event.id
+            )) })
+          ] }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Select Trainees" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Only trainees linked to the selected event are shown." })
+            ] }),
+            selectedEvent && traineesForSelectedEvent.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
-                  onClick: () => setSelectedForCompletion(getScheduledTraineesForCompletion),
+                  onClick: () => setSelectedTrainees(traineesForSelectedEvent.map((trainee) => trainee.name)),
                   className: "px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded text-sm",
                   children: "Select All"
                 }
@@ -98450,68 +98613,71 @@ const TrainingRecordsExportView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
-                  onClick: () => setSelectedForCompletion([]),
+                  onClick: () => setSelectedTrainees([]),
                   className: "px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm",
                   children: "Deselect All"
                 }
               )
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 overflow-y-auto border border-gray-600 rounded p-2 bg-gray-700/50", children: getScheduledTraineesForCompletion.map((traineeName) => {
-            const trainee = allTrainees.find((t) => t.name === traineeName);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 p-2 hover:bg-gray-600/30 rounded cursor-pointer", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: selectedForCompletion.includes(traineeName),
-                  onChange: (e) => {
-                    if (e.target.checked) {
-                      setSelectedForCompletion([...selectedForCompletion, traineeName]);
-                    } else {
-                      setSelectedForCompletion(selectedForCompletion.filter((name) => name !== traineeName));
-                    }
-                  },
-                  className: "h-4 w-4 accent-green-500 bg-gray-600 border-gray-500 rounded"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-200", children: [
-                trainee?.rank,
-                " ",
-                traineeName,
-                " (",
-                trainee?.course,
-                ")"
-              ] })
-            ] }, traineeName);
-          }) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-end space-x-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => setShowMassComplete(false),
-              className: "px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded",
-              children: "Cancel"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              onClick: processMassCompletion,
-              disabled: selectedForCompletion.length === 0,
-              className: `px-4 py-2 rounded font-semibold ${selectedForCompletion.length === 0 ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-green-600 hover:bg-green-700 text-white"}`,
-              children: [
-                "Complete Selected (",
-                selectedForCompletion.length,
-                ")"
-              ]
-            }
-          )
+          !selectedEvent ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "Select an event first." }) : traineesForSelectedEvent.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-yellow-300 text-sm", children: "No trainees from the selected course are linked to this event." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border border-gray-600 rounded p-2 bg-gray-700/50 max-h-72 overflow-y-auto", children: traineesForSelectedEvent.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-2 hover:bg-gray-600/30 rounded cursor-pointer", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: selectedTrainees.includes(trainee.name),
+                onChange: (event) => {
+                  if (event.target.checked) {
+                    setSelectedTrainees([...selectedTrainees, trainee.name]);
+                  } else {
+                    setSelectedTrainees(selectedTrainees.filter((name) => name !== trainee.name));
+                  }
+                },
+                className: "h-4 w-4 accent-green-500 bg-gray-600 border-gray-500 rounded"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-200", children: [
+              trainee.rank,
+              " ",
+              trainee.name,
+              " (",
+              trainee.course,
+              ")"
+            ] })
+          ] }, trainee.name)) }),
+          selectedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 p-4 rounded border border-gray-700 bg-gray-900/60", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm uppercase tracking-wide text-gray-400 mb-2", children: "Completion Summary" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-200", children: [
+              selectedEvent.flightNumber,
+              " on ",
+              formatDate(selectedEvent.date),
+              " at ",
+              formatTime$1(selectedEvent.startTime)
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400 mt-1", children: [
+              "This will mark the selected trainee ",
+              reportName,
+              " record",
+              selectedTrainees.length === 1 ? "" : "s",
+              " as DCO for this event only."
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 flex items-center justify-between gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-sm ${completionMessage.includes("Marked") ? "text-green-300" : "text-gray-300"}`, children: completionMessage }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: processCompletion,
+                disabled: !selectedEvent || selectedTrainees.length === 0 || isCompleting,
+                className: `px-5 py-3 rounded font-semibold ${!selectedEvent || selectedTrainees.length === 0 || isCompleting ? "bg-gray-700 text-gray-500 cursor-not-allowed" : "bg-green-600 hover:bg-green-700 text-white"}`,
+                children: isCompleting ? "Completing..." : `Complete Selected (${selectedTrainees.length})`
+              }
+            )
+          ] })
         ] })
       ] })
-    ] }) })
-  ] });
+    ] })
+  ] }) });
 };
 const TrainingRecordsView = ({
   courses,
@@ -98568,6 +98734,14 @@ const TrainingRecordsView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
+            onClick: () => setActiveTab("complete"),
+            className: `px-4 py-2 rounded-t font-medium transition-colors ${activeTab === "complete" ? "bg-gray-900 text-white border-t-2 border-sky-500" : "bg-gray-700 text-gray-400 hover:bg-gray-600"}`,
+            children: "Complete Training"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
             onClick: () => setActiveTab("export"),
             className: `px-4 py-2 rounded-t font-medium transition-colors ${activeTab === "export" ? "bg-gray-900 text-white border-t-2 border-sky-500" : "bg-gray-700 text-gray-400 hover:bg-gray-600"}`,
             children: "Export Records"
@@ -98617,6 +98791,20 @@ const TrainingRecordsView = ({
           trainingReportTemplate,
           phraseBank,
           hasTraineesEnabled
+        }
+      ),
+      activeTab === "complete" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        TrainingCompletionView,
+        {
+          traineesData,
+          archivedTraineesData,
+          courses,
+          archivedCourses,
+          publishedSchedules,
+          pt051Assessments,
+          onSavePT051Assessment,
+          trainingReportTemplate,
+          phraseBank
         }
       )
     ] })

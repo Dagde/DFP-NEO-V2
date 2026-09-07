@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import AuditButton from './AuditButton';
 import CoursesManagementView from './CoursesManagementView';
 import TrainingRecordsExportView from './TrainingRecordsExportView';
+import TrainingCompletionView from './TrainingCompletionView';
 import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, Pt051Assessment, PhraseBank } from '../types';
 import { NewCourseData } from './AddCourseFlyout';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
@@ -42,7 +43,7 @@ interface TrainingRecordsViewProps {
     hasTraineesEnabled?: boolean;
 }
 
-type TabType = 'courses' | 'export';
+type TabType = 'courses' | 'complete' | 'export';
 
 const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     courses,
@@ -105,6 +106,16 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         Courses Management
                     </button>
                     <button
+                        onClick={() => setActiveTab('complete')}
+                        className={`px-4 py-2 rounded-t font-medium transition-colors ${
+                            activeTab === 'complete'
+                                ? 'bg-gray-900 text-white border-t-2 border-sky-500'
+                                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                        }`}
+                    >
+                        Complete Training
+                    </button>
+                    <button
                         onClick={() => setActiveTab('export')}
                         className={`px-4 py-2 rounded-t font-medium transition-colors ${
                             activeTab === 'export'
@@ -157,6 +168,19 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         trainingReportTemplate={trainingReportTemplate}
                         phraseBank={phraseBank}
                         hasTraineesEnabled={hasTraineesEnabled}
+                    />
+                )}
+                {activeTab === 'complete' && (
+                    <TrainingCompletionView
+                        traineesData={traineesData}
+                        archivedTraineesData={archivedTraineesData}
+                        courses={courses}
+                        archivedCourses={archivedCourses}
+                        publishedSchedules={publishedSchedules}
+                        pt051Assessments={pt051Assessments}
+                        onSavePT051Assessment={onSavePT051Assessment}
+                        trainingReportTemplate={trainingReportTemplate}
+                        phraseBank={phraseBank}
                     />
                 )}
             </div>
