@@ -3767,46 +3767,6 @@ const isWatchingDfpMoveChangeEvent = (eventId) => {
   }
   return true;
 };
-const readJsonStorage = (key) => {
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-const downloadDfpMoveChangeTrace = (context = {}) => {
-  if (typeof window === "undefined") return;
-  const entries = readEntries();
-  const enrichedEntries = entries.map((entry, index) => {
-    const previous = index > 0 ? entries[index - 1] : null;
-    return {
-      index,
-      sincePreviousMs: typeof entry.perfMs === "number" && typeof previous?.perfMs === "number" ? entry.perfMs - previous.perfMs : null,
-      ...entry
-    };
-  });
-  const report = {
-    reportType: "DFP_MOVE_CHANGE_BAR_TRACE",
-    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    context,
-    entryCount: enrichedEntries.length,
-    entries: enrichedEntries,
-    dragDiagnostics: readJsonStorage("dfp_drag_diagnostics_report"),
-    dfpDataDiagnostics: readJsonStorage("neo_dfp_data_diag")
-  };
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const safeUser = String(context.currentUserName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
-  const safeDate = String(context.date || "no-date").replace(/[^0-9-]/g, "") || "no-date";
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `dfp-move-change-bar-trace-${safeUser}-${safeDate}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-};
 const DEFAULT_TASK_PROFILE_CONFIG = {
   flight_school: [],
   air_combat: [],
@@ -124108,13 +124068,10 @@ const App = () => {
     const saved = localStorage.getItem("timezoneOffset");
     return saved ? parseFloat(saved) : 10;
   });
-  const [showDepartureDensityOverlay, setShowDepartureDensityOverlay] = reactExports.useState(() => {
-    const saved = localStorage.getItem("showDepartureDensityOverlay");
-    return saved !== null ? JSON.parse(saved) : false;
-  });
+  const [showDepartureDensityOverlay, setShowDepartureDensityOverlay] = reactExports.useState(false);
   reactExports.useEffect(() => {
-    localStorage.setItem("showDepartureDensityOverlay", JSON.stringify(showDepartureDensityOverlay));
-  }, [showDepartureDensityOverlay]);
+    localStorage.removeItem("showDepartureDensityOverlay");
+  }, []);
   const [tileStatusSettings, setTileStatusSettings] = reactExports.useState(() => readTileStatusSettingsFromLocalStorage());
   const [fixedCrewTileColourModeByUnit, setFixedCrewTileColourModeByUnit] = reactExports.useState({});
   const [emergencyFreezeAuthority, setEmergencyFreezeAuthority] = reactExports.useState(
@@ -125744,20 +125701,6 @@ const App = () => {
     } catch {
       return false;
     }
-  }
-  function downloadCurrentDfpMoveChangeTrace() {
-    downloadDfpMoveChangeTrace({
-      currentUserName,
-      date,
-      school,
-      unit: activeUnitCode,
-      activeView,
-      baselineKey: activeBaselineKey,
-      liveSyncEnabled,
-      selectedEventId: selectedEvent?.id || null,
-      currentEventCount: (publishedSchedulesRef.current[date] || []).length,
-      baselineEventCount: (baselineSchedules[activeBaselineKey] || []).length
-    });
   }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
@@ -129645,7 +129588,6 @@ ${"=".repeat(60)}`);
         if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
         if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
         if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
-        if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
         if (saved.tileStatusSettings) setTileStatusSettings(normaliseTileStatusSettings(saved.tileStatusSettings));
         if (saved.emergencyFreezeAuthority) {
           setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(saved.emergencyFreezeAuthority, activeStaffQualificationCatalogue));
@@ -129800,7 +129742,7 @@ ${"=".repeat(60)}`);
       availableFtdCount,
       availableCptCount,
       timezoneOffset,
-      showDepartureDensityOverlay,
+      showDepartureDensityOverlay: false,
       tileStatusSettings,
       emergencyFreezeAuthority,
       sctEvents,
@@ -129859,7 +129801,6 @@ ${"=".repeat(60)}`);
     availableFtdCount,
     availableCptCount,
     timezoneOffset,
-    showDepartureDensityOverlay,
     tileStatusSettings,
     emergencyFreezeAuthority,
     sctEvents,
@@ -137308,7 +137249,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
   };
   reactExports.useCallback(() => {
     if (typeof window === "undefined") return;
-    const readJsonStorage2 = (key) => {
+    const readJsonStorage = (key) => {
       try {
         const raw = window.localStorage.getItem(key);
         return raw ? JSON.parse(raw) : null;
@@ -137320,7 +137261,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     };
     const getLatestNeoBuildDiagnosticReport = () => {
       const liveReport = window.__lastNeoBuildDiagnosticReport;
-      const storedReport = readJsonStorage2("neo_build_diag_report");
+      const storedReport = readJsonStorage("neo_build_diag_report");
       const liveUpdatedAt = Date.parse(String(liveReport?.updatedAt || liveReport?.timestamp || ""));
       const storedUpdatedAt = Date.parse(String(storedReport?.updatedAt || storedReport?.timestamp || ""));
       if (liveReport && (!storedReport || !Number.isFinite(storedUpdatedAt) || liveUpdatedAt >= storedUpdatedAt)) {
@@ -137370,12 +137311,12 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       },
       storedReports: {
         neoBuildDiagnostic: getLatestNeoBuildDiagnosticReport(),
-        neoBuildTiming: readJsonStorage2("neo_build_timing_report"),
-        neoBuildRuntimeError: readJsonStorage2("neo_build_runtime_error_report"),
-        neoBuildZeroTileTrace: readJsonStorage2("neo_build_zero_tile_trace"),
-        neoBuildInputTrace: readJsonStorage2("neo_build_input_trace"),
-        neoDfpDataTrace: readJsonStorage2("neo_dfp_data_diag"),
-        flightSchoolPriority: readJsonStorage2("flight_school_priority_diag_report")
+        neoBuildTiming: readJsonStorage("neo_build_timing_report"),
+        neoBuildRuntimeError: readJsonStorage("neo_build_runtime_error_report"),
+        neoBuildZeroTileTrace: readJsonStorage("neo_build_zero_tile_trace"),
+        neoBuildInputTrace: readJsonStorage("neo_build_input_trace"),
+        neoDfpDataTrace: readJsonStorage("neo_dfp_data_diag"),
+        flightSchoolPriority: readJsonStorage("flight_school_priority_diag_report")
       }
     };
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
@@ -143160,11 +143101,6 @@ ${error instanceof Error ? error.message : String(error)}`,
           onSelect: () => handleRemoveChangeBarNotification(selectedChangeBarEvents)
         });
       }
-      menuItems.push({
-        label: "Download Move Trace",
-        detail: "Download diagnostic JSON for DFP move and change-bar behaviour.",
-        onSelect: downloadCurrentDfpMoveChangeTrace
-      });
     } else if (aircraftNumber || contextKind === "aircraft" || contextKind === "aircraft-slot") {
       title = aircraftNumber ? `Aircraft ${aircraftNumber}` : "Aircraft";
       subtitle = [resourceLabel || "Flight Line", selectedEvent2 ? selectedEvent2.flightNumber || eventLabel : ""].filter(Boolean).join(" | ");
@@ -143225,7 +143161,6 @@ ${error instanceof Error ? error.message : String(error)}`,
           { label: "Directed Tasks", onSelect: () => handleNavigation("Priorities") },
           { label: "Emergency", onSelect: () => handleNavigateToSettingsSection({ sectionId: "emergency" }) }
         ],
-        { label: "Download Move Trace", detail: "Download diagnostic JSON for DFP move and change-bar behaviour.", onSelect: downloadCurrentDfpMoveChangeTrace },
         { label: "My Home", onSelect: () => handleNavigation("MyDashboard") }
       );
     } else {

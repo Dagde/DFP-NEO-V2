@@ -13,7 +13,6 @@ import { isEditableElement } from './utils/editableKeyEvents';
 import { getAdaptiveContextMenuPosition } from './utils/contextMenuPosition';
 import {
     appendDfpMoveChangeTrace,
-    downloadDfpMoveChangeTrace,
     isWatchingDfpMoveChangeEvent,
     summariseDfpMoveEvent,
     watchDfpMoveChangeEvents,
@@ -27851,16 +27850,11 @@ const App: React.FC = () => {
         return saved ? parseFloat(saved) : 10; // Default to UTC+10 (AEST); location timezones override this where available.
     });
 
-    // Validation Settings State
-    const [showDepartureDensityOverlay, setShowDepartureDensityOverlay] = useState<boolean>(() => {
-        const saved = localStorage.getItem('showDepartureDensityOverlay');
-        return saved !== null ? JSON.parse(saved) : false; // Default to false (OFF) on launch
-    });
-
-    // Save overlay setting to localStorage when it changes
+    // Dispatch Rate is a temporary display overlay. It should not persist after refresh.
+    const [showDepartureDensityOverlay, setShowDepartureDensityOverlay] = useState<boolean>(false);
     useEffect(() => {
-        localStorage.setItem('showDepartureDensityOverlay', JSON.stringify(showDepartureDensityOverlay));
-    }, [showDepartureDensityOverlay]);
+        localStorage.removeItem('showDepartureDensityOverlay');
+    }, []);
 
     const [tileStatusSettings, setTileStatusSettings] = useState<TileStatusSettings>(() => readTileStatusSettingsFromLocalStorage());
     const [fixedCrewTileColourModeByUnit, setFixedCrewTileColourModeByUnit] = useState<Record<string, FixedCrewTileColourMode>>({});
@@ -30215,21 +30209,6 @@ const App: React.FC = () => {
             surnameGroups,
             events,
         };
-    }
-
-    function downloadCurrentDfpMoveChangeTrace(): void {
-        downloadDfpMoveChangeTrace({
-            currentUserName,
-            date,
-            school,
-            unit: activeUnitCode,
-            activeView,
-            baselineKey: activeBaselineKey,
-            liveSyncEnabled,
-            selectedEventId: selectedEvent?.id || null,
-            currentEventCount: (publishedSchedulesRef.current[date] || []).length,
-            baselineEventCount: (baselineSchedules[activeBaselineKey] || []).length,
-        });
     }
 
     useEffect(() => {
@@ -34846,7 +34825,6 @@ const App: React.FC = () => {
                 if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
                 if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
                 if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
-                if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
                 if (saved.tileStatusSettings) setTileStatusSettings(normaliseTileStatusSettings(saved.tileStatusSettings));
                 if ((saved as any).emergencyFreezeAuthority) {
                     setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings((saved as any).emergencyFreezeAuthority, activeStaffQualificationCatalogue));
@@ -35025,7 +35003,7 @@ const App: React.FC = () => {
             availableFtdCount,
             availableCptCount,
             timezoneOffset,
-            showDepartureDensityOverlay,
+            showDepartureDensityOverlay: false,
             tileStatusSettings,
             emergencyFreezeAuthority,
             sctEvents,
@@ -35059,7 +35037,7 @@ const App: React.FC = () => {
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
         flyingWindowExclusions, flyingWindowExclusionsByUnit, activeFlyingWindowExclusionUnitKey,
         availableAircraftCount, neoAvailableAircraftCount, neoAircraftConfigCapacities, neoAircraftCapacityByUnit, activeNeoAircraftCapacityUnitKey, availableFtdCount, availableCptCount,
-        timezoneOffset, showDepartureDensityOverlay, tileStatusSettings, emergencyFreezeAuthority,
+        timezoneOffset, tileStatusSettings, emergencyFreezeAuthority,
         sctEvents, formationCallsigns, courseColors,
         phraseBank, cancellationCodes,
         masterCurrencies, currencyRequirements, unitCurrencyDefinitions,
@@ -51553,11 +51531,6 @@ appliedUpdates.forEach(update => {
                     onSelect: () => handleRemoveChangeBarNotification(selectedChangeBarEvents),
                 });
             }
-            menuItems.push({
-                label: 'Download Move Trace',
-                detail: 'Download diagnostic JSON for DFP move and change-bar behaviour.',
-                onSelect: downloadCurrentDfpMoveChangeTrace,
-            });
         } else if (aircraftNumber || contextKind === 'aircraft' || contextKind === 'aircraft-slot') {
             title = aircraftNumber ? `Aircraft ${aircraftNumber}` : 'Aircraft';
             subtitle = [resourceLabel || 'Flight Line', selectedEvent ? selectedEvent.flightNumber || eventLabel : ''].filter(Boolean).join(' | ');
@@ -51624,7 +51597,6 @@ appliedUpdates.forEach(update => {
                     { label: 'Directed Tasks', onSelect: () => handleNavigation('Priorities') },
                     { label: 'Emergency', onSelect: () => handleNavigateToSettingsSection({ sectionId: 'emergency' }) },
                 ] as DfpContextMenuItem[]),
-                { label: 'Download Move Trace', detail: 'Download diagnostic JSON for DFP move and change-bar behaviour.', onSelect: downloadCurrentDfpMoveChangeTrace },
                 { label: 'My Home', onSelect: () => handleNavigation('MyDashboard') }
             );
         } else {
