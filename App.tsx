@@ -31624,9 +31624,15 @@ const App: React.FC = () => {
                 student: event.student,
             })),
         });
-        const baselineEvts: ScheduleEvent[] = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0
-            ? snap.baselineEvents
-            : events;
+        const snapshotHasBaselineEvents = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0;
+        const snapshotBaselineEvents: ScheduleEvent[] = snapshotHasBaselineEvents ? snap.baselineEvents : [];
+        const existingBaselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
+        const existingBaselineEvents = baselineSchedules[existingBaselineKey] || [];
+        const baselineEvts: ScheduleEvent[] = snapshotHasBaselineEvents
+            ? snapshotBaselineEvents
+            : existingBaselineEvents.length > 0
+                ? existingBaselineEvents
+                : events;
         const watchedSnapshotEvents = events.filter(event => isWatchingDfpMoveChangeEvent(event.id));
         const watchedCurrentEvents = (publishedSchedulesRef.current[targetDate] || []).filter(event => isWatchingDfpMoveChangeEvent(event.id));
         if (watchedSnapshotEvents.length > 0 || watchedCurrentEvents.length > 0) {
@@ -31679,6 +31685,19 @@ const App: React.FC = () => {
 
         setBaselineSchedules(prev => {
             const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
+            if (!snapshotHasBaselineEvents && prev[baselineKey]?.length > 0) {
+                const watchedExistingBaseline = (prev[baselineKey] || []).filter(event => isWatchingDfpMoveChangeEvent(event.id));
+                if (watchedExistingBaseline.length > 0) {
+                    appendDfpMoveChangeTrace('snapshot:baseline-preserved-without-snapshot-baseline', {
+                        targetDate,
+                        baselineKey,
+                        source,
+                        replace,
+                        watchedBaseline: watchedExistingBaseline.map(summariseDfpMoveEvent),
+                    });
+                }
+                return prev;
+            }
             if (!replace && prev[baselineKey] && events.length > 0) return prev;
             if (!replace && prev[baselineKey] && events.length === 0) return prev;
             if (replace && prev[baselineKey] && baselineEvts.length > 0) {
@@ -31809,7 +31828,7 @@ const App: React.FC = () => {
         }
 
         return events.length;
-    }, [activeUnitCode, date]);
+    }, [activeUnitCode, baselineSchedules, date]);
 
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
     const loadSnapshotForDate = React.useCallback(async (
@@ -35046,6 +35065,7 @@ const App: React.FC = () => {
     // Baseline schedule state
     const [baselineSchedules, setBaselineSchedules] = useState<Record<string, ScheduleEvent[]>>({});
     const activeBaselineKey = getDailySnapshotKey(date);
+    const activeDfpSaveInFlightRef = useRef(0);
 
     // Alerts data state: { [date]: { [eventId]: alertEntry } }
     const [alertsDataByDate, setAlertsDataByDate] = useState<Record<string, Record<string, any>>>({});
@@ -41797,10 +41817,16 @@ const App: React.FC = () => {
             aircraftConfigState: currentAircraftConfigState,
             savedBy,
         };
-        // Only include baselineEvents if explicitly provided (initial publish)
-        // This preserves the original published baseline for change-bar detection after page reload
+        // Preserve the original published baseline for change-bar detection after page reload.
+        // Initial publish passes an explicit baseline. Later tile moves/edits should keep
+        // the existing baseline instead of allowing the edited schedule to become baseline.
         if (baselineEventsForDate !== undefined) {
             snapshotPayload.baselineEvents = baselineEventsForDate;
+        } else {
+            const existingBaselineEventsForDate = baselineSchedules[getDailySnapshotKey(targetDate, school, activeUnitCode)];
+            if (Array.isArray(existingBaselineEventsForDate) && existingBaselineEventsForDate.length > 0) {
+                snapshotPayload.baselineEvents = existingBaselineEventsForDate;
+            }
         }
 
         logScheduleDebug(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
@@ -42304,13 +42330,18 @@ const App: React.FC = () => {
                         savedEvents: _newEventsForDate.map(summariseDfpMoveEvent),
                         previousEvents: _prevForDate.filter((event: ScheduleEvent) => _newEventIds.has(event.id)).map(summariseDfpMoveEvent),
                     });
-                    persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate]).then((success) => {
-                        appendDfpMoveChangeTrace('flight-details-save:persist-complete', {
-                            date: d,
-                            success,
-                            savedEventIds: _newEventsForDate.map(event => event.id),
+                    activeDfpSaveInFlightRef.current += 1;
+                    persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate])
+                        .then((success) => {
+                            appendDfpMoveChangeTrace('flight-details-save:persist-complete', {
+                                date: d,
+                                success,
+                                savedEventIds: _newEventsForDate.map(event => event.id),
+                            });
+                        })
+                        .finally(() => {
+                            activeDfpSaveInFlightRef.current = Math.max(0, activeDfpSaveInFlightRef.current - 1);
                         });
-                    });
                 });
 
                 // Keep deployment assignment behaviour consistent whether the user
@@ -47347,6 +47378,7 @@ const App: React.FC = () => {
         // Use a short debounce (500ms) to avoid hammering DB during a drag
         if (_scheduleUpdatePersistTimer.current) clearTimeout(_scheduleUpdatePersistTimer.current);
         _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
+            _scheduleUpdatePersistTimer.current = null;
             if (updatedEventsForDate.length > 0) {
                 appendDfpMoveChangeTrace('schedule-update:persist-start', {
                     date,
@@ -47358,13 +47390,18 @@ const App: React.FC = () => {
                         .filter(event => appliedUpdates.some(update => update.eventId === event.id))
                         .map(summariseDfpMoveEvent),
                 });
-                persistScheduleForDate(date, updatedEventsForDate).then((success) => {
-                    appendDfpMoveChangeTrace('schedule-update:persist-complete', {
-                        date,
-                        success,
-                        appliedUpdates,
+                activeDfpSaveInFlightRef.current += 1;
+                persistScheduleForDate(date, updatedEventsForDate)
+                    .then((success) => {
+                        appendDfpMoveChangeTrace('schedule-update:persist-complete', {
+                            date,
+                            success,
+                            appliedUpdates,
+                        });
+                    })
+                    .finally(() => {
+                        activeDfpSaveInFlightRef.current = Math.max(0, activeDfpSaveInFlightRef.current - 1);
                     });
-                });
                 // Handle deployment-driven unavailability after drag settles.
                 // IMPORTANT: pass the FULL schedule across all dates so we can find
                 // deployment tiles that may live on a different date than the dragged flight.
@@ -48756,6 +48793,19 @@ appliedUpdates.forEach(update => {
             !date ||
             !/^\d{4}-\d{2}-\d{2}$/.test(date)
         ) {
+            return;
+        }
+        if (activeDfpSaveInFlightRef.current > 0 || _scheduleUpdatePersistTimer.current !== null) {
+            appendDfpMoveChangeTrace('live-sync:published-schedule-refresh-skipped-local-save', {
+                date,
+                school,
+                unit: activeUnitCode,
+                saveInFlightCount: activeDfpSaveInFlightRef.current,
+                hasPendingPersistTimer: _scheduleUpdatePersistTimer.current !== null,
+                watchedEvents: (publishedSchedulesRef.current[date] || [])
+                    .filter(event => isWatchingDfpMoveChangeEvent(event.id))
+                    .map(summariseDfpMoveEvent),
+            });
             return;
         }
         if (dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === 'empty') {

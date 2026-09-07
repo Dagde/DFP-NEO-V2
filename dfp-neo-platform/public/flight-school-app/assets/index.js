@@ -126931,7 +126931,11 @@ const App = () => {
         student: event.student
       }))
     });
-    const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
+    const snapshotHasBaselineEvents = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0;
+    const snapshotBaselineEvents = snapshotHasBaselineEvents ? snap2.baselineEvents : [];
+    const existingBaselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
+    const existingBaselineEvents = baselineSchedules[existingBaselineKey] || [];
+    const baselineEvts = snapshotHasBaselineEvents ? snapshotBaselineEvents : existingBaselineEvents.length > 0 ? existingBaselineEvents : events2;
     const watchedSnapshotEvents = events2.filter((event) => isWatchingDfpMoveChangeEvent(event.id));
     const watchedCurrentEvents = (publishedSchedulesRef.current[targetDate] || []).filter((event) => isWatchingDfpMoveChangeEvent(event.id));
     if (watchedSnapshotEvents.length > 0 || watchedCurrentEvents.length > 0) {
@@ -126981,6 +126985,19 @@ const App = () => {
     });
     setBaselineSchedules((prev) => {
       const baselineKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
+      if (!snapshotHasBaselineEvents && prev[baselineKey]?.length > 0) {
+        const watchedExistingBaseline = (prev[baselineKey] || []).filter((event) => isWatchingDfpMoveChangeEvent(event.id));
+        if (watchedExistingBaseline.length > 0) {
+          appendDfpMoveChangeTrace("snapshot:baseline-preserved-without-snapshot-baseline", {
+            targetDate,
+            baselineKey,
+            source,
+            replace,
+            watchedBaseline: watchedExistingBaseline.map(summariseDfpMoveEvent)
+          });
+        }
+        return prev;
+      }
       if (!replace && prev[baselineKey] && events2.length > 0) return prev;
       if (!replace && prev[baselineKey] && events2.length === 0) return prev;
       if (replace && prev[baselineKey] && baselineEvts.length > 0) {
@@ -127094,7 +127111,7 @@ const App = () => {
       });
     }
     return events2.length;
-  }, [activeUnitCode, date]);
+  }, [activeUnitCode, baselineSchedules, date]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
     const loadStartedAt = performance.now();
     const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = "", allowAdminFallbackContext = true, silent = false } = options;
@@ -129858,6 +129875,7 @@ ${"=".repeat(60)}`);
   ]);
   const [baselineSchedules, setBaselineSchedules] = reactExports.useState({});
   const activeBaselineKey = getDailySnapshotKey(date);
+  const activeDfpSaveInFlightRef = reactExports.useRef(0);
   const [alertsDataByDate, setAlertsDataByDate] = reactExports.useState({});
   const isDirtyRef = reactExports.useRef(() => false);
   const onSaveRef = reactExports.useRef(() => {
@@ -135213,6 +135231,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     };
     if (baselineEventsForDate !== void 0) {
       snapshotPayload.baselineEvents = baselineEventsForDate;
+    } else {
+      const existingBaselineEventsForDate = baselineSchedules[getDailySnapshotKey(targetDate, school, activeUnitCode)];
+      if (Array.isArray(existingBaselineEventsForDate) && existingBaselineEventsForDate.length > 0) {
+        snapshotPayload.baselineEvents = existingBaselineEventsForDate;
+      }
     }
     logScheduleDebug(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
     cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
@@ -135615,12 +135638,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
             savedEvents: _newEventsForDate.map(summariseDfpMoveEvent),
             previousEvents: _prevForDate.filter((event) => _newEventIds.has(event.id)).map(summariseDfpMoveEvent)
           });
+          activeDfpSaveInFlightRef.current += 1;
           persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate]).then((success) => {
             appendDfpMoveChangeTrace("flight-details-save:persist-complete", {
               date: d,
               success,
               savedEventIds: _newEventsForDate.map((event) => event.id)
             });
+          }).finally(() => {
+            activeDfpSaveInFlightRef.current = Math.max(0, activeDfpSaveInFlightRef.current - 1);
           });
         });
         setTimeout(() => {
@@ -139784,6 +139810,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     });
     if (_scheduleUpdatePersistTimer.current) clearTimeout(_scheduleUpdatePersistTimer.current);
     _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
+      _scheduleUpdatePersistTimer.current = null;
       if (updatedEventsForDate.length > 0) {
         appendDfpMoveChangeTrace("schedule-update:persist-start", {
           date,
@@ -139791,12 +139818,15 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           watchedEvents: updatedEventsForDate.filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent),
           baselineEvents: (baselineSchedules[activeBaselineKey] || []).filter((event) => appliedUpdates.some((update) => update.eventId === event.id)).map(summariseDfpMoveEvent)
         });
+        activeDfpSaveInFlightRef.current += 1;
         persistScheduleForDate(date, updatedEventsForDate).then((success) => {
           appendDfpMoveChangeTrace("schedule-update:persist-complete", {
             date,
             success,
             appliedUpdates
           });
+        }).finally(() => {
+          activeDfpSaveInFlightRef.current = Math.max(0, activeDfpSaveInFlightRef.current - 1);
         });
         setPublishedSchedules((prevSchedules) => {
           const allEvents = Object.values(prevSchedules).flat();
@@ -140968,6 +140998,17 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
   }, [isAddFlightTileModalOpen, liveSyncEnabled, syncUnavailabilityFromDatabase]);
   const syncPublishedScheduleForCurrentDate = reactExports.useCallback(async () => {
     if (setupTestProfile || isInitialSetupWizardActive || !liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing() || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return;
+    }
+    if (activeDfpSaveInFlightRef.current > 0 || _scheduleUpdatePersistTimer.current !== null) {
+      appendDfpMoveChangeTrace("live-sync:published-schedule-refresh-skipped-local-save", {
+        date,
+        school,
+        unit: activeUnitCode,
+        saveInFlightCount: activeDfpSaveInFlightRef.current,
+        hasPendingPersistTimer: _scheduleUpdatePersistTimer.current !== null,
+        watchedEvents: (publishedSchedulesRef.current[date] || []).filter((event) => isWatchingDfpMoveChangeEvent(event.id)).map(summariseDfpMoveEvent)
+      });
       return;
     }
     if (dfpSnapshotLoadState.date === date && dfpSnapshotLoadState.status === "empty") {
