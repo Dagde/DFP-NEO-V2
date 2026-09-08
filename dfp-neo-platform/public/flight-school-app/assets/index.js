@@ -12566,6 +12566,30 @@ const getCanonicalOrganisationLabel = (levels, repairMaps, levelIndex, value) =>
   if (exactOption) return exactOption;
   return repairMaps.get(levelIndex)?.get(normaliseOrgChartKey(label)) || label;
 };
+const getSafeOrganisationLevelNames = (levels, rootLabel) => {
+  const rootKey = normaliseOrgChartKey(rootLabel);
+  return (Array.isArray(levels) ? levels : []).map((level, index) => {
+    const rawName = normaliseOrgChartValue(level?.name);
+    const optionKeys = new Set((Array.isArray(level?.options) ? level.options : []).map(normaliseOrgChartKey).filter(Boolean));
+    if (index > 0 && (!rawName || normaliseOrgChartKey(rawName) === rootKey || optionKeys.has(normaliseOrgChartKey(rawName)))) {
+      return `Level ${index + 1}`;
+    }
+    return rawName || `Level ${index}`;
+  });
+};
+const cleanOrganisationChartDisplayPath = (path, rootLabel) => {
+  const rootKey = normaliseOrgChartKey(rootLabel);
+  const seenKeys = /* @__PURE__ */ new Set([rootKey]);
+  const cleanPath = [];
+  path.forEach((part) => {
+    const cleanPart = normaliseOrgChartValue(part);
+    const key = normaliseOrgChartKey(cleanPart);
+    if (!cleanPart || !key || seenKeys.has(key)) return;
+    cleanPath.push(cleanPart);
+    seenKeys.add(key);
+  });
+  return cleanPath;
+};
 const addOrganisationChartPath = (root2, path, levelNames, unitCode) => {
   let cursor = root2;
   path.forEach((rawPart, pathIndex) => {
@@ -12607,8 +12631,8 @@ const buildOrganisationChart = (platformConfig) => {
   if (!activeOrganisation) return null;
   const structure = activeOrganisation?.settings?.organisationStructure || {};
   const levels = Array.isArray(structure.levels) ? structure.levels : [];
-  const levelNames = levels.map((level, index) => normaliseOrgChartValue(level?.name) || `Level ${index}`);
   const rootLabel = getOrganisationStructureRootLabel(activeOrganisation, levels);
+  const levelNames = getSafeOrganisationLevelNames(levels, rootLabel);
   const root2 = {
     id: "org-root",
     label: rootLabel,
@@ -12623,7 +12647,7 @@ const buildOrganisationChart = (platformConfig) => {
     const path = (Array.isArray(rawPath) ? rawPath : String(rawPath || "").split(">")).map(normaliseOrgChartValue).filter(Boolean);
     const startsAtRoot = path[0]?.toLowerCase() === rootKey;
     const canonicalPath = path.map((part, pathIndex) => getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part));
-    const displayPath = startsAtRoot ? canonicalPath.slice(1) : canonicalPath;
+    const displayPath = cleanOrganisationChartDisplayPath(startsAtRoot ? canonicalPath.slice(1) : canonicalPath, rootLabel);
     addOrganisationChartPath(root2, displayPath, levelNames);
   });
   const activeOrganisationCode = normaliseOrgChartValue(activeOrganisation.code).toLowerCase();
@@ -12634,13 +12658,13 @@ const buildOrganisationChart = (platformConfig) => {
     const path = rawPath.map(normaliseOrgChartValue).filter(Boolean);
     const startsAtRoot = normaliseOrgChartKey(path[0]) === rootKey;
     const parentPath = path.map((part, pathIndex) => getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part)).filter(Boolean);
-    const displayPath = parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath;
+    const displayPath = cleanOrganisationChartDisplayPath(parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath, rootLabel);
     if (displayPath.length === 0) return;
     addOrganisationChartPath(root2, displayPath, levelNames, unitCode);
   });
   if (root2.children.length === 0) {
     levels.slice(1).forEach((level) => {
-      (Array.isArray(level?.options) ? level.options : []).map(normaliseOrgChartValue).filter(Boolean).forEach((option) => addOrganisationChartPath(root2, [option], levelNames));
+      (Array.isArray(level?.options) ? level.options : []).map(normaliseOrgChartValue).filter(Boolean).forEach((option) => addOrganisationChartPath(root2, cleanOrganisationChartDisplayPath([option], rootLabel), levelNames));
     });
   }
   const sortNodes = (node) => {

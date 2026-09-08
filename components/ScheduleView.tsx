@@ -393,6 +393,32 @@ const getCanonicalOrganisationLabel = (
     return repairMaps.get(levelIndex)?.get(normaliseOrgChartKey(label)) || label;
 };
 
+const getSafeOrganisationLevelNames = (levels: any[], rootLabel: string): string[] => {
+    const rootKey = normaliseOrgChartKey(rootLabel);
+    return (Array.isArray(levels) ? levels : []).map((level: any, index: number) => {
+        const rawName = normaliseOrgChartValue(level?.name);
+        const optionKeys = new Set((Array.isArray(level?.options) ? level.options : []).map(normaliseOrgChartKey).filter(Boolean));
+        if (index > 0 && (!rawName || normaliseOrgChartKey(rawName) === rootKey || optionKeys.has(normaliseOrgChartKey(rawName)))) {
+            return `Level ${index + 1}`;
+        }
+        return rawName || `Level ${index}`;
+    });
+};
+
+const cleanOrganisationChartDisplayPath = (path: string[], rootLabel: string): string[] => {
+    const rootKey = normaliseOrgChartKey(rootLabel);
+    const seenKeys = new Set<string>([rootKey]);
+    const cleanPath: string[] = [];
+    path.forEach((part) => {
+        const cleanPart = normaliseOrgChartValue(part);
+        const key = normaliseOrgChartKey(cleanPart);
+        if (!cleanPart || !key || seenKeys.has(key)) return;
+        cleanPath.push(cleanPart);
+        seenKeys.add(key);
+    });
+    return cleanPath;
+};
+
 const addOrganisationChartPath = (
     root: OrganisationChartNode,
     path: string[],
@@ -440,8 +466,8 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
     if (!activeOrganisation) return null;
     const structure = activeOrganisation?.settings?.organisationStructure || {};
     const levels = Array.isArray(structure.levels) ? structure.levels : [];
-    const levelNames = levels.map((level: any, index: number) => normaliseOrgChartValue(level?.name) || `Level ${index}`);
     const rootLabel = getOrganisationStructureRootLabel(activeOrganisation, levels);
+    const levelNames = getSafeOrganisationLevelNames(levels, rootLabel);
     const root: OrganisationChartNode = {
         id: 'org-root',
         label: rootLabel,
@@ -460,7 +486,7 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
         const canonicalPath = path.map((part, pathIndex) => (
             getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part)
         ));
-        const displayPath = startsAtRoot ? canonicalPath.slice(1) : canonicalPath;
+        const displayPath = cleanOrganisationChartDisplayPath(startsAtRoot ? canonicalPath.slice(1) : canonicalPath, rootLabel);
         addOrganisationChartPath(root, displayPath, levelNames);
     });
     const activeOrganisationCode = normaliseOrgChartValue(activeOrganisation.code).toLowerCase();
@@ -480,7 +506,7 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
             const parentPath = path
                 .map((part: unknown, pathIndex: number) => getCanonicalOrganisationLabel(levels, repairMaps, startsAtRoot ? pathIndex : pathIndex + 1, part))
                 .filter(Boolean);
-            const displayPath = parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath;
+            const displayPath = cleanOrganisationChartDisplayPath(parentPath[0]?.toLowerCase() === rootKey ? parentPath.slice(1) : parentPath, rootLabel);
             if (displayPath.length === 0) return;
             addOrganisationChartPath(root, displayPath, levelNames, unitCode);
         });
@@ -489,7 +515,7 @@ const buildOrganisationChart = (platformConfig: any): OrganisationChartNode | nu
             (Array.isArray(level?.options) ? level.options : [])
                 .map(normaliseOrgChartValue)
                 .filter(Boolean)
-                .forEach((option: string) => addOrganisationChartPath(root, [option], levelNames));
+                .forEach((option: string) => addOrganisationChartPath(root, cleanOrganisationChartDisplayPath([option], rootLabel), levelNames));
         });
     }
     const sortNodes = (node: OrganisationChartNode) => {
