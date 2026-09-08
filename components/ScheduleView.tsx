@@ -4377,19 +4377,207 @@ const InitialSetupWizard: React.FC<{
         'follow-on': 'text-emerald-700',
         review: 'text-orange-600',
     };
-    const isWizardStepComplete = (step: InitialSetupWizardStep) => {
-        if (step.id === 'resource-counts') return hasResourceRowCapacity;
+    const cleanWizardValue = (value: unknown) => String(value ?? '').trim();
+    const normaliseWizardValue = (value: unknown) => normaliseUnitSettingsIdentifier(cleanWizardValue(value));
+    const hasMeaningfulWizardText = (value: unknown, defaults: unknown[] = []) => {
+        const cleanValue = cleanWizardValue(value);
+        if (!cleanValue) return false;
+        const valueKey = normaliseWizardValue(cleanValue);
+        if (!valueKey) return false;
+        return !defaults.some((item) => normaliseWizardValue(item) === valueKey);
+    };
+    const hasMeaningfulWizardLine = (value: string, defaults: unknown[] = []) => (
+        parseWizardLineItems(value).some((item) => hasMeaningfulWizardText(item, defaults))
+    );
+    const hasPositiveWizardNumber = (value: unknown) => parseNumberDraft(String(value ?? ''), 0) > 0;
+    const hasChangedWizardObject = (value: Record<string, string>, defaults: Record<string, string>) => (
+        Object.keys(defaults).some((key) => normaliseWizardValue(value[key]) !== normaliseWizardValue(defaults[key]))
+    );
+    const hasMeaningfulOrganisationLevel = (levelIndex: number) => {
+        const level = getOrganisationDraftLevel(organisationDraft, levelIndex);
+        const defaultName = levelIndex === 0 ? 'Organisation' : `Level ${levelIndex}`;
         return (
-            completedWizardStepIds.has(step.id)
-            || (step.checkIds.length > 0 && step.checkIds.every((checkId) => checks.find((check) => check.id === checkId)?.complete))
+            hasMeaningfulWizardText(level.name, [defaultName, `Organisation Level ${levelIndex}`])
+            && Array.isArray(level.options)
+            && level.options.some((option: string) => hasMeaningfulWizardText(option, ['Organisation', defaultName, level.name]))
         );
+    };
+    const hasMeaningfulWizardStepData = (step: InitialSetupWizardStep) => {
+        switch (step.id) {
+            case 'analysis':
+                return checks.some((check) => check.complete);
+            case 'org-name':
+                return (
+                    hasMeaningfulWizardText(organisationDraft.name, ['Organisation'])
+                    && hasMeaningfulWizardText(organisationDraft.code, ['ORG', 'Organisation'])
+                );
+            case 'org-level1':
+                return hasMeaningfulOrganisationLevel(1);
+            case 'org-level2':
+                return hasMeaningfulOrganisationLevel(2);
+            case 'org-level3':
+                return hasMeaningfulOrganisationLevel(3);
+            case 'locations-today': {
+                const rows = parseWizardLocationRows(locationsTodayDraft);
+                return rows.some((row) => (
+                    hasMeaningfulWizardText(row.icao || row.iata, ['LOC1', 'LOC'])
+                    && hasMeaningfulWizardText(row.name || row.icao || row.iata, ['Home Location', 'Location'])
+                ));
+            }
+            case 'location-code':
+                return hasMeaningfulWizardText(locationDraft.code, ['LOC1', 'LOC']);
+            case 'location-details':
+                return (
+                    hasMeaningfulWizardText(locationDraft.code, ['LOC1', 'LOC'])
+                    && hasMeaningfulWizardText(locationDraft.iataCode, ['LOC'])
+                    && hasMeaningfulWizardText(locationDraft.name, ['Home Location', 'Location'])
+                    && hasMeaningfulWizardText(locationDraft.timezone, ['UTC'])
+                    && hasMeaningfulWizardLine(locationDraft.trainingAreas, ['Area A', 'Area B'])
+                );
+            case 'units-today': {
+                const rows = parseWizardUnitRows(unitsTodayDraft);
+                return rows.some((row) => (
+                    hasMeaningfulWizardText(row.code, ['UNIT', 'UNIT-01'])
+                    && hasMeaningfulWizardText(row.name || row.code, ['Unit', 'Unit Name', 'Training Unit Name'])
+                ));
+            }
+            case 'unit-code':
+                return (
+                    hasMeaningfulWizardText(unitDraft.code, ['UNIT', 'UNIT-01'])
+                    && hasMeaningfulWizardText(unitDraft.name, ['Unit'])
+                );
+            case 'unit-model':
+                return (
+                    hasMeaningfulWizardText(unitDraft.code, ['UNIT', 'UNIT-01'])
+                    && hasMeaningfulWizardText(unitDraft.name, ['Unit'])
+                    && hasMeaningfulWizardText(unitDraft.locationCode, ['LOC1', 'LOC'])
+                    && hasMeaningfulWizardText(unitDraft.unitType, ['Not set'])
+                    && hasMeaningfulWizardText(unitDraft.operationalModel, ['pooled-crew'])
+                );
+            case 'unit-modules': {
+                const rows = parseWizardPipeRows<{ module: string; enabled: string }>(unitModulesDraft, ['module', 'enabled']);
+                const defaultRows = 'DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On';
+                return rows.some((row) => hasMeaningfulWizardText(row.module) && /^on$/i.test(row.enabled))
+                    && normaliseWizardValue(unitModulesDraft) !== normaliseWizardValue(defaultRows);
+            }
+            case 'ranks-labels':
+                return parseWizardRankRows(rankLabelsDraft).some((row) => (
+                    hasPositiveWizardNumber(row.order)
+                    && hasMeaningfulWizardText(row.ranks, ['Senior Rank 1', 'Senior Rank 2', 'Team Lead Rank', 'Line Rank'])
+                ));
+            case 'resource-aircraft':
+                return (
+                    hasMeaningfulWizardText(resourceDraft.aircraftCode, ['Aircraft', 'Aircraft Type', 'Enter Aircraft Code'])
+                    && hasMeaningfulWizardText(resourceDraft.aircraftName, ['Aircraft', 'Resource', 'Enter Aircraft Or Resource Type'])
+                    && hasMeaningfulWizardText(resourceDraft.poolName, ['DFP Resource Rows'])
+                );
+            case 'resource-counts':
+                return [
+                    resourceDraft.aircraft,
+                    resourceDraft.sim,
+                    resourceDraft.trainer,
+                    resourceDraft.standby,
+                    resourceDraft.ground,
+                ].every(hasPositiveWizardNumber);
+            case 'crew':
+                return parseRoleRequirementsText(crewDraft.standardSeats).some((row) => (
+                    hasMeaningfulWizardText(row.role, ['Crew'])
+                    && Number(row.count || 0) > 0
+                ));
+            case 'build-rules':
+                return hasChangedWizardObject(buildRulesDraft, {
+                    businessRules: 'Use configured rule set',
+                    maxCrewDutyHours: '12',
+                    preferredDutyHours: '10',
+                    aircraftTurnaroundMinutes: '60',
+                    simTurnaroundMinutes: '30',
+                    trainerTurnaroundMinutes: '30',
+                    maxDispatchPerHour: '2',
+                    maxEventsPerDay: '',
+                    maxFlightsPerDay: '',
+                    minGapBetweenEventsMinutes: '0',
+                });
+            case 'resource-sharing':
+                return parseWizardSharingRows(resourceSharingDraft).some((row) => (
+                    /^on$/i.test(row.enabled)
+                    && hasMeaningfulWizardText(row.units)
+                ));
+            case 'currencies':
+                return parseWizardCurrencyRows(currencyDraft).some((row) => (
+                    hasMeaningfulWizardText(row.name, ['PIC Currency', 'Instrument Currency'])
+                    && hasMeaningfulWizardText(row.code, ['PIC', 'INST'])
+                    && hasMeaningfulWizardText(row.currency, ['PIC Currency', 'Instrument Currency'])
+                    && hasPositiveWizardNumber(row.aircraftCount)
+                ));
+            case 'training-records':
+                return parseWizardTrainingReportRows(trainingRecordsDraft).some((row) => (
+                    hasMeaningfulWizardText(row.genericName, ['Training Report'])
+                    && hasMeaningfulWizardText(row.organisationName, ['Assessment Form'])
+                    && hasMeaningfulWizardText(row.passLabel, ['Satisfactory'])
+                    && hasMeaningfulWizardText(row.failLabel, ['Unsatisfactory'])
+                ));
+            case 'staff-currency-events':
+                return parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).some((row) => (
+                    hasMeaningfulWizardText(row.name, ['Annual Instrument Check'])
+                    && hasMeaningfulWizardText(row.shortTitle, ['INST'])
+                    && hasPositiveWizardNumber(row.duration)
+                    && hasPositiveWizardNumber(row.aircraftCount)
+                ));
+            case 'scoring':
+                return parseWizardScoringRows(scoringDraft).some((row) => (
+                    hasMeaningfulWizardText(row.dimension, ['Preparation', 'Airmanship'])
+                    && hasMeaningfulWizardText(row.passStandard)
+                    && hasMeaningfulWizardText(row.failStandard)
+                ));
+            case 'access':
+                return (
+                    hasMeaningfulWizardText(accessDraft.userName, ['New user', 'Admin User'])
+                    && hasMeaningfulWizardText(accessDraft.locationCode, ['LOC1', 'LOC'])
+                    && hasMeaningfulWizardText(accessDraft.unitCode, ['UNIT', 'UNIT-01'])
+                    && hasMeaningfulWizardText(accessDraft.moduleCode)
+                    && hasMeaningfulWizardText(trainingDraft.accessLevel || accessDraft.accessLevel)
+                );
+            case 'staff':
+                return parseWizardStaffRows(staffDraft).some((row) => (
+                    hasMeaningfulWizardText(row.surname, ['Surname'])
+                    && hasMeaningfulWizardText(row.givenNames, ['First'])
+                    && hasMeaningfulWizardText(row.unit, ['UNIT', 'UNIT-01'])
+                    && hasMeaningfulWizardText(row.position, ['Pilot'])
+                ));
+            case 'trainees':
+                return unitDraft.hasTrainees === true;
+            case 'trainee-courses':
+                return hasMeaningfulWizardLine(traineeCourseOptionsDraft, ['Course 1']);
+            case 'trainee-upload':
+            case 'trainee-allocation':
+                return parseWizardTraineeRows(traineeDraft).some((row) => (
+                    hasMeaningfulWizardText(row.surname, ['Surname'])
+                    && hasMeaningfulWizardText(row.givenNames, ['First'])
+                    && hasMeaningfulWizardText(row.course || row.courseNumber, ['Course 1'])
+                ));
+            case 'master-lmp':
+                return (
+                    hasMeaningfulWizardText(trainingDraft.lmpCode, ['New Master LMP', 'Master LMP'])
+                    && hasMeaningfulWizardText(trainingDraft.lmpName, ['New Master LMP', 'Training Programme'])
+                );
+            case 'review':
+                return allMandatoryComplete;
+            default:
+                if (/^org-level\d+$/.test(step.id)) {
+                    return hasMeaningfulOrganisationLevel(Number(step.id.replace('org-level', '')));
+                }
+                return false;
+        }
+    };
+    const isWizardStepComplete = (step: InitialSetupWizardStep) => {
+        return hasMeaningfulWizardStepData(step);
     };
     const wizardStepTextClass = (step: InitialSetupWizardStep) => (
         isWizardStepComplete(step) ? 'text-slate-950' : wizardCategoryTextClass[step.category]
     );
     const wizardStepMenuItemClass = (step: InitialSetupWizardStep, index: number) => [
-        'block w-full px-3 py-2 text-left text-xs font-semibold leading-4 transition hover:bg-orange-50',
-        wizardCategoryTextClass[step.category],
+        'flex w-full items-start gap-1.5 px-3 py-2 text-left text-xs font-semibold leading-4 transition hover:bg-orange-50',
+        wizardStepTextClass(step),
         index === currentStep ? 'bg-slate-100' : 'bg-white',
     ].join(' ');
     const markWizardStepComplete = (stepId: string) => {
@@ -5648,7 +5836,10 @@ const InitialSetupWizard: React.FC<{
                                     role="option"
                                     aria-selected={index === currentStep}
                                 >
-                                    {index + 1}. {step.title}
+                                    <span className="w-6 shrink-0 text-right">
+                                        {isWizardStepComplete(step) ? '✓ ' : ''}{index + 1}.
+                                    </span>
+                                    <span className="min-w-0 flex-1">{step.title}</span>
                                 </button>
                             ))}
                         </div>
