@@ -3165,8 +3165,44 @@ const InitialSetupWizard: React.FC<{
     const [traineeDraft, setTraineeDraft] = useState('');
     const [traineeAllocationCommitted, setTraineeAllocationCommitted] = useState(false);
     const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = useState(false);
+    const defaultWizardUnitModulesDraft = 'DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On';
+    const makeWizardModuleCode = (moduleName: string, index = 0) => (
+        (String(moduleName || '').trim() || `Module ${index + 1}`)
+            .toUpperCase()
+            .replace(/[^A-Z0-9]+/g, '_')
+            .replace(/^_|_$/g, '')
+    );
+    const buildHydratedUnitModulesDraft = () => {
+        const savedDraft = String(
+            activeOrganisation?.settings?.initialSetupWizardDraft?.unitModules
+            || activeOrganisation?.settings?.initialSetupWizardDrafts?.unitModulesDraft
+            || activeOrganisation?.settings?.initialSetupWizardDrafts?.unitModules
+            || '',
+        ).trim();
+        if (savedDraft) return savedDraft;
+        const moduleNames = Array.from(new Set([
+            ...((platformConfig?.modules || []).map((module: any) => String(module?.name || module?.code || '').trim())),
+            'DFP',
+            'NEO Build',
+            'Program Schedule',
+            'Training Records',
+            'Build Intelligence',
+        ].filter(Boolean)));
+        const targetUnitCode = normaliseUnitSettingsIdentifier(currentUnit?.code || unitCode || '');
+        const rows = moduleNames.map((moduleName, index) => {
+            const moduleCode = makeWizardModuleCode(moduleName, index);
+            const savedModule = (platformConfig?.unitModules || []).find((item: any) => (
+                targetUnitCode
+                && normaliseUnitSettingsIdentifier(item?.unitCode) === targetUnitCode
+                && normaliseUnitSettingsIdentifier(item?.moduleCode) === normaliseUnitSettingsIdentifier(moduleCode)
+            ));
+            return `${moduleName} | ${savedModule?.isEnabled === false ? 'Off' : 'On'}`;
+        });
+        return rows.length > 0 ? rows.join('\n') : defaultWizardUnitModulesDraft;
+    };
     const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Training Report | Assessment Form | 0 | 5 | Yes | No | Satisfactory | Unsatisfactory');
-    const [unitModulesDraft, setUnitModulesDraft] = useState('DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On');
+    const [unitModulesDraft, setUnitModulesDraft] = useState(() => buildHydratedUnitModulesDraft());
+    const unitModulesDraftDirtyRef = useRef(false);
     const [rankLabelsDraft, setRankLabelsDraft] = useState('1 | Senior Rank 1 | Highest rank shown first\n2 | Senior Rank 2 | Next senior rank\n3 | Team Lead Rank | Operational supervisor level\n4 | Line Rank | Standard operational rank');
     const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
     const [currencyDraft, setCurrencyDraft] = useState('PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1');
@@ -3405,6 +3441,7 @@ const InitialSetupWizard: React.FC<{
         crewDraftDirtyRef.current = false;
         accessDraftDirtyRef.current = false;
         trainingDraftDirtyRef.current = false;
+        unitModulesDraftDirtyRef.current = false;
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
         pushWizardOrgDiag(`hydrate:${stage}-from-synced-settings`, {
             activeOrganisation: summariseActiveOrganisation(),
@@ -3417,6 +3454,7 @@ const InitialSetupWizard: React.FC<{
         setUnitsTodayDraft(hydratedUnits);
         setUnitParentDraft(hydratedUnitParents);
         setLocationsTodayDraft(hydratedLocations);
+        setUnitModulesDraft(buildHydratedUnitModulesDraft());
     };
 
     useEffect(() => {
@@ -3429,6 +3467,19 @@ const InitialSetupWizard: React.FC<{
         }
         hydrateWizardDraftsFromSettings('active-organisation');
     }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
+
+    useEffect(() => {
+        if (unitModulesDraftDirtyRef.current) return;
+        setUnitModulesDraft(buildHydratedUnitModulesDraft());
+    }, [
+        activeOrganisation?.settings?.initialSetupWizardDraft?.unitModules,
+        activeOrganisation?.settings?.initialSetupWizardDrafts?.unitModulesDraft,
+        activeOrganisation?.settings?.initialSetupWizardDrafts?.unitModules,
+        currentUnit?.code,
+        unitCode,
+        JSON.stringify(platformConfig?.modules || []),
+        JSON.stringify(platformConfig?.unitModules || []),
+    ]);
 
     useEffect(() => {
         const unitRows = parseWizardUnitRows(unitsTodayDraft).filter((row) => row.code);
@@ -3504,6 +3555,7 @@ const InitialSetupWizard: React.FC<{
         crewDraftDirtyRef.current = false;
         accessDraftDirtyRef.current = false;
         trainingDraftDirtyRef.current = false;
+        unitModulesDraftDirtyRef.current = false;
     }, [currentUnit?.code, unitCode]);
 
     useEffect(() => {
@@ -4026,6 +4078,90 @@ const InitialSetupWizard: React.FC<{
         })));
     };
 
+    const parseWizardUnitModuleDraftRows = () => {
+        const rows = parseWizardPipeRows<{ module: string; enabled: string }>(unitModulesDraft, ['module', 'enabled']);
+        return rows
+            .map((row, index) => {
+                const name = String(row.module || '').trim();
+                const code = makeWizardModuleCode(name, index);
+                if (!name || !code) return null;
+                return {
+                    name,
+                    code,
+                    isEnabled: !/^(off|no|disabled|false)$/i.test(String(row.enabled || 'On').trim()),
+                };
+            })
+            .filter(Boolean) as Array<{ name: string; code: string; isEnabled: boolean }>;
+    };
+
+    const saveUnitModulesDraft = () => {
+        const moduleRows = parseWizardUnitModuleDraftRows();
+        if (moduleRows.length === 0) {
+            setSaveMessage('Choose at least one app area before continuing.');
+            return;
+        }
+        const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+        if (!targetUnitCode) {
+            setSaveMessage('Set up the unit before choosing app areas.');
+            return;
+        }
+        saveWizardConfig('Unit app areas saved into Settings.', (baseConfig) => {
+            const modules = Array.isArray(baseConfig.modules) ? baseConfig.modules : [];
+            const nextModules = [...modules];
+            moduleRows.forEach((row) => {
+                const existingIndex = nextModules.findIndex((module: any) => (
+                    normaliseUnitSettingsIdentifier(module?.code) === normaliseUnitSettingsIdentifier(row.code)
+                    || normaliseUnitSettingsIdentifier(module?.name) === normaliseUnitSettingsIdentifier(row.name)
+                ));
+                const nextModule = {
+                    ...(existingIndex >= 0 ? nextModules[existingIndex] : { id: createWizardRecordId('module') }),
+                    code: row.code,
+                    name: row.name,
+                    status: 'ACTIVE',
+                };
+                if (existingIndex >= 0) nextModules[existingIndex] = nextModule;
+                else nextModules.push(nextModule);
+            });
+
+            const unitModules = Array.isArray(baseConfig.unitModules) ? baseConfig.unitModules : [];
+            const nextUnitModules = [...unitModules];
+            moduleRows.forEach((row) => {
+                const existingIndex = nextUnitModules.findIndex((item: any) => (
+                    normaliseUnitSettingsIdentifier(item?.unitCode) === normaliseUnitSettingsIdentifier(targetUnitCode)
+                    && normaliseUnitSettingsIdentifier(item?.moduleCode) === normaliseUnitSettingsIdentifier(row.code)
+                ));
+                const nextUnitModule = {
+                    ...(existingIndex >= 0 ? nextUnitModules[existingIndex] : { id: createWizardRecordId('unit-module'), settings: {} }),
+                    unitCode: targetUnitCode,
+                    moduleCode: row.code,
+                    isEnabled: row.isEnabled,
+                    status: 'ACTIVE',
+                };
+                if (existingIndex >= 0) nextUnitModules[existingIndex] = nextUnitModule;
+                else nextUnitModules.push(nextUnitModule);
+            });
+
+            return updatePrimaryOrganisationWithSettings({
+                ...baseConfig,
+                modules: nextModules,
+                unitModules: nextUnitModules,
+            }, (settings) => ({
+                ...settings,
+                initialSetupWizardDraft: {
+                    ...(settings.initialSetupWizardDraft || {}),
+                    unitModules: unitModulesDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+                initialSetupWizardDrafts: {
+                    ...(settings.initialSetupWizardDrafts || {}),
+                    unitModulesDraft,
+                    unitModules: unitModulesDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+            }));
+        });
+    };
+
     const hasResourceRowCapacity = activeResourcePools.some((pool: any) => {
         const settings = pool?.settings || {};
         return [
@@ -4459,9 +4595,10 @@ const InitialSetupWizard: React.FC<{
                 );
             case 'unit-modules': {
                 const rows = parseWizardPipeRows<{ module: string; enabled: string }>(unitModulesDraft, ['module', 'enabled']);
-                const defaultRows = 'DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On';
-                return rows.some((row) => hasMeaningfulWizardText(row.module) && /^on$/i.test(row.enabled))
-                    && normaliseWizardValue(unitModulesDraft) !== normaliseWizardValue(defaultRows);
+                return rows.some((row) => (
+                    hasMeaningfulWizardText(row.module)
+                    && /^(on|yes|enabled|true)$/i.test(String(row.enabled || 'On').trim())
+                ));
             }
             case 'ranks-labels':
                 return parseWizardRankRows(rankLabelsDraft).some((row) => (
@@ -4625,9 +4762,14 @@ const InitialSetupWizard: React.FC<{
             saveLocationDraft();
             return;
         }
-        if (stepId === 'unit-model' || stepId === 'unit-modules') {
+        if (stepId === 'unit-model') {
             saveUnitDraft();
             saveWizardSupplementaryDrafts('Unit setup synced into Settings.');
+            return;
+        }
+        if (stepId === 'unit-modules') {
+            saveUnitDraft();
+            saveUnitModulesDraft();
             return;
         }
         if (stepId === 'resource-aircraft' || stepId === 'resource-counts') {
@@ -5071,6 +5213,10 @@ const InitialSetupWizard: React.FC<{
         trainingDraftDirtyRef.current = true;
         setTrainingDraft(updater);
     };
+    const updateUnitModulesDraft = (value: string) => {
+        unitModulesDraftDirtyRef.current = true;
+        setUnitModulesDraft(value);
+    };
     const wizardField = (
         label: string,
         value: string,
@@ -5508,7 +5654,7 @@ const InitialSetupWizard: React.FC<{
         });
         const updateModuleRow = (module: string, enabled: string) => {
             const nextRows = rows.map((row) => normaliseUnitSettingsIdentifier(row.module) === normaliseUnitSettingsIdentifier(module) ? { ...row, enabled } : row);
-            setUnitModulesDraft(formatWizardPipeRows(nextRows, ['module', 'enabled']));
+            updateUnitModulesDraft(formatWizardPipeRows(nextRows, ['module', 'enabled']));
         };
         return (
             <div className="space-y-3">
