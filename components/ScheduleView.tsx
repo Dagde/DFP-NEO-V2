@@ -4576,7 +4576,7 @@ const InitialSetupWizard: React.FC<{
         isWizardStepComplete(step) ? 'text-slate-950' : wizardCategoryTextClass[step.category]
     );
     const wizardStepMenuItemClass = (step: InitialSetupWizardStep, index: number) => [
-        'flex w-full items-start gap-1.5 px-3 py-2 text-left text-xs font-semibold leading-4 transition hover:bg-orange-50',
+        'grid w-full grid-cols-[14px_24px_minmax(0,1fr)] items-start gap-1.5 px-3 py-2 text-left text-xs font-semibold leading-4 transition hover:bg-orange-50',
         wizardStepTextClass(step),
         index === currentStep ? 'bg-slate-100' : 'bg-white',
     ].join(' ');
@@ -5836,9 +5836,8 @@ const InitialSetupWizard: React.FC<{
                                     role="option"
                                     aria-selected={index === currentStep}
                                 >
-                                    <span className="w-6 shrink-0 text-right">
-                                        {isWizardStepComplete(step) ? '✓ ' : ''}{index + 1}.
-                                    </span>
+                                    <span className="text-center">{isWizardStepComplete(step) ? '✓' : ''}</span>
+                                    <span className="text-right">{index + 1}.</span>
                                     <span className="min-w-0 flex-1">{step.title}</span>
                                 </button>
                             ))}

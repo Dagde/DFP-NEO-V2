@@ -15826,7 +15826,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const wizardStepTextClass = (step) => isWizardStepComplete(step) ? "text-slate-950" : wizardCategoryTextClass[step.category];
   const wizardStepMenuItemClass = (step, index) => [
-    "flex w-full items-start gap-1.5 px-3 py-2 text-left text-xs font-semibold leading-4 transition hover:bg-orange-50",
+    "grid w-full grid-cols-[14px_24px_minmax(0,1fr)] items-start gap-1.5 px-3 py-2 text-left text-xs font-semibold leading-4 transition hover:bg-orange-50",
     wizardStepTextClass(step),
     index === currentStep ? "bg-slate-100" : "bg-white"
   ].join(" ");
@@ -16948,8 +16948,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
                         role: "option",
                         "aria-selected": index === currentStep,
                         children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "w-6 shrink-0 text-right", children: [
-                            isWizardStepComplete(step) ? "✓ " : "",
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center", children: isWizardStepComplete(step) ? "✓" : "" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-right", children: [
                             index + 1,
                             "."
                           ] }),
