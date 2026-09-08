@@ -13247,8 +13247,6 @@ const parseWizardEditablePipeRows = (value, keys) => String(value || "").split(/
 const formatWizardEditablePipeRows = (rows, keys) => rows.filter((row) => keys.some((key) => String(row[key] || "").trim())).map((row) => keys.map((key) => String(row[key] || "")).join("|")).join("\n");
 const parseWizardTrainingReportRows = (value) => parseWizardPipeRows(value, ["genericName", "organisationName", "gradeMin", "gradeMax", "showNumbers", "noGradeOption", "passLabel", "failLabel"]);
 const formatWizardTrainingReportRows = (rows) => formatWizardPipeRows(rows, ["genericName", "organisationName", "gradeMin", "gradeMax", "showNumbers", "noGradeOption", "passLabel", "failLabel"]);
-const parseWizardRankRows = (value) => parseWizardPipeRows(value, ["order", "ranks", "notes"]);
-const formatWizardRankRows = (rows) => formatWizardPipeRows(rows, ["order", "ranks", "notes"]);
 const parseWizardSharingRows = (value) => parseWizardPipeRows(value, ["type", "enabled", "units", "consequence"]);
 const formatWizardSharingRows = (rows) => formatWizardPipeRows(rows, ["type", "enabled", "units", "consequence"]);
 const parseWizardCurrencyRows = (value) => parseWizardPipeRows(value, ["name", "code", "crew", "config", "currency", "aircraftCount"]);
@@ -14330,6 +14328,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const primaryUserAccess = activeUserAccess.find((access) => normaliseUnitSettingsIdentifier(access?.unitCode || access?.unit) === normaliseUnitSettingsIdentifier(currentUnit?.code) || normaliseUnitSettingsIdentifier(access?.locationCode || access?.location) === normaliseUnitSettingsIdentifier(currentLocation?.code)) || activeUserAccess[0] || null;
   const primaryMasterLmp = activeMasterLmpCatalogue[0] || null;
   const primaryMasterLmpRule = activeMasterLmpAccess.find((rule) => normaliseUnitSettingsIdentifier(rule?.unitCode || rule?.unit) === normaliseUnitSettingsIdentifier(currentUnit?.code)) || activeMasterLmpAccess[0] || null;
+  const currentPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
+    activeOrganisation?.settings?.personnelDisplaySettings || activeOrganisation?.settings?.personnelSettings || null
+  );
   const levelDraftSource = (levelIndex) => organisationStructureLevels.find((level) => Number(level?.levelIndex ?? level?.level ?? levelIndex) === levelIndex) || organisationStructureLevels[levelIndex] || {};
   const parentLinesForLevel = (levelIndex, fallback = "") => {
     const level = levelDraftSource(levelIndex) || {};
@@ -14644,6 +14645,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const [unitModulesDraft, setUnitModulesDraft] = reactExports.useState(() => buildHydratedUnitModulesDraft());
   const unitModulesDraftDirtyRef = reactExports.useRef(false);
   const [rankLabelsDraft, setRankLabelsDraft] = reactExports.useState("1 | Senior Rank 1 | Highest rank shown first\n2 | Senior Rank 2 | Next senior rank\n3 | Team Lead Rank | Operational supervisor level\n4 | Line Rank | Standard operational rank");
+  const [rankSettingsDraft, setRankSettingsDraft] = reactExports.useState(() => ({
+    preset: currentPersonnelDisplaySettings.staffRankEquivalency?.preset || "AU",
+    sortMode: currentPersonnelDisplaySettings.sortMode || "rank-then-name",
+    traineeRanks: currentPersonnelDisplaySettings.useSeparateTraineeRankOrder ? "separate" : "staff",
+    instructorLabel: currentPersonnelDisplaySettings.instructorLabel || "Instructor"
+  }));
+  const rankSettingsDraftDirtyRef = reactExports.useRef(false);
   const [resourceSharingDraft, setResourceSharingDraft] = reactExports.useState("Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.");
   const [currencyDraft, setCurrencyDraft] = reactExports.useState("PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1");
   const [scoringDraft, setScoringDraft] = reactExports.useState("Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent");
@@ -14814,6 +14822,23 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const rankOrder = normalisePersonnelDisplaySettings(activeOrganisation?.settings?.personnelDisplaySettings || activeOrganisation?.settings?.personnelSettings || null).staffRankOrder || [];
     return rankOrder.length > 0 ? rankOrder.map((rank, index) => `${index + 1} | ${rank} |`).join("\n") : "";
   };
+  const buildHydratedRankSettingsDraft = () => {
+    const savedDraft = getSavedInitialSetupWizardDrafts()?.rankSettingsDraft || getSavedInitialSetupWizardDrafts()?.rankSettings;
+    if (savedDraft && typeof savedDraft === "object") {
+      return {
+        preset: savedDraft.preset && RANK_EQUIVALENCY_PRESETS[savedDraft.preset] ? savedDraft.preset : currentPersonnelDisplaySettings.staffRankEquivalency?.preset || "AU",
+        sortMode: savedDraft.sortMode === "alphabetical" ? "alphabetical" : "rank-then-name",
+        traineeRanks: savedDraft.traineeRanks === "separate" ? "separate" : "staff",
+        instructorLabel: String(savedDraft.instructorLabel || currentPersonnelDisplaySettings.instructorLabel || "Instructor")
+      };
+    }
+    return {
+      preset: currentPersonnelDisplaySettings.staffRankEquivalency?.preset || "AU",
+      sortMode: currentPersonnelDisplaySettings.sortMode || "rank-then-name",
+      traineeRanks: currentPersonnelDisplaySettings.useSeparateTraineeRankOrder ? "separate" : "staff",
+      instructorLabel: currentPersonnelDisplaySettings.instructorLabel || "Instructor"
+    };
+  };
   const buildHydratedResourceSharingDraft = () => {
     const saved = getSavedWizardString("resourceSharing", "resourceSharingDraft");
     if (saved) return saved;
@@ -14887,6 +14912,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const nextBuildRules = buildHydratedBuildRulesDraft();
     const nextTrainingRecords = buildHydratedTrainingRecordsDraft();
     const nextRanksAndLabels = buildHydratedRankLabelsDraft();
+    const nextRankSettings = buildHydratedRankSettingsDraft();
     const nextResourceSharing = buildHydratedResourceSharingDraft();
     const nextCurrencies = buildHydratedCurrencyDraft();
     const nextScoringMatrix = getSavedWizardString("scoringMatrix", "scoringDraft");
@@ -14902,6 +14928,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     if (savedTrainees) setTraineeDraft(savedTrainees);
     if (nextTrainingRecords) setTrainingRecordsDraft(nextTrainingRecords);
     if (nextRanksAndLabels) setRankLabelsDraft(nextRanksAndLabels);
+    setRankSettingsDraft(nextRankSettings);
     if (nextResourceSharing) setResourceSharingDraft(nextResourceSharing);
     if (nextCurrencies) setCurrencyDraft(nextCurrencies);
     if (nextScoringMatrix) setScoringDraft(nextScoringMatrix);
@@ -14982,6 +15009,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     crewDraftDirtyRef.current = false;
     accessDraftDirtyRef.current = false;
     trainingDraftDirtyRef.current = false;
+    rankSettingsDraftDirtyRef.current = false;
     unitModulesDraftDirtyRef.current = false;
     if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
     pushWizardOrgDiag(`hydrate:${stage}-from-synced-settings`, {
@@ -15495,6 +15523,44 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       };
     });
   };
+  const buildRankSettingsToSave = (settingsSource = activeOrganisation?.settings) => {
+    const existing = normalisePersonnelDisplaySettings(
+      settingsSource?.personnelDisplaySettings || settingsSource?.personnelSettings || null
+    );
+    const preset = RANK_EQUIVALENCY_PRESETS[rankSettingsDraft.preset] ? rankSettingsDraft.preset : existing.staffRankEquivalency?.preset || "AU";
+    const selectedEquivalency = preset === "CUSTOM" ? existing.staffRankEquivalency : RANK_EQUIVALENCY_PRESETS[preset] || RANK_EQUIVALENCY_PRESETS.AU;
+    const staffRankOrder = getRankOrderFromEquivalency({
+      ...selectedEquivalency,
+      civilianTitles: existing.civilianTitles
+    });
+    return {
+      ...existing,
+      sortMode: rankSettingsDraft.sortMode === "alphabetical" ? "alphabetical" : "rank-then-name",
+      useSeparateTraineeRankOrder: rankSettingsDraft.traineeRanks === "separate",
+      instructorLabel: String(rankSettingsDraft.instructorLabel || existing.instructorLabel || "Instructor").trim() || "Instructor",
+      staffRankEquivalency: selectedEquivalency,
+      staffRankOrder,
+      traineeRankOrder: rankSettingsDraft.traineeRanks === "separate" ? existing.traineeRankOrder : staffRankOrder
+    };
+  };
+  const saveRankSettingsDraft = () => {
+    saveWizardConfig("Rank display settings saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
+      ...settings,
+      personnelDisplaySettings: buildRankSettingsToSave(settings),
+      initialSetupWizardDraft: {
+        ...settings.initialSetupWizardDraft || {},
+        ranksAndLabels: rankLabelsDraft,
+        rankSettings: rankSettingsDraft,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      },
+      initialSetupWizardDrafts: {
+        ...settings.initialSetupWizardDrafts || {},
+        rankLabelsDraft,
+        rankSettingsDraft,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      }
+    })));
+  };
   const saveTrainingDraft = () => {
     const lmpCode = String(trainingDraft.lmpCode || "").trim();
     if (!lmpCode) {
@@ -15543,6 +15609,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         trainingRecords: trainingRecordsDraft,
         unitModules: unitModulesDraft,
         ranksAndLabels: rankLabelsDraft,
+        rankSettings: rankSettingsDraft,
         resourceSharing: resourceSharingDraft,
         currencies: currencyDraft,
         scoringMatrix: scoringDraft,
@@ -15565,6 +15632,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         trainingRecordsDraft,
         unitModulesDraft,
         rankLabelsDraft,
+        rankSettingsDraft,
         resourceSharingDraft,
         currencyDraft,
         scoringDraft,
@@ -15826,7 +15894,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       id: "ranks-labels",
       title: "Set ranks and display labels",
       label: "Ranks and labels",
-      body: "Set the rank order and common labels so lists sort and display in a way users understand.",
+      body: "Choose the rank table and name display rules this unit should use. The detailed rank table can still be edited later in Settings.",
       checkIds: ["access"],
       category: "highly-desirable"
     },
@@ -16043,7 +16111,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         return rows.some((row) => hasMeaningfulWizardText(row.module) && /^(on|yes|enabled|true)$/i.test(String(row.enabled || "On").trim()));
       }
       case "ranks-labels":
-        return parseWizardRankRows(rankLabelsDraft).some((row) => hasPositiveWizardNumber(row.order) && hasMeaningfulWizardText(row.ranks, ["Senior Rank 1", "Senior Rank 2", "Team Lead Rank", "Line Rank"]));
+        return hasMeaningfulWizardText(rankSettingsDraft.preset, ["CUSTOM"]) || hasMeaningfulWizardText(rankSettingsDraft.sortMode) || hasMeaningfulWizardText(rankSettingsDraft.traineeRanks) || hasMeaningfulWizardText(rankSettingsDraft.instructorLabel, ["Instructor"]);
       case "resource-aircraft":
         return hasMeaningfulWizardText(resourceDraft.aircraftCode, ["Aircraft", "Aircraft Type", "Enter Aircraft Code"]) && hasMeaningfulWizardText(resourceDraft.aircraftName, ["Aircraft", "Resource", "Enter Aircraft Or Resource Type"]) && hasMeaningfulWizardText(resourceDraft.poolName, ["DFP Resource Rows"]);
       case "resource-counts":
@@ -16160,6 +16228,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     if (stepId === "unit-modules") {
       saveUnitDraft();
       saveUnitModulesDraft();
+      return;
+    }
+    if (stepId === "ranks-labels") {
+      saveRankSettingsDraft();
       return;
     }
     if (stepId === "resource-aircraft" || stepId === "resource-counts") {
@@ -16579,6 +16651,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     unitModulesDraftDirtyRef.current = true;
     setUnitModulesDraft(value);
   };
+  const updateRankSettingsDraft = (updater) => {
+    rankSettingsDraftDirtyRef.current = true;
+    setRankSettingsDraft(updater);
+  };
   const wizardField = (label, value, onChange, options, placeholder) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: label }),
     options ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -16966,22 +17042,54 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     ] });
   };
   const renderRankLabelsEditor = () => {
-    const rows = parseWizardRankRows(rankLabelsDraft);
-    const editableRows = rows.length > 0 ? rows : [{ order: "1", ranks: "", notes: "" }];
-    const updateRow = (index, field, value) => {
-      const nextRows = [...editableRows];
-      nextRows[index] = { ...nextRows[index], [field]: value };
-      setRankLabelsDraft(formatWizardRankRows(nextRows));
-    };
+    const presetOptions = Object.keys(RANK_EQUIVALENCY_PRESET_LABELS);
+    const selectedPresetKey = RANK_EQUIVALENCY_PRESETS[rankSettingsDraft.preset] ? rankSettingsDraft.preset : "AU";
+    const selectedPreset = selectedPresetKey === "CUSTOM" ? currentPersonnelDisplaySettings.staffRankEquivalency : RANK_EQUIVALENCY_PRESETS[selectedPresetKey];
+    const serviceNames = selectedPreset?.services?.map((service) => String(service?.name || "").trim()).filter(Boolean).join(", ");
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Rank order controls how people are sorted in lists. Put the most senior rank at order 1. If more than one service or arm of the military will use this unit, include equivalent ranks on the same line." }),
-      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[80px_minmax(0,1fr)_minmax(0,1fr)_74px] xl:items-end", children: [
-        wizardField("Order", row.order || String(index + 1), (value) => updateRow(index, "order", value), void 0, String(index + 1)),
-        wizardField("Ranks at this level", row.ranks || "", (value) => updateRow(index, "ranks", value), void 0, "Team Lead Rank"),
-        wizardField("Notes", row.notes || "", (value) => updateRow(index, "notes", value), void 0, "Same seniority across services"),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setRankLabelsDraft(formatWizardRankRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
-      ] }, `rank-row-${index}`)),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setRankLabelsDraft(formatWizardRankRows([...editableRows, { order: String(editableRows.length + 1), ranks: "", notes: "" }])), children: "Add rank level" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "DFP NEO already has a detailed rank table in Settings. Use this step to choose the rank preset and how names are sorted. Only use Custom if an administrator has already edited the detailed rank table in Settings." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2", children: [
+        wizardField(
+          "Rank preset",
+          RANK_EQUIVALENCY_PRESET_LABELS[selectedPresetKey] || "Australia",
+          (value) => {
+            const nextPreset = presetOptions.find((key) => RANK_EQUIVALENCY_PRESET_LABELS[key] === value) || "AU";
+            updateRankSettingsDraft((current) => ({ ...current, preset: nextPreset }));
+          },
+          presetOptions.map((key) => RANK_EQUIVALENCY_PRESET_LABELS[key])
+        ),
+        wizardField(
+          "Sort people in lists",
+          rankSettingsDraft.sortMode === "alphabetical" ? "Alphabetical" : "Rank then name",
+          (value) => updateRankSettingsDraft((current) => ({
+            ...current,
+            sortMode: value === "Alphabetical" ? "alphabetical" : "rank-then-name"
+          })),
+          ["Rank then name", "Alphabetical"]
+        ),
+        wizardField(
+          "Trainee ranks",
+          rankSettingsDraft.traineeRanks === "separate" ? "Separate trainee rank order" : "Use staff rank order",
+          (value) => updateRankSettingsDraft((current) => ({
+            ...current,
+            traineeRanks: value === "Separate trainee rank order" ? "separate" : "staff"
+          })),
+          ["Use staff rank order", "Separate trainee rank order"]
+        ),
+        wizardField(
+          "Instructor display term",
+          rankSettingsDraft.instructorLabel || "Instructor",
+          (value) => updateRankSettingsDraft((current) => ({ ...current, instructorLabel: value })),
+          void 0,
+          "Instructor"
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700", children: [
+        "Selected rank table: ",
+        RANK_EQUIVALENCY_PRESET_LABELS[selectedPresetKey] || "Australia",
+        serviceNames ? ` (${serviceNames})` : "",
+        ". The full rank equivalency table remains in Settings under Resources & Configuration, Rank, Terminology & Labels."
+      ] })
     ] });
   };
   const renderSharingEditor = () => {
@@ -17613,7 +17721,6 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
       status: "ACTIVE"
     }));
-    const rankOrder = parseWizardRankRows(rankLabelsDraft).sort((a, b) => (Number(a.order) || 999) - (Number(b.order) || 999)).map((row) => row.ranks).filter(Boolean);
     const sharingRows = parseWizardSharingRows(resourceSharingDraft);
     const resourceSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes("resource"));
     const staffSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes("staff"));
@@ -17742,11 +17849,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
             currencyProfiles
           }),
           standardMissionProfiles: { profiles: standardMissionProfiles },
-          personnelDisplaySettings: {
-            staffRankOrder: rankOrder,
-            traineeRankOrder: rankOrder,
-            useSeparateTraineeRankOrder: false
-          },
+          personnelDisplaySettings: buildRankSettingsToSave(existingOrganisationSettings),
           fleetSharingEnabled: resourceSharingRows.some((row) => /^on$/i.test(row.enabled)),
           resourceSharingGroups: resourceSharingRows.map((row, index) => ({
             id: createSetupTestRecordId("resource-sharing", row.units || index + 1),
@@ -17776,6 +17879,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
             trainingRecords: trainingRecordsDraft,
             unitModules: unitModulesDraft,
             ranksAndLabels: rankLabelsDraft,
+            rankSettings: rankSettingsDraft,
             resourceSharing: resourceSharingDraft,
             currencies: currencyDraft,
             scoringMatrix: scoringDraft,
@@ -17962,10 +18066,12 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     saveUnitDraft();
     saveResourceDraft();
     saveCrewDraft();
+    saveRankSettingsDraft();
     saveTrainingDraft();
     saveAccessDraft();
     saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
       ...settings,
+      personnelDisplaySettings: buildRankSettingsToSave(settings),
       initialSetupWizardDraft: {
         unitsToday: parseWizardUnitRows(unitsTodayDraft),
         locationsToday: parseWizardLocationRows(locationsTodayDraft),
@@ -17980,6 +18086,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         trainingRecords: trainingRecordsDraft,
         unitModules: unitModulesDraft,
         ranksAndLabels: rankLabelsDraft,
+        rankSettings: rankSettingsDraft,
         resourceSharing: resourceSharingDraft,
         currencies: currencyDraft,
         scoringMatrix: scoringDraft,
@@ -18806,7 +18913,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     if (visibleStep.id === "ranks-labels") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the display order for ranks and equivalent titles. This matters anywhere DFP-NEO sorts people by rank." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose how DFP NEO should read the rank table when it sorts people. The full rank table is already managed in Settings, so this step only confirms the preset and display behaviour for this setup." }),
         renderRankLabelsEditor()
       );
     }
@@ -18876,7 +18983,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         ["Trainees", unitDraft.hasTrainees ? traineeDraft || "Not set" : "Trainees off"],
         ["Master LMP", `${trainingDraft.lmpCode || "Not set"} - ${trainingDraft.lmpName || "not named"}`],
         ["Modules", unitModulesDraft || "Not set"],
-        ["Ranks and labels", rankLabelsDraft || "Not set"],
+        ["Ranks and labels", `${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset] || "Australia"} / ${rankSettingsDraft.sortMode === "alphabetical" ? "Alphabetical" : "Rank then name"} / ${rankSettingsDraft.traineeRanks === "separate" ? "Separate trainee rank order" : "Trainees use staff rank order"}`],
         ["Sharing", resourceSharingDraft || "Not set"],
         ["Currencies", currencyDraft || "Not set"],
         ["Access", `${accessDraft.userName || "Not set"} / ${accessDraft.locationCode || "no location"} / ${accessDraft.unitCode || "no unit"} / ${trainingDraft.accessLevel || "View"}`],
