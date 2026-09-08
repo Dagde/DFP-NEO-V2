@@ -2883,6 +2883,42 @@ const InitialSetupWizard: React.FC<{
         );
         return Array.from({ length: configuredCount }, (_, levelIndex) => getOrganisationDraftLevel(draft, levelIndex));
     };
+    const cleanOrganisationDraftLevels = (levels: any[], rootFallback: string) => {
+        const rootLabel = String(levels?.[0]?.options?.[0] || rootFallback || 'Organisation').trim() || 'Organisation';
+        const seenAncestorKeys = new Set([normaliseUnitSettingsIdentifier(rootLabel)]);
+        return (Array.isArray(levels) ? levels : []).map((level, levelIndex) => {
+            if (levelIndex === 0) {
+                return {
+                    ...level,
+                    name: String(level?.name || rootLabel || 'Organisation'),
+                    options: [rootLabel].filter(Boolean),
+                };
+            }
+            const cleanOptions: string[] = [];
+            const seenLevelKeys = new Set<string>();
+            (Array.isArray(level?.options) ? level.options : []).forEach((option: any) => {
+                const cleanOption = String(option || '').trim();
+                const optionKey = normaliseUnitSettingsIdentifier(cleanOption);
+                if (!cleanOption || !optionKey || seenLevelKeys.has(optionKey) || seenAncestorKeys.has(optionKey)) return;
+                cleanOptions.push(cleanOption);
+                seenLevelKeys.add(optionKey);
+            });
+            cleanOptions.forEach((option) => seenAncestorKeys.add(normaliseUnitSettingsIdentifier(option)));
+            const rawName = String(level?.name || '').trim();
+            const nameKey = normaliseUnitSettingsIdentifier(rawName);
+            const cleanName = !rawName
+                || nameKey === normaliseUnitSettingsIdentifier(rootLabel)
+                || cleanOptions.some((option) => normaliseUnitSettingsIdentifier(option) === nameKey)
+                ? `Level ${levelIndex + 1}`
+                : rawName;
+            return {
+                ...level,
+                name: cleanName,
+                options: cleanOptions,
+                parents: String(level?.parents || ''),
+            };
+        }).filter((level, index) => index === 0 || (Array.isArray(level.options) && level.options.length > 0));
+    };
     const parseNumberDraft = (value: string, fallback = 0) => {
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : fallback;
@@ -3086,8 +3122,10 @@ const InitialSetupWizard: React.FC<{
     };
     const parseWizardOrganisationPath = (value: string) => String(value || '').split('/').map((item) => item.trim()).filter(Boolean);
     const getWizardOrganisationRelationshipPathsForDraft = (draft: typeof organisationDraft) => {
-        const levels = getOrganisationDraftLevels(draft)
-            .map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] }));
+        const levels = cleanOrganisationDraftLevels(
+            getOrganisationDraftLevels(draft).map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] })),
+            draft.name || draft.code || 'Organisation',
+        );
         const rootLabel = levels[0]?.options?.[0] || draft.name || draft.code || 'Organisation';
         const parentRowsByLevel = levels.map((level, levelIndex) => (
             levelIndex === 0
@@ -3490,9 +3528,10 @@ const InitialSetupWizard: React.FC<{
         || /^org-level\d+$/.test(String(stepId || ''))
     );
     const saveOrganisationDraft = (options: { preserveWizardDraft?: boolean; message?: string } = {}) => {
-        const organisationLevels = getOrganisationDraftLevels(organisationDraft)
-            .map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] }))
-            .filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || '').trim());
+        const organisationLevels = cleanOrganisationDraftLevels(
+            getOrganisationDraftLevels(organisationDraft).map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] })),
+            organisationDraft.name || organisationDraft.code || 'Organisation',
+        );
         const rootLabel = organisationLevels[0]?.options?.[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
         const parentRowsByLevel = organisationLevels.map((level, levelIndex) => (
             levelIndex === 0
@@ -3503,10 +3542,15 @@ const InitialSetupWizard: React.FC<{
         const unitRows = parseWizardUnitRows(unitsTodayDraft).filter((row) => row.code);
         const unitParentPathMap = getWizardUnitParentPathMap();
         const unitParentOptions = getWizardUnitParentPathOptions();
+        const validUnitParentValues = new Set(unitParentOptions.map(formatWizardOrganisationPath));
         const fallbackUnitParentPath = (unitParentOptions[0] || organisationRelationshipPaths[0] || [rootLabel]).filter(Boolean);
+        const getCleanUnitParentPath = (code: string) => {
+            const configuredPath = unitParentPathMap.get(normaliseUnitSettingsIdentifier(code)) || [];
+            return validUnitParentValues.has(formatWizardOrganisationPath(configuredPath)) ? configuredPath : fallbackUnitParentPath;
+        };
         const unitCodes = unitRows.map((row) => row.code).filter(Boolean);
         const unitParentByChild = unitCodes.reduce((map, code) => {
-            const parentPath = unitParentPathMap.get(normaliseUnitSettingsIdentifier(code)) || fallbackUnitParentPath;
+            const parentPath = getCleanUnitParentPath(code);
             return {
                 ...map,
                 [code]: parentPath[parentPath.length - 1] || rootLabel,
@@ -3529,7 +3573,7 @@ const InitialSetupWizard: React.FC<{
         const relationshipPaths = [
             ...organisationRelationshipPaths,
             ...unitCodes.map((code) => [
-                ...(unitParentPathMap.get(normaliseUnitSettingsIdentifier(code)) || fallbackUnitParentPath),
+                ...getCleanUnitParentPath(code),
                 code,
             ]),
         ];
@@ -5303,18 +5347,21 @@ const InitialSetupWizard: React.FC<{
         </div>
     );
     const organisationPreviewLevels = getOrganisationDraftLevels(organisationDraft)
-        .map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] }))
-        .filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || '').trim());
-    const organisationRootLabel = organisationPreviewLevels[0]?.options?.[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
+        .map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] }));
+    const cleanOrganisationPreviewLevels = cleanOrganisationDraftLevels(
+        organisationPreviewLevels,
+        organisationDraft.name || organisationDraft.code || 'Organisation',
+    );
+    const organisationRootLabel = cleanOrganisationPreviewLevels[0]?.options?.[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
     const getParentOptionsForOrganisationLevel = (levelIndex: number) => (
         levelIndex <= 1
             ? [organisationRootLabel].filter(Boolean)
-            : (Array.isArray(getOrganisationDraftLevel(organisationDraft, levelIndex - 1)?.options) ? getOrganisationDraftLevel(organisationDraft, levelIndex - 1).options : [])
+            : (Array.isArray(cleanOrganisationPreviewLevels[levelIndex - 1]?.options) ? cleanOrganisationPreviewLevels[levelIndex - 1].options : [])
     );
     const level1ParentOptions = getParentOptionsForOrganisationLevel(1);
     const level2ParentOptions = getParentOptionsForOrganisationLevel(2);
     const level3ParentOptions = getParentOptionsForOrganisationLevel(3);
-    const organisationPreviewParentRows = organisationPreviewLevels.map((level, levelIndex) => (
+    const organisationPreviewParentRows = cleanOrganisationPreviewLevels.map((level, levelIndex) => (
         levelIndex === 0
             ? []
             : buildWizardParentRowsForChildren(level.options, level.parents, getParentOptionsForOrganisationLevel(levelIndex))
@@ -5327,7 +5374,7 @@ const InitialSetupWizard: React.FC<{
                 <p className="text-[10px] font-semibold text-slate-400">This builds live as you type.</p>
             </div>
             <div className="space-y-4 overflow-x-auto pb-1">
-                {organisationPreviewLevels.map((level, levelIndex) => {
+                {cleanOrganisationPreviewLevels.map((level, levelIndex) => {
                     const options = level.options.length > 0
                         ? level.options
                         : levelIndex === 0
@@ -5479,13 +5526,15 @@ const InitialSetupWizard: React.FC<{
         }, 'field-edit:organisation-level-count');
     };
     const buildSetupTestOrganisationStructure = (unitRows: ReturnType<typeof parseWizardUnitRows>) => {
-        const organisationLevels = getOrganisationDraftLevels(organisationDraft)
-            .map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] }))
+        const organisationLevels = cleanOrganisationDraftLevels(
+            getOrganisationDraftLevels(organisationDraft).map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] })),
+            organisationDraft.name || organisationDraft.code || 'Organisation',
+        )
             .filter((level, index) => (
                 index === 0
                 || String(level.name || '').trim().toLowerCase() !== 'unit'
             ))
-            .filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || '').trim());
+            .filter((level, index) => index === 0 || level.options.length > 0);
         const rootLabel = organisationLevels[0]?.options?.[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
         const parentRowsByLevel = organisationLevels.map((level, levelIndex) => (
             levelIndex === 0
@@ -5496,10 +5545,13 @@ const InitialSetupWizard: React.FC<{
         const unitParentOptions = getWizardUnitParentPathOptions();
         const fallbackUnitParentPath = (unitParentOptions[0] || relationshipPaths[0] || [rootLabel]).filter(Boolean);
         const unitParentPathByCode = getWizardUnitParentPathMap();
+        const validUnitParentValues = new Set(unitParentOptions.map(formatWizardOrganisationPath));
         const unitCodes = unitRows.map((row) => row.code).filter(Boolean);
         const unitParentPaths = unitCodes.reduce((map, code) => {
             const configuredPath = unitParentPathByCode.get(normaliseUnitSettingsIdentifier(code));
-            const parentPath = configuredPath && configuredPath.length > 0 ? configuredPath : fallbackUnitParentPath;
+            const parentPath = configuredPath && validUnitParentValues.has(formatWizardOrganisationPath(configuredPath))
+                ? configuredPath
+                : fallbackUnitParentPath;
             return {
                 ...map,
                 [normaliseUnitSettingsIdentifier(code)]: parentPath,
