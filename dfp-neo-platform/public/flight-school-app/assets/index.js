@@ -14113,6 +14113,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return /* @__PURE__ */ new Set();
     }
   });
+  const [wizardPageMenuOpen, setWizardPageMenuOpen] = reactExports.useState(false);
   const [uploadResults, setUploadResults] = reactExports.useState({});
   const [importConfirmations, setImportConfirmations] = reactExports.useState({});
   const [pendingTemplateId, setPendingTemplateId] = reactExports.useState(null);
@@ -15656,6 +15657,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const isWizardStepComplete = (step) => completedWizardStepIds.has(step.id) || step.checkIds.length > 0 && step.checkIds.every((checkId) => checks.find((check) => check.id === checkId)?.complete);
   const wizardStepTextClass = (step) => isWizardStepComplete(step) ? "text-slate-950" : wizardCategoryTextClass[step.category];
+  const wizardStepMenuItemClass = (step, index) => [
+    "block w-full px-3 py-2 text-left text-xs font-semibold leading-4 transition hover:bg-orange-50",
+    wizardStepTextClass(step),
+    index === currentStep ? "bg-slate-100" : "bg-white"
+  ].join(" ");
   const markWizardStepComplete = (stepId) => {
     setCompletedWizardStepIds((current) => {
       const next = new Set(current);
@@ -16679,6 +16685,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     });
     syncWizardStepToSettings(visibleStep.id);
     markWizardStepComplete(visibleStep.id);
+    setWizardPageMenuOpen(false);
     setWizardStep(Math.min(steps.length - 1, currentStep + 1));
   };
   const goToWizardStep = (nextStep) => {
@@ -16690,6 +16697,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       draft: summariseOrganisationDraft(organisationDraft),
       activeOrganisation: summariseActiveOrganisation()
     });
+    setWizardPageMenuOpen(false);
     setWizardStep(boundedStep);
   };
   const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -16718,24 +16726,62 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-lg font-bold leading-tight text-slate-950", children: visibleStep.title }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-sm leading-5 text-slate-700", children: question })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block w-full shrink-0 lg:w-[240px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Go to wizard page" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                className: `${wizardInputClass} mt-1 bg-white text-slate-950`,
-                value: currentStep,
-                onChange: (event) => goToWizardStep(Number(event.target.value)),
-                onKeyDown: stopEditableKeyPropagation,
-                children: steps.map((step, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: index, children: [
-                  isWizardStepComplete(step) ? "✓ " : "",
-                  index + 1,
-                  ". ",
-                  step.title
-                ] }, `wizard-page-${step.id}`))
-              }
-            )
-          ] })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: "relative block w-full shrink-0 lg:w-[240px]",
+              onBlur: (event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setWizardPageMenuOpen(false);
+                }
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Go to wizard page" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    className: `${wizardInputClass} mt-1 flex items-center justify-between gap-2 bg-white text-left text-slate-950`,
+                    onClick: () => setWizardPageMenuOpen((open) => !open),
+                    onKeyDown: stopEditableKeyPropagation,
+                    "aria-expanded": wizardPageMenuOpen,
+                    "aria-haspopup": "listbox",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
+                        currentStep + 1,
+                        ". ",
+                        visibleStep.title
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-slate-400", children: "v" })
+                    ]
+                  }
+                ),
+                wizardPageMenuOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "div",
+                  {
+                    className: "absolute right-0 z-50 mt-1 max-h-[440px] w-[min(420px,calc(100vw-32px))] overflow-y-auto rounded-lg border border-slate-300 bg-white py-1 shadow-xl",
+                    role: "listbox",
+                    children: steps.map((step, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        type: "button",
+                        className: wizardStepMenuItemClass(step, index),
+                        onClick: () => goToWizardStep(index),
+                        role: "option",
+                        "aria-selected": index === currentStep,
+                        children: [
+                          index + 1,
+                          ". ",
+                          step.title
+                        ]
+                      },
+                      `wizard-page-${step.id}`
+                    ))
+                  }
+                ) : null
+              ]
+            }
+          )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",

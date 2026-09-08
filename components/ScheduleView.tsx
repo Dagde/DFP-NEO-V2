@@ -2588,6 +2588,7 @@ const InitialSetupWizard: React.FC<{
             return new Set();
         }
     });
+    const [wizardPageMenuOpen, setWizardPageMenuOpen] = useState(false);
     const [uploadResults, setUploadResults] = useState<Record<string, InitialSetupWizardUploadResult>>({});
     const [importConfirmations, setImportConfirmations] = useState<Record<string, string>>({});
     const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
@@ -4325,6 +4326,11 @@ const InitialSetupWizard: React.FC<{
     const wizardStepTextClass = (step: InitialSetupWizardStep) => (
         isWizardStepComplete(step) ? 'text-slate-950' : wizardCategoryTextClass[step.category]
     );
+    const wizardStepMenuItemClass = (step: InitialSetupWizardStep, index: number) => [
+        'block w-full px-3 py-2 text-left text-xs font-semibold leading-4 transition hover:bg-orange-50',
+        wizardStepTextClass(step),
+        index === currentStep ? 'bg-slate-100' : 'bg-white',
+    ].join(' ');
     const markWizardStepComplete = (stepId: string) => {
         setCompletedWizardStepIds((current) => {
             const next = new Set(current);
@@ -5512,6 +5518,7 @@ const InitialSetupWizard: React.FC<{
         });
         syncWizardStepToSettings(visibleStep.id);
         markWizardStepComplete(visibleStep.id);
+        setWizardPageMenuOpen(false);
         setWizardStep(Math.min(steps.length - 1, currentStep + 1));
     };
     const goToWizardStep = (nextStep: number) => {
@@ -5523,6 +5530,7 @@ const InitialSetupWizard: React.FC<{
             draft: summariseOrganisationDraft(organisationDraft),
             activeOrganisation: summariseActiveOrganisation(),
         });
+        setWizardPageMenuOpen(false);
         setWizardStep(boundedStep);
     };
     const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Next', saveAction?: () => void) => (
@@ -5548,21 +5556,46 @@ const InitialSetupWizard: React.FC<{
                     <h4 className="mt-1 text-lg font-bold leading-tight text-slate-950">{visibleStep.title}</h4>
                     <div className="mt-2 text-sm leading-5 text-slate-700">{question}</div>
                 </div>
-                <label className="block w-full shrink-0 lg:w-[240px]">
+                <div
+                    className="relative block w-full shrink-0 lg:w-[240px]"
+                    onBlur={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                            setWizardPageMenuOpen(false);
+                        }
+                    }}
+                >
                     <span className={wizardLabelClass}>Go to wizard page</span>
-                    <select
-                        className={`${wizardInputClass} mt-1 bg-white text-slate-950`}
-                        value={currentStep}
-                        onChange={(event) => goToWizardStep(Number(event.target.value))}
+                    <button
+                        type="button"
+                        className={`${wizardInputClass} mt-1 flex items-center justify-between gap-2 bg-white text-left text-slate-950`}
+                        onClick={() => setWizardPageMenuOpen((open) => !open)}
                         onKeyDown={stopEditableKeyPropagation}
+                        aria-expanded={wizardPageMenuOpen}
+                        aria-haspopup="listbox"
                     >
-                        {steps.map((step, index) => (
-                            <option key={`wizard-page-${step.id}`} value={index}>
-                                {isWizardStepComplete(step) ? '✓ ' : ''}{index + 1}. {step.title}
-                            </option>
-                        ))}
-                    </select>
-                </label>
+                        <span className="min-w-0 truncate">{currentStep + 1}. {visibleStep.title}</span>
+                        <span className="shrink-0 text-slate-400">v</span>
+                    </button>
+                    {wizardPageMenuOpen ? (
+                        <div
+                            className="absolute right-0 z-50 mt-1 max-h-[440px] w-[min(420px,calc(100vw-32px))] overflow-y-auto rounded-lg border border-slate-300 bg-white py-1 shadow-xl"
+                            role="listbox"
+                        >
+                            {steps.map((step, index) => (
+                                <button
+                                    key={`wizard-page-${step.id}`}
+                                    type="button"
+                                    className={wizardStepMenuItemClass(step, index)}
+                                    onClick={() => goToWizardStep(index)}
+                                    role="option"
+                                    aria-selected={index === currentStep}
+                                >
+                                    {index + 1}. {step.title}
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
+                </div>
             </div>
             <div
                 className="max-w-full overflow-hidden rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm"
