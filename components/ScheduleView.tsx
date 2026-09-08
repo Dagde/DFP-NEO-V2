@@ -2835,13 +2835,16 @@ const InitialSetupWizard: React.FC<{
     const orgStructureConfigured = organisationStructureLevels.length > 0 && organisationStructureLevels.some((level: any) => (
         String(level?.name || '').trim() && Array.isArray(level?.options) && level.options.length > 0
     ));
-    const primaryAircraftType = activeAircraftTypes[0] || null;
     const primaryResourcePool = activeResourcePools.find((pool: any) => (
         normaliseUnitSettingsIdentifier(pool?.unitCode) === normaliseUnitSettingsIdentifier(currentUnit?.code)
     )) || activeResourcePools.find((pool: any) => (
         !normaliseUnitSettingsIdentifier(pool?.unitCode)
         && normaliseUnitSettingsIdentifier(pool?.locationCode) === normaliseUnitSettingsIdentifier(currentLocation?.code)
     )) || null;
+    const primaryAircraftType = activeAircraftTypes.find((aircraft: any) => (
+        primaryResourcePool?.aircraftTypeCode
+        && normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(primaryResourcePool.aircraftTypeCode)
+    )) || activeAircraftTypes[0] || null;
     const primaryUserAccess = activeUserAccess.find((access: any) => (
         normaliseUnitSettingsIdentifier(access?.unitCode || access?.unit) === normaliseUnitSettingsIdentifier(currentUnit?.code)
         || normaliseUnitSettingsIdentifier(access?.locationCode || access?.location) === normaliseUnitSettingsIdentifier(currentLocation?.code)
@@ -3850,8 +3853,8 @@ const InitialSetupWizard: React.FC<{
             setSaveMessage('Enter a DFP Resource Rows name before saving.');
             return;
         }
-        const effectivePoolUnitCode = String(resourceDraft.poolUnitCode || unitDraft.code || currentUnit?.code || '').trim().toUpperCase();
-        const effectivePoolLocationCode = String(resourceDraft.poolLocationCode || unitDraft.locationCode || activeWizardLocationCode || currentLocation?.code || '').trim().toUpperCase();
+        const effectivePoolUnitCode = String(unitDraft.code || resourceDraft.poolUnitCode || currentUnit?.code || '').trim().toUpperCase();
+        const effectivePoolLocationCode = String(unitDraft.locationCode || resourceDraft.poolLocationCode || activeWizardLocationCode || currentLocation?.code || '').trim().toUpperCase();
         saveWizardConfig('Aircraft type and DFP resource rows saved into Settings.', (baseConfig) => {
             const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
             const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
@@ -6271,8 +6274,8 @@ const InitialSetupWizard: React.FC<{
         const primaryResourcePoolName = String(resourceDraft.poolName || '').trim();
         const hasDeliberateAircraftSetup = Boolean(primaryAircraftCode);
         const hasDeliberateResourceSetup = Boolean(primaryAircraftCode && primaryResourcePoolName);
-        const primaryResourceLocationCode = String(resourceDraft.poolLocationCode || primaryLocationCode || '').trim().toUpperCase();
-        const primaryResourceUnitCode = String(resourceDraft.poolUnitCode || cleanUnits[0]?.code || '').trim().toUpperCase();
+        const primaryResourceLocationCode = String(effectiveUnitDraft.locationCode || resourceDraft.poolLocationCode || primaryLocationCode || '').trim().toUpperCase();
+        const primaryResourceUnitCode = String(effectiveUnitDraft.code || resourceDraft.poolUnitCode || cleanUnits[0]?.code || '').trim().toUpperCase();
         const crewSeats = parseRoleRequirementsText(crewDraft.standardSeats);
         const alternateCrewRows = parseWizardLineItems(alternateCrewDraft).map((line, index) => {
             const [namePart, requirementsPart] = line.split('=').map((part) => part.trim());
