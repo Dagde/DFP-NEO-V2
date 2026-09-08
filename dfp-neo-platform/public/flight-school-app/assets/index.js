@@ -13500,20 +13500,42 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   );
   const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
   const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
+  const activeUnitCodes = Array.from(new Set(
+    activeUnitCode.split("+").map((code) => normaliseUnitSettingsIdentifier(code)).filter(Boolean)
+  ));
   const units = platformConfig?.units || [];
-  const unit = units.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode) || units.find((candidate) => String(candidate?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || units[0];
+  const exactUnit = units.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode);
+  const activeMemberUnits = exactUnit ? [exactUnit] : units.filter((candidate) => activeUnitCodes.includes(normaliseUnitSettingsIdentifier(candidate?.code)));
+  const isCombinedUnitContext = !exactUnit && activeUnitCodes.length > 1 && activeMemberUnits.length > 0;
+  const unit = exactUnit || activeMemberUnits[0] || (!activeUnitCode ? units.find((candidate) => String(candidate?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : null) || (!activeUnitCode ? units[0] : null);
+  const contextUnits = activeMemberUnits.length > 0 ? activeMemberUnits : unit ? [unit] : [];
+  const contextUnitCodes = Array.from(new Set(contextUnits.map((item) => normaliseUnitSettingsIdentifier(item?.code)).filter(Boolean)));
+  const contextUnitCodeSet = new Set(contextUnitCodes);
+  const contextMatchesUnit = (value) => {
+    const cleanValue = normaliseUnitSettingsIdentifier(value);
+    if (!cleanValue) return false;
+    return contextUnitCodeSet.has(cleanValue) || cleanValue === activeUnitCode;
+  };
+  const contextDisplayCode = isCombinedUnitContext ? activeUnitCode : normaliseUnitSettingsIdentifier(unit?.code);
+  const contextDisplayName = isCombinedUnitContext ? contextUnits.map((item) => item.name || item.code).filter(Boolean).join(" + ") : unit?.name || unit?.code || activeUnitCode;
+  const contextLocationCodes = Array.from(new Set(contextUnits.map((item) => normaliseUnitSettingsIdentifier(item?.locationCode)).filter(Boolean)));
+  const contextLocationDisplay = contextLocationCodes.length > 1 ? contextLocationCodes.join(" + ") : contextLocationCodes[0] || unit?.locationCode || "";
   unit ? units.findIndex((candidate) => candidate === unit) : -1;
-  const unitHasTrainees = unit?.settings?.hasTrainees !== false;
+  const unitHasTrainees = contextUnits.length > 0 ? contextUnits.some((contextUnit) => contextUnit?.settings?.hasTrainees !== false) : unit?.settings?.hasTrainees !== false;
   const locations = platformConfig?.locations || [];
   const modules = platformConfig?.modules || [];
-  const resourcePools = unit ? getRelevantResourcePoolsForUnit(platformConfig, unit) : [];
+  const resourcePools = Array.from(new Map(
+    contextUnits.flatMap((contextUnit) => getRelevantResourcePoolsForUnit(platformConfig, contextUnit)).map((pool) => [String(pool?.id || pool?.code || pool?.name || `${pool?.unitCode}-${pool?.aircraftTypeCode}`), pool])
+  ).values());
   const primaryResourcePool = resourcePools[0] || null;
   const primaryResourcePoolFocusKey = primaryResourcePool ? String(primaryResourcePool.id || primaryResourcePool.code || primaryResourcePool.name || "").trim() : "";
   const unitModules = platformConfig?.unitModules || [];
-  (platformConfig?.schedulingRuleSets || []).filter((ruleSet) => String(ruleSet?.isActive ?? true) !== "false" && (!ruleSet?.unitCode || normaliseUnitSettingsIdentifier(ruleSet.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
+  (platformConfig?.schedulingRuleSets || []).filter((ruleSet) => String(ruleSet?.isActive ?? true) !== "false" && (!ruleSet?.unitCode || contextMatchesUnit(ruleSet.unitCode)));
   const location = locations.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === normaliseUnitSettingsIdentifier(unit?.locationCode));
-  const parentPath = getResolvedUnitParentOrganisationPath(platformConfig, unit);
+  const parentPath = isCombinedUnitContext ? Array.from(new Set(contextUnits.flatMap((contextUnit) => getResolvedUnitParentOrganisationPath(platformConfig, contextUnit)))).filter(Boolean) : getResolvedUnitParentOrganisationPath(platformConfig, unit);
+  const contextOperationalModels = Array.from(new Set(contextUnits.map((contextUnit) => getUnitOperationalModel(contextUnit)).filter(Boolean)));
   const operationalModel = getUnitOperationalModel(unit);
+  const operationalModelDisplay = isCombinedUnitContext && contextOperationalModels.length > 1 ? contextOperationalModels.map((model) => getOperationalModelLabel(model)).join(" + ") : getOperationalModelLabel(operationalModel);
   const modelOptionLabels = Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
   const taskAbbreviations = unit?.settings?.taskProfileAbbreviations || {};
   const validTaskAbbreviations = getTaskProfileAbbreviationsForUnit(platformConfig, unit?.code);
@@ -13526,8 +13548,8 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const organisationSettings = activeOrganisation?.settings || {};
   const resourceSharingGroups = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0 ? organisationSettings.resourceSharingGroups : Array.isArray(organisationSettings.selectedUnits) && organisationSettings.selectedUnits.length > 0 ? [{ id: "legacy-resource-sharing", name: `${organisationSettings.selectedUnits.join("+")} Shared Resources`, selectedUnits: organisationSettings.selectedUnits, allocationMode: organisationSettings.allocationMode }] : [];
   const staffSharingGroups = Array.isArray(organisationSettings.staffSharingGroups) && organisationSettings.staffSharingGroups.length > 0 ? organisationSettings.staffSharingGroups : Array.isArray(organisationSettings.staffSharingUnits) && organisationSettings.staffSharingUnits.length > 0 ? [{ id: "legacy-staff-sharing", name: `${organisationSettings.staffSharingUnits.join("+")} Staff Sharing`, selectedUnits: organisationSettings.staffSharingUnits }] : [];
-  const resourceSharingForUnit = organisationSettings.fleetSharingEnabled ? resourceSharingGroups.filter((group) => group?.enabled !== false && (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code))) : [];
-  const staffSharingForUnit = organisationSettings.staffSharingEnabled ? staffSharingGroups.filter((group) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code))) : [];
+  const resourceSharingForUnit = organisationSettings.fleetSharingEnabled ? resourceSharingGroups.filter((group) => group?.enabled !== false && (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).some((code) => contextUnitCodeSet.has(code))) : [];
+  const staffSharingForUnit = organisationSettings.staffSharingEnabled ? staffSharingGroups.filter((group) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).some((code) => contextUnitCodeSet.has(code))) : [];
   organisationSettings.deploymentProfile || {};
   organisationSettings.operationalRunbook || {};
   const crewPositionTerminology = normaliseCrewPositionTerminology(organisationSettings.crewPositionTerminology || null);
@@ -13544,17 +13566,17 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const aircraftTypeCodes = Array.from(new Set(resourcePools.map((pool) => String(pool.aircraftTypeCode || "").trim().toUpperCase()).filter(Boolean)));
   const aircraftTypesForUnit = (platformConfig?.aircraftTypes || []).filter((aircraft) => aircraftTypeCodes.includes(String(aircraft.code || "").trim().toUpperCase()));
   const primaryAircraftTypeCode = aircraftTypesForUnit[0]?.code || aircraftTypeCodes[0] || "";
-  const alternateCrewProfiles = crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)) && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode)) && profile.operationalModels.includes(operationalModel));
-  const currencyProfiles = crewCompositionSettings.currencyProfiles.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)) && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode)));
-  const standardMissionProfiles = (Array.isArray(organisationSettings.standardMissionProfiles?.profiles) ? organisationSettings.standardMissionProfiles.profiles : Array.isArray(organisationSettings.standardMissionProfiles) ? organisationSettings.standardMissionProfiles : []).filter((profile) => String(profile?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile?.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
+  const alternateCrewProfiles = crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile.unitCode || contextMatchesUnit(profile.unitCode)) && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode)) && profile.operationalModels.includes(operationalModel));
+  const currencyProfiles = crewCompositionSettings.currencyProfiles.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile.unitCode || contextMatchesUnit(profile.unitCode)) && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode)));
+  const standardMissionProfiles = (Array.isArray(organisationSettings.standardMissionProfiles?.profiles) ? organisationSettings.standardMissionProfiles.profiles : Array.isArray(organisationSettings.standardMissionProfiles) ? organisationSettings.standardMissionProfiles : []).filter((profile) => String(profile?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile?.unitCode || contextMatchesUnit(profile.unitCode)));
   const masterLmpAccessRules = getOrganisationMasterLmpAccessRules(organisationSettings);
-  const masterLmpAccessForUnit = masterLmpAccessRules.filter((rule) => !rule?.unitCode || normaliseUnitSettingsIdentifier(rule.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
+  const masterLmpAccessForUnit = masterLmpAccessRules.filter((rule) => !rule?.unitCode || contextMatchesUnit(rule.unitCode));
   const unitHomeLocationCode = normaliseUnitSettingsIdentifier(unit?.locationCode);
   const userAccessForUnit = (platformConfig?.userAccess || []).filter((access) => {
     const accessUnitCode = normaliseUnitSettingsIdentifier(access?.unitCode);
     const accessLocationCode = normaliseUnitSettingsIdentifier(access?.locationCode);
-    if (accessUnitCode) return accessUnitCode === normaliseUnitSettingsIdentifier(unit?.code);
-    return !accessLocationCode || accessLocationCode === unitHomeLocationCode;
+    if (accessUnitCode) return contextUnitCodeSet.has(accessUnitCode);
+    return !accessLocationCode || contextLocationCodes.includes(accessLocationCode) || accessLocationCode === unitHomeLocationCode;
   });
   const getAccessUserLabel = (access) => {
     const userId = String(access?.userId || "").trim();
@@ -13600,8 +13622,8 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     return groups;
   }, {}));
   (platformConfig?.licenses || []).filter((license) => String(license?.status || "ACTIVE").toUpperCase() === "ACTIVE");
-  const unitCallsignEntries = unitCallsignSettings.entries.filter((entry) => normaliseUnitSettingsIdentifier(entry.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
-  const unitFormationCallsigns = formationCallsigns.filter((callsign) => normaliseUnitSettingsIdentifier(callsign.unit) === normaliseUnitSettingsIdentifier(unit?.code));
+  const unitCallsignEntries = unitCallsignSettings.entries.filter((entry) => contextMatchesUnit(entry.unitCode));
+  const unitFormationCallsigns = formationCallsigns.filter((callsign) => contextMatchesUnit(callsign.unit));
   const buildRules = buildRuleSettings || {};
   const eventLimits = buildRules.eventLimits;
   const formatHours2 = (value) => `${Number.isFinite(Number(value)) ? Number(value) : 0} hrs`;
@@ -13619,7 +13641,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     { id: "access", label: "Access", count: userAccessForUnit.length }
   ];
   const settingsAnchorSuffix = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "-");
-  const unitFocusAnchor = settingsAnchorSuffix(unit?.code);
+  const unitFocusAnchor = settingsAnchorSuffix(contextDisplayCode || unit?.code);
   const settingsLink = (sectionId, label = "Open Settings", focus = {}) => /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
     {
@@ -13987,14 +14009,15 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Unit Identity", description: "The core settings that decide where this unit lives and which operational model it uses.", action: settingsLink("platform-units", "Open Units", { unitCode: unit.code }), children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit code", value: unit.code || "", onChange: () => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit code", value: contextDisplayCode || unit.code || "", onChange: () => {
         }, disabled: true }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit name", value: unit.name || "", onChange: (value) => updateUnit(), disabled: true }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Location", value: unit.locationCode || "", options: locations.map((item) => item.code), onChange: (value) => updateUnit(), disabled: true }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Unit type", value: unit.unitType || "", options: unitTypeOptions, onChange: (value) => updateUnit(), disabled: true }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit name", value: contextDisplayName || unit.name || "", onChange: (value) => updateUnit(), disabled: true }),
+        isCombinedUnitContext ? /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Member units", value: contextUnits.map((contextUnit) => `${contextUnit.code}${contextUnit.name && contextUnit.name !== contextUnit.code ? ` - ${contextUnit.name}` : ""}`).join("\n") }) : null,
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Location", value: contextLocationDisplay || unit.locationCode || "", options: locations.map((item) => item.code), onChange: (value) => updateUnit(), disabled: true }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Unit type", value: isCombinedUnitContext ? "Combined unit context" : unit.unitType || "", options: unitTypeOptions, onChange: (value) => updateUnit(), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Trainees", value: unitHasTrainees ? "On" : "Off", onChange: () => {
         }, disabled: true }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: operationalModel, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings2({ operationalModel: value }), disabled: true })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: isCombinedUnitContext ? operationalModelDisplay : operationalModel, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings2({ operationalModel: value }), disabled: true })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Organisation & Location", description: "Where this unit sits in the configured organisation.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
         settingsLink("platform-units", "Unit ownership", { unitCode: unit.code }),
@@ -14012,13 +14035,17 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-[24px] border border-white/10 bg-white/[0.06] p-5 shadow-[0_18px_54px_rgba(0,0,0,0.24)] backdrop-blur", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400", children: "My Unit Settings" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-2xl font-semibold tracking-normal text-white", children: unit.name || unit.code }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 max-w-3xl text-xs leading-5 text-slate-400", children: "A simplified read-only view of the Settings records for this unit. Use the Open buttons to edit the authoritative setting in Settings." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-2xl font-semibold tracking-normal text-white", children: contextDisplayName || unit.name || unit.code }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2 max-w-3xl text-xs leading-5 text-slate-400", children: [
+          "A simplified read-only view of the Settings records for this ",
+          isCombinedUnitContext ? "combined unit context" : "unit",
+          ". Use the Open buttons to edit the authoritative setting in Settings."
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsMutedPillClass, children: unit.code }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsMutedPillClass, children: getOperationalModelLabel(operationalModel) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsMutedPillClass, children: unit.locationCode || "No location" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsMutedPillClass, children: contextDisplayCode || unit.code }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsMutedPillClass, children: operationalModelDisplay }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsMutedPillClass, children: contextLocationDisplay || "No location" })
       ] })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 xl:grid-cols-[230px_minmax(0,1fr)]", children: [
@@ -14202,7 +14229,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     });
   }, [uploadedCourseLmpItems]);
   const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
-  const currentUnit = (platformConfig?.units || []).find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(unitCode)) || (platformConfig?.units || [])[0];
+  const currentWizardUnitCode = normaliseUnitSettingsIdentifier(unitCode);
+  const currentWizardUnitCodes = Array.from(new Set(
+    currentWizardUnitCode.split("+").map((code) => normaliseUnitSettingsIdentifier(code)).filter(Boolean)
+  ));
+  const configuredWizardUnits = platformConfig?.units || [];
+  const exactCurrentUnit = configuredWizardUnits.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === currentWizardUnitCode);
+  const firstCurrentMemberUnit = !exactCurrentUnit && currentWizardUnitCodes.length > 0 ? configuredWizardUnits.find((unit) => currentWizardUnitCodes.includes(normaliseUnitSettingsIdentifier(unit?.code))) : null;
+  const currentUnit = exactCurrentUnit || firstCurrentMemberUnit || (!currentWizardUnitCode ? configuredWizardUnits[0] : null);
   const activeWizardLocationCode = String(locationCode || currentUnit?.locationCode || "").trim().toUpperCase();
   const currentUnitLocationKey = normaliseUnitSettingsIdentifier(currentUnit?.locationCode || activeWizardLocationCode);
   const currentLocation = (platformConfig?.locations || []).find((location) => [

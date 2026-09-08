@@ -1704,16 +1704,48 @@ const OrganisationMyUnitSettings: React.FC<{
     );
     const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
     const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
+    const activeUnitCodes = Array.from(new Set(
+        activeUnitCode
+            .split('+')
+            .map((code) => normaliseUnitSettingsIdentifier(code))
+            .filter(Boolean)
+    ));
     const units = platformConfig?.units || [];
-    const unit = units.find((candidate: any) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode)
-        || units.find((candidate: any) => String(candidate?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
-        || units[0];
+    const exactUnit = units.find((candidate: any) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode);
+    const activeMemberUnits = exactUnit
+        ? [exactUnit]
+        : units.filter((candidate: any) => activeUnitCodes.includes(normaliseUnitSettingsIdentifier(candidate?.code)));
+    const isCombinedUnitContext = !exactUnit && activeUnitCodes.length > 1 && activeMemberUnits.length > 0;
+    const unit = exactUnit
+        || activeMemberUnits[0]
+        || (!activeUnitCode ? units.find((candidate: any) => String(candidate?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE') : null)
+        || (!activeUnitCode ? units[0] : null);
+    const contextUnits = activeMemberUnits.length > 0 ? activeMemberUnits : (unit ? [unit] : []);
+    const contextUnitCodes = Array.from(new Set(contextUnits.map((item: any) => normaliseUnitSettingsIdentifier(item?.code)).filter(Boolean)));
+    const contextUnitCodeSet = new Set(contextUnitCodes);
+    const contextMatchesUnit = (value: unknown): boolean => {
+        const cleanValue = normaliseUnitSettingsIdentifier(value);
+        if (!cleanValue) return false;
+        return contextUnitCodeSet.has(cleanValue) || cleanValue === activeUnitCode;
+    };
+    const contextDisplayCode = isCombinedUnitContext ? activeUnitCode : normaliseUnitSettingsIdentifier(unit?.code);
+    const contextDisplayName = isCombinedUnitContext
+        ? contextUnits.map((item: any) => item.name || item.code).filter(Boolean).join(' + ')
+        : unit?.name || unit?.code || activeUnitCode;
+    const contextLocationCodes = Array.from(new Set(contextUnits.map((item: any) => normaliseUnitSettingsIdentifier(item?.locationCode)).filter(Boolean)));
+    const contextLocationDisplay = contextLocationCodes.length > 1 ? contextLocationCodes.join(' + ') : contextLocationCodes[0] || unit?.locationCode || '';
     const unitIndex = unit ? units.findIndex((candidate: any) => candidate === unit) : -1;
     const canEdit = false;
-    const unitHasTrainees = unit?.settings?.hasTrainees !== false;
+    const unitHasTrainees = contextUnits.length > 0
+        ? contextUnits.some((contextUnit: any) => contextUnit?.settings?.hasTrainees !== false)
+        : unit?.settings?.hasTrainees !== false;
     const locations = platformConfig?.locations || [];
     const modules = platformConfig?.modules || [];
-    const resourcePools = unit ? getRelevantResourcePoolsForUnit(platformConfig, unit) : [];
+    const resourcePools = Array.from(new Map(
+        contextUnits
+            .flatMap((contextUnit: any) => getRelevantResourcePoolsForUnit(platformConfig, contextUnit))
+            .map((pool: any) => [String(pool?.id || pool?.code || pool?.name || `${pool?.unitCode}-${pool?.aircraftTypeCode}`), pool])
+    ).values());
     const primaryResourcePool = resourcePools[0] || null;
     const primaryResourcePoolFocusKey = primaryResourcePool
         ? String(primaryResourcePool.id || primaryResourcePool.code || primaryResourcePool.name || '').trim()
@@ -1721,11 +1753,17 @@ const OrganisationMyUnitSettings: React.FC<{
     const unitModules = platformConfig?.unitModules || [];
     const schedulingRuleSets = (platformConfig?.schedulingRuleSets || []).filter((ruleSet: any) => (
         String(ruleSet?.isActive ?? true) !== 'false'
-        && (!ruleSet?.unitCode || normaliseUnitSettingsIdentifier(ruleSet.unitCode) === normaliseUnitSettingsIdentifier(unit?.code))
+        && (!ruleSet?.unitCode || contextMatchesUnit(ruleSet.unitCode))
     ));
     const location = locations.find((candidate: any) => normaliseUnitSettingsIdentifier(candidate?.code) === normaliseUnitSettingsIdentifier(unit?.locationCode));
-    const parentPath = getResolvedUnitParentOrganisationPath(platformConfig, unit);
+    const parentPath = isCombinedUnitContext
+        ? Array.from(new Set(contextUnits.flatMap((contextUnit: any) => getResolvedUnitParentOrganisationPath(platformConfig, contextUnit)))).filter(Boolean)
+        : getResolvedUnitParentOrganisationPath(platformConfig, unit);
+    const contextOperationalModels = Array.from(new Set(contextUnits.map((contextUnit: any) => getUnitOperationalModel(contextUnit)).filter(Boolean)));
     const operationalModel = getUnitOperationalModel(unit);
+    const operationalModelDisplay = isCombinedUnitContext && contextOperationalModels.length > 1
+        ? contextOperationalModels.map((model) => getOperationalModelLabel(model)).join(' + ')
+        : getOperationalModelLabel(operationalModel);
     const modelOptionLabels = Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
     const taskAbbreviations = unit?.settings?.taskProfileAbbreviations || {};
     const validTaskAbbreviations = getTaskProfileAbbreviationsForUnit(platformConfig, unit?.code);
@@ -1749,11 +1787,11 @@ const OrganisationMyUnitSettings: React.FC<{
     const resourceSharingForUnit = organisationSettings.fleetSharingEnabled
         ? resourceSharingGroups.filter((group: any) => (
             group?.enabled !== false
-            && (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code))
+            && (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).some((code: string) => contextUnitCodeSet.has(code))
         ))
         : [];
     const staffSharingForUnit = organisationSettings.staffSharingEnabled
-        ? staffSharingGroups.filter((group: any) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code)))
+        ? staffSharingGroups.filter((group: any) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).some((code: string) => contextUnitCodeSet.has(code)))
         : [];
     const deploymentProfile = organisationSettings.deploymentProfile || {};
     const operationalRunbook = organisationSettings.operationalRunbook || {};
@@ -1775,13 +1813,13 @@ const OrganisationMyUnitSettings: React.FC<{
     const primaryAircraftTypeCode = aircraftTypesForUnit[0]?.code || aircraftTypeCodes[0] || '';
     const alternateCrewProfiles = crewCompositionSettings.alternateCompositions.filter((profile) => (
         String(profile.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
-        && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code))
+        && (!profile.unitCode || contextMatchesUnit(profile.unitCode))
         && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode))
         && profile.operationalModels.includes(operationalModel)
     ));
     const currencyProfiles = crewCompositionSettings.currencyProfiles.filter((profile) => (
         String(profile.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
-        && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code))
+        && (!profile.unitCode || contextMatchesUnit(profile.unitCode))
         && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode))
     ));
     const standardMissionProfiles = (
@@ -1792,18 +1830,18 @@ const OrganisationMyUnitSettings: React.FC<{
                 : []
     ).filter((profile: any) => (
         String(profile?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
-        && (!profile?.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code))
+        && (!profile?.unitCode || contextMatchesUnit(profile.unitCode))
     ));
     const masterLmpAccessRules = getOrganisationMasterLmpAccessRules(organisationSettings);
     const masterLmpAccessForUnit = masterLmpAccessRules.filter((rule: any) => (
-        !rule?.unitCode || normaliseUnitSettingsIdentifier(rule.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)
+        !rule?.unitCode || contextMatchesUnit(rule.unitCode)
     ));
     const unitHomeLocationCode = normaliseUnitSettingsIdentifier(unit?.locationCode);
     const userAccessForUnit = (platformConfig?.userAccess || []).filter((access: any) => {
         const accessUnitCode = normaliseUnitSettingsIdentifier(access?.unitCode);
         const accessLocationCode = normaliseUnitSettingsIdentifier(access?.locationCode);
-        if (accessUnitCode) return accessUnitCode === normaliseUnitSettingsIdentifier(unit?.code);
-        return !accessLocationCode || accessLocationCode === unitHomeLocationCode;
+        if (accessUnitCode) return contextUnitCodeSet.has(accessUnitCode);
+        return !accessLocationCode || contextLocationCodes.includes(accessLocationCode) || accessLocationCode === unitHomeLocationCode;
     });
     const getAccessUserLabel = (access: any) => {
         const userId = String(access?.userId || '').trim();
@@ -1856,10 +1894,10 @@ const OrganisationMyUnitSettings: React.FC<{
         String(license?.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
     ));
     const unitCallsignEntries = unitCallsignSettings.entries.filter((entry) => (
-        normaliseUnitSettingsIdentifier(entry.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)
+        contextMatchesUnit(entry.unitCode)
     ));
     const unitFormationCallsigns = formationCallsigns.filter((callsign) => (
-        normaliseUnitSettingsIdentifier(callsign.unit) === normaliseUnitSettingsIdentifier(unit?.code)
+        contextMatchesUnit(callsign.unit)
     ));
     const buildRules = buildRuleSettings || {};
     const eventLimits = buildRules.eventLimits;
@@ -1883,7 +1921,7 @@ const OrganisationMyUnitSettings: React.FC<{
         { id: 'access', label: 'Access', count: userAccessForUnit.length },
     ];
     const settingsAnchorSuffix = (value: any) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '-');
-    const unitFocusAnchor = settingsAnchorSuffix(unit?.code);
+    const unitFocusAnchor = settingsAnchorSuffix(contextDisplayCode || unit?.code);
     const settingsLink = (
         sectionId: string,
         label = 'Open Settings',
@@ -2418,12 +2456,15 @@ const OrganisationMyUnitSettings: React.FC<{
         return (
             <div className="space-y-4">
                 <UnitSettingsGroup title="Unit Identity" description="The core settings that decide where this unit lives and which operational model it uses." action={settingsLink('platform-units', 'Open Units', { unitCode: unit.code })}>
-                    <UnitSettingsField label="Unit code" value={unit.code || ''} onChange={() => {}} disabled />
-                    <UnitSettingsField label="Unit name" value={unit.name || ''} onChange={(value) => updateUnit({ name: value })} disabled={!canEdit} />
-                    <UnitSettingsSelect label="Location" value={unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateUnit({ locationCode: value })} disabled={!canEdit} />
-                    <UnitSettingsSelect label="Unit type" value={unit.unitType || ''} options={unitTypeOptions} onChange={(value) => updateUnit({ unitType: value })} disabled={!canEdit} />
+                    <UnitSettingsField label="Unit code" value={contextDisplayCode || unit.code || ''} onChange={() => {}} disabled />
+                    <UnitSettingsField label="Unit name" value={contextDisplayName || unit.name || ''} onChange={(value) => updateUnit({ name: value })} disabled={!canEdit} />
+                    {isCombinedUnitContext ? (
+                        <UnitSettingsReadRow label="Member units" value={contextUnits.map((contextUnit: any) => `${contextUnit.code}${contextUnit.name && contextUnit.name !== contextUnit.code ? ` - ${contextUnit.name}` : ''}`).join('\n')} />
+                    ) : null}
+                    <UnitSettingsSelect label="Location" value={contextLocationDisplay || unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateUnit({ locationCode: value })} disabled={!canEdit} />
+                    <UnitSettingsSelect label="Unit type" value={isCombinedUnitContext ? 'Combined unit context' : unit.unitType || ''} options={unitTypeOptions} onChange={(value) => updateUnit({ unitType: value })} disabled={!canEdit} />
                     <UnitSettingsField label="Trainees" value={unitHasTrainees ? 'On' : 'Off'} onChange={() => {}} disabled />
-                    <UnitSettingsSelect label="Operating model" value={operationalModel} options={OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)} optionLabels={modelOptionLabels} onChange={(value) => updateUnitSettings({ operationalModel: value })} disabled={!canEdit} />
+                    <UnitSettingsSelect label="Operating model" value={isCombinedUnitContext ? operationalModelDisplay : operationalModel} options={OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)} optionLabels={modelOptionLabels} onChange={(value) => updateUnitSettings({ operationalModel: value })} disabled={!canEdit} />
                 </UnitSettingsGroup>
                 <UnitSettingsGroup title="Organisation & Location" description="Where this unit sits in the configured organisation." action={<div className="flex flex-wrap justify-end gap-2">{settingsLink('platform-units', 'Unit ownership', { unitCode: unit.code })}{settingsLink('platform-organisation-locations', 'Locations', { locationCode: unit.locationCode })}</div>}>
                     <UnitSettingsField label="Parent organisation" value={formatPlainList(parentPath, '')} onChange={(value) => updateUnitSettings({ parentOrganisationPath: value.split('/').map((part) => part.trim()).filter(Boolean), parentOrganisation: value.split('/').map((part) => part.trim()).filter(Boolean).join('-') })} disabled={!canEdit} />
@@ -2442,15 +2483,15 @@ const OrganisationMyUnitSettings: React.FC<{
                 <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">My Unit Settings</p>
-                        <h3 className="mt-1 text-2xl font-semibold tracking-normal text-white">{unit.name || unit.code}</h3>
+                        <h3 className="mt-1 text-2xl font-semibold tracking-normal text-white">{contextDisplayName || unit.name || unit.code}</h3>
                         <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-400">
-                            A simplified read-only view of the Settings records for this unit. Use the Open buttons to edit the authoritative setting in Settings.
+                            A simplified read-only view of the Settings records for this {isCombinedUnitContext ? 'combined unit context' : 'unit'}. Use the Open buttons to edit the authoritative setting in Settings.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <span className={unitSettingsMutedPillClass}>{unit.code}</span>
-                        <span className={unitSettingsMutedPillClass}>{getOperationalModelLabel(operationalModel)}</span>
-                        <span className={unitSettingsMutedPillClass}>{unit.locationCode || 'No location'}</span>
+                        <span className={unitSettingsMutedPillClass}>{contextDisplayCode || unit.code}</span>
+                        <span className={unitSettingsMutedPillClass}>{operationalModelDisplay}</span>
+                        <span className={unitSettingsMutedPillClass}>{contextLocationDisplay || 'No location'}</span>
                     </div>
                 </div>
             </div>
@@ -2652,9 +2693,23 @@ const InitialSetupWizard: React.FC<{
     const activeOrganisation = (platformConfig?.organisations || []).find((organisation: any) => (
         String(organisation?.status || 'ACTIVE').toUpperCase() === 'ACTIVE'
     )) || platformConfig?.organisations?.[0];
-    const currentUnit = (platformConfig?.units || []).find((unit: any) => (
-        normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(unitCode)
-    )) || (platformConfig?.units || [])[0];
+    const currentWizardUnitCode = normaliseUnitSettingsIdentifier(unitCode);
+    const currentWizardUnitCodes = Array.from(new Set(
+        currentWizardUnitCode
+            .split('+')
+            .map((code) => normaliseUnitSettingsIdentifier(code))
+            .filter(Boolean)
+    ));
+    const configuredWizardUnits = platformConfig?.units || [];
+    const exactCurrentUnit = configuredWizardUnits.find((unit: any) => (
+        normaliseUnitSettingsIdentifier(unit?.code) === currentWizardUnitCode
+    ));
+    const firstCurrentMemberUnit = !exactCurrentUnit && currentWizardUnitCodes.length > 0
+        ? configuredWizardUnits.find((unit: any) => currentWizardUnitCodes.includes(normaliseUnitSettingsIdentifier(unit?.code)))
+        : null;
+    const currentUnit = exactCurrentUnit
+        || firstCurrentMemberUnit
+        || (!currentWizardUnitCode ? configuredWizardUnits[0] : null);
     const activeWizardLocationCode = String(locationCode || currentUnit?.locationCode || '').trim().toUpperCase();
     const currentUnitLocationKey = normaliseUnitSettingsIdentifier(currentUnit?.locationCode || activeWizardLocationCode);
     const currentLocation = (platformConfig?.locations || []).find((location: any) => (
