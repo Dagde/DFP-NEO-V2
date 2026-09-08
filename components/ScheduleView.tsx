@@ -3082,6 +3082,7 @@ const InitialSetupWizard: React.FC<{
         timezone: String(currentLocation?.timezone || 'UTC'),
         trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(', ') : '',
     });
+    const locationDraftDirtyRef = useRef(false);
     const [unitsTodayDraft, setUnitsTodayDraft] = useState('');
     const [unitParentDraft, setUnitParentDraft] = useState('');
     const [locationsTodayDraft, setLocationsTodayDraft] = useState(() => (
@@ -3102,6 +3103,7 @@ const InitialSetupWizard: React.FC<{
         operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
         hasTrainees: currentUnit?.settings?.hasTrainees !== false,
     });
+    const unitDraftDirtyRef = useRef(false);
     const [resourceDraft, setResourceDraft] = useState({
         aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
         aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
@@ -3127,6 +3129,7 @@ const InitialSetupWizard: React.FC<{
         moduleCode: String(primaryUserAccess?.moduleCode || primaryUserAccess?.module || 'DFP'),
         accessLevel: String(primaryUserAccess?.accessLevel || primaryUserAccess?.access || 'View'),
     });
+    const accessDraftDirtyRef = useRef(false);
     const [trainingDraft, setTrainingDraft] = useState({
         lmpCode: String(primaryMasterLmp?.code || 'New Master LMP'),
         lmpName: String(primaryMasterLmp?.name || primaryMasterLmp?.code || 'New Master LMP'),
@@ -3137,6 +3140,7 @@ const InitialSetupWizard: React.FC<{
         accessModel: String(primaryMasterLmpRule?.operationalModel || primaryMasterLmpRule?.model || 'Any Model'),
         accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || 'View'),
     });
+    const trainingDraftDirtyRef = useRef(false);
     const [crewLabelsDraft, setCrewLabelsDraft] = useState('Pilot = Pilot\nLoadmaster = Loadmaster');
     const [alternateCrewDraft, setAlternateCrewDraft] = useState('Reduced crew = Pilot 1, Loadmaster 1');
     const [buildRulesDraft, setBuildRulesDraft] = useState({
@@ -3392,8 +3396,12 @@ const InitialSetupWizard: React.FC<{
         const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, hydratedOrganisation);
         const hydratedLocations = buildHydratedLocationsTodayDraft();
         organisationDraftDirtyRef.current = false;
+        locationDraftDirtyRef.current = false;
+        unitDraftDirtyRef.current = false;
         resourceDraftDirtyRef.current = false;
         crewDraftDirtyRef.current = false;
+        accessDraftDirtyRef.current = false;
+        trainingDraftDirtyRef.current = false;
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
         pushWizardOrgDiag(`hydrate:${stage}-from-synced-settings`, {
             activeOrganisation: summariseActiveOrganisation(),
@@ -3449,6 +3457,7 @@ const InitialSetupWizard: React.FC<{
     ]);
 
     useEffect(() => {
+        if (locationDraftDirtyRef.current) return;
         setLocationDraft({
             code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'LOC1'),
             iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'LOC'),
@@ -3462,6 +3471,7 @@ const InitialSetupWizard: React.FC<{
         const firstLocation = parseWizardLocationRows(locationsTodayDraft)[0];
         setLocationDraftRowCount((count) => Math.max(count, parseWizardLocationRows(locationsTodayDraft).length, 1));
         if (!firstLocation) return;
+        if (locationDraftDirtyRef.current) return;
         const matchedProfile = findWizardLocationProfile(firstLocation.icao || firstLocation.iata || firstLocation.name);
         setLocationDraft((draft) => ({
             ...draft,
@@ -3473,6 +3483,7 @@ const InitialSetupWizard: React.FC<{
     }, [locationsTodayDraft]);
 
     useEffect(() => {
+        if (unitDraftDirtyRef.current) return;
         setUnitDraft({
             code: String(currentUnit?.code || unitCode || 'UNIT-01'),
             name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
@@ -3484,9 +3495,22 @@ const InitialSetupWizard: React.FC<{
     }, [activeWizardLocationCode, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code, unitTypeOptions]);
 
     useEffect(() => {
+        locationDraftDirtyRef.current = false;
+        unitDraftDirtyRef.current = false;
         resourceDraftDirtyRef.current = false;
         crewDraftDirtyRef.current = false;
+        accessDraftDirtyRef.current = false;
+        trainingDraftDirtyRef.current = false;
     }, [currentUnit?.code, unitCode]);
+
+    useEffect(() => {
+        if (resourceDraftDirtyRef.current) return;
+        setResourceDraft((draft) => ({
+            ...draft,
+            poolUnitCode: unitDraft.code || draft.poolUnitCode,
+            poolLocationCode: unitDraft.locationCode || draft.poolLocationCode,
+        }));
+    }, [unitDraft.code, unitDraft.locationCode]);
 
     useEffect(() => {
         if (resourceDraftDirtyRef.current || crewDraftDirtyRef.current) return;
@@ -3516,6 +3540,7 @@ const InitialSetupWizard: React.FC<{
     }, [resourceDraft.aircraftCode]);
 
     useEffect(() => {
+        if (accessDraftDirtyRef.current) return;
         setAccessDraft({
             userName: String(primaryUserAccess?.userName || primaryUserAccess?.user || 'New user'),
             locationCode: String(primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || ''),
@@ -3526,6 +3551,7 @@ const InitialSetupWizard: React.FC<{
     }, [primaryUserAccess?.userName, primaryUserAccess?.user, primaryUserAccess?.locationCode, primaryUserAccess?.unitCode, primaryUserAccess?.moduleCode, primaryUserAccess?.accessLevel, primaryUserAccess?.access, currentLocation?.code, currentUnit?.code]);
 
     useEffect(() => {
+        if (trainingDraftDirtyRef.current) return;
         setTrainingDraft({
             lmpCode: String(primaryMasterLmp?.code || 'New Master LMP'),
             lmpName: String(primaryMasterLmp?.name || primaryMasterLmp?.code || 'New Master LMP'),
@@ -3824,11 +3850,13 @@ const InitialSetupWizard: React.FC<{
             setSaveMessage('Enter a DFP Resource Rows name before saving.');
             return;
         }
+        const effectivePoolUnitCode = String(resourceDraft.poolUnitCode || unitDraft.code || currentUnit?.code || '').trim().toUpperCase();
+        const effectivePoolLocationCode = String(resourceDraft.poolLocationCode || unitDraft.locationCode || activeWizardLocationCode || currentLocation?.code || '').trim().toUpperCase();
         saveWizardConfig('Aircraft type and DFP resource rows saved into Settings.', (baseConfig) => {
             const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
             const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
             const aircraftExists = aircraftTypes.some((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode));
-            const targetUnitCode = normaliseUnitSettingsIdentifier(resourceDraft.poolUnitCode);
+            const targetUnitCode = normaliseUnitSettingsIdentifier(effectivePoolUnitCode);
             const existingUnitPool = resourcePools.find((pool: any) => (
                 String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
                 && targetUnitCode
@@ -3836,14 +3864,14 @@ const InitialSetupWizard: React.FC<{
             ));
             const targetPool = existingUnitPool || primaryResourcePool || null;
             const poolKey = targetPool?.id || targetPool?.code || '';
-            const generatedPoolCode = makeWizardResourcePoolCode(resourceDraft.poolLocationCode, resourceDraft.poolUnitCode, aircraftCode);
+            const generatedPoolCode = makeWizardResourcePoolCode(effectivePoolLocationCode, effectivePoolUnitCode, aircraftCode);
             const nextPool = {
                 id: targetPool?.id || createWizardRecordId('pool'),
                 code: targetPool?.code || generatedPoolCode,
                 name: poolName,
                 organisationCode: activeOrganisation?.code || organisationDraft.code || 'DEFAULT',
-                locationCode: resourceDraft.poolLocationCode,
-                unitCode: resourceDraft.poolUnitCode,
+                locationCode: effectivePoolLocationCode,
+                unitCode: effectivePoolUnitCode,
                 aircraftTypeCode: aircraftCode,
                 poolType: targetPool?.poolType || 'Dedicated',
                 status: 'ACTIVE',
@@ -3885,20 +3913,29 @@ const InitialSetupWizard: React.FC<{
             setSaveMessage('Choose an aircraft type before saving crew composition.');
             return;
         }
-        saveWizardConfig('Crew composition saved into Settings.', (baseConfig) => ({
-            ...baseConfig,
-            aircraftTypes: (baseConfig.aircraftTypes || []).map((aircraft: any) => (
-                normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode)
-                    ? {
-                        ...aircraft,
-                        crewComposition: {
-                            ...normaliseAircraftCrewComposition(aircraft.crewComposition || null),
-                            standardSeats: parseRoleRequirementsText(crewDraft.standardSeats),
-                        },
-                    }
-                    : aircraft
-            )),
-        }));
+        saveWizardConfig('Crew composition saved into Settings.', (baseConfig) => {
+            const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
+            const existingAircraft = aircraftTypes.find((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode));
+            const nextAircraft = {
+                ...(existingAircraft || {
+                    id: createWizardRecordId('aircraft-type'),
+                    code: aircraftCode,
+                    name: resourceDraft.aircraftName || aircraftCode,
+                    category: 'Other',
+                    status: 'ACTIVE',
+                }),
+                crewComposition: {
+                    ...normaliseAircraftCrewComposition(existingAircraft?.crewComposition || null),
+                    standardSeats: parseRoleRequirementsText(crewDraft.standardSeats),
+                },
+            };
+            return {
+                ...baseConfig,
+                aircraftTypes: existingAircraft
+                    ? aircraftTypes.map((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode) ? nextAircraft : aircraft)
+                    : [...aircraftTypes, nextAircraft],
+            };
+        });
     };
 
     const saveAccessDraft = () => {
@@ -4793,8 +4830,12 @@ const InitialSetupWizard: React.FC<{
             activeOrganisation: summariseActiveOrganisation(),
         });
         organisationDraftDirtyRef.current = false;
+        locationDraftDirtyRef.current = false;
+        unitDraftDirtyRef.current = false;
         resourceDraftDirtyRef.current = false;
         crewDraftDirtyRef.current = false;
+        accessDraftDirtyRef.current = false;
+        trainingDraftDirtyRef.current = false;
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
         hydrateWizardDraftsFromSettings('start-again');
         setWizardStep(0);
@@ -4815,6 +4856,14 @@ const InitialSetupWizard: React.FC<{
     const wizardPrimaryButtonClass = 'rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600';
     const wizardInputClass = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200';
     const wizardLabelClass = 'text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
+    const updateLocationDraft = (updater: React.SetStateAction<typeof locationDraft>) => {
+        locationDraftDirtyRef.current = true;
+        setLocationDraft(updater);
+    };
+    const updateUnitDraft = (updater: React.SetStateAction<typeof unitDraft>) => {
+        unitDraftDirtyRef.current = true;
+        setUnitDraft(updater);
+    };
     const updateResourceDraft = (updater: React.SetStateAction<typeof resourceDraft>) => {
         resourceDraftDirtyRef.current = true;
         setResourceDraft(updater);
@@ -4822,6 +4871,14 @@ const InitialSetupWizard: React.FC<{
     const updateCrewDraft = (updater: React.SetStateAction<typeof crewDraft>) => {
         crewDraftDirtyRef.current = true;
         setCrewDraft(updater);
+    };
+    const updateAccessDraft = (updater: React.SetStateAction<typeof accessDraft>) => {
+        accessDraftDirtyRef.current = true;
+        setAccessDraft(updater);
+    };
+    const updateTrainingDraft = (updater: React.SetStateAction<typeof trainingDraft>) => {
+        trainingDraftDirtyRef.current = true;
+        setTrainingDraft(updater);
     };
     const wizardField = (
         label: string,
@@ -5519,7 +5576,7 @@ const InitialSetupWizard: React.FC<{
         markWizardStepComplete(stepIdToSync);
         setWizardPageMenuOpen(false);
         setWizardStep(Math.min(steps.length - 1, currentStep + 1));
-        if (typeof window !== 'undefined') window.setTimeout(syncStep, 0);
+        if (typeof window !== 'undefined') window.requestAnimationFrame(() => window.setTimeout(syncStep, 0));
         else syncStep();
     };
     const goToWizardStep = (nextStep: number) => {
@@ -6022,7 +6079,10 @@ const InitialSetupWizard: React.FC<{
         const primaryAircraftCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || '').trim().toUpperCase();
         const primaryAircraftName = String(resourceDraft.aircraftName || '').trim();
         const primaryResourcePoolName = String(resourceDraft.poolName || '').trim();
+        const hasDeliberateAircraftSetup = Boolean(primaryAircraftCode);
         const hasDeliberateResourceSetup = Boolean(primaryAircraftCode && primaryResourcePoolName);
+        const primaryResourceLocationCode = String(resourceDraft.poolLocationCode || primaryLocationCode || '').trim().toUpperCase();
+        const primaryResourceUnitCode = String(resourceDraft.poolUnitCode || cleanUnits[0]?.code || '').trim().toUpperCase();
         const crewSeats = parseRoleRequirementsText(crewDraft.standardSeats);
         const alternateCrewRows = parseWizardLineItems(alternateCrewDraft).map((line, index) => {
             const [namePart, requirementsPart] = line.split('=').map((part) => part.trim());
@@ -6260,7 +6320,7 @@ const InitialSetupWizard: React.FC<{
                 organisations: [organisation],
                 locations: nextLocations,
                 units: nextUnits,
-                aircraftTypes: hasDeliberateResourceSetup ? [{
+                aircraftTypes: hasDeliberateAircraftSetup ? [{
                     id: createSetupTestRecordId('aircraft-type', primaryAircraftCode),
                     code: primaryAircraftCode,
                     name: primaryAircraftName || primaryAircraftCode,
@@ -6272,12 +6332,12 @@ const InitialSetupWizard: React.FC<{
                     },
                 }] : existingAircraftTypes,
                 resourcePools: hasDeliberateResourceSetup ? [{
-                    id: createSetupTestRecordId('resource-pool', `${primaryAircraftCode}-${resourceDraft.poolLocationCode || primaryLocationCode}-${resourceDraft.poolUnitCode || cleanUnits[0]?.code || ''}`),
-                    code: makeWizardResourcePoolCode(resourceDraft.poolLocationCode || primaryLocationCode, resourceDraft.poolUnitCode || cleanUnits[0]?.code || '', primaryAircraftCode),
+                    id: createSetupTestRecordId('resource-pool', `${primaryAircraftCode}-${primaryResourceLocationCode}-${primaryResourceUnitCode}`),
+                    code: makeWizardResourcePoolCode(primaryResourceLocationCode, primaryResourceUnitCode, primaryAircraftCode),
                     name: primaryResourcePoolName,
                     organisationCode: organisation.code,
-                    locationCode: resourceDraft.poolLocationCode || primaryLocationCode,
-                    unitCode: resourceDraft.poolUnitCode || cleanUnits[0]?.code || '',
+                    locationCode: primaryResourceLocationCode,
+                    unitCode: primaryResourceUnitCode,
                     aircraftTypeCode: primaryAircraftCode,
                     poolType: 'Dedicated',
                     status: 'ACTIVE',
@@ -7026,7 +7086,7 @@ const InitialSetupWizard: React.FC<{
         if (visibleStep.id === 'location-code') {
             return promptShell(
                 <p>Next we will set up the first base or operating location. What is the location code?</p>,
-                wizardField('Location code', locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'LOC1'),
+                wizardField('Location code', locationDraft.code, (value) => updateLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'LOC1'),
             );
         }
         if (visibleStep.id === 'location-details') {
@@ -7035,18 +7095,18 @@ const InitialSetupWizard: React.FC<{
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardDataListField('ICAO code', locationDraft.code, (value) => {
                         const matchedProfile = findWizardLocationProfile(value);
-                        setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || draft.iataCode, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
+                        updateLocationDraft((draft) => ({ ...draft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || draft.iataCode, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
                     }, wizardLocationIcaoOptions, 'ICAO code')}
                     {wizardDataListField('IATA code', locationDraft.iataCode, (value) => {
                         const matchedProfile = findWizardLocationProfile(value);
-                        setLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || draft.code, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
+                        updateLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || draft.code, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
                     }, wizardLocationIataOptions, 'IATA code')}
                     {wizardDataListField('Location name', locationDraft.name, (value) => {
                         const matchedProfile = findWizardLocationProfile(value);
-                        setLocationDraft((draft) => ({ ...draft, name: value, code: matchedProfile?.icao || draft.code, iataCode: matchedProfile?.iata || draft.iataCode, timezone: matchedProfile?.timezone || draft.timezone }));
+                        updateLocationDraft((draft) => ({ ...draft, name: value, code: matchedProfile?.icao || draft.code, iataCode: matchedProfile?.iata || draft.iataCode, timezone: matchedProfile?.timezone || draft.timezone }));
                     }, wizardLocationNameOptions, 'Location name')}
-                    {wizardField('Timezone', locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), undefined, 'UTC')}
-                    {wizardField('Training areas', locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), undefined, 'Area A, Area B')}
+                    {wizardField('Timezone', locationDraft.timezone, (value) => updateLocationDraft((draft) => ({ ...draft, timezone: value })), undefined, 'UTC')}
+                    {wizardField('Training areas', locationDraft.trainingAreas, (value) => updateLocationDraft((draft) => ({ ...draft, trainingAreas: value })), undefined, 'Area A, Area B')}
                 </div>,
             );
         }
@@ -7054,8 +7114,8 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Now we will set up the first unit using the app. What is the unit code and name?</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-01')}
-                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit')}
+                    {wizardField('Unit code', unitDraft.code, (value) => updateUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-01')}
+                    {wizardField('Unit name', unitDraft.name, (value) => updateUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit')}
                 </div>,
             );
         }
@@ -7063,16 +7123,16 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Set the identity and operating model for the first unit. The operating model is important because it controls which scheduler logic applies.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-01')}
-                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit')}
-                    {wizardDataListField('Home location', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, 'LOC1')}
-                    {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions)}
+                    {wizardField('Unit code', unitDraft.code, (value) => updateUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-01')}
+                    {wizardField('Unit name', unitDraft.name, (value) => updateUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit')}
+                    {wizardDataListField('Home location', unitDraft.locationCode, (value) => updateUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, 'LOC1')}
+                    {wizardField('Unit type', unitDraft.unitType, (value) => updateUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions)}
                     {wizardField(
                         'Operational model',
                         getWizardOperationalModelLabel(unitDraft.operationalModel),
                         (label) => {
                             const selected = OPERATIONAL_MODEL_OPTIONS.find((option) => option.label === label);
-                            setUnitDraft((draft) => ({ ...draft, operationalModel: selected?.value || draft.operationalModel }));
+                            updateUnitDraft((draft) => ({ ...draft, operationalModel: selected?.value || draft.operationalModel }));
                         },
                         OPERATIONAL_MODEL_OPTIONS.map((option) => option.label)
                     )}
@@ -7081,7 +7141,7 @@ const InitialSetupWizard: React.FC<{
                         <button
                             type="button"
                             className={`${wizardInputClass} mt-1 text-left ${unitDraft.hasTrainees ? 'bg-emerald-50 text-emerald-900' : 'bg-slate-100 text-slate-600'}`}
-                            onClick={() => setUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees }))}
+                            onClick={() => updateUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees }))}
                         >
                             {unitDraft.hasTrainees ? 'Yes, trainees on' : 'No, trainees off'}
                         </button>
@@ -7190,7 +7250,7 @@ const InitialSetupWizard: React.FC<{
                     <button
                         type="button"
                         className={`${wizardInputClass} mb-3 text-left ${unitDraft.hasTrainees ? 'bg-emerald-50 text-emerald-900' : 'bg-slate-100 text-slate-600'}`}
-                        onClick={() => setUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees }))}
+                        onClick={() => updateUnitDraft((draft) => ({ ...draft, hasTrainees: !draft.hasTrainees }))}
                     >
                         {unitDraft.hasTrainees ? 'Trainees on' : 'Trainees off'}
                     </button>
@@ -7268,9 +7328,9 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardDataListField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'Master LMP', 'master-lmp-code')}
-                    {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'Training Programme')}
-                    {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), 'Initial programme or qualification stream')}
+                    {wizardDataListField('Master LMP code', trainingDraft.lmpCode, (value) => updateTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'Master LMP', 'master-lmp-code')}
+                    {wizardField('Master LMP name', trainingDraft.lmpName, (value) => updateTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'Training Programme')}
+                    {wizardTextArea('Description', trainingDraft.description, (value) => updateTrainingDraft((draft) => ({ ...draft, description: value })), 'Initial programme or qualification stream')}
                 </div>,
             );
         }
@@ -7308,11 +7368,11 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Access scopes decide who can view, assign, or manage a Master LMP for a location and unit. Practically: if a user has no access scope here, they should not be offered this LMP for this unit.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('User', accessDraft.userName, (value) => setAccessDraft((draft) => ({ ...draft, userName: value })), undefined, 'Admin User')}
-                    {wizardField('Location', accessDraft.locationCode, (value) => setAccessDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
-                    {wizardField('Unit', accessDraft.unitCode, (value) => setAccessDraft((draft) => ({ ...draft, unitCode: value })), activeUnits.map((unit: any) => unit.code))}
-                    {wizardField('Module', accessDraft.moduleCode, (value) => setAccessDraft((draft) => ({ ...draft, moduleCode: value })), ['DFP', 'NEO Build', 'Training Records', 'Build Intelligence'])}
-                    {wizardField('Access level', trainingDraft.accessLevel, (value) => setTrainingDraft((draft) => ({ ...draft, accessLevel: value })), ['View', 'Assign', 'Manage'])}
+                    {wizardField('User', accessDraft.userName, (value) => updateAccessDraft((draft) => ({ ...draft, userName: value })), undefined, 'Admin User')}
+                    {wizardField('Location', accessDraft.locationCode, (value) => updateAccessDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
+                    {wizardField('Unit', accessDraft.unitCode, (value) => updateAccessDraft((draft) => ({ ...draft, unitCode: value })), activeUnits.map((unit: any) => unit.code))}
+                    {wizardField('Module', accessDraft.moduleCode, (value) => updateAccessDraft((draft) => ({ ...draft, moduleCode: value })), ['DFP', 'NEO Build', 'Training Records', 'Build Intelligence'])}
+                    {wizardField('Access level', trainingDraft.accessLevel, (value) => updateTrainingDraft((draft) => ({ ...draft, accessLevel: value })), ['View', 'Assign', 'Manage'])}
                 </div>,
             );
         }
