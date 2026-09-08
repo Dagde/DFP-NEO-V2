@@ -5385,14 +5385,15 @@ const InitialSetupWizard: React.FC<{
         onParentMappingsChange: (value: string) => void,
         placeholder: string,
         parentOptions: string[],
-    ) => (
+    ) => {
+        const enteredLevelNumber = levelNumber + 1;
+        return (
         <div className="max-w-full overflow-hidden">
-            <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(130px,190px)_minmax(0,1fr)]">
-                {wizardField(`Level ${levelNumber} type`, levelName, onNameChange, undefined, `Organisation Level ${levelNumber}`)}
+            <div className="grid min-w-0 gap-3">
                 <div className="min-w-0 md:w-1/2">
-                    {wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true)}
+                    {wizardTextArea(`Level ${enteredLevelNumber} names`, levelOptions, onOptionsChange, placeholder, true)}
                 </div>
-                <div className="md:col-span-2">
+                <div>
                     <div>
                         <span className={wizardLabelClass}>Parents for this level</span>
                         <div className="mt-2 overflow-hidden rounded-lg border border-slate-300 bg-white">
@@ -5430,11 +5431,12 @@ const InitialSetupWizard: React.FC<{
                 </div>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-600">
-                The names box lists the organisations on this level. The parent selector tells DFP-NEO where each one sits, so the organisation diagram can build the correct tree.
+                Add one organisation name per line. The parent selector tells DFP-NEO where each one sits, so the organisation diagram can build the correct tree.
             </p>
             {renderOrganisationPreview()}
         </div>
-    );
+        );
+    };
     const updateAdditionalOrganisationLevel = (levelIndex: number, changes: Record<string, string>) => {
         updateOrganisationDraft((draft: typeof organisationDraft) => {
             const additionalLevels = Array.isArray(draft.additionalLevels) ? [...draft.additionalLevels] : [];

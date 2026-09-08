@@ -16532,38 +16532,40 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       ] }, `${part}-${pathIndex}`)) }, `${path.join("-")}-${index}`)) })
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-lg border border-amber-300/30 bg-amber-950/20 px-3 py-2 text-xs font-semibold leading-5 text-amber-100", children: "Add parent links so DFP-NEO knows which organisation owns each child." })
   ] });
-  const organisationLevelAnswer = (levelNumber, levelName, levelOptions, parentMappings, onNameChange, onOptionsChange, onParentMappingsChange, placeholder, parentOptions) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-full overflow-hidden", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-3 md:grid-cols-[minmax(130px,190px)_minmax(0,1fr)]", children: [
-      wizardField(`Level ${levelNumber} type`, levelName, onNameChange, void 0, `Organisation Level ${levelNumber}`),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 md:w-1/2", children: wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Parents for this level" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-hidden rounded-lg border border-slate-300 bg-white", children: fromLines(levelOptions).length > 0 && parentOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-slate-200", children: fromLines(levelOptions).map((child) => {
-          const currentParent = buildWizardParentRowsForChildren([child], parentMappings, parentOptions)[0]?.parent || "";
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 px-3 py-2 md:grid-cols-[minmax(110px,170px)_minmax(0,1fr)] md:items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Child" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-bold text-slate-950", children: child })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block min-w-0 md:w-1/2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Parent" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "select",
-                {
-                  className: `${wizardInputClass} mt-1`,
-                  value: currentParent,
-                  onChange: (event) => onParentMappingsChange(updateWizardParentMapping(parentMappings, child, event.target.value)),
-                  children: parentOptions.map((parent) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: parent, children: parent }, `${child}-${parent}`))
-                }
-              )
-            ] })
-          ] }, `${levelNumber}-${child}`);
-        }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-3 py-3 text-xs font-semibold leading-5 text-slate-500", children: "Add names for this level and the level above it first, then choose each parent here." }) })
-      ] }) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "The names box lists the organisations on this level. The parent selector tells DFP-NEO where each one sits, so the organisation diagram can build the correct tree." }),
-    renderOrganisationPreview()
-  ] });
+  const organisationLevelAnswer = (levelNumber, levelName, levelOptions, parentMappings, onNameChange, onOptionsChange, onParentMappingsChange, placeholder, parentOptions) => {
+    const enteredLevelNumber = levelNumber + 1;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-full overflow-hidden", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 md:w-1/2", children: wizardTextArea(`Level ${enteredLevelNumber} names`, levelOptions, onOptionsChange, placeholder, true) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Parents for this level" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-hidden rounded-lg border border-slate-300 bg-white", children: fromLines(levelOptions).length > 0 && parentOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-slate-200", children: fromLines(levelOptions).map((child) => {
+            const currentParent = buildWizardParentRowsForChildren([child], parentMappings, parentOptions)[0]?.parent || "";
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 px-3 py-2 md:grid-cols-[minmax(110px,170px)_minmax(0,1fr)] md:items-center", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Child" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-bold text-slate-950", children: child })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block min-w-0 md:w-1/2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Parent" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "select",
+                  {
+                    className: `${wizardInputClass} mt-1`,
+                    value: currentParent,
+                    onChange: (event) => onParentMappingsChange(updateWizardParentMapping(parentMappings, child, event.target.value)),
+                    children: parentOptions.map((parent) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: parent, children: parent }, `${child}-${parent}`))
+                  }
+                )
+              ] })
+            ] }, `${levelNumber}-${child}`);
+          }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-3 py-3 text-xs font-semibold leading-5 text-slate-500", children: "Add names for this level and the level above it first, then choose each parent here." }) })
+        ] }) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "Add one organisation name per line. The parent selector tells DFP-NEO where each one sits, so the organisation diagram can build the correct tree." }),
+      renderOrganisationPreview()
+    ] });
+  };
   const updateAdditionalOrganisationLevel = (levelIndex, changes) => {
     updateOrganisationDraft((draft) => {
       const additionalLevels = Array.isArray(draft.additionalLevels) ? [...draft.additionalLevels] : [];
