@@ -15317,6 +15317,16 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       }
     })));
   };
+  const hasResourceRowCapacity = activeResourcePools.some((pool) => {
+    const settings = pool?.settings || {};
+    return [
+      settings.aircraft ?? pool?.aircraft,
+      settings.ftd ?? settings.sim ?? pool?.ftd ?? pool?.sim,
+      settings.cpt ?? settings.trainer ?? pool?.cpt ?? pool?.trainer,
+      settings.standby ?? pool?.standby,
+      settings.ground ?? pool?.ground
+    ].some((value) => parseNumberDraft(String(value ?? ""), 0) > 0);
+  });
   const checks = [
     {
       id: "organisation",
@@ -15348,8 +15358,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       id: "resources",
       label: "Aircraft setup and DFP resource rows",
       mandatory: true,
-      complete: activeAircraftTypes.length > 0 && activeResourcePools.length > 0,
-      summary: activeResourcePools.length > 0 ? `${activeResourcePools.length} DFP Resource Rows record${activeResourcePools.length === 1 ? "" : "s"} configured` : "Aircraft types and DFP Resource Rows are needed before NEO can build.",
+      complete: activeAircraftTypes.length > 0 && activeResourcePools.length > 0 && hasResourceRowCapacity,
+      summary: hasResourceRowCapacity ? `${activeResourcePools.length} DFP Resource Rows record${activeResourcePools.length === 1 ? "" : "s"} with usable capacity configured` : "Aircraft types and at least one usable DFP resource row are needed before NEO can build.",
       settingsSection: activeAircraftTypes.length > 0 ? "platform-dfp-resource-rows" : "platform-aircraft-setup"
     },
     {
@@ -15655,11 +15665,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     "follow-on": "text-emerald-700",
     review: "text-orange-600"
   };
-  const isWizardStepComplete = (step) => completedWizardStepIds.has(step.id) || step.checkIds.length > 0 && step.checkIds.every((checkId) => checks.find((check) => check.id === checkId)?.complete);
+  const isWizardStepComplete = (step) => {
+    if (step.id === "resource-counts") return hasResourceRowCapacity;
+    return completedWizardStepIds.has(step.id) || step.checkIds.length > 0 && step.checkIds.every((checkId) => checks.find((check) => check.id === checkId)?.complete);
+  };
   const wizardStepTextClass = (step) => isWizardStepComplete(step) ? "text-slate-950" : wizardCategoryTextClass[step.category];
   const wizardStepMenuItemClass = (step, index) => [
     "block w-full px-3 py-2 text-left text-xs font-semibold leading-4 transition hover:bg-orange-50",
-    wizardStepTextClass(step),
+    wizardCategoryTextClass[step.category],
     index === currentStep ? "bg-slate-100" : "bg-white"
   ].join(" ");
   const markWizardStepComplete = (stepId) => {
@@ -16678,15 +16691,31 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         return;
       }
     }
+    if (visibleStep.id === "resource-counts") {
+      const draftResourceCounts = [
+        resourceDraft.aircraft,
+        resourceDraft.sim,
+        resourceDraft.trainer,
+        resourceDraft.standby,
+        resourceDraft.ground
+      ].map((value) => parseNumberDraft(value, 0));
+      if (!draftResourceCounts.some((value) => value > 0)) {
+        setSaveMessage("Enter at least one aircraft, simulator, trainer, standby or ground row before continuing.");
+        return;
+      }
+    }
     pushWizardOrgDiag("wizard:next-sync-current-step", {
       fromStep: visibleStep.id,
       draft: summariseOrganisationDraft(organisationDraft),
       activeOrganisation: summariseActiveOrganisation()
     });
-    syncWizardStepToSettings(visibleStep.id);
-    markWizardStepComplete(visibleStep.id);
+    const stepIdToSync = visibleStep.id;
+    const syncStep = () => syncWizardStepToSettings(stepIdToSync);
+    markWizardStepComplete(stepIdToSync);
     setWizardPageMenuOpen(false);
     setWizardStep(Math.min(steps.length - 1, currentStep + 1));
+    if (typeof window !== "undefined") window.setTimeout(syncStep, 0);
+    else syncStep();
   };
   const goToWizardStep = (nextStep) => {
     const boundedStep = Math.min(steps.length - 1, Math.max(0, nextStep));
