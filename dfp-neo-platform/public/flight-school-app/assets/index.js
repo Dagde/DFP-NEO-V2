@@ -14573,6 +14573,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || ""),
     standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || [])
   });
+  const resourceDraftDirtyRef = reactExports.useRef(false);
+  const crewDraftDirtyRef = reactExports.useRef(false);
   const [accessDraft, setAccessDraft] = reactExports.useState({
     userName: String(primaryUserAccess?.userName || primaryUserAccess?.user || "New user"),
     locationCode: String(primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || ""),
@@ -14799,6 +14801,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, hydratedOrganisation);
     const hydratedLocations = buildHydratedLocationsTodayDraft();
     organisationDraftDirtyRef.current = false;
+    resourceDraftDirtyRef.current = false;
+    crewDraftDirtyRef.current = false;
     if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
     pushWizardOrgDiag(`hydrate:${stage}-from-synced-settings`, {
       activeOrganisation: summariseActiveOrganisation(),
@@ -14881,6 +14885,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     });
   }, [activeWizardLocationCode, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code, unitTypeOptions]);
   reactExports.useEffect(() => {
+    resourceDraftDirtyRef.current = false;
+    crewDraftDirtyRef.current = false;
+  }, [currentUnit?.code, unitCode]);
+  reactExports.useEffect(() => {
+    if (resourceDraftDirtyRef.current || crewDraftDirtyRef.current) return;
     setResourceDraft({
       aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
       aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
@@ -16087,6 +16096,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       activeOrganisation: summariseActiveOrganisation()
     });
     organisationDraftDirtyRef.current = false;
+    resourceDraftDirtyRef.current = false;
+    crewDraftDirtyRef.current = false;
     if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
     hydrateWizardDraftsFromSettings("start-again");
     setWizardStep(0);
@@ -16105,35 +16116,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const wizardPrimaryButtonClass = "rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600";
   const wizardInputClass = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200";
   const wizardLabelClass = "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500";
-  const insertWizardTextAtCursor = (field, text, onChange) => {
-    if (field.disabled || field.readOnly) return false;
-    const currentValue = field.value || "";
-    const selectionStart = field.selectionStart ?? currentValue.length;
-    const selectionEnd = field.selectionEnd ?? selectionStart;
-    const nextValue = `${currentValue.slice(0, selectionStart)}${text}${currentValue.slice(selectionEnd)}`;
-    const nextCursor = selectionStart + text.length;
-    onChange(nextValue);
-    window.requestAnimationFrame(() => {
-      field.setSelectionRange(nextCursor, nextCursor);
-    });
-    return true;
+  const updateResourceDraft = (updater) => {
+    resourceDraftDirtyRef.current = true;
+    setResourceDraft(updater);
   };
-  const insertWizardSpaceAtCursor = (event, onChange) => {
-    if (event.key !== " " && event.code !== "Space" && event.key !== "Spacebar") return false;
-    if (event.metaKey || event.ctrlKey || event.altKey) return false;
-    event.preventDefault();
-    event.stopPropagation();
-    return insertWizardTextAtCursor(event.currentTarget, " ", onChange);
-  };
-  const handleWizardTextKeyDownCapture = (event, onChange) => {
-    if (insertWizardSpaceAtCursor(event, onChange)) return;
-  };
-  const handleWizardBeforeInput = (event, onChange) => {
-    const inputEvent = event.nativeEvent;
-    if (inputEvent.inputType !== "insertText" || inputEvent.data !== " ") return;
-    event.preventDefault();
-    event.stopPropagation();
-    insertWizardTextAtCursor(event.currentTarget, " ", onChange);
+  const updateCrewDraft = (updater) => {
+    crewDraftDirtyRef.current = true;
+    setCrewDraft(updater);
   };
   const wizardField = (label, value, onChange, options, placeholder) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: label }),
@@ -16153,8 +16142,6 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         className: `${wizardInputClass} mt-1`,
         value,
         placeholder,
-        onBeforeInput: (event) => handleWizardBeforeInput(event, onChange),
-        onKeyDownCapture: (event) => handleWizardTextKeyDownCapture(event, onChange),
         onKeyDown: stopEditableKeyPropagation,
         onChange: (event) => onChange(event.target.value)
       }
@@ -16171,8 +16158,6 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           value,
           list: listId,
           placeholder,
-          onBeforeInput: (event) => handleWizardBeforeInput(event, onChange),
-          onKeyDownCapture: (event) => handleWizardTextKeyDownCapture(event, onChange),
           onKeyDown: stopEditableKeyPropagation,
           onChange: (event) => onChange(event.target.value)
         }
@@ -16653,8 +16638,6 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         value,
         placeholder,
         autoFocus,
-        onBeforeInput: (event) => handleWizardBeforeInput(event, onChange),
-        onKeyDownCapture: (event) => handleWizardTextKeyDownCapture(event, onChange),
         onKeyDown: stopEditableKeyPropagation,
         onChange: (event) => onChange(event.target.value)
       }
@@ -18173,9 +18156,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           " use?"
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "Enter aircraft code"),
-          wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "Enter aircraft or resource type"),
-          wizardField("DFP Resource Rows name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "DFP Resource Rows")
+          wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => updateResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "Enter aircraft code"),
+          wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => updateResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "Enter aircraft or resource type"),
+          wizardField("DFP Resource Rows name", resourceDraft.poolName, (value) => updateResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "DFP Resource Rows")
         ] })
       );
     }
@@ -18183,11 +18166,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Enter how many rows this unit can use on the schedule. These numbers tell NEO what it can place on the flying program." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-5", children: [
-          wizardField("Aircraft", resourceDraft.aircraft, (value) => setResourceDraft((draft) => ({ ...draft, aircraft: value }))),
-          wizardField("Sim", resourceDraft.sim, (value) => setResourceDraft((draft) => ({ ...draft, sim: value }))),
-          wizardField("Trainer", resourceDraft.trainer, (value) => setResourceDraft((draft) => ({ ...draft, trainer: value }))),
-          wizardField("Standby Lines", resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value }))),
-          wizardField("Ground Lines", resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))
+          wizardField("Aircraft", resourceDraft.aircraft, (value) => updateResourceDraft((draft) => ({ ...draft, aircraft: value }))),
+          wizardField("Sim", resourceDraft.sim, (value) => updateResourceDraft((draft) => ({ ...draft, sim: value }))),
+          wizardField("Trainer", resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value }))),
+          wizardField("Standby Lines", resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value }))),
+          wizardField("Ground Lines", resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value })))
         ] })
       );
     }
@@ -18195,9 +18178,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardDataListField("Aircraft type", crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || "Enter aircraft code") }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardDataListField("Aircraft type", crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => updateCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || "Enter aircraft code") }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-2", children: [
-            renderCrewCompositionEditor("Standard crew composition", crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value }))),
+            renderCrewCompositionEditor("Standard crew composition", crewDraft.standardSeats, (value) => updateCrewDraft((draft) => ({ ...draft, standardSeats: value }))),
             renderCrewCompositionEditor("Alternate crew composition", alternateCrewDraft, setAlternateCrewDraft, "Add alternate position")
           ] }),
           renderCrewLabelsEditor()

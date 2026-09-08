@@ -3118,6 +3118,8 @@ const InitialSetupWizard: React.FC<{
         aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || ''),
         standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || []),
     });
+    const resourceDraftDirtyRef = useRef(false);
+    const crewDraftDirtyRef = useRef(false);
     const [accessDraft, setAccessDraft] = useState({
         userName: String(primaryUserAccess?.userName || primaryUserAccess?.user || 'New user'),
         locationCode: String(primaryUserAccess?.locationCode || primaryUserAccess?.location || currentLocation?.code || ''),
@@ -3390,6 +3392,8 @@ const InitialSetupWizard: React.FC<{
         const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, hydratedOrganisation);
         const hydratedLocations = buildHydratedLocationsTodayDraft();
         organisationDraftDirtyRef.current = false;
+        resourceDraftDirtyRef.current = false;
+        crewDraftDirtyRef.current = false;
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
         pushWizardOrgDiag(`hydrate:${stage}-from-synced-settings`, {
             activeOrganisation: summariseActiveOrganisation(),
@@ -3480,6 +3484,12 @@ const InitialSetupWizard: React.FC<{
     }, [activeWizardLocationCode, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code, unitTypeOptions]);
 
     useEffect(() => {
+        resourceDraftDirtyRef.current = false;
+        crewDraftDirtyRef.current = false;
+    }, [currentUnit?.code, unitCode]);
+
+    useEffect(() => {
+        if (resourceDraftDirtyRef.current || crewDraftDirtyRef.current) return;
         setResourceDraft({
             aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
             aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
@@ -4783,6 +4793,8 @@ const InitialSetupWizard: React.FC<{
             activeOrganisation: summariseActiveOrganisation(),
         });
         organisationDraftDirtyRef.current = false;
+        resourceDraftDirtyRef.current = false;
+        crewDraftDirtyRef.current = false;
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
         hydrateWizardDraftsFromSettings('start-again');
         setWizardStep(0);
@@ -4803,48 +4815,13 @@ const InitialSetupWizard: React.FC<{
     const wizardPrimaryButtonClass = 'rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600';
     const wizardInputClass = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200';
     const wizardLabelClass = 'text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
-    const insertWizardTextAtCursor = (
-        field: HTMLInputElement | HTMLTextAreaElement,
-        text: string,
-        onChange: (value: string) => void,
-    ): boolean => {
-        if (field.disabled || field.readOnly) return false;
-        const currentValue = field.value || '';
-        const selectionStart = field.selectionStart ?? currentValue.length;
-        const selectionEnd = field.selectionEnd ?? selectionStart;
-        const nextValue = `${currentValue.slice(0, selectionStart)}${text}${currentValue.slice(selectionEnd)}`;
-        const nextCursor = selectionStart + text.length;
-        onChange(nextValue);
-        window.requestAnimationFrame(() => {
-            field.setSelectionRange(nextCursor, nextCursor);
-        });
-        return true;
+    const updateResourceDraft = (updater: React.SetStateAction<typeof resourceDraft>) => {
+        resourceDraftDirtyRef.current = true;
+        setResourceDraft(updater);
     };
-    const insertWizardSpaceAtCursor = (
-        event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
-        onChange: (value: string) => void,
-    ): boolean => {
-        if (event.key !== ' ' && event.code !== 'Space' && event.key !== 'Spacebar') return false;
-        if (event.metaKey || event.ctrlKey || event.altKey) return false;
-        event.preventDefault();
-        event.stopPropagation();
-        return insertWizardTextAtCursor(event.currentTarget, ' ', onChange);
-    };
-    const handleWizardTextKeyDownCapture = (
-        event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
-        onChange: (value: string) => void,
-    ) => {
-        if (insertWizardSpaceAtCursor(event, onChange)) return;
-    };
-    const handleWizardBeforeInput = (
-        event: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>,
-        onChange: (value: string) => void,
-    ) => {
-        const inputEvent = event.nativeEvent as InputEvent;
-        if (inputEvent.inputType !== 'insertText' || inputEvent.data !== ' ') return;
-        event.preventDefault();
-        event.stopPropagation();
-        insertWizardTextAtCursor(event.currentTarget, ' ', onChange);
+    const updateCrewDraft = (updater: React.SetStateAction<typeof crewDraft>) => {
+        crewDraftDirtyRef.current = true;
+        setCrewDraft(updater);
     };
     const wizardField = (
         label: string,
@@ -4870,8 +4847,6 @@ const InitialSetupWizard: React.FC<{
                     className={`${wizardInputClass} mt-1`}
                     value={value}
                     placeholder={placeholder}
-                    onBeforeInput={(event) => handleWizardBeforeInput(event, onChange)}
-                    onKeyDownCapture={(event) => handleWizardTextKeyDownCapture(event, onChange)}
                     onKeyDown={stopEditableKeyPropagation}
                     onChange={(event) => onChange(event.target.value)}
                 />
@@ -4895,8 +4870,6 @@ const InitialSetupWizard: React.FC<{
                     value={value}
                     list={listId}
                     placeholder={placeholder}
-                    onBeforeInput={(event) => handleWizardBeforeInput(event, onChange)}
-                    onKeyDownCapture={(event) => handleWizardTextKeyDownCapture(event, onChange)}
                     onKeyDown={stopEditableKeyPropagation}
                     onChange={(event) => onChange(event.target.value)}
                 />
@@ -5485,8 +5458,6 @@ const InitialSetupWizard: React.FC<{
                 value={value}
                 placeholder={placeholder}
                 autoFocus={autoFocus}
-                onBeforeInput={(event) => handleWizardBeforeInput(event, onChange)}
-                onKeyDownCapture={(event) => handleWizardTextKeyDownCapture(event, onChange)}
                 onKeyDown={stopEditableKeyPropagation}
                 onChange={(event) => onChange(event.target.value)}
             />
@@ -7122,9 +7093,9 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>What aircraft type or primary resource should <strong>{unitDraft.code || 'this unit'}</strong> use?</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), undefined, 'Enter aircraft code')}
-                    {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'Enter aircraft or resource type')}
-                    {wizardField('DFP Resource Rows name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'DFP Resource Rows')}
+                    {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => updateResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), undefined, 'Enter aircraft code')}
+                    {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => updateResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'Enter aircraft or resource type')}
+                    {wizardField('DFP Resource Rows name', resourceDraft.poolName, (value) => updateResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'DFP Resource Rows')}
                 </div>,
             );
         }
@@ -7132,11 +7103,11 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Enter how many rows this unit can use on the schedule. These numbers tell NEO what it can place on the flying program.</p>,
                 <div className="grid gap-3 md:grid-cols-5">
-                    {wizardField('Aircraft', resourceDraft.aircraft, (value) => setResourceDraft((draft) => ({ ...draft, aircraft: value })))}
-                    {wizardField('Sim', resourceDraft.sim, (value) => setResourceDraft((draft) => ({ ...draft, sim: value })))}
-                    {wizardField('Trainer', resourceDraft.trainer, (value) => setResourceDraft((draft) => ({ ...draft, trainer: value })))}
-                    {wizardField('Standby Lines', resourceDraft.standby, (value) => setResourceDraft((draft) => ({ ...draft, standby: value })))}
-                    {wizardField('Ground Lines', resourceDraft.ground, (value) => setResourceDraft((draft) => ({ ...draft, ground: value })))}
+                    {wizardField('Aircraft', resourceDraft.aircraft, (value) => updateResourceDraft((draft) => ({ ...draft, aircraft: value })))}
+                    {wizardField('Sim', resourceDraft.sim, (value) => updateResourceDraft((draft) => ({ ...draft, sim: value })))}
+                    {wizardField('Trainer', resourceDraft.trainer, (value) => updateResourceDraft((draft) => ({ ...draft, trainer: value })))}
+                    {wizardField('Standby Lines', resourceDraft.standby, (value) => updateResourceDraft((draft) => ({ ...draft, standby: value })))}
+                    {wizardField('Ground Lines', resourceDraft.ground, (value) => updateResourceDraft((draft) => ({ ...draft, ground: value })))}
                 </div>,
             );
         }
@@ -7145,10 +7116,10 @@ const InitialSetupWizard: React.FC<{
                 <p>Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events.</p>,
                 <div className="space-y-3">
                     <div className="grid gap-3 md:grid-cols-2">
-                        {wizardDataListField('Aircraft type', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'Enter aircraft code')}
+                        {wizardDataListField('Aircraft type', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => updateCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'Enter aircraft code')}
                     </div>
                     <div className="grid gap-3 xl:grid-cols-2">
-                        {renderCrewCompositionEditor('Standard crew composition', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })))}
+                        {renderCrewCompositionEditor('Standard crew composition', crewDraft.standardSeats, (value) => updateCrewDraft((draft) => ({ ...draft, standardSeats: value })))}
                         {renderCrewCompositionEditor('Alternate crew composition', alternateCrewDraft, setAlternateCrewDraft, 'Add alternate position')}
                     </div>
                     {renderCrewLabelsEditor()}
