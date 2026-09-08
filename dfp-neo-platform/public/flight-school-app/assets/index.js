@@ -12815,6 +12815,7 @@ const unitSettingsRowClass = "grid gap-2 border-t border-white/10 px-4 py-3 firs
 const unitSettingsMutedPillClass = "rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[11px] font-semibold text-slate-300";
 const initialSetupWizardStorageKey = "dfp-initial-setup-wizard-step";
 const initialSetupWizardOrganisationDraftStorageKey = "dfp-initial-setup-wizard-organisation-draft";
+const initialSetupWizardCompletedStepsStorageKey = "dfp-initial-setup-wizard-completed-steps";
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
 const createWizardRecordId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createSetupTestRecordId = (prefix, key = "") => {
@@ -14103,6 +14104,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const stored = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
     return Number.isFinite(stored) ? Math.max(0, stored) : 0;
   });
+  const [completedWizardStepIds, setCompletedWizardStepIds] = reactExports.useState(() => {
+    if (typeof window === "undefined") return /* @__PURE__ */ new Set();
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardCompletedStepsStorageKey) || "[]");
+      return new Set(Array.isArray(parsed) ? parsed.map((item) => String(item || "")).filter(Boolean) : []);
+    } catch {
+      return /* @__PURE__ */ new Set();
+    }
+  });
   const [uploadResults, setUploadResults] = reactExports.useState({});
   const [importConfirmations, setImportConfirmations] = reactExports.useState({});
   const [pendingTemplateId, setPendingTemplateId] = reactExports.useState(null);
@@ -15094,6 +15104,78 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       };
     });
   };
+  const saveWizardLocationRowsDraft = (message = "Location list synced into Settings.") => {
+    const locationRows = parseWizardLocationRows(locationsTodayDraft);
+    if (locationRows.length === 0) {
+      setSaveMessage("Add at least one locality before continuing.");
+      return;
+    }
+    saveWizardConfig(message, (baseConfig) => {
+      const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
+      const nextLocations = [...locations];
+      locationRows.forEach((row) => {
+        const code = String(row.icao || row.iata || "").trim().toUpperCase();
+        if (!code) return;
+        const existingIndex = nextLocations.findIndex((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(code));
+        const existingLocation = existingIndex >= 0 ? nextLocations[existingIndex] : null;
+        const nextLocation = {
+          ...existingLocation || { id: createWizardRecordId("location") },
+          code,
+          iataCode: String(row.iata || existingLocation?.iataCode || existingLocation?.settings?.iataCode || "").trim().toUpperCase(),
+          name: row.name || existingLocation?.name || code,
+          timezone: existingLocation?.timezone || "UTC",
+          status: existingLocation?.status || "ACTIVE",
+          settings: {
+            ...existingLocation?.settings || {},
+            iataCode: String(row.iata || existingLocation?.iataCode || existingLocation?.settings?.iataCode || "").trim().toUpperCase()
+          }
+        };
+        if (existingIndex >= 0) nextLocations[existingIndex] = nextLocation;
+        else nextLocations.push(nextLocation);
+      });
+      return {
+        ...baseConfig,
+        locations: nextLocations
+      };
+    });
+  };
+  const saveWizardUnitRowsDraft = (message = "Unit list synced into Settings.") => {
+    const unitRows = parseWizardUnitRows(unitsTodayDraft);
+    if (unitRows.length === 0) {
+      setSaveMessage("Add at least one unit before continuing.");
+      return;
+    }
+    const defaultLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code;
+    saveWizardConfig(message, (baseConfig) => {
+      const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
+      const nextUnits = [...units];
+      unitRows.forEach((row) => {
+        const code = String(row.code || "").trim().toUpperCase();
+        if (!code) return;
+        const existingIndex = nextUnits.findIndex((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(code));
+        const existingUnit = existingIndex >= 0 ? nextUnits[existingIndex] : null;
+        const nextUnit = {
+          ...existingUnit || { id: createWizardRecordId("unit") },
+          code,
+          name: row.name || existingUnit?.name || code,
+          locationCode: existingUnit?.locationCode || defaultLocationCode || unitDraft.locationCode,
+          unitType: existingUnit?.unitType || unitDraft.unitType,
+          status: existingUnit?.status || "ACTIVE",
+          settings: {
+            ...existingUnit?.settings || {},
+            operationalModel: existingUnit?.settings?.operationalModel || unitDraft.operationalModel,
+            hasTrainees: existingUnit?.settings?.hasTrainees ?? unitDraft.hasTrainees
+          }
+        };
+        if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
+        else nextUnits.push(nextUnit);
+      });
+      return {
+        ...baseConfig,
+        units: nextUnits
+      };
+    });
+  };
   const saveResourceDraft = () => {
     const aircraftCode = String(resourceDraft.aircraftCode || "").trim().toUpperCase();
     if (!aircraftCode) {
@@ -15212,6 +15294,28 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       };
     }));
   };
+  const saveWizardSupplementaryDrafts = (message = "This step has been synced into Settings.") => {
+    saveWizardConfig(message, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
+      ...settings,
+      initialSetupWizardDraft: {
+        ...settings.initialSetupWizardDraft || {},
+        unitsToday: parseWizardUnitRows(unitsTodayDraft),
+        locationsToday: parseWizardLocationRows(locationsTodayDraft),
+        unitParents: unitParentDraft,
+        crewLabels: crewLabelsDraft,
+        alternateCrews: alternateCrewDraft,
+        buildRules: buildRulesDraftText,
+        trainingRecords: trainingRecordsDraft,
+        unitModules: unitModulesDraft,
+        ranksAndLabels: rankLabelsDraft,
+        resourceSharing: resourceSharingDraft,
+        currencies: currencyDraft,
+        scoringMatrix: scoringDraft,
+        staffCurrencyEvents: staffCurrencyEventsDraft,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      }
+    })));
+  };
   const checks = [
     {
       id: "organisation",
@@ -15292,8 +15396,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       id: `org-level${levelIndex}`,
       title: `Build the level below ${getOrganisationDraftLevel(organisationDraft, levelIndex - 1).name || `Level ${levelIndex - 1}`}`,
       label: `Level ${levelIndex}`,
-      body: "Add this organisation layer and choose the immediate parent for each item.",
-      checkIds: ["organisation"]
+      body: "Add this organisation layer and choose the immediate parent for each item. This keeps the organisation tree clear.",
+      checkIds: ["organisation"],
+      category: "mandatory"
     };
   });
   const steps = [
@@ -15302,197 +15407,231 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       title: "Let us check what is already set up",
       label: "Check",
       body: "I will quickly read the current Settings data first, then guide you through the setup one question at a time.",
-      checkIds: checks.map((check) => check.id)
+      checkIds: checks.map((check) => check.id),
+      category: "review"
     },
     {
       id: "org-name",
       title: "What is the name of your organisation?",
       label: "Org name",
-      body: "This becomes Level 0, the top of the organisation structure.",
-      checkIds: ["organisation"]
+      body: "Start with the organisation that owns or operates DFP NEO. This becomes the top of the structure.",
+      checkIds: ["organisation"],
+      category: "mandatory"
     },
     {
       id: "org-level1",
       title: "Build the next level down",
       label: "Level 1",
-      body: `Thanks. ${organisationDraft.name || organisationDraft.code || "Your organisation"} will be Level 0. Now add the first layer below it.`,
-      checkIds: ["organisation"]
+      body: `Thanks. ${organisationDraft.name || organisationDraft.code || "Your organisation"} is the top of the tree. Now add the first layer below it.`,
+      checkIds: ["organisation"],
+      category: "mandatory"
     },
     {
       id: "org-level2",
       title: `Build the level below ${organisationDraft.level1Name || "Level 1"}`,
       label: "Level 2",
-      body: "For example, this might be Command, Group, Wing, Region, or Directorate.",
-      checkIds: ["organisation"]
+      body: "Tell the wizard what sits below the level above. This might be a command, group, wing, region, or directorate.",
+      checkIds: ["organisation"],
+      category: "mandatory"
     },
     {
       id: "org-level3",
       title: `Build the level below ${organisationDraft.level2Name || "Level 2"}`,
       label: "Level 3",
-      body: "This is normally the level units are attached to or owned by.",
-      checkIds: ["organisation"]
+      body: "This is usually the level closest to the units that will use the app.",
+      checkIds: ["organisation"],
+      category: "mandatory"
     },
     ...additionalOrganisationLevelSteps,
-    {
-      id: "units-today",
-      title: "Which units do you want to set up today?",
-      label: "Units",
-      body: "List the units you want this wizard to prepare. You can add more units later in Settings.",
-      checkIds: ["units"]
-    },
     {
       id: "locations-today",
       title: "Which localities do you want to set up?",
       label: "Locations",
-      body: "A locality is a base, airfield, or operating location. Add the ICAO and IATA codes where known.",
-      checkIds: ["locations"]
+      body: "Add the bases, airfields, or operating locations this unit may use.",
+      checkIds: ["locations"],
+      category: "mandatory"
     },
     {
       id: "location-details",
       title: "Add details for the first locality",
       label: "Location details",
-      body: "Confirm the first locality details. Repeat this pattern for each locality listed above.",
-      checkIds: ["locations"]
+      body: "Confirm the local details used for time, display, first light and last light shading, and training areas.",
+      checkIds: ["locations"],
+      category: "highly-desirable"
+    },
+    {
+      id: "units-today",
+      title: "Which units do you want to set up today?",
+      label: "Units",
+      body: "List the units you want this wizard to prepare. You can add more units later in Settings.",
+      checkIds: ["units"],
+      category: "mandatory"
     },
     {
       id: "unit-model",
       title: "Set up the first unit",
       label: "Unit setup",
-      body: "We will repeat this setup pattern for each unit you listed. Start with the first/current unit.",
-      checkIds: ["units"]
+      body: "Set the unit identity, home location, unit type, and operating model. The operating model controls which scheduling logic applies.",
+      checkIds: ["units"],
+      category: "mandatory"
+    },
+    {
+      id: "unit-modules",
+      title: "Choose the app areas this unit will use",
+      label: "Modules",
+      body: "Switch on the main app areas this unit needs. You can adjust this later in Settings.",
+      checkIds: ["access"],
+      category: "mandatory"
+    },
+    {
+      id: "ranks-labels",
+      title: "Set ranks and display labels",
+      label: "Ranks and labels",
+      body: "Set the rank order and common labels so lists sort and display in a way users understand.",
+      checkIds: ["access"],
+      category: "highly-desirable"
     },
     {
       id: "resource-aircraft",
       title: `What aircraft or main resource does ${unitDraft.code || "this unit"} use?`,
       label: "Aircraft",
-      body: "This creates or updates the aircraft type and DFP Resource Rows name.",
-      checkIds: ["resources"]
+      body: "Tell DFP NEO what aircraft or main scheduling resource the unit uses.",
+      checkIds: ["resources"],
+      category: "mandatory"
     },
     {
       id: "resource-counts",
       title: `What can ${unitDraft.code || "this unit"} schedule?`,
       label: "Counts",
-      body: "Enter the numbers NEO can use for aircraft, simulators, trainers, standby and ground rows. Saving this step writes the DFP resource rows into Settings.",
-      checkIds: ["resources"]
+      body: "Enter the numbers NEO can use for aircraft, simulators, trainers, standby lines and ground rows.",
+      checkIds: ["resources"],
+      category: "mandatory"
     },
     {
       id: "crew",
       title: "Set the crew rules",
       label: "Crew",
-      body: "Set the standard crew, labels, and any alternate crew patterns for this unit and aircraft.",
-      checkIds: ["crew"]
+      body: "Set the normal crew pattern and any alternate crew patterns for this aircraft or resource.",
+      checkIds: ["crew"],
+      category: "highly-desirable"
     },
     {
       id: "build-rules",
       title: "Set the build rules and limits",
       label: "Build rules",
-      body: "These are the rules NEO uses when it builds a schedule: business rules, duty limits, turnaround times, and event limits.",
-      checkIds: ["rules"]
-    },
-    {
-      id: "staff",
-      title: "Add staff for this unit",
-      label: "Staff",
-      body: "Add the people NEO can schedule or use for permissions. You can upload a staff template on this step.",
-      checkIds: ["access"]
-    },
-    {
-      id: "trainees",
-      title: "Does this unit have trainees?",
-      label: "Trainees",
-      body: "If this unit has trainees, switch trainees on. The next steps will create courses, upload trainees, then allocate them.",
-      checkIds: ["access"]
-    },
-    {
-      id: "trainee-courses",
-      title: "Create trainee courses",
-      label: "Courses",
-      body: "Create the course numbers or course names trainees can be allocated to. These choices will be used after the trainee upload.",
-      checkIds: ["access"]
-    },
-    {
-      id: "trainee-upload",
-      title: "Upload or add trainees",
-      label: "Upload trainees",
-      body: "Upload the trainee template or add trainees manually. Course allocation happens on the next step.",
-      checkIds: ["access"]
-    },
-    {
-      id: "trainee-allocation",
-      title: "Allocate trainees to courses",
-      label: "Allocate trainees",
-      body: "Select which course each trainee belongs to, then commit the trainees to Trainee Profiles.",
-      checkIds: ["access"]
-    },
-    {
-      id: "master-lmp",
-      title: "Choose or build the LMPs this unit will use",
-      label: "LMP",
-      body: "Choose an existing Master LMP or define a new one. Events can be uploaded from the courses template on this step.",
-      checkIds: ["training"]
-    },
-    {
-      id: "training-records",
-      title: "Set up training records",
-      label: "Records",
-      body: "Choose the training record names and grading labels for this unit. Detailed report design can still be refined later.",
-      checkIds: ["training"]
-    },
-    {
-      id: "unit-modules",
-      title: "Choose unit modules",
-      label: "Modules",
-      body: "Choose which app modules this unit should use.",
-      checkIds: ["access"]
-    },
-    {
-      id: "ranks-labels",
-      title: "Choose ranks and labels",
-      label: "Ranks",
-      body: "Use an existing rank and label set if one fits, or write the changes needed for this unit.",
-      checkIds: ["access"]
+      body: "Set the simple limits NEO should respect when it builds the schedule.",
+      checkIds: ["rules"],
+      category: "highly-desirable"
     },
     {
       id: "resource-sharing",
       title: "Set resource and staff sharing",
       label: "Sharing",
-      body: "Decide whether this unit shares aircraft, crew, staff, or other resources with another unit.",
-      checkIds: ["resources"]
+      body: "Tell DFP NEO whether this unit can share aircraft, resources, or staff with another unit.",
+      checkIds: ["resources"],
+      category: "highly-desirable"
     },
     {
       id: "currencies",
       title: "Set the currencies this unit uses",
       label: "Currencies",
-      body: "Enter only the currencies now. The full Currency Builder can be opened after setup for detailed rules.",
-      checkIds: ["training"]
+      body: "Add the currency and recency definitions the unit needs for planning and checks.",
+      checkIds: ["training"],
+      category: "highly-desirable"
     },
     {
-      id: "access",
-      title: "Who should have access first?",
-      label: "Access",
-      body: "Create the first access scope so the selected user can work with the location, unit and Master LMP.",
-      checkIds: ["access", "training"]
+      id: "training-records",
+      title: "Set training report names and grading labels",
+      label: "Training reports",
+      body: "Set the report name and grading words users will see when recording training evidence.",
+      checkIds: ["training"],
+      category: "highly-desirable"
+    },
+    {
+      id: "staff-currency-events",
+      title: `Set ${configuredContinuationShortLabel} and currency event presets`,
+      label: `${configuredContinuationShortLabel}/currency events`,
+      body: "Create common reusable event presets now, or refine them later if the unit is not ready.",
+      checkIds: ["training"],
+      category: "highly-desirable"
     },
     {
       id: "scoring",
       title: "Set up the scoring matrix",
       label: "Scoring",
-      body: "You can set this up now or mark it for later. This controls training report scoring.",
-      checkIds: ["training"]
+      body: "Set the plain-English grading standards used in training reports. You can also upload the scoring template.",
+      checkIds: ["training"],
+      category: "highly-desirable"
     },
     {
-      id: "staff-currency-events",
-      title: `Set ${configuredContinuationShortLabel} and currency events`,
-      label: `${configuredContinuationShortLabel}/currency events`,
-      body: `Add common ${configuredContinuationShortLabel} and currency event settings now, or leave them for later if the unit is not ready.`,
-      checkIds: ["training"]
+      id: "access",
+      title: "Set the first access scope",
+      label: "Access",
+      body: "Create the first access scope for this unit. Other users can be added after the wizard.",
+      checkIds: ["access", "training"],
+      category: "highly-desirable"
+    },
+    {
+      id: "staff",
+      title: "Add staff for this unit",
+      label: "Staff",
+      body: "Optional final step: add staff now, or leave this until the unit setup is complete.",
+      checkIds: ["access"],
+      category: "follow-on",
+      optional: true
+    },
+    {
+      id: "trainees",
+      title: "Does this unit have trainees?",
+      label: "Trainees",
+      body: "Optional final step: switch trainees on only if you want to start trainee setup now.",
+      checkIds: ["access"],
+      category: "follow-on",
+      optional: true
+    },
+    {
+      id: "trainee-courses",
+      title: "Create trainee courses",
+      label: "Courses",
+      body: "Optional final step: create the course names or course numbers trainees can be allocated to.",
+      checkIds: ["access"],
+      category: "follow-on",
+      optional: true
+    },
+    {
+      id: "trainee-upload",
+      title: "Upload or add trainees",
+      label: "Upload trainees",
+      body: "Optional final step: upload trainees or add them manually.",
+      checkIds: ["access"],
+      category: "follow-on",
+      optional: true
+    },
+    {
+      id: "trainee-allocation",
+      title: "Allocate trainees to courses",
+      label: "Allocate trainees",
+      body: "Optional final step: place each trainee into the right course, then commit them to Trainee Profiles.",
+      checkIds: ["access"],
+      category: "follow-on",
+      optional: true
+    },
+    {
+      id: "master-lmp",
+      title: "Choose or build the LMPs this unit will use",
+      label: "LMP",
+      body: "Optional final step: choose an existing LMP or start building the training event list.",
+      checkIds: ["training"],
+      category: "follow-on",
+      optional: true
     },
     {
       id: "review",
       title: "Review the setup",
       label: "Review",
       body: allMandatoryComplete ? "The mandatory setup areas look ready." : "Some mandatory setup areas still need attention. Step through the questions again or continue refining values here.",
-      checkIds: checks.map((check) => check.id)
+      checkIds: checks.map((check) => check.id),
+      category: "review"
     }
   ];
   const currentStep = Math.min(wizardStep, steps.length - 1);
@@ -15508,6 +15647,84 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const visibleStepTemplateIds = templateIdsByStep[visibleStep.id] || [];
   const visibleTemplates = initialSetupTemplates.filter((template) => visibleStepTemplateIds.includes(template.id));
+  const wizardCategoryTextClass = {
+    mandatory: "text-red-600",
+    "highly-desirable": "text-blue-600",
+    optional: "text-emerald-700",
+    "follow-on": "text-emerald-700",
+    review: "text-orange-600"
+  };
+  const isWizardStepComplete = (step) => completedWizardStepIds.has(step.id) || step.checkIds.length > 0 && step.checkIds.every((checkId) => checks.find((check) => check.id === checkId)?.complete);
+  const wizardStepTextClass = (step) => isWizardStepComplete(step) ? "text-slate-950" : wizardCategoryTextClass[step.category];
+  const markWizardStepComplete = (stepId) => {
+    setCompletedWizardStepIds((current) => {
+      const next = new Set(current);
+      next.add(stepId);
+      if (typeof window !== "undefined") {
+        safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(Array.from(next)));
+      }
+      return next;
+    });
+  };
+  const clearWizardStepCompletions = () => {
+    setCompletedWizardStepIds(/* @__PURE__ */ new Set());
+    if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardCompletedStepsStorageKey);
+  };
+  const syncWizardStepToSettings = (stepId) => {
+    if (isSetupTestMode$1) {
+      saveSetupTestWizardDrafts(false);
+      return;
+    }
+    if (stepId === "units-today") {
+      saveOrganisationDraft({
+        preserveWizardDraft: true,
+        message: "Organisation draft synced into Settings."
+      });
+      saveWizardUnitRowsDraft("Unit list synced into Settings.");
+      return;
+    }
+    if (isOrganisationWizardStep(stepId)) {
+      saveOrganisationDraft({
+        preserveWizardDraft: true,
+        message: "Organisation draft synced into Settings."
+      });
+      return;
+    }
+    if (stepId === "locations-today") {
+      saveWizardLocationRowsDraft();
+      return;
+    }
+    if (stepId === "location-details") {
+      saveLocationDraft();
+      return;
+    }
+    if (stepId === "unit-model" || stepId === "unit-modules") {
+      saveUnitDraft();
+      saveWizardSupplementaryDrafts("Unit setup synced into Settings.");
+      return;
+    }
+    if (stepId === "resource-aircraft" || stepId === "resource-counts") {
+      saveResourceDraft();
+      return;
+    }
+    if (stepId === "crew") {
+      saveCrewDraft();
+      saveWizardSupplementaryDrafts("Crew setup synced into Settings.");
+      return;
+    }
+    if (stepId === "master-lmp") {
+      saveTrainingDraft();
+      return;
+    }
+    if (stepId === "access") {
+      saveAccessDraft();
+      saveWizardSupplementaryDrafts("Access setup synced into Settings.");
+      return;
+    }
+    if (stepId !== "analysis" && stepId !== "review") {
+      saveWizardSupplementaryDrafts();
+    }
+  };
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return;
     safeSetWizardLocalStorage(initialSetupWizardStorageKey, String(currentStep));
@@ -15857,6 +16074,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     setMode("active");
     setUploadResults({});
     safeSetWizardLocalStorage(initialSetupWizardStorageKey, "0");
+    clearWizardStepCompletions();
   };
   const resumeWizard = () => {
     hydrateWizardDraftsFromSettings("resume");
@@ -16454,25 +16672,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         return;
       }
     }
-    if (isOrganisationWizardStep(visibleStep.id)) {
-      pushWizardOrgDiag("wizard:next-saving-organisation-draft", {
-        fromStep: visibleStep.id,
-        draft: summariseOrganisationDraft(organisationDraft),
-        activeOrganisation: summariseActiveOrganisation()
-      });
-      saveOrganisationDraft({
-        preserveWizardDraft: true,
-        message: "Organisation draft synced into Settings."
-      });
-    }
-    if (isSetupTestMode$1) {
-      pushWizardOrgDiag("wizard:next-before-setup-sync", {
-        fromStep: visibleStep.id,
-        draft: summariseOrganisationDraft(organisationDraft),
-        activeOrganisation: summariseActiveOrganisation()
-      });
-      saveSetupTestWizardDrafts(false);
-    }
+    pushWizardOrgDiag("wizard:next-sync-current-step", {
+      fromStep: visibleStep.id,
+      draft: summariseOrganisationDraft(organisationDraft),
+      activeOrganisation: summariseActiveOrganisation()
+    });
+    syncWizardStepToSettings(visibleStep.id);
+    markWizardStepComplete(visibleStep.id);
     setWizardStep(Math.min(steps.length - 1, currentStep + 1));
   };
   const goToWizardStep = (nextStep) => {
@@ -16484,27 +16690,6 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       draft: summariseOrganisationDraft(organisationDraft),
       activeOrganisation: summariseActiveOrganisation()
     });
-    if (isOrganisationWizardStep(visibleStep.id)) {
-      pushWizardOrgDiag("wizard:jump-saving-organisation-draft", {
-        fromStep: visibleStep.id,
-        toStep: steps[boundedStep]?.id,
-        draft: summariseOrganisationDraft(organisationDraft),
-        activeOrganisation: summariseActiveOrganisation()
-      });
-      saveOrganisationDraft({
-        preserveWizardDraft: true,
-        message: "Organisation draft synced into Settings."
-      });
-    }
-    if (isSetupTestMode$1) {
-      pushWizardOrgDiag("wizard:jump-before-setup-sync", {
-        fromStep: visibleStep.id,
-        toStep: steps[boundedStep]?.id,
-        draft: summariseOrganisationDraft(organisationDraft),
-        activeOrganisation: summariseActiveOrganisation()
-      });
-      saveSetupTestWizardDrafts(false);
-    }
     setWizardStep(boundedStep);
   };
   const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -16516,11 +16701,19 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: [
-              "Step ",
-              currentStep + 1,
-              " of ",
-              steps.length
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-x-3 gap-y-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: `text-[11px] font-bold uppercase tracking-[0.18em] ${wizardStepTextClass(visibleStep)}`, children: [
+                "Step ",
+                currentStep + 1,
+                " of ",
+                steps.length
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-600", children: "Mandatory" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-blue-600", children: "Highly desirable" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-emerald-700", children: "Optional" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-slate-950", children: "Complete" })
+              ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-lg font-bold leading-tight text-slate-950", children: visibleStep.title }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-sm leading-5 text-slate-700", children: question })
@@ -16535,6 +16728,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
                 onChange: (event) => goToWizardStep(Number(event.target.value)),
                 onKeyDown: stopEditableKeyPropagation,
                 children: steps.map((step, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: index, children: [
+                  isWizardStepComplete(step) ? "✓ " : "",
                   index + 1,
                   ". ",
                   step.title
@@ -17273,6 +17467,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         staffCurrencyEvents: staffCurrencyEventsDraft
       }
     })));
+    setCompletedWizardStepIds(new Set(steps.map((step) => step.id)));
+    if (typeof window !== "undefined") {
+      safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(steps.map((step) => step.id)));
+    }
     setSaveMessage("Setup saved into Settings.");
   };
   const commitWizardStaffProfiles = () => {
@@ -18138,15 +18336,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       );
     }
     return promptShell(
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: isSetupTestMode$1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        "Each step has already synced into Settings as you clicked Next. Press ",
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+        "Each step syncs into Settings when you click ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Next" }),
+        ". Review the setup below, then press ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Save setup" }),
-        " to mark the wizard complete."
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        "Review the setup below. Nothing from this wizard is written to Settings until you press ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Save setup" }),
-        "."
-      ] }) }),
+        " to finish the wizard."
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 text-sm", children: [
         ["Organisation", `${organisationDraft.name || organisationDraft.code || "Not set"} (${organisationDraft.code || "no code"})`],
         ["Structure", `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || "Level 1"}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || "Level 2"}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || "Level 3"} / ${organisationPreviewLinks.length} parent links`],
@@ -18184,8 +18380,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         completedMandatory,
         " of ",
         mandatoryChecks.length,
-        " mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. ",
-        isSetupTestMode$1 ? "Each step syncs into Settings when you click Next." : "Settings are not updated until the final Save setup step."
+        " mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. Each step syncs into Settings when you click Next."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid gap-3 sm:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resumeWizard, children: [
