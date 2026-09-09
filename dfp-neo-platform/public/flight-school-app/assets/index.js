@@ -14652,6 +14652,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     instructorLabel: currentPersonnelDisplaySettings.instructorLabel || "Instructor"
   }));
   const rankSettingsDraftDirtyRef = reactExports.useRef(false);
+  const wizardCrewPositionTerminology = normaliseCrewPositionTerminology(activeOrganisation?.settings?.crewPositionTerminology || null);
+  const getWizardCrewRoleOptions = (value) => {
+    const existingRoles = parseRoleRequirementsText(value).map((row) => String(row.role || "").trim()).filter(Boolean);
+    return getCrewPositionOptions(wizardCrewPositionTerminology, existingRoles, unitDraft.operationalModel);
+  };
   const [resourceSharingDraft, setResourceSharingDraft] = reactExports.useState("Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.");
   const [currencyDraft, setCurrencyDraft] = reactExports.useState("PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1");
   const [scoringDraft, setScoringDraft] = reactExports.useState("Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent");
@@ -16722,7 +16727,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onChange(formatRoleRequirementsText([...editableRows, { role: "Crew", count: 1 }])), children: addLabel })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[minmax(0,1fr)_100px_74px] md:items-end", children: [
-        wizardField("Crew role", row.role || "", (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "role", nextValue)), void 0, "Pilot"),
+        wizardField("Crew role", row.role || "", (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "role", nextValue)), getWizardCrewRoleOptions(value), "Pilot"),
         wizardField("How many", String(row.count ?? 1), (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "count", nextValue)), void 0, "1"),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onChange(removeWizardRoleRequirementText(value, index)), children: "Delete" })
       ] }, `${title}-${index}`)) })

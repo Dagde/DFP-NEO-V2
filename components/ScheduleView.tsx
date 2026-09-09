@@ -13,7 +13,7 @@ import { getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from '../
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import { normaliseCrewCompositionSettings } from '../utils/crewCompositionProfiles';
-import { getCrewPositionLabelMap, normaliseCrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { getCrewPositionLabelMap, getCrewPositionOptions, normaliseCrewPositionTerminology } from '../utils/crewPositionTerminology';
 import {
     getRankOrderFromEquivalency,
     normalisePersonnelDisplaySettings,
@@ -3223,6 +3223,11 @@ const InitialSetupWizard: React.FC<{
         instructorLabel: currentPersonnelDisplaySettings.instructorLabel || 'Instructor',
     }));
     const rankSettingsDraftDirtyRef = useRef(false);
+    const wizardCrewPositionTerminology = normaliseCrewPositionTerminology(activeOrganisation?.settings?.crewPositionTerminology || null);
+    const getWizardCrewRoleOptions = (value: string) => {
+        const existingRoles = parseRoleRequirementsText(value).map((row) => String(row.role || '').trim()).filter(Boolean);
+        return getCrewPositionOptions(wizardCrewPositionTerminology, existingRoles, unitDraft.operationalModel);
+    };
     const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
     const [currencyDraft, setCurrencyDraft] = useState('PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1');
     const [scoringDraft, setScoringDraft] = useState('Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent');
@@ -5592,7 +5597,7 @@ const InitialSetupWizard: React.FC<{
                 <div className="space-y-2">
                     {editableRows.map((row, index) => (
                         <div key={`${title}-${index}`} className="grid gap-2 md:grid-cols-[minmax(0,1fr)_100px_74px] md:items-end">
-                            {wizardField('Crew role', row.role || '', (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'role', nextValue)), undefined, 'Pilot')}
+                            {wizardField('Crew role', row.role || '', (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'role', nextValue)), getWizardCrewRoleOptions(value), 'Pilot')}
                             {wizardField('How many', String(row.count ?? 1), (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'count', nextValue)), undefined, '1')}
                             <button type="button" className={wizardSmallButtonClass} onClick={() => onChange(removeWizardRoleRequirementText(value, index))}>
                                 Delete
