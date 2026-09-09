@@ -14089,7 +14089,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     ] })
   ] });
 };
-const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
+const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
   const [mode, setMode] = reactExports.useState("detect");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const configuredContinuationShortLabel = reactExports.useMemo(
@@ -14648,7 +14648,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const [rankSettingsDraft, setRankSettingsDraft] = reactExports.useState(() => ({
     preset: currentPersonnelDisplaySettings.staffRankEquivalency?.preset || "AU",
     sortMode: currentPersonnelDisplaySettings.sortMode || "rank-then-name",
-    traineeRanks: currentPersonnelDisplaySettings.useSeparateTraineeRankOrder ? "separate" : "staff",
+    traineeRanks: "staff",
     instructorLabel: currentPersonnelDisplaySettings.instructorLabel || "Instructor"
   }));
   const rankSettingsDraftDirtyRef = reactExports.useRef(false);
@@ -14828,14 +14828,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return {
         preset: savedDraft.preset && RANK_EQUIVALENCY_PRESETS[savedDraft.preset] ? savedDraft.preset : currentPersonnelDisplaySettings.staffRankEquivalency?.preset || "AU",
         sortMode: savedDraft.sortMode === "alphabetical" ? "alphabetical" : "rank-then-name",
-        traineeRanks: savedDraft.traineeRanks === "separate" ? "separate" : "staff",
+        traineeRanks: "staff",
         instructorLabel: String(savedDraft.instructorLabel || currentPersonnelDisplaySettings.instructorLabel || "Instructor")
       };
     }
     return {
       preset: currentPersonnelDisplaySettings.staffRankEquivalency?.preset || "AU",
       sortMode: currentPersonnelDisplaySettings.sortMode || "rank-then-name",
-      traineeRanks: currentPersonnelDisplaySettings.useSeparateTraineeRankOrder ? "separate" : "staff",
+      traineeRanks: "staff",
       instructorLabel: currentPersonnelDisplaySettings.instructorLabel || "Instructor"
     };
   };
@@ -15536,11 +15536,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     return {
       ...existing,
       sortMode: rankSettingsDraft.sortMode === "alphabetical" ? "alphabetical" : "rank-then-name",
-      useSeparateTraineeRankOrder: rankSettingsDraft.traineeRanks === "separate",
+      useSeparateTraineeRankOrder: false,
       instructorLabel: String(rankSettingsDraft.instructorLabel || existing.instructorLabel || "Instructor").trim() || "Instructor",
       staffRankEquivalency: selectedEquivalency,
       staffRankOrder,
-      traineeRankOrder: rankSettingsDraft.traineeRanks === "separate" ? existing.traineeRankOrder : staffRankOrder
+      traineeRankOrder: staffRankOrder
     };
   };
   const saveRankSettingsDraft = () => {
@@ -17047,7 +17047,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const selectedPreset = selectedPresetKey === "CUSTOM" ? currentPersonnelDisplaySettings.staffRankEquivalency : RANK_EQUIVALENCY_PRESETS[selectedPresetKey];
     const serviceNames = selectedPreset?.services?.map((service) => String(service?.name || "").trim()).filter(Boolean).join(", ");
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "DFP NEO already has a detailed rank table in Settings. Use this step to choose the rank preset and how names are sorted. Only use Custom if an administrator has already edited the detailed rank table in Settings." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "DFP NEO already has a detailed rank table in Settings. Use this step to choose the rank preset and how names are sorted. If you need a custom rank table, edit it in Settings first." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2", children: [
         wizardField(
           "Rank preset",
@@ -17068,22 +17068,33 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           ["Rank then name", "Alphabetical"]
         ),
         wizardField(
-          "Trainee ranks",
-          rankSettingsDraft.traineeRanks === "separate" ? "Separate trainee rank order" : "Use staff rank order",
-          (value) => updateRankSettingsDraft((current) => ({
-            ...current,
-            traineeRanks: value === "Separate trainee rank order" ? "separate" : "staff"
-          })),
-          ["Use staff rank order", "Separate trainee rank order"]
-        ),
-        wizardField(
           "Instructor display term",
           rankSettingsDraft.instructorLabel || "Instructor",
           (value) => updateRankSettingsDraft((current) => ({ ...current, instructorLabel: value })),
           void 0,
           "Instructor"
-        )
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Trainee ranks" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-sm font-bold text-slate-900", children: "Use staff rank order" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block", children: "Trainees are sorted using the same rank table as staff in this wizard." })
+        ] })
       ] }),
+      selectedPresetKey === "CUSTOM" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold leading-5 text-orange-900", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Custom rank tables are edited in Settings, not in the setup wizard." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            className: "shrink-0 rounded-md border border-orange-300 bg-white px-3 py-1.5 text-[11px] font-bold text-orange-900 shadow-sm transition hover:border-orange-500 hover:bg-orange-100",
+            onClick: () => onNavigateToSettingsSection?.({
+              sectionId: "platform-rank-terminology",
+              focusSubsectionId: "platform-staff-rank-equivalency"
+            }),
+            children: "Open Rank Settings"
+          }
+        )
+      ] }) : null,
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700", children: [
         "Selected rank table: ",
         RANK_EQUIVALENCY_PRESET_LABELS[selectedPresetKey] || "Australia",
@@ -18983,7 +18994,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         ["Trainees", unitDraft.hasTrainees ? traineeDraft || "Not set" : "Trainees off"],
         ["Master LMP", `${trainingDraft.lmpCode || "Not set"} - ${trainingDraft.lmpName || "not named"}`],
         ["Modules", unitModulesDraft || "Not set"],
-        ["Ranks and labels", `${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset] || "Australia"} / ${rankSettingsDraft.sortMode === "alphabetical" ? "Alphabetical" : "Rank then name"} / ${rankSettingsDraft.traineeRanks === "separate" ? "Separate trainee rank order" : "Trainees use staff rank order"}`],
+        ["Ranks and labels", `${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset] || "Australia"} / ${rankSettingsDraft.sortMode === "alphabetical" ? "Alphabetical" : "Rank then name"} / Trainees use staff rank order`],
         ["Sharing", resourceSharingDraft || "Not set"],
         ["Currencies", currencyDraft || "Not set"],
         ["Access", `${accessDraft.userName || "Not set"} / ${accessDraft.locationCode || "no location"} / ${accessDraft.unitCode || "no unit"} / ${trainingDraft.accessLevel || "View"}`],
@@ -89035,7 +89046,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               renderRankTerminologySectionAction()
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-violet-400/30 bg-violet-500/10 p-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-staff-rank-equivalency", className: "rounded-lg border border-violet-400/30 bg-violet-500/10 p-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start justify-between gap-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-sm font-bold text-violet-100", children: "Staff Rank Equivalency Table" }),

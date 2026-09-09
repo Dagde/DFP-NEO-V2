@@ -2573,7 +2573,7 @@ const InitialSetupWizard: React.FC<{
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
     isSetupTestMode?: boolean;
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
-}> = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
+}> = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
@@ -3219,7 +3219,7 @@ const InitialSetupWizard: React.FC<{
     const [rankSettingsDraft, setRankSettingsDraft] = useState(() => ({
         preset: currentPersonnelDisplaySettings.staffRankEquivalency?.preset || 'AU',
         sortMode: currentPersonnelDisplaySettings.sortMode || 'rank-then-name',
-        traineeRanks: currentPersonnelDisplaySettings.useSeparateTraineeRankOrder ? 'separate' : 'staff',
+        traineeRanks: 'staff',
         instructorLabel: currentPersonnelDisplaySettings.instructorLabel || 'Instructor',
     }));
     const rankSettingsDraftDirtyRef = useRef(false);
@@ -3447,14 +3447,14 @@ const InitialSetupWizard: React.FC<{
                     ? savedDraft.preset as RankEquivalencyPresetKey
                     : currentPersonnelDisplaySettings.staffRankEquivalency?.preset || 'AU',
                 sortMode: savedDraft.sortMode === 'alphabetical' ? 'alphabetical' : 'rank-then-name',
-                traineeRanks: savedDraft.traineeRanks === 'separate' ? 'separate' : 'staff',
+                traineeRanks: 'staff',
                 instructorLabel: String(savedDraft.instructorLabel || currentPersonnelDisplaySettings.instructorLabel || 'Instructor'),
             };
         }
         return {
             preset: currentPersonnelDisplaySettings.staffRankEquivalency?.preset || 'AU',
             sortMode: currentPersonnelDisplaySettings.sortMode || 'rank-then-name',
-            traineeRanks: currentPersonnelDisplaySettings.useSeparateTraineeRankOrder ? 'separate' : 'staff',
+            traineeRanks: 'staff',
             instructorLabel: currentPersonnelDisplaySettings.instructorLabel || 'Instructor',
         };
     };
@@ -4238,11 +4238,11 @@ const InitialSetupWizard: React.FC<{
         return {
             ...existing,
             sortMode: rankSettingsDraft.sortMode === 'alphabetical' ? 'alphabetical' : 'rank-then-name',
-            useSeparateTraineeRankOrder: rankSettingsDraft.traineeRanks === 'separate',
+            useSeparateTraineeRankOrder: false,
             instructorLabel: String(rankSettingsDraft.instructorLabel || existing.instructorLabel || 'Instructor').trim() || 'Instructor',
             staffRankEquivalency: selectedEquivalency,
             staffRankOrder,
-            traineeRankOrder: rankSettingsDraft.traineeRanks === 'separate' ? existing.traineeRankOrder : staffRankOrder,
+            traineeRankOrder: staffRankOrder,
         };
     };
 
@@ -5975,7 +5975,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    DFP NEO already has a detailed rank table in Settings. Use this step to choose the rank preset and how names are sorted. Only use Custom if an administrator has already edited the detailed rank table in Settings.
+                    DFP NEO already has a detailed rank table in Settings. Use this step to choose the rank preset and how names are sorted. If you need a custom rank table, edit it in Settings first.
                 </div>
                 <div className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2">
                     {wizardField(
@@ -5997,22 +5997,33 @@ const InitialSetupWizard: React.FC<{
                         ['Rank then name', 'Alphabetical'],
                     )}
                     {wizardField(
-                        'Trainee ranks',
-                        rankSettingsDraft.traineeRanks === 'separate' ? 'Separate trainee rank order' : 'Use staff rank order',
-                        (value) => updateRankSettingsDraft((current) => ({
-                            ...current,
-                            traineeRanks: value === 'Separate trainee rank order' ? 'separate' : 'staff',
-                        })),
-                        ['Use staff rank order', 'Separate trainee rank order'],
-                    )}
-                    {wizardField(
                         'Instructor display term',
                         rankSettingsDraft.instructorLabel || 'Instructor',
                         (value) => updateRankSettingsDraft((current) => ({ ...current, instructorLabel: value })),
                         undefined,
                         'Instructor',
                     )}
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700">
+                        <span className={wizardLabelClass}>Trainee ranks</span>
+                        <span className="mt-1 block text-sm font-bold text-slate-900">Use staff rank order</span>
+                        <span className="mt-1 block">Trainees are sorted using the same rank table as staff in this wizard.</span>
+                    </div>
                 </div>
+                {selectedPresetKey === 'CUSTOM' ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold leading-5 text-orange-900">
+                        <span>Custom rank tables are edited in Settings, not in the setup wizard.</span>
+                        <button
+                            type="button"
+                            className="shrink-0 rounded-md border border-orange-300 bg-white px-3 py-1.5 text-[11px] font-bold text-orange-900 shadow-sm transition hover:border-orange-500 hover:bg-orange-100"
+                            onClick={() => onNavigateToSettingsSection?.({
+                                sectionId: 'platform-rank-terminology',
+                                focusSubsectionId: 'platform-staff-rank-equivalency',
+                            })}
+                        >
+                            Open Rank Settings
+                        </button>
+                    </div>
+                ) : null}
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700">
                     Selected rank table: {RANK_EQUIVALENCY_PRESET_LABELS[selectedPresetKey] || 'Australia'}{serviceNames ? ` (${serviceNames})` : ''}. The full rank equivalency table remains in Settings under Resources & Configuration, Rank, Terminology & Labels.
                 </div>
@@ -8055,7 +8066,7 @@ const InitialSetupWizard: React.FC<{
                     ['Trainees', unitDraft.hasTrainees ? traineeDraft || 'Not set' : 'Trainees off'],
                     ['Master LMP', `${trainingDraft.lmpCode || 'Not set'} - ${trainingDraft.lmpName || 'not named'}`],
                     ['Modules', unitModulesDraft || 'Not set'],
-                    ['Ranks and labels', `${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset as RankEquivalencyPresetKey] || 'Australia'} / ${rankSettingsDraft.sortMode === 'alphabetical' ? 'Alphabetical' : 'Rank then name'} / ${rankSettingsDraft.traineeRanks === 'separate' ? 'Separate trainee rank order' : 'Trainees use staff rank order'}`],
+                    ['Ranks and labels', `${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset as RankEquivalencyPresetKey] || 'Australia'} / ${rankSettingsDraft.sortMode === 'alphabetical' ? 'Alphabetical' : 'Rank then name'} / Trainees use staff rank order`],
                     ['Sharing', resourceSharingDraft || 'Not set'],
                     ['Currencies', currencyDraft || 'Not set'],
                     ['Access', `${accessDraft.userName || 'Not set'} / ${accessDraft.locationCode || 'no location'} / ${accessDraft.unitCode || 'no unit'} / ${trainingDraft.accessLevel || 'View'}`],

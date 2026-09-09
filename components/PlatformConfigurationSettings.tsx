@@ -13238,7 +13238,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             {renderRankTerminologySectionAction()}
           </div>
           <div className="space-y-4">
-            <div className="rounded-lg border border-violet-400/30 bg-violet-500/10 p-4">
+            <div id="platform-staff-rank-equivalency" className="rounded-lg border border-violet-400/30 bg-violet-500/10 p-4">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h6 className="text-sm font-bold text-violet-100">Staff Rank Equivalency Table</h6>
