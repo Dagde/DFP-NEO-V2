@@ -3439,13 +3439,14 @@ const InitialSetupWizard: React.FC<{
         };
     };
     const buildHydratedBuildRulesDraft = () => {
-        const savedBuildRules = getSavedWizardString('buildRules', 'buildRulesDraft');
-        if (savedBuildRules) return parseHydratedBuildRulesDraft(savedBuildRules);
         const ruleSet = (platformConfig?.schedulingRuleSets || []).find((item: any) => (
             normaliseUnitSettingsIdentifier(item?.unitCode) === normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode)
             && String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
         )) || (platformConfig?.schedulingRuleSets || [])[0];
-        if (!ruleSet) return null;
+        if (!ruleSet) {
+            const savedBuildRules = getSavedWizardString('buildRules', 'buildRulesDraft');
+            return savedBuildRules ? parseHydratedBuildRulesDraft(savedBuildRules) : null;
+        }
         return {
             businessRules: String(ruleSet.businessRules || 'Use configured rule set'),
             maxCrewDutyHours: String(ruleSet.maxCrewDutyHours ?? '12'),
@@ -3460,16 +3461,17 @@ const InitialSetupWizard: React.FC<{
         };
     };
     const buildHydratedRankLabelsDraft = () => {
-        const saved = getSavedWizardString('ranksAndLabels', 'rankLabelsDraft');
-        if (saved) return saved;
         const rankOrder = normalisePersonnelDisplaySettings(activeOrganisation?.settings?.personnelDisplaySettings || activeOrganisation?.settings?.personnelSettings || null).staffRankOrder || [];
         return rankOrder.length > 0
             ? rankOrder.map((rank: string, index: number) => `${index + 1} | ${rank} |`).join('\n')
-            : '';
+            : getSavedWizardString('ranksAndLabels', 'rankLabelsDraft');
     };
     const buildHydratedRankSettingsDraft = () => {
-        const savedDraft = getSavedInitialSetupWizardDrafts()?.rankSettingsDraft
-            || getSavedInitialSetupWizardDrafts()?.rankSettings;
+        const hasLiveRankSettings = Boolean(activeOrganisation?.settings?.personnelDisplaySettings || activeOrganisation?.settings?.personnelSettings);
+        const savedDraft = hasLiveRankSettings ? null : (
+            getSavedInitialSetupWizardDrafts()?.rankSettingsDraft
+            || getSavedInitialSetupWizardDrafts()?.rankSettings
+        );
         if (savedDraft && typeof savedDraft === 'object') {
             return {
                 preset: (savedDraft.preset && RANK_EQUIVALENCY_PRESETS[savedDraft.preset as RankEquivalencyPresetKey])
@@ -3488,27 +3490,46 @@ const InitialSetupWizard: React.FC<{
         };
     };
     const buildHydratedResourceSharingDraft = () => {
-        const saved = getSavedWizardString('resourceSharing', 'resourceSharingDraft');
-        if (saved) return saved;
         const settings = activeOrganisation?.settings || {};
-        const resourceRows = (Array.isArray(settings.resourceSharingGroups) ? settings.resourceSharingGroups : []).map((group: any, index: number) => ({
-            type: group?.name || `Resource sharing ${index + 1}`,
-            enabled: settings.fleetSharingEnabled === false ? 'Off' : 'On',
-            units: Array.isArray(group?.selectedUnits) ? group.selectedUnits.join(', ') : '',
-            consequence: 'Resources may be shared between the selected units.',
-        }));
-        const staffRows = (Array.isArray(settings.staffSharingGroups) ? settings.staffSharingGroups : []).map((group: any, index: number) => ({
-            type: group?.name || `Staff sharing ${index + 1}`,
-            enabled: settings.staffSharingEnabled === false ? 'Off' : 'On',
-            units: Array.isArray(group?.selectedUnits) ? group.selectedUnits.join(', ') : '',
-            consequence: 'Staff may be shared between the selected units.',
-        }));
+        const resourceGroups = Array.isArray(settings.resourceSharingGroups) ? settings.resourceSharingGroups : [];
+        const staffGroups = Array.isArray(settings.staffSharingGroups) ? settings.staffSharingGroups : [];
+        const legacyResourceUnits = Array.isArray(settings.selectedUnits) ? settings.selectedUnits : [];
+        const legacyStaffUnits = Array.isArray(settings.staffSharingUnits) ? settings.staffSharingUnits : [];
+        const hasLiveSharingSettings = settings.fleetSharingEnabled === true
+            || settings.staffSharingEnabled === true
+            || resourceGroups.length > 0
+            || staffGroups.length > 0
+            || legacyResourceUnits.length > 0
+            || legacyStaffUnits.length > 0;
+        if (!hasLiveSharingSettings) return getSavedWizardString('resourceSharing', 'resourceSharingDraft');
+        const resourceUnits = Array.from(new Set([
+            ...resourceGroups.flatMap((group: any) => Array.isArray(group?.selectedUnits) ? group.selectedUnits : []),
+            ...legacyResourceUnits,
+        ].map((item: any) => String(item || '').trim()).filter(Boolean)));
+        const staffUnits = Array.from(new Set([
+            ...staffGroups.flatMap((group: any) => Array.isArray(group?.selectedUnits) ? group.selectedUnits : []),
+            ...legacyStaffUnits,
+        ].map((item: any) => String(item || '').trim()).filter(Boolean)));
+        const resourceRows = [{
+            type: 'Resource sharing',
+            enabled: settings.fleetSharingEnabled === true ? 'On' : 'Off',
+            units: resourceUnits.join(', '),
+            consequence: settings.fleetSharingEnabled === true
+                ? 'Unit can use shared aircraft and DFP resource rows from the listed units.'
+                : 'Unit keeps its own aircraft and DFP resource row capacity.',
+        }];
+        const staffRows = [{
+            type: 'Staff sharing',
+            enabled: settings.staffSharingEnabled === true ? 'On' : 'Off',
+            units: staffUnits.join(', '),
+            consequence: settings.staffSharingEnabled === true
+                ? 'Unit can schedule staff from the listed units.'
+                : 'Unit only schedules its own staff unless changed later.',
+        }];
         const rows = [...resourceRows, ...staffRows];
         return rows.length > 0 ? formatWizardSharingRows(rows) : '';
     };
     const buildHydratedCurrencyDraft = () => {
-        const saved = getSavedWizardString('currencies', 'currencyDraft');
-        if (saved) return saved;
         return crewCompositionSettings.currencyProfiles.length > 0
             ? formatWizardCurrencyRows(crewCompositionSettings.currencyProfiles.map((profile: any) => ({
                 name: String(profile.name || profile.currency || profile.code || ''),
@@ -3518,13 +3539,11 @@ const InitialSetupWizard: React.FC<{
                 currency: String(profile.currency || profile.name || ''),
                 aircraftCount: String(profile.aircraftCount ?? 1),
             })))
-            : '';
+            : getSavedWizardString('currencies', 'currencyDraft');
     };
     const buildHydratedTrainingRecordsDraft = () => {
-        const saved = getSavedWizardString('trainingRecords', 'trainingRecordsDraft');
-        if (saved) return saved;
         const template = currentUnit?.settings?.trainingReportTemplate;
-        if (!template) return '';
+        if (!template) return getSavedWizardString('trainingRecords', 'trainingRecordsDraft');
         return formatWizardTrainingReportRows([{
             genericName: 'Training Report',
             organisationName: String(template.displayName || 'Assessment Form'),
@@ -3537,8 +3556,6 @@ const InitialSetupWizard: React.FC<{
         }]);
     };
     const buildHydratedStaffCurrencyEventsDraft = () => {
-        const saved = getSavedWizardString('staffCurrencyEvents', 'staffCurrencyEventsDraft');
-        if (saved) return saved;
         const profiles = Array.isArray(activeOrganisation?.settings?.standardMissionProfiles?.profiles)
             ? activeOrganisation.settings.standardMissionProfiles.profiles
             : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles)
@@ -3557,7 +3574,7 @@ const InitialSetupWizard: React.FC<{
                 config: String(profile.config || 'ANY'),
                 aircraftCount: String(profile.aircraftCount ?? 1),
             })))
-            : '';
+            : getSavedWizardString('staffCurrencyEvents', 'staffCurrencyEventsDraft');
     };
     const hydrateSupplementaryWizardDrafts = () => {
         const savedTraineeCourses = getSavedWizardString('traineeCourses', 'traineeCourseOptionsDraft');
@@ -4350,6 +4367,269 @@ const InitialSetupWizard: React.FC<{
                 },
             };
         }));
+    };
+
+    const saveResourceSharingDraft = () => {
+        const sharingRows = parseWizardSharingRows(resourceSharingDraft);
+        const staffSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes('staff'));
+        const resourceSharingRows = sharingRows.filter((row, index) => (
+            row.type.toLowerCase().includes('resource')
+            || (!row.type.toLowerCase().includes('staff') && index === 0)
+        ));
+        const splitUnits = (value: string) => Array.from(new Set(String(value || '')
+            .split(',')
+            .map((item) => item.trim().toUpperCase())
+            .filter(Boolean)));
+        saveWizardConfig('Resource and staff sharing saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+            const existingResourceGroups = Array.isArray(settings.resourceSharingGroups) ? settings.resourceSharingGroups : [];
+            const existingStaffGroups = Array.isArray(settings.staffSharingGroups) ? settings.staffSharingGroups : [];
+            const nextResourceGroups = resourceSharingRows.map((row, index) => {
+                const selectedUnits = splitUnits(row.units);
+                const existing = existingResourceGroups[index] || existingResourceGroups.find((group: any) => (
+                    selectedUnits.length > 0
+                    && Array.isArray(group?.selectedUnits)
+                    && group.selectedUnits.map(normaliseUnitSettingsIdentifier).join('|') === selectedUnits.map(normaliseUnitSettingsIdentifier).join('|')
+                ));
+                return {
+                    ...(existing || { id: createWizardRecordId('resource-sharing') }),
+                    name: existing?.name || (selectedUnits.length > 1 ? selectedUnits.join('+') : 'Resource sharing'),
+                    selectedUnits,
+                    status: 'ACTIVE',
+                };
+            });
+            const nextStaffGroups = staffSharingRows.map((row, index) => {
+                const selectedUnits = splitUnits(row.units);
+                const existing = existingStaffGroups[index] || existingStaffGroups.find((group: any) => (
+                    selectedUnits.length > 0
+                    && Array.isArray(group?.selectedUnits)
+                    && group.selectedUnits.map(normaliseUnitSettingsIdentifier).join('|') === selectedUnits.map(normaliseUnitSettingsIdentifier).join('|')
+                ));
+                return {
+                    ...(existing || { id: createWizardRecordId('staff-sharing') }),
+                    name: existing?.name || (selectedUnits.length > 1 ? `${selectedUnits.join('+')} Staff Sharing` : 'Staff sharing'),
+                    selectedUnits,
+                    status: 'ACTIVE',
+                };
+            });
+            return {
+                ...settings,
+                fleetSharingEnabled: resourceSharingRows.some((row) => /^on$/i.test(row.enabled)),
+                resourceSharingGroups: nextResourceGroups,
+                staffSharingEnabled: staffSharingRows.some((row) => /^on$/i.test(row.enabled)),
+                staffSharingGroups: nextStaffGroups,
+                initialSetupWizardDraft: {
+                    ...(settings.initialSetupWizardDraft || {}),
+                    resourceSharing: resourceSharingDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+                initialSetupWizardDrafts: {
+                    ...(settings.initialSetupWizardDrafts || {}),
+                    resourceSharingDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+            };
+        }));
+    };
+
+    const saveBuildRulesDraft = () => {
+        const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+        saveWizardConfig('Build rules saved into Settings.', (baseConfig) => {
+            const ruleSets = Array.isArray(baseConfig.schedulingRuleSets) ? baseConfig.schedulingRuleSets : [];
+            const existingIndex = ruleSets.findIndex((ruleSet: any) => (
+                targetUnitCode
+                && normaliseUnitSettingsIdentifier(ruleSet?.unitCode) === normaliseUnitSettingsIdentifier(targetUnitCode)
+                && String(ruleSet?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+            ));
+            const existingRule = existingIndex >= 0 ? ruleSets[existingIndex] : null;
+            const nextRule = {
+                ...(existingRule || { id: createWizardRecordId('scheduling-rule-set') }),
+                name: existingRule?.name || `${targetUnitCode || 'Unit'} build rules`,
+                unitCode: targetUnitCode,
+                businessRules: buildRulesDraft.businessRules,
+                maxCrewDutyHours: parseNumberDraft(buildRulesDraft.maxCrewDutyHours, 12),
+                preferredDutyHours: parseNumberDraft(buildRulesDraft.preferredDutyHours, 10),
+                aircraftTurnaroundMinutes: parseNumberDraft(buildRulesDraft.aircraftTurnaroundMinutes, 60),
+                simTurnaroundMinutes: parseNumberDraft(buildRulesDraft.simTurnaroundMinutes, 30),
+                trainerTurnaroundMinutes: parseNumberDraft(buildRulesDraft.trainerTurnaroundMinutes, 30),
+                maxDispatchPerHour: parseNumberDraft(buildRulesDraft.maxDispatchPerHour, 2),
+                maxEventsPerDay: parseNumberDraft(buildRulesDraft.maxEventsPerDay, 0),
+                maxFlightsPerDay: parseNumberDraft(buildRulesDraft.maxFlightsPerDay, 0),
+                minGapBetweenEventsMinutes: parseNumberDraft(buildRulesDraft.minGapBetweenEventsMinutes, 0),
+                status: 'ACTIVE',
+            };
+            const nextRuleSets = existingIndex >= 0
+                ? ruleSets.map((ruleSet: any, index: number) => index === existingIndex ? nextRule : ruleSet)
+                : [...ruleSets, nextRule];
+            return updatePrimaryOrganisationWithSettings({
+                ...baseConfig,
+                schedulingRuleSets: nextRuleSets,
+            }, (settings) => ({
+                ...settings,
+                initialSetupWizardDraft: {
+                    ...(settings.initialSetupWizardDraft || {}),
+                    buildRules: buildRulesDraftText,
+                    updatedAt: new Date().toISOString(),
+                },
+                initialSetupWizardDrafts: {
+                    ...(settings.initialSetupWizardDrafts || {}),
+                    buildRulesDraft: buildRulesDraftText,
+                    updatedAt: new Date().toISOString(),
+                },
+            }));
+        });
+    };
+
+    const saveTrainingRecordsDraft = () => {
+        const row = parseWizardTrainingReportRows(trainingRecordsDraft)[0];
+        if (!row) {
+            setSaveMessage('Add the training report details before continuing.');
+            return;
+        }
+        const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+        const nextTemplate = {
+            displayName: row.organisationName || row.genericName || 'Training Report',
+            grades: {
+                scaleMin: Number(row.gradeMin) || 0,
+                scaleMax: Number(row.gradeMax) || 5,
+                showNumbers: String(row.showNumbers || '').toLowerCase() !== 'no',
+                includeNoGrade: String(row.noGradeOption || '').toLowerCase() === 'yes',
+            },
+            overallResults: {
+                passLabel: row.passLabel || 'Satisfactory',
+                failLabel: row.failLabel || 'Unsatisfactory',
+            },
+        };
+        saveWizardConfig('Training report settings saved into Settings.', (baseConfig) => {
+            const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
+            const nextUnits = units.map((unit: any) => (
+                normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(targetUnitCode)
+                    ? { ...unit, settings: { ...(unit.settings || {}), trainingReportTemplate: nextTemplate } }
+                    : unit
+            ));
+            return updatePrimaryOrganisationWithSettings({
+                ...baseConfig,
+                units: nextUnits,
+            }, (settings) => ({
+                ...settings,
+                initialSetupWizardDraft: {
+                    ...(settings.initialSetupWizardDraft || {}),
+                    trainingRecords: trainingRecordsDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+                initialSetupWizardDrafts: {
+                    ...(settings.initialSetupWizardDrafts || {}),
+                    trainingRecordsDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+            }));
+        });
+    };
+
+    const saveCurrencyProfilesDraft = () => {
+        const currencyProfiles = parseWizardCurrencyRows(currencyDraft).map((row, index) => ({
+            id: createWizardRecordId('currency-profile'),
+            unitCode: String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase(),
+            aircraftTypeCode: String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || '').trim().toUpperCase(),
+            name: row.name || row.currency || row.code || `Currency ${index + 1}`,
+            code: (row.code || row.name || `CUR${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || `CUR${index + 1}`,
+            crew: row.crew || 'Standard crew',
+            config: row.config || 'ANY',
+            currency: row.currency || row.name || `Currency ${index + 1}`,
+            aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
+            status: 'ACTIVE',
+        })).filter((profile) => profile.name || profile.code);
+        saveWizardConfig('Currency profiles saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
+            ...settings,
+            crewCompositionSettings: normaliseCrewCompositionSettings({
+                ...(settings.crewCompositionSettings || {}),
+                currencyProfiles,
+            }),
+            initialSetupWizardDraft: {
+                ...(settings.initialSetupWizardDraft || {}),
+                currencies: currencyDraft,
+                updatedAt: new Date().toISOString(),
+            },
+            initialSetupWizardDrafts: {
+                ...(settings.initialSetupWizardDrafts || {}),
+                currencyDraft,
+                updatedAt: new Date().toISOString(),
+            },
+        })));
+    };
+
+    const saveScoringMatrixDraft = () => {
+        const scoringRows = parseWizardScoringRows(scoringDraft);
+        const trainingReportPhraseBank = scoringRows.reduce((bank, row) => ({
+            ...bank,
+            [row.dimension || 'Assessment']: {
+                0: [row.grade0 || row.failStandard].filter(Boolean),
+                1: [row.grade1].filter(Boolean),
+                2: [row.grade2].filter(Boolean),
+                3: [row.grade3 || row.passStandard].filter(Boolean),
+                4: [row.grade4].filter(Boolean),
+                5: [row.grade5].filter(Boolean),
+            },
+        }), {} as Record<string, any>);
+        const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+        saveWizardConfig('Scoring matrix saved into Settings.', (baseConfig) => {
+            const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
+            const nextUnits = units.map((unit: any) => (
+                normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(targetUnitCode)
+                    ? { ...unit, settings: { ...(unit.settings || {}), trainingReportPhraseBank } }
+                    : unit
+            ));
+            return updatePrimaryOrganisationWithSettings({
+                ...baseConfig,
+                units: nextUnits,
+            }, (settings) => ({
+                ...settings,
+                initialSetupWizardDraft: {
+                    ...(settings.initialSetupWizardDraft || {}),
+                    scoringMatrix: scoringDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+                initialSetupWizardDrafts: {
+                    ...(settings.initialSetupWizardDrafts || {}),
+                    scoringDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+            }));
+        });
+    };
+
+    const saveStaffCurrencyEventsDraft = () => {
+        const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+        const aircraftTypeCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || '').trim().toUpperCase();
+        const standardMissionProfiles = parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).map((row, index) => ({
+            id: createWizardRecordId('standard-mission'),
+            unitCode: targetUnitCode,
+            name: row.name || row.shortTitle || `Standard event ${index + 1}`,
+            shortTitle: row.shortTitle || row.name || `EVT${index + 1}`,
+            resourceType: row.resourceType || 'Flight',
+            aircraftTypeCode,
+            duration: Math.max(0, Number(row.duration) || 0),
+            preFlight: Math.max(0, Number(row.preFlight) || 0),
+            postFlight: Math.max(0, Number(row.postFlight) || 0),
+            crew: row.crew || 'Standard crew',
+            currency: row.currency || '',
+            config: row.config || 'ANY',
+            aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
+            status: 'ACTIVE',
+        })).filter((profile) => profile.name || profile.shortTitle);
+        saveWizardConfig('Staff currency event presets saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
+            ...settings,
+            standardMissionProfiles: { profiles: standardMissionProfiles },
+            initialSetupWizardDraft: {
+                ...(settings.initialSetupWizardDraft || {}),
+                staffCurrencyEvents: staffCurrencyEventsDraft,
+                updatedAt: new Date().toISOString(),
+            },
+            initialSetupWizardDrafts: {
+                ...(settings.initialSetupWizardDrafts || {}),
+                staffCurrencyEventsDraft,
+                updatedAt: new Date().toISOString(),
+            },
+        })));
     };
 
     const saveTrainingDraft = () => {
@@ -5157,6 +5437,10 @@ const InitialSetupWizard: React.FC<{
             saveCrewRolesDraft();
             return;
         }
+        if (stepId === 'resource-sharing') {
+            saveResourceSharingDraft();
+            return;
+        }
         if (stepId === 'resource-aircraft' || stepId === 'resource-counts') {
             saveResourceDraft();
             return;
@@ -5173,6 +5457,26 @@ const InitialSetupWizard: React.FC<{
         if (stepId === 'access') {
             saveAccessDraft();
             saveWizardSupplementaryDrafts('Access setup synced into Settings.');
+            return;
+        }
+        if (stepId === 'build-rules') {
+            saveBuildRulesDraft();
+            return;
+        }
+        if (stepId === 'training-records') {
+            saveTrainingRecordsDraft();
+            return;
+        }
+        if (stepId === 'currencies') {
+            saveCurrencyProfilesDraft();
+            return;
+        }
+        if (stepId === 'scoring') {
+            saveScoringMatrixDraft();
+            return;
+        }
+        if (stepId === 'staff-currency-events') {
+            saveStaffCurrencyEventsDraft();
             return;
         }
         if (stepId !== 'analysis' && stepId !== 'review') {
