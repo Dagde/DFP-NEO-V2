@@ -1317,6 +1317,9 @@ const formatWizardTrainingReportRows = (rows: ReturnType<typeof parseWizardTrain
 const parseWizardRankRows = (value: string) => parseWizardPipeRows<{ order: string; ranks: string; notes: string }>(value, ['order', 'ranks', 'notes']);
 const formatWizardRankRows = (rows: ReturnType<typeof parseWizardRankRows>) => formatWizardPipeRows(rows, ['order', 'ranks', 'notes']);
 
+const parseWizardCrewRoleRows = (value: string) => parseWizardPipeRows<{ role: string; label: string; models: string }>(value, ['role', 'label', 'models']);
+const formatWizardCrewRoleRows = (rows: ReturnType<typeof parseWizardCrewRoleRows>) => formatWizardPipeRows(rows, ['role', 'label', 'models']);
+
 const parseWizardSharingRows = (value: string) => parseWizardPipeRows<{ type: string; enabled: string; units: string; consequence: string }>(value, ['type', 'enabled', 'units', 'consequence']);
 const formatWizardSharingRows = (rows: ReturnType<typeof parseWizardSharingRows>) => formatWizardPipeRows(rows, ['type', 'enabled', 'units', 'consequence']);
 
@@ -2865,6 +2868,7 @@ const InitialSetupWizard: React.FC<{
         || activeOrganisation?.settings?.personnelSettings
         || null,
     );
+    const currentWizardCrewPositionTerminology = normaliseCrewPositionTerminology(activeOrganisation?.settings?.crewPositionTerminology || null);
     const levelDraftSource = (levelIndex: number) => organisationStructureLevels.find((level: any) => Number(level?.levelIndex ?? level?.level ?? levelIndex) === levelIndex) || organisationStructureLevels[levelIndex] || {};
     const parentLinesForLevel = (levelIndex: number, fallback = '') => {
         const level = levelDraftSource(levelIndex) || {};
@@ -3223,7 +3227,27 @@ const InitialSetupWizard: React.FC<{
         instructorLabel: currentPersonnelDisplaySettings.instructorLabel || 'Instructor',
     }));
     const rankSettingsDraftDirtyRef = useRef(false);
-    const wizardCrewPositionTerminology = normaliseCrewPositionTerminology(activeOrganisation?.settings?.crewPositionTerminology || null);
+    const [crewRolesDraft, setCrewRolesDraft] = useState(() => formatWizardCrewRoleRows(
+        currentWizardCrewPositionTerminology.positions.map((position) => ({
+            role: position.genericName,
+            label: position.label || position.genericName,
+            models: (position.operationalModels || []).join(', '),
+        }))
+    ));
+    const crewRolesDraftDirtyRef = useRef(false);
+    const updateCrewRolesDraft = (updater: string | ((current: string) => string)) => {
+        crewRolesDraftDirtyRef.current = true;
+        setCrewRolesDraft((current) => typeof updater === 'function' ? updater(current) : updater);
+    };
+    const wizardCrewPositionTerminology = normaliseCrewPositionTerminology({
+        positions: parseWizardCrewRoleRows(crewRolesDraft).map((row, index) => ({
+            id: row.role.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `crew-role-${index + 1}`,
+            genericName: row.role || row.label || `Crew Role ${index + 1}`,
+            label: row.label || row.role || `Crew Role ${index + 1}`,
+            operationalModels: row.models.split(',').map((model) => model.trim()).filter(Boolean).map((model) => normaliseOperationalModel(model)),
+        })),
+        deletedDefaultIds: currentWizardCrewPositionTerminology.deletedDefaultIds,
+    });
     const getWizardCrewRoleOptions = (value: string) => {
         const existingRoles = parseRoleRequirementsText(value).map((row) => String(row.role || '').trim()).filter(Boolean);
         return getCrewPositionOptions(wizardCrewPositionTerminology, existingRoles, unitDraft.operationalModel);
@@ -3764,6 +3788,7 @@ const InitialSetupWizard: React.FC<{
         accessDraftDirtyRef.current = false;
         trainingDraftDirtyRef.current = false;
         unitModulesDraftDirtyRef.current = false;
+        crewRolesDraftDirtyRef.current = false;
     }, [currentUnit?.code, unitCode]);
 
     useEffect(() => {
@@ -3826,6 +3851,17 @@ const InitialSetupWizard: React.FC<{
             accessLevel: String(primaryMasterLmpRule?.access || primaryMasterLmpRule?.accessLevel || 'View'),
         });
     }, [activeWizardLocationCode, primaryMasterLmp?.code, primaryMasterLmp?.name, primaryMasterLmp?.description, primaryMasterLmp?.status, primaryMasterLmpRule?.locationCode, primaryMasterLmpRule?.unitCode, primaryMasterLmpRule?.operationalModel, primaryMasterLmpRule?.model, primaryMasterLmpRule?.access, primaryMasterLmpRule?.accessLevel, currentLocation?.code, currentUnit?.code]);
+
+    useEffect(() => {
+        if (crewRolesDraftDirtyRef.current) return;
+        setCrewRolesDraft(formatWizardCrewRoleRows(
+            currentWizardCrewPositionTerminology.positions.map((position) => ({
+                role: position.genericName,
+                label: position.label || position.genericName,
+                models: (position.operationalModels || []).join(', '),
+            }))
+        ));
+    }, [JSON.stringify(activeOrganisation?.settings?.crewPositionTerminology || {})]);
 
     const saveWizardConfig = (message: string, updater: (baseConfig: any) => any) => {
         if (!onUpdatePlatformConfig) {
@@ -4270,6 +4306,52 @@ const InitialSetupWizard: React.FC<{
         })));
     };
 
+    const saveCrewRolesDraft = () => {
+        const rows = parseWizardCrewRoleRows(crewRolesDraft);
+        const validRows = rows.filter((row) => String(row.role || '').trim());
+        if (validRows.length === 0) {
+            setSaveMessage('Add at least one crew role before continuing.');
+            return;
+        }
+        saveWizardConfig('Crew roles saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+            const existingTerminology = normaliseCrewPositionTerminology(settings.crewPositionTerminology || null);
+            const nextPositions = validRows.map((row, index) => {
+                const cleanRole = String(row.role || '').trim();
+                const existing = existingTerminology.positions.find((position) => (
+                    normaliseUnitSettingsIdentifier(position.genericName) === normaliseUnitSettingsIdentifier(cleanRole)
+                ));
+                const modelTokens = String(row.models || '')
+                    .split(',')
+                    .map((model) => model.trim())
+                    .filter(Boolean)
+                    .map((model) => normaliseOperationalModel(model));
+                return {
+                    id: existing?.id || createWizardRecordId('crew-role'),
+                    genericName: cleanRole,
+                    label: String(row.label || cleanRole).trim() || cleanRole,
+                    operationalModels: modelTokens.length > 0 ? modelTokens : OPERATIONAL_MODEL_OPTIONS.map((option) => option.value),
+                };
+            });
+            return {
+                ...settings,
+                crewPositionTerminology: normaliseCrewPositionTerminology({
+                    positions: nextPositions,
+                    deletedDefaultIds: existingTerminology.deletedDefaultIds,
+                }),
+                initialSetupWizardDraft: {
+                    ...(settings.initialSetupWizardDraft || {}),
+                    crewRoles: crewRolesDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+                initialSetupWizardDrafts: {
+                    ...(settings.initialSetupWizardDrafts || {}),
+                    crewRolesDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+            };
+        }));
+    };
+
     const saveTrainingDraft = () => {
         const lmpCode = String(trainingDraft.lmpCode || '').trim();
         if (!lmpCode) {
@@ -4324,6 +4406,7 @@ const InitialSetupWizard: React.FC<{
                 unitModules: unitModulesDraft,
                 ranksAndLabels: rankLabelsDraft,
                 rankSettings: rankSettingsDraft,
+                crewRoles: crewRolesDraft,
                 resourceSharing: resourceSharingDraft,
                 currencies: currencyDraft,
                 scoringMatrix: scoringDraft,
@@ -4347,6 +4430,7 @@ const InitialSetupWizard: React.FC<{
                 unitModulesDraft,
                 rankLabelsDraft,
                 rankSettingsDraft,
+                crewRolesDraft,
                 resourceSharingDraft,
                 currencyDraft,
                 scoringDraft,
@@ -4628,6 +4712,14 @@ const InitialSetupWizard: React.FC<{
             category: 'highly-desirable',
         },
         {
+            id: 'crew-roles',
+            title: 'Set the crew roles this unit uses',
+            label: 'Crew roles',
+            body: 'Choose the crew role names available when this unit builds crew rules and flight events.',
+            checkIds: ['crew'],
+            category: 'highly-desirable',
+        },
+        {
             id: 'resource-aircraft',
             title: `What aircraft or main resource does ${unitDraft.code || 'this unit'} use?`,
             label: 'Aircraft',
@@ -4885,6 +4977,11 @@ const InitialSetupWizard: React.FC<{
                     || hasMeaningfulWizardText(rankSettingsDraft.traineeRanks)
                     || hasMeaningfulWizardText(rankSettingsDraft.instructorLabel, ['Instructor'])
                 );
+            case 'crew-roles':
+                return parseWizardCrewRoleRows(crewRolesDraft).some((row) => (
+                    hasMeaningfulWizardText(row.role, ['Crew Role'])
+                    && hasMeaningfulWizardText(row.label, ['Crew Role'])
+                ));
             case 'resource-aircraft':
                 return (
                     hasMeaningfulWizardText(resourceDraft.aircraftCode, ['Aircraft', 'Aircraft Type', 'Enter Aircraft Code'])
@@ -5054,6 +5151,10 @@ const InitialSetupWizard: React.FC<{
         }
         if (stepId === 'ranks-labels') {
             saveRankSettingsDraft();
+            return;
+        }
+        if (stepId === 'crew-roles') {
+            saveCrewRolesDraft();
             return;
         }
         if (stepId === 'resource-aircraft' || stepId === 'resource-counts') {
@@ -5638,6 +5739,73 @@ const InitialSetupWizard: React.FC<{
                         </div>
                     ))}
                 </div>
+            </div>
+        );
+    };
+    const renderCrewRolesEditor = () => {
+        const rows = parseWizardCrewRoleRows(crewRolesDraft);
+        const editableRows = rows.length > 0
+            ? rows
+            : [
+                { role: 'Pilot', label: 'Pilot', models: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value).join(', ') },
+                { role: 'Trainee', label: 'Trainee', models: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value).join(', ') },
+            ];
+        const updateRow = (index: number, field: 'role' | 'label' | 'models', value: string) => {
+            const nextRows = [...editableRows];
+            nextRows[index] = { ...nextRows[index], [field]: value };
+            updateCrewRolesDraft(formatWizardCrewRoleRows(nextRows));
+        };
+        const toggleModel = (index: number, model: string, enabled: boolean) => {
+            const selectedModels = editableRows[index].models
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean);
+            const nextModels = enabled
+                ? Array.from(new Set([...selectedModels, model]))
+                : selectedModels.filter((item) => item !== model);
+            updateRow(index, 'models', (nextModels.length > 0 ? nextModels : [model]).join(', '));
+        };
+        return (
+            <div className="space-y-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm font-semibold leading-5 text-blue-950">
+                    These are the approved crew role names that users can choose later. Add only roles that should appear in crew rules, event setup, and crew selection.
+                </div>
+                {editableRows.map((row, index) => {
+                    const selectedModels = row.models.split(',').map((item) => item.trim()).filter(Boolean);
+                    return (
+                        <div key={`crew-role-draft-${index}`} className="rounded-lg border border-slate-300 bg-white p-3">
+                            <div className="grid gap-3 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(280px,1.1fr)_74px] lg:items-end">
+                                {wizardField('Crew role name', row.role || '', (value) => updateRow(index, 'role', value), undefined, 'Pilot')}
+                                {wizardField('Label users see', row.label || row.role || '', (value) => updateRow(index, 'label', value), undefined, row.role || 'Pilot')}
+                                <div>
+                                    <span className={wizardLabelClass}>Use in models</span>
+                                    <div className="mt-1 grid gap-1 rounded-lg border border-slate-300 bg-slate-50 p-2 sm:grid-cols-2">
+                                        {OPERATIONAL_MODEL_OPTIONS.map((option) => {
+                                            const checked = selectedModels.length === 0 || selectedModels.includes(option.value);
+                                            return (
+                                                <label key={`${row.role}-${option.value}`} className="flex items-center gap-2 text-[11px] font-semibold text-slate-700">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="h-3.5 w-3.5 rounded border-slate-400 accent-cyan-500"
+                                                        checked={checked}
+                                                        onChange={(event) => toggleModel(index, option.value, event.target.checked)}
+                                                    />
+                                                    <span>{option.label.replace(' Model', '')}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <button type="button" className={wizardSmallButtonClass} onClick={() => updateCrewRolesDraft(formatWizardCrewRoleRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+                <button type="button" className={wizardSmallButtonClass} onClick={() => updateCrewRolesDraft(formatWizardCrewRoleRows([...editableRows, { role: '', label: '', models: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value).join(', ') }]))}>
+                    Add crew role
+                </button>
             </div>
         );
     };
@@ -6927,6 +7095,7 @@ const InitialSetupWizard: React.FC<{
                         alternateCompositions: alternateCrewRows,
                         currencyProfiles,
                     }),
+                    crewPositionTerminology: wizardCrewPositionTerminology,
                     standardMissionProfiles: { profiles: standardMissionProfiles },
                     personnelDisplaySettings: buildRankSettingsToSave(existingOrganisationSettings),
                     fleetSharingEnabled: resourceSharingRows.some((row) => /^on$/i.test(row.enabled)),
@@ -6959,6 +7128,7 @@ const InitialSetupWizard: React.FC<{
                         unitModules: unitModulesDraft,
                         ranksAndLabels: rankLabelsDraft,
                         rankSettings: rankSettingsDraft,
+                        crewRoles: crewRolesDraft,
                         resourceSharing: resourceSharingDraft,
                         currencies: currencyDraft,
                         scoringMatrix: scoringDraft,
@@ -7846,7 +8016,6 @@ const InitialSetupWizard: React.FC<{
                         {renderCrewCompositionEditor('Normal crew required', crewDraft.standardSeats, (value) => updateCrewDraft((draft) => ({ ...draft, standardSeats: value })))}
                         {renderCrewCompositionEditor('Other approved crew composition', alternateCrewDraft, setAlternateCrewDraft, 'Add crew role')}
                     </div>
-                    {renderCrewLabelsEditor()}
                 </div>,
             );
         }
@@ -8014,6 +8183,12 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Choose how DFP NEO should read the rank table when it sorts people. The full rank table is already managed in Settings, so this step only confirms the preset and display behaviour for this setup.</p>,
                 renderRankLabelsEditor(),
+            );
+        }
+        if (visibleStep.id === 'crew-roles') {
+            return promptShell(
+                <p>Set the approved crew role names this unit can use. These names become the dropdown choices when you define normal and alternate crew composition.</p>,
+                renderCrewRolesEditor(),
             );
         }
         if (visibleStep.id === 'resource-sharing') {
