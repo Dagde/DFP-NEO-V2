@@ -5577,7 +5577,7 @@ const InitialSetupWizard: React.FC<{
         title: string,
         value: string,
         onChange: (value: string) => void,
-        addLabel = 'Add position',
+        addLabel = 'Add crew role',
     ) => {
         const rows = parseRoleRequirementsText(value);
         const editableRows = rows.length > 0 ? rows : [{ role: 'Pilot', count: 1 }];
@@ -5592,8 +5592,8 @@ const InitialSetupWizard: React.FC<{
                 <div className="space-y-2">
                     {editableRows.map((row, index) => (
                         <div key={`${title}-${index}`} className="grid gap-2 md:grid-cols-[minmax(0,1fr)_100px_74px] md:items-end">
-                            {wizardField('Position', row.role || '', (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'role', nextValue)), undefined, 'Pilot')}
-                            {wizardField('Number', String(row.count ?? 1), (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'count', nextValue)), undefined, '1')}
+                            {wizardField('Crew role', row.role || '', (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'role', nextValue)), undefined, 'Pilot')}
+                            {wizardField('How many', String(row.count ?? 1), (nextValue) => onChange(updateWizardRoleRequirementText(value, index, 'count', nextValue)), undefined, '1')}
                             <button type="button" className={wizardSmallButtonClass} onClick={() => onChange(removeWizardRoleRequirementText(value, index))}>
                                 Delete
                             </button>
@@ -5609,7 +5609,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="rounded-lg border border-slate-300 bg-white p-3">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <span className={wizardLabelClass}>Crew labels</span>
+                    <span className={wizardLabelClass}>Words shown to users</span>
                     <button type="button" className={wizardSmallButtonClass} onClick={() => setCrewLabelsDraft(formatWizardCrewLabelRows([...editableRows, { term: 'Crew', label: 'Crew' }]))}>
                         Add label
                     </button>
@@ -5617,12 +5617,12 @@ const InitialSetupWizard: React.FC<{
                 <div className="space-y-2">
                     {editableRows.map((row, index) => (
                         <div key={`crew-label-${index}`} className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_74px] md:items-end">
-                            {wizardField('System term', row.term || '', (nextValue) => {
+                            {wizardField('DFP NEO role', row.term || '', (nextValue) => {
                                 const nextRows = [...editableRows];
                                 nextRows[index] = { ...nextRows[index], term: nextValue };
                                 setCrewLabelsDraft(formatWizardCrewLabelRows(nextRows));
                             }, undefined, 'PIC')}
-                            {wizardField('Display label', row.label || '', (nextValue) => {
+                            {wizardField('Label users see', row.label || '', (nextValue) => {
                                 const nextRows = [...editableRows];
                                 nextRows[index] = { ...nextRows[index], label: nextValue };
                                 setCrewLabelsDraft(formatWizardCrewLabelRows(nextRows));
@@ -7835,11 +7835,11 @@ const InitialSetupWizard: React.FC<{
                 <p>Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events.</p>,
                 <div className="space-y-3">
                     <div className="grid gap-3 md:grid-cols-2">
-                        {wizardDataListField('Aircraft type', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => updateCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'Enter aircraft code')}
+                        {wizardDataListField('Aircraft / resource', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => updateCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'Enter aircraft code')}
                     </div>
                     <div className="grid gap-3 xl:grid-cols-2">
-                        {renderCrewCompositionEditor('Standard crew composition', crewDraft.standardSeats, (value) => updateCrewDraft((draft) => ({ ...draft, standardSeats: value })))}
-                        {renderCrewCompositionEditor('Alternate crew composition', alternateCrewDraft, setAlternateCrewDraft, 'Add alternate position')}
+                        {renderCrewCompositionEditor('Normal crew required', crewDraft.standardSeats, (value) => updateCrewDraft((draft) => ({ ...draft, standardSeats: value })))}
+                        {renderCrewCompositionEditor('Other approved crew composition', alternateCrewDraft, setAlternateCrewDraft, 'Add crew role')}
                     </div>
                     {renderCrewLabelsEditor()}
                 </div>,

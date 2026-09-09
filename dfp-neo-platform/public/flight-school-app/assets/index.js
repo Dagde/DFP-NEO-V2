@@ -16713,7 +16713,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     };
     setLocationsTodayDraft(formatWizardLocationRows(nextRows));
   };
-  const renderCrewCompositionEditor = (title, value, onChange, addLabel = "Add position") => {
+  const renderCrewCompositionEditor = (title, value, onChange, addLabel = "Add crew role") => {
     const rows = parseRoleRequirementsText(value);
     const editableRows = rows.length > 0 ? rows : [{ role: "Pilot", count: 1 }];
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
@@ -16722,8 +16722,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onChange(formatRoleRequirementsText([...editableRows, { role: "Crew", count: 1 }])), children: addLabel })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[minmax(0,1fr)_100px_74px] md:items-end", children: [
-        wizardField("Position", row.role || "", (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "role", nextValue)), void 0, "Pilot"),
-        wizardField("Number", String(row.count ?? 1), (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "count", nextValue)), void 0, "1"),
+        wizardField("Crew role", row.role || "", (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "role", nextValue)), void 0, "Pilot"),
+        wizardField("How many", String(row.count ?? 1), (nextValue) => onChange(updateWizardRoleRequirementText(value, index, "count", nextValue)), void 0, "1"),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => onChange(removeWizardRoleRequirementText(value, index)), children: "Delete" })
       ] }, `${title}-${index}`)) })
     ] });
@@ -16733,16 +16733,16 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const editableRows = rows.length > 0 ? rows : [{ term: "Pilot", label: "Pilot" }];
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Crew labels" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Words shown to users" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setCrewLabelsDraft(formatWizardCrewLabelRows([...editableRows, { term: "Crew", label: "Crew" }])), children: "Add label" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_74px] md:items-end", children: [
-        wizardField("System term", row.term || "", (nextValue) => {
+        wizardField("DFP NEO role", row.term || "", (nextValue) => {
           const nextRows = [...editableRows];
           nextRows[index] = { ...nextRows[index], term: nextValue };
           setCrewLabelsDraft(formatWizardCrewLabelRows(nextRows));
         }, void 0, "PIC"),
-        wizardField("Display label", row.label || "", (nextValue) => {
+        wizardField("Label users see", row.label || "", (nextValue) => {
           const nextRows = [...editableRows];
           nextRows[index] = { ...nextRows[index], label: nextValue };
           setCrewLabelsDraft(formatWizardCrewLabelRows(nextRows));
@@ -18757,10 +18757,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardDataListField("Aircraft type", crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => updateCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || "Enter aircraft code") }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardDataListField("Aircraft / resource", crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => updateCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || "Enter aircraft code") }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-2", children: [
-            renderCrewCompositionEditor("Standard crew composition", crewDraft.standardSeats, (value) => updateCrewDraft((draft) => ({ ...draft, standardSeats: value }))),
-            renderCrewCompositionEditor("Alternate crew composition", alternateCrewDraft, setAlternateCrewDraft, "Add alternate position")
+            renderCrewCompositionEditor("Normal crew required", crewDraft.standardSeats, (value) => updateCrewDraft((draft) => ({ ...draft, standardSeats: value }))),
+            renderCrewCompositionEditor("Other approved crew composition", alternateCrewDraft, setAlternateCrewDraft, "Add crew role")
           ] }),
           renderCrewLabelsEditor()
         ] })
