@@ -14254,7 +14254,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       }))
     });
   }, [uploadedCourseLmpItems]);
-  const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+  const activeOrganisation = getActiveOrganisation(platformConfig);
   const currentWizardUnitCode = normaliseUnitSettingsIdentifier(unitCode);
   const currentWizardUnitCodes = Array.from(new Set(
     currentWizardUnitCode.split("+").map((code) => normaliseUnitSettingsIdentifier(code)).filter(Boolean)
@@ -14858,33 +14858,48 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       instructorLabel: currentPersonnelDisplaySettings.instructorLabel || "Instructor"
     };
   };
+  const readSharingGroupUnits = (group) => {
+    const unitSources = [
+      group?.selectedUnits,
+      group?.selectedUnitCodes,
+      group?.unitCodes,
+      group?.units,
+      group?.memberUnits,
+      group?.participatingUnits
+    ];
+    const source = unitSources.find((candidate) => Array.isArray(candidate)) || [];
+    return Array.from(new Set(source.map((item) => typeof item === "string" ? item : item?.unitCode || item?.code || item?.name || "").map((item) => String(item || "").trim().toUpperCase()).filter(Boolean)));
+  };
+  const isSharingGroupEnabled = (group) => group?.enabled === true || group?.isEnabled === true || group?.enabled !== false && group?.isEnabled !== false && readSharingGroupUnits(group).length > 1;
   const buildHydratedResourceSharingDraft = () => {
     const settings = activeOrganisation?.settings || {};
     const resourceGroups = Array.isArray(settings.resourceSharingGroups) ? settings.resourceSharingGroups : [];
     const staffGroups = Array.isArray(settings.staffSharingGroups) ? settings.staffSharingGroups : [];
     const legacyResourceUnits = Array.isArray(settings.selectedUnits) ? settings.selectedUnits : [];
     const legacyStaffUnits = Array.isArray(settings.staffSharingUnits) ? settings.staffSharingUnits : [];
-    const hasLiveSharingSettings = settings.fleetSharingEnabled === true || settings.staffSharingEnabled === true || resourceGroups.length > 0 || staffGroups.length > 0 || legacyResourceUnits.length > 0 || legacyStaffUnits.length > 0;
+    const resourceSharingOn = settings.fleetSharingEnabled === true || legacyResourceUnits.length > 1 || resourceGroups.some(isSharingGroupEnabled);
+    const staffSharingOn = settings.staffSharingEnabled === true || legacyStaffUnits.length > 1 || staffGroups.some(isSharingGroupEnabled);
+    const hasLiveSharingSettings = resourceSharingOn || staffSharingOn || resourceGroups.length > 0 || staffGroups.length > 0 || legacyResourceUnits.length > 0 || legacyStaffUnits.length > 0;
     if (!hasLiveSharingSettings) return getSavedWizardString("resourceSharing", "resourceSharingDraft");
     const resourceUnits = Array.from(new Set([
-      ...resourceGroups.flatMap((group) => Array.isArray(group?.selectedUnits) ? group.selectedUnits : []),
+      ...resourceGroups.flatMap(readSharingGroupUnits),
       ...legacyResourceUnits
-    ].map((item) => String(item || "").trim()).filter(Boolean)));
+    ].map((item) => String(item || "").trim().toUpperCase()).filter(Boolean)));
     const staffUnits = Array.from(new Set([
-      ...staffGroups.flatMap((group) => Array.isArray(group?.selectedUnits) ? group.selectedUnits : []),
+      ...staffGroups.flatMap(readSharingGroupUnits),
       ...legacyStaffUnits
-    ].map((item) => String(item || "").trim()).filter(Boolean)));
+    ].map((item) => String(item || "").trim().toUpperCase()).filter(Boolean)));
     const resourceRows = [{
       type: "Resource sharing",
-      enabled: settings.fleetSharingEnabled === true ? "On" : "Off",
+      enabled: resourceSharingOn ? "On" : "Off",
       units: resourceUnits.join(", "),
-      consequence: settings.fleetSharingEnabled === true ? "Unit can use shared aircraft and DFP resource rows from the listed units." : "Unit keeps its own aircraft and DFP resource row capacity."
+      consequence: resourceSharingOn ? "Unit can use shared aircraft and DFP resource rows from the listed units." : "Unit keeps its own aircraft and DFP resource row capacity."
     }];
     const staffRows = [{
       type: "Staff sharing",
-      enabled: settings.staffSharingEnabled === true ? "On" : "Off",
+      enabled: staffSharingOn ? "On" : "Off",
       units: staffUnits.join(", "),
-      consequence: settings.staffSharingEnabled === true ? "Unit can schedule staff from the listed units." : "Unit only schedules its own staff unless changed later."
+      consequence: staffSharingOn ? "Unit can schedule staff from the listed units." : "Unit only schedules its own staff unless changed later."
     }];
     const rows = [...resourceRows, ...staffRows];
     return rows.length > 0 ? formatWizardSharingRows(rows) : "";
@@ -15641,6 +15656,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const staffSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes("staff"));
     const resourceSharingRows = sharingRows.filter((row, index) => row.type.toLowerCase().includes("resource") || !row.type.toLowerCase().includes("staff") && index === 0);
     const splitUnits = (value) => Array.from(new Set(String(value || "").split(",").map((item) => item.trim().toUpperCase()).filter(Boolean)));
+    const rowIsEnabled = (value) => /^on$/i.test(String(value || "").trim());
     saveWizardConfig("Resource and staff sharing saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
       const existingResourceGroups = Array.isArray(settings.resourceSharingGroups) ? settings.resourceSharingGroups : [];
       const existingStaffGroups = Array.isArray(settings.staffSharingGroups) ? settings.staffSharingGroups : [];
@@ -15651,6 +15667,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           ...existing || { id: createWizardRecordId("resource-sharing") },
           name: existing?.name || (selectedUnits.length > 1 ? selectedUnits.join("+") : "Resource sharing"),
           selectedUnits,
+          allocationMode: existing?.allocationMode || settings.allocationMode || "combined",
+          desiredAllocations: existing?.desiredAllocations || settings.desiredAllocations || {},
+          remainderUnitIndex: typeof existing?.remainderUnitIndex === "number" ? existing.remainderUnitIndex : typeof settings.remainderUnitIndex === "number" ? settings.remainderUnitIndex : -1,
+          enabled: rowIsEnabled(row.enabled),
           status: "ACTIVE"
         };
       });
@@ -15661,14 +15681,22 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           ...existing || { id: createWizardRecordId("staff-sharing") },
           name: existing?.name || (selectedUnits.length > 1 ? `${selectedUnits.join("+")} Staff Sharing` : "Staff sharing"),
           selectedUnits,
+          enabled: rowIsEnabled(row.enabled),
           status: "ACTIVE"
         };
       });
+      const selectedResourceUnits = Array.from(new Set(nextResourceGroups.filter((group) => group.enabled !== false).flatMap((group) => readSharingGroupUnits(group))));
+      const selectedStaffUnits = Array.from(new Set(nextStaffGroups.filter((group) => group.enabled !== false).flatMap((group) => readSharingGroupUnits(group))));
       return {
         ...settings,
-        fleetSharingEnabled: resourceSharingRows.some((row) => /^on$/i.test(row.enabled)),
+        fleetSharingEnabled: nextResourceGroups.some((group) => group.enabled !== false && readSharingGroupUnits(group).length > 1),
+        selectedUnits: selectedResourceUnits,
+        allocationMode: nextResourceGroups[0]?.allocationMode || settings.allocationMode || "combined",
+        desiredAllocations: nextResourceGroups[0]?.desiredAllocations || settings.desiredAllocations || {},
+        remainderUnitIndex: typeof nextResourceGroups[0]?.remainderUnitIndex === "number" ? nextResourceGroups[0].remainderUnitIndex : typeof settings.remainderUnitIndex === "number" ? settings.remainderUnitIndex : -1,
         resourceSharingGroups: nextResourceGroups,
-        staffSharingEnabled: staffSharingRows.some((row) => /^on$/i.test(row.enabled)),
+        staffSharingEnabled: nextStaffGroups.some((group) => group.enabled !== false && readSharingGroupUnits(group).length > 1),
+        staffSharingUnits: selectedStaffUnits,
         staffSharingGroups: nextStaffGroups,
         initialSetupWizardDraft: {
           ...settings.initialSetupWizardDraft || {},
