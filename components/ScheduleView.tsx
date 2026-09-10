@@ -6624,7 +6624,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    Resource sharing lets this unit use another unit's aircraft, simulators, trainers or ground lines. Staff sharing lets this unit schedule people from another unit. Turning either on can increase scheduling flexibility, but it also means conflicts and availability must be managed across units.
+                    Resource sharing lets this unit use another unit's aircraft, simulators, trainers or ground lines. Staff sharing lets this unit schedule people from another unit. Only units already configured in DFP NEO can be selected for sharing. Turning either on can increase scheduling flexibility, but it also means conflicts and availability must be managed across units.
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`sharing-row-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">

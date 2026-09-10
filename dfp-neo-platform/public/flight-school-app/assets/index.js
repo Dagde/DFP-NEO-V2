@@ -17548,7 +17548,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       updateRow(index, "units", nextUnits.join(", "));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Resource sharing lets this unit use another unit's aircraft, simulators, trainers or ground lines. Staff sharing lets this unit schedule people from another unit. Turning either on can increase scheduling flexibility, but it also means conflicts and availability must be managed across units." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Resource sharing lets this unit use another unit's aircraft, simulators, trainers or ground lines. Staff sharing lets this unit schedule people from another unit. Only units already configured in DFP NEO can be selected for sharing. Turning either on can increase scheduling flexibility, but it also means conflicts and availability must be managed across units." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-[160px_1fr_110px]", children: [
           wizardField("Sharing type", row.type || "", (value) => updateRow(index, "type", value), ["Resource sharing", "Staff sharing"]),
