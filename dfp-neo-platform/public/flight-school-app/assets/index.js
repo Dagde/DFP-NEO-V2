@@ -14082,7 +14082,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     ] })
   ] });
 };
-const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
+const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
   const [mode, setMode] = reactExports.useState("detect");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const configuredContinuationShortLabel = reactExports.useMemo(
@@ -14254,7 +14254,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       }))
     });
   }, [uploadedCourseLmpItems]);
-  const activeOrganisation = getActiveOrganisation(platformConfig);
+  const baseActiveOrganisation = getActiveOrganisation(platformConfig);
+  const activeOrganisation = baseActiveOrganisation ? {
+    ...baseActiveOrganisation,
+    settings: {
+      ...baseActiveOrganisation.settings || {},
+      ...organisationSettings || {}
+    }
+  } : baseActiveOrganisation;
   const currentWizardUnitCode = normaliseUnitSettingsIdentifier(unitCode);
   const currentWizardUnitCodes = Array.from(new Set(
     currentWizardUnitCode.split("+").map((code) => normaliseUnitSettingsIdentifier(code)).filter(Boolean)
@@ -15004,6 +15011,17 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         name: activeOrganisation.name,
         status: activeOrganisation.status,
         settingsKeys: Object.keys(activeOrganisation.settings || {}).sort()
+      } : null,
+      liveOrganisationSettingsProp: organisationSettings ? {
+        fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
+        selectedUnits: organisationSettings.selectedUnits,
+        allocationMode: organisationSettings.allocationMode,
+        activeResourceSharingGroupId: organisationSettings.activeResourceSharingGroupId,
+        resourceSharingGroups: organisationSettings.resourceSharingGroups,
+        staffSharingEnabled: organisationSettings.staffSharingEnabled,
+        staffSharingUnits: organisationSettings.staffSharingUnits,
+        activeStaffSharingGroupId: organisationSettings.activeStaffSharingGroupId,
+        staffSharingGroups: organisationSettings.staffSharingGroups
       } : null,
       allOrganisations: (platformConfig?.organisations || []).map((organisation) => ({
         id: organisation?.id,
@@ -19704,7 +19722,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
+const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState("structure");
@@ -19849,6 +19867,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, locationCode, f
       InitialSetupWizard,
       {
         platformConfig,
+        organisationSettings,
         unitCode,
         locationCode,
         onUpdatePlatformConfig,
@@ -19925,6 +19944,7 @@ const ScheduleView = ({
   onExternalEventDrop,
   diagnosticHighlightedEventIds = /* @__PURE__ */ new Set(),
   platformConfig,
+  organisationSettings,
   onUpdatePlatformConfig,
   onNavigateToSettingsSection,
   personnelDisplaySettings: personnelDisplaySettingsInput,
@@ -21512,7 +21532,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, locationCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
@@ -145176,6 +145196,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onExternalEventDrop: handleProgramScheduleExternalEventDrop,
             diagnosticHighlightedEventIds: staffAvailabilityDiagnosticEventIds,
             platformConfig,
+            organisationSettings,
             onUpdatePlatformConfig: handleUpdatePlatformConfigFromSchedule,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
             personnelDisplaySettings,

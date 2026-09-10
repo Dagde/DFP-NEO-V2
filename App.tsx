@@ -51918,6 +51918,7 @@ appliedUpdates.forEach(update => {
                            onExternalEventDrop={handleProgramScheduleExternalEventDrop}
                            diagnosticHighlightedEventIds={staffAvailabilityDiagnosticEventIds}
                            platformConfig={platformConfig}
+                           organisationSettings={organisationSettings}
                            onUpdatePlatformConfig={handleUpdatePlatformConfigFromSchedule}
                            onNavigateToSettingsSection={handleNavigateToSettingsSection}
                            personnelDisplaySettings={personnelDisplaySettings}

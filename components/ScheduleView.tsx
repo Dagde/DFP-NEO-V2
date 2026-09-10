@@ -132,6 +132,7 @@ interface ScheduleViewProps {
   onExternalEventDrop?: (event: ScheduleEvent, placement: { startTime: number; resourceId: string }) => void;
   diagnosticHighlightedEventIds?: Set<string>;
   platformConfig?: any;
+  organisationSettings?: any;
   onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
   onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
@@ -2570,13 +2571,14 @@ const OrganisationMyUnitSettings: React.FC<{
 
 const InitialSetupWizard: React.FC<{
     platformConfig?: any;
+    organisationSettings?: any;
     unitCode?: string;
     locationCode?: string;
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
     isSetupTestMode?: boolean;
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
-}> = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
+}> = ({ platformConfig, organisationSettings, unitCode, locationCode, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
@@ -2749,7 +2751,16 @@ const InitialSetupWizard: React.FC<{
         });
     }, [uploadedCourseLmpItems]);
 
-    const activeOrganisation = getActiveOrganisation(platformConfig);
+    const baseActiveOrganisation = getActiveOrganisation(platformConfig);
+    const activeOrganisation = baseActiveOrganisation
+        ? {
+            ...baseActiveOrganisation,
+            settings: {
+                ...(baseActiveOrganisation.settings || {}),
+                ...(organisationSettings || {}),
+            },
+        }
+        : baseActiveOrganisation;
     const currentWizardUnitCode = normaliseUnitSettingsIdentifier(unitCode);
     const currentWizardUnitCodes = Array.from(new Set(
         currentWizardUnitCode
@@ -3665,6 +3676,17 @@ const InitialSetupWizard: React.FC<{
                 name: activeOrganisation.name,
                 status: activeOrganisation.status,
                 settingsKeys: Object.keys(activeOrganisation.settings || {}).sort(),
+            } : null,
+            liveOrganisationSettingsProp: organisationSettings ? {
+                fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
+                selectedUnits: organisationSettings.selectedUnits,
+                allocationMode: organisationSettings.allocationMode,
+                activeResourceSharingGroupId: organisationSettings.activeResourceSharingGroupId,
+                resourceSharingGroups: organisationSettings.resourceSharingGroups,
+                staffSharingEnabled: organisationSettings.staffSharingEnabled,
+                staffSharingUnits: organisationSettings.staffSharingUnits,
+                activeStaffSharingGroupId: organisationSettings.activeStaffSharingGroupId,
+                staffSharingGroups: organisationSettings.staffSharingGroups,
             } : null,
             allOrganisations: (platformConfig?.organisations || []).map((organisation: any) => ({
                 id: organisation?.id,
@@ -8961,6 +8983,7 @@ const InitialSetupWizard: React.FC<{
 
 const OrganisationSlideoutDiagram: React.FC<{
     platformConfig?: any;
+    organisationSettings?: any;
     unitCode?: string;
     locationCode?: string;
     formationCallsigns?: FormationCallsign[];
@@ -8971,7 +8994,7 @@ const OrganisationSlideoutDiagram: React.FC<{
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
     isOpen?: boolean;
     onInitialSetupWizardActiveChange?: (active: boolean) => void;
-}> = ({ platformConfig, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
+}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>('structure');
@@ -9116,6 +9139,7 @@ const OrganisationSlideoutDiagram: React.FC<{
                 <div className="max-w-full overflow-x-hidden">
                     <InitialSetupWizard
                         platformConfig={platformConfig}
+                        organisationSettings={organisationSettings}
                         unitCode={unitCode}
                         locationCode={locationCode}
                         onUpdatePlatformConfig={onUpdatePlatformConfig}
@@ -9150,6 +9174,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     onExternalEventDrop,
     diagnosticHighlightedEventIds = new Set<string>(),
     platformConfig,
+    organisationSettings,
     onUpdatePlatformConfig,
     onNavigateToSettingsSection,
     personnelDisplaySettings: personnelDisplaySettingsInput,
@@ -10954,7 +10979,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{ width: 'min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))' }}
                     >
                         <div className={`h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                            <OrganisationSlideoutDiagram platformConfig={platformConfig} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} />
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} organisationSettings={organisationSettings} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} />
                         </div>
                         <button
                             type="button"
