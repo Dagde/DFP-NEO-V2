@@ -1321,8 +1321,8 @@ const formatWizardRankRows = (rows: ReturnType<typeof parseWizardRankRows>) => f
 const parseWizardCrewRoleRows = (value: string) => parseWizardPipeRows<{ role: string; label: string; models: string }>(value, ['role', 'label', 'models']);
 const formatWizardCrewRoleRows = (rows: ReturnType<typeof parseWizardCrewRoleRows>) => formatWizardPipeRows(rows, ['role', 'label', 'models']);
 
-const parseWizardSharingRows = (value: string) => parseWizardPipeRows<{ type: string; enabled: string; units: string; consequence: string }>(value, ['type', 'enabled', 'units', 'consequence']);
-const formatWizardSharingRows = (rows: ReturnType<typeof parseWizardSharingRows>) => formatWizardPipeRows(rows, ['type', 'enabled', 'units', 'consequence']);
+const parseWizardSharingRows = (value: string) => parseWizardPipeRows<{ type: string; enabled: string; units: string; consequence: string; name: string; allocationMode: string }>(value, ['type', 'enabled', 'units', 'consequence', 'name', 'allocationMode']);
+const formatWizardSharingRows = (rows: ReturnType<typeof parseWizardSharingRows>) => formatWizardPipeRows(rows, ['type', 'enabled', 'units', 'consequence', 'name', 'allocationMode']);
 
 const parseWizardCurrencyRows = (value: string) => parseWizardPipeRows<{ name: string; code: string; crew: string; config: string; currency: string; aircraftCount: string }>(value, ['name', 'code', 'crew', 'config', 'currency', 'aircraftCount']);
 const formatWizardCurrencyRows = (rows: ReturnType<typeof parseWizardCurrencyRows>) => formatWizardPipeRows(rows, ['name', 'code', 'crew', 'config', 'currency', 'aircraftCount']);
@@ -3533,11 +3533,9 @@ const InitialSetupWizard: React.FC<{
         const legacyResourceUnits = Array.isArray(settings.selectedUnits) ? settings.selectedUnits : [];
         const legacyStaffUnits = Array.isArray(settings.staffSharingUnits) ? settings.staffSharingUnits : [];
         const resourceSharingOn = settings.fleetSharingEnabled === true
-            || legacyResourceUnits.length > 1
-            || resourceGroups.some(isSharingGroupEnabled);
-        const staffSharingOn = settings.staffSharingEnabled === true
-            || legacyStaffUnits.length > 1
-            || staffGroups.some(isSharingGroupEnabled);
+            || resourceGroups.some(isSharingGroupEnabled)
+            || legacyResourceUnits.length > 1;
+        const staffSharingOn = settings.staffSharingEnabled === true;
         const hasLiveSharingSettings = resourceSharingOn
             || staffSharingOn
             || resourceGroups.length > 0
@@ -3545,30 +3543,50 @@ const InitialSetupWizard: React.FC<{
             || legacyResourceUnits.length > 0
             || legacyStaffUnits.length > 0;
         if (!hasLiveSharingSettings) return getSavedWizardString('resourceSharing', 'resourceSharingDraft');
-        const resourceUnits = Array.from(new Set([
-            ...resourceGroups.flatMap(readSharingGroupUnits),
-            ...legacyResourceUnits,
-        ].map((item: any) => String(item || '').trim().toUpperCase()).filter(Boolean)));
-        const staffUnits = Array.from(new Set([
-            ...staffGroups.flatMap(readSharingGroupUnits),
-            ...legacyStaffUnits,
-        ].map((item: any) => String(item || '').trim().toUpperCase()).filter(Boolean)));
-        const resourceRows = [{
-            type: 'Resource sharing',
-            enabled: resourceSharingOn ? 'On' : 'Off',
-            units: resourceUnits.join(', '),
-            consequence: resourceSharingOn
-                ? 'Unit can use shared aircraft and DFP resource rows from the listed units.'
-                : 'Unit keeps its own aircraft and DFP resource row capacity.',
-        }];
-        const staffRows = [{
-            type: 'Staff sharing',
-            enabled: staffSharingOn ? 'On' : 'Off',
-            units: staffUnits.join(', '),
-            consequence: staffSharingOn
-                ? 'Unit can schedule staff from the listed units.'
-                : 'Unit only schedules its own staff unless changed later.',
-        }];
+        const resourceRows = resourceGroups.length > 0
+            ? resourceGroups.map((group: any, index: number) => {
+                const groupUnits = readSharingGroupUnits(group);
+                const groupEnabled = group?.enabled === false ? false : resourceSharingOn;
+                return {
+                    type: 'Resource sharing',
+                    enabled: groupEnabled ? 'On' : 'Off',
+                    units: groupUnits.join(', '),
+                    consequence: groupEnabled
+                        ? 'Unit can use shared aircraft and DFP resource rows from the listed units.'
+                        : 'Unit keeps its own aircraft and DFP resource row capacity.',
+                    name: group?.name || `Resource sharing arrangement ${index + 1}`,
+                    allocationMode: group?.allocationMode || settings.allocationMode || 'combined',
+                };
+            })
+            : [{
+                type: 'Resource sharing',
+                enabled: resourceSharingOn ? 'On' : 'Off',
+                units: legacyResourceUnits.map((item: any) => String(item || '').trim().toUpperCase()).filter(Boolean).join(', '),
+                consequence: resourceSharingOn
+                    ? 'Unit can use shared aircraft and DFP resource rows from the listed units.'
+                    : 'Unit keeps its own aircraft and DFP resource row capacity.',
+                name: settings.activeResourceSharingGroupId || 'Resource sharing arrangement',
+                allocationMode: settings.allocationMode || 'combined',
+            }];
+        const staffRows = staffSharingOn && staffGroups.length > 0
+            ? staffGroups.map((group: any, index: number) => ({
+                type: 'Staff sharing',
+                enabled: group?.enabled === false ? 'Off' : 'On',
+                units: readSharingGroupUnits(group).join(', '),
+                consequence: group?.enabled === false
+                    ? 'Unit only schedules its own staff unless changed later.'
+                    : 'Unit can schedule staff from the listed units.',
+                name: group?.name || `Staff sharing arrangement ${index + 1}`,
+                allocationMode: '',
+            }))
+            : [{
+                type: 'Staff sharing',
+                enabled: 'Off',
+                units: '',
+                consequence: 'Unit only schedules its own staff unless changed later.',
+                name: staffGroups[0]?.name || 'Staff sharing arrangement',
+                allocationMode: '',
+            }];
         const rows = [...resourceRows, ...staffRows];
         return rows.length > 0 ? formatWizardSharingRows(rows) : '';
     };
@@ -3612,9 +3630,7 @@ const InitialSetupWizard: React.FC<{
         const resourceSharingOn = settings.fleetSharingEnabled === true
             || legacyResourceUnits.length > 1
             || resourceGroups.some(isSharingGroupEnabled);
-        const staffSharingOn = settings.staffSharingEnabled === true
-            || legacyStaffUnits.length > 1
-            || staffGroups.some(isSharingGroupEnabled);
+        const staffSharingOn = settings.staffSharingEnabled === true;
         const hydratedDraft = buildHydratedResourceSharingDraft();
         const storageSnapshot: Record<string, any> = {};
         if (typeof window !== 'undefined') {
@@ -4625,9 +4641,9 @@ const InitialSetupWizard: React.FC<{
                 ));
                 return {
                     ...(existing || { id: createWizardRecordId('resource-sharing') }),
-                    name: existing?.name || (selectedUnits.length > 1 ? selectedUnits.join('+') : 'Resource sharing'),
+                    name: row.name || existing?.name || (selectedUnits.length > 1 ? selectedUnits.join('+') : 'Resource sharing'),
                     selectedUnits,
-                    allocationMode: existing?.allocationMode || settings.allocationMode || 'combined',
+                    allocationMode: row.allocationMode || existing?.allocationMode || settings.allocationMode || 'combined',
                     desiredAllocations: existing?.desiredAllocations || settings.desiredAllocations || {},
                     remainderUnitIndex: typeof existing?.remainderUnitIndex === 'number'
                         ? existing.remainderUnitIndex
@@ -4645,8 +4661,8 @@ const InitialSetupWizard: React.FC<{
                 ));
                 return {
                     ...(existing || { id: createWizardRecordId('staff-sharing') }),
-                    name: existing?.name || (selectedUnits.length > 1 ? `${selectedUnits.join('+')} Staff Sharing` : 'Staff sharing'),
-                    selectedUnits,
+                    name: row.name || existing?.name || (selectedUnits.length > 1 ? `${selectedUnits.join('+')} Staff Sharing` : 'Staff sharing'),
+                    selectedUnits: rowIsEnabled(row.enabled) ? selectedUnits : [],
                     enabled: rowIsEnabled(row.enabled),
                     status: 'ACTIVE',
                 };
@@ -4667,8 +4683,8 @@ const InitialSetupWizard: React.FC<{
                     ? nextResourceGroups[0].remainderUnitIndex
                     : (typeof settings.remainderUnitIndex === 'number' ? settings.remainderUnitIndex : -1),
                 resourceSharingGroups: nextResourceGroups,
-                staffSharingEnabled: nextStaffGroups.some((group: any) => group.enabled !== false && readSharingGroupUnits(group).length > 1),
-                staffSharingUnits: selectedStaffUnits,
+                staffSharingEnabled: nextStaffGroups.some((group: any) => group.enabled === true && readSharingGroupUnits(group).length > 1),
+                staffSharingUnits: nextStaffGroups.some((group: any) => group.enabled === true) ? selectedStaffUnits : [],
                 staffSharingGroups: nextStaffGroups,
                 initialSetupWizardDraft: {
                     ...(settings.initialSetupWizardDraft || {}),
@@ -6763,15 +6779,35 @@ const InitialSetupWizard: React.FC<{
     const renderSharingEditor = () => {
         const rows = parseWizardSharingRows(resourceSharingDraft);
         const editableRows = rows.length > 0 ? rows : [
-            { type: 'Resource sharing', enabled: 'Off', units: '', consequence: 'Unit keeps its own aircraft and DFP resource row capacity.' },
-            { type: 'Staff sharing', enabled: 'Off', units: '', consequence: 'Unit only schedules its own staff unless changed later.' },
+            { type: 'Resource sharing', enabled: 'Off', units: '', consequence: 'Unit keeps its own aircraft and DFP resource row capacity.', name: 'Resource sharing arrangement', allocationMode: 'combined' },
+            { type: 'Staff sharing', enabled: 'Off', units: '', consequence: 'Unit only schedules its own staff unless changed later.', name: 'Staff sharing arrangement', allocationMode: '' },
         ];
         const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
             setResourceSharingDraft(formatWizardSharingRows(nextRows));
         };
-        const unitOptions = parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code);
+        const updateRowValues = (index: number, values: Partial<typeof editableRows[number]>) => {
+            const nextRows = [...editableRows];
+            nextRows[index] = { ...nextRows[index], ...values };
+            setResourceSharingDraft(formatWizardSharingRows(nextRows));
+        };
+        const unitOptions = Array.from(new Set([
+            ...currentWizardUnitCodes,
+            ...parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code),
+            ...(Array.isArray(platformConfig?.units) ? platformConfig.units.map((unit: any) => unit?.code) : []),
+        ].map((code) => normaliseUnitSettingsIdentifier(code)).filter(Boolean))).sort();
+        const toggleRowUnit = (index: number, unit: string) => {
+            const selectedUnits = editableRows[index].units
+                .split(',')
+                .map((item) => normaliseUnitSettingsIdentifier(item))
+                .filter(Boolean);
+            const unitCode = normaliseUnitSettingsIdentifier(unit);
+            const nextUnits = selectedUnits.includes(unitCode)
+                ? selectedUnits.filter((item) => item !== unitCode)
+                : [...selectedUnits, unitCode];
+            updateRow(index, 'units', nextUnits.join(', '));
+        };
         return (
             <div className="space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
@@ -6787,12 +6823,67 @@ const InitialSetupWizard: React.FC<{
                     </button>
                 </div>
                 {editableRows.map((row, index) => (
-                    <div key={`sharing-row-${index}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[150px_110px_minmax(0,1fr)]">
-                        {wizardField('Sharing type', row.type || '', (value) => updateRow(index, 'type', value), ['Resource sharing', 'Staff sharing'])}
-                        {wizardField('Enabled', row.enabled || 'Off', (value) => updateRow(index, 'enabled', value), ['Off', 'On'])}
-                        {wizardDataListField('Shared with units', row.units || '', (value) => updateRow(index, 'units', value.toUpperCase()), unitOptions, 'UNIT-01, UNIT-02', `sharing-units-${index}`)}
-                        <div className="md:col-span-3">
-                            {wizardField('Consequence / plain English note', row.consequence || '', (value) => updateRow(index, 'consequence', value), undefined, 'Unit can borrow aircraft capacity from listed units.')}
+                    <div key={`sharing-row-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="grid min-w-0 gap-2 md:grid-cols-[160px_1fr_110px]">
+                            {wizardField('Sharing type', row.type || '', (value) => updateRow(index, 'type', value), ['Resource sharing', 'Staff sharing'])}
+                            {wizardField('Arrangement name', row.name || '', (value) => updateRow(index, 'name', value), undefined, row.type?.toLowerCase().includes('staff') ? 'Staff sharing arrangement' : '1FTS+CFS')}
+                            {wizardField('Enabled', row.enabled || 'Off', (value) => {
+                                const isTurningOff = /^off$/i.test(value);
+                                updateRowValues(index, {
+                                    enabled: value,
+                                    units: isTurningOff ? '' : row.units,
+                                    consequence: isTurningOff
+                                        ? (row.type?.toLowerCase().includes('staff')
+                                        ? 'Unit only schedules its own staff unless changed later.'
+                                        : 'Unit keeps its own aircraft and DFP resource row capacity.')
+                                        : row.consequence,
+                                });
+                            }, ['Off', 'On'])}
+                        </div>
+                        <div>
+                            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-slate-500">Shared with units</div>
+                            <div className="grid gap-2 sm:grid-cols-3 md:grid-cols-4">
+                                {unitOptions.map((unit) => {
+                                    const selected = row.units
+                                        .split(',')
+                                        .map((item) => normaliseUnitSettingsIdentifier(item))
+                                        .filter(Boolean)
+                                        .includes(unit);
+                                    return (
+                                        <button
+                                            key={`${index}-${unit}`}
+                                            type="button"
+                                            onClick={() => toggleRowUnit(index, unit)}
+                                            className={`rounded-lg border-2 px-3 py-2 text-center text-sm font-bold transition ${
+                                                selected
+                                                    ? 'border-sky-500 bg-sky-50 text-sky-700'
+                                                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            {unit}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {unitOptions.length === 0 && (
+                                <p className="text-xs font-semibold text-amber-700">No configured units are available to select.</p>
+                            )}
+                        </div>
+                        {row.type?.toLowerCase().includes('resource') && (
+                            <div className="grid min-w-0 gap-2 md:grid-cols-[220px_1fr]">
+                                {wizardField('Allocation mode', row.allocationMode || 'combined', (value) => updateRow(index, 'allocationMode', value), ['combined', 'fixed'])}
+                                {wizardField('Consequence / plain English note', row.consequence || '', (value) => updateRow(index, 'consequence', value), undefined, 'Unit can use shared aircraft and DFP resource rows from the listed units.')}
+                            </div>
+                        )}
+                        {!row.type?.toLowerCase().includes('resource') && (
+                            <div>
+                                {wizardField('Consequence / plain English note', row.consequence || '', (value) => updateRow(index, 'consequence', value), undefined, 'Unit can schedule staff from the listed units.')}
+                            </div>
+                        )}
+                        <div className="text-[11px] font-semibold text-slate-500">
+                            {row.type?.toLowerCase().includes('staff')
+                                ? 'Matches Settings > Resources & Configuration > Resource Sharing > Staff Sharing.'
+                                : 'Matches Settings > Resources & Configuration > Resource Sharing > Aircraft & Resource Sharing.'}
                         </div>
                     </div>
                 ))}
@@ -7667,16 +7758,19 @@ const InitialSetupWizard: React.FC<{
                     fleetSharingEnabled: resourceSharingRows.some((row) => /^on$/i.test(row.enabled)),
                     resourceSharingGroups: resourceSharingRows.map((row, index) => ({
                         id: createSetupTestRecordId('resource-sharing', row.units || index + 1),
-                        name: row.type || `Resource sharing ${index + 1}`,
+                        name: row.name || `Resource sharing ${index + 1}`,
                         selectedUnits: row.units.split(',').map((item) => item.trim()).filter(Boolean),
+                        allocationMode: row.allocationMode || 'combined',
                         status: 'ACTIVE',
+                        enabled: /^on$/i.test(row.enabled),
                     })),
-                    staffSharingEnabled: staffSharingRows.some((row) => /^on$/i.test(row.enabled)),
+                    staffSharingEnabled: staffSharingRows.some((row) => /^on$/i.test(row.enabled) && row.units.split(',').map((item) => item.trim()).filter(Boolean).length > 1),
                     staffSharingGroups: staffSharingRows.map((row, index) => ({
                         id: createSetupTestRecordId('staff-sharing', row.units || index + 1),
-                        name: row.type || `Staff sharing ${index + 1}`,
-                        selectedUnits: row.units.split(',').map((item) => item.trim()).filter(Boolean),
+                        name: row.name || `Staff sharing ${index + 1}`,
+                        selectedUnits: /^on$/i.test(row.enabled) ? row.units.split(',').map((item) => item.trim()).filter(Boolean) : [],
                         status: 'ACTIVE',
+                        enabled: /^on$/i.test(row.enabled),
                     })),
                     initialSetupWizardDraft: {
                         organisation: organisationDraft,
