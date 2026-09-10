@@ -12,12 +12,12 @@ const PublishConfirmationFlyout: React.FC<PublishConfirmationFlyoutProps> = ({ d
     const dateObj = new Date(Date.UTC(year, month - 1, day));
 
     const formattedDate = dateObj.toLocaleDateString('en-GB', {
-        weekday: 'long',
+        weekday: 'short',
         year: '2-digit',
-        month: 'long',
+        month: 'short',
         day: 'numeric',
         timeZone: 'UTC'
-    });
+    }).replace(/,/g, '');
 
     return (
         <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center animate-fade-in" onClick={onCancel}>
@@ -30,8 +30,13 @@ const PublishConfirmationFlyout: React.FC<PublishConfirmationFlyoutProps> = ({ d
                 </div>
                 <div className="p-6">
                     <p className="text-gray-300">
-                        You are about to publish the schedule for <strong className="text-white">{formattedDate}</strong>.
+                        You are about to publish the schedule for:
                     </p>
+                    <div className="my-5 text-center">
+                        <strong className="block text-4xl font-extrabold tracking-wide text-white">
+                            {formattedDate}
+                        </strong>
+                    </div>
                     <p className="text-gray-300 mt-4">
                         This action will <strong className="text-amber-400">replace the active program schedule for {formattedDate}</strong> with the contents of this build. This cannot be undone.
                     </p>

@@ -69857,23 +69857,20 @@ const PublishConfirmationFlyout = ({ date, onConfirm, onCancel }) => {
   const [year, month, day] = date.split("-").map(Number);
   const dateObj = new Date(Date.UTC(year, month - 1, day));
   const formattedDate = dateObj.toLocaleDateString("en-GB", {
-    weekday: "long",
+    weekday: "short",
     year: "2-digit",
-    month: "long",
+    month: "short",
     day: "numeric",
     timeZone: "UTC"
-  });
+  }).replace(/,/g, "");
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[70] flex items-center justify-center animate-fade-in", onClick: onCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20 flex items-center space-x-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-sky-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "Confirm Publication" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300", children: [
-        "You are about to publish the schedule for ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: formattedDate }),
-        "."
-      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: "You are about to publish the schedule for:" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "my-5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "block text-4xl font-extrabold tracking-wide text-white", children: formattedDate }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mt-4", children: [
         "This action will ",
         /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-amber-400", children: [
