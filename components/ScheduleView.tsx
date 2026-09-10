@@ -5389,12 +5389,21 @@ const InitialSetupWizard: React.FC<{
                     && hasPositiveWizardNumber(row.aircraftCount)
                 ));
             case 'training-records':
-                return parseWizardTrainingReportRows(trainingRecordsDraft).some((row) => (
-                    hasMeaningfulWizardText(row.genericName, ['Training Report'])
-                    && hasMeaningfulWizardText(row.organisationName, ['Assessment Form'])
-                    && hasMeaningfulWizardText(row.passLabel, ['Satisfactory'])
-                    && hasMeaningfulWizardText(row.failLabel, ['Unsatisfactory'])
-                ));
+                return parseWizardTrainingReportRows(trainingRecordsDraft).some((row) => {
+                    const lowestGrade = Number(row.gradeMin);
+                    const highestGrade = Number(row.gradeMax);
+                    return (
+                        hasMeaningfulWizardText(row.genericName)
+                        && hasMeaningfulWizardText(row.organisationName)
+                        && Number.isFinite(lowestGrade)
+                        && Number.isFinite(highestGrade)
+                        && highestGrade > lowestGrade
+                        && hasMeaningfulWizardText(row.showNumbers)
+                        && hasMeaningfulWizardText(row.noGradeOption)
+                        && hasMeaningfulWizardText(row.passLabel)
+                        && hasMeaningfulWizardText(row.failLabel)
+                    );
+                });
             case 'staff-currency-events':
                 return parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).some((row) => (
                     hasMeaningfulWizardText(row.name, ['Annual Instrument Check'])

@@ -16507,7 +16507,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       case "currencies":
         return parseWizardCurrencyRows(currencyDraft).some((row) => hasMeaningfulWizardText(row.name, ["PIC Currency", "Instrument Currency"]) && hasMeaningfulWizardText(row.code, ["PIC", "INST"]) && hasMeaningfulWizardText(row.currency, ["PIC Currency", "Instrument Currency"]) && hasPositiveWizardNumber(row.aircraftCount));
       case "training-records":
-        return parseWizardTrainingReportRows(trainingRecordsDraft).some((row) => hasMeaningfulWizardText(row.genericName, ["Training Report"]) && hasMeaningfulWizardText(row.organisationName, ["Assessment Form"]) && hasMeaningfulWizardText(row.passLabel, ["Satisfactory"]) && hasMeaningfulWizardText(row.failLabel, ["Unsatisfactory"]));
+        return parseWizardTrainingReportRows(trainingRecordsDraft).some((row) => {
+          const lowestGrade = Number(row.gradeMin);
+          const highestGrade = Number(row.gradeMax);
+          return hasMeaningfulWizardText(row.genericName) && hasMeaningfulWizardText(row.organisationName) && Number.isFinite(lowestGrade) && Number.isFinite(highestGrade) && highestGrade > lowestGrade && hasMeaningfulWizardText(row.showNumbers) && hasMeaningfulWizardText(row.noGradeOption) && hasMeaningfulWizardText(row.passLabel) && hasMeaningfulWizardText(row.failLabel);
+        });
       case "staff-currency-events":
         return parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).some((row) => hasMeaningfulWizardText(row.name, ["Annual Instrument Check"]) && hasMeaningfulWizardText(row.shortTitle, ["INST"]) && hasPositiveWizardNumber(row.duration) && hasPositiveWizardNumber(row.aircraftCount));
       case "scoring":
