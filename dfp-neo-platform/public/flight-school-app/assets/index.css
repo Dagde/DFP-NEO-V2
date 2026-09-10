@@ -1043,6 +1043,154 @@ html[data-theme="light"] body {
 .neo-assist-priority-delete-icon:hover {
     color: #991b1b !important;
 }
+
+/* Wizard scoring matrix: reuse Settings behaviour with the wizard light theme. */
+.scoring-matrix-inline--wizard {
+    background: #ffffff !important;
+    color: #0f172a !important;
+}
+
+.scoring-matrix-inline--wizard .bg-gray-900,
+.scoring-matrix-inline--wizard .bg-gray-800,
+.scoring-matrix-inline--wizard .bg-gray-800\/70,
+.scoring-matrix-inline--wizard .bg-gray-900\/50,
+.scoring-matrix-inline--wizard .bg-gray-800\/50 {
+    background: #ffffff !important;
+}
+
+.scoring-matrix-inline--wizard > .flex-1 {
+    background: #ffffff !important;
+    padding: 1rem !important;
+}
+
+.scoring-matrix-inline--wizard .w-56 {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+}
+
+.scoring-matrix-inline--wizard .w-56 > .p-3 {
+    background: #eff6ff !important;
+    border-bottom: 1px solid #bfdbfe !important;
+    color: #1e3a8a !important;
+}
+
+.scoring-matrix-inline--wizard .w-56 button {
+    color: #334155 !important;
+}
+
+.scoring-matrix-inline--wizard .w-56 button.border-sky-500 {
+    background: #dbeafe !important;
+    color: #1e3a8a !important;
+    border-color: #3b82f6 !important;
+}
+
+.scoring-matrix-inline--wizard h3,
+.scoring-matrix-inline--wizard .text-sky-400 {
+    color: #1d4ed8 !important;
+}
+
+.scoring-matrix-inline--wizard .text-white,
+.scoring-matrix-inline--wizard .text-gray-200,
+.scoring-matrix-inline--wizard .text-gray-300 {
+    color: #0f172a !important;
+}
+
+.scoring-matrix-inline--wizard .text-gray-400,
+.scoring-matrix-inline--wizard .text-gray-500 {
+    color: #64748b !important;
+}
+
+.scoring-matrix-inline--wizard .border-gray-700,
+.scoring-matrix-inline--wizard .border-gray-700\/30,
+.scoring-matrix-inline--wizard .border-gray-600 {
+    border-color: #e2e8f0 !important;
+}
+
+.scoring-matrix-inline--wizard .border-green-500\/30 {
+    border-color: #bbf7d0 !important;
+}
+
+.scoring-matrix-inline--wizard .bg-green-900\/10 {
+    background: #f0fdf4 !important;
+}
+
+.scoring-matrix-inline--wizard .border-yellow-500\/30 {
+    border-color: #fde68a !important;
+}
+
+.scoring-matrix-inline--wizard .bg-yellow-900\/10 {
+    background: #fffbeb !important;
+}
+
+.scoring-matrix-inline--wizard .border-red-500\/30 {
+    border-color: #fecaca !important;
+}
+
+.scoring-matrix-inline--wizard .bg-red-900\/10 {
+    background: #fff1f2 !important;
+}
+
+.scoring-matrix-inline--wizard textarea,
+.scoring-matrix-inline--wizard input,
+.scoring-matrix-inline--wizard select {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+.scoring-matrix-inline--wizard textarea.bg-transparent {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+.scoring-matrix-inline--wizard textarea:focus,
+.scoring-matrix-inline--wizard input:focus,
+.scoring-matrix-inline--wizard select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 1px #3b82f6 !important;
+}
+
+.scoring-matrix-inline--wizard .bg-sky-600,
+.scoring-matrix-inline--wizard .bg-gray-700 {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+.scoring-matrix-inline--wizard .bg-green-600 {
+    background: #16a34a !important;
+    border-color: #16a34a !important;
+    color: #ffffff !important;
+}
+
+.scoring-matrix-inline--wizard .bg-red-600 {
+    background: #dc2626 !important;
+    border-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+.scoring-matrix-inline--wizard .hover\:text-red-400:hover,
+.scoring-matrix-inline--wizard .text-red-400 {
+    color: #dc2626 !important;
+}
+
+.scoring-matrix-inline--wizard .fixed .bg-gray-800,
+.scoring-matrix-inline--wizard .fixed .bg-gray-800\/50,
+.scoring-matrix-inline--wizard .fixed .bg-gray-900\/50 {
+    background: #ffffff !important;
+}
+
+.scoring-matrix-inline--wizard .fixed .rounded-lg {
+    border-color: #e2e8f0 !important;
+}
+
+.scoring-matrix-inline--wizard .fixed h2 {
+    color: #0f172a !important;
+}
+
+.scoring-matrix-inline--wizard .fixed label:hover {
+    background: #f8fafc !important;
+}
 /* NEO Build Indicator Styles */
 @keyframes neo-build-pulse {
     0%, 100% {

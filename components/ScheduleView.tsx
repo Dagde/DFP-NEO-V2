@@ -6824,11 +6824,12 @@ const InitialSetupWizard: React.FC<{
                         </button>
                     ))}
                 </div>
-                <div className="overflow-hidden rounded-lg border border-slate-300 bg-slate-950">
+                <div className="overflow-hidden rounded-lg border border-slate-300 bg-white">
                     <ScoringMatrixInline
                         activeTab={wizardScoringTab}
                         phraseBank={wizardScoringPhraseBank}
                         onUpdatePhraseBank={updateScoringPhraseBank}
+                        theme="wizard"
                     />
                 </div>
             </div>

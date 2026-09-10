@@ -177,9 +177,10 @@ interface ScoringMatrixInlineProps {
     onUpdatePhraseBank: (newBank: PhraseBank) => void;
     readOnly?: boolean;
     onElementAdded?: (elementName: string) => void;
+    theme?: 'dark' | 'wizard';
 }
 
-export const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded }) => {
+export const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded, theme = 'dark' }) => {
     const [showAddElementFlyout, setShowAddElementFlyout] = useState(false);
     const [showDeleteElementFlyout, setShowDeleteElementFlyout] = useState(false);
     const [newElementName, setNewElementName] = useState('');
@@ -326,7 +327,7 @@ export const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ active
     };
 
     return (
-        <div className="flex overflow-hidden" style={{ minHeight: '600px' }}>
+        <div className={`scoring-matrix-inline scoring-matrix-inline--${theme} flex overflow-hidden`} style={{ minHeight: '600px' }}>
             {/* Elements sidebar - only shown when Elements tab is active */}
             {activeTab === 'Elements' && (
                 <div className="w-56 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">

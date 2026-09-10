@@ -14495,7 +14495,7 @@ const renderCurrencyLogicNode = (node, allCurrencies, depth = 0) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-2 space-y-2", children: node.children.map((child, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: typeof child === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: getCurrencyDisplayNameById(child, allCurrencies) }) : renderCurrencyLogicNode(child, allCurrencies, depth + 1) }, `${depth}-${index}`)) })
   ] });
 };
-const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded }) => {
+const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded, theme = "dark" }) => {
   const [showAddElementFlyout, setShowAddElementFlyout] = reactExports.useState(false);
   const [showDeleteElementFlyout, setShowDeleteElementFlyout] = reactExports.useState(false);
   const [newElementName, setNewElementName] = reactExports.useState("");
@@ -14641,7 +14641,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
         return String(grade);
     }
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex overflow-hidden", style: { minHeight: "600px" }, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `scoring-matrix-inline scoring-matrix-inline--${theme} flex overflow-hidden`, style: { minHeight: "600px" }, children: [
     activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-56 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-900/50 flex justify-between items-center", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Flight Elements" }),
@@ -21251,12 +21251,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         },
         `wizard-scoring-tab-${tabId}`
       )) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-300 bg-slate-950", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-300 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         ScoringMatrixInline,
         {
           activeTab: wizardScoringTab,
           phraseBank: wizardScoringPhraseBank,
-          onUpdatePhraseBank: updateScoringPhraseBank
+          onUpdatePhraseBank: updateScoringPhraseBank,
+          theme: "wizard"
         }
       ) })
     ] });
