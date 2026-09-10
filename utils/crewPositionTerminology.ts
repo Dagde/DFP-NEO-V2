@@ -19,6 +19,7 @@ export interface CrewPositionTerminology {
 
 export const DEFAULT_CREW_POSITION_TERMINOLOGY: CrewPositionTerminology = {
   positions: [
+    { id: 'instructor', genericName: 'Instructor', label: 'Instructor', operationalModels: ['flight_school'] },
     { id: 'pilot', genericName: 'Pilot', label: 'Pilot', operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'pooled_crew'] },
     { id: 'combat-systems-operator', genericName: 'Combat Systems Operator', label: 'Combat Systems Operator', operationalModels: ['air_combat'] },
     { id: 'airborne-mission-commander', genericName: 'Airborne Mission Commander', label: 'Airborne Mission Commander', operationalModels: ['fixed_crew', 'pooled_crew'] },
@@ -108,6 +109,15 @@ export const normaliseCrewPositionTerminology = (source?: any): CrewPositionTerm
   ]
     .map(normaliseEntry)
     .filter((entry): entry is CrewPositionTerminologyEntry => Boolean(entry));
+
+  const hasInstructorPosition = positions.some((entry) => (
+    entry.id === 'instructor'
+    || entry.genericName.trim().toUpperCase() === 'INSTRUCTOR'
+  ));
+  if (hasExplicitPositions && !hasInstructorPosition && !deletedDefaultIds.has('instructor')) {
+    const instructorDefault = DEFAULT_CREW_POSITION_TERMINOLOGY.positions.find((entry) => entry.id === 'instructor');
+    if (instructorDefault) positions.push(instructorDefault);
+  }
 
   const byGenericName = new Map<string, CrewPositionTerminologyEntry>();
   positions.forEach((entry) => {
