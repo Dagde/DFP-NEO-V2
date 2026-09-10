@@ -6,6 +6,7 @@ import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
 import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
 import { ScoringMatrixInline } from './SettingsView';
+import PlatformConfigurationSettings from './PlatformConfigurationSettings';
 import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings, normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
@@ -53,6 +54,7 @@ import {
    
 declare const XLSX: any;
 
+type AppUserPermission = 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
 
 interface ScheduleViewProps {
   date: string;
@@ -136,6 +138,8 @@ interface ScheduleViewProps {
   organisationSettings?: any;
   onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
   onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
+  currentUserPermission?: AppUserPermission;
+  canUsePlatformPermission?: (permissionId: string) => boolean;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
   isSetupTestMode?: boolean;
   onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
@@ -2628,9 +2632,11 @@ const InitialSetupWizard: React.FC<{
     locationCode?: string;
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
+    currentUserPermission?: AppUserPermission;
+    canUsePlatformPermission?: (permissionId: string) => boolean;
     isSetupTestMode?: boolean;
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
-}> = ({ platformConfig, organisationSettings, unitCode, locationCode, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
+}> = ({ platformConfig, organisationSettings, unitCode, locationCode, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
@@ -5210,9 +5216,9 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'access',
-            title: 'Set the first access scope',
-            label: 'Access',
-            body: 'Create the first access scope for this unit. Other users can be added after the wizard.',
+            title: 'Manage user permissions',
+            label: 'User permissions',
+            body: 'Manage who can use this unit and what each person can do.',
             checkIds: ['access', 'training'],
             category: 'highly-desirable',
         },
@@ -5478,13 +5484,14 @@ const InitialSetupWizard: React.FC<{
                     ))
                 ));
             case 'access':
-                return (
-                    hasMeaningfulWizardText(accessDraft.userName, ['New user', 'Admin User'])
-                    && hasMeaningfulWizardText(accessDraft.locationCode, ['LOC1', 'LOC'])
-                    && hasMeaningfulWizardText(accessDraft.unitCode, ['UNIT', 'UNIT-01'])
-                    && hasMeaningfulWizardText(accessDraft.moduleCode)
-                    && hasMeaningfulWizardText(trainingDraft.accessLevel || accessDraft.accessLevel)
-                );
+                return activeUserAccess.some((access: any) => (
+                    hasMeaningfulWizardText(access?.userName || access?.userId)
+                    && (
+                        hasMeaningfulWizardText(access?.accessLevel)
+                        || hasMeaningfulWizardText(access?.role)
+                        || (Array.isArray(access?.profileIds) && access.profileIds.length > 0)
+                    )
+                ));
             case 'staff':
                 return parseWizardStaffRows(staffDraft).some((row) => (
                     hasMeaningfulWizardText(row.surname, ['Surname'])
@@ -5606,8 +5613,7 @@ const InitialSetupWizard: React.FC<{
             return;
         }
         if (stepId === 'access') {
-            saveAccessDraft();
-            saveWizardSupplementaryDrafts('Access setup synced into Settings.');
+            setSaveMessage('User permissions are managed directly in Settings.');
             return;
         }
         if (stepId === 'build-rules') {
@@ -7846,7 +7852,6 @@ const InitialSetupWizard: React.FC<{
         saveCrewDraft();
         saveRankSettingsDraft();
         saveTrainingDraft();
-        saveAccessDraft();
         saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
             ...settings,
             personnelDisplaySettings: buildRankSettingsToSave(settings),
@@ -8731,14 +8736,27 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'access') {
+            const activeUnitCodesForPermissions = Array.from(new Set([
+                ...(String(unitCode || '').split('+').map((item) => item.trim()).filter(Boolean)),
+                unitDraft.code,
+            ].map((item) => String(item || '').trim()).filter(Boolean)));
             return promptShell(
-                <p>Access scopes decide who can view, assign, or manage a Master LMP for a location and unit. Practically: if a user has no access scope here, they should not be offered this LMP for this unit.</p>,
-                <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('User', accessDraft.userName, (value) => updateAccessDraft((draft) => ({ ...draft, userName: value })), undefined, 'Admin User')}
-                    {wizardField('Location', accessDraft.locationCode, (value) => updateAccessDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
-                    {wizardField('Unit', accessDraft.unitCode, (value) => updateAccessDraft((draft) => ({ ...draft, unitCode: value })), activeUnits.map((unit: any) => unit.code))}
-                    {wizardField('Module', accessDraft.moduleCode, (value) => updateAccessDraft((draft) => ({ ...draft, moduleCode: value })), ['DFP', 'NEO Build', 'Training Records', 'Build Intelligence'])}
-                    {wizardField('Access level', trainingDraft.accessLevel, (value) => updateTrainingDraft((draft) => ({ ...draft, accessLevel: value })), ['View', 'Assign', 'Manage'])}
+                <p>Manage the users who can access this unit. This is the same permission manager used in Settings, so changes made here update Settings directly.</p>,
+                <div className="wizard-settings-embed overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <PlatformConfigurationSettings
+                        currentUserPermission={currentUserPermission}
+                        onShowSuccess={(message) => setSaveMessage(message || 'User permissions saved into Settings.')}
+                        scrollTarget="platform-user-access"
+                        sectionOnly
+                        canUsePlatformPermission={canUsePlatformPermission}
+                        activeUnitCode={unitCode || unitDraft.code || ''}
+                        activeUnitCodes={activeUnitCodesForPermissions}
+                        activeCompositeUnitCode={unitCode || ''}
+                        activeOperationalModel={unitDraft.operationalModel}
+                        focusUnitCode={unitDraft.code || unitCode || ''}
+                        focusLocationCode={locationDraft.code || locationCode || ''}
+                        onNavigateToSettingsSection={onNavigateToSettingsSection}
+                    />
                 </div>,
             );
         }
@@ -8776,7 +8794,7 @@ const InitialSetupWizard: React.FC<{
                     ['Ranks and labels', `${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset as RankEquivalencyPresetKey] || 'Australia'} / ${rankSettingsDraft.sortMode === 'alphabetical' ? 'Alphabetical' : 'Rank then name'} / Trainees use staff rank order`],
                     ['Sharing', resourceSharingDraft || 'Not set'],
                     ['Currencies', currencyDraft || 'Not set'],
-                    ['Access', `${accessDraft.userName || 'Not set'} / ${accessDraft.locationCode || 'no location'} / ${accessDraft.unitCode || 'no unit'} / ${trainingDraft.accessLevel || 'View'}`],
+                    ['User permissions', activeUserAccess.length > 0 ? `${activeUserAccess.length} active access ${activeUserAccess.length === 1 ? 'scope' : 'scopes'}` : 'Not set'],
                     ['Scoring', scoringDraft || 'Not set'],
                     ['Staff currency events', staffCurrencyEventsDraft || 'Not set'],
                 ].map(([label, value]) => (
@@ -8951,11 +8969,13 @@ const OrganisationSlideoutDiagram: React.FC<{
     buildRuleSettings?: ScheduleViewProps['buildRuleSettings'];
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
     onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
+    currentUserPermission?: AppUserPermission;
+    canUsePlatformPermission?: (permissionId: string) => boolean;
     isSetupTestMode?: boolean;
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
     isOpen?: boolean;
     onInitialSetupWizardActiveChange?: (active: boolean) => void;
-}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
+}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>('structure');
@@ -9105,6 +9125,8 @@ const OrganisationSlideoutDiagram: React.FC<{
                         locationCode={locationCode}
                         onUpdatePlatformConfig={onUpdatePlatformConfig}
                         onNavigateToSettingsSection={onNavigateToSettingsSection}
+                        currentUserPermission={currentUserPermission}
+                        canUsePlatformPermission={canUsePlatformPermission}
                         isSetupTestMode={isSetupTestMode}
                         onSaveSetupTestPersonnel={onSaveSetupTestPersonnel}
                     />
@@ -9138,6 +9160,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     organisationSettings,
     onUpdatePlatformConfig,
     onNavigateToSettingsSection,
+    currentUserPermission = 'Staff',
+    canUsePlatformPermission,
     personnelDisplaySettings: personnelDisplaySettingsInput,
     isSetupTestMode = false,
     onSaveSetupTestPersonnel,
@@ -10940,7 +10964,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{ width: 'min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))' }}
                     >
                         <div className={`h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                            <OrganisationSlideoutDiagram platformConfig={platformConfig} organisationSettings={organisationSettings} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} />
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} organisationSettings={organisationSettings} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} currentUserPermission={currentUserPermission} canUsePlatformPermission={canUsePlatformPermission} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} />
                         </div>
                         <button
                             type="button"
