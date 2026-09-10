@@ -3264,6 +3264,7 @@ const InitialSetupWizard: React.FC<{
     const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
     const [currencyDraft, setCurrencyDraft] = useState('PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1');
     const [scoringDraft, setScoringDraft] = useState('Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent');
+    const [wizardScoringTab, setWizardScoringTab] = useState<'grades' | 'elements'>('grades');
     const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('Annual Instrument Check | INST | Flight | 90 | 90 | 60 | Standard crew | Instrument Currency | ANY | 1');
 
     const formatWizardOrganisationPath = (path: string[]) => path.map((item) => String(item || '').trim()).filter(Boolean).join(' / ');
@@ -6738,36 +6739,103 @@ const InitialSetupWizard: React.FC<{
     const renderScoringEditor = () => {
         const rows = parseWizardScoringRows(scoringDraft);
         const editableRows = rows.length > 0 ? rows : [{ dimension: '', passStandard: '', failStandard: '', grade0: '', grade1: '', grade2: '', grade3: '', grade4: '', grade5: '' }];
+        const gradeFields = [
+            ['grade0', 'Grade 0', 'Lowest grade / unsafe or not ready'],
+            ['grade1', 'Grade 1', 'Well below the required standard'],
+            ['grade2', 'Grade 2', 'Needs help or more training'],
+            ['grade3', 'Grade 3', 'Meets the required standard'],
+            ['grade4', 'Grade 4', 'Above the required standard'],
+            ['grade5', 'Grade 5', 'Highest grade / excellent standard'],
+        ] as const;
+        const gradeSourceRow = editableRows.find((row) => gradeFields.some(([field]) => hasMeaningfulWizardText(row[field]))) || editableRows[0];
+        const writeRows = (nextRows: typeof editableRows) => {
+            setScoringDraft(formatWizardScoringRows(nextRows));
+        };
         const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
-            setScoringDraft(formatWizardScoringRows(nextRows));
+            writeRows(nextRows);
+        };
+        const updateGradeLabel = (field: typeof gradeFields[number][0], value: string) => {
+            writeRows(editableRows.map((row) => ({ ...row, [field]: value })));
         };
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    The scoring matrix defines what each training report grade means. In practice, instructors use these words to explain why a trainee passed, failed, or needs more training.
+                    The scoring matrix defines two things: the grade labels users see on a training report, and the assessment areas instructors mark, such as airmanship and preparation.
                 </div>
-                {editableRows.map((row, index) => (
-                    <div key={`scoring-row-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
-                        <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_74px] xl:items-end">
-                            {wizardField('Assessment area', row.dimension || '', (value) => updateRow(index, 'dimension', value), undefined, 'Preparation')}
-                            {wizardField('Pass standard', row.passStandard || '', (value) => updateRow(index, 'passStandard', value), undefined, 'Prepared, safe and ready.')}
-                            {wizardField('Fail standard', row.failStandard || '', (value) => updateRow(index, 'failStandard', value), undefined, 'Unsafe or not prepared.')}
-                            <button type="button" className={wizardSmallButtonClass} onClick={() => setScoringDraft(formatWizardScoringRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
-                                Delete
-                            </button>
+                <div className="flex flex-wrap gap-2">
+                    {[
+                        ['grades', 'Grade labels'],
+                        ['elements', 'Assessment areas'],
+                    ].map(([tabId, tabLabel]) => (
+                        <button
+                            key={`wizard-scoring-tab-${tabId}`}
+                            type="button"
+                            className={`rounded-md border px-3 py-2 text-xs font-bold ${wizardScoringTab === tabId ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-slate-300 bg-white text-slate-700'}`}
+                            onClick={() => setWizardScoringTab(tabId as 'grades' | 'elements')}
+                        >
+                            {tabLabel}
+                        </button>
+                    ))}
+                </div>
+                {wizardScoringTab === 'grades' ? (
+                    <div className="rounded-lg border border-slate-300 bg-white p-3">
+                        <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700">
+                            Enter the labels from the lowest grade to the highest grade. These labels apply to every assessment area in this setup.
                         </div>
-                        <div className="grid min-w-0 gap-2 md:grid-cols-3 xl:grid-cols-4">
-                            {(['grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5'] as const).map((field, gradeIndex) => (
-                                wizardField(`Grade ${gradeIndex}`, row[field] || '', (value) => updateRow(index, field, value), undefined, gradeIndex === 0 ? 'Unsafe' : gradeIndex < 3 ? 'Needs help' : 'Meets standard')
+                        <div className="grid max-w-[540px] gap-2">
+                            {gradeFields.map(([field, label, help]) => (
+                                <div key={`wizard-grade-label-${field}`} className="grid items-center gap-2 sm:grid-cols-[108px_minmax(0,1fr)]">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900">{label}</p>
+                                        <p className="text-[11px] font-semibold leading-4 text-slate-500">{help}</p>
+                                    </div>
+                                    <input
+                                        className={wizardInputClass}
+                                        value={gradeSourceRow?.[field] || ''}
+                                        placeholder={field === 'grade0' ? 'Unsafe' : field === 'grade3' ? 'Meets standard' : field === 'grade5' ? 'Excellent' : 'Grade label'}
+                                        onKeyDown={stopEditableKeyPropagation}
+                                        onChange={(event) => updateGradeLabel(field, event.target.value)}
+                                    />
+                                </div>
                             ))}
                         </div>
                     </div>
-                ))}
-                <button type="button" className={wizardSmallButtonClass} onClick={() => setScoringDraft(formatWizardScoringRows([...editableRows, { dimension: '', passStandard: '', failStandard: '', grade0: '', grade1: '', grade2: '', grade3: '', grade4: '', grade5: '' }]))}>
-                    Add assessment area
-                </button>
+                ) : (
+                    <div className="space-y-3">
+                        <div className="rounded-lg border border-slate-300 bg-white p-3">
+                            <p className="text-xs font-semibold leading-5 text-slate-700">
+                                Assessment areas are the parts of performance that instructors mark. Add one row for each area your reports use, then set the plain-English pass and fail standard for that area.
+                            </p>
+                        </div>
+                        {editableRows.map((row, index) => (
+                            <div key={`scoring-row-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
+                                <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_74px] xl:items-end">
+                                    {wizardField('Assessment area', row.dimension || '', (value) => updateRow(index, 'dimension', value), undefined, 'Preparation')}
+                                    {wizardField('Pass standard', row.passStandard || '', (value) => updateRow(index, 'passStandard', value), undefined, 'Prepared, safe and ready.')}
+                                    {wizardField('Fail standard', row.failStandard || '', (value) => updateRow(index, 'failStandard', value), undefined, 'Unsafe or not prepared.')}
+                                    <button type="button" className={wizardSmallButtonClass} onClick={() => writeRows(editableRows.filter((_, rowIndex) => rowIndex !== index))}>
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                        <button type="button" className={wizardSmallButtonClass} onClick={() => writeRows([...editableRows, { dimension: '', passStandard: '', failStandard: '', grade0: gradeSourceRow?.grade0 || '', grade1: gradeSourceRow?.grade1 || '', grade2: gradeSourceRow?.grade2 || '', grade3: gradeSourceRow?.grade3 || '', grade4: gradeSourceRow?.grade4 || '', grade5: gradeSourceRow?.grade5 || '' }])}>
+                            Add assessment area
+                        </button>
+                    </div>
+                )}
+                {wizardScoringTab === 'grades' && (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-600">
+                        Use the Assessment areas tab on this same step to add or edit items such as Airmanship, Preparation and Technique.
+                    </div>
+                )}
+                {wizardScoringTab === 'elements' && editableRows.length === 0 && (
+                    <button type="button" className={wizardSmallButtonClass} onClick={() => writeRows([{ dimension: '', passStandard: '', failStandard: '', grade0: gradeSourceRow?.grade0 || '', grade1: gradeSourceRow?.grade1 || '', grade2: gradeSourceRow?.grade2 || '', grade3: gradeSourceRow?.grade3 || '', grade4: gradeSourceRow?.grade4 || '', grade5: gradeSourceRow?.grade5 || '' }])}>
+                        Add assessment area
+                            </button>
+                )}
             </div>
         );
     };
