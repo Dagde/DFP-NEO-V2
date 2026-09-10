@@ -179,7 +179,7 @@ interface ScoringMatrixInlineProps {
     onElementAdded?: (elementName: string) => void;
 }
 
-const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded }) => {
+export const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded }) => {
     const [showAddElementFlyout, setShowAddElementFlyout] = useState(false);
     const [showDeleteElementFlyout, setShowDeleteElementFlyout] = useState(false);
     const [newElementName, setNewElementName] = useState('');

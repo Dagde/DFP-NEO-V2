@@ -12113,6 +12113,3630 @@ const AircraftAvailabilityOverlay = ({
     }
   ) });
 };
+const INITIAL_SCORING_MATRIX_ELEMENTS = [
+  "Generic Flying Elements",
+  "Airmanship",
+  "Preparation",
+  "Technique",
+  "Pre-Post Flight",
+  "Walk Around",
+  "Strap-in",
+  "Ground Checks",
+  "Airborne Checks",
+  "Stationary",
+  "Visual",
+  "Effects of Control",
+  "Trimming",
+  "Straight and Level",
+  "Level medium Turn",
+  "Level Steep turn",
+  "Visual - Initial & Pitch",
+  "Landing",
+  "Crosswind",
+  "Radio Comms",
+  "Situational Awareness",
+  "Lookout",
+  "Knowledge"
+];
+const SCORING_MATRIX_ELEMENT_LIST_KEY$3 = "__scoringMatrixElements";
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
+const SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY = "__scoringMatrixElementSelectionVersion";
+const SCORING_MATRIX_ELEMENT_SELECTION_VERSION = 2;
+const LEGACY_CORE_SCORING_MATRIX_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
+const DEFAULT_SCORING_MATRIX_SECTIONS = [
+  "Core Dimensions",
+  "Procedural Framework",
+  "Takeoff",
+  "Departure",
+  "Core Handling Skills",
+  "Turns",
+  "Recovery",
+  "Landing",
+  "Domestics",
+  "Additional Elements"
+];
+const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS = {
+  Airmanship: "Core Dimensions",
+  Preparation: "Core Dimensions",
+  Technique: "Core Dimensions",
+  "Pre-Post Flight": "Procedural Framework",
+  "Walk Around": "Procedural Framework",
+  "Strap-in": "Procedural Framework",
+  "Ground Checks": "Procedural Framework",
+  "Airborne Checks": "Procedural Framework",
+  Stationary: "Takeoff",
+  Visual: "Departure",
+  "Effects of Control": "Core Handling Skills",
+  Trimming: "Core Handling Skills",
+  "Straight and Level": "Core Handling Skills",
+  "Level medium Turn": "Turns",
+  "Level Steep turn": "Turns",
+  "Visual - Initial & Pitch": "Recovery",
+  Landing: "Landing",
+  Crosswind: "Landing",
+  "Radio Comms": "Domestics",
+  "Situational Awareness": "Domestics",
+  Lookout: "Domestics",
+  Knowledge: "Domestics"
+};
+const SCORING_MATRIX_SECTION_HELP = "Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.";
+const normaliseScoringMatrixElementName = (value) => String(value || "").trim();
+const dedupeScoringMatrixElements = (elements) => elements.map(normaliseScoringMatrixElementName).filter(Boolean).filter((element, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
+const getConfiguredScoringMatrixElements = (phraseBank) => {
+  const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$3];
+  if (Array.isArray(savedElements)) {
+    const saved = dedupeScoringMatrixElements(savedElements);
+    const selectionVersion = Number(phraseBank?.[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] || 0);
+    if (selectionVersion >= SCORING_MATRIX_ELEMENT_SELECTION_VERSION) {
+      return saved;
+    }
+    return dedupeScoringMatrixElements([...LEGACY_CORE_SCORING_MATRIX_ELEMENTS, ...saved]);
+  }
+  const customElements = Object.keys(phraseBank || {}).filter((key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY$3 && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 && key !== SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY && !INITIAL_SCORING_MATRIX_ELEMENTS.includes(key));
+  return dedupeScoringMatrixElements([...INITIAL_SCORING_MATRIX_ELEMENTS, ...customElements]);
+};
+const getConfiguredScoringMatrixElementGroups = (phraseBank) => {
+  const savedGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2];
+  const hasExplicitGroups = !!savedGroups && typeof savedGroups === "object" && !Array.isArray(savedGroups);
+  return {
+    groups: hasExplicitGroups ? savedGroups : {},
+    hasExplicitGroups
+  };
+};
+const getScoringMatrixElementGroup = (element, groups, hasExplicitGroups) => {
+  if (Object.prototype.hasOwnProperty.call(groups, element)) {
+    return String(groups[element] || "").trim() || "Additional Elements";
+  }
+  if (!hasExplicitGroups) {
+    return DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || "Additional Elements";
+  }
+  return "Additional Elements";
+};
+const DraftPhraseTextArea = ({ value, readOnly, onCommit }) => {
+  const [draft, setDraft] = reactExports.useState(value || "");
+  const [isFocused, setIsFocused] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isFocused) setDraft(value || "");
+  }, [isFocused, value]);
+  const autoSize = (field) => {
+    field.style.height = "auto";
+    field.style.height = `${field.scrollHeight}px`;
+  };
+  const commitDraft = () => {
+    setIsFocused(false);
+    if (!readOnly) onCommit(draft);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      value: isFocused ? draft : value || "",
+      rows: 1,
+      readOnly,
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraft),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraft),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: (event) => {
+        setDraft(value || "");
+        setIsFocused(true);
+        autoSize(event.currentTarget);
+      },
+      onBlur: commitDraft,
+      onChange: (event) => {
+        setDraft(event.target.value);
+        autoSize(event.currentTarget);
+      },
+      ref: (el) => {
+        if (el) autoSize(el);
+      },
+      className: `flex-1 bg-gray-800 border rounded p-2 text-sm resize-none overflow-hidden transition-colors ${!readOnly ? "border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500" : "border-transparent bg-transparent text-gray-300 cursor-default"}`,
+      style: { minHeight: "38px", height: "auto" }
+    }
+  );
+};
+const AddElementFlyout = ({ onClose, onSave }) => {
+  const [name, setName] = reactExports.useState("");
+  const handleSave = () => {
+    if (name.trim()) {
+      onSave(name.trim());
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Add New Flight Element" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "element-name", className: "block text-sm font-medium text-gray-400", children: "Element Name" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          id: "element-name",
+          type: "text",
+          value: name,
+          onBeforeInput: (event) => handleEditableTextBeforeInput(event, setName),
+          onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setName),
+          onKeyDown: stopEditableKeyPropagation,
+          onChange: (e) => setName(e.target.value),
+          autoFocus: true,
+          className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+        }
+      )
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, disabled: !name.trim(), className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Save" })
+    ] })
+  ] }) });
+};
+const DeleteElementFlyout = ({ onClose, onDelete, flightElements }) => {
+  const [selectedToDelete, setSelectedToDelete] = reactExports.useState(/* @__PURE__ */ new Set());
+  const toggleSelection = (element) => {
+    const newSet = new Set(selectedToDelete);
+    if (newSet.has(element)) {
+      newSet.delete(element);
+    } else {
+      newSet.add(element);
+    }
+    setSelectedToDelete(newSet);
+  };
+  const handleDelete = async () => {
+    if (selectedToDelete.size === 0) {
+      await showDarkAlert("Please select at least one element to delete.", "Delete Elements", "warning");
+      return;
+    }
+    onDelete(selectedToDelete);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700 flex flex-col max-h-[80vh]", onClick: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Delete Flight Elements" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 flex-1 overflow-y-auto", children: flightElements.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: flightElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          type: "checkbox",
+          checked: selectedToDelete.has(element),
+          onChange: () => toggleSelection(element),
+          className: "h-4 w-4 accent-red-500 bg-gray-600"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-300", children: element })
+    ] }) }, element)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic", children: "No elements to delete." }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDelete, disabled: selectedToDelete.size === 0, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Delete Selected" })
+    ] })
+  ] }) });
+};
+const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialTab = "Airmanship" }) => {
+  const [activeTab, setActiveTab] = reactExports.useState(initialTab);
+  const [showAddElementFlyout, setShowAddElementFlyout] = reactExports.useState(false);
+  const [showDeleteElementFlyout, setShowDeleteElementFlyout] = reactExports.useState(false);
+  const [editModeGrades, setEditModeGrades] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [flightElements, setFlightElements] = reactExports.useState(() => {
+    return getConfiguredScoringMatrixElements(phraseBank);
+  });
+  const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
+  const [elementGroupDrafts, setElementGroupDrafts] = reactExports.useState({});
+  const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
+  const { groups: configuredElementGroups, hasExplicitGroups: hasExplicitElementGroups } = getConfiguredScoringMatrixElementGroups(phraseBank);
+  const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
+  const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
+  const sectionOptions = Array.from(new Set([
+    ...hasExplicitElementGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS,
+    ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
+    savedElementGroup,
+    String(currentElementGroup || "").trim()
+  ].filter(Boolean)));
+  const handleElementGroupChange = (element, group) => {
+    const nextGroup = String(group || "").trim();
+    onUpdatePhraseBank({
+      ...phraseBank,
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
+        ...configuredElementGroups,
+        [element]: nextGroup || "Additional Elements"
+      },
+      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION
+    });
+  };
+  const beginElementGroupDraft = (element) => {
+    setElementGroupDrafts((previous) => ({
+      ...previous,
+      [element]: previous[element] ?? getScoringMatrixElementGroup(element, configuredElementGroups, hasExplicitElementGroups)
+    }));
+  };
+  const updateElementGroupDraft = (element, group) => {
+    setElementGroupDrafts((previous) => ({ ...previous, [element]: group }));
+  };
+  const commitElementGroupDraft = (element) => {
+    if (!(element in elementGroupDrafts)) return;
+    handleElementGroupChange(element, elementGroupDrafts[element]);
+    setElementGroupDrafts((previous) => {
+      if (!(element in previous)) return previous;
+      const { [element]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
+    });
+  };
+  const toggleEditMode = (grade) => {
+    const newEditModeGrades = new Set(editModeGrades);
+    if (newEditModeGrades.has(grade)) {
+      newEditModeGrades.delete(grade);
+    } else {
+      newEditModeGrades.add(grade);
+    }
+    setEditModeGrades(newEditModeGrades);
+  };
+  const handlePhraseChange = (grade, index, value) => {
+    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
+    const gradePhrases = currentPhrases[grade] || [];
+    const newGradePhrases = [...gradePhrases];
+    newGradePhrases[index] = value;
+    onUpdatePhraseBank({
+      ...phraseBank,
+      [currentDimension]: {
+        ...currentPhrases,
+        [grade]: newGradePhrases
+      }
+    });
+  };
+  const handleAddPhrase = (grade) => {
+    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
+    const gradePhrases = currentPhrases[grade] || [];
+    onUpdatePhraseBank({
+      ...phraseBank,
+      [currentDimension]: {
+        ...currentPhrases,
+        [grade]: [...gradePhrases, ""]
+      }
+    });
+  };
+  const handleDeletePhrase = (grade, index) => {
+    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
+    const gradePhrases = currentPhrases[grade] || [];
+    onUpdatePhraseBank({
+      ...phraseBank,
+      [currentDimension]: {
+        ...currentPhrases,
+        [grade]: gradePhrases.filter((_, i) => i !== index)
+      }
+    });
+  };
+  const handleAddElement = () => {
+    setShowAddElementFlyout(true);
+  };
+  const handleSaveNewElement = (newElementName) => {
+    if (flightElements.includes(newElementName)) {
+      void showDarkAlert("An element with this name already exists.", "Add Element", "warning");
+      return;
+    }
+    const nextElements = [...flightElements, newElementName];
+    setFlightElements(nextElements);
+    onUpdatePhraseBank({
+      ...phraseBank,
+      [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: nextElements,
+      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
+        ...configuredElementGroups,
+        [newElementName]: "Additional Elements"
+      },
+      [newElementName]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+    });
+    setSelectedElement(newElementName);
+    setShowAddElementFlyout(false);
+  };
+  const handleDeleteElements = (elementsToDelete) => {
+    const newFlightElements = flightElements.filter((el) => !elementsToDelete.has(el));
+    setFlightElements(newFlightElements);
+    const newPhraseBank = { ...phraseBank };
+    elementsToDelete.forEach((el) => {
+      delete newPhraseBank[el];
+    });
+    const nextGroups = { ...configuredElementGroups };
+    elementsToDelete.forEach((el) => {
+      delete nextGroups[el];
+    });
+    newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$3] = newFlightElements;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] = SCORING_MATRIX_ELEMENT_SELECTION_VERSION;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] = nextGroups;
+    onUpdatePhraseBank(newPhraseBank);
+    if (elementsToDelete.has(selectedElement)) {
+      setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
+    }
+    setShowDeleteElementFlyout(false);
+  };
+  const getGradeColor = (grade) => {
+    if (grade >= 4) return "border-green-500/30 bg-green-900/10";
+    if (grade >= 2) return "border-yellow-500/30 bg-yellow-900/10";
+    return "border-red-500/30 bg-red-900/10";
+  };
+  const getGradeLabel = (grade) => {
+    switch (grade) {
+      case 5:
+        return "5 - Excellent";
+      case 4:
+        return "4 - High Satisfactory";
+      case 3:
+        return "3 - Satisfactory";
+      case 2:
+        return "2 - Low Satisfactory";
+      case 1:
+        return "1 - Marginal";
+      case 0:
+        return "0 - Unsatisfactory";
+      default:
+        return String(grade);
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl border border-gray-700 flex flex-col h-[85vh]", onClick: (e) => e.stopPropagation(), onKeyDownCapture: stopEditableKeyPropagation, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center shrink-0", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Scoring Matrix Setup" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex border-b border-gray-700 bg-gray-900/30 shrink-0", children: ["Airmanship", "Preparation", "Technique", "Elements"].map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        onClick: () => setActiveTab(tab),
+        className: `flex-1 py-3 text-lg font-semibold text-center border-b-4 transition-colors ${activeTab === tab ? "border-sky-500 text-sky-400 bg-gray-800" : "border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"}`,
+        children: tab
+      },
+      tab
+    )) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-1 overflow-hidden", children: [
+      activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-64 bg-gray-800 border-r border-gray-700 flex flex-col shrink-0 overflow-y-auto", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-900/50 flex justify-between items-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Flight Elements" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => setShowDeleteElementFlyout(true),
+                className: "p-1 rounded-full bg-gray-700 hover:bg-gray-600",
+                title: "Delete flight element(s)",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-red-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z", clipRule: "evenodd" }) })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: handleAddElement,
+                className: "p-1 rounded-full bg-gray-700 hover:bg-gray-600",
+                title: "Add new flight element",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-sky-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
+              }
+            )
+          ] })
+        ] }),
+        flightElements.map((el) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setSelectedElement(el),
+            className: `text-left px-4 py-3 border-l-4 transition-colors font-medium text-sm ${selectedElement === el ? "border-sky-500 bg-gray-700 text-white" : "border-transparent text-gray-400 hover:bg-gray-700/50 hover:text-gray-200"}`,
+            children: el
+          },
+          el
+        ))
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto p-6 space-y-6 bg-gray-900", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-2xl font-bold text-sky-400", children: currentDimension }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Define standardized phrases for each grade level." })
+        ] }),
+        activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400", children: "Training report section" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300",
+                  title: SCORING_MATRIX_SECTION_HELP,
+                  children: "i"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-30 hidden w-72 -translate-x-1/2 rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-gray-200 shadow-xl group-hover:block", children: SCORING_MATRIX_SECTION_HELP })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "text",
+                value: currentElementGroup,
+                onFocus: () => beginElementGroupDraft(selectedElement),
+                onChange: (event) => updateElementGroupDraft(selectedElement, event.target.value),
+                onBlur: () => commitElementGroupDraft(selectedElement),
+                onKeyDownCapture: stopEditableKeyPropagation,
+                onKeyDown: stopEditableKeyPropagation,
+                className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: sectionOptions.includes(currentElementGroup) ? currentElementGroup : "",
+                onChange: (event) => {
+                  setElementGroupDrafts((previous) => {
+                    const { [selectedElement]: _discardedDraft, ...remainingDrafts } = previous;
+                    return remainingDrafts;
+                  });
+                  handleElementGroupChange(selectedElement, event.target.value);
+                },
+                className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500",
+                children: [
+                  !sectionOptions.includes(currentElementGroup) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Custom section" }),
+                  sectionOptions.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: section, children: section }, section))
+                ]
+              }
+            )
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "This controls which heading this element appears under on the training report." })
+        ] }),
+        [5, 4, 3, 2, 1, 0].map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `border rounded-lg overflow-hidden ${getGradeColor(grade)}`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-2 font-bold text-sm border-b border-gray-700/30 flex justify-between items-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white opacity-90", children: getGradeLabel(grade) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2", children: editModeGrades.has(grade) ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => toggleEditMode(grade),
+                  className: "text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition-colors border border-green-500 font-semibold",
+                  children: "✓ Save"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => handleAddPhrase(grade),
+                  className: "text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600",
+                  children: "+ Add Phrase"
+                }
+              )
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => toggleEditMode(grade),
+                className: "text-xs bg-sky-600 hover:bg-sky-700 text-white px-3 py-1 rounded transition-colors border border-sky-500 font-semibold",
+                children: "✎ Edit"
+              }
+            ) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-2", children: phraseBank && phraseBank[currentDimension] && phraseBank[currentDimension][grade] ? phraseBank[currentDimension][grade].map((phrase, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2 group", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              DraftPhraseTextArea,
+              {
+                value: phrase,
+                readOnly: !editModeGrades.has(grade),
+                onCommit: (nextValue) => handlePhraseChange(grade, idx, nextValue)
+              }
+            ),
+            editModeGrades.has(grade) && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => handleDeletePhrase(grade, idx),
+                className: "p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity",
+                title: "Delete phrase",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z", clipRule: "evenodd" }) })
+              }
+            )
+          ] }, idx)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 italic pl-1", children: "No phrases defined." }) })
+        ] }, grade))
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-800 border-t border-gray-700 flex justify-end shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-6 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md", children: "Done" }) }),
+    showAddElementFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AddElementFlyout,
+      {
+        onClose: () => setShowAddElementFlyout(false),
+        onSave: handleSaveNewElement
+      }
+    ),
+    showDeleteElementFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      DeleteElementFlyout,
+      {
+        onClose: () => setShowDeleteElementFlyout(false),
+        onDelete: handleDeleteElements,
+        flightElements
+      }
+    )
+  ] }) });
+};
+const CancellationCodesTable = ({
+  codes,
+  onAddCode,
+  onEditCode,
+  onToggleActive,
+  onDeleteCode,
+  canEdit,
+  usedCodes,
+  isLoading = false,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
+  const [isAddingNew, setIsAddingNew] = reactExports.useState(false);
+  const [editingCode, setEditingCode] = reactExports.useState(null);
+  const [deletingCode, setDeletingCode] = reactExports.useState(null);
+  const [isEditUnlocked, setIsEditUnlocked] = reactExports.useState(false);
+  const [formData, setFormData] = reactExports.useState({
+    code: "",
+    category: "Aircraft",
+    description: "",
+    appliesTo: "Both",
+    isActive: true
+  });
+  const standardActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+  const getStatusClass = (isActive) => isActive ? "bg-green-900/50 text-green-400 border-green-500/40" : "bg-red-900/50 text-red-400 border-red-500/40";
+  const handleStartAdd = () => {
+    if (!isEditUnlocked) return;
+    setFormData({
+      code: "",
+      category: "Aircraft",
+      description: "",
+      appliesTo: "Both",
+      isActive: true
+    });
+    setIsAddingNew(true);
+    setEditingCode(null);
+  };
+  const handleStartEdit = (code) => {
+    if (!isEditUnlocked) return;
+    setFormData(code);
+    setEditingCode(code.code);
+    setIsAddingNew(false);
+  };
+  const handleCancel = () => {
+    setIsAddingNew(false);
+    setEditingCode(null);
+    setFormData({
+      code: "",
+      category: "Aircraft",
+      description: "",
+      appliesTo: "Both",
+      isActive: true
+    });
+  };
+  const handleDelete = (code) => {
+    if (!isEditUnlocked) return;
+    setDeletingCode(code);
+  };
+  const confirmDelete = () => {
+    if (deletingCode) {
+      onDeleteCode(deletingCode);
+      setDeletingCode(null);
+    }
+  };
+  const cancelDelete = () => {
+    setDeletingCode(null);
+  };
+  const handleSave = () => {
+    if (!isEditUnlocked) return;
+    if (!formData.code || !formData.description) {
+      return;
+    }
+    const newCode = {
+      code: formData.code.toUpperCase(),
+      category: formData.category,
+      description: formData.description,
+      appliesTo: formData.appliesTo,
+      isActive: formData.isActive ?? true,
+      createdAt: formData.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    if (isAddingNew) {
+      onAddCode(newCode);
+    } else if (editingCode) {
+      onEditCode(editingCode, newCode);
+    }
+    handleCancel();
+  };
+  const handleToggleEditUnlocked = () => {
+    if (isEditUnlocked) {
+      handleCancel();
+      setDeletingCode(null);
+      setIsEditUnlocked(false);
+      return;
+    }
+    setIsEditUnlocked(true);
+  };
+  const sortedCodes = [...codes].sort((a, b) => {
+    if (a.category !== b.category) {
+      return a.category.localeCompare(b.category);
+    }
+    return a.code.localeCompare(b.code);
+  });
+  const deletingCodeHasHistory = deletingCode ? usedCodes.has(deletingCode) : false;
+  const formatAppliesToLabel = (value) => {
+    if (value === "FTD") return resourceDisplayNames.ftd;
+    if (value === "Both") return `Flight + ${resourceDisplayNames.ftd}`;
+    return "Flight";
+  };
+  if (isLoading) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Cancellation Codes" }),
+        canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-24 h-8 bg-gray-700 rounded animate-pulse" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Code" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Category" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Description" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Applies To" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Status" }),
+          canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Actions" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: [...Array(6)].map((_, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-4 bg-gray-700 rounded animate-pulse" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 h-4 bg-gray-700 rounded animate-pulse" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-48 h-4 bg-gray-700 rounded animate-pulse" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-4 bg-gray-700 rounded animate-pulse" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 h-5 bg-gray-700 rounded animate-pulse mx-auto" }) }),
+          canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-10 h-6 bg-gray-700 rounded animate-pulse" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 h-6 bg-gray-700 rounded animate-pulse" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-6 bg-gray-700 rounded animate-pulse" })
+          ] }) })
+        ] }, i)) })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex items-center space-x-2 text-gray-400 text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "animate-spin h-4 w-4 text-sky-400", xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "4" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Loading cancellation codes from database…" })
+      ] })
+    ] });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Cancellation Codes" }),
+      canEdit && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleToggleEditUnlocked,
+            className: standardActionButtonClass,
+            children: isEditUnlocked ? "Lock" : "Edit"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleStartAdd,
+            disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
+            className: standardActionButtonClass,
+            children: "Add"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Code" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Category" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Description" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Applies To" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Status" }),
+        canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Actions" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+        isAddingNew && /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 bg-gray-700/30", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: formData.code,
+              onChange: (e) => setFormData({ ...formData, code: e.target.value.toUpperCase() }),
+              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
+              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
+              onKeyDown: stopEditableKeyPropagation,
+              maxLength: 4,
+              className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
+              placeholder: "CODE"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: formData.category,
+              onChange: (e) => setFormData({ ...formData, category: e.target.value }),
+              className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Aircraft", children: "Aircraft" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Crew", children: "Crew" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Program", children: "Program" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Weather", children: "Weather" })
+              ]
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: formData.description,
+              onChange: (e) => setFormData({ ...formData, description: e.target.value }),
+              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, description: value })),
+              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, description: value })),
+              onKeyDown: stopEditableKeyPropagation,
+              className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
+              placeholder: "Description"
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: formData.appliesTo,
+              onChange: (e) => setFormData({ ...formData, appliesTo: e.target.value }),
+              className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "Both", children: [
+                  "Flight + ",
+                  resourceDisplayNames.ftd
+                ] })
+              ]
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block px-2 py-1 rounded text-xs font-semibold bg-green-900/50 text-green-400", children: "Active" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: handleSave,
+                className: "px-3 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700",
+                children: "Save"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: handleCancel,
+                className: "px-3 py-1 bg-gray-600 text-white rounded text-xs font-semibold hover:bg-gray-700",
+                children: "Cancel"
+              }
+            )
+          ] }) })
+        ] }),
+        sortedCodes.map((code) => {
+          const isEditing = editingCode === code.code;
+          const isUsed = usedCodes.has(code.code);
+          if (isEditing) {
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 bg-gray-700/30", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: formData.code,
+                  onChange: (e) => setFormData({ ...formData, code: e.target.value.toUpperCase() }),
+                  onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
+                  onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
+                  onKeyDown: stopEditableKeyPropagation,
+                  maxLength: 4,
+                  className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: formData.category,
+                  onChange: (e) => setFormData({ ...formData, category: e.target.value }),
+                  className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Aircraft", children: "Aircraft" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Crew", children: "Crew" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Program", children: "Program" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Weather", children: "Weather" })
+                  ]
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: formData.description,
+                  onChange: (e) => setFormData({ ...formData, description: e.target.value }),
+                  onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, description: value })),
+                  onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, description: value })),
+                  onKeyDown: stopEditableKeyPropagation,
+                  className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: formData.appliesTo,
+                  onChange: (e) => setFormData({ ...formData, appliesTo: e.target.value }),
+                  className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "Both", children: [
+                      "Flight + ",
+                      resourceDisplayNames.ftd
+                    ] })
+                  ]
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setFormData({ ...formData, isActive: !formData.isActive }),
+                  className: `inline-flex min-w-[74px] items-center justify-center rounded border px-2 py-1 text-xs font-semibold ${getStatusClass(formData.isActive)}`,
+                  children: formData.isActive ? "Active" : "Inactive"
+                }
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: handleSave,
+                    className: "px-3 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700",
+                    children: "Save"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: handleCancel,
+                    className: "px-3 py-1 bg-gray-600 text-white rounded text-xs font-semibold hover:bg-gray-700",
+                    children: "Cancel"
+                  }
+                )
+              ] }) })
+            ] }, code.code);
+          }
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/20", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-white font-mono font-semibold", children: code.code }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: code.category }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: code.description }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: formatAppliesToLabel(code.appliesTo) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => onToggleActive(code.code),
+                disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
+                className: `inline-flex min-w-[74px] items-center justify-center rounded border px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${getStatusClass(code.isActive)}`,
+                title: isEditUnlocked ? "Click to switch Active or Inactive" : "Click Edit above to unlock status changes",
+                children: code.isActive ? "Active" : "Inactive"
+              }
+            ) }),
+            canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => handleStartEdit(code),
+                  disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
+                  className: "px-3 py-1 bg-sky-600 text-white rounded text-xs font-semibold hover:bg-sky-700 disabled:bg-gray-600 disabled:cursor-not-allowed",
+                  children: "Edit"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => onToggleActive(code.code),
+                  disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
+                  className: `px-3 py-1 rounded text-xs font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed ${code.isActive ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-green-600 text-white hover:bg-green-700"}`,
+                  children: code.isActive ? "Deactivate" : "Activate"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => handleDelete(code.code),
+                  disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
+                  className: "px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed",
+                  title: isUsed ? "Delete code with usage warning" : "Delete code",
+                  children: "Delete"
+                }
+              )
+            ] }) })
+          ] }, code.code);
+        }),
+        sortedCodes.length === 0 && !isAddingNew && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { colSpan: canEdit ? 6 : 5, className: "py-8 text-center text-gray-500", children: [
+          "No cancellation codes found.",
+          canEdit && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-1", children: [
+            "Click ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-semibold", children: "Add" }),
+            " to create one."
+          ] })
+        ] }) })
+      ] })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 text-sm text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Inactive codes remain visible in historical records." }) }),
+    deletingCode && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6 max-w-md", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white mb-4", children: "Confirm Delete" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-6", children: [
+        "Are you sure you want to delete the cancellation code",
+        " ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-red-400", children: deletingCode }),
+        "? This action cannot be undone."
+      ] }),
+      deletingCodeHasHistory && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 rounded-lg border border-amber-500/50 bg-amber-950/40 px-4 py-3 text-sm text-amber-100", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-amber-200", children: "This code has been used in cancellation history." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2", children: "Deleting it may affect historical reporting, filters, or audit interpretation. Confirm only if this code was created in error or has been replaced." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end space-x-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: cancelDelete,
+            className: "px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700",
+            children: "Cancel"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: confirmDelete,
+            className: "px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700",
+            children: "Delete"
+          }
+        )
+      ] })
+    ] }) })
+  ] });
+};
+const ACHistoryPage = ({
+  currentUserRole: currentUserRole2,
+  cancellationRecords,
+  currentUserId,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
+  const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
+  const [usedCodes, setUsedCodes] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [codesLoading, setCodesLoading] = reactExports.useState(true);
+  const [codesError, setCodesError] = reactExports.useState(null);
+  const canEdit = currentUserRole2 === "Super Admin" || currentUserRole2 === "Admin";
+  const getAuthHeaders = reactExports.useCallback(() => {
+    const sessionToken = localStorage.getItem("dfp_session_token") || "";
+    return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
+  }, []);
+  const loadCodesFromDB = reactExports.useCallback(async () => {
+    setCodesLoading(true);
+    setCodesError(null);
+    try {
+      const res = await fetch("/api/cancellation-codes", { credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.codes)) {
+        setCancellationCodes(data.codes);
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (err) {
+      console.error("Failed to load cancellation codes from DB:", err);
+      setCodesError("Failed to load cancellation codes.");
+    } finally {
+      setCodesLoading(false);
+    }
+  }, []);
+  reactExports.useEffect(() => {
+    loadCodesFromDB();
+  }, [loadCodesFromDB]);
+  reactExports.useEffect(() => {
+    const used = /* @__PURE__ */ new Set();
+    cancellationRecords.forEach((record) => {
+      used.add(record.cancellationCode);
+      if (record.manualCodeEntry) {
+        used.add(record.manualCodeEntry);
+      }
+    });
+    setUsedCodes(used);
+  }, [cancellationRecords]);
+  const handleAddCode = async (newCode) => {
+    if (!canEdit) {
+      await showDarkAlert("Admin permission is required to change cancellation codes.", "Access Denied", "warning");
+      return;
+    }
+    if (cancellationCodes.some((c) => c.code === newCode.code)) {
+      await showDarkAlert("A code with this identifier already exists.", "Cancellation Code Exists", "warning");
+      return;
+    }
+    try {
+      const res = await fetch("/api/cancellation-codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        credentials: "include",
+        body: JSON.stringify({ ...newCode, createdBy: currentUserId })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        await showDarkAlert(`Failed to save code: ${err.error || "Unknown error"}`, "Cancellation Code Save Failed", "error");
+        return;
+      }
+      const data = await res.json();
+      if (data.success) {
+        await loadCodesFromDB();
+      }
+    } catch (err) {
+      console.error("Failed to add cancellation code:", err);
+      await showDarkAlert("Failed to save code. Please try again.", "Cancellation Code Save Failed", "error");
+    }
+  };
+  const handleEditCode = async (oldCode, newCode) => {
+    if (!canEdit) {
+      await showDarkAlert("Admin permission is required to change cancellation codes.", "Access Denied", "warning");
+      return;
+    }
+    try {
+      if (oldCode !== newCode.code) {
+        await fetch(`/api/cancellation-codes/${encodeURIComponent(oldCode)}`, {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+          credentials: "include"
+        });
+      }
+      const res = await fetch("/api/cancellation-codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        credentials: "include",
+        body: JSON.stringify({ ...newCode, createdBy: currentUserId })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        await showDarkAlert(`Failed to update code: ${err.error || "Unknown error"}`, "Cancellation Code Update Failed", "error");
+        return;
+      }
+      await loadCodesFromDB();
+    } catch (err) {
+      console.error("Failed to edit cancellation code:", err);
+      await showDarkAlert("Failed to update code. Please try again.", "Cancellation Code Update Failed", "error");
+    }
+  };
+  const handleToggleActive = async (code) => {
+    if (!canEdit) {
+      await showDarkAlert("Admin permission is required to change cancellation codes.", "Access Denied", "warning");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/cancellation-codes/${encodeURIComponent(code)}/toggle`, {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+        credentials: "include"
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        await showDarkAlert(`Failed to toggle code: ${err.error || "Unknown error"}`, "Cancellation Code Update Failed", "error");
+        return;
+      }
+      setCancellationCodes(
+        (prev) => prev.map((c) => c.code === code ? { ...c, isActive: !c.isActive } : c)
+      );
+      await loadCodesFromDB();
+    } catch (err) {
+      console.error("Failed to toggle cancellation code:", err);
+      await showDarkAlert("Failed to update code. Please try again.", "Cancellation Code Update Failed", "error");
+    }
+  };
+  const handleDeleteCode = async (code) => {
+    if (!canEdit) {
+      await showDarkAlert("Admin permission is required to delete cancellation codes.", "Access Denied", "warning");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/cancellation-codes/${encodeURIComponent(code)}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+        credentials: "include"
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        await showDarkAlert(`Failed to delete code: ${err.error || "Unknown error"}`, "Cancellation Code Delete Failed", "error");
+        return;
+      }
+      setCancellationCodes((prev) => prev.filter((c) => c.code !== code));
+    } catch (err) {
+      console.error("Failed to delete cancellation code:", err);
+      await showDarkAlert("Failed to delete code. Please try again.", "Cancellation Code Delete Failed", "error");
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white mb-1", children: "Cancellation Codes" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "Manage the master cancellation code table used by aircraft availability history, recent cancellations, and cancellation analytics." })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      codesError && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 px-4 py-2 bg-red-900/40 border border-red-700 rounded text-red-300 text-sm flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          "⚠️ ",
+          codesError
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: loadCodesFromDB,
+            className: "ml-auto text-xs underline hover:text-red-100",
+            children: "Retry"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        CancellationCodesTable,
+        {
+          codes: cancellationCodes,
+          onAddCode: handleAddCode,
+          onEditCode: handleEditCode,
+          onToggleActive: handleToggleActive,
+          onDeleteCode: handleDeleteCode,
+          canEdit,
+          usedCodes,
+          isLoading: codesLoading,
+          resourceDisplayNames
+        }
+      )
+    ] })
+  ] });
+};
+const DutyTurnaroundSection = ({
+  preferredDutyPeriod,
+  onUpdatePreferredDutyPeriod,
+  maxCrewDutyPeriod,
+  onUpdateMaxCrewDutyPeriod,
+  flightTurnaround,
+  onUpdateFlightTurnaround,
+  ftdTurnaround,
+  onUpdateFtdTurnaround,
+  cptTurnaround,
+  onUpdateCptTurnaround,
+  taxiGroundTime,
+  onUpdateTaxiGroundTime,
+  canEdit = true,
+  onShowSuccess,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const [draftPreferredDutyPeriod, setDraftPreferredDutyPeriod] = reactExports.useState(preferredDutyPeriod);
+  const [draftMaxCrewDutyPeriod, setDraftMaxCrewDutyPeriod] = reactExports.useState(maxCrewDutyPeriod);
+  const [draftFlightTurnaround, setDraftFlightTurnaround] = reactExports.useState(flightTurnaround);
+  const [draftFtdTurnaround, setDraftFtdTurnaround] = reactExports.useState(ftdTurnaround);
+  const [draftCptTurnaround, setDraftCptTurnaround] = reactExports.useState(cptTurnaround);
+  const [draftTaxiGroundTime, setDraftTaxiGroundTime] = reactExports.useState(taxiGroundTime);
+  const [openTurnaroundMenu, setOpenTurnaroundMenu] = reactExports.useState(null);
+  const turnaroundOptions = reactExports.useMemo(() => Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 0.1).toFixed(1))), []);
+  const taxiGroundOptions = reactExports.useMemo(() => Array.from({ length: 10 }, (_, i) => parseFloat((i * 0.1).toFixed(1))), []);
+  const standardSettingsButtonClass2 = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+  reactExports.useEffect(() => {
+    if (isEditing) return;
+    setDraftPreferredDutyPeriod(preferredDutyPeriod);
+    setDraftMaxCrewDutyPeriod(maxCrewDutyPeriod);
+    setDraftFlightTurnaround(flightTurnaround);
+    setDraftFtdTurnaround(ftdTurnaround);
+    setDraftCptTurnaround(cptTurnaround);
+    setDraftTaxiGroundTime(taxiGroundTime);
+  }, [cptTurnaround, flightTurnaround, ftdTurnaround, isEditing, maxCrewDutyPeriod, preferredDutyPeriod, taxiGroundTime]);
+  const handleEdit = () => {
+    setDraftPreferredDutyPeriod(preferredDutyPeriod);
+    setDraftMaxCrewDutyPeriod(maxCrewDutyPeriod);
+    setDraftFlightTurnaround(flightTurnaround);
+    setDraftFtdTurnaround(ftdTurnaround);
+    setDraftCptTurnaround(cptTurnaround);
+    setDraftTaxiGroundTime(taxiGroundTime);
+    setOpenTurnaroundMenu(null);
+    setIsEditing(true);
+  };
+  const handleCancel = () => {
+    setDraftPreferredDutyPeriod(preferredDutyPeriod);
+    setDraftMaxCrewDutyPeriod(maxCrewDutyPeriod);
+    setDraftFlightTurnaround(flightTurnaround);
+    setDraftFtdTurnaround(ftdTurnaround);
+    setDraftCptTurnaround(cptTurnaround);
+    setDraftTaxiGroundTime(taxiGroundTime);
+    setOpenTurnaroundMenu(null);
+    setIsEditing(false);
+  };
+  const handleSave = () => {
+    onUpdatePreferredDutyPeriod(draftPreferredDutyPeriod);
+    onUpdateMaxCrewDutyPeriod(draftMaxCrewDutyPeriod);
+    onUpdateFlightTurnaround(draftFlightTurnaround);
+    onUpdateFtdTurnaround(draftFtdTurnaround);
+    onUpdateCptTurnaround(draftCptTurnaround);
+    onUpdateTaxiGroundTime(draftTaxiGroundTime);
+    setOpenTurnaroundMenu(null);
+    setIsEditing(false);
+    logAudit(
+      "Settings - Duty & Turnaround",
+      "update",
+      "Updated duty and turnaround settings",
+      `Duty period soft/hard: ${preferredDutyPeriod}/${maxCrewDutyPeriod} → ${draftPreferredDutyPeriod}/${draftMaxCrewDutyPeriod}; turnaround ${flightTurnaround}/${ftdTurnaround}/${cptTurnaround} → ${draftFlightTurnaround}/${draftFtdTurnaround}/${draftCptTurnaround}; taxi/ground ${taxiGroundTime} → ${draftTaxiGroundTime}`
+    );
+    onShowSuccess?.("Duty and turnaround settings updated");
+  };
+  const TurnaroundInput = ({ label, value, onChange, options }) => {
+    const inputId = `turnaround-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    const isOpen = openTurnaroundMenu === inputId;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        className: "relative",
+        onBlur: (event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            setOpenTurnaroundMenu((current) => current === inputId ? null : current);
+          }
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { id: `${inputId}-label`, className: "block text-sm font-medium text-gray-400", children: label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              id: inputId,
+              disabled: !isEditing,
+              "aria-haspopup": "listbox",
+              "aria-expanded": isOpen,
+              "aria-labelledby": `${inputId}-label ${inputId}`,
+              onClick: () => setOpenTurnaroundMenu((current) => current === inputId ? null : inputId),
+              className: `relative w-full mt-1 border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  value.toFixed(1),
+                  " hrs"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    "aria-hidden": "true",
+                    className: "pointer-events-none absolute right-3 top-1/2 h-0 w-0 -translate-y-1/2 border-x-[5px] border-t-[6px] border-x-transparent border-t-gray-300"
+                  }
+                )
+              ]
+            }
+          ),
+          isEditing && isOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              role: "listbox",
+              "aria-labelledby": `${inputId}-label`,
+              className: "absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-md border border-gray-600 bg-gray-900 py-1 shadow-2xl",
+              children: options.map((opt) => {
+                const selected = opt === value;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    type: "button",
+                    role: "option",
+                    "aria-selected": selected,
+                    onMouseDown: (event) => event.preventDefault(),
+                    onClick: () => {
+                      onChange(opt);
+                      setOpenTurnaroundMenu(null);
+                    },
+                    className: `block w-full px-3 py-2 text-left text-sm ${selected ? "bg-cyan-500/20 text-cyan-100" : "text-gray-200 hover:bg-gray-700"}`,
+                    children: [
+                      opt.toFixed(1),
+                      " hrs"
+                    ]
+                  },
+                  opt
+                );
+              })
+            }
+          )
+        ]
+      }
+    );
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit", onKeyDownCapture: stopEditableKeyPropagation, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Duty & Turnaround" }),
+      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: standardSettingsButtonClass2, children: "Save" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: standardSettingsButtonClass2, children: "Cancel" })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleEdit, disabled: !canEdit, className: standardSettingsButtonClass2, children: "Edit" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 space-y-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Crew Duty Period (hrs)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 mt-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col flex-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", children: "Soft Limit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                value: draftPreferredDutyPeriod,
+                onChange: (e) => setDraftPreferredDutyPeriod(parseInt(e.target.value) || 0),
+                disabled: !isEditing,
+                className: `w-full border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col flex-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", children: "Hard Limit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                value: draftMaxCrewDutyPeriod,
+                onChange: (e) => setDraftMaxCrewDutyPeriod(parseInt(e.target.value) || 0),
+                disabled: !isEditing,
+                className: `w-full border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+              }
+            )
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Turnaround Times" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2 mt-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TurnaroundInput,
+            {
+              label: "Flight",
+              value: draftFlightTurnaround,
+              onChange: setDraftFlightTurnaround,
+              options: turnaroundOptions
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TurnaroundInput,
+            {
+              label: resourceDisplayNames.ftd,
+              value: draftFtdTurnaround,
+              onChange: setDraftFtdTurnaround,
+              options: turnaroundOptions
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TurnaroundInput,
+            {
+              label: resourceDisplayNames.cpt,
+              value: draftCptTurnaround,
+              onChange: setDraftCptTurnaround,
+              options: turnaroundOptions
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Post Flight Time Accounting" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2 mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TurnaroundInput,
+          {
+            label: "Taxi/Ground",
+            value: draftTaxiGroundTime,
+            onChange: setDraftTaxiGroundTime,
+            options: taxiGroundOptions
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "Default extra time added to airborne time to calculate block time." })
+      ] })
+    ] })
+  ] });
+};
+const defaultAllowedActions = {
+  postFlightTimes: false,
+  pt051Entries: false,
+  flightAuthorisation: false,
+  aircraftAvailability: false
+};
+const EmergencyPage = ({
+  currentUserRole: currentUserRole2,
+  onShowSuccess,
+  trainingReportDisplayName,
+  emergencyFreezeAuthority,
+  onUpdateEmergencyFreezeAuthority,
+  qualificationOptions = [],
+  currentUserQualificationIds = [],
+  canEditEmergencyAuthority = false,
+  flightAuthorisationRequired = true
+}) => {
+  const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze$1();
+  const [showConfirmDialog, setShowConfirmDialog] = reactExports.useState(false);
+  const [isProcessing, setIsProcessing] = reactExports.useState(false);
+  const [isEditingAuthority, setIsEditingAuthority] = reactExports.useState(false);
+  const [authorityDraft, setAuthorityDraft] = reactExports.useState(() => normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority));
+  const [pendingAllowedActions, setPendingAllowedActions] = reactExports.useState(defaultAllowedActions);
+  const reportDisplayName = String(trainingReportDisplayName || "").trim() || "Training Report";
+  const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
+  const effectivePendingAllowedActions = flightAuthorisationRequired ? pendingAllowedActions : { ...pendingAllowedActions, flightAuthorisation: false };
+  const frozenFlightAuthorisationAllowed = flightAuthorisationRequired && freezeState.allowedActions.flightAuthorisation;
+  reactExports.useEffect(() => {
+    if (!flightAuthorisationRequired) {
+      setPendingAllowedActions((prev) => prev.flightAuthorisation ? { ...prev, flightAuthorisation: false } : prev);
+    }
+  }, [flightAuthorisationRequired]);
+  const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
+  const canActivateFreeze = hasEmergencyFreezeAuthority({
+    settings: authoritySettings,
+    userQualificationIds: currentUserQualificationIds
+  });
+  const canDeactivateFreeze = hasEmergencyFreezeAuthority({
+    settings: authoritySettings,
+    userQualificationIds: currentUserQualificationIds
+  });
+  reactExports.useEffect(() => {
+    if (!isEditingAuthority) {
+      setAuthorityDraft(authoritySettings);
+    }
+  }, [authoritySettings, isEditingAuthority]);
+  const requestPassword = async (message, title) => {
+    const password = await showDarkPrompt({
+      title,
+      message,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Confirm",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return false;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", title, "warning");
+        return false;
+      }
+      return true;
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+      return false;
+    }
+  };
+  const handleAuthorityChange = (qualificationId, checked) => {
+    const current = authorityDraft.activateQualificationIds || [];
+    const next = checked ? Array.from(/* @__PURE__ */ new Set([...current, qualificationId])) : current.filter((id) => id !== qualificationId);
+    setAuthorityDraft(normaliseEmergencyFreezeAuthoritySettings({
+      ...authorityDraft,
+      activateQualificationIds: next,
+      deactivateQualificationIds: next
+    }));
+  };
+  const handleEditAuthority = async () => {
+    if (!canEditEmergencyAuthority) return;
+    const unlocked = await requestPassword(
+      "Enter your password to edit emergency freeze authority.",
+      "Emergency Authority Password Required"
+    );
+    if (!unlocked) return;
+    setAuthorityDraft(authoritySettings);
+    setIsEditingAuthority(true);
+  };
+  const handleCancelAuthority = () => {
+    setAuthorityDraft(authoritySettings);
+    setIsEditingAuthority(false);
+  };
+  const handleSaveAuthority = async () => {
+    if (!canEditEmergencyAuthority || !onUpdateEmergencyFreezeAuthority) return;
+    onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings({
+      activateQualificationIds: authorityDraft.activateQualificationIds,
+      deactivateQualificationIds: authorityDraft.activateQualificationIds
+    }));
+    setIsEditingAuthority(false);
+    if (onShowSuccess) {
+      onShowSuccess("Emergency freeze authority saved");
+    }
+  };
+  const handleAllowedActionChange = (action) => {
+    if (action === "flightAuthorisation" && !flightAuthorisationRequired) return;
+    setPendingAllowedActions((prev) => ({
+      ...prev,
+      [action]: !prev[action]
+    }));
+  };
+  const handleFreezeEverything = () => {
+    setPendingAllowedActions(defaultAllowedActions);
+  };
+  const isEverythingFrozen = () => {
+    return !effectivePendingAllowedActions.postFlightTimes && !effectivePendingAllowedActions.pt051Entries && !effectivePendingAllowedActions.flightAuthorisation && !effectivePendingAllowedActions.aircraftAvailability;
+  };
+  const handleFreezeClick = () => {
+    if (!canActivateFreeze) {
+      showDarkAlert("You are not authorised to activate an emergency freeze.", "Emergency Freeze Locked", "warning");
+      return;
+    }
+    setShowConfirmDialog(true);
+  };
+  const handleFreezeConfirm = async () => {
+    const unlocked = await requestPassword(
+      "Enter your password to activate the emergency freeze.",
+      "Emergency Freeze Password Required"
+    );
+    if (!unlocked) return;
+    setIsProcessing(true);
+    freezeSystem("Aircraft Emergency", effectivePendingAllowedActions, currentUserRole2);
+    setShowConfirmDialog(false);
+    setIsProcessing(false);
+    if (onShowSuccess) {
+      onShowSuccess("System has been frozen due to Aircraft Emergency");
+    }
+  };
+  const handleUnfreeze = async () => {
+    if (!canDeactivateFreeze) {
+      showDarkAlert("You are not authorised to deactivate an emergency freeze.", "Emergency Freeze Locked", "warning");
+      return;
+    }
+    const unlocked = await requestPassword(
+      "Enter your password to deactivate the emergency freeze.",
+      "Emergency Freeze Password Required"
+    );
+    if (!unlocked) return;
+    setIsProcessing(true);
+    unfreezeSystem();
+    setIsProcessing(false);
+    if (onShowSuccess) {
+      onShowSuccess("System has been unfrozen and is now fully operational");
+    }
+  };
+  const formatDateTime2 = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+  const getQualificationLabel = (qualificationId) => {
+    const match = qualificationOptions.find((qualification) => qualification.id === qualificationId);
+    return match?.code || match?.name || qualificationId;
+  };
+  const renderSelectedQualifications = (qualificationIds) => qualificationIds.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: qualificationIds.map((id) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-200", children: getQualificationLabel(id) }, id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-500", children: "No qualifications selected." });
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-900/30", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-8 h-8 text-white", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Emergency Controls" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "System freeze and emergency management" })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-xl border p-6 ${freezeState.isFrozen ? "bg-gradient-to-br from-red-900/30 to-red-950/30 border-red-500/50" : "bg-gradient-to-br from-green-900/20 to-green-950/20 border-green-500/30"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-14 h-14 rounded-full flex items-center justify-center ${freezeState.isFrozen ? "bg-red-600 animate-pulse" : "bg-green-600"}`, children: freezeState.isFrozen ? /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-7 h-7 text-white", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-7 h-7 text-white", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }) }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: `text-xl font-bold ${freezeState.isFrozen ? "text-red-400" : "text-green-400"}`, children: freezeState.isFrozen ? "SYSTEM FROZEN" : "SYSTEM OPERATIONAL" }),
+          freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm mt-1", children: [
+            "Reason: ",
+            freezeState.freezeReason,
+            " • Since: ",
+            freezeState.frozenAt && formatDateTime2(freezeState.frozenAt)
+          ] })
+        ] })
+      ] }),
+      !freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3 h-3 rounded-full bg-green-500 animate-pulse" }),
+      freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3 h-3 rounded-full bg-red-500 animate-pulse" })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-800/50 p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Emergency Freeze Authority" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Qualifications authorised to activate and deactivate freeze." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2", children: isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleCancelAuthority,
+              className: "rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
+              children: "Cancel"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleSaveAuthority,
+              className: "rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500",
+              children: "Save"
+            }
+          )
+        ] }) : canEditEmergencyAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleEditAuthority,
+            className: "rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
+            children: "Edit"
+          }
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200", children: "Read-only" }) })
+      ] }),
+      qualificationOptions.length > 0 ? isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate and Deactivate" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 md:grid-cols-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: displayedAuthoritySettings.activateQualificationIds.includes(qualification.id),
+              onChange: (event) => handleAuthorityChange(qualification.id, event.target.checked),
+              className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
+        ] }, `emergency-authority-${qualification.id}`)) })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate and Deactivate" }),
+        renderSelectedQualifications(authoritySettings.activateQualificationIds)
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No active qualifications are configured for this unit model." })
+    ] }),
+    !freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-xl border border-gray-700 p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-semibold text-white mb-4 flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-red-400", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" }) }),
+        "Freeze System"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm mb-4", children: "Select which operations should remain available during the system freeze. These options must be selected BEFORE initiating the freeze." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          onClick: handleFreezeClick,
+          disabled: !canActivateFreeze,
+          className: "relative group",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-red-800 rounded-xl transform translate-y-1 group-active:translate-y-0 transition-transform" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-red-700 rounded-xl transform translate-y-0.5 group-active:translate-y-0 transition-transform" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `relative px-8 py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-900/50 flex items-center gap-3 group-active:transform group-active:translate-y-1 transition-transform ${canActivateFreeze ? "bg-gradient-to-b from-red-500 to-red-600" : "bg-gray-600 cursor-not-allowed opacity-70"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-6 h-6", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" }) }),
+              "FREEZE SYSTEM"
+            ] })
+          ]
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4 mt-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-medium text-gray-300 mb-3", children: "Select operations to allow during freeze:" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: isEverythingFrozen(),
+                onChange: handleFreezeEverything,
+                className: "w-5 h-5 rounded border-gray-500 text-red-500 focus:ring-red-500 focus:ring-offset-gray-800"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Freeze Everything" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "No operations allowed during freeze" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: pendingAllowedActions.postFlightTimes,
+                onChange: () => handleAllowedActionChange("postFlightTimes"),
+                className: "w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Post Flight Times Entries" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "Allow recording of post-flight time entries" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: pendingAllowedActions.pt051Entries,
+                onChange: () => handleAllowedActionChange("pt051Entries"),
+                className: "w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-white font-medium", children: [
+                reportDisplayName,
+                " Entries"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-xs", children: [
+                "Allow ",
+                reportDisplayName,
+                " submissions"
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-3 p-3 rounded-lg border transition-colors ${flightAuthorisationRequired ? "bg-gray-700/50 border-gray-600 cursor-pointer hover:bg-gray-700" : "bg-gray-800/70 border-gray-700 cursor-not-allowed opacity-70"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: flightAuthorisationRequired && pendingAllowedActions.flightAuthorisation,
+                onChange: () => handleAllowedActionChange("flightAuthorisation"),
+                disabled: !flightAuthorisationRequired,
+                className: "w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: flightAuthorisationRequired ? "text-white font-medium" : "text-gray-400 font-medium", children: "Flight Authorisation Entries" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: flightAuthorisationRequired ? "Allow flight authorisation processing" : "Flight authorisation is optional for this unit, so this emergency exception is disabled." })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: pendingAllowedActions.aircraftAvailability,
+                onChange: () => handleAllowedActionChange("aircraftAvailability"),
+                className: "w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Aircraft Availability Entries" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "Allow aircraft availability updates" })
+            ] })
+          ] })
+        ] })
+      ] })
+    ] }),
+    freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-xl border border-red-500/30 p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-semibold text-white mb-4 flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-red-400", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
+        "Allowed Operations During Freeze"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 mb-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.postFlightTimes ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: freezeState.allowedActions.postFlightTimes ? "text-green-400" : "text-gray-500", children: "Post Flight Times" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.pt051Entries ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: freezeState.allowedActions.pt051Entries ? "text-green-400" : "text-gray-500", children: [
+          reportDisplayName,
+          " Entries"
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${frozenFlightAuthorisationAllowed ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: frozenFlightAuthorisationAllowed ? "text-green-400" : "text-gray-500", children: "Flight Authorisation" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.aircraftAvailability ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: freezeState.allowedActions.aircraftAvailability ? "text-green-400" : "text-gray-500", children: "Aircraft Availability" }) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: handleUnfreeze,
+          disabled: isProcessing || !canDeactivateFreeze,
+          className: "w-full py-3 px-4 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2",
+          children: isProcessing ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Processing..." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Unfreeze System" })
+          ] })
+        }
+      )
+    ] }),
+    showConfirmDialog && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-red-500 p-6 max-w-md w-full mx-4 shadow-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full bg-red-900/50 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-6 h-6 text-red-500", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white", children: "Confirm System Freeze" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-4", children: [
+        "Are you sure you wish to ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 font-semibold", children: "freeze the system" }),
+        " due to Aircraft Emergency?"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg p-3 mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-2", children: "Operations allowed during freeze:" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: isEverythingFrozen() ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 text-sm font-medium", children: "None (Full Freeze)" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          effectivePendingAllowedActions.postFlightTimes && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Post Flight Times" }),
+          effectivePendingAllowedActions.pt051Entries && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: reportDisplayName }),
+          effectivePendingAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Flight Auth" }),
+          effectivePendingAllowedActions.aircraftAvailability && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Aircraft Availability" })
+        ] }) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm mb-6", children: "This will prevent all scheduling and data modifications until manually unfrozen." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setShowConfirmDialog(false),
+            className: "flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors",
+            children: "Cancel"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleFreezeConfirm,
+            disabled: isProcessing,
+            className: "flex-1 py-2 px-4 bg-red-600 hover:bg-red-500 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-colors",
+            children: isProcessing ? "Processing..." : "Yes, Freeze System"
+          }
+        )
+      ] })
+    ] }) })
+  ] });
+};
+const standardSettingsButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+const InfoBadge = ({ title, ariaLabel }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  "span",
+  {
+    role: "img",
+    "aria-label": ariaLabel,
+    title,
+    className: "inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/70",
+    children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-serif text-[11px] font-bold italic leading-none normal-case", children: "i" })
+  }
+);
+const ContinuationCurrencyEventsSettings = ({
+  sctShortLabel,
+  sctLongLabel,
+  sctEvents,
+  onUpdateSctEvents,
+  masterCurrencies,
+  currencyRequirements,
+  canEditSettings,
+  onOpenCurrencyRequirements,
+  aircraftConfigurationDefinitions = [],
+  activeUnitCode = "",
+  activeUnitCodes = [],
+  activeCompositeUnitCode = "",
+  activeAircraftTypeCode = ""
+}) => {
+  const [isEditingSctEvents, setIsEditingSctEvents] = reactExports.useState(false);
+  const [tempSctEvents, setTempSctEvents] = reactExports.useState([]);
+  const [newSctEvent, setNewSctEvent] = reactExports.useState("");
+  const [selectedSctEventId, setSelectedSctEventId] = reactExports.useState(null);
+  const configuredSctEvents = reactExports.useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
+  const activeCurrencyNames = reactExports.useMemo(() => Array.from(new Set(
+    [...masterCurrencies, ...currencyRequirements].filter((currency) => currency.isVisible).map((currency) => String(currency.name || "").trim()).filter(Boolean)
+  )), [masterCurrencies, currencyRequirements]);
+  const aircraftConfigOptions = reactExports.useMemo(() => {
+    const definitions = Array.isArray(aircraftConfigurationDefinitions) && aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
+    return Array.from(new Map([
+      ["ANY", { id: "ANY", label: "ANY" }],
+      ...definitions.map((definition) => [definition.id, { id: definition.id, label: definition.label || definition.id }])
+    ]).values());
+  }, [aircraftConfigurationDefinitions]);
+  const activeUnitCodeList = reactExports.useMemo(() => Array.from(new Set([
+    activeUnitCode,
+    ...Array.isArray(activeUnitCodes) ? activeUnitCodes : []
+  ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean))), [activeUnitCode, activeUnitCodes]);
+  const activeContinuationAircraftTypeCode = reactExports.useMemo(() => String(activeAircraftTypeCode || "").trim().toUpperCase(), [activeAircraftTypeCode]);
+  const displayedSctEvents = isEditingSctEvents ? tempSctEvents : configuredSctEvents;
+  const selectedTempSctEvent = tempSctEvents.find((event) => (event.id || event.name) === selectedSctEventId) || null;
+  const selectedConfiguredSctEvent = configuredSctEvents.find((event) => (event.id || event.name) === selectedSctEventId) || null;
+  const applyContinuationEventDefaults = (event) => ({
+    ...event,
+    aircraftTypeCode: String(event.aircraftTypeCode || "").trim().toUpperCase() || activeContinuationAircraftTypeCode
+  });
+  const updateTempSctEvent = (eventId, updates) => {
+    setTempSctEvents((current) => current.map((event) => (event.id || event.name) === eventId ? { ...event, ...updates } : event));
+  };
+  const toggleTempSctConfig = (eventId, configId) => {
+    setTempSctEvents((current) => current.map((event) => {
+      if ((event.id || event.name) !== eventId) return event;
+      const currentConfigs = Array.isArray(event.acceptableAircraftConfigs) && event.acceptableAircraftConfigs.length > 0 ? event.acceptableAircraftConfigs : [event.config || "ANY"];
+      const selected = new Set(currentConfigs);
+      if (selected.has(configId)) selected.delete(configId);
+      else selected.add(configId);
+      const nextConfigs = Array.from(selected);
+      const safeConfigs = nextConfigs.length > 0 ? nextConfigs : ["ANY"];
+      return { ...event, acceptableAircraftConfigs: safeConfigs, config: safeConfigs[0] || "ANY" };
+    }));
+  };
+  const handleEditSctEvents = async () => {
+    if (!selectedSctEventId || !selectedConfiguredSctEvent) {
+      await showDarkAlert("Select an event tile before editing.", "Select Event First", "warning");
+      return;
+    }
+    const editableEvents = normaliseContinuationEventSettings(sctEvents).map(applyContinuationEventDefaults);
+    setTempSctEvents(editableEvents);
+    setIsEditingSctEvents(true);
+  };
+  const handleSaveSctEvents = () => {
+    const cleanedEvents = normaliseContinuationEventSettings(tempSctEvents);
+    const oldEvents = configuredSctEvents.map((event) => event.name).join(", ");
+    const newEvents = cleanedEvents.map((event) => event.name).join(", ");
+    onUpdateSctEvents(cleanedEvents);
+    setIsEditingSctEvents(false);
+    logAudit({
+      page: `Settings - ${sctShortLabel} Events`,
+      action: "update",
+      description: `Updated ${sctLongLabel} event types`,
+      changes: `From: [${oldEvents}] To: [${newEvents}]`
+    });
+  };
+  const handleCancelSctEvents = () => {
+    setNewSctEvent("");
+    setIsEditingSctEvents(false);
+  };
+  const handleAddSctEvent = () => {
+    const name = newSctEvent.trim();
+    if (name && !tempSctEvents.some((event) => event.name.toUpperCase() === name.toUpperCase())) {
+      const newEvent = {
+        id: `continuation-event-${Date.now()}`,
+        name,
+        code: name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT",
+        unitCode: activeUnitCodeList[0] || "",
+        compositeUnitCode: activeCompositeUnitCode || "",
+        aircraftTypeCode: activeContinuationAircraftTypeCode,
+        crew: "",
+        config: "ANY",
+        acceptableAircraftConfigs: ["ANY"],
+        currency: activeCurrencyNames[0] || name,
+        dayNight: "Day",
+        flightType: "Dual",
+        aircraftCount: 1,
+        status: "ACTIVE"
+      };
+      setTempSctEvents([...tempSctEvents, newEvent]);
+      setSelectedSctEventId(newEvent.id);
+      setNewSctEvent("");
+    }
+  };
+  const handleRemoveSctEvent = (eventToRemove) => {
+    setTempSctEvents(tempSctEvents.filter((evt) => (evt.id || evt.name) !== eventToRemove));
+    if (selectedSctEventId === eventToRemove) setSelectedSctEventId(null);
+  };
+  const renderEventTile = (evt) => {
+    const eventKey = evt.id || evt.name;
+    const isSelected = selectedSctEventId === eventKey;
+    const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
+    const unitLabel = evt.unitCode || activeUnitCodeList[0] || "All units";
+    const aircraftLabel = evt.aircraftTypeCode || activeContinuationAircraftTypeCode || "Aircraft type not set";
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "button",
+      {
+        type: "button",
+        onClick: () => setSelectedSctEventId(eventKey),
+        className: `w-full rounded-md border p-3 text-left transition-colors ${isSelected ? "border-sky-400/70 bg-sky-950/30 shadow-[inset_3px_0_0_rgba(56,189,248,0.75)]" : "border-gray-700/80 bg-gray-900/45 hover:border-gray-500 hover:bg-gray-900/70"}`,
+        "aria-pressed": isSelected,
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 items-start justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 flex-wrap items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-sm font-semibold text-white", children: evt.name }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-600/70 bg-gray-950/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-300", children: evt.code || "CONT" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap gap-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800/90 px-2 py-0.5 text-[11px] font-medium text-gray-300", children: evt.dayNight || "Day" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800/90 px-2 py-0.5 text-[11px] font-medium text-gray-300", children: evt.flightType || "Dual" }),
+                evt.currency && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-sky-950/50 px-2 py-0.5 text-[11px] font-medium text-sky-100", children: evt.currency })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "shrink-0 text-right text-[11px] text-gray-400", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold text-gray-300", children: [
+                "A/C ",
+                Math.max(1, Number(evt.aircraftCount) || 1)
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: selectedConfigs.join(", ") })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 border-t border-gray-700/70 pt-2 text-[11px] text-gray-400 sm:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Unit" }),
+              " ",
+              unitLabel
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Aircraft" }),
+              " ",
+              aircraftLabel
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Crew" }),
+              " ",
+              evt.crew || "Default"
+            ] })
+          ] })
+        ]
+      }
+    ) }, eventKey);
+  };
+  const renderSelectedEventDetails = (evt) => {
+    const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
+    const unitLabel = evt.unitCode || activeUnitCodeList[0] || "All units";
+    const aircraftLabel = evt.aircraftTypeCode || activeContinuationAircraftTypeCode || "Aircraft type not set";
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/55 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-start justify-between gap-3 border-b border-gray-700 pb-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-gray-500", children: "Selected Event" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 truncate text-xl font-semibold text-white", children: evt.name })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-600/70 bg-gray-950/60 px-2 py-1 text-xs font-bold uppercase tracking-wide text-gray-300", children: evt.code || "CONT" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Currency" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: evt.currency || "None" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Unit" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: unitLabel })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "A/C Type" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: aircraftLabel })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Day/Night" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: evt.dayNight || "Day" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Dual/Solo" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: evt.flightType || "Dual" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "A/C" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: Math.max(1, Number(evt.aircraftCount) || 1) })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Acceptable CONFIG" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap gap-2", children: selectedConfigs.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800 px-2 py-0.5 text-xs font-semibold text-gray-200", children: config }, config)) })
+      ] })
+    ] });
+  };
+  const renderSelectedEventEditor = (evt) => {
+    const eventKey = evt.id || evt.name;
+    const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/70 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between border-b border-gray-700 pb-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-gray-500", children: "Editing Event" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-semibold text-white", children: evt.name })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => handleRemoveSctEvent(eventKey), className: "flex h-[34px] items-center justify-center rounded border border-red-500/30 bg-red-950/40 px-3 text-xs font-bold text-red-200 hover:bg-red-900/50", children: "Delete" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_90px]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Event",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: evt.name,
+              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateTempSctEvent(eventKey, { name: value })),
+              onChange: (event) => updateTempSctEvent(eventKey, { name: event.target.value }),
+              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateTempSctEvent(eventKey, { name: value })),
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Code",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: evt.code || "",
+              maxLength: 8,
+              onChange: (event) => updateTempSctEvent(eventKey, { code: event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Day/Night",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: evt.dayNight || "Day",
+              onChange: (event) => updateTempSctEvent(eventKey, { dayNight: event.target.value }),
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Night" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day/Night" })
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Dual/Solo",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: evt.flightType || "Dual",
+              onChange: (event) => updateTempSctEvent(eventKey, { flightType: event.target.value }),
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Dual" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Solo" })
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "A/C",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              min: 1,
+              max: 24,
+              value: Math.max(1, Number(evt.aircraftCount) || 1),
+              onChange: (event) => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(event.target.value) || 1))) }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,2.4fr)_90px_minmax(0,0.9fr)_minmax(0,0.9fr)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              InfoBadge,
+              {
+                ariaLabel: "Currency field information",
+                title: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh."
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: evt.currency || "",
+              onChange: (event) => updateTempSctEvent(eventKey, { currency: event.target.value }),
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
+                activeCurrencyNames.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: currency, children: currency }, currency))
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Unit",
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: evt.unitCode || "",
+              onChange: (event) => updateTempSctEvent(eventKey, { unitCode: event.target.value }),
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All applicable units" }),
+                activeUnitCodeList.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "A/C Type",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: evt.aircraftTypeCode || "",
+              onChange: (event) => updateTempSctEvent(eventKey, { aircraftTypeCode: event.target.value.toUpperCase() }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+          "Crew",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: evt.crew || "",
+              onChange: (event) => updateTempSctEvent(eventKey, { crew: event.target.value }),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex min-w-0 items-center gap-3 rounded border border-gray-700 bg-gray-950/60 p-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "shrink-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: "Acceptable CONFIG" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-0 flex-1 flex-nowrap items-center gap-4 overflow-x-auto", children: aircraftConfigOptions.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex shrink-0 items-center gap-2 text-xs font-semibold text-gray-200", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: selectedConfigs.includes(config.id),
+              onChange: () => toggleTempSctConfig(eventKey, config.id),
+              className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: config.label })
+        ] }, `${eventKey}-${config.id}`)) })
+      ] })
+    ] });
+  };
+  const renderSelectedEventPanel = () => {
+    if (isEditingSctEvents) {
+      return selectedTempSctEvent ? renderSelectedEventEditor(selectedTempSctEvent) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full min-h-[320px] items-center justify-center rounded-md border border-dashed border-gray-700 bg-gray-900/40 p-6 text-center text-sm text-gray-400", children: "Select an event tile to edit." });
+    }
+    return selectedConfiguredSctEvent ? renderSelectedEventDetails(selectedConfiguredSctEvent) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full min-h-[320px] items-center justify-center rounded-md border border-dashed border-gray-700 bg-gray-900/40 p-6 text-center text-sm text-gray-400", children: "Select an event tile to view details." });
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl min-h-[600px] flex flex-col", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-gray-200", children: [
+          sctShortLabel,
+          " / Currency Events"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          InfoBadge,
+          {
+            ariaLabel: "Currency events information",
+            title: "The Currency field links a completed event to the currency requirement it should satisfy or refresh. Set up currencies in Training & Standards > Currency Requirements."
+          }
+        )
+      ] }),
+      isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+        onOpenCurrencyRequirements && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onOpenCurrencyRequirements, className: standardSettingsButtonClass, children: [
+          "Currency",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+          "Setup"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSaveSctEvents, className: standardSettingsButtonClass, children: "Save" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleCancelSctEvents, className: standardSettingsButtonClass, children: "Cancel" })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+        onOpenCurrencyRequirements && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onOpenCurrencyRequirements, className: standardSettingsButtonClass, children: [
+          "Currency",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+          "Setup"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleEditSctEvents,
+            disabled: !canEditSettings,
+            className: standardSettingsButtonClass,
+            children: "Edit"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-0 flex-1 flex-col space-y-4 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isEditingSctEvents ? "Edit the selected event and save when complete." : `Select a ${sctShortLabel} / currency event tile, then press Edit.` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-h-0 flex-1 gap-4 lg:grid-cols-[360px_minmax(0,1fr)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 space-y-2 overflow-y-auto pr-1", children: displayedSctEvents.map(renderEventTile) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-y-auto", children: renderSelectedEventPanel() })
+      ] }),
+      isEditingSctEvents && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2 border-t border-gray-700 pt-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            value: newSctEvent,
+            onChange: (event) => setNewSctEvent(event.target.value),
+            onKeyDownCapture: stopEditableKeyPropagation,
+            onKeyDown: (event) => {
+              stopEditableKeyPropagation(event);
+              if (event.key === "Enter") handleAddSctEvent();
+            },
+            placeholder: `New ${sctShortLabel} event name`,
+            className: "flex-grow rounded-md border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white focus:outline-none focus:ring-sky-500"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleAddSctEvent, className: "rounded-md bg-green-700 px-3 py-1 text-sm font-semibold text-white hover:bg-green-600", children: "+" })
+      ] })
+    ] })
+  ] });
+};
+const escapeOrganisationTemplateHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const downloadOrganisationStructureTemplateFile = (fileName = "DFP_NEO_Organisation_Structure_Template.xls") => {
+  const headers = ["Level", "Level Type", "Name", "Parent", "Notes"];
+  const rows = [
+    ["0", "Organisation", "Organisation", "", "Top level organisation"],
+    ["1", "Organisation Level 1", "Organisation Level 1", "Organisation", "First organisation layer below the top level"],
+    ["2", "Organisation Level 2", "Organisation Level 2", "Organisation Level 1", "Second organisation layer"],
+    ["3", "Organisation Level 3", "Organisation Level 3", "Organisation Level 2", "Add as many levels as needed before units"],
+    ["4", "Organisation Level 4", "Organisation Level 4", "Organisation Level 3", "Optional deeper level"],
+    ["5", "Organisation Level 5", "Organisation Level 5", "Organisation Level 4", "Optional deeper level"],
+    ["6", "Organisation Level 6", "Organisation Level 6", "Organisation Level 5", "Optional deeper level"]
+  ];
+  const tableRows = [
+    `<tr>${headers.map((header) => `<th>${escapeOrganisationTemplateHtml(header)}</th>`).join("")}</tr>`,
+    ...rows.map((row) => `<tr>${headers.map((_, index) => `<td>${escapeOrganisationTemplateHtml(row[index] || "")}</td>`).join("")}</tr>`)
+  ].join("");
+  const html = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+body { font-family: Arial, Helvetica, sans-serif; color: #162033; }
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+col.level { width: 90px; }
+col.type { width: 180px; }
+col.name { width: 250px; }
+col.parent { width: 250px; }
+col.notes { width: 390px; }
+.title { background: #143142; color: #ffffff; font-size: 20px; font-weight: 700; height: 34px; }
+.subtitle { background: #dbeafe; color: #143142; font-size: 12px; font-weight: 600; height: 28px; }
+.guide { background: #eef2f7; color: #334155; font-size: 11px; height: 24px; }
+th { background: #f97316; color: #ffffff; border: 1px solid #9a3412; font-size: 12px; font-weight: 700; height: 28px; text-align: left; padding: 6px; }
+td { border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 6px; vertical-align: top; }
+tr:nth-child(even) td { background: #f8fafc; }
+</style>
+</head>
+<body>
+<table>
+<colgroup><col class="level" /><col class="type" /><col class="name" /><col class="parent" /><col class="notes" /></colgroup>
+<tr><td class="title" colspan="${headers.length}">DFP NEO Organisation Structure Template</td></tr>
+<tr><td class="subtitle" colspan="${headers.length}">Use this single table for all organisation levels before units. Add one row per organisation item.</td></tr>
+<tr><td class="guide" colspan="${headers.length}">Level 0 is the top organisation. Level Type is the plain-English name for that layer. Each lower level names its immediate parent in the Parent column.</td></tr>
+<tr><td colspan="${headers.length}"></td></tr>
+${tableRows}
+</table>
+</body>
+</html>`;
+  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName.replace(/\.csv$/i, ".xls").replace(/\.xlsx$/i, ".xls");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+const TEMPLATE_OVERRIDE_FOLDER_ID = "template_overrides";
+const formatCurrencyExpiryCalculation = (value) => {
+  const normalised = String(value || "").trim().toUpperCase();
+  if (normalised === "LATEST_CHILD") {
+    return "Use the latest expiry date from the requirements in this rule.";
+  }
+  if (normalised === "EARLIEST_CHILD") {
+    return "Use the earliest expiry date from the requirements in this rule.";
+  }
+  return "Expiry is not configured for this combined currency.";
+};
+const getCurrencyDisplayNameById = (currencyId, allCurrencies) => {
+  const match = allCurrencies.find((currency) => currency.id === currencyId || currency.name === currencyId);
+  return match?.name || currencyId;
+};
+const renderCurrencyLogicNode = (node, allCurrencies, depth = 0) => {
+  if (!node || typeof node !== "object" || !Array.isArray(node.children) || node.children.length === 0) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No requirements have been added to this combined currency." });
+  }
+  const operator = String(node.operator || "AND").toUpperCase() === "OR" ? "OR" : "AND";
+  const heading = operator === "AND" ? "All of these requirements must be current:" : "Any one of these requirements is enough:";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: depth > 0 ? "mt-2 border-l border-gray-600 pl-3" : "", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-gray-200", children: heading }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-2 space-y-2", children: node.children.map((child, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: typeof child === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: getCurrencyDisplayNameById(child, allCurrencies) }) : renderCurrencyLogicNode(child, allCurrencies, depth + 1) }, `${depth}-${index}`)) })
+  ] });
+};
+const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded }) => {
+  const [showAddElementFlyout, setShowAddElementFlyout] = reactExports.useState(false);
+  const [showDeleteElementFlyout, setShowDeleteElementFlyout] = reactExports.useState(false);
+  const [newElementName, setNewElementName] = reactExports.useState("");
+  const [selectedToDelete, setSelectedToDelete] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [editModeGrades, setEditModeGrades] = reactExports.useState(/* @__PURE__ */ new Set());
+  const toggleEditMode = (grade) => {
+    const newSet = new Set(editModeGrades);
+    if (newSet.has(grade)) {
+      newSet.delete(grade);
+    } else {
+      newSet.add(grade);
+    }
+    setEditModeGrades(newSet);
+  };
+  const [flightElements, setFlightElements] = reactExports.useState(() => {
+    return getConfiguredScoringMatrixElements(phraseBank);
+  });
+  const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
+  const [elementGroupDrafts, setElementGroupDrafts] = reactExports.useState({});
+  const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
+  const { groups: configuredElementGroups, hasExplicitGroups: hasExplicitElementGroups } = getConfiguredScoringMatrixElementGroups(phraseBank);
+  const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
+  const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
+  const sectionOptions = Array.from(new Set([
+    ...hasExplicitElementGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS,
+    ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
+    savedElementGroup,
+    String(currentElementGroup || "").trim()
+  ].filter(Boolean)));
+  const handleElementGroupChange = (element, group) => {
+    const nextGroup = String(group || "").trim();
+    onUpdatePhraseBank({
+      ...phraseBank,
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
+        ...configuredElementGroups,
+        [element]: nextGroup || "Additional Elements"
+      },
+      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION
+    });
+  };
+  const beginElementGroupDraft = (element) => {
+    setElementGroupDrafts((previous) => ({
+      ...previous,
+      [element]: previous[element] ?? getScoringMatrixElementGroup(element, configuredElementGroups, hasExplicitElementGroups)
+    }));
+  };
+  const updateElementGroupDraft = (element, group) => {
+    setElementGroupDrafts((previous) => ({ ...previous, [element]: group }));
+  };
+  const commitElementGroupDraft = (element) => {
+    if (!(element in elementGroupDrafts)) return;
+    handleElementGroupChange(element, elementGroupDrafts[element]);
+    setElementGroupDrafts((previous) => {
+      if (!(element in previous)) return previous;
+      const { [element]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
+    });
+  };
+  const handlePhraseChange = (grade, index, value) => {
+    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
+    const gradePhrases = currentPhrases[grade] || [];
+    const newGradePhrases = [...gradePhrases];
+    newGradePhrases[index] = value;
+    onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: newGradePhrases } });
+  };
+  const handleAddPhrase = (grade) => {
+    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
+    const gradePhrases = currentPhrases[grade] || [];
+    onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: [...gradePhrases, ""] } });
+  };
+  const handleDeletePhrase = (grade, index) => {
+    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
+    const gradePhrases = currentPhrases[grade] || [];
+    onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: gradePhrases.filter((_, i) => i !== index) } });
+  };
+  const handleSaveNewElement = async () => {
+    const name = newElementName.trim();
+    if (!name) return;
+    if (flightElements.includes(name)) {
+      await showDarkAlert("An element with this name already exists.", "Duplicate Element", "warning");
+      return;
+    }
+    const nextElements = [...flightElements, name];
+    setFlightElements(nextElements);
+    onUpdatePhraseBank({
+      ...phraseBank,
+      [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: nextElements,
+      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
+        ...configuredElementGroups,
+        [name]: "Additional Elements"
+      },
+      [name]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+    });
+    setSelectedElement(name);
+    setNewElementName("");
+    setShowAddElementFlyout(false);
+    onElementAdded?.(name);
+  };
+  const handleDeleteElements = async () => {
+    if (selectedToDelete.size === 0) {
+      await showDarkAlert("Please select at least one element to delete.", "No Element Selected", "warning");
+      return;
+    }
+    const newFlightElements = flightElements.filter((el) => !selectedToDelete.has(el));
+    setFlightElements(newFlightElements);
+    const newPhraseBank = { ...phraseBank };
+    selectedToDelete.forEach((el) => {
+      delete newPhraseBank[el];
+    });
+    const nextGroups = { ...configuredElementGroups };
+    selectedToDelete.forEach((el) => {
+      delete nextGroups[el];
+    });
+    newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$3] = newFlightElements;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] = SCORING_MATRIX_ELEMENT_SELECTION_VERSION;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] = nextGroups;
+    onUpdatePhraseBank(newPhraseBank);
+    if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
+    setSelectedToDelete(/* @__PURE__ */ new Set());
+    setShowDeleteElementFlyout(false);
+  };
+  const getGradeColor = (grade) => {
+    if (grade >= 4) return "border-green-500/30 bg-green-900/10";
+    if (grade >= 2) return "border-yellow-500/30 bg-yellow-900/10";
+    return "border-red-500/30 bg-red-900/10";
+  };
+  const getGradeLabel = (grade) => {
+    switch (grade) {
+      case 5:
+        return "5 - Excellent";
+      case 4:
+        return "4 - High Satisfactory";
+      case 3:
+        return "3 - Satisfactory";
+      case 2:
+        return "2 - Low Satisfactory";
+      case 1:
+        return "1 - Marginal";
+      case 0:
+        return "0 - Unsatisfactory";
+      default:
+        return String(grade);
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex overflow-hidden", style: { minHeight: "600px" }, children: [
+    activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-56 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-900/50 flex justify-between items-center", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Flight Elements" }),
+        !readOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => setShowDeleteElementFlyout(true),
+              className: "p-1 rounded-full bg-gray-700 hover:bg-gray-600",
+              title: "Delete flight element(s)",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-red-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z", clipRule: "evenodd" }) })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => setShowAddElementFlyout(true),
+              className: "p-1 rounded-full bg-gray-700 hover:bg-gray-600",
+              title: "Add new flight element",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-sky-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
+            }
+          )
+        ] })
+      ] }),
+      flightElements.map((el) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: () => setSelectedElement(el),
+          className: `text-left px-4 py-3 border-l-4 transition-colors font-medium text-sm ${selectedElement === el ? "border-sky-500 bg-gray-700 text-white" : "border-transparent text-gray-400 hover:bg-gray-700/50 hover:text-gray-200"}`,
+          children: el
+        },
+        el
+      ))
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto p-6 space-y-6 bg-gray-900", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-2xl font-bold text-sky-400", children: currentDimension }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Define standardized phrases for each grade level." })
+      ] }),
+      activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400", children: "Training report section" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300",
+                title: SCORING_MATRIX_SECTION_HELP,
+                children: "i"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-30 hidden w-72 -translate-x-1/2 rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-gray-200 shadow-xl group-hover:block", children: SCORING_MATRIX_SECTION_HELP })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: currentElementGroup,
+              onFocus: () => beginElementGroupDraft(selectedElement),
+              onChange: (event) => updateElementGroupDraft(selectedElement, event.target.value),
+              onBlur: () => commitElementGroupDraft(selectedElement),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              onKeyDown: stopEditableKeyPropagation,
+              readOnly,
+              className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: sectionOptions.includes(currentElementGroup) ? currentElementGroup : "",
+              onChange: (event) => {
+                setElementGroupDrafts((previous) => {
+                  const { [selectedElement]: _discardedDraft, ...remainingDrafts } = previous;
+                  return remainingDrafts;
+                });
+                handleElementGroupChange(selectedElement, event.target.value);
+              },
+              disabled: readOnly,
+              className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:text-gray-400",
+              children: [
+                !sectionOptions.includes(currentElementGroup) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Custom section" }),
+                sectionOptions.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: section, children: section }, section))
+              ]
+            }
+          )
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "This controls which heading this element appears under on the training report." })
+      ] }),
+      [5, 4, 3, 2, 1, 0].map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `border rounded-lg overflow-hidden ${getGradeColor(grade)}`, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-2 font-bold text-sm border-b border-gray-700/30 flex justify-between items-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white opacity-90", children: getGradeLabel(grade) }),
+          !readOnly && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2", children: editModeGrades.has(grade) ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => toggleEditMode(grade),
+                className: "text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition-colors border border-green-500 font-semibold",
+                children: "✓ Save"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => handleAddPhrase(grade),
+                className: "text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600",
+                children: "+ Add Phrase"
+              }
+            )
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => toggleEditMode(grade),
+              className: "text-xs bg-sky-600 hover:bg-sky-700 text-white px-3 py-1 rounded transition-colors border border-sky-500 font-semibold",
+              children: "✎ Edit"
+            }
+          ) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-2", children: phraseBank && phraseBank[currentDimension] && phraseBank[currentDimension][grade] ? phraseBank[currentDimension][grade].map((phrase, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2 group", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "textarea",
+            {
+              value: phrase,
+              onBeforeInput: (event) => {
+                if (!readOnly && editModeGrades.has(grade)) handleEditableTextBeforeInput(event, (value) => handlePhraseChange(grade, idx, value));
+              },
+              onKeyDownCapture: (event) => {
+                if (!readOnly && editModeGrades.has(grade)) handleEditableTextKeyDownCapture(event, (value) => handlePhraseChange(grade, idx, value));
+                else stopEditableKeyPropagation(event);
+              },
+              onKeyDown: stopEditableKeyPropagation,
+              onChange: (e) => {
+                if (!readOnly && editModeGrades.has(grade)) handlePhraseChange(grade, idx, e.target.value);
+              },
+              readOnly: readOnly || !editModeGrades.has(grade),
+              rows: 1,
+              className: `flex-1 rounded p-2 text-sm resize-none overflow-hidden transition-colors ${readOnly ? "bg-gray-800/50 border border-gray-700 text-gray-400 cursor-default" : editModeGrades.has(grade) ? "bg-gray-800 border border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500" : "bg-transparent border border-transparent text-gray-300 cursor-default"}`,
+              style: { minHeight: "38px", height: "auto" },
+              onInput: (e) => {
+                const target = e.currentTarget;
+                target.style.height = "auto";
+                target.style.height = `${target.scrollHeight}px`;
+              }
+            }
+          ),
+          !readOnly && editModeGrades.has(grade) && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => handleDeletePhrase(grade, idx),
+              className: "p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity",
+              title: "Delete phrase",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z", clipRule: "evenodd" }) })
+            }
+          )
+        ] }, idx)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 italic pl-1", children: "No phrases defined." }) })
+      ] }, grade))
+    ] }),
+    !readOnly && showAddElementFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[100] flex items-center justify-center", onClick: () => setShowAddElementFlyout(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Add New Flight Element" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Element Name" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            value: newElementName,
+            onChange: (e) => setNewElementName(e.target.value),
+            autoFocus: true,
+            onKeyDown: (e) => {
+              if (e.key === "Enter") handleSaveNewElement();
+            },
+            className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+          }
+        )
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowAddElementFlyout(false), className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveNewElement, disabled: !newElementName.trim(), className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Save" })
+      ] })
+    ] }) }),
+    !readOnly && showDeleteElementFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[100] flex items-center justify-center", onClick: () => setShowDeleteElementFlyout(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700 flex flex-col max-h-[80vh]", onClick: (e) => e.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Delete Flight Elements" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 flex-1 overflow-y-auto", children: flightElements.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: flightElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "checkbox",
+            checked: selectedToDelete.has(element),
+            onChange: () => {
+              const newSet = new Set(selectedToDelete);
+              if (newSet.has(element)) newSet.delete(element);
+              else newSet.add(element);
+              setSelectedToDelete(newSet);
+            },
+            className: "h-4 w-4 accent-red-500 bg-gray-600"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-300", children: element })
+      ] }) }, element)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic", children: "No elements to delete." }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowDeleteElementFlyout(false), className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDeleteElements, disabled: selectedToDelete.size === 0, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Delete Selected" })
+      ] })
+    ] }) })
+  ] });
+};
+const SettingsView = ({
+  onShowSuccess,
+  eventLimits,
+  onUpdateEventLimits,
+  phraseBank,
+  onUpdatePhraseBank,
+  onNavigate,
+  onOpenCurrencyBuilder,
+  onOpenCurrencyRequirements,
+  masterCurrencies,
+  currencyRequirements,
+  sctEvents,
+  onUpdateSctEvents,
+  preferredDutyPeriod,
+  onUpdatePreferredDutyPeriod,
+  maxCrewDutyPeriod,
+  onUpdateMaxCrewDutyPeriod,
+  flightTurnaround,
+  onUpdateFlightTurnaround,
+  ftdTurnaround,
+  onUpdateFtdTurnaround,
+  cptTurnaround,
+  onUpdateCptTurnaround,
+  taxiGroundTime,
+  onUpdateTaxiGroundTime,
+  currentUserPermission,
+  activeSection = "scoring-matrix",
+  scoringMatrixActiveTab,
+  scoringMatrixReadOnly = false,
+  onScoringMatrixElementAdded,
+  activeOperationalModel,
+  activeUnitHasTrainees = true,
+  maxDispatchPerHour,
+  onUpdateMaxDispatchPerHour,
+  dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
+  onUpdateDispatchRateWindowMinutes,
+  dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS,
+  onUpdateDispatchStaggerSettings,
+  tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
+  onUpdateTileStatusSettings,
+  timezoneOffset,
+  cancellationRecords,
+  cancellationCodes,
+  currentAircraftAvailable,
+  totalAircraft,
+  dayFlyingStart = "08:00",
+  dayFlyingEnd = "17:00",
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  trainingReportDisplayName = "Training Report",
+  emergencyFreezeAuthority,
+  onUpdateEmergencyFreezeAuthority,
+  qualificationOptions = [],
+  currentUserQualificationIds = [],
+  aircraftConfigurationDefinitions = [],
+  activeUnitCode = "",
+  activeUnitCodes = [],
+  activeCompositeUnitCode = "",
+  activeAircraftTypeCode = ""
+}) => {
+  const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
+  const canEditEmergencyAuthority = ["Super Admin", "Admin"].includes(currentUserPermission);
+  const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
+  const sctShortLabel = sctTerminology.shortLabel;
+  const sctLongLabel = sctTerminology.longLabel;
+  const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
+  const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
+  const contractorStaffLimitLabel = simIpDisplayLabel.trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
+  const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
+  const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
+  const [isEditingBusinessRules, setIsEditingBusinessRules] = reactExports.useState(false);
+  const [tempMaxDispatchPerHour, setTempMaxDispatchPerHour] = reactExports.useState(maxDispatchPerHour);
+  const [tempDispatchRateWindowMinutes, setTempDispatchRateWindowMinutes] = reactExports.useState(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
+  const [tempDispatchStaggerSettings, setTempDispatchStaggerSettings] = reactExports.useState(resolvedDispatchStaggerSettings);
+  const [tempTileStatusSettings, setTempTileStatusSettings] = reactExports.useState(resolvedTileStatusSettings);
+  const displayedDispatchStaggerSettings = isEditingBusinessRules ? tempDispatchStaggerSettings : resolvedDispatchStaggerSettings;
+  const displayedTileStatusSettings = isEditingBusinessRules ? tempTileStatusSettings : resolvedTileStatusSettings;
+  const displayedMaxDispatchPerHour = isEditingBusinessRules ? tempMaxDispatchPerHour : maxDispatchPerHour;
+  const displayedDispatchRateWindowMinutes = isEditingBusinessRules ? tempDispatchRateWindowMinutes : normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes);
+  const canEditBusinessRules = canEditSettings && isEditingBusinessRules;
+  const handleDispatchRateWindowChange = (value) => {
+    setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(value));
+  };
+  const handleDispatchStaggerChange = (updates) => {
+    setTempDispatchStaggerSettings((current) => normaliseDispatchStaggerSettings({
+      ...current,
+      ...updates
+    }));
+  };
+  const handleTileStatusSettingsChange = (updates) => {
+    setTempTileStatusSettings((current) => normaliseTileStatusSettings({
+      ...current,
+      ...updates
+    }));
+  };
+  const handleTileStatusMinutesChange = (key, value) => handleTileStatusSettingsChange({ [key]: value });
+  const [selectedCurrency, setSelectedCurrency] = reactExports.useState(null);
+  const [isEditingLimits, setIsEditingLimits] = reactExports.useState(false);
+  const [tempLimits, setTempLimits] = reactExports.useState(eventLimits);
+  const canEditTraineeLimits = isEditingLimits && activeUnitHasTrainees;
+  const [showScoringMatrix, setShowScoringMatrix] = reactExports.useState(false);
+  const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState("Airmanship");
+  const [repoFiles, setRepoFiles] = reactExports.useState([]);
+  const [pendingTemplateOverride, setPendingTemplateOverride] = reactExports.useState(null);
+  const templateOverrideInputRef = reactExports.useRef(null);
+  const standardSettingsButtonClass2 = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+  const safeNameSort = (a, b) => {
+    const nameA = a.name || "";
+    const nameB = b.name || "";
+    return nameA.localeCompare(nameB);
+  };
+  const visibleCurrencies = reactExports.useMemo(() => {
+    return [...masterCurrencies, ...currencyRequirements].filter((c) => c.isVisible).sort(safeNameSort);
+  }, [masterCurrencies, currencyRequirements]);
+  reactExports.useEffect(() => {
+    if (activeSection && activeSection !== "data-loaders") return;
+    const initAndFetch = async () => {
+      try {
+        await initDB();
+        refreshFiles();
+      } catch (error) {
+        console.error("Failed to initialize DB:", error);
+      }
+    };
+    initAndFetch();
+  }, [activeSection]);
+  const shouldShowSection = (sectionName) => {
+    if (!activeSection) return true;
+    return activeSection === sectionName;
+  };
+  const refreshFiles = async () => {
+    const files = await getAllFiles();
+    setRepoFiles(files);
+  };
+  const getTemplateOverride = (templateKey) => repoFiles.find((file) => file.folderId === TEMPLATE_OVERRIDE_FOLDER_ID && file.name.startsWith(`${templateKey}::`));
+  const getTemplateOverrideDisplayName = (templateKey) => {
+    const override = getTemplateOverride(templateKey);
+    return override ? override.name.replace(`${templateKey}::`, "") : "";
+  };
+  const downloadStoredTemplate = async (templateKey) => {
+    const override = getTemplateOverride(templateKey);
+    if (!override) return false;
+    const record = await getFile(override.id);
+    if (!record) return false;
+    const url = URL.createObjectURL(record.content);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = record.name.replace(`${templateKey}::`, "");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  };
+  const downloadPublicTemplate = (href, fileName) => {
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  const verifySettingsEditPassword = async (message) => {
+    const password = await showDarkPrompt({
+      title: "Password Required",
+      message,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel"
+    });
+    if (!password) return false;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", "Password Required", "warning");
+        return false;
+      }
+      return true;
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+      return false;
+    }
+  };
+  const handleChangeTemplateClick = async (template) => {
+    const unlocked = await verifySettingsEditPassword(`Enter your password to change the ${template.label} download template.`);
+    if (!unlocked) return;
+    setPendingTemplateOverride(template);
+    if (templateOverrideInputRef.current) templateOverrideInputRef.current.value = "";
+    templateOverrideInputRef.current?.click();
+  };
+  const handleTemplateOverrideSelected = async (file) => {
+    if (!file || !pendingTemplateOverride) return;
+    const existingOverrides = repoFiles.filter((existingFile) => existingFile.folderId === TEMPLATE_OVERRIDE_FOLDER_ID && existingFile.name.startsWith(`${pendingTemplateOverride.key}::`));
+    await Promise.all(existingOverrides.map((existingFile) => deleteFile(existingFile.id)));
+    await addFile(file, TEMPLATE_OVERRIDE_FOLDER_ID, `${pendingTemplateOverride.key}::${file.name}`);
+    await refreshFiles();
+    logAudit({
+      page: "Settings - Template Downloads",
+      action: "update",
+      description: `Changed ${pendingTemplateOverride.label} download template`,
+      changes: `Template file: ${file.name}`
+    });
+    onShowSuccess(`${pendingTemplateOverride.label} template updated.`);
+    setPendingTemplateOverride(null);
+  };
+  const handleResetTemplateOverride = async (template) => {
+    const unlocked = await verifySettingsEditPassword(`Enter your password to reset the ${template.label} download template.`);
+    if (!unlocked) return;
+    const existingOverrides = repoFiles.filter((existingFile) => existingFile.folderId === TEMPLATE_OVERRIDE_FOLDER_ID && existingFile.name.startsWith(`${template.key}::`));
+    await Promise.all(existingOverrides.map((existingFile) => deleteFile(existingFile.id)));
+    await refreshFiles();
+    logAudit({
+      page: "Settings - Template Downloads",
+      action: "update",
+      description: `Reset ${template.label} download template`,
+      changes: "Restored system template download."
+    });
+    onShowSuccess(`${template.label} template reset to system template.`);
+  };
+  const handleEditBusinessRules = () => {
+    setTempMaxDispatchPerHour(maxDispatchPerHour);
+    setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
+    setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
+    setTempTileStatusSettings(resolvedTileStatusSettings);
+    setIsEditingBusinessRules(true);
+  };
+  const handleSaveBusinessRules = () => {
+    onUpdateMaxDispatchPerHour(tempMaxDispatchPerHour);
+    const savedDispatchRateWindowMinutes = normaliseDispatchRateWindowMinutes(tempDispatchRateWindowMinutes);
+    if (onUpdateDispatchRateWindowMinutes) {
+      onUpdateDispatchRateWindowMinutes(savedDispatchRateWindowMinutes);
+    }
+    if (onUpdateDispatchStaggerSettings) {
+      onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings(tempDispatchStaggerSettings));
+    }
+    const savedTileStatusSettings = normaliseTileStatusSettings(tempTileStatusSettings);
+    if (onUpdateTileStatusSettings) {
+      onUpdateTileStatusSettings(savedTileStatusSettings);
+    }
+    setIsEditingBusinessRules(false);
+    onShowSuccess("Business rules updated");
+    logAudit({
+      page: "Settings - Business Rules",
+      action: "update",
+      description: "Updated business rule settings",
+      changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; dispatch rate window: ${savedDispatchRateWindowMinutes} min; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? "none" : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? "none" : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation: ${savedTileStatusSettings.flightAuthorisationRequired ? "required" : "optional"}; authorisation warnings: ${savedTileStatusSettings.authorizationWarningMinutes}/${savedTileStatusSettings.authorizationUrgentMinutes} min`
+    });
+  };
+  const handleCancelBusinessRules = () => {
+    setTempMaxDispatchPerHour(maxDispatchPerHour);
+    setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
+    setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
+    setTempTileStatusSettings(resolvedTileStatusSettings);
+    setIsEditingBusinessRules(false);
+  };
+  const handleEditLimits = () => {
+    setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
+    setIsEditingLimits(true);
+  };
+  const handleSaveLimits = () => {
+    onUpdateEventLimits(tempLimits);
+    setIsEditingLimits(false);
+    onShowSuccess("Daily event limits updated");
+    logAudit({
+      page: "Settings - Daily Event Limits",
+      action: "update",
+      description: "Updated event scheduling limits",
+      changes: "Updated scheduling limit categories"
+    });
+  };
+  const handleCancelLimits = () => {
+    setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
+    setIsEditingLimits(false);
+  };
+  const handleUpdatePhraseBank = (newBank) => {
+    onUpdatePhraseBank(newBank);
+    debouncedAuditLog(
+      "scoring-matrix-phrase-bank",
+      {
+        page: "Settings - Scoring Matrix",
+        action: "update",
+        description: "Updated scoring matrix phrase bank",
+        changes: "Modified scoring criteria and phrases"
+      },
+      (page, action, description, changes) => logAudit({ page, action, description, changes })
+    );
+  };
+  const handleDownloadInstructorTemplate = async () => {
+    if (await downloadStoredTemplate("staff")) return;
+    downloadPublicTemplate("/Staff_Bulk_Update_Template.xlsx", "Staff_Bulk_Update_Template.xlsx");
+  };
+  const handleDownloadTraineeTemplate = async () => {
+    if (await downloadStoredTemplate("trainee")) return;
+    downloadPublicTemplate("/Trainee_Bulk_Update_Template.xlsx", "Trainee_Bulk_Update_Template.xlsx");
+  };
+  const handleDownloadLmpTemplate = async () => {
+    if (await downloadStoredTemplate("lmp")) return;
+    downloadPublicTemplate("/LMP_Syllabus_Template.xlsx", "LMP_Syllabus_Template.xlsx");
+  };
+  const handleDownloadLogbookTemplate = async () => {
+    if (await downloadStoredTemplate("logbook")) return;
+    const headers = ["Date", "Aircraft", "Pilot", "Student", "Sortie", "Duration", "Result"];
+    const ws = XLSX.utils.json_to_sheet([{}], { header: headers });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Logbook");
+    XLSX.writeFile(wb, "Logbook_Template.xlsx");
+  };
+  const handleDownloadOrganisationStructureTemplate = async () => {
+    if (await downloadStoredTemplate("organisation-structure")) return;
+    downloadOrganisationStructureTemplateFile();
+  };
+  const dataLoaderTemplateRows = [
+    { key: "staff", label: "Staff", downloadLabel: "Staff Template (.xlsx)", onDownload: handleDownloadInstructorTemplate },
+    { key: "trainee", label: "Trainee", downloadLabel: "Trainee Template (.xlsx)", onDownload: handleDownloadTraineeTemplate },
+    { key: "lmp", label: "LMP", downloadLabel: "LMP Template (.xlsx)", onDownload: handleDownloadLmpTemplate },
+    { key: "logbook", label: "Logbook", downloadLabel: "Logbook Template (.xlsx)", onDownload: handleDownloadLogbookTemplate },
+    { key: "organisation-structure", label: "Organisational Structure", downloadLabel: "Organisational Structure Template (.xlsx)", onDownload: handleDownloadOrganisationStructureTemplate }
+  ];
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { onKeyDownCapture: stopEditableKeyPropagation, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+      shouldShowSection("validation") && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ACHistoryPage,
+        {
+          currentUserRole: currentUserPermission,
+          cancellationRecords: cancellationRecords || [],
+          currentAircraftAvailable,
+          totalAircraft,
+          timezoneOffset,
+          dayFlyingStart,
+          dayFlyingEnd,
+          resourceDisplayNames
+        }
+      ) }),
+      shouldShowSection("scoring-matrix") && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ScoringMatrixInline,
+        {
+          activeTab: scoringMatrixActiveTab || "Airmanship",
+          phraseBank,
+          onUpdatePhraseBank: handleUpdatePhraseBank,
+          readOnly: scoringMatrixReadOnly,
+          onElementAdded: onScoringMatrixElementAdded
+        }
+      ),
+      shouldShowSection("duty-turnaround") && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        DutyTurnaroundSection,
+        {
+          preferredDutyPeriod,
+          onUpdatePreferredDutyPeriod,
+          maxCrewDutyPeriod,
+          onUpdateMaxCrewDutyPeriod,
+          flightTurnaround,
+          onUpdateFlightTurnaround,
+          ftdTurnaround,
+          onUpdateFtdTurnaround,
+          cptTurnaround,
+          onUpdateCptTurnaround,
+          taxiGroundTime,
+          onUpdateTaxiGroundTime,
+          canEdit: canEditSettings,
+          onShowSuccess,
+          resourceDisplayNames
+        }
+      ),
+      shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ContinuationCurrencyEventsSettings,
+        {
+          sctShortLabel,
+          sctLongLabel,
+          sctEvents,
+          onUpdateSctEvents,
+          masterCurrencies,
+          currencyRequirements,
+          canEditSettings,
+          onOpenCurrencyRequirements,
+          aircraftConfigurationDefinitions,
+          activeUnitCode,
+          activeUnitCodes,
+          activeCompositeUnitCode,
+          activeAircraftTypeCode
+        }
+      ),
+      shouldShowSection("currencies") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Currency Requirements" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto max-h-[400px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-left text-sm", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "font-medium text-gray-400 px-4 pt-0 pb-2 border-b border-gray-700", children: "Currency" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "font-medium text-gray-400 px-4 pt-0 pb-2 border-b border-gray-700", children: "Type" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: visibleCurrencies.map((c, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "tr",
+              {
+                className: `border-t border-gray-700 cursor-pointer transition-colors ${selectedCurrency?.id === c.id ? "bg-sky-900/30" : "hover:bg-gray-700"}`,
+                onClick: () => setSelectedCurrency(c),
+                onMouseEnter: () => setSelectedCurrency(c),
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-4 text-gray-200", children: c.name }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-4 text-gray-300 capitalize", children: c.type })
+                ]
+              },
+              c.id
+            )) })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700 shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onOpenCurrencyBuilder ? onOpenCurrencyBuilder() : onNavigate("CurrencyBuilder"), className: "w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Currency Builder" }) })
+        ] }),
+        selectedCurrency && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center shrink-0 border-b border-gray-700", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Currency Details" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => setSelectedCurrency(null),
+                className: "text-gray-400 hover:text-white transition-colors",
+                children: "✕"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Name" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.name })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Type" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200 capitalize", children: selectedCurrency.type })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Description" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 whitespace-pre-wrap", children: selectedCurrency.description || "No description" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Visible" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.isVisible ? "Yes" : "No" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Post-Flight Currency Panel" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.showInPostFlight ? "Yes" : "No" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Post-Flight Recency Checklist" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.showInPostFlightRecency ? "Yes" : "No" })
+            ] }),
+            selectedCurrency.type === "primitive" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Validity Days" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-200", children: [
+                  selectedCurrency.validityDays,
+                  " days"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Required Count" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.requiredCount })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Currency Short Code" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: selectedCurrency.shortCode || selectedCurrency.eventCodes?.[0] ? selectedCurrency.shortCode || selectedCurrency.eventCodes?.[0] : "None" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Expiry Rule" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200 capitalize", children: selectedCurrency.expiryRule })
+              ] })
+            ] }),
+            selectedCurrency.type === "composite" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/70 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-2", children: "Rule" }),
+                renderCurrencyLogicNode(
+                  selectedCurrency.logicTree,
+                  [...currencyRequirements, ...masterCurrencies]
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/70 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-2", children: "Expiry" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300", children: formatCurrencyExpiryCalculation(selectedCurrency.expiryCalculation) })
+              ] })
+            ] })
+          ] })
+        ] })
+      ] }),
+      shouldShowSection("business-rules") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Business Rules" }),
+          isEditingBusinessRules ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveBusinessRules, className: standardSettingsButtonClass2, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelBusinessRules, className: standardSettingsButtonClass2, children: "Cancel" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleEditBusinessRules,
+              disabled: !canEditSettings,
+              className: standardSettingsButtonClass2,
+              children: "Edit"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Max dispatch / hr" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: displayedMaxDispatchPerHour,
+                onChange: (e) => setTempMaxDispatchPerHour(parseInt(e.target.value)),
+                disabled: !canEditBusinessRules,
+                className: `w-[100px] px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
+                children: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map((value) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value, children: value }, value))
+              }
+            ),
+            canEditSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Maximum number of dispatches allowed per hour" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Dispatch Rate window" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-stretch gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "number",
+                  min: MIN_DISPATCH_RATE_WINDOW_MINUTES,
+                  max: MAX_DISPATCH_RATE_WINDOW_MINUTES,
+                  step: DISPATCH_RATE_WINDOW_STEP_MINUTES,
+                  value: displayedDispatchRateWindowMinutes,
+                  onChange: (event) => handleDispatchRateWindowChange(Number(event.target.value)),
+                  disabled: !canEditBusinessRules || !onUpdateDispatchRateWindowMinutes,
+                  className: `w-[120px] px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${canEditBusinessRules && onUpdateDispatchRateWindowMinutes ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => handleDispatchRateWindowChange(displayedDispatchRateWindowMinutes + DISPATCH_RATE_WINDOW_STEP_MINUTES),
+                    disabled: !canEditBusinessRules || !onUpdateDispatchRateWindowMinutes || displayedDispatchRateWindowMinutes >= MAX_DISPATCH_RATE_WINDOW_MINUTES,
+                    className: "h-[19px] w-8 rounded border border-gray-600 bg-gray-700 text-[10px] font-bold text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40",
+                    "aria-label": "Increase Dispatch Rate window by five minutes",
+                    children: "▲"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => handleDispatchRateWindowChange(displayedDispatchRateWindowMinutes - DISPATCH_RATE_WINDOW_STEP_MINUTES),
+                    disabled: !canEditBusinessRules || !onUpdateDispatchRateWindowMinutes || displayedDispatchRateWindowMinutes <= MIN_DISPATCH_RATE_WINDOW_MINUTES,
+                    className: "h-[19px] w-8 rounded border border-gray-600 bg-gray-700 text-[10px] font-bold text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40",
+                    "aria-label": "Decrease Dispatch Rate window by five minutes",
+                    children: "▼"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "self-center text-xs text-gray-400", children: "min" })
+            ] }),
+            canEditSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Window used by the DFP Dispatch Rate overlay. Default is 60 minutes." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-4 border-t border-gray-700", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-200", children: "Dispatch Stagger" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Minimum interval between event start times. Formation members may still share an authorised formation start." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-300", children: "Flights" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs text-gray-300", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: displayedDispatchStaggerSettings.flightNoMinimum,
+                        onChange: (event) => handleDispatchStaggerChange({ flightNoMinimum: event.target.checked }),
+                        disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings,
+                        className: "h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
+                      }
+                    ),
+                    "No minimum"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 0,
+                      max: 120,
+                      step: 1,
+                      value: displayedDispatchStaggerSettings.flightMinutes,
+                      onChange: (event) => handleDispatchStaggerChange({ flightMinutes: Number(event.target.value) }),
+                      disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings || displayedDispatchStaggerSettings.flightNoMinimum,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && onUpdateDispatchStaggerSettings && !displayedDispatchStaggerSettings.flightNoMinimum ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-300", children: "Simulators" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs text-gray-300", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: displayedDispatchStaggerSettings.simulatorNoMinimum,
+                        onChange: (event) => handleDispatchStaggerChange({ simulatorNoMinimum: event.target.checked }),
+                        disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings,
+                        className: "h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
+                      }
+                    ),
+                    "No minimum"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 0,
+                      max: 120,
+                      step: 1,
+                      value: displayedDispatchStaggerSettings.simulatorMinutes,
+                      onChange: (event) => handleDispatchStaggerChange({ simulatorMinutes: Number(event.target.value) }),
+                      disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings || displayedDispatchStaggerSettings.simulatorNoMinimum,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && onUpdateDispatchStaggerSettings && !displayedDispatchStaggerSettings.simulatorNoMinimum ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
+                ] })
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-4 border-t border-gray-700", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-between gap-4 mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-200", children: "Flight tile authorisation warnings" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Controls whether flight authorisation is required and when unsigned flight tiles change border colour on the current day's DFP." })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-start gap-3 rounded-lg border p-3 mb-3 ${canEditBusinessRules ? "bg-gray-700/40 border-gray-600 cursor-pointer hover:bg-gray-700/60" : "bg-gray-700/20 border-gray-700 cursor-not-allowed"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: displayedTileStatusSettings.flightAuthorisationRequired,
+                  onChange: (e) => handleTileStatusSettingsChange({ flightAuthorisationRequired: e.target.checked }),
+                  disabled: !canEditBusinessRules,
+                  className: "mt-1 h-4 w-4 rounded border-gray-500 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-100", children: "Flight authorisation required" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block mt-1 text-xs text-gray-400", children: "When off, authorisation controls stay visible but cannot be selected, and DFP authorisation border warnings are disabled." })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-medium text-gray-400 mb-1", children: "Amber warning before start" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 0,
+                      max: 720,
+                      step: 5,
+                      value: displayedTileStatusSettings.authorizationWarningMinutes,
+                      onChange: (e) => handleTileStatusMinutesChange("authorizationWarningMinutes", Number(e.target.value)),
+                      disabled: !canEditBusinessRules || !displayedTileStatusSettings.flightAuthorisationRequired,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && displayedTileStatusSettings.flightAuthorisationRequired ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-medium text-gray-400 mb-1", children: "Red urgent before start" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 0,
+                      max: 720,
+                      step: 5,
+                      value: displayedTileStatusSettings.authorizationUrgentMinutes,
+                      onChange: (e) => handleTileStatusMinutesChange("authorizationUrgentMinutes", Number(e.target.value)),
+                      disabled: !canEditBusinessRules || !displayedTileStatusSettings.flightAuthorisationRequired,
+                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && displayedTileStatusSettings.flightAuthorisationRequired ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
+                ] })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "Deployment tiles, Runway DI/TWR DI and Duty Supervisor events are exempt from these authorisation warning colours." })
+          ] })
+        ] }) })
+      ] }),
+      shouldShowSection("data-loaders") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Template Downloads" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Blank Template Downloads" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Download blank templates for bulk uploads in the relevant Staff, Trainee, LMP and Organisation pages. Completed files are selected or dropped into those pages, not stored here." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                ref: templateOverrideInputRef,
+                type: "file",
+                accept: ".xlsx,.xls,.csv",
+                className: "hidden",
+                onChange: (event) => void handleTemplateOverrideSelected(event.target.files?.[0])
+              }
+            ),
+            dataLoaderTemplateRows.map((template) => {
+              const overrideName = getTemplateOverrideDisplayName(template.key);
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/40 p-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => void template.onDownload(), className: "w-[45%] min-w-0 shrink-0 truncate whitespace-nowrap rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-sky-700", children: template.downloadLabel }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => void handleChangeTemplateClick(template),
+                      className: "shrink-0 whitespace-nowrap rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20",
+                      children: "Change Template"
+                    }
+                  ),
+                  overrideName ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => void handleResetTemplateOverride(template),
+                      className: "shrink-0 whitespace-nowrap rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20",
+                      children: "Reset"
+                    }
+                  ) : null
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500", title: overrideName || "Configured baseline template", children: overrideName ? `Custom: ${overrideName}` : "Configured baseline" })
+              ] }, template.key);
+            })
+          ] })
+        ] }) })
+      ] }),
+      shouldShowSection("event-limits") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl h-fit", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Daily Event Limits" }),
+          isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLimits, className: standardSettingsButtonClass2, children: "Save" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelLimits, className: standardSettingsButtonClass2, children: "Cancel" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleEditLimits,
+              disabled: !canEditSettings,
+              className: standardSettingsButtonClass2,
+              children: "Edit"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Staff" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max flights per day:" }),
+              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "1", value: tempLimits.instructor.maxFlights || 1, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlights: parseInt(e.target.value) || 1 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlights || 1 })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max simulator per day:" }),
+              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "1", value: tempLimits.instructor.maxSimulators || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxSimulators: parseInt(e.target.value) || 1 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxSimulators || 2 })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max flight + sim per day:" }),
+              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "1", value: tempLimits.instructor.maxFlightSim || tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightSim: parseInt(e.target.value) || 1, maxFlightFtd: parseInt(e.target.value) || 1 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlightSim || eventLimits.instructor.maxFlightFtd || 2 })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor qualification assigned) - Max Duty Supervisor session (hrs):" }),
+              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.instructor.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxDutySup })
+            ] })
+          ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Execs" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+                  "Max Flight/",
+                  resourceDisplayNames.ftd,
+                  " per day:"
+                ] }),
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxFlightFtd, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.exec.maxFlightFtd })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max Duty Supervisor session (hrs):" }),
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.exec.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.exec.maxDutySup })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total events per day:" }),
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.exec.maxTotal })
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Staff" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+                  "Max Flight/",
+                  resourceDisplayNames.ftd,
+                  " per day:"
+                ] }),
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0, maxFlightSim: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlightFtd })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor qualification assigned) - Max Duty Supervisor session (hrs):" }),
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.instructor.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxDutySup })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total events per day:" }),
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxTotal || 3, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxTotal })
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "fieldset",
+            {
+              className: `p-3 border rounded-lg transition ${activeUnitHasTrainees ? "border-gray-600" : "border-gray-700 bg-gray-900/50 opacity-45"}`,
+              disabled: !activeUnitHasTrainees,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: [
+                  "Trainees",
+                  activeUnitHasTrainees ? "" : " (Off for current unit)"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+                      "Max Flight/",
+                      resourceDisplayNames.ftd,
+                      " per day:"
+                    ] }),
+                    canEditTraineeLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxFlightFtd || 1, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxFlightFtd })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total events per day:" }),
+                    canEditTraineeLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxTotal })
+                  ] })
+                ] })
+              ]
+            }
+          ),
+          contractorStaffEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: contractorStaffLimitLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+                  "Max Flight/",
+                  resourceDisplayNames.ftd,
+                  " per day:"
+                ] }),
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { ...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.simIp.maxFtd })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total events per day:" }),
+                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { ...tempLimits.simIp, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.simIp.maxTotal })
+              ] })
+            ] })
+          ] }) : null
+        ] }) })
+      ] }),
+      shouldShowSection("emergency") && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        EmergencyPage,
+        {
+          currentUserRole: currentUserPermission,
+          onShowSuccess,
+          trainingReportDisplayName,
+          emergencyFreezeAuthority,
+          onUpdateEmergencyFreezeAuthority,
+          qualificationOptions,
+          currentUserQualificationIds,
+          canEditEmergencyAuthority,
+          flightAuthorisationRequired: resolvedTileStatusSettings.flightAuthorisationRequired
+        }
+      )
+    ] }),
+    showScoringMatrix && /* @__PURE__ */ jsxRuntimeExports.jsx(ScoringMatrixFlyout, { onClose: () => setShowScoringMatrix(false), phraseBank, onUpdatePhraseBank: handleUpdatePhraseBank, initialTab: scoringMatrixTab })
+  ] });
+};
 const VisualAdjustGuide = ({
   event,
   onTimeChange,
@@ -12348,63 +15972,6 @@ const endDfpDragDiagnostic = (sessionId) => {
   session.endedAt = (/* @__PURE__ */ new Date()).toISOString();
   if (report.activeSessionId === sessionId) report.activeSessionId = null;
   persistReport(report);
-};
-const escapeOrganisationTemplateHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-const downloadOrganisationStructureTemplateFile = (fileName = "DFP_NEO_Organisation_Structure_Template.xls") => {
-  const headers = ["Level", "Level Type", "Name", "Parent", "Notes"];
-  const rows = [
-    ["0", "Organisation", "Organisation", "", "Top level organisation"],
-    ["1", "Organisation Level 1", "Organisation Level 1", "Organisation", "First organisation layer below the top level"],
-    ["2", "Organisation Level 2", "Organisation Level 2", "Organisation Level 1", "Second organisation layer"],
-    ["3", "Organisation Level 3", "Organisation Level 3", "Organisation Level 2", "Add as many levels as needed before units"],
-    ["4", "Organisation Level 4", "Organisation Level 4", "Organisation Level 3", "Optional deeper level"],
-    ["5", "Organisation Level 5", "Organisation Level 5", "Organisation Level 4", "Optional deeper level"],
-    ["6", "Organisation Level 6", "Organisation Level 6", "Organisation Level 5", "Optional deeper level"]
-  ];
-  const tableRows = [
-    `<tr>${headers.map((header) => `<th>${escapeOrganisationTemplateHtml(header)}</th>`).join("")}</tr>`,
-    ...rows.map((row) => `<tr>${headers.map((_, index) => `<td>${escapeOrganisationTemplateHtml(row[index] || "")}</td>`).join("")}</tr>`)
-  ].join("");
-  const html = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<style>
-body { font-family: Arial, Helvetica, sans-serif; color: #162033; }
-table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-col.level { width: 90px; }
-col.type { width: 180px; }
-col.name { width: 250px; }
-col.parent { width: 250px; }
-col.notes { width: 390px; }
-.title { background: #143142; color: #ffffff; font-size: 20px; font-weight: 700; height: 34px; }
-.subtitle { background: #dbeafe; color: #143142; font-size: 12px; font-weight: 600; height: 28px; }
-.guide { background: #eef2f7; color: #334155; font-size: 11px; height: 24px; }
-th { background: #f97316; color: #ffffff; border: 1px solid #9a3412; font-size: 12px; font-weight: 700; height: 28px; text-align: left; padding: 6px; }
-td { border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 6px; vertical-align: top; }
-tr:nth-child(even) td { background: #f8fafc; }
-</style>
-</head>
-<body>
-<table>
-<colgroup><col class="level" /><col class="type" /><col class="name" /><col class="parent" /><col class="notes" /></colgroup>
-<tr><td class="title" colspan="${headers.length}">DFP NEO Organisation Structure Template</td></tr>
-<tr><td class="subtitle" colspan="${headers.length}">Use this single table for all organisation levels before units. Add one row per organisation item.</td></tr>
-<tr><td class="guide" colspan="${headers.length}">Level 0 is the top organisation. Level Type is the plain-English name for that layer. Each lower level names its immediate parent in the Parent column.</td></tr>
-<tr><td colspan="${headers.length}"></td></tr>
-${tableRows}
-</table>
-</body>
-</html>`;
-  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName.replace(/\.csv$/i, ".xls").replace(/\.xlsx$/i, ".xls");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 };
 const PIXELS_PER_HOUR$6 = 200;
 const ROW_HEIGHT$6 = 32;
@@ -13252,6 +16819,39 @@ const parseWizardCurrencyRows = (value) => parseWizardPipeRows(value, ["name", "
 const formatWizardCurrencyRows = (rows) => formatWizardPipeRows(rows, ["name", "code", "crew", "config", "currency", "aircraftCount"]);
 const parseWizardScoringRows = (value) => parseWizardPipeRows(value, ["dimension", "passStandard", "failStandard", "grade0", "grade1", "grade2", "grade3", "grade4", "grade5"]);
 const formatWizardScoringRows = (rows) => formatWizardPipeRows(rows, ["dimension", "passStandard", "failStandard", "grade0", "grade1", "grade2", "grade3", "grade4", "grade5"]);
+const defaultWizardScoringDraft = "Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent";
+const isScoringPhraseBank = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value) && Object.values(value).some((dimension) => Boolean(dimension) && typeof dimension === "object" && !Array.isArray(dimension) && Object.values(dimension).some(Array.isArray));
+const wizardScoringRowsToPhraseBank = (value) => {
+  const rows = parseWizardScoringRows(value || defaultWizardScoringDraft);
+  return rows.reduce((bank, row) => ({
+    ...bank,
+    [row.dimension || "Assessment"]: {
+      0: [row.grade0 || row.failStandard].filter(Boolean),
+      1: [row.grade1].filter(Boolean),
+      2: [row.grade2].filter(Boolean),
+      3: [row.grade3 || row.passStandard].filter(Boolean),
+      4: [row.grade4].filter(Boolean),
+      5: [row.grade5].filter(Boolean)
+    }
+  }), {});
+};
+const wizardPhraseBankToScoringDraft = (phraseBank) => {
+  const rows = Object.entries(phraseBank || {}).filter(([dimension, phrases]) => !dimension.startsWith("__") && Boolean(phrases) && typeof phrases === "object" && !Array.isArray(phrases) && Object.values(phrases).some(Array.isArray)).map(([dimension, phrases]) => {
+    const gradePhrases = phrases;
+    return {
+      dimension,
+      passStandard: gradePhrases[3]?.[0] || "",
+      failStandard: gradePhrases[0]?.[0] || "",
+      grade0: gradePhrases[0]?.[0] || "",
+      grade1: gradePhrases[1]?.[0] || "",
+      grade2: gradePhrases[2]?.[0] || "",
+      grade3: gradePhrases[3]?.[0] || "",
+      grade4: gradePhrases[4]?.[0] || "",
+      grade5: gradePhrases[5]?.[0] || ""
+    };
+  });
+  return formatWizardScoringRows(rows.length > 0 ? rows : parseWizardScoringRows(defaultWizardScoringDraft));
+};
 const parseWizardStandardCurrencyEventRows = (value) => parseWizardEditablePipeRows(value, ["name", "shortTitle", "resourceType", "duration", "preFlight", "postFlight", "crew", "currency", "config", "aircraftCount"]);
 const formatWizardStandardCurrencyEventRows = (rows) => formatWizardEditablePipeRows(rows, ["name", "shortTitle", "resourceType", "duration", "preFlight", "postFlight", "crew", "currency", "config", "aircraftCount"]);
 const getWizardOperationalModelLabel = (value) => OPERATIONAL_MODEL_OPTIONS.find((option) => option.value === normaliseOperationalModel(value))?.label || getOperationalModelLabel(value);
@@ -14686,8 +18286,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const [resourceSharingDraft, setResourceSharingDraft] = reactExports.useState("Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.");
   const [currencyDraft, setCurrencyDraft] = reactExports.useState("PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1");
-  const [scoringDraft, setScoringDraft] = reactExports.useState("Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent");
-  const [wizardScoringTab, setWizardScoringTab] = reactExports.useState("grades");
+  const [scoringDraft, setScoringDraft] = reactExports.useState(defaultWizardScoringDraft);
+  const [wizardScoringPhraseBank, setWizardScoringPhraseBank] = reactExports.useState(() => wizardScoringRowsToPhraseBank(defaultWizardScoringDraft));
+  const [wizardScoringTab, setWizardScoringTab] = reactExports.useState("Airmanship");
   const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = reactExports.useState("Annual Instrument Check | INST | Flight | 90 | 90 | 60 | Standard crew | Instrument Currency | ANY | 1");
   const formatWizardOrganisationPath = (path) => path.map((item) => String(item || "").trim()).filter(Boolean).join(" / ");
   const formatWizardImmediateParentLabel = (path) => {
@@ -14971,6 +18572,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       aircraftCount: String(profile.aircraftCount ?? 1)
     }))) : getSavedWizardString("staffCurrencyEvents", "staffCurrencyEventsDraft");
   };
+  const buildHydratedScoringPhraseBankDraft = () => {
+    const unitPhraseBank = currentUnit?.settings?.trainingReportPhraseBank;
+    if (isScoringPhraseBank(unitPhraseBank)) return unitPhraseBank;
+    const organisationPhraseBank = activeOrganisation?.settings?.trainingReportPhraseBank;
+    if (isScoringPhraseBank(organisationPhraseBank)) return organisationPhraseBank;
+    const savedDraft = getSavedWizardString("scoringMatrix", "scoringDraft");
+    return wizardScoringRowsToPhraseBank(savedDraft || defaultWizardScoringDraft);
+  };
   const hydrateSupplementaryWizardDrafts = () => {
     const savedTraineeCourses = getSavedWizardString("traineeCourses", "traineeCourseOptionsDraft");
     const savedTrainees = getSavedWizardString("trainees", "traineeDraft");
@@ -14983,7 +18592,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const nextRankSettings = buildHydratedRankSettingsDraft();
     const nextResourceSharing = buildHydratedResourceSharingDraft();
     const nextCurrencies = buildHydratedCurrencyDraft();
-    const nextScoringMatrix = getSavedWizardString("scoringMatrix", "scoringDraft");
+    const nextScoringPhraseBank = buildHydratedScoringPhraseBankDraft();
     const nextStaffCurrencyEvents = buildHydratedStaffCurrencyEventsDraft();
     if (nextCrewLabels) setCrewLabelsDraft(nextCrewLabels);
     if (nextAlternateCrews) setAlternateCrewDraft(nextAlternateCrews);
@@ -14999,7 +18608,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setRankSettingsDraft(nextRankSettings);
     if (nextResourceSharing) setResourceSharingDraft(nextResourceSharing);
     if (nextCurrencies) setCurrencyDraft(nextCurrencies);
-    if (nextScoringMatrix) setScoringDraft(nextScoringMatrix);
+    setWizardScoringPhraseBank(nextScoringPhraseBank);
+    setScoringDraft(wizardPhraseBankToScoringDraft(nextScoringPhraseBank));
     if (nextStaffCurrencyEvents) setStaffCurrencyEventsDraft(nextStaffCurrencyEvents);
   };
   const buildHydratedUnitParentDraft = (unitsDraftValue, draft) => {
@@ -15853,18 +19463,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     })));
   };
   const saveScoringMatrixDraft = () => {
-    const scoringRows = parseWizardScoringRows(scoringDraft);
-    const trainingReportPhraseBank = scoringRows.reduce((bank, row) => ({
-      ...bank,
-      [row.dimension || "Assessment"]: {
-        0: [row.grade0 || row.failStandard].filter(Boolean),
-        1: [row.grade1].filter(Boolean),
-        2: [row.grade2].filter(Boolean),
-        3: [row.grade3 || row.passStandard].filter(Boolean),
-        4: [row.grade4].filter(Boolean),
-        5: [row.grade5].filter(Boolean)
-      }
-    }), {});
+    const trainingReportPhraseBank = wizardScoringPhraseBank;
+    const nextScoringDraft = wizardPhraseBankToScoringDraft(trainingReportPhraseBank);
     const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || "").trim().toUpperCase();
     saveWizardConfig("Scoring matrix saved into Settings.", (baseConfig) => {
       const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
@@ -15876,16 +19476,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         ...settings,
         initialSetupWizardDraft: {
           ...settings.initialSetupWizardDraft || {},
-          scoringMatrix: scoringDraft,
+          scoringMatrix: nextScoringDraft,
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         },
         initialSetupWizardDrafts: {
           ...settings.initialSetupWizardDrafts || {},
-          scoringDraft,
+          scoringDraft: nextScoringDraft,
           updatedAt: (/* @__PURE__ */ new Date()).toISOString()
         }
       }));
     });
+    setScoringDraft(nextScoringDraft);
   };
   const saveStaffCurrencyEventsDraft = () => {
     const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || "").trim().toUpperCase();
@@ -15956,6 +19557,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }));
   };
   const saveWizardSupplementaryDrafts = (message = "This step has been synced into Settings.") => {
+    const scoringDraftToSave = wizardPhraseBankToScoringDraft(wizardScoringPhraseBank);
     saveWizardConfig(message, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
       ...settings,
       initialSetupWizardDraft: {
@@ -15973,7 +19575,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         crewRoles: crewRolesDraft,
         resourceSharing: resourceSharingDraft,
         currencies: currencyDraft,
-        scoringMatrix: scoringDraft,
+        scoringMatrix: scoringDraftToSave,
         staffCurrencyEvents: staffCurrencyEventsDraft,
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       },
@@ -15997,7 +19599,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         crewRolesDraft,
         resourceSharingDraft,
         currencyDraft,
-        scoringDraft,
+        scoringDraft: scoringDraftToSave,
         staffCurrencyEventsDraft,
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       }
@@ -16522,7 +20124,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       case "staff-currency-events":
         return parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).some((row) => hasMeaningfulWizardText(row.name, ["Annual Instrument Check"]) && hasMeaningfulWizardText(row.shortTitle, ["INST"]) && hasPositiveWizardNumber(row.duration) && hasPositiveWizardNumber(row.aircraftCount));
       case "scoring":
-        return parseWizardScoringRows(scoringDraft).some((row) => hasMeaningfulWizardText(row.dimension, ["Preparation", "Airmanship"]) && hasMeaningfulWizardText(row.passStandard) && hasMeaningfulWizardText(row.failStandard));
+        return Object.entries(wizardScoringPhraseBank || {}).some(([dimension, phrases]) => hasMeaningfulWizardText(dimension, ["Preparation", "Airmanship"]) && Boolean(phrases) && typeof phrases === "object" && !Array.isArray(phrases) && Object.values(phrases).some((gradePhrases) => Array.isArray(gradePhrases) && gradePhrases.some((phrase) => hasMeaningfulWizardText(phrase))));
       case "access":
         return hasMeaningfulWizardText(accessDraft.userName, ["New user", "Admin User"]) && hasMeaningfulWizardText(accessDraft.locationCode, ["LOC1", "LOC"]) && hasMeaningfulWizardText(accessDraft.unitCode, ["UNIT", "UNIT-01"]) && hasMeaningfulWizardText(accessDraft.moduleCode) && hasMeaningfulWizardText(trainingDraft.accessLevel || accessDraft.accessLevel);
       case "staff":
@@ -16989,7 +20591,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         grade4: getWizardCellByHeader(result.headers || [], row, "Grade 4"),
         grade5: getWizardCellByHeader(result.headers || [], row, "Grade 5")
       })).filter((row) => row.dimension || row.passStandard || row.failStandard);
-      setScoringDraft(formatWizardScoringRows(importedRows));
+      const importedDraft = formatWizardScoringRows(importedRows);
+      setScoringDraft(importedDraft);
+      setWizardScoringPhraseBank(wizardScoringRowsToPhraseBank(importedDraft));
       const message = `Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? "" : "s"} into the wizard. Click Next to sync it into Settings.`;
       setImportConfirmations((current) => ({ ...current, [template.id]: message }));
       setSaveMessage(message);
@@ -17626,33 +21230,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     ] });
   };
   const renderScoringEditor = () => {
-    const rows = parseWizardScoringRows(scoringDraft);
-    const editableRows = rows.length > 0 ? rows : [{ dimension: "", passStandard: "", failStandard: "", grade0: "", grade1: "", grade2: "", grade3: "", grade4: "", grade5: "" }];
-    const gradeFields = [
-      ["grade0", "Grade 0", "Lowest grade / unsafe or not ready"],
-      ["grade1", "Grade 1", "Well below the required standard"],
-      ["grade2", "Grade 2", "Needs help or more training"],
-      ["grade3", "Grade 3", "Meets the required standard"],
-      ["grade4", "Grade 4", "Above the required standard"],
-      ["grade5", "Grade 5", "Highest grade / excellent standard"]
-    ];
-    const gradeSourceRow = editableRows.find((row) => gradeFields.some(([field]) => hasMeaningfulWizardText(row[field]))) || editableRows[0];
-    const writeRows = (nextRows) => {
-      setScoringDraft(formatWizardScoringRows(nextRows));
-    };
-    const updateRow = (index, field, value) => {
-      const nextRows = [...editableRows];
-      nextRows[index] = { ...nextRows[index], [field]: value };
-      writeRows(nextRows);
-    };
-    const updateGradeLabel = (field, value) => {
-      writeRows(editableRows.map((row) => ({ ...row, [field]: value })));
+    const updateScoringPhraseBank = (nextPhraseBank) => {
+      setWizardScoringPhraseBank(nextPhraseBank);
+      setScoringDraft(wizardPhraseBankToScoringDraft(nextPhraseBank));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "The scoring matrix defines two things: the grade labels users see on a training report, and the assessment areas instructors mark, such as airmanship and preparation." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "This uses the same scoring matrix editor as Settings. Edit the grade phrases for Airmanship, Preparation, Technique, or add and group extra flight elements." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: [
-        ["grades", "Grade labels"],
-        ["elements", "Assessment areas"]
+        ["Airmanship", "Airmanship"],
+        ["Preparation", "Preparation"],
+        ["Technique", "Technique"],
+        ["Elements", "Elements"]
       ].map(([tabId, tabLabel]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
@@ -17663,36 +21251,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         },
         `wizard-scoring-tab-${tabId}`
       )) }),
-      wizardScoringTab === "grades" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700", children: "Enter the labels from the lowest grade to the highest grade. These labels apply to every assessment area in this setup." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid max-w-[540px] gap-2", children: gradeFields.map(([field, label, help]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-center gap-2 sm:grid-cols-[108px_minmax(0,1fr)]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-900", children: label }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold leading-4 text-slate-500", children: help })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              className: wizardInputClass,
-              value: gradeSourceRow?.[field] || "",
-              placeholder: field === "grade0" ? "Unsafe" : field === "grade3" ? "Meets standard" : field === "grade5" ? "Excellent" : "Grade label",
-              onKeyDown: stopEditableKeyPropagation,
-              onChange: (event) => updateGradeLabel(field, event.target.value)
-            }
-          )
-        ] }, `wizard-grade-label-${field}`)) })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-slate-700", children: "Assessment areas are the parts of performance that instructors mark. Add one row for each area your reports use, then set the plain-English pass and fail standard for that area." }) }),
-        editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_74px] xl:items-end", children: [
-          wizardField("Assessment area", row.dimension || "", (value) => updateRow(index, "dimension", value), void 0, "Preparation"),
-          wizardField("Pass standard", row.passStandard || "", (value) => updateRow(index, "passStandard", value), void 0, "Prepared, safe and ready."),
-          wizardField("Fail standard", row.failStandard || "", (value) => updateRow(index, "failStandard", value), void 0, "Unsafe or not prepared."),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => writeRows(editableRows.filter((_, rowIndex) => rowIndex !== index)), children: "Delete" })
-        ] }) }, `scoring-row-${index}`)),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => writeRows([...editableRows, { dimension: "", passStandard: "", failStandard: "", grade0: gradeSourceRow?.grade0 || "", grade1: gradeSourceRow?.grade1 || "", grade2: gradeSourceRow?.grade2 || "", grade3: gradeSourceRow?.grade3 || "", grade4: gradeSourceRow?.grade4 || "", grade5: gradeSourceRow?.grade5 || "" }]), children: "Add assessment area" })
-      ] }),
-      wizardScoringTab === "grades" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-600", children: "Use the Assessment areas tab on this same step to add or edit items such as Airmanship, Preparation and Technique." }),
-      wizardScoringTab === "elements" && editableRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => writeRows([{ dimension: "", passStandard: "", failStandard: "", grade0: gradeSourceRow?.grade0 || "", grade1: gradeSourceRow?.grade1 || "", grade2: gradeSourceRow?.grade2 || "", grade3: gradeSourceRow?.grade3 || "", grade4: gradeSourceRow?.grade4 || "", grade5: gradeSourceRow?.grade5 || "" }]), children: "Add assessment area" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-300 bg-slate-950", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ScoringMatrixInline,
+        {
+          activeTab: wizardScoringTab,
+          phraseBank: wizardScoringPhraseBank,
+          onUpdatePhraseBank: updateScoringPhraseBank
+        }
+      ) })
     ] });
   };
   const renderStandardCurrencyEventsEditor = () => {
@@ -18258,18 +21824,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const resourceSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes("resource"));
     const staffSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes("staff"));
     const trainingReportRow = parseWizardTrainingReportRows(trainingRecordsDraft)[0];
-    const scoringRows = parseWizardScoringRows(scoringDraft);
-    const trainingReportPhraseBank = scoringRows.reduce((bank, row) => ({
-      ...bank,
-      [row.dimension || "Assessment"]: {
-        0: [row.grade0 || row.failStandard].filter(Boolean),
-        1: [row.grade1].filter(Boolean),
-        2: [row.grade2].filter(Boolean),
-        3: [row.grade3 || row.passStandard].filter(Boolean),
-        4: [row.grade4].filter(Boolean),
-        5: [row.grade5].filter(Boolean)
-      }
-    }), {});
+    const trainingReportPhraseBank = wizardScoringPhraseBank;
+    const scoringDraftToSave = wizardPhraseBankToScoringDraft(trainingReportPhraseBank);
     const setupPersonnel = buildSetupTestPersonnel(cleanUnits, overrides);
     onUpdatePlatformConfig((baseConfig) => {
       const existingAircraftTypes = Array.isArray(baseConfig?.aircraftTypes) ? baseConfig.aircraftTypes : [];
@@ -18420,7 +21976,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             crewRoles: crewRolesDraft,
             resourceSharing: resourceSharingDraft,
             currencies: currencyDraft,
-            scoringMatrix: scoringDraft,
+            scoringMatrix: scoringDraftToSave,
             staffCurrencyEvents: staffCurrencyEventsDraft
           }
         }
@@ -18627,7 +22183,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         rankSettings: rankSettingsDraft,
         resourceSharing: resourceSharingDraft,
         currencies: currencyDraft,
-        scoringMatrix: scoringDraft,
+        scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
         staffCurrencyEvents: staffCurrencyEventsDraft
       }
     })));
@@ -26769,105 +30325,6 @@ This records RPL against this Individual LMP event.`,
       )
     ] })
   ] });
-};
-const INITIAL_SCORING_MATRIX_ELEMENTS = [
-  "Generic Flying Elements",
-  "Airmanship",
-  "Preparation",
-  "Technique",
-  "Pre-Post Flight",
-  "Walk Around",
-  "Strap-in",
-  "Ground Checks",
-  "Airborne Checks",
-  "Stationary",
-  "Visual",
-  "Effects of Control",
-  "Trimming",
-  "Straight and Level",
-  "Level medium Turn",
-  "Level Steep turn",
-  "Visual - Initial & Pitch",
-  "Landing",
-  "Crosswind",
-  "Radio Comms",
-  "Situational Awareness",
-  "Lookout",
-  "Knowledge"
-];
-const SCORING_MATRIX_ELEMENT_LIST_KEY$3 = "__scoringMatrixElements";
-const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
-const SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY = "__scoringMatrixElementSelectionVersion";
-const SCORING_MATRIX_ELEMENT_SELECTION_VERSION = 2;
-const LEGACY_CORE_SCORING_MATRIX_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
-const DEFAULT_SCORING_MATRIX_SECTIONS = [
-  "Core Dimensions",
-  "Procedural Framework",
-  "Takeoff",
-  "Departure",
-  "Core Handling Skills",
-  "Turns",
-  "Recovery",
-  "Landing",
-  "Domestics",
-  "Additional Elements"
-];
-const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS = {
-  Airmanship: "Core Dimensions",
-  Preparation: "Core Dimensions",
-  Technique: "Core Dimensions",
-  "Pre-Post Flight": "Procedural Framework",
-  "Walk Around": "Procedural Framework",
-  "Strap-in": "Procedural Framework",
-  "Ground Checks": "Procedural Framework",
-  "Airborne Checks": "Procedural Framework",
-  Stationary: "Takeoff",
-  Visual: "Departure",
-  "Effects of Control": "Core Handling Skills",
-  Trimming: "Core Handling Skills",
-  "Straight and Level": "Core Handling Skills",
-  "Level medium Turn": "Turns",
-  "Level Steep turn": "Turns",
-  "Visual - Initial & Pitch": "Recovery",
-  Landing: "Landing",
-  Crosswind: "Landing",
-  "Radio Comms": "Domestics",
-  "Situational Awareness": "Domestics",
-  Lookout: "Domestics",
-  Knowledge: "Domestics"
-};
-const SCORING_MATRIX_SECTION_HELP = "Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.";
-const normaliseScoringMatrixElementName = (value) => String(value || "").trim();
-const dedupeScoringMatrixElements = (elements) => elements.map(normaliseScoringMatrixElementName).filter(Boolean).filter((element, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
-const getConfiguredScoringMatrixElements = (phraseBank) => {
-  const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$3];
-  if (Array.isArray(savedElements)) {
-    const saved = dedupeScoringMatrixElements(savedElements);
-    const selectionVersion = Number(phraseBank?.[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] || 0);
-    if (selectionVersion >= SCORING_MATRIX_ELEMENT_SELECTION_VERSION) {
-      return saved;
-    }
-    return dedupeScoringMatrixElements([...LEGACY_CORE_SCORING_MATRIX_ELEMENTS, ...saved]);
-  }
-  const customElements = Object.keys(phraseBank || {}).filter((key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY$3 && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 && key !== SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY && !INITIAL_SCORING_MATRIX_ELEMENTS.includes(key));
-  return dedupeScoringMatrixElements([...INITIAL_SCORING_MATRIX_ELEMENTS, ...customElements]);
-};
-const getConfiguredScoringMatrixElementGroups = (phraseBank) => {
-  const savedGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2];
-  const hasExplicitGroups = !!savedGroups && typeof savedGroups === "object" && !Array.isArray(savedGroups);
-  return {
-    groups: hasExplicitGroups ? savedGroups : {},
-    hasExplicitGroups
-  };
-};
-const getScoringMatrixElementGroup = (element, groups, hasExplicitGroups) => {
-  if (Object.prototype.hasOwnProperty.call(groups, element)) {
-    return String(groups[element] || "").trim() || "Additional Elements";
-  }
-  if (!hasExplicitGroups) {
-    return DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || "Additional Elements";
-  }
-  return "Additional Elements";
 };
 const DraftTextInput$2 = ({
   value,
@@ -72406,3474 +75863,6 @@ const AuthorisationFlyout = ({
       }
     ),
     showClearConfirmation && /* @__PURE__ */ jsxRuntimeExports.jsx(ClearAuthConfirmation, { onConfirm: handleProceedToPinForClear, onCancel: () => setShowClearConfirmation(false) })
-  ] });
-};
-const DraftPhraseTextArea = ({ value, readOnly, onCommit }) => {
-  const [draft, setDraft] = reactExports.useState(value || "");
-  const [isFocused, setIsFocused] = reactExports.useState(false);
-  reactExports.useEffect(() => {
-    if (!isFocused) setDraft(value || "");
-  }, [isFocused, value]);
-  const autoSize = (field) => {
-    field.style.height = "auto";
-    field.style.height = `${field.scrollHeight}px`;
-  };
-  const commitDraft = () => {
-    setIsFocused(false);
-    if (!readOnly) onCommit(draft);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "textarea",
-    {
-      value: isFocused ? draft : value || "",
-      rows: 1,
-      readOnly,
-      onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraft),
-      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraft),
-      onKeyDown: stopEditableKeyPropagation,
-      onFocus: (event) => {
-        setDraft(value || "");
-        setIsFocused(true);
-        autoSize(event.currentTarget);
-      },
-      onBlur: commitDraft,
-      onChange: (event) => {
-        setDraft(event.target.value);
-        autoSize(event.currentTarget);
-      },
-      ref: (el) => {
-        if (el) autoSize(el);
-      },
-      className: `flex-1 bg-gray-800 border rounded p-2 text-sm resize-none overflow-hidden transition-colors ${!readOnly ? "border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500" : "border-transparent bg-transparent text-gray-300 cursor-default"}`,
-      style: { minHeight: "38px", height: "auto" }
-    }
-  );
-};
-const AddElementFlyout = ({ onClose, onSave }) => {
-  const [name, setName] = reactExports.useState("");
-  const handleSave = () => {
-    if (name.trim()) {
-      onSave(name.trim());
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Add New Flight Element" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "element-name", className: "block text-sm font-medium text-gray-400", children: "Element Name" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          id: "element-name",
-          type: "text",
-          value: name,
-          onBeforeInput: (event) => handleEditableTextBeforeInput(event, setName),
-          onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setName),
-          onKeyDown: stopEditableKeyPropagation,
-          onChange: (e) => setName(e.target.value),
-          autoFocus: true,
-          className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-        }
-      )
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, disabled: !name.trim(), className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Save" })
-    ] })
-  ] }) });
-};
-const DeleteElementFlyout = ({ onClose, onDelete, flightElements }) => {
-  const [selectedToDelete, setSelectedToDelete] = reactExports.useState(/* @__PURE__ */ new Set());
-  const toggleSelection = (element) => {
-    const newSet = new Set(selectedToDelete);
-    if (newSet.has(element)) {
-      newSet.delete(element);
-    } else {
-      newSet.add(element);
-    }
-    setSelectedToDelete(newSet);
-  };
-  const handleDelete = async () => {
-    if (selectedToDelete.size === 0) {
-      await showDarkAlert("Please select at least one element to delete.", "Delete Elements", "warning");
-      return;
-    }
-    onDelete(selectedToDelete);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700 flex flex-col max-h-[80vh]", onClick: (e) => e.stopPropagation(), children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Delete Flight Elements" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 flex-1 overflow-y-auto", children: flightElements.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: flightElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          type: "checkbox",
-          checked: selectedToDelete.has(element),
-          onChange: () => toggleSelection(element),
-          className: "h-4 w-4 accent-red-500 bg-gray-600"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-300", children: element })
-    ] }) }, element)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic", children: "No elements to delete." }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDelete, disabled: selectedToDelete.size === 0, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Delete Selected" })
-    ] })
-  ] }) });
-};
-const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialTab = "Airmanship" }) => {
-  const [activeTab, setActiveTab] = reactExports.useState(initialTab);
-  const [showAddElementFlyout, setShowAddElementFlyout] = reactExports.useState(false);
-  const [showDeleteElementFlyout, setShowDeleteElementFlyout] = reactExports.useState(false);
-  const [editModeGrades, setEditModeGrades] = reactExports.useState(/* @__PURE__ */ new Set());
-  const [flightElements, setFlightElements] = reactExports.useState(() => {
-    return getConfiguredScoringMatrixElements(phraseBank);
-  });
-  const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
-  const [elementGroupDrafts, setElementGroupDrafts] = reactExports.useState({});
-  const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
-  const { groups: configuredElementGroups, hasExplicitGroups: hasExplicitElementGroups } = getConfiguredScoringMatrixElementGroups(phraseBank);
-  const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
-  const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
-  const sectionOptions = Array.from(new Set([
-    ...hasExplicitElementGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS,
-    ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
-    savedElementGroup,
-    String(currentElementGroup || "").trim()
-  ].filter(Boolean)));
-  const handleElementGroupChange = (element, group) => {
-    const nextGroup = String(group || "").trim();
-    onUpdatePhraseBank({
-      ...phraseBank,
-      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
-        ...configuredElementGroups,
-        [element]: nextGroup || "Additional Elements"
-      },
-      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION
-    });
-  };
-  const beginElementGroupDraft = (element) => {
-    setElementGroupDrafts((previous) => ({
-      ...previous,
-      [element]: previous[element] ?? getScoringMatrixElementGroup(element, configuredElementGroups, hasExplicitElementGroups)
-    }));
-  };
-  const updateElementGroupDraft = (element, group) => {
-    setElementGroupDrafts((previous) => ({ ...previous, [element]: group }));
-  };
-  const commitElementGroupDraft = (element) => {
-    if (!(element in elementGroupDrafts)) return;
-    handleElementGroupChange(element, elementGroupDrafts[element]);
-    setElementGroupDrafts((previous) => {
-      if (!(element in previous)) return previous;
-      const { [element]: _committedDraft, ...remainingDrafts } = previous;
-      return remainingDrafts;
-    });
-  };
-  const toggleEditMode = (grade) => {
-    const newEditModeGrades = new Set(editModeGrades);
-    if (newEditModeGrades.has(grade)) {
-      newEditModeGrades.delete(grade);
-    } else {
-      newEditModeGrades.add(grade);
-    }
-    setEditModeGrades(newEditModeGrades);
-  };
-  const handlePhraseChange = (grade, index, value) => {
-    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
-    const gradePhrases = currentPhrases[grade] || [];
-    const newGradePhrases = [...gradePhrases];
-    newGradePhrases[index] = value;
-    onUpdatePhraseBank({
-      ...phraseBank,
-      [currentDimension]: {
-        ...currentPhrases,
-        [grade]: newGradePhrases
-      }
-    });
-  };
-  const handleAddPhrase = (grade) => {
-    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
-    const gradePhrases = currentPhrases[grade] || [];
-    onUpdatePhraseBank({
-      ...phraseBank,
-      [currentDimension]: {
-        ...currentPhrases,
-        [grade]: [...gradePhrases, ""]
-      }
-    });
-  };
-  const handleDeletePhrase = (grade, index) => {
-    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
-    const gradePhrases = currentPhrases[grade] || [];
-    onUpdatePhraseBank({
-      ...phraseBank,
-      [currentDimension]: {
-        ...currentPhrases,
-        [grade]: gradePhrases.filter((_, i) => i !== index)
-      }
-    });
-  };
-  const handleAddElement = () => {
-    setShowAddElementFlyout(true);
-  };
-  const handleSaveNewElement = (newElementName) => {
-    if (flightElements.includes(newElementName)) {
-      void showDarkAlert("An element with this name already exists.", "Add Element", "warning");
-      return;
-    }
-    const nextElements = [...flightElements, newElementName];
-    setFlightElements(nextElements);
-    onUpdatePhraseBank({
-      ...phraseBank,
-      [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: nextElements,
-      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
-      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
-        ...configuredElementGroups,
-        [newElementName]: "Additional Elements"
-      },
-      [newElementName]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
-    });
-    setSelectedElement(newElementName);
-    setShowAddElementFlyout(false);
-  };
-  const handleDeleteElements = (elementsToDelete) => {
-    const newFlightElements = flightElements.filter((el) => !elementsToDelete.has(el));
-    setFlightElements(newFlightElements);
-    const newPhraseBank = { ...phraseBank };
-    elementsToDelete.forEach((el) => {
-      delete newPhraseBank[el];
-    });
-    const nextGroups = { ...configuredElementGroups };
-    elementsToDelete.forEach((el) => {
-      delete nextGroups[el];
-    });
-    newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$3] = newFlightElements;
-    newPhraseBank[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] = SCORING_MATRIX_ELEMENT_SELECTION_VERSION;
-    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] = nextGroups;
-    onUpdatePhraseBank(newPhraseBank);
-    if (elementsToDelete.has(selectedElement)) {
-      setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
-    }
-    setShowDeleteElementFlyout(false);
-  };
-  const getGradeColor = (grade) => {
-    if (grade >= 4) return "border-green-500/30 bg-green-900/10";
-    if (grade >= 2) return "border-yellow-500/30 bg-yellow-900/10";
-    return "border-red-500/30 bg-red-900/10";
-  };
-  const getGradeLabel = (grade) => {
-    switch (grade) {
-      case 5:
-        return "5 - Excellent";
-      case 4:
-        return "4 - High Satisfactory";
-      case 3:
-        return "3 - Satisfactory";
-      case 2:
-        return "2 - Low Satisfactory";
-      case 1:
-        return "1 - Marginal";
-      case 0:
-        return "0 - Unsatisfactory";
-      default:
-        return String(grade);
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl border border-gray-700 flex flex-col h-[85vh]", onClick: (e) => e.stopPropagation(), onKeyDownCapture: stopEditableKeyPropagation, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center shrink-0", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Scoring Matrix Setup" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex border-b border-gray-700 bg-gray-900/30 shrink-0", children: ["Airmanship", "Preparation", "Technique", "Elements"].map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "button",
-      {
-        onClick: () => setActiveTab(tab),
-        className: `flex-1 py-3 text-lg font-semibold text-center border-b-4 transition-colors ${activeTab === tab ? "border-sky-500 text-sky-400 bg-gray-800" : "border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"}`,
-        children: tab
-      },
-      tab
-    )) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-1 overflow-hidden", children: [
-      activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-64 bg-gray-800 border-r border-gray-700 flex flex-col shrink-0 overflow-y-auto", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-900/50 flex justify-between items-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Flight Elements" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => setShowDeleteElementFlyout(true),
-                className: "p-1 rounded-full bg-gray-700 hover:bg-gray-600",
-                title: "Delete flight element(s)",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-red-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z", clipRule: "evenodd" }) })
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: handleAddElement,
-                className: "p-1 rounded-full bg-gray-700 hover:bg-gray-600",
-                title: "Add new flight element",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-sky-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
-              }
-            )
-          ] })
-        ] }),
-        flightElements.map((el) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => setSelectedElement(el),
-            className: `text-left px-4 py-3 border-l-4 transition-colors font-medium text-sm ${selectedElement === el ? "border-sky-500 bg-gray-700 text-white" : "border-transparent text-gray-400 hover:bg-gray-700/50 hover:text-gray-200"}`,
-            children: el
-          },
-          el
-        ))
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto p-6 space-y-6 bg-gray-900", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-2xl font-bold text-sky-400", children: currentDimension }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Define standardized phrases for each grade level." })
-        ] }),
-        activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400", children: "Training report section" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "span",
-                {
-                  className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300",
-                  title: SCORING_MATRIX_SECTION_HELP,
-                  children: "i"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-30 hidden w-72 -translate-x-1/2 rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-gray-200 shadow-xl group-hover:block", children: SCORING_MATRIX_SECTION_HELP })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "text",
-                value: currentElementGroup,
-                onFocus: () => beginElementGroupDraft(selectedElement),
-                onChange: (event) => updateElementGroupDraft(selectedElement, event.target.value),
-                onBlur: () => commitElementGroupDraft(selectedElement),
-                onKeyDownCapture: stopEditableKeyPropagation,
-                onKeyDown: stopEditableKeyPropagation,
-                className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: sectionOptions.includes(currentElementGroup) ? currentElementGroup : "",
-                onChange: (event) => {
-                  setElementGroupDrafts((previous) => {
-                    const { [selectedElement]: _discardedDraft, ...remainingDrafts } = previous;
-                    return remainingDrafts;
-                  });
-                  handleElementGroupChange(selectedElement, event.target.value);
-                },
-                className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500",
-                children: [
-                  !sectionOptions.includes(currentElementGroup) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Custom section" }),
-                  sectionOptions.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: section, children: section }, section))
-                ]
-              }
-            )
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "This controls which heading this element appears under on the training report." })
-        ] }),
-        [5, 4, 3, 2, 1, 0].map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `border rounded-lg overflow-hidden ${getGradeColor(grade)}`, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-2 font-bold text-sm border-b border-gray-700/30 flex justify-between items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white opacity-90", children: getGradeLabel(grade) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2", children: editModeGrades.has(grade) ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => toggleEditMode(grade),
-                  className: "text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition-colors border border-green-500 font-semibold",
-                  children: "✓ Save"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => handleAddPhrase(grade),
-                  className: "text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600",
-                  children: "+ Add Phrase"
-                }
-              )
-            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => toggleEditMode(grade),
-                className: "text-xs bg-sky-600 hover:bg-sky-700 text-white px-3 py-1 rounded transition-colors border border-sky-500 font-semibold",
-                children: "✎ Edit"
-              }
-            ) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-2", children: phraseBank && phraseBank[currentDimension] && phraseBank[currentDimension][grade] ? phraseBank[currentDimension][grade].map((phrase, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2 group", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              DraftPhraseTextArea,
-              {
-                value: phrase,
-                readOnly: !editModeGrades.has(grade),
-                onCommit: (nextValue) => handlePhraseChange(grade, idx, nextValue)
-              }
-            ),
-            editModeGrades.has(grade) && /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => handleDeletePhrase(grade, idx),
-                className: "p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity",
-                title: "Delete phrase",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z", clipRule: "evenodd" }) })
-              }
-            )
-          ] }, idx)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 italic pl-1", children: "No phrases defined." }) })
-        ] }, grade))
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-800 border-t border-gray-700 flex justify-end shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-6 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md", children: "Done" }) }),
-    showAddElementFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      AddElementFlyout,
-      {
-        onClose: () => setShowAddElementFlyout(false),
-        onSave: handleSaveNewElement
-      }
-    ),
-    showDeleteElementFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      DeleteElementFlyout,
-      {
-        onClose: () => setShowDeleteElementFlyout(false),
-        onDelete: handleDeleteElements,
-        flightElements
-      }
-    )
-  ] }) });
-};
-const CancellationCodesTable = ({
-  codes,
-  onAddCode,
-  onEditCode,
-  onToggleActive,
-  onDeleteCode,
-  canEdit,
-  usedCodes,
-  isLoading = false,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
-}) => {
-  const [isAddingNew, setIsAddingNew] = reactExports.useState(false);
-  const [editingCode, setEditingCode] = reactExports.useState(null);
-  const [deletingCode, setDeletingCode] = reactExports.useState(null);
-  const [isEditUnlocked, setIsEditUnlocked] = reactExports.useState(false);
-  const [formData, setFormData] = reactExports.useState({
-    code: "",
-    category: "Aircraft",
-    description: "",
-    appliesTo: "Both",
-    isActive: true
-  });
-  const standardActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
-  const getStatusClass = (isActive) => isActive ? "bg-green-900/50 text-green-400 border-green-500/40" : "bg-red-900/50 text-red-400 border-red-500/40";
-  const handleStartAdd = () => {
-    if (!isEditUnlocked) return;
-    setFormData({
-      code: "",
-      category: "Aircraft",
-      description: "",
-      appliesTo: "Both",
-      isActive: true
-    });
-    setIsAddingNew(true);
-    setEditingCode(null);
-  };
-  const handleStartEdit = (code) => {
-    if (!isEditUnlocked) return;
-    setFormData(code);
-    setEditingCode(code.code);
-    setIsAddingNew(false);
-  };
-  const handleCancel = () => {
-    setIsAddingNew(false);
-    setEditingCode(null);
-    setFormData({
-      code: "",
-      category: "Aircraft",
-      description: "",
-      appliesTo: "Both",
-      isActive: true
-    });
-  };
-  const handleDelete = (code) => {
-    if (!isEditUnlocked) return;
-    setDeletingCode(code);
-  };
-  const confirmDelete = () => {
-    if (deletingCode) {
-      onDeleteCode(deletingCode);
-      setDeletingCode(null);
-    }
-  };
-  const cancelDelete = () => {
-    setDeletingCode(null);
-  };
-  const handleSave = () => {
-    if (!isEditUnlocked) return;
-    if (!formData.code || !formData.description) {
-      return;
-    }
-    const newCode = {
-      code: formData.code.toUpperCase(),
-      category: formData.category,
-      description: formData.description,
-      appliesTo: formData.appliesTo,
-      isActive: formData.isActive ?? true,
-      createdAt: formData.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    if (isAddingNew) {
-      onAddCode(newCode);
-    } else if (editingCode) {
-      onEditCode(editingCode, newCode);
-    }
-    handleCancel();
-  };
-  const handleToggleEditUnlocked = () => {
-    if (isEditUnlocked) {
-      handleCancel();
-      setDeletingCode(null);
-      setIsEditUnlocked(false);
-      return;
-    }
-    setIsEditUnlocked(true);
-  };
-  const sortedCodes = [...codes].sort((a, b) => {
-    if (a.category !== b.category) {
-      return a.category.localeCompare(b.category);
-    }
-    return a.code.localeCompare(b.code);
-  });
-  const deletingCodeHasHistory = deletingCode ? usedCodes.has(deletingCode) : false;
-  const formatAppliesToLabel = (value) => {
-    if (value === "FTD") return resourceDisplayNames.ftd;
-    if (value === "Both") return `Flight + ${resourceDisplayNames.ftd}`;
-    return "Flight";
-  };
-  if (isLoading) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Cancellation Codes" }),
-        canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-24 h-8 bg-gray-700 rounded animate-pulse" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Code" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Category" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Description" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Applies To" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Status" }),
-          canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Actions" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: [...Array(6)].map((_, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-4 bg-gray-700 rounded animate-pulse" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 h-4 bg-gray-700 rounded animate-pulse" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-48 h-4 bg-gray-700 rounded animate-pulse" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-4 bg-gray-700 rounded animate-pulse" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 h-5 bg-gray-700 rounded animate-pulse mx-auto" }) }),
-          canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-10 h-6 bg-gray-700 rounded animate-pulse" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 h-6 bg-gray-700 rounded animate-pulse" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-6 bg-gray-700 rounded animate-pulse" })
-          ] }) })
-        ] }, i)) })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex items-center space-x-2 text-gray-400 text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "animate-spin h-4 w-4 text-sky-400", xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "4" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Loading cancellation codes from database…" })
-      ] })
-    ] });
-  }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Cancellation Codes" }),
-      canEdit && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: handleToggleEditUnlocked,
-            className: standardActionButtonClass,
-            children: isEditUnlocked ? "Lock" : "Edit"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: handleStartAdd,
-            disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
-            className: standardActionButtonClass,
-            children: "Add"
-          }
-        )
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Code" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Category" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Description" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Applies To" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Status" }),
-        canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Actions" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-        isAddingNew && /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 bg-gray-700/30", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: formData.code,
-              onChange: (e) => setFormData({ ...formData, code: e.target.value.toUpperCase() }),
-              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
-              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
-              onKeyDown: stopEditableKeyPropagation,
-              maxLength: 4,
-              className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
-              placeholder: "CODE"
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: formData.category,
-              onChange: (e) => setFormData({ ...formData, category: e.target.value }),
-              className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Aircraft", children: "Aircraft" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Crew", children: "Crew" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Program", children: "Program" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Weather", children: "Weather" })
-              ]
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: formData.description,
-              onChange: (e) => setFormData({ ...formData, description: e.target.value }),
-              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, description: value })),
-              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, description: value })),
-              onKeyDown: stopEditableKeyPropagation,
-              className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
-              placeholder: "Description"
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: formData.appliesTo,
-              onChange: (e) => setFormData({ ...formData, appliesTo: e.target.value }),
-              className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "Both", children: [
-                  "Flight + ",
-                  resourceDisplayNames.ftd
-                ] })
-              ]
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-block px-2 py-1 rounded text-xs font-semibold bg-green-900/50 text-green-400", children: "Active" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: handleSave,
-                className: "px-3 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700",
-                children: "Save"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: handleCancel,
-                className: "px-3 py-1 bg-gray-600 text-white rounded text-xs font-semibold hover:bg-gray-700",
-                children: "Cancel"
-              }
-            )
-          ] }) })
-        ] }),
-        sortedCodes.map((code) => {
-          const isEditing = editingCode === code.code;
-          const isUsed = usedCodes.has(code.code);
-          if (isEditing) {
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 bg-gray-700/30", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: formData.code,
-                  onChange: (e) => setFormData({ ...formData, code: e.target.value.toUpperCase() }),
-                  onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
-                  onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
-                  onKeyDown: stopEditableKeyPropagation,
-                  maxLength: 4,
-                  className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  value: formData.category,
-                  onChange: (e) => setFormData({ ...formData, category: e.target.value }),
-                  className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Aircraft", children: "Aircraft" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Crew", children: "Crew" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Program", children: "Program" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Weather", children: "Weather" })
-                  ]
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "text",
-                  value: formData.description,
-                  onChange: (e) => setFormData({ ...formData, description: e.target.value }),
-                  onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, description: value })),
-                  onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, description: value })),
-                  onKeyDown: stopEditableKeyPropagation,
-                  className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "select",
-                {
-                  value: formData.appliesTo,
-                  onChange: (e) => setFormData({ ...formData, appliesTo: e.target.value }),
-                  className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "Both", children: [
-                      "Flight + ",
-                      resourceDisplayNames.ftd
-                    ] })
-                  ]
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => setFormData({ ...formData, isActive: !formData.isActive }),
-                  className: `inline-flex min-w-[74px] items-center justify-center rounded border px-2 py-1 text-xs font-semibold ${getStatusClass(formData.isActive)}`,
-                  children: formData.isActive ? "Active" : "Inactive"
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: handleSave,
-                    className: "px-3 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700",
-                    children: "Save"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    onClick: handleCancel,
-                    className: "px-3 py-1 bg-gray-600 text-white rounded text-xs font-semibold hover:bg-gray-700",
-                    children: "Cancel"
-                  }
-                )
-              ] }) })
-            ] }, code.code);
-          }
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/20", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-white font-mono font-semibold", children: code.code }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: code.category }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: code.description }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: formatAppliesToLabel(code.appliesTo) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => onToggleActive(code.code),
-                disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
-                className: `inline-flex min-w-[74px] items-center justify-center rounded border px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${getStatusClass(code.isActive)}`,
-                title: isEditUnlocked ? "Click to switch Active or Inactive" : "Click Edit above to unlock status changes",
-                children: code.isActive ? "Active" : "Inactive"
-              }
-            ) }),
-            canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => handleStartEdit(code),
-                  disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
-                  className: "px-3 py-1 bg-sky-600 text-white rounded text-xs font-semibold hover:bg-sky-700 disabled:bg-gray-600 disabled:cursor-not-allowed",
-                  children: "Edit"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => onToggleActive(code.code),
-                  disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
-                  className: `px-3 py-1 rounded text-xs font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed ${code.isActive ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-green-600 text-white hover:bg-green-700"}`,
-                  children: code.isActive ? "Deactivate" : "Activate"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => handleDelete(code.code),
-                  disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
-                  className: "px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed",
-                  title: isUsed ? "Delete code with usage warning" : "Delete code",
-                  children: "Delete"
-                }
-              )
-            ] }) })
-          ] }, code.code);
-        }),
-        sortedCodes.length === 0 && !isAddingNew && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { colSpan: canEdit ? 6 : 5, className: "py-8 text-center text-gray-500", children: [
-          "No cancellation codes found.",
-          canEdit && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-1", children: [
-            "Click ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-semibold", children: "Add" }),
-            " to create one."
-          ] })
-        ] }) })
-      ] })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 text-sm text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Inactive codes remain visible in historical records." }) }),
-    deletingCode && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6 max-w-md", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white mb-4", children: "Confirm Delete" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-6", children: [
-        "Are you sure you want to delete the cancellation code",
-        " ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-red-400", children: deletingCode }),
-        "? This action cannot be undone."
-      ] }),
-      deletingCodeHasHistory && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 rounded-lg border border-amber-500/50 bg-amber-950/40 px-4 py-3 text-sm text-amber-100", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-amber-200", children: "This code has been used in cancellation history." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2", children: "Deleting it may affect historical reporting, filters, or audit interpretation. Confirm only if this code was created in error or has been replaced." })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end space-x-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: cancelDelete,
-            className: "px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700",
-            children: "Cancel"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: confirmDelete,
-            className: "px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700",
-            children: "Delete"
-          }
-        )
-      ] })
-    ] }) })
-  ] });
-};
-const ACHistoryPage = ({
-  currentUserRole: currentUserRole2,
-  cancellationRecords,
-  currentUserId,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
-}) => {
-  const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
-  const [usedCodes, setUsedCodes] = reactExports.useState(/* @__PURE__ */ new Set());
-  const [codesLoading, setCodesLoading] = reactExports.useState(true);
-  const [codesError, setCodesError] = reactExports.useState(null);
-  const canEdit = currentUserRole2 === "Super Admin" || currentUserRole2 === "Admin";
-  const getAuthHeaders = reactExports.useCallback(() => {
-    const sessionToken = localStorage.getItem("dfp_session_token") || "";
-    return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
-  }, []);
-  const loadCodesFromDB = reactExports.useCallback(async () => {
-    setCodesLoading(true);
-    setCodesError(null);
-    try {
-      const res = await fetch("/api/cancellation-codes", { credentials: "include" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.codes)) {
-        setCancellationCodes(data.codes);
-      } else {
-        throw new Error("Invalid response from server");
-      }
-    } catch (err) {
-      console.error("Failed to load cancellation codes from DB:", err);
-      setCodesError("Failed to load cancellation codes.");
-    } finally {
-      setCodesLoading(false);
-    }
-  }, []);
-  reactExports.useEffect(() => {
-    loadCodesFromDB();
-  }, [loadCodesFromDB]);
-  reactExports.useEffect(() => {
-    const used = /* @__PURE__ */ new Set();
-    cancellationRecords.forEach((record) => {
-      used.add(record.cancellationCode);
-      if (record.manualCodeEntry) {
-        used.add(record.manualCodeEntry);
-      }
-    });
-    setUsedCodes(used);
-  }, [cancellationRecords]);
-  const handleAddCode = async (newCode) => {
-    if (!canEdit) {
-      await showDarkAlert("Admin permission is required to change cancellation codes.", "Access Denied", "warning");
-      return;
-    }
-    if (cancellationCodes.some((c) => c.code === newCode.code)) {
-      await showDarkAlert("A code with this identifier already exists.", "Cancellation Code Exists", "warning");
-      return;
-    }
-    try {
-      const res = await fetch("/api/cancellation-codes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        credentials: "include",
-        body: JSON.stringify({ ...newCode, createdBy: currentUserId })
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        await showDarkAlert(`Failed to save code: ${err.error || "Unknown error"}`, "Cancellation Code Save Failed", "error");
-        return;
-      }
-      const data = await res.json();
-      if (data.success) {
-        await loadCodesFromDB();
-      }
-    } catch (err) {
-      console.error("Failed to add cancellation code:", err);
-      await showDarkAlert("Failed to save code. Please try again.", "Cancellation Code Save Failed", "error");
-    }
-  };
-  const handleEditCode = async (oldCode, newCode) => {
-    if (!canEdit) {
-      await showDarkAlert("Admin permission is required to change cancellation codes.", "Access Denied", "warning");
-      return;
-    }
-    try {
-      if (oldCode !== newCode.code) {
-        await fetch(`/api/cancellation-codes/${encodeURIComponent(oldCode)}`, {
-          method: "DELETE",
-          headers: getAuthHeaders(),
-          credentials: "include"
-        });
-      }
-      const res = await fetch("/api/cancellation-codes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        credentials: "include",
-        body: JSON.stringify({ ...newCode, createdBy: currentUserId })
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        await showDarkAlert(`Failed to update code: ${err.error || "Unknown error"}`, "Cancellation Code Update Failed", "error");
-        return;
-      }
-      await loadCodesFromDB();
-    } catch (err) {
-      console.error("Failed to edit cancellation code:", err);
-      await showDarkAlert("Failed to update code. Please try again.", "Cancellation Code Update Failed", "error");
-    }
-  };
-  const handleToggleActive = async (code) => {
-    if (!canEdit) {
-      await showDarkAlert("Admin permission is required to change cancellation codes.", "Access Denied", "warning");
-      return;
-    }
-    try {
-      const res = await fetch(`/api/cancellation-codes/${encodeURIComponent(code)}/toggle`, {
-        method: "PATCH",
-        headers: getAuthHeaders(),
-        credentials: "include"
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        await showDarkAlert(`Failed to toggle code: ${err.error || "Unknown error"}`, "Cancellation Code Update Failed", "error");
-        return;
-      }
-      setCancellationCodes(
-        (prev) => prev.map((c) => c.code === code ? { ...c, isActive: !c.isActive } : c)
-      );
-      await loadCodesFromDB();
-    } catch (err) {
-      console.error("Failed to toggle cancellation code:", err);
-      await showDarkAlert("Failed to update code. Please try again.", "Cancellation Code Update Failed", "error");
-    }
-  };
-  const handleDeleteCode = async (code) => {
-    if (!canEdit) {
-      await showDarkAlert("Admin permission is required to delete cancellation codes.", "Access Denied", "warning");
-      return;
-    }
-    try {
-      const res = await fetch(`/api/cancellation-codes/${encodeURIComponent(code)}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-        credentials: "include"
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        await showDarkAlert(`Failed to delete code: ${err.error || "Unknown error"}`, "Cancellation Code Delete Failed", "error");
-        return;
-      }
-      setCancellationCodes((prev) => prev.filter((c) => c.code !== code));
-    } catch (err) {
-      console.error("Failed to delete cancellation code:", err);
-      await showDarkAlert("Failed to delete code. Please try again.", "Cancellation Code Delete Failed", "error");
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white mb-1", children: "Cancellation Codes" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "Manage the master cancellation code table used by aircraft availability history, recent cancellations, and cancellation analytics." })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      codesError && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 px-4 py-2 bg-red-900/40 border border-red-700 rounded text-red-300 text-sm flex items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-          "⚠️ ",
-          codesError
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: loadCodesFromDB,
-            className: "ml-auto text-xs underline hover:text-red-100",
-            children: "Retry"
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        CancellationCodesTable,
-        {
-          codes: cancellationCodes,
-          onAddCode: handleAddCode,
-          onEditCode: handleEditCode,
-          onToggleActive: handleToggleActive,
-          onDeleteCode: handleDeleteCode,
-          canEdit,
-          usedCodes,
-          isLoading: codesLoading,
-          resourceDisplayNames
-        }
-      )
-    ] })
-  ] });
-};
-const DutyTurnaroundSection = ({
-  preferredDutyPeriod,
-  onUpdatePreferredDutyPeriod,
-  maxCrewDutyPeriod,
-  onUpdateMaxCrewDutyPeriod,
-  flightTurnaround,
-  onUpdateFlightTurnaround,
-  ftdTurnaround,
-  onUpdateFtdTurnaround,
-  cptTurnaround,
-  onUpdateCptTurnaround,
-  taxiGroundTime,
-  onUpdateTaxiGroundTime,
-  canEdit = true,
-  onShowSuccess,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
-}) => {
-  const [isEditing, setIsEditing] = reactExports.useState(false);
-  const [draftPreferredDutyPeriod, setDraftPreferredDutyPeriod] = reactExports.useState(preferredDutyPeriod);
-  const [draftMaxCrewDutyPeriod, setDraftMaxCrewDutyPeriod] = reactExports.useState(maxCrewDutyPeriod);
-  const [draftFlightTurnaround, setDraftFlightTurnaround] = reactExports.useState(flightTurnaround);
-  const [draftFtdTurnaround, setDraftFtdTurnaround] = reactExports.useState(ftdTurnaround);
-  const [draftCptTurnaround, setDraftCptTurnaround] = reactExports.useState(cptTurnaround);
-  const [draftTaxiGroundTime, setDraftTaxiGroundTime] = reactExports.useState(taxiGroundTime);
-  const [openTurnaroundMenu, setOpenTurnaroundMenu] = reactExports.useState(null);
-  const turnaroundOptions = reactExports.useMemo(() => Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 0.1).toFixed(1))), []);
-  const taxiGroundOptions = reactExports.useMemo(() => Array.from({ length: 10 }, (_, i) => parseFloat((i * 0.1).toFixed(1))), []);
-  const standardSettingsButtonClass2 = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
-  reactExports.useEffect(() => {
-    if (isEditing) return;
-    setDraftPreferredDutyPeriod(preferredDutyPeriod);
-    setDraftMaxCrewDutyPeriod(maxCrewDutyPeriod);
-    setDraftFlightTurnaround(flightTurnaround);
-    setDraftFtdTurnaround(ftdTurnaround);
-    setDraftCptTurnaround(cptTurnaround);
-    setDraftTaxiGroundTime(taxiGroundTime);
-  }, [cptTurnaround, flightTurnaround, ftdTurnaround, isEditing, maxCrewDutyPeriod, preferredDutyPeriod, taxiGroundTime]);
-  const handleEdit = () => {
-    setDraftPreferredDutyPeriod(preferredDutyPeriod);
-    setDraftMaxCrewDutyPeriod(maxCrewDutyPeriod);
-    setDraftFlightTurnaround(flightTurnaround);
-    setDraftFtdTurnaround(ftdTurnaround);
-    setDraftCptTurnaround(cptTurnaround);
-    setDraftTaxiGroundTime(taxiGroundTime);
-    setOpenTurnaroundMenu(null);
-    setIsEditing(true);
-  };
-  const handleCancel = () => {
-    setDraftPreferredDutyPeriod(preferredDutyPeriod);
-    setDraftMaxCrewDutyPeriod(maxCrewDutyPeriod);
-    setDraftFlightTurnaround(flightTurnaround);
-    setDraftFtdTurnaround(ftdTurnaround);
-    setDraftCptTurnaround(cptTurnaround);
-    setDraftTaxiGroundTime(taxiGroundTime);
-    setOpenTurnaroundMenu(null);
-    setIsEditing(false);
-  };
-  const handleSave = () => {
-    onUpdatePreferredDutyPeriod(draftPreferredDutyPeriod);
-    onUpdateMaxCrewDutyPeriod(draftMaxCrewDutyPeriod);
-    onUpdateFlightTurnaround(draftFlightTurnaround);
-    onUpdateFtdTurnaround(draftFtdTurnaround);
-    onUpdateCptTurnaround(draftCptTurnaround);
-    onUpdateTaxiGroundTime(draftTaxiGroundTime);
-    setOpenTurnaroundMenu(null);
-    setIsEditing(false);
-    logAudit(
-      "Settings - Duty & Turnaround",
-      "update",
-      "Updated duty and turnaround settings",
-      `Duty period soft/hard: ${preferredDutyPeriod}/${maxCrewDutyPeriod} → ${draftPreferredDutyPeriod}/${draftMaxCrewDutyPeriod}; turnaround ${flightTurnaround}/${ftdTurnaround}/${cptTurnaround} → ${draftFlightTurnaround}/${draftFtdTurnaround}/${draftCptTurnaround}; taxi/ground ${taxiGroundTime} → ${draftTaxiGroundTime}`
-    );
-    onShowSuccess?.("Duty and turnaround settings updated");
-  };
-  const TurnaroundInput = ({ label, value, onChange, options }) => {
-    const inputId = `turnaround-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-    const isOpen = openTurnaroundMenu === inputId;
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        className: "relative",
-        onBlur: (event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) {
-            setOpenTurnaroundMenu((current) => current === inputId ? null : current);
-          }
-        },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { id: `${inputId}-label`, className: "block text-sm font-medium text-gray-400", children: label }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              id: inputId,
-              disabled: !isEditing,
-              "aria-haspopup": "listbox",
-              "aria-expanded": isOpen,
-              "aria-labelledby": `${inputId}-label ${inputId}`,
-              onClick: () => setOpenTurnaroundMenu((current) => current === inputId ? null : inputId),
-              className: `relative w-full mt-1 border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                  value.toFixed(1),
-                  " hrs"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "span",
-                  {
-                    "aria-hidden": "true",
-                    className: "pointer-events-none absolute right-3 top-1/2 h-0 w-0 -translate-y-1/2 border-x-[5px] border-t-[6px] border-x-transparent border-t-gray-300"
-                  }
-                )
-              ]
-            }
-          ),
-          isEditing && isOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "div",
-            {
-              role: "listbox",
-              "aria-labelledby": `${inputId}-label`,
-              className: "absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-md border border-gray-600 bg-gray-900 py-1 shadow-2xl",
-              children: options.map((opt) => {
-                const selected = opt === value;
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    role: "option",
-                    "aria-selected": selected,
-                    onMouseDown: (event) => event.preventDefault(),
-                    onClick: () => {
-                      onChange(opt);
-                      setOpenTurnaroundMenu(null);
-                    },
-                    className: `block w-full px-3 py-2 text-left text-sm ${selected ? "bg-cyan-500/20 text-cyan-100" : "text-gray-200 hover:bg-gray-700"}`,
-                    children: [
-                      opt.toFixed(1),
-                      " hrs"
-                    ]
-                  },
-                  opt
-                );
-              })
-            }
-          )
-        ]
-      }
-    );
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit", onKeyDownCapture: stopEditableKeyPropagation, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Duty & Turnaround" }),
-      isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: standardSettingsButtonClass2, children: "Save" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: standardSettingsButtonClass2, children: "Cancel" })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleEdit, disabled: !canEdit, className: standardSettingsButtonClass2, children: "Edit" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Crew Duty Period (hrs)" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 mt-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col flex-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", children: "Soft Limit" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "number",
-                value: draftPreferredDutyPeriod,
-                onChange: (e) => setDraftPreferredDutyPeriod(parseInt(e.target.value) || 0),
-                disabled: !isEditing,
-                className: `w-full border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col flex-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs text-gray-500 mb-1", children: "Hard Limit" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "number",
-                value: draftMaxCrewDutyPeriod,
-                onChange: (e) => setDraftMaxCrewDutyPeriod(parseInt(e.target.value) || 0),
-                disabled: !isEditing,
-                className: `w-full border rounded-md py-2 px-3 focus:outline-none focus:ring-sky-500 text-center ${isEditing ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
-              }
-            )
-          ] })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Turnaround Times" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2 mt-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            TurnaroundInput,
-            {
-              label: "Flight",
-              value: draftFlightTurnaround,
-              onChange: setDraftFlightTurnaround,
-              options: turnaroundOptions
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            TurnaroundInput,
-            {
-              label: resourceDisplayNames.ftd,
-              value: draftFtdTurnaround,
-              onChange: setDraftFtdTurnaround,
-              options: turnaroundOptions
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            TurnaroundInput,
-            {
-              label: resourceDisplayNames.cpt,
-              value: draftCptTurnaround,
-              onChange: setDraftCptTurnaround,
-              options: turnaroundOptions
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Post Flight Time Accounting" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2 mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          TurnaroundInput,
-          {
-            label: "Taxi/Ground",
-            value: draftTaxiGroundTime,
-            onChange: setDraftTaxiGroundTime,
-            options: taxiGroundOptions
-          }
-        ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "Default extra time added to airborne time to calculate block time." })
-      ] })
-    ] })
-  ] });
-};
-const defaultAllowedActions = {
-  postFlightTimes: false,
-  pt051Entries: false,
-  flightAuthorisation: false,
-  aircraftAvailability: false
-};
-const EmergencyPage = ({
-  currentUserRole: currentUserRole2,
-  onShowSuccess,
-  trainingReportDisplayName,
-  emergencyFreezeAuthority,
-  onUpdateEmergencyFreezeAuthority,
-  qualificationOptions = [],
-  currentUserQualificationIds = [],
-  canEditEmergencyAuthority = false,
-  flightAuthorisationRequired = true
-}) => {
-  const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze$1();
-  const [showConfirmDialog, setShowConfirmDialog] = reactExports.useState(false);
-  const [isProcessing, setIsProcessing] = reactExports.useState(false);
-  const [isEditingAuthority, setIsEditingAuthority] = reactExports.useState(false);
-  const [authorityDraft, setAuthorityDraft] = reactExports.useState(() => normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority));
-  const [pendingAllowedActions, setPendingAllowedActions] = reactExports.useState(defaultAllowedActions);
-  const reportDisplayName = String(trainingReportDisplayName || "").trim() || "Training Report";
-  const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
-  const effectivePendingAllowedActions = flightAuthorisationRequired ? pendingAllowedActions : { ...pendingAllowedActions, flightAuthorisation: false };
-  const frozenFlightAuthorisationAllowed = flightAuthorisationRequired && freezeState.allowedActions.flightAuthorisation;
-  reactExports.useEffect(() => {
-    if (!flightAuthorisationRequired) {
-      setPendingAllowedActions((prev) => prev.flightAuthorisation ? { ...prev, flightAuthorisation: false } : prev);
-    }
-  }, [flightAuthorisationRequired]);
-  const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
-  const canActivateFreeze = hasEmergencyFreezeAuthority({
-    settings: authoritySettings,
-    userQualificationIds: currentUserQualificationIds
-  });
-  const canDeactivateFreeze = hasEmergencyFreezeAuthority({
-    settings: authoritySettings,
-    userQualificationIds: currentUserQualificationIds
-  });
-  reactExports.useEffect(() => {
-    if (!isEditingAuthority) {
-      setAuthorityDraft(authoritySettings);
-    }
-  }, [authoritySettings, isEditingAuthority]);
-  const requestPassword = async (message, title) => {
-    const password = await showDarkPrompt({
-      title,
-      message,
-      inputLabel: "Password",
-      inputType: "password",
-      inputPlaceholder: "Enter password",
-      confirmText: "Confirm",
-      cancelText: "Cancel",
-      variant: "warning"
-    });
-    if (!password) return false;
-    try {
-      const isValid = await verifyCurrentUserPassword(password);
-      if (!isValid) {
-        await showDarkAlert("The password was not accepted.", title, "warning");
-        return false;
-      }
-      return true;
-    } catch (error) {
-      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
-      return false;
-    }
-  };
-  const handleAuthorityChange = (qualificationId, checked) => {
-    const current = authorityDraft.activateQualificationIds || [];
-    const next = checked ? Array.from(/* @__PURE__ */ new Set([...current, qualificationId])) : current.filter((id) => id !== qualificationId);
-    setAuthorityDraft(normaliseEmergencyFreezeAuthoritySettings({
-      ...authorityDraft,
-      activateQualificationIds: next,
-      deactivateQualificationIds: next
-    }));
-  };
-  const handleEditAuthority = async () => {
-    if (!canEditEmergencyAuthority) return;
-    const unlocked = await requestPassword(
-      "Enter your password to edit emergency freeze authority.",
-      "Emergency Authority Password Required"
-    );
-    if (!unlocked) return;
-    setAuthorityDraft(authoritySettings);
-    setIsEditingAuthority(true);
-  };
-  const handleCancelAuthority = () => {
-    setAuthorityDraft(authoritySettings);
-    setIsEditingAuthority(false);
-  };
-  const handleSaveAuthority = async () => {
-    if (!canEditEmergencyAuthority || !onUpdateEmergencyFreezeAuthority) return;
-    onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings({
-      activateQualificationIds: authorityDraft.activateQualificationIds,
-      deactivateQualificationIds: authorityDraft.activateQualificationIds
-    }));
-    setIsEditingAuthority(false);
-    if (onShowSuccess) {
-      onShowSuccess("Emergency freeze authority saved");
-    }
-  };
-  const handleAllowedActionChange = (action) => {
-    if (action === "flightAuthorisation" && !flightAuthorisationRequired) return;
-    setPendingAllowedActions((prev) => ({
-      ...prev,
-      [action]: !prev[action]
-    }));
-  };
-  const handleFreezeEverything = () => {
-    setPendingAllowedActions(defaultAllowedActions);
-  };
-  const isEverythingFrozen = () => {
-    return !effectivePendingAllowedActions.postFlightTimes && !effectivePendingAllowedActions.pt051Entries && !effectivePendingAllowedActions.flightAuthorisation && !effectivePendingAllowedActions.aircraftAvailability;
-  };
-  const handleFreezeClick = () => {
-    if (!canActivateFreeze) {
-      showDarkAlert("You are not authorised to activate an emergency freeze.", "Emergency Freeze Locked", "warning");
-      return;
-    }
-    setShowConfirmDialog(true);
-  };
-  const handleFreezeConfirm = async () => {
-    const unlocked = await requestPassword(
-      "Enter your password to activate the emergency freeze.",
-      "Emergency Freeze Password Required"
-    );
-    if (!unlocked) return;
-    setIsProcessing(true);
-    freezeSystem("Aircraft Emergency", effectivePendingAllowedActions, currentUserRole2);
-    setShowConfirmDialog(false);
-    setIsProcessing(false);
-    if (onShowSuccess) {
-      onShowSuccess("System has been frozen due to Aircraft Emergency");
-    }
-  };
-  const handleUnfreeze = async () => {
-    if (!canDeactivateFreeze) {
-      showDarkAlert("You are not authorised to deactivate an emergency freeze.", "Emergency Freeze Locked", "warning");
-      return;
-    }
-    const unlocked = await requestPassword(
-      "Enter your password to deactivate the emergency freeze.",
-      "Emergency Freeze Password Required"
-    );
-    if (!unlocked) return;
-    setIsProcessing(true);
-    unfreezeSystem();
-    setIsProcessing(false);
-    if (onShowSuccess) {
-      onShowSuccess("System has been unfrozen and is now fully operational");
-    }
-  };
-  const formatDateTime2 = (isoString) => {
-    const date = new Date(isoString);
-    return date.toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
-  const getQualificationLabel = (qualificationId) => {
-    const match = qualificationOptions.find((qualification) => qualification.id === qualificationId);
-    return match?.code || match?.name || qualificationId;
-  };
-  const renderSelectedQualifications = (qualificationIds) => qualificationIds.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: qualificationIds.map((id) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-200", children: getQualificationLabel(id) }, id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-500", children: "No qualifications selected." });
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-900/30", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-8 h-8 text-white", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Emergency Controls" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "System freeze and emergency management" })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-xl border p-6 ${freezeState.isFrozen ? "bg-gradient-to-br from-red-900/30 to-red-950/30 border-red-500/50" : "bg-gradient-to-br from-green-900/20 to-green-950/20 border-green-500/30"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-14 h-14 rounded-full flex items-center justify-center ${freezeState.isFrozen ? "bg-red-600 animate-pulse" : "bg-green-600"}`, children: freezeState.isFrozen ? /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-7 h-7 text-white", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-7 h-7 text-white", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }) }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: `text-xl font-bold ${freezeState.isFrozen ? "text-red-400" : "text-green-400"}`, children: freezeState.isFrozen ? "SYSTEM FROZEN" : "SYSTEM OPERATIONAL" }),
-          freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm mt-1", children: [
-            "Reason: ",
-            freezeState.freezeReason,
-            " • Since: ",
-            freezeState.frozenAt && formatDateTime2(freezeState.frozenAt)
-          ] })
-        ] })
-      ] }),
-      !freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3 h-3 rounded-full bg-green-500 animate-pulse" }),
-      freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3 h-3 rounded-full bg-red-500 animate-pulse" })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-800/50 p-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Emergency Freeze Authority" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Qualifications authorised to activate and deactivate freeze." })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2", children: isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: handleCancelAuthority,
-              className: "rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
-              children: "Cancel"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: handleSaveAuthority,
-              className: "rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500",
-              children: "Save"
-            }
-          )
-        ] }) : canEditEmergencyAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: handleEditAuthority,
-            className: "rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
-            children: "Edit"
-          }
-        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200", children: "Read-only" }) })
-      ] }),
-      qualificationOptions.length > 0 ? isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate and Deactivate" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 md:grid-cols-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "checkbox",
-              checked: displayedAuthoritySettings.activateQualificationIds.includes(qualification.id),
-              onChange: (event) => handleAuthorityChange(qualification.id, event.target.checked),
-              className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
-        ] }, `emergency-authority-${qualification.id}`)) })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate and Deactivate" }),
-        renderSelectedQualifications(authoritySettings.activateQualificationIds)
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No active qualifications are configured for this unit model." })
-    ] }),
-    !freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-xl border border-gray-700 p-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-semibold text-white mb-4 flex items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-red-400", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" }) }),
-        "Freeze System"
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm mb-4", children: "Select which operations should remain available during the system freeze. These options must be selected BEFORE initiating the freeze." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "button",
-        {
-          onClick: handleFreezeClick,
-          disabled: !canActivateFreeze,
-          className: "relative group",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-red-800 rounded-xl transform translate-y-1 group-active:translate-y-0 transition-transform" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-red-700 rounded-xl transform translate-y-0.5 group-active:translate-y-0 transition-transform" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `relative px-8 py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-900/50 flex items-center gap-3 group-active:transform group-active:translate-y-1 transition-transform ${canActivateFreeze ? "bg-gradient-to-b from-red-500 to-red-600" : "bg-gray-600 cursor-not-allowed opacity-70"}`, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-6 h-6", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" }) }),
-              "FREEZE SYSTEM"
-            ] })
-          ]
-        }
-      ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4 mt-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-medium text-gray-300 mb-3", children: "Select operations to allow during freeze:" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: isEverythingFrozen(),
-                onChange: handleFreezeEverything,
-                className: "w-5 h-5 rounded border-gray-500 text-red-500 focus:ring-red-500 focus:ring-offset-gray-800"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Freeze Everything" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "No operations allowed during freeze" })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: pendingAllowedActions.postFlightTimes,
-                onChange: () => handleAllowedActionChange("postFlightTimes"),
-                className: "w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Post Flight Times Entries" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "Allow recording of post-flight time entries" })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: pendingAllowedActions.pt051Entries,
-                onChange: () => handleAllowedActionChange("pt051Entries"),
-                className: "w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-white font-medium", children: [
-                reportDisplayName,
-                " Entries"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-xs", children: [
-                "Allow ",
-                reportDisplayName,
-                " submissions"
-              ] })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-3 p-3 rounded-lg border transition-colors ${flightAuthorisationRequired ? "bg-gray-700/50 border-gray-600 cursor-pointer hover:bg-gray-700" : "bg-gray-800/70 border-gray-700 cursor-not-allowed opacity-70"}`, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: flightAuthorisationRequired && pendingAllowedActions.flightAuthorisation,
-                onChange: () => handleAllowedActionChange("flightAuthorisation"),
-                disabled: !flightAuthorisationRequired,
-                className: "w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: flightAuthorisationRequired ? "text-white font-medium" : "text-gray-400 font-medium", children: "Flight Authorisation Entries" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: flightAuthorisationRequired ? "Allow flight authorisation processing" : "Flight authorisation is optional for this unit, so this emergency exception is disabled." })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: pendingAllowedActions.aircraftAvailability,
-                onChange: () => handleAllowedActionChange("aircraftAvailability"),
-                className: "w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "Aircraft Availability Entries" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "Allow aircraft availability updates" })
-            ] })
-          ] })
-        ] })
-      ] })
-    ] }),
-    freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-xl border border-red-500/30 p-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-semibold text-white mb-4 flex items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-red-400", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
-        "Allowed Operations During Freeze"
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 mb-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.postFlightTimes ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: freezeState.allowedActions.postFlightTimes ? "text-green-400" : "text-gray-500", children: "Post Flight Times" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.pt051Entries ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: freezeState.allowedActions.pt051Entries ? "text-green-400" : "text-gray-500", children: [
-          reportDisplayName,
-          " Entries"
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${frozenFlightAuthorisationAllowed ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: frozenFlightAuthorisationAllowed ? "text-green-400" : "text-gray-500", children: "Flight Authorisation" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.aircraftAvailability ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: freezeState.allowedActions.aircraftAvailability ? "text-green-400" : "text-gray-500", children: "Aircraft Availability" }) })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: handleUnfreeze,
-          disabled: isProcessing || !canDeactivateFreeze,
-          className: "w-full py-3 px-4 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2",
-          children: isProcessing ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Processing..." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Unfreeze System" })
-          ] })
-        }
-      )
-    ] }),
-    showConfirmDialog && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-red-500 p-6 max-w-md w-full mx-4 shadow-2xl", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full bg-red-900/50 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-6 h-6 text-red-500", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white", children: "Confirm System Freeze" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-4", children: [
-        "Are you sure you wish to ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 font-semibold", children: "freeze the system" }),
-        " due to Aircraft Emergency?"
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg p-3 mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-2", children: "Operations allowed during freeze:" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: isEverythingFrozen() ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 text-sm font-medium", children: "None (Full Freeze)" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          effectivePendingAllowedActions.postFlightTimes && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Post Flight Times" }),
-          effectivePendingAllowedActions.pt051Entries && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: reportDisplayName }),
-          effectivePendingAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Flight Auth" }),
-          effectivePendingAllowedActions.aircraftAvailability && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Aircraft Availability" })
-        ] }) })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm mb-6", children: "This will prevent all scheduling and data modifications until manually unfrozen." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => setShowConfirmDialog(false),
-            className: "flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors",
-            children: "Cancel"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: handleFreezeConfirm,
-            disabled: isProcessing,
-            className: "flex-1 py-2 px-4 bg-red-600 hover:bg-red-500 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-colors",
-            children: isProcessing ? "Processing..." : "Yes, Freeze System"
-          }
-        )
-      ] })
-    ] }) })
-  ] });
-};
-const standardSettingsButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
-const InfoBadge = ({ title, ariaLabel }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-  "span",
-  {
-    role: "img",
-    "aria-label": ariaLabel,
-    title,
-    className: "inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-cyan-400/35 bg-gray-950/20 text-cyan-100/70",
-    children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-serif text-[11px] font-bold italic leading-none normal-case", children: "i" })
-  }
-);
-const ContinuationCurrencyEventsSettings = ({
-  sctShortLabel,
-  sctLongLabel,
-  sctEvents,
-  onUpdateSctEvents,
-  masterCurrencies,
-  currencyRequirements,
-  canEditSettings,
-  onOpenCurrencyRequirements,
-  aircraftConfigurationDefinitions = [],
-  activeUnitCode = "",
-  activeUnitCodes = [],
-  activeCompositeUnitCode = "",
-  activeAircraftTypeCode = ""
-}) => {
-  const [isEditingSctEvents, setIsEditingSctEvents] = reactExports.useState(false);
-  const [tempSctEvents, setTempSctEvents] = reactExports.useState([]);
-  const [newSctEvent, setNewSctEvent] = reactExports.useState("");
-  const [selectedSctEventId, setSelectedSctEventId] = reactExports.useState(null);
-  const configuredSctEvents = reactExports.useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
-  const activeCurrencyNames = reactExports.useMemo(() => Array.from(new Set(
-    [...masterCurrencies, ...currencyRequirements].filter((currency) => currency.isVisible).map((currency) => String(currency.name || "").trim()).filter(Boolean)
-  )), [masterCurrencies, currencyRequirements]);
-  const aircraftConfigOptions = reactExports.useMemo(() => {
-    const definitions = Array.isArray(aircraftConfigurationDefinitions) && aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
-    return Array.from(new Map([
-      ["ANY", { id: "ANY", label: "ANY" }],
-      ...definitions.map((definition) => [definition.id, { id: definition.id, label: definition.label || definition.id }])
-    ]).values());
-  }, [aircraftConfigurationDefinitions]);
-  const activeUnitCodeList = reactExports.useMemo(() => Array.from(new Set([
-    activeUnitCode,
-    ...Array.isArray(activeUnitCodes) ? activeUnitCodes : []
-  ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean))), [activeUnitCode, activeUnitCodes]);
-  const activeContinuationAircraftTypeCode = reactExports.useMemo(() => String(activeAircraftTypeCode || "").trim().toUpperCase(), [activeAircraftTypeCode]);
-  const displayedSctEvents = isEditingSctEvents ? tempSctEvents : configuredSctEvents;
-  const selectedTempSctEvent = tempSctEvents.find((event) => (event.id || event.name) === selectedSctEventId) || null;
-  const selectedConfiguredSctEvent = configuredSctEvents.find((event) => (event.id || event.name) === selectedSctEventId) || null;
-  const applyContinuationEventDefaults = (event) => ({
-    ...event,
-    aircraftTypeCode: String(event.aircraftTypeCode || "").trim().toUpperCase() || activeContinuationAircraftTypeCode
-  });
-  const updateTempSctEvent = (eventId, updates) => {
-    setTempSctEvents((current) => current.map((event) => (event.id || event.name) === eventId ? { ...event, ...updates } : event));
-  };
-  const toggleTempSctConfig = (eventId, configId) => {
-    setTempSctEvents((current) => current.map((event) => {
-      if ((event.id || event.name) !== eventId) return event;
-      const currentConfigs = Array.isArray(event.acceptableAircraftConfigs) && event.acceptableAircraftConfigs.length > 0 ? event.acceptableAircraftConfigs : [event.config || "ANY"];
-      const selected = new Set(currentConfigs);
-      if (selected.has(configId)) selected.delete(configId);
-      else selected.add(configId);
-      const nextConfigs = Array.from(selected);
-      const safeConfigs = nextConfigs.length > 0 ? nextConfigs : ["ANY"];
-      return { ...event, acceptableAircraftConfigs: safeConfigs, config: safeConfigs[0] || "ANY" };
-    }));
-  };
-  const handleEditSctEvents = async () => {
-    if (!selectedSctEventId || !selectedConfiguredSctEvent) {
-      await showDarkAlert("Select an event tile before editing.", "Select Event First", "warning");
-      return;
-    }
-    const editableEvents = normaliseContinuationEventSettings(sctEvents).map(applyContinuationEventDefaults);
-    setTempSctEvents(editableEvents);
-    setIsEditingSctEvents(true);
-  };
-  const handleSaveSctEvents = () => {
-    const cleanedEvents = normaliseContinuationEventSettings(tempSctEvents);
-    const oldEvents = configuredSctEvents.map((event) => event.name).join(", ");
-    const newEvents = cleanedEvents.map((event) => event.name).join(", ");
-    onUpdateSctEvents(cleanedEvents);
-    setIsEditingSctEvents(false);
-    logAudit({
-      page: `Settings - ${sctShortLabel} Events`,
-      action: "update",
-      description: `Updated ${sctLongLabel} event types`,
-      changes: `From: [${oldEvents}] To: [${newEvents}]`
-    });
-  };
-  const handleCancelSctEvents = () => {
-    setNewSctEvent("");
-    setIsEditingSctEvents(false);
-  };
-  const handleAddSctEvent = () => {
-    const name = newSctEvent.trim();
-    if (name && !tempSctEvents.some((event) => event.name.toUpperCase() === name.toUpperCase())) {
-      const newEvent = {
-        id: `continuation-event-${Date.now()}`,
-        name,
-        code: name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT",
-        unitCode: activeUnitCodeList[0] || "",
-        compositeUnitCode: activeCompositeUnitCode || "",
-        aircraftTypeCode: activeContinuationAircraftTypeCode,
-        crew: "",
-        config: "ANY",
-        acceptableAircraftConfigs: ["ANY"],
-        currency: activeCurrencyNames[0] || name,
-        dayNight: "Day",
-        flightType: "Dual",
-        aircraftCount: 1,
-        status: "ACTIVE"
-      };
-      setTempSctEvents([...tempSctEvents, newEvent]);
-      setSelectedSctEventId(newEvent.id);
-      setNewSctEvent("");
-    }
-  };
-  const handleRemoveSctEvent = (eventToRemove) => {
-    setTempSctEvents(tempSctEvents.filter((evt) => (evt.id || evt.name) !== eventToRemove));
-    if (selectedSctEventId === eventToRemove) setSelectedSctEventId(null);
-  };
-  const renderEventTile = (evt) => {
-    const eventKey = evt.id || evt.name;
-    const isSelected = selectedSctEventId === eventKey;
-    const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
-    const unitLabel = evt.unitCode || activeUnitCodeList[0] || "All units";
-    const aircraftLabel = evt.aircraftTypeCode || activeContinuationAircraftTypeCode || "Aircraft type not set";
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "button",
-      {
-        type: "button",
-        onClick: () => setSelectedSctEventId(eventKey),
-        className: `w-full rounded-md border p-3 text-left transition-colors ${isSelected ? "border-sky-400/70 bg-sky-950/30 shadow-[inset_3px_0_0_rgba(56,189,248,0.75)]" : "border-gray-700/80 bg-gray-900/45 hover:border-gray-500 hover:bg-gray-900/70"}`,
-        "aria-pressed": isSelected,
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 items-start justify-between gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 flex-wrap items-center gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-sm font-semibold text-white", children: evt.name }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-600/70 bg-gray-950/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-300", children: evt.code || "CONT" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap gap-1.5", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800/90 px-2 py-0.5 text-[11px] font-medium text-gray-300", children: evt.dayNight || "Day" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800/90 px-2 py-0.5 text-[11px] font-medium text-gray-300", children: evt.flightType || "Dual" }),
-                evt.currency && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-sky-950/50 px-2 py-0.5 text-[11px] font-medium text-sky-100", children: evt.currency })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "shrink-0 text-right text-[11px] text-gray-400", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold text-gray-300", children: [
-                "A/C ",
-                Math.max(1, Number(evt.aircraftCount) || 1)
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: selectedConfigs.join(", ") })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-2 border-t border-gray-700/70 pt-2 text-[11px] text-gray-400 sm:grid-cols-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Unit" }),
-              " ",
-              unitLabel
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Aircraft" }),
-              " ",
-              aircraftLabel
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "truncate", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Crew" }),
-              " ",
-              evt.crew || "Default"
-            ] })
-          ] })
-        ]
-      }
-    ) }, eventKey);
-  };
-  const renderSelectedEventDetails = (evt) => {
-    const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
-    const unitLabel = evt.unitCode || activeUnitCodeList[0] || "All units";
-    const aircraftLabel = evt.aircraftTypeCode || activeContinuationAircraftTypeCode || "Aircraft type not set";
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/55 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-start justify-between gap-3 border-b border-gray-700 pb-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-gray-500", children: "Selected Event" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 truncate text-xl font-semibold text-white", children: evt.name })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-600/70 bg-gray-950/60 px-2 py-1 text-xs font-bold uppercase tracking-wide text-gray-300", children: evt.code || "CONT" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Currency" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: evt.currency || "None" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Unit" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: unitLabel })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "A/C Type" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: aircraftLabel })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Day/Night" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: evt.dayNight || "Day" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Dual/Solo" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: evt.flightType || "Dual" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "A/C" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-200", children: Math.max(1, Number(evt.aircraftCount) || 1) })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-700/80 bg-gray-950/35 p-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Acceptable CONFIG" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap gap-2", children: selectedConfigs.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-800 px-2 py-0.5 text-xs font-semibold text-gray-200", children: config }, config)) })
-      ] })
-    ] });
-  };
-  const renderSelectedEventEditor = (evt) => {
-    const eventKey = evt.id || evt.name;
-    const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/70 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between border-b border-gray-700 pb-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-gray-500", children: "Editing Event" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-semibold text-white", children: evt.name })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => handleRemoveSctEvent(eventKey), className: "flex h-[34px] items-center justify-center rounded border border-red-500/30 bg-red-950/40 px-3 text-xs font-bold text-red-200 hover:bg-red-900/50", children: "Delete" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_150px_110px_110px_90px]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          "Event",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: evt.name,
-              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateTempSctEvent(eventKey, { name: value })),
-              onChange: (event) => updateTempSctEvent(eventKey, { name: event.target.value }),
-              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateTempSctEvent(eventKey, { name: value })),
-              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          "Code",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: evt.code || "",
-              maxLength: 8,
-              onChange: (event) => updateTempSctEvent(eventKey, { code: event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) }),
-              onKeyDownCapture: stopEditableKeyPropagation,
-              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          "Day/Night",
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: evt.dayNight || "Day",
-              onChange: (event) => updateTempSctEvent(eventKey, { dayNight: event.target.value }),
-              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Night" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day/Night" })
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          "Dual/Solo",
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: evt.flightType || "Dual",
-              onChange: (event) => updateTempSctEvent(eventKey, { flightType: event.target.value }),
-              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Dual" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Solo" })
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          "A/C",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "number",
-              min: 1,
-              max: 24,
-              value: Math.max(1, Number(evt.aircraftCount) || 1),
-              onChange: (event) => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(event.target.value) || 1))) }),
-              onKeyDownCapture: stopEditableKeyPropagation,
-              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,2.4fr)_90px_minmax(0,0.9fr)_minmax(0,0.9fr)]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              InfoBadge,
-              {
-                ariaLabel: "Currency field information",
-                title: "Currencies are configured in Training & Standards > Currency Requirements. Select the requirement this completed event should satisfy or refresh."
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: evt.currency || "",
-              onChange: (event) => updateTempSctEvent(eventKey, { currency: event.target.value }),
-              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
-                activeCurrencyNames.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: currency, children: currency }, currency))
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          "Unit",
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: evt.unitCode || "",
-              onChange: (event) => updateTempSctEvent(eventKey, { unitCode: event.target.value }),
-              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All applicable units" }),
-                activeUnitCodeList.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          "A/C Type",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: evt.aircraftTypeCode || "",
-              onChange: (event) => updateTempSctEvent(eventKey, { aircraftTypeCode: event.target.value.toUpperCase() }),
-              onKeyDownCapture: stopEditableKeyPropagation,
-              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
-          "Crew",
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: evt.crew || "",
-              onChange: (event) => updateTempSctEvent(eventKey, { crew: event.target.value }),
-              onKeyDownCapture: stopEditableKeyPropagation,
-              className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex min-w-0 items-center gap-3 rounded border border-gray-700 bg-gray-950/60 p-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "shrink-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: "Acceptable CONFIG" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-0 flex-1 flex-nowrap items-center gap-4 overflow-x-auto", children: aircraftConfigOptions.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex shrink-0 items-center gap-2 text-xs font-semibold text-gray-200", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "checkbox",
-              checked: selectedConfigs.includes(config.id),
-              onChange: () => toggleTempSctConfig(eventKey, config.id),
-              className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: config.label })
-        ] }, `${eventKey}-${config.id}`)) })
-      ] })
-    ] });
-  };
-  const renderSelectedEventPanel = () => {
-    if (isEditingSctEvents) {
-      return selectedTempSctEvent ? renderSelectedEventEditor(selectedTempSctEvent) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full min-h-[320px] items-center justify-center rounded-md border border-dashed border-gray-700 bg-gray-900/40 p-6 text-center text-sm text-gray-400", children: "Select an event tile to edit." });
-    }
-    return selectedConfiguredSctEvent ? renderSelectedEventDetails(selectedConfiguredSctEvent) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full min-h-[320px] items-center justify-center rounded-md border border-dashed border-gray-700 bg-gray-900/40 p-6 text-center text-sm text-gray-400", children: "Select an event tile to view details." });
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl min-h-[600px] flex flex-col", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-gray-200", children: [
-          sctShortLabel,
-          " / Currency Events"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          InfoBadge,
-          {
-            ariaLabel: "Currency events information",
-            title: "The Currency field links a completed event to the currency requirement it should satisfy or refresh. Set up currencies in Training & Standards > Currency Requirements."
-          }
-        )
-      ] }),
-      isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-        onOpenCurrencyRequirements && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onOpenCurrencyRequirements, className: standardSettingsButtonClass, children: [
-          "Currency",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-          "Setup"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSaveSctEvents, className: standardSettingsButtonClass, children: "Save" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleCancelSctEvents, className: standardSettingsButtonClass, children: "Cancel" })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-        onOpenCurrencyRequirements && /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", onClick: onOpenCurrencyRequirements, className: standardSettingsButtonClass, children: [
-          "Currency",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-          "Setup"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: handleEditSctEvents,
-            disabled: !canEditSettings,
-            className: standardSettingsButtonClass,
-            children: "Edit"
-          }
-        )
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-h-0 flex-1 flex-col space-y-4 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: isEditingSctEvents ? "Edit the selected event and save when complete." : `Select a ${sctShortLabel} / currency event tile, then press Edit.` }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-h-0 flex-1 gap-4 lg:grid-cols-[360px_minmax(0,1fr)]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 space-y-2 overflow-y-auto pr-1", children: displayedSctEvents.map(renderEventTile) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-y-auto", children: renderSelectedEventPanel() })
-      ] }),
-      isEditingSctEvents && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2 border-t border-gray-700 pt-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "text",
-            value: newSctEvent,
-            onChange: (event) => setNewSctEvent(event.target.value),
-            onKeyDownCapture: stopEditableKeyPropagation,
-            onKeyDown: (event) => {
-              stopEditableKeyPropagation(event);
-              if (event.key === "Enter") handleAddSctEvent();
-            },
-            placeholder: `New ${sctShortLabel} event name`,
-            className: "flex-grow rounded-md border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-white focus:outline-none focus:ring-sky-500"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleAddSctEvent, className: "rounded-md bg-green-700 px-3 py-1 text-sm font-semibold text-white hover:bg-green-600", children: "+" })
-      ] })
-    ] })
-  ] });
-};
-const TEMPLATE_OVERRIDE_FOLDER_ID = "template_overrides";
-const formatCurrencyExpiryCalculation = (value) => {
-  const normalised = String(value || "").trim().toUpperCase();
-  if (normalised === "LATEST_CHILD") {
-    return "Use the latest expiry date from the requirements in this rule.";
-  }
-  if (normalised === "EARLIEST_CHILD") {
-    return "Use the earliest expiry date from the requirements in this rule.";
-  }
-  return "Expiry is not configured for this combined currency.";
-};
-const getCurrencyDisplayNameById = (currencyId, allCurrencies) => {
-  const match = allCurrencies.find((currency) => currency.id === currencyId || currency.name === currencyId);
-  return match?.name || currencyId;
-};
-const renderCurrencyLogicNode = (node, allCurrencies, depth = 0) => {
-  if (!node || typeof node !== "object" || !Array.isArray(node.children) || node.children.length === 0) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No requirements have been added to this combined currency." });
-  }
-  const operator = String(node.operator || "AND").toUpperCase() === "OR" ? "OR" : "AND";
-  const heading = operator === "AND" ? "All of these requirements must be current:" : "Any one of these requirements is enough:";
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: depth > 0 ? "mt-2 border-l border-gray-600 pl-3" : "", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-gray-200", children: heading }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-2 space-y-2", children: node.children.map((child, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: typeof child === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: getCurrencyDisplayNameById(child, allCurrencies) }) : renderCurrencyLogicNode(child, allCurrencies, depth + 1) }, `${depth}-${index}`)) })
-  ] });
-};
-const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded }) => {
-  const [showAddElementFlyout, setShowAddElementFlyout] = reactExports.useState(false);
-  const [showDeleteElementFlyout, setShowDeleteElementFlyout] = reactExports.useState(false);
-  const [newElementName, setNewElementName] = reactExports.useState("");
-  const [selectedToDelete, setSelectedToDelete] = reactExports.useState(/* @__PURE__ */ new Set());
-  const [editModeGrades, setEditModeGrades] = reactExports.useState(/* @__PURE__ */ new Set());
-  const toggleEditMode = (grade) => {
-    const newSet = new Set(editModeGrades);
-    if (newSet.has(grade)) {
-      newSet.delete(grade);
-    } else {
-      newSet.add(grade);
-    }
-    setEditModeGrades(newSet);
-  };
-  const [flightElements, setFlightElements] = reactExports.useState(() => {
-    return getConfiguredScoringMatrixElements(phraseBank);
-  });
-  const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
-  const [elementGroupDrafts, setElementGroupDrafts] = reactExports.useState({});
-  const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
-  const { groups: configuredElementGroups, hasExplicitGroups: hasExplicitElementGroups } = getConfiguredScoringMatrixElementGroups(phraseBank);
-  const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
-  const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
-  const sectionOptions = Array.from(new Set([
-    ...hasExplicitElementGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS,
-    ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
-    savedElementGroup,
-    String(currentElementGroup || "").trim()
-  ].filter(Boolean)));
-  const handleElementGroupChange = (element, group) => {
-    const nextGroup = String(group || "").trim();
-    onUpdatePhraseBank({
-      ...phraseBank,
-      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
-        ...configuredElementGroups,
-        [element]: nextGroup || "Additional Elements"
-      },
-      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION
-    });
-  };
-  const beginElementGroupDraft = (element) => {
-    setElementGroupDrafts((previous) => ({
-      ...previous,
-      [element]: previous[element] ?? getScoringMatrixElementGroup(element, configuredElementGroups, hasExplicitElementGroups)
-    }));
-  };
-  const updateElementGroupDraft = (element, group) => {
-    setElementGroupDrafts((previous) => ({ ...previous, [element]: group }));
-  };
-  const commitElementGroupDraft = (element) => {
-    if (!(element in elementGroupDrafts)) return;
-    handleElementGroupChange(element, elementGroupDrafts[element]);
-    setElementGroupDrafts((previous) => {
-      if (!(element in previous)) return previous;
-      const { [element]: _committedDraft, ...remainingDrafts } = previous;
-      return remainingDrafts;
-    });
-  };
-  const handlePhraseChange = (grade, index, value) => {
-    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
-    const gradePhrases = currentPhrases[grade] || [];
-    const newGradePhrases = [...gradePhrases];
-    newGradePhrases[index] = value;
-    onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: newGradePhrases } });
-  };
-  const handleAddPhrase = (grade) => {
-    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
-    const gradePhrases = currentPhrases[grade] || [];
-    onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: [...gradePhrases, ""] } });
-  };
-  const handleDeletePhrase = (grade, index) => {
-    const currentPhrases = phraseBank && phraseBank[currentDimension] || {};
-    const gradePhrases = currentPhrases[grade] || [];
-    onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: gradePhrases.filter((_, i) => i !== index) } });
-  };
-  const handleSaveNewElement = async () => {
-    const name = newElementName.trim();
-    if (!name) return;
-    if (flightElements.includes(name)) {
-      await showDarkAlert("An element with this name already exists.", "Duplicate Element", "warning");
-      return;
-    }
-    const nextElements = [...flightElements, name];
-    setFlightElements(nextElements);
-    onUpdatePhraseBank({
-      ...phraseBank,
-      [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: nextElements,
-      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
-      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
-        ...configuredElementGroups,
-        [name]: "Additional Elements"
-      },
-      [name]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
-    });
-    setSelectedElement(name);
-    setNewElementName("");
-    setShowAddElementFlyout(false);
-    onElementAdded?.(name);
-  };
-  const handleDeleteElements = async () => {
-    if (selectedToDelete.size === 0) {
-      await showDarkAlert("Please select at least one element to delete.", "No Element Selected", "warning");
-      return;
-    }
-    const newFlightElements = flightElements.filter((el) => !selectedToDelete.has(el));
-    setFlightElements(newFlightElements);
-    const newPhraseBank = { ...phraseBank };
-    selectedToDelete.forEach((el) => {
-      delete newPhraseBank[el];
-    });
-    const nextGroups = { ...configuredElementGroups };
-    selectedToDelete.forEach((el) => {
-      delete nextGroups[el];
-    });
-    newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$3] = newFlightElements;
-    newPhraseBank[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] = SCORING_MATRIX_ELEMENT_SELECTION_VERSION;
-    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] = nextGroups;
-    onUpdatePhraseBank(newPhraseBank);
-    if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
-    setSelectedToDelete(/* @__PURE__ */ new Set());
-    setShowDeleteElementFlyout(false);
-  };
-  const getGradeColor = (grade) => {
-    if (grade >= 4) return "border-green-500/30 bg-green-900/10";
-    if (grade >= 2) return "border-yellow-500/30 bg-yellow-900/10";
-    return "border-red-500/30 bg-red-900/10";
-  };
-  const getGradeLabel = (grade) => {
-    switch (grade) {
-      case 5:
-        return "5 - Excellent";
-      case 4:
-        return "4 - High Satisfactory";
-      case 3:
-        return "3 - Satisfactory";
-      case 2:
-        return "2 - Low Satisfactory";
-      case 1:
-        return "1 - Marginal";
-      case 0:
-        return "0 - Unsatisfactory";
-      default:
-        return String(grade);
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex overflow-hidden", style: { minHeight: "600px" }, children: [
-    activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-56 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-900/50 flex justify-between items-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Flight Elements" }),
-        !readOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => setShowDeleteElementFlyout(true),
-              className: "p-1 rounded-full bg-gray-700 hover:bg-gray-600",
-              title: "Delete flight element(s)",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-red-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z", clipRule: "evenodd" }) })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => setShowAddElementFlyout(true),
-              className: "p-1 rounded-full bg-gray-700 hover:bg-gray-600",
-              title: "Add new flight element",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-sky-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
-            }
-          )
-        ] })
-      ] }),
-      flightElements.map((el) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => setSelectedElement(el),
-          className: `text-left px-4 py-3 border-l-4 transition-colors font-medium text-sm ${selectedElement === el ? "border-sky-500 bg-gray-700 text-white" : "border-transparent text-gray-400 hover:bg-gray-700/50 hover:text-gray-200"}`,
-          children: el
-        },
-        el
-      ))
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto p-6 space-y-6 bg-gray-900", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-2xl font-bold text-sky-400", children: currentDimension }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Define standardized phrases for each grade level." })
-      ] }),
-      activeTab === "Elements" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-gray-700 rounded-lg bg-gray-800/70 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-bold uppercase tracking-wider text-gray-400", children: "Training report section" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "span",
-              {
-                className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300",
-                title: SCORING_MATRIX_SECTION_HELP,
-                children: "i"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-30 hidden w-72 -translate-x-1/2 rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-gray-200 shadow-xl group-hover:block", children: SCORING_MATRIX_SECTION_HELP })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: currentElementGroup,
-              onFocus: () => beginElementGroupDraft(selectedElement),
-              onChange: (event) => updateElementGroupDraft(selectedElement, event.target.value),
-              onBlur: () => commitElementGroupDraft(selectedElement),
-              onKeyDownCapture: stopEditableKeyPropagation,
-              onKeyDown: stopEditableKeyPropagation,
-              readOnly,
-              className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: sectionOptions.includes(currentElementGroup) ? currentElementGroup : "",
-              onChange: (event) => {
-                setElementGroupDrafts((previous) => {
-                  const { [selectedElement]: _discardedDraft, ...remainingDrafts } = previous;
-                  return remainingDrafts;
-                });
-                handleElementGroupChange(selectedElement, event.target.value);
-              },
-              disabled: readOnly,
-              className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:text-gray-400",
-              children: [
-                !sectionOptions.includes(currentElementGroup) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Custom section" }),
-                sectionOptions.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: section, children: section }, section))
-              ]
-            }
-          )
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "This controls which heading this element appears under on the training report." })
-      ] }),
-      [5, 4, 3, 2, 1, 0].map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `border rounded-lg overflow-hidden ${getGradeColor(grade)}`, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-2 font-bold text-sm border-b border-gray-700/30 flex justify-between items-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white opacity-90", children: getGradeLabel(grade) }),
-          !readOnly && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2", children: editModeGrades.has(grade) ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => toggleEditMode(grade),
-                className: "text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition-colors border border-green-500 font-semibold",
-                children: "✓ Save"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => handleAddPhrase(grade),
-                className: "text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600",
-                children: "+ Add Phrase"
-              }
-            )
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => toggleEditMode(grade),
-              className: "text-xs bg-sky-600 hover:bg-sky-700 text-white px-3 py-1 rounded transition-colors border border-sky-500 font-semibold",
-              children: "✎ Edit"
-            }
-          ) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-2", children: phraseBank && phraseBank[currentDimension] && phraseBank[currentDimension][grade] ? phraseBank[currentDimension][grade].map((phrase, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2 group", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "textarea",
-            {
-              value: phrase,
-              onBeforeInput: (event) => {
-                if (!readOnly && editModeGrades.has(grade)) handleEditableTextBeforeInput(event, (value) => handlePhraseChange(grade, idx, value));
-              },
-              onKeyDownCapture: (event) => {
-                if (!readOnly && editModeGrades.has(grade)) handleEditableTextKeyDownCapture(event, (value) => handlePhraseChange(grade, idx, value));
-                else stopEditableKeyPropagation(event);
-              },
-              onKeyDown: stopEditableKeyPropagation,
-              onChange: (e) => {
-                if (!readOnly && editModeGrades.has(grade)) handlePhraseChange(grade, idx, e.target.value);
-              },
-              readOnly: readOnly || !editModeGrades.has(grade),
-              rows: 1,
-              className: `flex-1 rounded p-2 text-sm resize-none overflow-hidden transition-colors ${readOnly ? "bg-gray-800/50 border border-gray-700 text-gray-400 cursor-default" : editModeGrades.has(grade) ? "bg-gray-800 border border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500" : "bg-transparent border border-transparent text-gray-300 cursor-default"}`,
-              style: { minHeight: "38px", height: "auto" },
-              onInput: (e) => {
-                const target = e.currentTarget;
-                target.style.height = "auto";
-                target.style.height = `${target.scrollHeight}px`;
-              }
-            }
-          ),
-          !readOnly && editModeGrades.has(grade) && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => handleDeletePhrase(grade, idx),
-              className: "p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity",
-              title: "Delete phrase",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z", clipRule: "evenodd" }) })
-            }
-          )
-        ] }, idx)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 italic pl-1", children: "No phrases defined." }) })
-      ] }, grade))
-    ] }),
-    !readOnly && showAddElementFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[100] flex items-center justify-center", onClick: () => setShowAddElementFlyout(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Add New Flight Element" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Element Name" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "text",
-            value: newElementName,
-            onChange: (e) => setNewElementName(e.target.value),
-            autoFocus: true,
-            onKeyDown: (e) => {
-              if (e.key === "Enter") handleSaveNewElement();
-            },
-            className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-          }
-        )
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowAddElementFlyout(false), className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveNewElement, disabled: !newElementName.trim(), className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Save" })
-      ] })
-    ] }) }),
-    !readOnly && showDeleteElementFlyout && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[100] flex items-center justify-center", onClick: () => setShowDeleteElementFlyout(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700 flex flex-col max-h-[80vh]", onClick: (e) => e.stopPropagation(), children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Delete Flight Elements" }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 flex-1 overflow-y-auto", children: flightElements.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: flightElements.map((element) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "checkbox",
-            checked: selectedToDelete.has(element),
-            onChange: () => {
-              const newSet = new Set(selectedToDelete);
-              if (newSet.has(element)) newSet.delete(element);
-              else newSet.add(element);
-              setSelectedToDelete(newSet);
-            },
-            className: "h-4 w-4 accent-red-500 bg-gray-600"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-300", children: element })
-      ] }) }, element)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic", children: "No elements to delete." }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowDeleteElementFlyout(false), className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDeleteElements, disabled: selectedToDelete.size === 0, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Delete Selected" })
-      ] })
-    ] }) })
-  ] });
-};
-const SettingsView = ({
-  onShowSuccess,
-  eventLimits,
-  onUpdateEventLimits,
-  phraseBank,
-  onUpdatePhraseBank,
-  onNavigate,
-  onOpenCurrencyBuilder,
-  onOpenCurrencyRequirements,
-  masterCurrencies,
-  currencyRequirements,
-  sctEvents,
-  onUpdateSctEvents,
-  preferredDutyPeriod,
-  onUpdatePreferredDutyPeriod,
-  maxCrewDutyPeriod,
-  onUpdateMaxCrewDutyPeriod,
-  flightTurnaround,
-  onUpdateFlightTurnaround,
-  ftdTurnaround,
-  onUpdateFtdTurnaround,
-  cptTurnaround,
-  onUpdateCptTurnaround,
-  taxiGroundTime,
-  onUpdateTaxiGroundTime,
-  currentUserPermission,
-  activeSection = "scoring-matrix",
-  scoringMatrixActiveTab,
-  scoringMatrixReadOnly = false,
-  onScoringMatrixElementAdded,
-  activeOperationalModel,
-  activeUnitHasTrainees = true,
-  maxDispatchPerHour,
-  onUpdateMaxDispatchPerHour,
-  dispatchRateWindowMinutes = DEFAULT_DISPATCH_RATE_WINDOW_MINUTES,
-  onUpdateDispatchRateWindowMinutes,
-  dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS,
-  onUpdateDispatchStaggerSettings,
-  tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS,
-  onUpdateTileStatusSettings,
-  timezoneOffset,
-  cancellationRecords,
-  cancellationCodes,
-  currentAircraftAvailable,
-  totalAircraft,
-  dayFlyingStart = "08:00",
-  dayFlyingEnd = "17:00",
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
-  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
-  trainingReportDisplayName = "Training Report",
-  emergencyFreezeAuthority,
-  onUpdateEmergencyFreezeAuthority,
-  qualificationOptions = [],
-  currentUserQualificationIds = [],
-  aircraftConfigurationDefinitions = [],
-  activeUnitCode = "",
-  activeUnitCodes = [],
-  activeCompositeUnitCode = "",
-  activeAircraftTypeCode = ""
-}) => {
-  const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
-  const canEditEmergencyAuthority = ["Super Admin", "Admin"].includes(currentUserPermission);
-  const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
-  const sctShortLabel = sctTerminology.shortLabel;
-  const sctLongLabel = sctTerminology.longLabel;
-  const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
-  const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
-  const contractorStaffLimitLabel = simIpDisplayLabel.trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
-  const resolvedDispatchStaggerSettings = normaliseDispatchStaggerSettings(dispatchStaggerSettings);
-  const resolvedTileStatusSettings = normaliseTileStatusSettings(tileStatusSettings);
-  const [isEditingBusinessRules, setIsEditingBusinessRules] = reactExports.useState(false);
-  const [tempMaxDispatchPerHour, setTempMaxDispatchPerHour] = reactExports.useState(maxDispatchPerHour);
-  const [tempDispatchRateWindowMinutes, setTempDispatchRateWindowMinutes] = reactExports.useState(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
-  const [tempDispatchStaggerSettings, setTempDispatchStaggerSettings] = reactExports.useState(resolvedDispatchStaggerSettings);
-  const [tempTileStatusSettings, setTempTileStatusSettings] = reactExports.useState(resolvedTileStatusSettings);
-  const displayedDispatchStaggerSettings = isEditingBusinessRules ? tempDispatchStaggerSettings : resolvedDispatchStaggerSettings;
-  const displayedTileStatusSettings = isEditingBusinessRules ? tempTileStatusSettings : resolvedTileStatusSettings;
-  const displayedMaxDispatchPerHour = isEditingBusinessRules ? tempMaxDispatchPerHour : maxDispatchPerHour;
-  const displayedDispatchRateWindowMinutes = isEditingBusinessRules ? tempDispatchRateWindowMinutes : normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes);
-  const canEditBusinessRules = canEditSettings && isEditingBusinessRules;
-  const handleDispatchRateWindowChange = (value) => {
-    setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(value));
-  };
-  const handleDispatchStaggerChange = (updates) => {
-    setTempDispatchStaggerSettings((current) => normaliseDispatchStaggerSettings({
-      ...current,
-      ...updates
-    }));
-  };
-  const handleTileStatusSettingsChange = (updates) => {
-    setTempTileStatusSettings((current) => normaliseTileStatusSettings({
-      ...current,
-      ...updates
-    }));
-  };
-  const handleTileStatusMinutesChange = (key, value) => handleTileStatusSettingsChange({ [key]: value });
-  const [selectedCurrency, setSelectedCurrency] = reactExports.useState(null);
-  const [isEditingLimits, setIsEditingLimits] = reactExports.useState(false);
-  const [tempLimits, setTempLimits] = reactExports.useState(eventLimits);
-  const canEditTraineeLimits = isEditingLimits && activeUnitHasTrainees;
-  const [showScoringMatrix, setShowScoringMatrix] = reactExports.useState(false);
-  const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState("Airmanship");
-  const [repoFiles, setRepoFiles] = reactExports.useState([]);
-  const [pendingTemplateOverride, setPendingTemplateOverride] = reactExports.useState(null);
-  const templateOverrideInputRef = reactExports.useRef(null);
-  const standardSettingsButtonClass2 = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
-  const safeNameSort = (a, b) => {
-    const nameA = a.name || "";
-    const nameB = b.name || "";
-    return nameA.localeCompare(nameB);
-  };
-  const visibleCurrencies = reactExports.useMemo(() => {
-    return [...masterCurrencies, ...currencyRequirements].filter((c) => c.isVisible).sort(safeNameSort);
-  }, [masterCurrencies, currencyRequirements]);
-  reactExports.useEffect(() => {
-    if (activeSection && activeSection !== "data-loaders") return;
-    const initAndFetch = async () => {
-      try {
-        await initDB();
-        refreshFiles();
-      } catch (error) {
-        console.error("Failed to initialize DB:", error);
-      }
-    };
-    initAndFetch();
-  }, [activeSection]);
-  const shouldShowSection = (sectionName) => {
-    if (!activeSection) return true;
-    return activeSection === sectionName;
-  };
-  const refreshFiles = async () => {
-    const files = await getAllFiles();
-    setRepoFiles(files);
-  };
-  const getTemplateOverride = (templateKey) => repoFiles.find((file) => file.folderId === TEMPLATE_OVERRIDE_FOLDER_ID && file.name.startsWith(`${templateKey}::`));
-  const getTemplateOverrideDisplayName = (templateKey) => {
-    const override = getTemplateOverride(templateKey);
-    return override ? override.name.replace(`${templateKey}::`, "") : "";
-  };
-  const downloadStoredTemplate = async (templateKey) => {
-    const override = getTemplateOverride(templateKey);
-    if (!override) return false;
-    const record = await getFile(override.id);
-    if (!record) return false;
-    const url = URL.createObjectURL(record.content);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = record.name.replace(`${templateKey}::`, "");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    return true;
-  };
-  const downloadPublicTemplate = (href, fileName) => {
-    const link = document.createElement("a");
-    link.href = href;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  const verifySettingsEditPassword = async (message) => {
-    const password = await showDarkPrompt({
-      title: "Password Required",
-      message,
-      inputLabel: "Password",
-      inputType: "password",
-      inputPlaceholder: "Enter password",
-      confirmText: "Unlock",
-      cancelText: "Cancel"
-    });
-    if (!password) return false;
-    try {
-      const isValid = await verifyCurrentUserPassword(password);
-      if (!isValid) {
-        await showDarkAlert("The password was not accepted.", "Password Required", "warning");
-        return false;
-      }
-      return true;
-    } catch (error) {
-      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
-      return false;
-    }
-  };
-  const handleChangeTemplateClick = async (template) => {
-    const unlocked = await verifySettingsEditPassword(`Enter your password to change the ${template.label} download template.`);
-    if (!unlocked) return;
-    setPendingTemplateOverride(template);
-    if (templateOverrideInputRef.current) templateOverrideInputRef.current.value = "";
-    templateOverrideInputRef.current?.click();
-  };
-  const handleTemplateOverrideSelected = async (file) => {
-    if (!file || !pendingTemplateOverride) return;
-    const existingOverrides = repoFiles.filter((existingFile) => existingFile.folderId === TEMPLATE_OVERRIDE_FOLDER_ID && existingFile.name.startsWith(`${pendingTemplateOverride.key}::`));
-    await Promise.all(existingOverrides.map((existingFile) => deleteFile(existingFile.id)));
-    await addFile(file, TEMPLATE_OVERRIDE_FOLDER_ID, `${pendingTemplateOverride.key}::${file.name}`);
-    await refreshFiles();
-    logAudit({
-      page: "Settings - Template Downloads",
-      action: "update",
-      description: `Changed ${pendingTemplateOverride.label} download template`,
-      changes: `Template file: ${file.name}`
-    });
-    onShowSuccess(`${pendingTemplateOverride.label} template updated.`);
-    setPendingTemplateOverride(null);
-  };
-  const handleResetTemplateOverride = async (template) => {
-    const unlocked = await verifySettingsEditPassword(`Enter your password to reset the ${template.label} download template.`);
-    if (!unlocked) return;
-    const existingOverrides = repoFiles.filter((existingFile) => existingFile.folderId === TEMPLATE_OVERRIDE_FOLDER_ID && existingFile.name.startsWith(`${template.key}::`));
-    await Promise.all(existingOverrides.map((existingFile) => deleteFile(existingFile.id)));
-    await refreshFiles();
-    logAudit({
-      page: "Settings - Template Downloads",
-      action: "update",
-      description: `Reset ${template.label} download template`,
-      changes: "Restored system template download."
-    });
-    onShowSuccess(`${template.label} template reset to system template.`);
-  };
-  const handleEditBusinessRules = () => {
-    setTempMaxDispatchPerHour(maxDispatchPerHour);
-    setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
-    setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
-    setTempTileStatusSettings(resolvedTileStatusSettings);
-    setIsEditingBusinessRules(true);
-  };
-  const handleSaveBusinessRules = () => {
-    onUpdateMaxDispatchPerHour(tempMaxDispatchPerHour);
-    const savedDispatchRateWindowMinutes = normaliseDispatchRateWindowMinutes(tempDispatchRateWindowMinutes);
-    if (onUpdateDispatchRateWindowMinutes) {
-      onUpdateDispatchRateWindowMinutes(savedDispatchRateWindowMinutes);
-    }
-    if (onUpdateDispatchStaggerSettings) {
-      onUpdateDispatchStaggerSettings(normaliseDispatchStaggerSettings(tempDispatchStaggerSettings));
-    }
-    const savedTileStatusSettings = normaliseTileStatusSettings(tempTileStatusSettings);
-    if (onUpdateTileStatusSettings) {
-      onUpdateTileStatusSettings(savedTileStatusSettings);
-    }
-    setIsEditingBusinessRules(false);
-    onShowSuccess("Business rules updated");
-    logAudit({
-      page: "Settings - Business Rules",
-      action: "update",
-      description: "Updated business rule settings",
-      changes: `Max dispatch/hr: ${tempMaxDispatchPerHour}; dispatch rate window: ${savedDispatchRateWindowMinutes} min; flight stagger: ${tempDispatchStaggerSettings.flightNoMinimum ? "none" : `${tempDispatchStaggerSettings.flightMinutes} min`}; simulator stagger: ${tempDispatchStaggerSettings.simulatorNoMinimum ? "none" : `${tempDispatchStaggerSettings.simulatorMinutes} min`}; authorisation: ${savedTileStatusSettings.flightAuthorisationRequired ? "required" : "optional"}; authorisation warnings: ${savedTileStatusSettings.authorizationWarningMinutes}/${savedTileStatusSettings.authorizationUrgentMinutes} min`
-    });
-  };
-  const handleCancelBusinessRules = () => {
-    setTempMaxDispatchPerHour(maxDispatchPerHour);
-    setTempDispatchRateWindowMinutes(normaliseDispatchRateWindowMinutes(dispatchRateWindowMinutes));
-    setTempDispatchStaggerSettings(resolvedDispatchStaggerSettings);
-    setTempTileStatusSettings(resolvedTileStatusSettings);
-    setIsEditingBusinessRules(false);
-  };
-  const handleEditLimits = () => {
-    setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
-    setIsEditingLimits(true);
-  };
-  const handleSaveLimits = () => {
-    onUpdateEventLimits(tempLimits);
-    setIsEditingLimits(false);
-    onShowSuccess("Daily event limits updated");
-    logAudit({
-      page: "Settings - Daily Event Limits",
-      action: "update",
-      description: "Updated event scheduling limits",
-      changes: "Updated scheduling limit categories"
-    });
-  };
-  const handleCancelLimits = () => {
-    setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
-    setIsEditingLimits(false);
-  };
-  const handleUpdatePhraseBank = (newBank) => {
-    onUpdatePhraseBank(newBank);
-    debouncedAuditLog(
-      "scoring-matrix-phrase-bank",
-      {
-        page: "Settings - Scoring Matrix",
-        action: "update",
-        description: "Updated scoring matrix phrase bank",
-        changes: "Modified scoring criteria and phrases"
-      },
-      (page, action, description, changes) => logAudit({ page, action, description, changes })
-    );
-  };
-  const handleDownloadInstructorTemplate = async () => {
-    if (await downloadStoredTemplate("staff")) return;
-    downloadPublicTemplate("/Staff_Bulk_Update_Template.xlsx", "Staff_Bulk_Update_Template.xlsx");
-  };
-  const handleDownloadTraineeTemplate = async () => {
-    if (await downloadStoredTemplate("trainee")) return;
-    downloadPublicTemplate("/Trainee_Bulk_Update_Template.xlsx", "Trainee_Bulk_Update_Template.xlsx");
-  };
-  const handleDownloadLmpTemplate = async () => {
-    if (await downloadStoredTemplate("lmp")) return;
-    downloadPublicTemplate("/LMP_Syllabus_Template.xlsx", "LMP_Syllabus_Template.xlsx");
-  };
-  const handleDownloadLogbookTemplate = async () => {
-    if (await downloadStoredTemplate("logbook")) return;
-    const headers = ["Date", "Aircraft", "Pilot", "Student", "Sortie", "Duration", "Result"];
-    const ws = XLSX.utils.json_to_sheet([{}], { header: headers });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Logbook");
-    XLSX.writeFile(wb, "Logbook_Template.xlsx");
-  };
-  const handleDownloadOrganisationStructureTemplate = async () => {
-    if (await downloadStoredTemplate("organisation-structure")) return;
-    downloadOrganisationStructureTemplateFile();
-  };
-  const dataLoaderTemplateRows = [
-    { key: "staff", label: "Staff", downloadLabel: "Staff Template (.xlsx)", onDownload: handleDownloadInstructorTemplate },
-    { key: "trainee", label: "Trainee", downloadLabel: "Trainee Template (.xlsx)", onDownload: handleDownloadTraineeTemplate },
-    { key: "lmp", label: "LMP", downloadLabel: "LMP Template (.xlsx)", onDownload: handleDownloadLmpTemplate },
-    { key: "logbook", label: "Logbook", downloadLabel: "Logbook Template (.xlsx)", onDownload: handleDownloadLogbookTemplate },
-    { key: "organisation-structure", label: "Organisational Structure", downloadLabel: "Organisational Structure Template (.xlsx)", onDownload: handleDownloadOrganisationStructureTemplate }
-  ];
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { onKeyDownCapture: stopEditableKeyPropagation, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-      shouldShowSection("validation") && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ACHistoryPage,
-        {
-          currentUserRole: currentUserPermission,
-          cancellationRecords: cancellationRecords || [],
-          currentAircraftAvailable,
-          totalAircraft,
-          timezoneOffset,
-          dayFlyingStart,
-          dayFlyingEnd,
-          resourceDisplayNames
-        }
-      ) }),
-      shouldShowSection("scoring-matrix") && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ScoringMatrixInline,
-        {
-          activeTab: scoringMatrixActiveTab || "Airmanship",
-          phraseBank,
-          onUpdatePhraseBank: handleUpdatePhraseBank,
-          readOnly: scoringMatrixReadOnly,
-          onElementAdded: onScoringMatrixElementAdded
-        }
-      ),
-      shouldShowSection("duty-turnaround") && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        DutyTurnaroundSection,
-        {
-          preferredDutyPeriod,
-          onUpdatePreferredDutyPeriod,
-          maxCrewDutyPeriod,
-          onUpdateMaxCrewDutyPeriod,
-          flightTurnaround,
-          onUpdateFlightTurnaround,
-          ftdTurnaround,
-          onUpdateFtdTurnaround,
-          cptTurnaround,
-          onUpdateCptTurnaround,
-          taxiGroundTime,
-          onUpdateTaxiGroundTime,
-          canEdit: canEditSettings,
-          onShowSuccess,
-          resourceDisplayNames
-        }
-      ),
-      shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ContinuationCurrencyEventsSettings,
-        {
-          sctShortLabel,
-          sctLongLabel,
-          sctEvents,
-          onUpdateSctEvents,
-          masterCurrencies,
-          currencyRequirements,
-          canEditSettings,
-          onOpenCurrencyRequirements,
-          aircraftConfigurationDefinitions,
-          activeUnitCode,
-          activeUnitCodes,
-          activeCompositeUnitCode,
-          activeAircraftTypeCode
-        }
-      ),
-      shouldShowSection("currencies") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Currency Requirements" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto max-h-[400px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-left text-sm", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "sticky top-0 bg-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "font-medium text-gray-400 px-4 pt-0 pb-2 border-b border-gray-700", children: "Currency" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "font-medium text-gray-400 px-4 pt-0 pb-2 border-b border-gray-700", children: "Type" })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: visibleCurrencies.map((c, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "tr",
-              {
-                className: `border-t border-gray-700 cursor-pointer transition-colors ${selectedCurrency?.id === c.id ? "bg-sky-900/30" : "hover:bg-gray-700"}`,
-                onClick: () => setSelectedCurrency(c),
-                onMouseEnter: () => setSelectedCurrency(c),
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-4 text-gray-200", children: c.name }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-4 text-gray-300 capitalize", children: c.type })
-                ]
-              },
-              c.id
-            )) })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700 shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onOpenCurrencyBuilder ? onOpenCurrencyBuilder() : onNavigate("CurrencyBuilder"), className: "w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Currency Builder" }) })
-        ] }),
-        selectedCurrency && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center shrink-0 border-b border-gray-700", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Currency Details" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => setSelectedCurrency(null),
-                className: "text-gray-400 hover:text-white transition-colors",
-                children: "✕"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Name" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.name })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Type" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200 capitalize", children: selectedCurrency.type })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Description" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 whitespace-pre-wrap", children: selectedCurrency.description || "No description" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Visible" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.isVisible ? "Yes" : "No" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Post-Flight Currency Panel" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.showInPostFlight ? "Yes" : "No" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Post-Flight Recency Checklist" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.showInPostFlightRecency ? "Yes" : "No" })
-            ] }),
-            selectedCurrency.type === "primitive" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Validity Days" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-200", children: [
-                  selectedCurrency.validityDays,
-                  " days"
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Required Count" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.requiredCount })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Currency Short Code" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: selectedCurrency.shortCode || selectedCurrency.eventCodes?.[0] ? selectedCurrency.shortCode || selectedCurrency.eventCodes?.[0] : "None" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Expiry Rule" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200 capitalize", children: selectedCurrency.expiryRule })
-              ] })
-            ] }),
-            selectedCurrency.type === "composite" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/70 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-2", children: "Rule" }),
-                renderCurrencyLogicNode(
-                  selectedCurrency.logicTree,
-                  [...currencyRequirements, ...masterCurrencies]
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/70 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-2", children: "Expiry" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300", children: formatCurrencyExpiryCalculation(selectedCurrency.expiryCalculation) })
-              ] })
-            ] })
-          ] })
-        ] })
-      ] }),
-      shouldShowSection("business-rules") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Business Rules" }),
-          isEditingBusinessRules ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveBusinessRules, className: standardSettingsButtonClass2, children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelBusinessRules, className: standardSettingsButtonClass2, children: "Cancel" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: handleEditBusinessRules,
-              disabled: !canEditSettings,
-              className: standardSettingsButtonClass2,
-              children: "Edit"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Max dispatch / hr" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "select",
-              {
-                value: displayedMaxDispatchPerHour,
-                onChange: (e) => setTempMaxDispatchPerHour(parseInt(e.target.value)),
-                disabled: !canEditBusinessRules,
-                className: `w-[100px] px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`,
-                children: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map((value) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value, children: value }, value))
-              }
-            ),
-            canEditSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Maximum number of dispatches allowed per hour" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Dispatch Rate window" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-stretch gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "number",
-                  min: MIN_DISPATCH_RATE_WINDOW_MINUTES,
-                  max: MAX_DISPATCH_RATE_WINDOW_MINUTES,
-                  step: DISPATCH_RATE_WINDOW_STEP_MINUTES,
-                  value: displayedDispatchRateWindowMinutes,
-                  onChange: (event) => handleDispatchRateWindowChange(Number(event.target.value)),
-                  disabled: !canEditBusinessRules || !onUpdateDispatchRateWindowMinutes,
-                  className: `w-[120px] px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${canEditBusinessRules && onUpdateDispatchRateWindowMinutes ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => handleDispatchRateWindowChange(displayedDispatchRateWindowMinutes + DISPATCH_RATE_WINDOW_STEP_MINUTES),
-                    disabled: !canEditBusinessRules || !onUpdateDispatchRateWindowMinutes || displayedDispatchRateWindowMinutes >= MAX_DISPATCH_RATE_WINDOW_MINUTES,
-                    className: "h-[19px] w-8 rounded border border-gray-600 bg-gray-700 text-[10px] font-bold text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40",
-                    "aria-label": "Increase Dispatch Rate window by five minutes",
-                    children: "▲"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
-                  {
-                    type: "button",
-                    onClick: () => handleDispatchRateWindowChange(displayedDispatchRateWindowMinutes - DISPATCH_RATE_WINDOW_STEP_MINUTES),
-                    disabled: !canEditBusinessRules || !onUpdateDispatchRateWindowMinutes || displayedDispatchRateWindowMinutes <= MIN_DISPATCH_RATE_WINDOW_MINUTES,
-                    className: "h-[19px] w-8 rounded border border-gray-600 bg-gray-700 text-[10px] font-bold text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40",
-                    "aria-label": "Decrease Dispatch Rate window by five minutes",
-                    children: "▼"
-                  }
-                )
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "self-center text-xs text-gray-400", children: "min" })
-            ] }),
-            canEditSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Window used by the DFP Dispatch Rate overlay. Default is 60 minutes." })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-4 border-t border-gray-700", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-200", children: "Dispatch Stagger" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Minimum interval between event start times. Formation members may still share an authorised formation start." })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-300", children: "Flights" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs text-gray-300", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        checked: displayedDispatchStaggerSettings.flightNoMinimum,
-                        onChange: (event) => handleDispatchStaggerChange({ flightNoMinimum: event.target.checked }),
-                        disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings,
-                        className: "h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
-                      }
-                    ),
-                    "No minimum"
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "number",
-                      min: 0,
-                      max: 120,
-                      step: 1,
-                      value: displayedDispatchStaggerSettings.flightMinutes,
-                      onChange: (event) => handleDispatchStaggerChange({ flightMinutes: Number(event.target.value) }),
-                      disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings || displayedDispatchStaggerSettings.flightNoMinimum,
-                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && onUpdateDispatchStaggerSettings && !displayedDispatchStaggerSettings.flightNoMinimum ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-300", children: "Simulators" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs text-gray-300", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        checked: displayedDispatchStaggerSettings.simulatorNoMinimum,
-                        onChange: (event) => handleDispatchStaggerChange({ simulatorNoMinimum: event.target.checked }),
-                        disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings,
-                        className: "h-4 w-4 rounded border-gray-600 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed"
-                      }
-                    ),
-                    "No minimum"
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "number",
-                      min: 0,
-                      max: 120,
-                      step: 1,
-                      value: displayedDispatchStaggerSettings.simulatorMinutes,
-                      onChange: (event) => handleDispatchStaggerChange({ simulatorMinutes: Number(event.target.value) }),
-                      disabled: !canEditBusinessRules || !onUpdateDispatchStaggerSettings || displayedDispatchStaggerSettings.simulatorNoMinimum,
-                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && onUpdateDispatchStaggerSettings && !displayedDispatchStaggerSettings.simulatorNoMinimum ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
-                ] })
-              ] })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "pt-4 border-t border-gray-700", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-between gap-4 mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-200", children: "Flight tile authorisation warnings" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Controls whether flight authorisation is required and when unsigned flight tiles change border colour on the current day's DFP." })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-start gap-3 rounded-lg border p-3 mb-3 ${canEditBusinessRules ? "bg-gray-700/40 border-gray-600 cursor-pointer hover:bg-gray-700/60" : "bg-gray-700/20 border-gray-700 cursor-not-allowed"}`, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: displayedTileStatusSettings.flightAuthorisationRequired,
-                  onChange: (e) => handleTileStatusSettingsChange({ flightAuthorisationRequired: e.target.checked }),
-                  disabled: !canEditBusinessRules,
-                  className: "mt-1 h-4 w-4 rounded border-gray-500 bg-gray-700 text-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-100", children: "Flight authorisation required" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block mt-1 text-xs text-gray-400", children: "When off, authorisation controls stay visible but cannot be selected, and DFP authorisation border warnings are disabled." })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-medium text-gray-400 mb-1", children: "Amber warning before start" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "number",
-                      min: 0,
-                      max: 720,
-                      step: 5,
-                      value: displayedTileStatusSettings.authorizationWarningMinutes,
-                      onChange: (e) => handleTileStatusMinutesChange("authorizationWarningMinutes", Number(e.target.value)),
-                      disabled: !canEditBusinessRules || !displayedTileStatusSettings.flightAuthorisationRequired,
-                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && displayedTileStatusSettings.flightAuthorisationRequired ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-medium text-gray-400 mb-1", children: "Red urgent before start" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "number",
-                      min: 0,
-                      max: 720,
-                      step: 5,
-                      value: displayedTileStatusSettings.authorizationUrgentMinutes,
-                      onChange: (e) => handleTileStatusMinutesChange("authorizationUrgentMinutes", Number(e.target.value)),
-                      disabled: !canEditBusinessRules || !displayedTileStatusSettings.flightAuthorisationRequired,
-                      className: `w-full px-3 py-2 rounded-md border focus:ring-sky-500 focus:border-sky-500 ${canEditBusinessRules && displayedTileStatusSettings.flightAuthorisationRequired ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-600 border-gray-500 text-gray-300 cursor-not-allowed"}`
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "min" })
-                ] })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-500", children: "Deployment tiles, Runway DI/TWR DI and Duty Supervisor events are exempt from these authorisation warning colours." })
-          ] })
-        ] }) })
-      ] }),
-      shouldShowSection("data-loaders") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-5xl rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Template Downloads" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "overflow-hidden rounded-lg border border-gray-600 bg-gray-900/30 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Blank Template Downloads" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Download blank templates for bulk uploads in the relevant Staff, Trainee, LMP and Organisation pages. Completed files are selected or dropped into those pages, not stored here." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                ref: templateOverrideInputRef,
-                type: "file",
-                accept: ".xlsx,.xls,.csv",
-                className: "hidden",
-                onChange: (event) => void handleTemplateOverrideSelected(event.target.files?.[0])
-              }
-            ),
-            dataLoaderTemplateRows.map((template) => {
-              const overrideName = getTemplateOverrideDisplayName(template.key);
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/40 p-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => void template.onDownload(), className: "w-[45%] min-w-0 shrink-0 truncate whitespace-nowrap rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-sky-700", children: template.downloadLabel }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => void handleChangeTemplateClick(template),
-                      className: "shrink-0 whitespace-nowrap rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/20",
-                      children: "Change Template"
-                    }
-                  ),
-                  overrideName ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: () => void handleResetTemplateOverride(template),
-                      className: "shrink-0 whitespace-nowrap rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 hover:bg-red-500/20",
-                      children: "Reset"
-                    }
-                  ) : null
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500", title: overrideName || "Configured baseline template", children: overrideName ? `Custom: ${overrideName}` : "Configured baseline" })
-              ] }, template.key);
-            })
-          ] })
-        ] }) })
-      ] }),
-      shouldShowSection("event-limits") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl h-fit", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Daily Event Limits" }),
-          isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLimits, className: standardSettingsButtonClass2, children: "Save" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancelLimits, className: standardSettingsButtonClass2, children: "Cancel" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: handleEditLimits,
-              disabled: !canEditSettings,
-              className: standardSettingsButtonClass2,
-              children: "Edit"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4", children: isFixedCrewModel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Staff" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max flights per day:" }),
-              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "1", value: tempLimits.instructor.maxFlights || 1, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlights: parseInt(e.target.value) || 1 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlights || 1 })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max simulator per day:" }),
-              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "1", value: tempLimits.instructor.maxSimulators || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxSimulators: parseInt(e.target.value) || 1 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxSimulators || 2 })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max flight + sim per day:" }),
-              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "1", value: tempLimits.instructor.maxFlightSim || tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightSim: parseInt(e.target.value) || 1, maxFlightFtd: parseInt(e.target.value) || 1 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlightSim || eventLimits.instructor.maxFlightFtd || 2 })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor qualification assigned) - Max Duty Supervisor session (hrs):" }),
-              isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.instructor.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxDutySup })
-            ] })
-          ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Execs" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
-                  "Max Flight/",
-                  resourceDisplayNames.ftd,
-                  " per day:"
-                ] }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxFlightFtd, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.exec.maxFlightFtd })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max Duty Supervisor session (hrs):" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.exec.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.exec.maxDutySup })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total events per day:" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.exec.maxTotal })
-              ] })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Staff" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
-                  "Max Flight/",
-                  resourceDisplayNames.ftd,
-                  " per day:"
-                ] }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0, maxFlightSim: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlightFtd })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor qualification assigned) - Max Duty Supervisor session (hrs):" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.instructor.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxDutySup })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total events per day:" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxTotal || 3, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxTotal })
-              ] })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "fieldset",
-            {
-              className: `p-3 border rounded-lg transition ${activeUnitHasTrainees ? "border-gray-600" : "border-gray-700 bg-gray-900/50 opacity-45"}`,
-              disabled: !activeUnitHasTrainees,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: [
-                  "Trainees",
-                  activeUnitHasTrainees ? "" : " (Off for current unit)"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
-                      "Max Flight/",
-                      resourceDisplayNames.ftd,
-                      " per day:"
-                    ] }),
-                    canEditTraineeLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxFlightFtd || 1, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxFlightFtd })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total events per day:" }),
-                    canEditTraineeLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.trainee.maxTotal })
-                  ] })
-                ] })
-              ]
-            }
-          ),
-          contractorStaffEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: contractorStaffLimitLabel }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
-                  "Max Flight/",
-                  resourceDisplayNames.ftd,
-                  " per day:"
-                ] }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { ...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.simIp.maxFtd })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max total events per day:" }),
-                isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxTotal || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { ...tempLimits.simIp, maxTotal: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.simIp.maxTotal })
-              ] })
-            ] })
-          ] }) : null
-        ] }) })
-      ] }),
-      shouldShowSection("emergency") && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        EmergencyPage,
-        {
-          currentUserRole: currentUserPermission,
-          onShowSuccess,
-          trainingReportDisplayName,
-          emergencyFreezeAuthority,
-          onUpdateEmergencyFreezeAuthority,
-          qualificationOptions,
-          currentUserQualificationIds,
-          canEditEmergencyAuthority,
-          flightAuthorisationRequired: resolvedTileStatusSettings.flightAuthorisationRequired
-        }
-      )
-    ] }),
-    showScoringMatrix && /* @__PURE__ */ jsxRuntimeExports.jsx(ScoringMatrixFlyout, { onClose: () => setShowScoringMatrix(false), phraseBank, onUpdatePhraseBank: handleUpdatePhraseBank, initialTab: scoringMatrixTab })
   ] });
 };
 const UserListSection = ({

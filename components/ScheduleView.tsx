@@ -1,10 +1,11 @@
 
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee, Instructor, FlyingWindowExclusionPeriod, FormationCallsign, EventLimits } from '../types';
+import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee, Instructor, FlyingWindowExclusionPeriod, FormationCallsign, EventLimits, type PhraseBank } from '../types';
 import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
 import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
+import { ScoringMatrixInline } from './SettingsView';
 import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings, normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
@@ -1329,6 +1330,57 @@ const formatWizardCurrencyRows = (rows: ReturnType<typeof parseWizardCurrencyRow
 
 const parseWizardScoringRows = (value: string) => parseWizardPipeRows<{ dimension: string; passStandard: string; failStandard: string; grade0: string; grade1: string; grade2: string; grade3: string; grade4: string; grade5: string }>(value, ['dimension', 'passStandard', 'failStandard', 'grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5']);
 const formatWizardScoringRows = (rows: ReturnType<typeof parseWizardScoringRows>) => formatWizardPipeRows(rows, ['dimension', 'passStandard', 'failStandard', 'grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5']);
+const defaultWizardScoringDraft = 'Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent';
+const isScoringPhraseBank = (value: unknown): value is PhraseBank => (
+    Boolean(value)
+    && typeof value === 'object'
+    && !Array.isArray(value)
+    && Object.values(value as Record<string, unknown>).some((dimension) => (
+        Boolean(dimension)
+        && typeof dimension === 'object'
+        && !Array.isArray(dimension)
+        && Object.values(dimension as Record<string, unknown>).some(Array.isArray)
+    ))
+);
+const wizardScoringRowsToPhraseBank = (value: string): PhraseBank => {
+    const rows = parseWizardScoringRows(value || defaultWizardScoringDraft);
+    return rows.reduce((bank, row) => ({
+        ...bank,
+        [row.dimension || 'Assessment']: {
+            0: [row.grade0 || row.failStandard].filter(Boolean),
+            1: [row.grade1].filter(Boolean),
+            2: [row.grade2].filter(Boolean),
+            3: [row.grade3 || row.passStandard].filter(Boolean),
+            4: [row.grade4].filter(Boolean),
+            5: [row.grade5].filter(Boolean),
+        },
+    }), {} as PhraseBank);
+};
+const wizardPhraseBankToScoringDraft = (phraseBank: PhraseBank): string => {
+    const rows = Object.entries(phraseBank || {})
+        .filter(([dimension, phrases]) => (
+            !dimension.startsWith('__')
+            && Boolean(phrases)
+            && typeof phrases === 'object'
+            && !Array.isArray(phrases)
+            && Object.values(phrases as Record<string, unknown>).some(Array.isArray)
+        ))
+        .map(([dimension, phrases]) => {
+            const gradePhrases = phrases as Record<number, string[]>;
+            return {
+                dimension,
+                passStandard: gradePhrases[3]?.[0] || '',
+                failStandard: gradePhrases[0]?.[0] || '',
+                grade0: gradePhrases[0]?.[0] || '',
+                grade1: gradePhrases[1]?.[0] || '',
+                grade2: gradePhrases[2]?.[0] || '',
+                grade3: gradePhrases[3]?.[0] || '',
+                grade4: gradePhrases[4]?.[0] || '',
+                grade5: gradePhrases[5]?.[0] || '',
+            };
+        });
+    return formatWizardScoringRows(rows.length > 0 ? rows : parseWizardScoringRows(defaultWizardScoringDraft));
+};
 
 const parseWizardStandardCurrencyEventRows = (value: string) => parseWizardEditablePipeRows<{ name: string; shortTitle: string; resourceType: string; duration: string; preFlight: string; postFlight: string; crew: string; currency: string; config: string; aircraftCount: string }>(value, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);
 const formatWizardStandardCurrencyEventRows = (rows: ReturnType<typeof parseWizardStandardCurrencyEventRows>) => formatWizardEditablePipeRows(rows, ['name', 'shortTitle', 'resourceType', 'duration', 'preFlight', 'postFlight', 'crew', 'currency', 'config', 'aircraftCount']);
@@ -3263,8 +3315,9 @@ const InitialSetupWizard: React.FC<{
     };
     const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
     const [currencyDraft, setCurrencyDraft] = useState('PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1');
-    const [scoringDraft, setScoringDraft] = useState('Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent');
-    const [wizardScoringTab, setWizardScoringTab] = useState<'grades' | 'elements'>('grades');
+    const [scoringDraft, setScoringDraft] = useState(defaultWizardScoringDraft);
+    const [wizardScoringPhraseBank, setWizardScoringPhraseBank] = useState<PhraseBank>(() => wizardScoringRowsToPhraseBank(defaultWizardScoringDraft));
+    const [wizardScoringTab, setWizardScoringTab] = useState<'Airmanship' | 'Preparation' | 'Technique' | 'Elements'>('Airmanship');
     const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('Annual Instrument Check | INST | Flight | 90 | 90 | 60 | Standard crew | Instrument Currency | ANY | 1');
 
     const formatWizardOrganisationPath = (path: string[]) => path.map((item) => String(item || '').trim()).filter(Boolean).join(' / ');
@@ -3638,6 +3691,14 @@ const InitialSetupWizard: React.FC<{
             })))
             : getSavedWizardString('staffCurrencyEvents', 'staffCurrencyEventsDraft');
     };
+    const buildHydratedScoringPhraseBankDraft = () => {
+        const unitPhraseBank = currentUnit?.settings?.trainingReportPhraseBank;
+        if (isScoringPhraseBank(unitPhraseBank)) return unitPhraseBank;
+        const organisationPhraseBank = activeOrganisation?.settings?.trainingReportPhraseBank;
+        if (isScoringPhraseBank(organisationPhraseBank)) return organisationPhraseBank;
+        const savedDraft = getSavedWizardString('scoringMatrix', 'scoringDraft');
+        return wizardScoringRowsToPhraseBank(savedDraft || defaultWizardScoringDraft);
+    };
     const hydrateSupplementaryWizardDrafts = () => {
         const savedTraineeCourses = getSavedWizardString('traineeCourses', 'traineeCourseOptionsDraft');
         const savedTrainees = getSavedWizardString('trainees', 'traineeDraft');
@@ -3650,7 +3711,7 @@ const InitialSetupWizard: React.FC<{
         const nextRankSettings = buildHydratedRankSettingsDraft();
         const nextResourceSharing = buildHydratedResourceSharingDraft();
         const nextCurrencies = buildHydratedCurrencyDraft();
-        const nextScoringMatrix = getSavedWizardString('scoringMatrix', 'scoringDraft');
+        const nextScoringPhraseBank = buildHydratedScoringPhraseBankDraft();
         const nextStaffCurrencyEvents = buildHydratedStaffCurrencyEventsDraft();
         if (nextCrewLabels) setCrewLabelsDraft(nextCrewLabels);
         if (nextAlternateCrews) setAlternateCrewDraft(nextAlternateCrews);
@@ -3666,7 +3727,8 @@ const InitialSetupWizard: React.FC<{
         setRankSettingsDraft(nextRankSettings);
         if (nextResourceSharing) setResourceSharingDraft(nextResourceSharing);
         if (nextCurrencies) setCurrencyDraft(nextCurrencies);
-        if (nextScoringMatrix) setScoringDraft(nextScoringMatrix);
+        setWizardScoringPhraseBank(nextScoringPhraseBank);
+        setScoringDraft(wizardPhraseBankToScoringDraft(nextScoringPhraseBank));
         if (nextStaffCurrencyEvents) setStaffCurrencyEventsDraft(nextStaffCurrencyEvents);
     };
     const buildHydratedUnitParentDraft = (unitsDraftValue: string, draft: typeof organisationDraft) => {
@@ -4641,18 +4703,8 @@ const InitialSetupWizard: React.FC<{
     };
 
     const saveScoringMatrixDraft = () => {
-        const scoringRows = parseWizardScoringRows(scoringDraft);
-        const trainingReportPhraseBank = scoringRows.reduce((bank, row) => ({
-            ...bank,
-            [row.dimension || 'Assessment']: {
-                0: [row.grade0 || row.failStandard].filter(Boolean),
-                1: [row.grade1].filter(Boolean),
-                2: [row.grade2].filter(Boolean),
-                3: [row.grade3 || row.passStandard].filter(Boolean),
-                4: [row.grade4].filter(Boolean),
-                5: [row.grade5].filter(Boolean),
-            },
-        }), {} as Record<string, any>);
+        const trainingReportPhraseBank = wizardScoringPhraseBank;
+        const nextScoringDraft = wizardPhraseBankToScoringDraft(trainingReportPhraseBank);
         const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
         saveWizardConfig('Scoring matrix saved into Settings.', (baseConfig) => {
             const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
@@ -4668,16 +4720,17 @@ const InitialSetupWizard: React.FC<{
                 ...settings,
                 initialSetupWizardDraft: {
                     ...(settings.initialSetupWizardDraft || {}),
-                    scoringMatrix: scoringDraft,
+                    scoringMatrix: nextScoringDraft,
                     updatedAt: new Date().toISOString(),
                 },
                 initialSetupWizardDrafts: {
                     ...(settings.initialSetupWizardDrafts || {}),
-                    scoringDraft,
+                    scoringDraft: nextScoringDraft,
                     updatedAt: new Date().toISOString(),
                 },
             }));
         });
+        setScoringDraft(nextScoringDraft);
     };
 
     const saveStaffCurrencyEventsDraft = () => {
@@ -4755,6 +4808,7 @@ const InitialSetupWizard: React.FC<{
     };
 
     const saveWizardSupplementaryDrafts = (message = 'This step has been synced into Settings.') => {
+        const scoringDraftToSave = wizardPhraseBankToScoringDraft(wizardScoringPhraseBank);
         saveWizardConfig(message, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
             ...settings,
             initialSetupWizardDraft: {
@@ -4772,7 +4826,7 @@ const InitialSetupWizard: React.FC<{
                 crewRoles: crewRolesDraft,
                 resourceSharing: resourceSharingDraft,
                 currencies: currencyDraft,
-                scoringMatrix: scoringDraft,
+                scoringMatrix: scoringDraftToSave,
                 staffCurrencyEvents: staffCurrencyEventsDraft,
                 updatedAt: new Date().toISOString(),
             },
@@ -4796,7 +4850,7 @@ const InitialSetupWizard: React.FC<{
                 crewRolesDraft,
                 resourceSharingDraft,
                 currencyDraft,
-                scoringDraft,
+                scoringDraft: scoringDraftToSave,
                 staffCurrencyEventsDraft,
                 updatedAt: new Date().toISOString(),
             },
@@ -5413,10 +5467,15 @@ const InitialSetupWizard: React.FC<{
                     && hasPositiveWizardNumber(row.aircraftCount)
                 ));
             case 'scoring':
-                return parseWizardScoringRows(scoringDraft).some((row) => (
-                    hasMeaningfulWizardText(row.dimension, ['Preparation', 'Airmanship'])
-                    && hasMeaningfulWizardText(row.passStandard)
-                    && hasMeaningfulWizardText(row.failStandard)
+                return Object.entries(wizardScoringPhraseBank || {}).some(([dimension, phrases]) => (
+                    hasMeaningfulWizardText(dimension, ['Preparation', 'Airmanship'])
+                    && Boolean(phrases)
+                    && typeof phrases === 'object'
+                    && !Array.isArray(phrases)
+                    && Object.values(phrases as Record<string, unknown>).some((gradePhrases) => (
+                        Array.isArray(gradePhrases)
+                        && gradePhrases.some((phrase) => hasMeaningfulWizardText(phrase))
+                    ))
                 ));
             case 'access':
                 return (
@@ -5929,7 +5988,9 @@ const InitialSetupWizard: React.FC<{
                 grade4: getWizardCellByHeader(result.headers || [], row, 'Grade 4'),
                 grade5: getWizardCellByHeader(result.headers || [], row, 'Grade 5'),
             })).filter((row) => row.dimension || row.passStandard || row.failStandard);
-            setScoringDraft(formatWizardScoringRows(importedRows));
+            const importedDraft = formatWizardScoringRows(importedRows);
+            setScoringDraft(importedDraft);
+            setWizardScoringPhraseBank(wizardScoringRowsToPhraseBank(importedDraft));
             const message = `Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? '' : 's'} into the wizard. Click Next to sync it into Settings.`;
             setImportConfirmations((current) => ({ ...current, [template.id]: message }));
             setSaveMessage(message);
@@ -6737,105 +6798,39 @@ const InitialSetupWizard: React.FC<{
         );
     };
     const renderScoringEditor = () => {
-        const rows = parseWizardScoringRows(scoringDraft);
-        const editableRows = rows.length > 0 ? rows : [{ dimension: '', passStandard: '', failStandard: '', grade0: '', grade1: '', grade2: '', grade3: '', grade4: '', grade5: '' }];
-        const gradeFields = [
-            ['grade0', 'Grade 0', 'Lowest grade / unsafe or not ready'],
-            ['grade1', 'Grade 1', 'Well below the required standard'],
-            ['grade2', 'Grade 2', 'Needs help or more training'],
-            ['grade3', 'Grade 3', 'Meets the required standard'],
-            ['grade4', 'Grade 4', 'Above the required standard'],
-            ['grade5', 'Grade 5', 'Highest grade / excellent standard'],
-        ] as const;
-        const gradeSourceRow = editableRows.find((row) => gradeFields.some(([field]) => hasMeaningfulWizardText(row[field]))) || editableRows[0];
-        const writeRows = (nextRows: typeof editableRows) => {
-            setScoringDraft(formatWizardScoringRows(nextRows));
-        };
-        const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
-            const nextRows = [...editableRows];
-            nextRows[index] = { ...nextRows[index], [field]: value };
-            writeRows(nextRows);
-        };
-        const updateGradeLabel = (field: typeof gradeFields[number][0], value: string) => {
-            writeRows(editableRows.map((row) => ({ ...row, [field]: value })));
+        const updateScoringPhraseBank = (nextPhraseBank: PhraseBank) => {
+            setWizardScoringPhraseBank(nextPhraseBank);
+            setScoringDraft(wizardPhraseBankToScoringDraft(nextPhraseBank));
         };
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    The scoring matrix defines two things: the grade labels users see on a training report, and the assessment areas instructors mark, such as airmanship and preparation.
+                    This uses the same scoring matrix editor as Settings. Edit the grade phrases for Airmanship, Preparation, Technique, or add and group extra flight elements.
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {[
-                        ['grades', 'Grade labels'],
-                        ['elements', 'Assessment areas'],
+                        ['Airmanship', 'Airmanship'],
+                        ['Preparation', 'Preparation'],
+                        ['Technique', 'Technique'],
+                        ['Elements', 'Elements'],
                     ].map(([tabId, tabLabel]) => (
                         <button
                             key={`wizard-scoring-tab-${tabId}`}
                             type="button"
                             className={`rounded-md border px-3 py-2 text-xs font-bold ${wizardScoringTab === tabId ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-slate-300 bg-white text-slate-700'}`}
-                            onClick={() => setWizardScoringTab(tabId as 'grades' | 'elements')}
+                            onClick={() => setWizardScoringTab(tabId as 'Airmanship' | 'Preparation' | 'Technique' | 'Elements')}
                         >
                             {tabLabel}
                         </button>
                     ))}
                 </div>
-                {wizardScoringTab === 'grades' ? (
-                    <div className="rounded-lg border border-slate-300 bg-white p-3">
-                        <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-700">
-                            Enter the labels from the lowest grade to the highest grade. These labels apply to every assessment area in this setup.
-                        </div>
-                        <div className="grid max-w-[540px] gap-2">
-                            {gradeFields.map(([field, label, help]) => (
-                                <div key={`wizard-grade-label-${field}`} className="grid items-center gap-2 sm:grid-cols-[108px_minmax(0,1fr)]">
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-900">{label}</p>
-                                        <p className="text-[11px] font-semibold leading-4 text-slate-500">{help}</p>
-                                    </div>
-                                    <input
-                                        className={wizardInputClass}
-                                        value={gradeSourceRow?.[field] || ''}
-                                        placeholder={field === 'grade0' ? 'Unsafe' : field === 'grade3' ? 'Meets standard' : field === 'grade5' ? 'Excellent' : 'Grade label'}
-                                        onKeyDown={stopEditableKeyPropagation}
-                                        onChange={(event) => updateGradeLabel(field, event.target.value)}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        <div className="rounded-lg border border-slate-300 bg-white p-3">
-                            <p className="text-xs font-semibold leading-5 text-slate-700">
-                                Assessment areas are the parts of performance that instructors mark. Add one row for each area your reports use, then set the plain-English pass and fail standard for that area.
-                            </p>
-                        </div>
-                        {editableRows.map((row, index) => (
-                            <div key={`scoring-row-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
-                                <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_74px] xl:items-end">
-                                    {wizardField('Assessment area', row.dimension || '', (value) => updateRow(index, 'dimension', value), undefined, 'Preparation')}
-                                    {wizardField('Pass standard', row.passStandard || '', (value) => updateRow(index, 'passStandard', value), undefined, 'Prepared, safe and ready.')}
-                                    {wizardField('Fail standard', row.failStandard || '', (value) => updateRow(index, 'failStandard', value), undefined, 'Unsafe or not prepared.')}
-                                    <button type="button" className={wizardSmallButtonClass} onClick={() => writeRows(editableRows.filter((_, rowIndex) => rowIndex !== index))}>
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                        <button type="button" className={wizardSmallButtonClass} onClick={() => writeRows([...editableRows, { dimension: '', passStandard: '', failStandard: '', grade0: gradeSourceRow?.grade0 || '', grade1: gradeSourceRow?.grade1 || '', grade2: gradeSourceRow?.grade2 || '', grade3: gradeSourceRow?.grade3 || '', grade4: gradeSourceRow?.grade4 || '', grade5: gradeSourceRow?.grade5 || '' }])}>
-                            Add assessment area
-                        </button>
-                    </div>
-                )}
-                {wizardScoringTab === 'grades' && (
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold leading-5 text-slate-600">
-                        Use the Assessment areas tab on this same step to add or edit items such as Airmanship, Preparation and Technique.
-                    </div>
-                )}
-                {wizardScoringTab === 'elements' && editableRows.length === 0 && (
-                    <button type="button" className={wizardSmallButtonClass} onClick={() => writeRows([{ dimension: '', passStandard: '', failStandard: '', grade0: gradeSourceRow?.grade0 || '', grade1: gradeSourceRow?.grade1 || '', grade2: gradeSourceRow?.grade2 || '', grade3: gradeSourceRow?.grade3 || '', grade4: gradeSourceRow?.grade4 || '', grade5: gradeSourceRow?.grade5 || '' }])}>
-                        Add assessment area
-                            </button>
-                )}
+                <div className="overflow-hidden rounded-lg border border-slate-300 bg-slate-950">
+                    <ScoringMatrixInline
+                        activeTab={wizardScoringTab}
+                        phraseBank={wizardScoringPhraseBank}
+                        onUpdatePhraseBank={updateScoringPhraseBank}
+                    />
+                </div>
             </div>
         );
     };
@@ -7503,18 +7498,8 @@ const InitialSetupWizard: React.FC<{
         const resourceSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes('resource'));
         const staffSharingRows = sharingRows.filter((row) => row.type.toLowerCase().includes('staff'));
         const trainingReportRow = parseWizardTrainingReportRows(trainingRecordsDraft)[0];
-        const scoringRows = parseWizardScoringRows(scoringDraft);
-        const trainingReportPhraseBank = scoringRows.reduce((bank, row) => ({
-            ...bank,
-            [row.dimension || 'Assessment']: {
-                0: [row.grade0 || row.failStandard].filter(Boolean),
-                1: [row.grade1].filter(Boolean),
-                2: [row.grade2].filter(Boolean),
-                3: [row.grade3 || row.passStandard].filter(Boolean),
-                4: [row.grade4].filter(Boolean),
-                5: [row.grade5].filter(Boolean),
-            },
-        }), {} as Record<string, any>);
+        const trainingReportPhraseBank = wizardScoringPhraseBank;
+        const scoringDraftToSave = wizardPhraseBankToScoringDraft(trainingReportPhraseBank);
         const setupPersonnel = buildSetupTestPersonnel(cleanUnits, overrides);
 
         onUpdatePlatformConfig((baseConfig: any) => {
@@ -7672,7 +7657,7 @@ const InitialSetupWizard: React.FC<{
                         crewRoles: crewRolesDraft,
                         resourceSharing: resourceSharingDraft,
                         currencies: currencyDraft,
-                        scoringMatrix: scoringDraft,
+                        scoringMatrix: scoringDraftToSave,
                         staffCurrencyEvents: staffCurrencyEventsDraft,
                     },
                 },
@@ -7881,7 +7866,7 @@ const InitialSetupWizard: React.FC<{
                 rankSettings: rankSettingsDraft,
                 resourceSharing: resourceSharingDraft,
                 currencies: currencyDraft,
-                scoringMatrix: scoringDraft,
+                scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
                 staffCurrencyEvents: staffCurrencyEventsDraft,
             },
         })));
