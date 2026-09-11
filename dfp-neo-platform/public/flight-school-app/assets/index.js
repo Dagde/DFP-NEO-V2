@@ -31161,7 +31161,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     ] })
   ] });
 };
-const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
+const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
   const [mode, setMode] = reactExports.useState("detect");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const configuredContinuationShortLabel = reactExports.useMemo(
@@ -33340,6 +33340,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       category: "mandatory"
     },
     {
+      id: "aircraft-configs",
+      title: "Set aircraft CONFIG options",
+      label: "Aircraft CONFIG",
+      body: "Set the aircraft CONFIG names and setup values this unit uses when planning aircraft. This is the same aircraft setup used in Settings.",
+      checkIds: ["resources"],
+      category: "highly-desirable"
+    },
+    {
       id: "crew",
       title: "Set the crew rules",
       label: "Crew",
@@ -33348,10 +33356,26 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       category: "highly-desirable"
     },
     {
+      id: "callsigns",
+      title: "Set callsign rules",
+      label: "Callsigns",
+      body: "Set the callsign prefixes and formation callsigns this unit uses when creating or scheduling events.",
+      checkIds: ["crew"],
+      category: "highly-desirable"
+    },
+    {
       id: "build-rules",
       title: "Set the build rules and limits",
       label: "Build rules",
       body: "Set the simple limits NEO should respect when it builds the schedule.",
+      checkIds: ["rules"],
+      category: "highly-desirable"
+    },
+    {
+      id: "advanced-scheduling-rules",
+      title: "Check advanced scheduling rules",
+      label: "Advanced rules",
+      body: "Check the detailed event timings and scheduling rule sets used when DFP NEO places events.",
       checkIds: ["rules"],
       category: "highly-desirable"
     },
@@ -33402,6 +33426,31 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       body: "Manage who can use this unit and what each person can do.",
       checkIds: ["access", "training"],
       category: "highly-desirable"
+    },
+    {
+      id: "deployment-readiness",
+      title: "Set deployment readiness",
+      label: "Deployment",
+      body: "Record how this installation is licensed, connected, and prepared for operational use.",
+      checkIds: ["access"],
+      category: "highly-desirable"
+    },
+    {
+      id: "operational-runbook",
+      title: "Record support and recovery details",
+      label: "Support",
+      body: "Record who supports the system, how backups are managed, and what recovery targets apply.",
+      checkIds: ["access"],
+      category: "highly-desirable"
+    },
+    {
+      id: "licensing",
+      title: "Record licence details",
+      label: "Licensing",
+      body: "Record licence details and feature limits if this deployment needs licence tracking.",
+      checkIds: ["access"],
+      category: "optional",
+      optional: true
     },
     {
       id: "staff",
@@ -33503,6 +33552,71 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const defaultName = levelIndex === 0 ? "Organisation" : `Level ${levelIndex}`;
     return hasMeaningfulWizardText(level.name, [defaultName, `Organisation Level ${levelIndex}`]) && Array.isArray(level.options) && level.options.some((option) => hasMeaningfulWizardText(option, ["Organisation", defaultName, level.name]));
   };
+  const getWizardActiveUnitCodes = () => Array.from(new Set([
+    ...String(unitCode || "").split("+").map((item) => item.trim()).filter(Boolean),
+    unitDraft.code
+  ].map((item) => String(item || "").trim()).filter(Boolean)));
+  const getWizardSourceResourcePool = () => {
+    const targetUnitCode = normaliseWizardValue(unitDraft.code || currentUnit?.code || unitCode);
+    const targetAircraftCode = normaliseWizardValue(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code);
+    return activeResourcePools.find((pool) => (!targetUnitCode || normaliseWizardValue(pool?.unitCode) === targetUnitCode) && (!targetAircraftCode || normaliseWizardValue(pool?.aircraftTypeCode) === targetAircraftCode)) || activeResourcePools.find((pool) => targetUnitCode && normaliseWizardValue(pool?.unitCode) === targetUnitCode) || primaryResourcePool || activeResourcePools[0] || null;
+  };
+  const getWizardSourceAircraftType = () => {
+    const targetAircraftCode = normaliseWizardValue(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code);
+    return activeAircraftTypes.find((aircraft) => normaliseWizardValue(aircraft?.code) === targetAircraftCode) || primaryAircraftType || activeAircraftTypes[0] || null;
+  };
+  const getWizardAircraftConfigDefinitions = () => {
+    const aircraft = getWizardSourceAircraftType();
+    const pool = getWizardSourceResourcePool();
+    const aircraftConfigs = aircraft?.settings?.aircraftConfigurations || aircraft?.aircraftConfigurations || aircraft?.configurations;
+    const poolConfigs = pool?.settings?.aircraftConfigurations || pool?.aircraftConfigurations || pool?.configurations;
+    const configs = Array.isArray(aircraftConfigs) && aircraftConfigs.length > 0 ? aircraftConfigs : poolConfigs;
+    return Array.isArray(configs) ? configs : [];
+  };
+  const hasMeaningfulAircraftConfigDefinitions = () => getWizardAircraftConfigDefinitions().some((config) => hasMeaningfulWizardText(config?.label || config?.name || config?.code || config?.definition, ["CONFIG 0", "CONFIG0", "Config 0"]) || hasPositiveWizardNumber(config?.capacity ?? config?.count ?? config?.aircraftCount));
+  const hasMeaningfulUnitCallsignSettings = () => {
+    const settings = normaliseUnitCallsignSettings(activeOrganisation?.settings?.unitCallsignSettings || null);
+    const activeUnitCodesSet = new Set(getWizardActiveUnitCodes().map(normaliseWizardValue).filter(Boolean));
+    return settings.entries.some((entry) => {
+      const entryUnit = normaliseWizardValue(entry?.unitCode || entry?.unit || entry?.code);
+      return (!activeUnitCodesSet.size || !entryUnit || activeUnitCodesSet.has(entryUnit)) && hasMeaningfulWizardText(entry?.prefix || entry?.callsignPrefix || entry?.callsign || entry?.label);
+    });
+  };
+  const hasMeaningfulFormationCallsigns = () => (formationCallsigns || []).some((callsign) => hasMeaningfulWizardText(callsign?.prefix || callsign?.callsign || callsign?.name || callsign?.label));
+  const hasMeaningfulCallsignSettings = () => hasMeaningfulUnitCallsignSettings() || hasMeaningfulFormationCallsigns();
+  const hasMeaningfulSchedulingRuleSettings = () => {
+    const targetUnitCode = normaliseWizardValue(unitDraft.code || currentUnit?.code || unitCode);
+    const ruleSets = Array.isArray(platformConfig?.schedulingRuleSets) ? platformConfig.schedulingRuleSets : [];
+    return hasPositiveWizardNumber(buildRuleSettings?.maxDispatchPerHour) || hasPositiveWizardNumber(buildRuleSettings?.dispatchRateWindowMinutes) || ruleSets.some((ruleSet) => String(ruleSet?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && ruleSet?.isActive !== false && (!targetUnitCode || !ruleSet?.unitCode || normaliseWizardValue(ruleSet.unitCode) === targetUnitCode) && hasMeaningfulWizardText(ruleSet?.name, ["Use configured rule set"]));
+  };
+  const hasMeaningfulDeploymentProfile = () => {
+    const profile = activeOrganisation?.settings?.deploymentProfile || activeOrganisation?.settings?.deploymentProfileSettings || platformConfig?.deploymentProfile || {};
+    return [
+      profile.dataResidence,
+      profile.networkPosture,
+      profile.notes
+    ].some((value) => hasMeaningfulWizardText(value)) || hasMeaningfulWizardText(profile.mode, ["Online SaaS"]) || hasMeaningfulWizardText(profile.authModel, ["Password"]) || hasMeaningfulWizardText(profile.validationMethod, ["Manual"]) || hasMeaningfulWizardText(profile.enforcementMode, ["Monitor Only"]) || Number.isFinite(Number(profile.offlineGraceDays)) && Number(profile.offlineGraceDays) !== 30 || Number.isFinite(Number(profile.checkIntervalHours)) && Number(profile.checkIntervalHours) !== 24;
+  };
+  const hasMeaningfulOperationalRunbook = () => {
+    const runbook = activeOrganisation?.settings?.operationalRunbook || activeOrganisation?.settings?.operationalRunbookSettings || platformConfig?.operationalRunbook || {};
+    return [
+      "environmentName",
+      "deploymentIdentifier",
+      "supportOwner",
+      "supportContact",
+      "approvingAuthority",
+      "backupStorageLocation",
+      "lastBackupDate",
+      "lastRestoreTestDate",
+      "maintenanceWindow",
+      "updateApprovalProcess",
+      "lastUpdateDate",
+      "evidenceExportPath",
+      "accreditationStatus",
+      "notes"
+    ].some((key) => hasMeaningfulWizardText(runbook[key], ["Production", "Not started"])) || Number.isFinite(Number(runbook.backupRetentionDays)) && Number(runbook.backupRetentionDays) !== 30 || Number.isFinite(Number(runbook.restoreTimeObjectiveHours)) && Number(runbook.restoreTimeObjectiveHours) !== 24 || Number.isFinite(Number(runbook.restorePointObjectiveHours)) && Number(runbook.restorePointObjectiveHours) !== 24 || Number.isFinite(Number(runbook.auditRetentionYears)) && Number(runbook.auditRetentionYears) !== 7;
+  };
+  const hasMeaningfulLicenceSettings = () => (Array.isArray(platformConfig?.licenses) ? platformConfig.licenses : []).some((license) => String(license?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (hasMeaningfulWizardText(license.licenseName) || hasMeaningfulWizardText(license.licenseKey) || hasMeaningfulWizardText(license.validUntil) || hasMeaningfulWizardText(license.offlineFingerprint)));
   const hasMeaningfulWizardStepData = (step) => {
     switch (step.id) {
       case "analysis":
@@ -33549,8 +33663,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           resourceDraft.standby,
           resourceDraft.ground
         ].every(hasPositiveWizardNumber);
+      case "aircraft-configs":
+        return hasMeaningfulAircraftConfigDefinitions();
       case "crew":
         return parseRoleRequirementsText(crewDraft.standardSeats).some((row) => hasMeaningfulWizardText(row.role, ["Crew"]) && Number(row.count || 0) > 0);
+      case "callsigns":
+        return hasMeaningfulCallsignSettings();
       case "build-rules":
         return hasChangedWizardObject(buildRulesDraft, {
           businessRules: "Use configured rule set",
@@ -33564,6 +33682,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           maxFlightsPerDay: "",
           minGapBetweenEventsMinutes: "0"
         });
+      case "advanced-scheduling-rules":
+        return hasMeaningfulSchedulingRuleSettings();
       case "resource-sharing":
         return parseWizardSharingRows(resourceSharingDraft).some((row) => /^on$/i.test(row.enabled) && hasMeaningfulWizardText(row.units));
       case "currencies":
@@ -33580,6 +33700,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         return Object.entries(wizardScoringPhraseBank || {}).some(([dimension, phrases]) => hasMeaningfulWizardText(dimension, ["Preparation", "Airmanship"]) && Boolean(phrases) && typeof phrases === "object" && !Array.isArray(phrases) && Object.values(phrases).some((gradePhrases) => Array.isArray(gradePhrases) && gradePhrases.some((phrase) => hasMeaningfulWizardText(phrase))));
       case "access":
         return activeUserAccess.some((access) => hasMeaningfulWizardText(access?.userName || access?.userId) && (hasMeaningfulWizardText(access?.accessLevel) || hasMeaningfulWizardText(access?.role) || Array.isArray(access?.profileIds) && access.profileIds.length > 0));
+      case "deployment-readiness":
+        return hasMeaningfulDeploymentProfile();
+      case "operational-runbook":
+        return hasMeaningfulOperationalRunbook();
+      case "licensing":
+        return hasMeaningfulLicenceSettings();
       case "staff":
         return parseWizardStaffRows(staffDraft).some((row) => hasMeaningfulWizardText(row.surname, ["Surname"]) && hasMeaningfulWizardText(row.givenNames, ["First"]) && hasMeaningfulWizardText(row.unit, ["UNIT", "UNIT-01"]) && hasMeaningfulWizardText(row.position, ["Pilot"]));
       case "trainees":
@@ -33688,6 +33814,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (stepId === "access") {
       setSaveMessage("User permissions are managed directly in Settings.");
+      return;
+    }
+    if ([
+      "aircraft-configs",
+      "callsigns",
+      "advanced-scheduling-rules",
+      "deployment-readiness",
+      "operational-runbook",
+      "licensing"
+    ].includes(stepId)) {
+      setSaveMessage("This step uses the same Settings records directly. Use Edit and Save in this section after making changes.");
       return;
     }
     if (stepId === "build-rules") {
@@ -34822,6 +34959,28 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     });
     setWizardPageMenuOpen(false);
     setWizardStep(boundedStep);
+  };
+  const renderWizardPlatformSettingsEmbed = (scrollTarget, focusSubsectionId = "", successMessage = "Settings saved into Settings.", extraProps = {}) => {
+    const activeUnitCodesForSettings = getWizardActiveUnitCodes();
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "wizard-settings-embed overflow-hidden rounded-lg border border-slate-200 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PlatformConfigurationSettings,
+      {
+        currentUserPermission,
+        onShowSuccess: (message) => setSaveMessage(message || successMessage),
+        scrollTarget,
+        sectionOnly: true,
+        canUsePlatformPermission,
+        activeUnitCode: unitCode || unitDraft.code || "",
+        activeUnitCodes: activeUnitCodesForSettings,
+        activeCompositeUnitCode: unitCode || "",
+        activeOperationalModel: unitDraft.operationalModel,
+        focusUnitCode: unitDraft.code || unitCode || "",
+        focusLocationCode: locationDraft.code || locationCode || "",
+        focusSubsectionId,
+        onNavigateToSettingsSection,
+        ...extraProps
+      }
+    ) });
   };
   const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
@@ -36186,6 +36345,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         ] })
       );
     }
+    if (visibleStep.id === "aircraft-configs") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the aircraft CONFIG records this unit uses. This is the same Aircraft Setup section used in Settings, so changes made here update Settings directly." }),
+        renderWizardPlatformSettingsEmbed(
+          "platform-aircraft-setup",
+          "platform-aircraft-type-settings",
+          "Aircraft CONFIG settings saved into Settings.",
+          { focusAircraftTypeCode: resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || "" }
+        )
+      );
+    }
     if (visibleStep.id === "crew") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events." }),
@@ -36196,6 +36366,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             renderCrewCompositionEditor("Other approved crew composition", alternateCrewDraft, setAlternateCrewDraft, "Add crew role")
           ] })
         ] })
+      );
+    }
+    if (visibleStep.id === "callsigns") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the callsign rules this unit uses. This is the same callsign setup used in Settings, so changes made here update Settings directly." }),
+        renderWizardPlatformSettingsEmbed(
+          "platform-rank-terminology",
+          "platform-unit-callsigns",
+          "Callsign settings saved into Settings.",
+          { formationCallsigns }
+        )
       );
     }
     if (visibleStep.id === "build-rules") {
@@ -36233,6 +36414,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             ] })
           ] })
         ] })
+      );
+    }
+    if (visibleStep.id === "advanced-scheduling-rules") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Check the detailed timing rules and scheduling rule sets. These are the same records used by Settings when NEO places events." }),
+        renderWizardPlatformSettingsEmbed(
+          "platform-scheduling-rule-sets",
+          "platform-scheduling-rule-records",
+          "Scheduling rules saved into Settings."
+        )
       );
     }
     if (visibleStep.id === "staff") {
@@ -36383,29 +36574,43 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       );
     }
     if (visibleStep.id === "access") {
-      const activeUnitCodesForPermissions = Array.from(new Set([
-        ...String(unitCode || "").split("+").map((item) => item.trim()).filter(Boolean),
-        unitDraft.code
-      ].map((item) => String(item || "").trim()).filter(Boolean)));
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Manage the users who can access this unit. This is the same permission manager used in Settings, so changes made here update Settings directly." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "wizard-settings-embed overflow-hidden rounded-lg border border-slate-200 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          PlatformConfigurationSettings,
-          {
-            currentUserPermission,
-            onShowSuccess: (message) => setSaveMessage(message || "User permissions saved into Settings."),
-            scrollTarget: "platform-user-access",
-            sectionOnly: true,
-            canUsePlatformPermission,
-            activeUnitCode: unitCode || unitDraft.code || "",
-            activeUnitCodes: activeUnitCodesForPermissions,
-            activeCompositeUnitCode: unitCode || "",
-            activeOperationalModel: unitDraft.operationalModel,
-            focusUnitCode: unitDraft.code || unitCode || "",
-            focusLocationCode: locationDraft.code || locationCode || "",
-            onNavigateToSettingsSection
-          }
-        ) })
+        renderWizardPlatformSettingsEmbed(
+          "platform-user-access",
+          "platform-user-access-records",
+          "User permissions saved into Settings."
+        )
+      );
+    }
+    if (visibleStep.id === "deployment-readiness") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Record the deployment settings administrators need before the system is used operationally. This is the same deployment readiness section used in Settings." }),
+        renderWizardPlatformSettingsEmbed(
+          "platform-deployment-readiness",
+          "platform-deployment-profile",
+          "Deployment readiness saved into Settings."
+        )
+      );
+    }
+    if (visibleStep.id === "operational-runbook") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Record the support, backup and recovery details administrators need for operational handover. This is the same support and recovery section used in Settings." }),
+        renderWizardPlatformSettingsEmbed(
+          "platform-operational-runbook",
+          "platform-operational-runbook-identity",
+          "Support and recovery details saved into Settings."
+        )
+      );
+    }
+    if (visibleStep.id === "licensing") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Record licence details and limits if this deployment is using licence tracking. This is the same licence section used in Settings." }),
+        renderWizardPlatformSettingsEmbed(
+          "platform-licensing",
+          "platform-license-records",
+          "Licence details saved into Settings."
+        )
       );
     }
     if (visibleStep.id === "scoring") {
@@ -36467,6 +36672,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           help: "These numbers control what rows appear on the DFP schedule for this unit."
         },
         {
+          label: "Aircraft CONFIG",
+          value: (() => {
+            const configs = getWizardAircraftConfigDefinitions();
+            return configs.length > 0 ? configs.map((config) => `${config.code || config.name || "CONFIG"}${config.label || config.name ? ` - ${config.label || config.name}` : ""}`).join("\n") : "Not set";
+          })(),
+          help: "These are the aircraft configuration options users can choose when planning or building events."
+        },
+        {
           label: "Crew roles",
           value: parseWizardCrewRoleRows(crewRolesDraft).map((row) => `${row.label || row.role || "Crew role"}${row.models ? ` - used by ${row.models}` : ""}`).join("\n") || "Not set",
           help: "These are the crew position names users can choose from when setting crew rules."
@@ -36477,9 +36690,19 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           help: "This tells NEO what a normal crew looks like for the aircraft or resource."
         },
         {
+          label: "Callsign rules",
+          value: hasMeaningfulCallsignSettings() ? `${hasMeaningfulUnitCallsignSettings() ? "Unit callsign prefixes set." : "Unit callsign prefixes not set."} ${hasMeaningfulFormationCallsigns() ? "Formation callsigns set." : "Formation callsigns not set."}`.trim() : "Not set",
+          help: "These rules help DFP NEO suggest callsigns instead of making users type them from scratch."
+        },
+        {
           label: "Scheduling limits",
           value: buildRulesDraftText || "Not set",
           help: "These limits help prevent the build from placing too much flying, too close together, or beyond duty limits."
+        },
+        {
+          label: "Advanced scheduling rules",
+          value: hasMeaningfulSchedulingRuleSettings() ? "Detailed timing or rule-set records are configured." : "Not set",
+          help: "These records control default event timings and detailed scheduling behaviour."
         },
         {
           label: "Resource and staff sharing",
@@ -36532,6 +36755,21 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           label: "User permissions",
           value: activeUserAccess.length > 0 ? `${activeUserAccess.length} active user access record${activeUserAccess.length === 1 ? "" : "s"} set.` : "Not set",
           help: "This controls who can open this unit and what they are allowed to do."
+        },
+        {
+          label: "Deployment readiness",
+          value: hasMeaningfulDeploymentProfile() ? "Deployment readiness details are set." : "Not set",
+          help: "These records describe how this installation is licensed, connected and prepared for operational use."
+        },
+        {
+          label: "Support and recovery",
+          value: hasMeaningfulOperationalRunbook() ? "Support and recovery details are set." : "Not set",
+          help: "These records identify support contacts, backup settings and recovery targets."
+        },
+        {
+          label: "Licensing",
+          value: hasMeaningfulLicenceSettings() ? "Licence records are set." : "Not set",
+          help: "These records are used when the deployment needs licence tracking."
         },
         {
           label: "Staff list",
@@ -36823,6 +37061,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         organisationSettings,
         unitCode,
         locationCode,
+        formationCallsigns,
+        buildRuleSettings,
         onUpdatePlatformConfig,
         onNavigateToSettingsSection,
         currentUserPermission,
