@@ -2668,6 +2668,7 @@ const InitialSetupWizard: React.FC<{
         }
     });
     const [wizardPageMenuOpen, setWizardPageMenuOpen] = useState(false);
+    const wizardCurrentStepMenuItemRef = useRef<HTMLButtonElement | null>(null);
     const [uploadResults, setUploadResults] = useState<Record<string, InitialSetupWizardUploadResult>>({});
     const [importConfirmations, setImportConfirmations] = useState<Record<string, string>>({});
     const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
@@ -5404,6 +5405,16 @@ const InitialSetupWizard: React.FC<{
     ];
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
+    useEffect(() => {
+        if (!wizardPageMenuOpen) return;
+        const animationFrameId = window.requestAnimationFrame(() => {
+            wizardCurrentStepMenuItemRef.current?.scrollIntoView({
+                block: 'center',
+                inline: 'nearest',
+            });
+        });
+        return () => window.cancelAnimationFrame(animationFrameId);
+    }, [currentStep, wizardPageMenuOpen]);
     const templateIdsByStep: Record<string, string[]> = {
         'org-name': ['organisation'],
         'units-today': ['units'],
@@ -7294,6 +7305,7 @@ const InitialSetupWizard: React.FC<{
                                 <button
                                     key={`wizard-page-${step.id}`}
                                     type="button"
+                                    ref={index === currentStep ? wizardCurrentStepMenuItemRef : undefined}
                                     className={wizardStepMenuItemClass(step, index)}
                                     onClick={() => goToWizardStep(index)}
                                     role="option"

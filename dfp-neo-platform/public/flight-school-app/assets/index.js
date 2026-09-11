@@ -31184,6 +31184,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
   });
   const [wizardPageMenuOpen, setWizardPageMenuOpen] = reactExports.useState(false);
+  const wizardCurrentStepMenuItemRef = reactExports.useRef(null);
   const [uploadResults, setUploadResults] = reactExports.useState({});
   const [importConfirmations, setImportConfirmations] = reactExports.useState({});
   const [pendingTemplateId, setPendingTemplateId] = reactExports.useState(null);
@@ -33558,6 +33559,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   ];
   const currentStep = Math.min(wizardStep, steps.length - 1);
   const visibleStep = steps[currentStep];
+  reactExports.useEffect(() => {
+    if (!wizardPageMenuOpen) return;
+    const animationFrameId = window.requestAnimationFrame(() => {
+      wizardCurrentStepMenuItemRef.current?.scrollIntoView({
+        block: "center",
+        inline: "nearest"
+      });
+    });
+    return () => window.cancelAnimationFrame(animationFrameId);
+  }, [currentStep, wizardPageMenuOpen]);
   const templateIdsByStep = {
     "org-name": ["organisation"],
     "units-today": ["units"],
@@ -35088,6 +35099,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                       "button",
                       {
                         type: "button",
+                        ref: index === currentStep ? wizardCurrentStepMenuItemRef : void 0,
                         className: wizardStepMenuItemClass(step, index),
                         onClick: () => goToWizardStep(index),
                         role: "option",
