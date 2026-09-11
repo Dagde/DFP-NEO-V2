@@ -1192,7 +1192,7 @@ html[data-theme="light"] body {
     background: #f8fafc !important;
 }
 
-/* Wizard embedded Settings sections: keep Settings behaviour with the wizard light theme. */
+/* Wizard embedded Settings sections: keep Settings behaviour with a polished wizard light theme. */
 .wizard-settings-embed {
     background: #ffffff !important;
     color: #0f172a !important;
@@ -1205,17 +1205,57 @@ html[data-theme="light"] body {
 .wizard-settings-embed .bg-gray-900\/70,
 .wizard-settings-embed .bg-gray-800,
 .wizard-settings-embed .bg-gray-800\/50,
+.wizard-settings-embed .bg-gray-800\/70,
+.wizard-settings-embed .bg-gray-700,
+.wizard-settings-embed .bg-gray-700\/50,
 .wizard-settings-embed .bg-slate-950,
 .wizard-settings-embed .bg-slate-950\/55,
 .wizard-settings-embed .bg-slate-900,
-.wizard-settings-embed .bg-slate-900\/70 {
+.wizard-settings-embed .bg-slate-900\/70,
+.wizard-settings-embed .bg-slate-800,
+.wizard-settings-embed .bg-slate-800\/70 {
     background: #ffffff !important;
 }
 
-.wizard-settings-embed section,
-.wizard-settings-embed .rounded-lg,
+.wizard-settings-embed section {
+    overflow: hidden !important;
+    border: 1px solid #dbeafe !important;
+    background: #ffffff !important;
+}
+
+.wizard-settings-embed section > div:first-child {
+    background: #eaf4fb !important;
+    border-bottom: 1px solid #c7dff0 !important;
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed section > div:first-child h3,
+.wizard-settings-embed section > div:first-child h4,
+.wizard-settings-embed section > div:first-child p {
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed section > div:first-child::before {
+    background: #38bdf8 !important;
+}
+
+.wizard-settings-embed #platform-user-access-records {
+    background: #f8fbff !important;
+}
+
+.wizard-settings-embed #platform-user-access-records > .rounded-lg,
 .wizard-settings-embed .rounded-xl {
-    background-color: #ffffff !important;
+    border-color: #dbeafe !important;
+    background: #ffffff !important;
+}
+
+.wizard-settings-embed #platform-user-access-records > .rounded-lg:first-child {
+    background: #eff6ff !important;
+    border-color: #bfdbfe !important;
+}
+
+.wizard-settings-embed #platform-user-access-records > .rounded-lg:first-child p {
+    color: #334155 !important;
 }
 
 .wizard-settings-embed .border-gray-800,
@@ -1226,11 +1266,13 @@ html[data-theme="light"] body {
 .wizard-settings-embed .border-slate-700,
 .wizard-settings-embed .border-cyan-500\/20,
 .wizard-settings-embed .border-cyan-500\/30 {
-    border-color: #e2e8f0 !important;
+    border-color: #dbeafe !important;
 }
 
 .wizard-settings-embed .bg-cyan-500\/10,
-.wizard-settings-embed .bg-sky-500\/10 {
+.wizard-settings-embed .bg-sky-500\/10,
+.wizard-settings-embed .bg-cyan-950\/20,
+.wizard-settings-embed .bg-cyan-950\/30 {
     background: #eff6ff !important;
 }
 
@@ -1260,6 +1302,16 @@ html[data-theme="light"] body {
     color: #1d4ed8 !important;
 }
 
+.wizard-settings-embed .text-cyan-100\/70,
+.wizard-settings-embed .text-cyan-100\/80 {
+    color: #475569 !important;
+}
+
+.wizard-settings-embed h5,
+.wizard-settings-embed h6 {
+    color: #0f172a !important;
+}
+
 .wizard-settings-embed input,
 .wizard-settings-embed select,
 .wizard-settings-embed textarea,
@@ -1269,6 +1321,18 @@ html[data-theme="light"] body {
     background: #ffffff !important;
     border-color: #cbd5e1 !important;
     color: #0f172a !important;
+}
+
+.wizard-settings-embed input[type="checkbox"] {
+    accent-color: #0284c7 !important;
+}
+
+.wizard-settings-embed input:disabled,
+.wizard-settings-embed select:disabled,
+.wizard-settings-embed textarea:disabled {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    opacity: 1 !important;
 }
 
 .wizard-settings-embed input::placeholder,
@@ -1287,12 +1351,84 @@ html[data-theme="light"] body {
     color: #111827 !important;
 }
 
+.wizard-settings-embed label.rounded {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed label.rounded span {
+    color: inherit !important;
+}
+
+.wizard-settings-embed label.rounded .block.text-xs,
+.wizard-settings-embed label.rounded .text-xs,
+.wizard-settings-embed label.rounded .text-\[10px\] {
+    color: #64748b !important;
+}
+
+.wizard-settings-embed label.rounded:has(input:checked),
+.wizard-settings-embed .bg-cyan-500\/10 label.rounded:has(input:checked) {
+    background: #eff6ff !important;
+    border-color: #93c5fd !important;
+}
+
+.wizard-settings-embed .bg-cyan-500\/20 {
+    background: #cffafe !important;
+}
+
+.wizard-settings-embed .text-cyan-200 {
+    color: #0369a1 !important;
+}
+
+.wizard-settings-embed .bg-amber-500\/10 {
+    background: #fffbeb !important;
+}
+
+.wizard-settings-embed .bg-amber-500\/20 {
+    background: #fef3c7 !important;
+}
+
+.wizard-settings-embed .text-amber-50,
+.wizard-settings-embed .text-amber-100,
+.wizard-settings-embed .text-amber-200 {
+    color: #92400e !important;
+}
+
+.wizard-settings-embed .border-amber-400\/40 {
+    border-color: #fcd34d !important;
+}
+
+.wizard-settings-embed .bg-emerald-500\/10 {
+    background: #ecfdf5 !important;
+}
+
+.wizard-settings-embed .text-emerald-50 {
+    color: #065f46 !important;
+}
+
+.wizard-settings-embed .border-emerald-400\/40 {
+    border-color: #6ee7b7 !important;
+}
+
 .wizard-settings-embed .bg-sky-600,
 .wizard-settings-embed .bg-cyan-600,
 .wizard-settings-embed .bg-blue-600 {
     background: #2563eb !important;
     border-color: #2563eb !important;
     color: #ffffff !important;
+}
+
+.wizard-settings-embed .bg-cyan-600\/15,
+.wizard-settings-embed .bg-cyan-600\/25 {
+    background: #e0f2fe !important;
+    border-color: #7dd3fc !important;
+    color: #075985 !important;
+}
+
+.wizard-settings-embed .hover\:bg-cyan-500\/25:hover,
+.wizard-settings-embed .hover\:bg-cyan-500\/35:hover {
+    background: #bae6fd !important;
 }
 
 .wizard-settings-embed .bg-green-600 {
