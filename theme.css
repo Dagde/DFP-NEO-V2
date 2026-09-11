@@ -1534,6 +1534,157 @@ html[data-theme="light"] body {
     background: #eff6ff !important;
     border-color: #bfdbfe !important;
 }
+
+.wizard-settings-embed #platform-aircraft-setup,
+.wizard-settings-embed #platform-rank-terminology {
+    background: #ffffff !important;
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-950,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-950\/40,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-950\/50,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-950\/65,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-950\/70,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-900,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-900\/50,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-900\/60,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-900\/70,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-900\/80,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-800,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-800\/50,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-800\/70,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-700,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-700\/50,
+.wizard-settings-embed #platform-aircraft-setup .bg-gray-600,
+.wizard-settings-embed #platform-aircraft-setup [class*="bg-gray-9"],
+.wizard-settings-embed #platform-aircraft-setup [class*="bg-gray-8"],
+.wizard-settings-embed #platform-aircraft-setup [class*="bg-gray-7"],
+.wizard-settings-embed #platform-aircraft-setup [class*="bg-gray-6"],
+.wizard-settings-embed #platform-rank-terminology .bg-gray-950,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-950\/40,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-950\/50,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-950\/65,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-950\/70,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-900,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-900\/50,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-900\/60,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-900\/70,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-900\/80,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-800,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-800\/50,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-800\/70,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-700,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-700\/50,
+.wizard-settings-embed #platform-rank-terminology .bg-gray-600,
+.wizard-settings-embed #platform-rank-terminology [class*="bg-gray-9"],
+.wizard-settings-embed #platform-rank-terminology [class*="bg-gray-8"],
+.wizard-settings-embed #platform-rank-terminology [class*="bg-gray-7"],
+.wizard-settings-embed #platform-rank-terminology [class*="bg-gray-6"] {
+    background: #ffffff !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup .border-gray-900,
+.wizard-settings-embed #platform-aircraft-setup .border-gray-800,
+.wizard-settings-embed #platform-aircraft-setup .border-gray-700,
+.wizard-settings-embed #platform-aircraft-setup .border-gray-600,
+.wizard-settings-embed #platform-rank-terminology .border-gray-900,
+.wizard-settings-embed #platform-rank-terminology .border-gray-800,
+.wizard-settings-embed #platform-rank-terminology .border-gray-700,
+.wizard-settings-embed #platform-rank-terminology .border-gray-600 {
+    border-color: #cbd5e1 !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup [class*="text-gray-"],
+.wizard-settings-embed #platform-rank-terminology [class*="text-gray-"],
+.wizard-settings-embed #platform-aircraft-setup [class*="text-slate-"],
+.wizard-settings-embed #platform-rank-terminology [class*="text-slate-"] {
+    color: #475569 !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup .text-white,
+.wizard-settings-embed #platform-rank-terminology .text-white,
+.wizard-settings-embed #platform-aircraft-setup h3,
+.wizard-settings-embed #platform-aircraft-setup h4,
+.wizard-settings-embed #platform-aircraft-setup h5,
+.wizard-settings-embed #platform-aircraft-setup h6,
+.wizard-settings-embed #platform-rank-terminology h3,
+.wizard-settings-embed #platform-rank-terminology h4,
+.wizard-settings-embed #platform-rank-terminology h5,
+.wizard-settings-embed #platform-rank-terminology h6 {
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup [class*="text-orange-"],
+.wizard-settings-embed #platform-rank-terminology [class*="text-orange-"] {
+    color: #9a3412 !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup [class*="text-cyan-"],
+.wizard-settings-embed #platform-rank-terminology [class*="text-cyan-"],
+.wizard-settings-embed #platform-aircraft-setup [class*="text-sky-"],
+.wizard-settings-embed #platform-rank-terminology [class*="text-sky-"] {
+    color: #075985 !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup .bg-orange-500\/10,
+.wizard-settings-embed #platform-aircraft-setup .bg-orange-500\/15,
+.wizard-settings-embed #platform-aircraft-setup .bg-orange-500\/20,
+.wizard-settings-embed #platform-rank-terminology .bg-orange-500\/10,
+.wizard-settings-embed #platform-rank-terminology .bg-orange-500\/15,
+.wizard-settings-embed #platform-rank-terminology .bg-orange-500\/20 {
+    background: #fff7ed !important;
+    border-color: #fdba74 !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup .bg-cyan-500\/10,
+.wizard-settings-embed #platform-aircraft-setup .bg-cyan-500\/15,
+.wizard-settings-embed #platform-aircraft-setup .bg-cyan-500\/20,
+.wizard-settings-embed #platform-rank-terminology .bg-cyan-500\/10,
+.wizard-settings-embed #platform-rank-terminology .bg-cyan-500\/15,
+.wizard-settings-embed #platform-rank-terminology .bg-cyan-500\/20,
+.wizard-settings-embed #platform-rank-terminology .bg-purple-500\/10,
+.wizard-settings-embed #platform-rank-terminology .bg-indigo-500\/10 {
+    background: #eff6ff !important;
+    border-color: #bfdbfe !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup label:has(input:checked),
+.wizard-settings-embed #platform-rank-terminology label:has(input:checked),
+.wizard-settings-embed #platform-aircraft-setup button.text-orange-100,
+.wizard-settings-embed #platform-rank-terminology button.text-orange-100 {
+    background: #e0f2fe !important;
+    border-color: #7dd3fc !important;
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup label:has(input:checked) span,
+.wizard-settings-embed #platform-rank-terminology label:has(input:checked) span,
+.wizard-settings-embed #platform-aircraft-setup button.text-orange-100 span,
+.wizard-settings-embed #platform-rank-terminology button.text-orange-100 span {
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed #platform-rank-terminology table,
+.wizard-settings-embed #platform-rank-terminology thead,
+.wizard-settings-embed #platform-rank-terminology tbody,
+.wizard-settings-embed #platform-rank-terminology tr,
+.wizard-settings-embed #platform-rank-terminology th,
+.wizard-settings-embed #platform-rank-terminology td {
+    border-color: #cbd5e1 !important;
+}
+
+.wizard-settings-embed #platform-rank-terminology thead th,
+.wizard-settings-embed #platform-rank-terminology .grid.bg-gray-900\/80 {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup .grid.bg-gray-900\/80,
+.wizard-settings-embed #platform-aircraft-setup .border-b.bg-gray-950\/65 {
+    background: #f8fafc !important;
+    color: #334155 !important;
+}
 /* NEO Build Indicator Styles */
 @keyframes neo-build-pulse {
     0%, 100% {
