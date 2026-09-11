@@ -35339,104 +35339,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       markComplete ? "Setup saved in this setup workspace." : "This step has been synced into Settings for this setup workspace."
     );
   };
-  const saveAllWizardDrafts = () => {
-    if (isSetupTestMode$1) {
-      saveSetupTestWizardDrafts();
-      return;
-    }
-    saveOrganisationDraft();
-    const locationRows = parseWizardLocationRows(locationsTodayDraft);
-    const unitRows = parseWizardUnitRows(unitsTodayDraft);
-    if (onUpdatePlatformConfig && (locationRows.length > 0 || unitRows.length > 0)) {
-      onUpdatePlatformConfig((current) => {
-        const baseConfig = current || platformConfig || {};
-        const existingLocations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
-        const existingUnits = Array.isArray(baseConfig.units) ? baseConfig.units : [];
-        const nextLocations = [...existingLocations];
-        locationRows.forEach((row) => {
-          const code = row.icao || row.iata;
-          if (!code) return;
-          const existingIndex = nextLocations.findIndex((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(code));
-          const nextLocation = {
-            ...existingIndex >= 0 ? nextLocations[existingIndex] : { id: createWizardRecordId("location") },
-            code,
-            iataCode: row.iata,
-            name: row.name || code,
-            timezone: existingIndex >= 0 ? nextLocations[existingIndex].timezone || "UTC" : "UTC",
-            status: "ACTIVE",
-            settings: {
-              ...existingIndex >= 0 ? nextLocations[existingIndex].settings || {} : {},
-              iataCode: row.iata
-            }
-          };
-          if (existingIndex >= 0) nextLocations[existingIndex] = nextLocation;
-          else nextLocations.push(nextLocation);
-        });
-        const defaultLocationCode = locationRows[0]?.icao || locationDraft.code;
-        const nextUnits = [...existingUnits];
-        unitRows.forEach((row) => {
-          const code = row.code;
-          if (!code) return;
-          const existingIndex = nextUnits.findIndex((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(code));
-          const nextUnit = {
-            ...existingIndex >= 0 ? nextUnits[existingIndex] : { id: createWizardRecordId("unit") },
-            code,
-            name: row.name || code,
-            locationCode: existingIndex >= 0 ? nextUnits[existingIndex].locationCode || defaultLocationCode : defaultLocationCode,
-            unitType: existingIndex >= 0 ? nextUnits[existingIndex].unitType || unitDraft.unitType : unitDraft.unitType,
-            status: "ACTIVE",
-            settings: {
-              ...existingIndex >= 0 ? nextUnits[existingIndex].settings || {} : {},
-              operationalModel: existingIndex >= 0 ? nextUnits[existingIndex].settings?.operationalModel || unitDraft.operationalModel : unitDraft.operationalModel,
-              hasTrainees: existingIndex >= 0 ? nextUnits[existingIndex].settings?.hasTrainees ?? unitDraft.hasTrainees : unitDraft.hasTrainees
-            }
-          };
-          if (existingIndex >= 0) nextUnits[existingIndex] = nextUnit;
-          else nextUnits.push(nextUnit);
-        });
-        return {
-          ...baseConfig,
-          locations: nextLocations,
-          units: nextUnits
-        };
-      });
-    }
-    saveLocationDraft();
-    saveUnitDraft();
-    saveResourceDraft();
-    saveCrewDraft();
-    saveRankSettingsDraft();
-    saveTrainingDraft();
-    saveWizardConfig("Setup saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
-      ...settings,
-      personnelDisplaySettings: buildRankSettingsToSave(settings),
-      initialSetupWizardDraft: {
-        unitsToday: parseWizardUnitRows(unitsTodayDraft),
-        locationsToday: parseWizardLocationRows(locationsTodayDraft),
-        unitParents: unitParentDraft,
-        crewLabels: crewLabelsDraft,
-        alternateCrews: alternateCrewDraft,
-        buildRules: buildRulesDraftText,
-        staff: staffDraft,
-        traineesEnabled: unitDraft.hasTrainees,
-        traineeCourses: traineeCourseOptionsDraft,
-        trainees: traineeDraft,
-        trainingRecords: trainingRecordsDraft,
-        unitModules: unitModulesDraft,
-        ranksAndLabels: rankLabelsDraft,
-        rankSettings: rankSettingsDraft,
-        resourceSharing: resourceSharingDraft,
-        currencies: currencyDraft,
-        scoringMatrix: wizardPhraseBankToScoringDraft(wizardScoringPhraseBank),
-        staffCurrencyEvents: staffCurrencyEventsDraft
-      }
-    })));
-    setCompletedWizardStepIds(new Set(steps.map((step) => step.id)));
-    if (typeof window !== "undefined") {
-      safeSetWizardLocalStorage(initialSetupWizardCompletedStepsStorageKey, JSON.stringify(steps.map((step) => step.id)));
-    }
-    setSaveMessage("Setup saved into Settings.");
-  };
   const commitWizardStaffProfiles = () => {
     const staffRows = uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : void 0;
     const staffCount = (staffRows || parseWizardStaffRows(staffDraft)).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.personnelId || row.qualifications).length;
@@ -36320,11 +36222,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     return promptShell(
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-        "Each step syncs into Settings when you click ",
+        "Each step is saved into Settings when you click ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Next" }),
-        ". Review the setup below, then press ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Save setup" }),
-        " to finish the wizard."
+        ". Use this page to check the setup. If something is wrong, go back to that step and change it. No extra save is required on this review page."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 text-sm", children: [
         {
@@ -36457,8 +36357,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-semibold leading-5 text-slate-500", children: help })
         ] })
       ] }, label)) }),
-      "Save setup",
-      saveAllWizardDrafts
+      "Finish review",
+      () => setSaveMessage("Setup review complete. Each step has already been saved into Settings.")
     );
   };
   if (mode === "detect" && isPartiallyConfigured) {

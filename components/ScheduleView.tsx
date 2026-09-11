@@ -8774,7 +8774,7 @@ const InitialSetupWizard: React.FC<{
         }
         return promptShell(
             <p>
-                Each step syncs into Settings when you click <strong>Next</strong>. Review the setup below, then press <strong>Save setup</strong> to finish the wizard.
+                Each step is saved into Settings when you click <strong>Next</strong>. Use this page to check the setup. If something is wrong, go back to that step and change it. No extra save is required on this review page.
             </p>,
             <div className="grid gap-2 text-sm">
                 {[
@@ -8917,8 +8917,8 @@ const InitialSetupWizard: React.FC<{
                     </div>
                 ))}
             </div>,
-            'Save setup',
-            saveAllWizardDrafts,
+            'Finish review',
+            () => setSaveMessage('Setup review complete. Each step has already been saved into Settings.'),
         );
     };
 
