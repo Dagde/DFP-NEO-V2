@@ -1864,6 +1864,8 @@ const buildConfigurationHealth = (
   permissionProfiles: PermissionProfile[],
   readinessPercent: number,
   operationalReadinessPercent: number,
+  staffPeople: Instructor[] = [],
+  traineePeople: Trainee[] = [],
   scope: ConfigurationHealthScope = {},
 ): ConfigurationHealthItem[] => {
   const items: ConfigurationHealthItem[] = [];
@@ -1931,6 +1933,54 @@ const buildConfigurationHealth = (
   const activeModuleCodes = new Set(activeModules.map((module) => toIdentifier(module.code)));
   const platformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
   const userIds = new Set(platformUsers.flatMap((user) => uniqueValues([user.userId, user.username].map(toIdentifier))));
+  const knownAccessIdentityIds = new Set<string>();
+  const addKnownAccessIdentity = (value: unknown) => {
+    const normalised = toIdentifier(value).toLowerCase();
+    if (normalised) knownAccessIdentityIds.add(normalised);
+  };
+  platformUsers.forEach((user) => {
+    addKnownAccessIdentity(user.userId);
+    addKnownAccessIdentity(user.username);
+    addKnownAccessIdentity((user as any).email);
+    addKnownAccessIdentity((user as any).staffRecordId);
+    addKnownAccessIdentity((user as any).staffPersonnelId || (user as any).staffIdNumber);
+    addKnownAccessIdentity((user as any).traineeRecordId);
+    addKnownAccessIdentity((user as any).traineePersonnelId || (user as any).traineeIdNumber);
+  });
+  staffPeople.forEach((staff) => {
+    const recordId = toIdentifier((staff as any)?.id);
+    const personnelId = toIdentifier((staff as any)?.idNumber || (staff as any)?.personnelId || (staff as any)?.serviceNumber);
+    const email = toIdentifier((staff as any)?.email);
+    addKnownAccessIdentity(recordId);
+    addKnownAccessIdentity(personnelId);
+    addKnownAccessIdentity(email);
+    addKnownAccessIdentity(recordId ? `staff:${recordId}` : '');
+    addKnownAccessIdentity(personnelId ? `staff-id:${personnelId}` : '');
+    addKnownAccessIdentity(email ? `staff-email:${email}` : '');
+  });
+  traineePeople.forEach((trainee) => {
+    const recordId = toIdentifier((trainee as any)?.id);
+    const personnelId = toIdentifier((trainee as any)?.idNumber || (trainee as any)?.personnelId || (trainee as any)?.serviceNumber);
+    const email = toIdentifier((trainee as any)?.email);
+    addKnownAccessIdentity(recordId);
+    addKnownAccessIdentity(personnelId);
+    addKnownAccessIdentity(email);
+    addKnownAccessIdentity(recordId ? `trainee:${recordId}` : '');
+    addKnownAccessIdentity(personnelId ? `trainee-id:${personnelId}` : '');
+    addKnownAccessIdentity(email ? `trainee-email:${email}` : '');
+  });
+  const hasKnownAccessIdentity = (access: any): boolean => uniqueValues([
+    access?.userId,
+    access?.username,
+    access?.email,
+    access?.personnelId,
+    access?.staffRecordId,
+    access?.staffPersonnelId,
+    access?.staffIdNumber,
+    access?.traineeRecordId,
+    access?.traineePersonnelId,
+    access?.traineeIdNumber,
+  ].map((value) => toIdentifier(value).toLowerCase())).some((value) => knownAccessIdentityIds.has(value));
   const profileIds = new Set(permissionProfiles.map((profile) => toIdentifier(profile.id)));
 
   if (activeOrganisations.length === 0) {
@@ -2164,8 +2214,8 @@ const buildConfigurationHealth = (
     const moduleCode = toIdentifier(access.moduleCode);
     const assignedProfiles = Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds.map(toIdentifier).filter(Boolean) : [];
 
-    if (!userId || !userIds.has(userId)) {
-      add('CRITICAL', 'User Access', `${userLabel} has invalid user record`, 'The access scope points to a user that is not present in the platform user list.', `access-${userId || userLabel}-user`, undefined, { focusUserId: userId, focusSubsectionId: 'platform-user-access-records' });
+    if (!userId || (!userIds.has(userId) && !hasKnownAccessIdentity(access))) {
+      add('CRITICAL', 'User Access', `${userLabel} has invalid user record`, 'The access scope points to a person or login account that is not present in the active user, staff or trainee records.', `access-${userId || userLabel}-user`, undefined, { focusUserId: userId, focusSubsectionId: 'platform-user-access-records' });
     }
     if (locationCode && !activeLocationCodes.has(locationCode)) {
       add('CRITICAL', 'User Access', `${userLabel} has invalid location scope`, `${locationCode} is not an active location.`, `access-${userId}-${locationCode}`, undefined, { focusUserId: userId, focusLocationCode: locationCode, focusSubsectionId: `platform-user-access-location-${getConfigurationHealthFocusAnchor(locationCode)}` });
@@ -5782,11 +5832,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             permissionProfiles,
             readinessPercent,
             operationalReadinessPercent,
+            instructorsData,
+            traineesData,
             { includeOrganisationWideChecks: isOrganisationWideConfigurationHealth },
           )
         : []
     ),
-    [configurationHealthActive, configurationHealthConfig, isOrganisationWideConfigurationHealth, permissionProfiles, readinessPercent, operationalReadinessPercent],
+    [configurationHealthActive, configurationHealthConfig, instructorsData, isOrganisationWideConfigurationHealth, permissionProfiles, readinessPercent, operationalReadinessPercent, traineesData],
   );
 
   const configurationHealthSummary = useMemo(() => (

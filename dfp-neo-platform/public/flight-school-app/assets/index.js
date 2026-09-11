@@ -17592,7 +17592,7 @@ const buildScopedConfigurationHealthConfig = (config, unitCodes) => {
     })
   };
 };
-const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, operationalReadinessPercent, scope = {}) => {
+const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, operationalReadinessPercent, staffPeople = [], traineePeople = [], scope = {}) => {
   const items = [];
   const add = (severity, area, title, detail, idSuffix = `${area}-${title}-${items.length}`, remediation, focusTarget) => {
     const settingsLink = severity === "OK" ? null : getConfigurationHealthSettingsLink(area, title);
@@ -17647,6 +17647,54 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
   const activeModuleCodes = new Set(activeModules.map((module) => toIdentifier(module.code)));
   const platformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
   const userIds = new Set(platformUsers.flatMap((user) => uniqueValues([user.userId, user.username].map(toIdentifier))));
+  const knownAccessIdentityIds = /* @__PURE__ */ new Set();
+  const addKnownAccessIdentity = (value) => {
+    const normalised = toIdentifier(value).toLowerCase();
+    if (normalised) knownAccessIdentityIds.add(normalised);
+  };
+  platformUsers.forEach((user) => {
+    addKnownAccessIdentity(user.userId);
+    addKnownAccessIdentity(user.username);
+    addKnownAccessIdentity(user.email);
+    addKnownAccessIdentity(user.staffRecordId);
+    addKnownAccessIdentity(user.staffPersonnelId || user.staffIdNumber);
+    addKnownAccessIdentity(user.traineeRecordId);
+    addKnownAccessIdentity(user.traineePersonnelId || user.traineeIdNumber);
+  });
+  staffPeople.forEach((staff) => {
+    const recordId = toIdentifier(staff?.id);
+    const personnelId = toIdentifier(staff?.idNumber || staff?.personnelId || staff?.serviceNumber);
+    const email = toIdentifier(staff?.email);
+    addKnownAccessIdentity(recordId);
+    addKnownAccessIdentity(personnelId);
+    addKnownAccessIdentity(email);
+    addKnownAccessIdentity(recordId ? `staff:${recordId}` : "");
+    addKnownAccessIdentity(personnelId ? `staff-id:${personnelId}` : "");
+    addKnownAccessIdentity(email ? `staff-email:${email}` : "");
+  });
+  traineePeople.forEach((trainee) => {
+    const recordId = toIdentifier(trainee?.id);
+    const personnelId = toIdentifier(trainee?.idNumber || trainee?.personnelId || trainee?.serviceNumber);
+    const email = toIdentifier(trainee?.email);
+    addKnownAccessIdentity(recordId);
+    addKnownAccessIdentity(personnelId);
+    addKnownAccessIdentity(email);
+    addKnownAccessIdentity(recordId ? `trainee:${recordId}` : "");
+    addKnownAccessIdentity(personnelId ? `trainee-id:${personnelId}` : "");
+    addKnownAccessIdentity(email ? `trainee-email:${email}` : "");
+  });
+  const hasKnownAccessIdentity = (access) => uniqueValues([
+    access?.userId,
+    access?.username,
+    access?.email,
+    access?.personnelId,
+    access?.staffRecordId,
+    access?.staffPersonnelId,
+    access?.staffIdNumber,
+    access?.traineeRecordId,
+    access?.traineePersonnelId,
+    access?.traineeIdNumber
+  ].map((value) => toIdentifier(value).toLowerCase())).some((value) => knownAccessIdentityIds.has(value));
   const profileIds = new Set(permissionProfiles.map((profile) => toIdentifier(profile.id)));
   if (activeOrganisations.length === 0) {
     add("CRITICAL", "Organisation", "No active organisation", "At least one active organisation is required before the platform can be managed as a commercial deployment.", "organisation-none", void 0, { focusSubsectionId: "platform-organisation" });
@@ -17851,8 +17899,8 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     const unitCode = toIdentifier(access.unitCode);
     const moduleCode = toIdentifier(access.moduleCode);
     const assignedProfiles = Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds.map(toIdentifier).filter(Boolean) : [];
-    if (!userId || !userIds.has(userId)) {
-      add("CRITICAL", "User Access", `${userLabel} has invalid user record`, "The access scope points to a user that is not present in the platform user list.", `access-${userId || userLabel}-user`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
+    if (!userId || !userIds.has(userId) && !hasKnownAccessIdentity(access)) {
+      add("CRITICAL", "User Access", `${userLabel} has invalid user record`, "The access scope points to a person or login account that is not present in the active user, staff or trainee records.", `access-${userId || userLabel}-user`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
     }
     if (locationCode && !activeLocationCodes.has(locationCode)) {
       add("CRITICAL", "User Access", `${userLabel} has invalid location scope`, `${locationCode} is not an active location.`, `access-${userId}-${locationCode}`, void 0, { focusUserId: userId, focusLocationCode: locationCode, focusSubsectionId: `platform-user-access-location-${getConfigurationHealthFocusAnchor(locationCode)}` });
@@ -20716,9 +20764,11 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
       permissionProfiles,
       readinessPercent,
       operationalReadinessPercent,
+      instructorsData,
+      traineesData,
       { includeOrganisationWideChecks: isOrganisationWideConfigurationHealth }
     ) : [],
-    [configurationHealthActive, configurationHealthConfig, isOrganisationWideConfigurationHealth, permissionProfiles, readinessPercent, operationalReadinessPercent]
+    [configurationHealthActive, configurationHealthConfig, instructorsData, isOrganisationWideConfigurationHealth, permissionProfiles, readinessPercent, operationalReadinessPercent, traineesData]
   );
   const configurationHealthSummary = reactExports.useMemo(() => configurationHealth.reduce((summary, item) => ({
     ...summary,
