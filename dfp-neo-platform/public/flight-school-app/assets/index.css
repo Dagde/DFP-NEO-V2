@@ -1200,6 +1200,8 @@ html[data-theme="light"] body {
 
 .wizard-settings-embed .bg-gray-950,
 .wizard-settings-embed .bg-gray-950\/55,
+.wizard-settings-embed .bg-gray-950\/60,
+.wizard-settings-embed .bg-gray-950\/70,
 .wizard-settings-embed .bg-gray-900,
 .wizard-settings-embed .bg-gray-900\/50,
 .wizard-settings-embed .bg-gray-900\/70,
@@ -1265,6 +1267,7 @@ html[data-theme="light"] body {
 .wizard-settings-embed .border-slate-800,
 .wizard-settings-embed .border-slate-700,
 .wizard-settings-embed .border-cyan-500\/20,
+.wizard-settings-embed .border-cyan-500\/25,
 .wizard-settings-embed .border-cyan-500\/30 {
     border-color: #dbeafe !important;
 }
@@ -1453,6 +1456,71 @@ html[data-theme="light"] body {
 .wizard-settings-embed .shadow-lg,
 .wizard-settings-embed .shadow-xl {
     box-shadow: none !important;
+}
+
+.wizard-settings-embed #platform-user-access .bg-gray-950\/70,
+.wizard-settings-embed #platform-user-access .bg-gray-950\/60,
+.wizard-settings-embed #platform-user-access .bg-gray-950\/50,
+.wizard-settings-embed #platform-user-access .bg-gray-950,
+.wizard-settings-embed #platform-user-access .bg-gray-900,
+.wizard-settings-embed #platform-user-access .bg-gray-800\/80,
+.wizard-settings-embed #platform-user-access .bg-gray-800 {
+    background: #f3f4f6 !important;
+}
+
+.wizard-settings-embed #platform-user-access #platform-user-access-records > .rounded-lg:not(:first-child),
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] {
+    background: #ffffff !important;
+    border-color: #dbeafe !important;
+}
+
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] .bg-cyan-500\/10,
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] .bg-cyan-950\/20,
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] .bg-cyan-950\/30,
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] div[style*="background-color"] {
+    background: #ffffff !important;
+}
+
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] > div[style*="background-color"] {
+    background: #f8fafc !important;
+    border-color: #dbeafe !important;
+}
+
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] h5,
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] label,
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] label span,
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] p {
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] .ml-auto.rounded {
+    background: #ffffff !important;
+    border: 1px solid #dbeafe !important;
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] button:not(.btn-aluminium-brushed) {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed #platform-user-access [id^="platform-user-access-location-"] button:not(.btn-aluminium-brushed):hover {
+    background: #f1f5f9 !important;
+}
+
+.wizard-settings-embed #platform-user-access .space-y-3 > .rounded.border.border-gray-800 {
+    background: #f3f4f6 !important;
+    border-color: #d1d5db !important;
+}
+
+.wizard-settings-embed #platform-user-access .space-y-3 > .rounded.border.border-gray-800 > .mb-2 {
+    color: #0369a1 !important;
+}
+
+.wizard-settings-embed #platform-user-access-records > .rounded-lg:first-child {
+    background: #eff6ff !important;
+    border-color: #bfdbfe !important;
 }
 /* NEO Build Indicator Styles */
 @keyframes neo-build-pulse {
