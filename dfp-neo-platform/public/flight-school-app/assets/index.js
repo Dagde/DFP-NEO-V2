@@ -17696,6 +17696,30 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     access?.traineeIdNumber
   ].map((value) => toIdentifier(value).toLowerCase())).some((value) => knownAccessIdentityIds.has(value));
   const profileIds = new Set(permissionProfiles.map((profile) => toIdentifier(profile.id)));
+  const permissionProfileLabels = new Set(permissionProfiles.flatMap((profile) => [
+    toIdentifier(profile.id).toLowerCase(),
+    toIdentifier(profile.name).toLowerCase()
+  ]).filter(Boolean));
+  const accessRoleLabels = /* @__PURE__ */ new Set([
+    "viewer",
+    "scheduler",
+    "supervisor",
+    "unit admin",
+    "platform admin",
+    "super admin",
+    "admin",
+    "staff",
+    "trainee",
+    "instructor",
+    "maintenance",
+    "flying supervisor",
+    "course supervisor"
+  ]);
+  const accessLooksLikePermissionRole = (access) => uniqueValues([
+    access?.userId,
+    access?.username,
+    access?.displayName
+  ].map((value) => toIdentifier(value).toLowerCase())).some((value) => permissionProfileLabels.has(value) || accessRoleLabels.has(value));
   if (activeOrganisations.length === 0) {
     add("CRITICAL", "Organisation", "No active organisation", "At least one active organisation is required before the platform can be managed as a commercial deployment.", "organisation-none", void 0, { focusSubsectionId: "platform-organisation" });
   } else {
@@ -17900,7 +17924,19 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     const moduleCode = toIdentifier(access.moduleCode);
     const assignedProfiles = Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds.map(toIdentifier).filter(Boolean) : [];
     if (!userId || !userIds.has(userId) && !hasKnownAccessIdentity(access)) {
-      add("CRITICAL", "User Access", `${userLabel} has invalid user record`, "The access scope points to a person or login account that is not present in the active user, staff or trainee records.", `access-${userId || userLabel}-user`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
+      if (accessLooksLikePermissionRole(access)) {
+        add(
+          "CRITICAL",
+          "User Access",
+          `${userLabel} is a role, not a user`,
+          "This access scope has a permission role saved where a person or login account should be. Assign the role to a real administrator user instead.",
+          `access-${userId || userLabel}-role-user`,
+          "Open Settings → People & Permissions → Manage User Permissions, remove this access scope, then select the real user and assign the correct permission profile.",
+          { focusUserId: userId, focusSubsectionId: "platform-user-access-records" }
+        );
+      } else {
+        add("CRITICAL", "User Access", `${userLabel} has invalid user record`, "The access scope points to a person or login account that is not present in the active user, staff or trainee records.", `access-${userId || userLabel}-user`, void 0, { focusUserId: userId, focusSubsectionId: "platform-user-access-records" });
+      }
     }
     if (locationCode && !activeLocationCodes.has(locationCode)) {
       add("CRITICAL", "User Access", `${userLabel} has invalid location scope`, `${locationCode} is not an active location.`, `access-${userId}-${locationCode}`, void 0, { focusUserId: userId, focusLocationCode: locationCode, focusSubsectionId: `platform-user-access-location-${getConfigurationHealthFocusAnchor(locationCode)}` });
@@ -21043,17 +21079,44 @@ This removes it from the master list and from every user assignment that current
         if (!user.traineeRecordId && !user.traineePersonnelId && !user.email) addRepresentedKey("trainee-name", user.traineeName || user.traineeFullName);
       });
       const platformUserIds = new Set(platformOptions.flatMap((user) => uniqueValues([user.id, user.username].map(toIdentifier))));
+      const roleLikeAccessLabels = new Set([
+        ...permissionProfiles.flatMap((profile) => [
+          toIdentifier(profile.id).toLowerCase(),
+          toIdentifier(profile.name).toLowerCase()
+        ]),
+        "viewer",
+        "scheduler",
+        "supervisor",
+        "unit admin",
+        "platform admin",
+        "super admin",
+        "admin",
+        "staff",
+        "trainee",
+        "instructor",
+        "maintenance",
+        "flying supervisor",
+        "course supervisor"
+      ].filter(Boolean));
       const orphanOptions = configUserAccess.filter((access) => {
         const accessUserId = toIdentifier(access.userId);
         const accessUsername = toIdentifier(access.username);
         return (accessUserId || accessUsername) && !platformUserIds.has(accessUserId) && !platformUserIds.has(accessUsername);
-      }).map((access) => withSearchText({
-        id: access.userId || access.username,
-        name: `${access.displayName || access.username || access.userId || "Unknown user"} (access scope has no login account)`,
-        username: access.username || access.userId || "",
-        email: "",
-        personnelId: toIdentifier(access.personnelId || access.staffPersonnelId || access.traineePersonnelId)
-      })).filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index);
+      }).map((access) => {
+        const orphanLabel = access.displayName || access.username || access.userId || "Unknown user";
+        const looksLikeRole = uniqueValues([
+          access.userId,
+          access.username,
+          access.displayName
+        ].map((value) => toIdentifier(value).toLowerCase())).some((value) => roleLikeAccessLabels.has(value));
+        return withSearchText({
+          id: access.userId || access.username,
+          name: looksLikeRole ? `${orphanLabel} (role saved as user)` : `${orphanLabel} (access scope has no login account)`,
+          username: access.username || access.userId || "",
+          email: "",
+          personnelId: toIdentifier(access.personnelId || access.staffPersonnelId || access.traineePersonnelId)
+        });
+      }).filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index);
       const staffOptions = instructorsData.filter((staff) => String(staff?.name || staff?.fullName || "").trim()).filter((staff) => {
         const recordId = toIdentifier(staff?.id).toLowerCase();
         const personnelId = toIdentifier(staff?.idNumber || staff?.personnelId || staff?.serviceNumber).toLowerCase();
@@ -21107,7 +21170,7 @@ This removes it from the master list and from every user assignment that current
       recordSettingsTraceTiming("userOptions", traceStartedAt);
       return result;
     },
-    [configPlatformUsers, configUserAccess, instructorsData, traineesData]
+    [configPlatformUsers, configUserAccess, instructorsData, permissionProfiles, traineesData]
   );
   const activeBulkUnitCodes = reactExports.useMemo(() => Array.from(new Set([
     ...Array.isArray(activeUnitCodes) ? activeUnitCodes : [],
