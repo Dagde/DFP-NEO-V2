@@ -10613,10 +10613,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <p className="mt-1 text-xs text-gray-500">Define aircraft identity, cruise planning values and normal crew-seat eligibility.</p>
             </div>
             {canEditResourcePools && (
-              <div className="w-[200px] max-w-full rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+              <div className="w-[200px] max-w-full rounded-lg border border-red-300 bg-red-50 p-3 shadow-sm">
                 <div className="mb-3">
-                  <div className="text-xs font-black uppercase tracking-wide text-red-100">Delete Aircraft Type Entered In Error</div>
-                  <div className="mt-1 text-[11px] leading-relaxed text-red-100/70">
+                  <div className="text-xs font-black uppercase tracking-wide text-red-800">Delete Aircraft Type Entered In Error</div>
+                  <div className="mt-1 text-[11px] font-semibold leading-relaxed text-red-700">
                     Select by aircraft type name only. Deletion requires your password and is applied only when this section is saved.
                   </div>
                 </div>
@@ -10634,7 +10634,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     disabled={!canEditResourcePools || !selectedAircraftTypeDeleteKey}
                     onClick={deleteSelectedAircraftType}
-                    className={`${aircraftResourceMiniButtonClass} w-full`}
+                    className="h-[38px] w-full rounded-md border border-red-300 bg-white px-3 text-xs font-black text-red-700 hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Delete Aircraft Type
                   </button>
