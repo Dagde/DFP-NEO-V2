@@ -6097,8 +6097,31 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return linkedName || displayUserName(person);
   };
 
+  const getAccessNameSearchAliases = (value: unknown): string[] => {
+    const raw = stripAccessPersonContext(value).toLowerCase();
+    const normalised = raw.replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+    if (!normalised) return [];
+    const aliases = [normalised];
+    if (raw.includes(',')) {
+      const parts = raw.split(',').map((part) => part.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        aliases.push(`${parts.slice(1).join(' ')} ${parts[0]}`.replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' '));
+      }
+    } else {
+      const parts = normalised.split(' ').filter(Boolean);
+      if (parts.length >= 2) {
+        aliases.push(`${parts[parts.length - 1]} ${parts.slice(0, -1).join(' ')}`.trim());
+      }
+    }
+    return uniqueValues(aliases);
+  };
+
   const buildAccessUserSearchText = (values: unknown[]): string => uniqueValues(values
-    .flatMap((value) => String(value || '').toLowerCase().split(/[^a-z0-9]+/))
+    .flatMap((value) => [
+      ...String(value || '').toLowerCase().split(/[^a-z0-9]+/),
+      ...getAccessNameSearchAliases(value).flatMap((alias) => alias.split(' ')),
+      ...getAccessNameSearchAliases(value),
+    ])
     .filter(Boolean)).join(' ');
 
   const buildStaffAccessId = (staff: any): string => {
@@ -15276,7 +15299,7 @@ const UserSearchSelect = ({
   }, [draftSearch]);
 
   const filteredUsers = useMemo(() => {
-    const query = filterSearch.trim().toLowerCase();
+    const query = filterSearch.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
     return users.filter((user) => {
       if (!query) return true;
       const searchText = user.searchText || [user.name, user.username, user.email, user.personnelId]

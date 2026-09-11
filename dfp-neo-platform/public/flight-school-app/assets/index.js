@@ -20991,7 +20991,29 @@ This removes it from the master list and from every user assignment that current
     const linkedName = stripAccessPersonContext(person.staffName || person.traineeName || person.name || person.staffFullName || person.traineeFullName || person.fullName);
     return linkedName || displayUserName(person);
   };
-  const buildAccessUserSearchText = (values) => uniqueValues(values.flatMap((value) => String(value || "").toLowerCase().split(/[^a-z0-9]+/)).filter(Boolean)).join(" ");
+  const getAccessNameSearchAliases = (value) => {
+    const raw = stripAccessPersonContext(value).toLowerCase();
+    const normalised = raw.replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+    if (!normalised) return [];
+    const aliases = [normalised];
+    if (raw.includes(",")) {
+      const parts = raw.split(",").map((part) => part.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        aliases.push(`${parts.slice(1).join(" ")} ${parts[0]}`.replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " "));
+      }
+    } else {
+      const parts = normalised.split(" ").filter(Boolean);
+      if (parts.length >= 2) {
+        aliases.push(`${parts[parts.length - 1]} ${parts.slice(0, -1).join(" ")}`.trim());
+      }
+    }
+    return uniqueValues(aliases);
+  };
+  const buildAccessUserSearchText = (values) => uniqueValues(values.flatMap((value) => [
+    ...String(value || "").toLowerCase().split(/[^a-z0-9]+/),
+    ...getAccessNameSearchAliases(value).flatMap((alias) => alias.split(" ")),
+    ...getAccessNameSearchAliases(value)
+  ]).filter(Boolean)).join(" ");
   const buildStaffAccessId = (staff) => {
     const recordId = toIdentifier(staff?.id);
     if (recordId) return `staff:${recordId}`;
@@ -29064,7 +29086,7 @@ const UserSearchSelect = ({
     return () => window.clearTimeout(timeoutId);
   }, [draftSearch]);
   const filteredUsers = reactExports.useMemo(() => {
-    const query = filterSearch.trim().toLowerCase();
+    const query = filterSearch.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
     return users.filter((user) => {
       if (!query) return true;
       const searchText = user.searchText || [user.name, user.username, user.email, user.personnelId].map((field) => String(field || "").toLowerCase()).join(" ");
