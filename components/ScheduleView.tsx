@@ -3750,6 +3750,129 @@ const InitialSetupWizard: React.FC<{
         const savedDraft = getSavedWizardString('scoringMatrix', 'scoringDraft');
         return wizardScoringRowsToPhraseBank(savedDraft || defaultWizardScoringDraft);
     };
+    const wizardStep16_18TraceStorageKey = 'dfp_neo_wizard_step_16_18_trace';
+    const wizardStep16_18TraceLimit = 180;
+    const readWizardStep16_18TraceEntries = () => {
+        if (typeof window === 'undefined') return [];
+        try {
+            const parsed = JSON.parse(window.localStorage.getItem(wizardStep16_18TraceStorageKey) || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    };
+    const writeWizardStep16_18TraceEntries = (entries: any[]) => {
+        safeSetWizardLocalStorage(wizardStep16_18TraceStorageKey, JSON.stringify(entries.slice(-wizardStep16_18TraceLimit)));
+    };
+    const buildWizardStep16_18TraceSnapshot = (details: Record<string, any> = {}) => {
+        const targetAircraftCode = String(crewDraft.aircraftCode || resourceDraft.aircraftCode || primaryAircraftType?.code || '').trim().toUpperCase();
+        const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+        const matchingAircraftTypes = activeAircraftTypes
+            .filter((aircraft: any) => !targetAircraftCode || normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(targetAircraftCode))
+            .map((aircraft: any) => ({
+                id: aircraft?.id,
+                code: aircraft?.code,
+                name: aircraft?.name,
+                category: aircraft?.category,
+                status: aircraft?.status,
+                crewComposition: aircraft?.crewComposition || null,
+                normalisedCrewComposition: normaliseAircraftCrewComposition(aircraft?.crewComposition || null),
+            }));
+        const schedulingRuleSets = Array.isArray(platformConfig?.schedulingRuleSets) ? platformConfig.schedulingRuleSets : [];
+        const matchingSchedulingRuleSets = schedulingRuleSets
+            .filter((ruleSet: any) => (
+                !targetUnitCode
+                || normaliseUnitSettingsIdentifier(ruleSet?.unitCode) === normaliseUnitSettingsIdentifier(targetUnitCode)
+            ))
+            .map((ruleSet: any) => ({
+                id: ruleSet?.id,
+                name: ruleSet?.name,
+                unitCode: ruleSet?.unitCode,
+                status: ruleSet?.status,
+                isActive: ruleSet?.isActive,
+                maxCrewDutyHours: ruleSet?.maxCrewDutyHours,
+                preferredDutyHours: ruleSet?.preferredDutyHours,
+                aircraftTurnaroundMinutes: ruleSet?.aircraftTurnaroundMinutes,
+                simTurnaroundMinutes: ruleSet?.simTurnaroundMinutes,
+                trainerTurnaroundMinutes: ruleSet?.trainerTurnaroundMinutes,
+                maxDispatchPerHour: ruleSet?.maxDispatchPerHour,
+                maxEventsPerDay: ruleSet?.maxEventsPerDay,
+                maxFlightsPerDay: ruleSet?.maxFlightsPerDay,
+                minGapBetweenEventsMinutes: ruleSet?.minGapBetweenEventsMinutes,
+            }));
+        const savedDrafts = getSavedInitialSetupWizardDrafts?.() || {};
+        return {
+            timestamp: new Date().toISOString(),
+            wizardStep,
+            targetUnitCode,
+            targetAircraftCode,
+            currentUnit: {
+                code: currentUnit?.code,
+                name: currentUnit?.name,
+                locationCode: currentUnit?.locationCode,
+            },
+            unitDraft,
+            resourceDraft,
+            crewDraft,
+            alternateCrewDraft,
+            parsedCrewDraft: {
+                standardSeats: parseRoleRequirementsText(crewDraft.standardSeats),
+                otherApprovedCrewComposition: parseRoleRequirementsText(alternateCrewDraft),
+            },
+            buildRulesDraft,
+            buildRulesDraftText,
+            dirtyRefs: {
+                resourceDraftDirty: resourceDraftDirtyRef.current,
+                crewDraftDirty: crewDraftDirtyRef.current,
+                buildRulesDraftDirty: buildRulesDraftDirtyRef.current,
+            },
+            matchingAircraftTypes,
+            matchingSchedulingRuleSets,
+            savedWizardDrafts: {
+                crewLabels: savedDrafts.crewLabels,
+                crewLabelsDraft: savedDrafts.crewLabelsDraft,
+                alternateCrews: savedDrafts.alternateCrews,
+                alternateCrewDraft: savedDrafts.alternateCrewDraft,
+                buildRules: savedDrafts.buildRules,
+                buildRulesDraft: savedDrafts.buildRulesDraft,
+                updatedAt: savedDrafts.updatedAt,
+            },
+            platformCounts: {
+                aircraftTypes: activeAircraftTypes.length,
+                schedulingRuleSets: schedulingRuleSets.length,
+            },
+            details,
+        };
+    };
+    const pushWizardStep16_18Trace = (event: string, details: Record<string, any> = {}) => {
+        if (typeof window === 'undefined') return;
+        const nextEntry = {
+            event,
+            ...buildWizardStep16_18TraceSnapshot(details),
+        };
+        writeWizardStep16_18TraceEntries([...readWizardStep16_18TraceEntries(), nextEntry]);
+    };
+    const downloadWizardStep16_18Trace = (reason: string) => {
+        if (typeof window === 'undefined') return;
+        pushWizardStep16_18Trace('download:manual-requested', { reason });
+        const traceEntries = readWizardStep16_18TraceEntries();
+        const payload = {
+            generatedAt: new Date().toISOString(),
+            reason,
+            currentSnapshot: buildWizardStep16_18TraceSnapshot({ reason, source: 'download' }),
+            traceEntries,
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const safeUnit = String(unitDraft.code || currentUnit?.code || unitCode || 'unit').replace(/[^A-Za-z0-9_-]+/g, '-');
+        link.href = url;
+        link.download = `dfp-neo-wizard-step-16-18-trace-${safeUnit}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
     const hydrateSupplementaryWizardDrafts = () => {
         const savedTraineeCourses = getSavedWizardString('traineeCourses', 'traineeCourseOptionsDraft');
         const savedTrainees = getSavedWizardString('trainees', 'traineeDraft');
@@ -3764,6 +3887,12 @@ const InitialSetupWizard: React.FC<{
         const nextCurrencies = buildHydratedCurrencyDraft();
         const nextScoringPhraseBank = buildHydratedScoringPhraseBankDraft();
         const nextStaffCurrencyEvents = buildHydratedStaffCurrencyEventsDraft();
+        pushWizardStep16_18Trace('hydrate:supplementary-drafts', {
+            nextCrewLabels,
+            nextAlternateCrews,
+            nextBuildRules,
+            buildRulesDraftDirty: buildRulesDraftDirtyRef.current,
+        });
         if (nextCrewLabels) setCrewLabelsDraft(nextCrewLabels);
         if (nextAlternateCrews) setAlternateCrewDraft(nextAlternateCrews);
         if (nextBuildRules && !buildRulesDraftDirtyRef.current) setBuildRulesDraft(nextBuildRules);
@@ -4402,8 +4531,14 @@ const InitialSetupWizard: React.FC<{
 
     const saveCrewDraft = () => {
         const aircraftCode = String(crewDraft.aircraftCode || '').trim().toUpperCase();
+        pushWizardStep16_18Trace('save:crew-start', {
+            aircraftCode,
+            parsedStandardSeats: parseRoleRequirementsText(crewDraft.standardSeats),
+            parsedOtherApprovedCrewComposition: parseRoleRequirementsText(alternateCrewDraft),
+        });
         if (!aircraftCode) {
             setSaveMessage('Choose an aircraft type before saving crew composition.');
+            pushWizardStep16_18Trace('save:crew-blocked-no-aircraft-code', { aircraftCode });
             return;
         }
         saveWizardConfig('Crew composition saved into Settings.', (baseConfig) => {
@@ -4422,6 +4557,23 @@ const InitialSetupWizard: React.FC<{
                     standardSeats: parseRoleRequirementsText(crewDraft.standardSeats),
                 },
             };
+            pushWizardStep16_18Trace('save:crew-updater-result', {
+                aircraftCode,
+                existingAircraft: existingAircraft ? {
+                    id: existingAircraft.id,
+                    code: existingAircraft.code,
+                    name: existingAircraft.name,
+                    crewComposition: existingAircraft.crewComposition || null,
+                } : null,
+                nextAircraft: {
+                    id: nextAircraft.id,
+                    code: nextAircraft.code,
+                    name: nextAircraft.name,
+                    crewComposition: nextAircraft.crewComposition,
+                },
+                aircraftTypesBefore: aircraftTypes.length,
+                aircraftTypesAfter: existingAircraft ? aircraftTypes.length : aircraftTypes.length + 1,
+            });
             return {
                 ...baseConfig,
                 aircraftTypes: existingAircraft
@@ -4631,6 +4783,15 @@ const InitialSetupWizard: React.FC<{
 
     const saveBuildRulesDraft = () => {
         const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+        pushWizardStep16_18Trace('save:build-rules-start', {
+            targetUnitCode,
+            buildRulesDraft,
+            parsed: {
+                maxEventsPerDay: parseNumberDraft(buildRulesDraft.maxEventsPerDay, 0),
+                maxFlightsPerDay: parseNumberDraft(buildRulesDraft.maxFlightsPerDay, 0),
+                minGapBetweenEventsMinutes: parseNumberDraft(buildRulesDraft.minGapBetweenEventsMinutes, 0),
+            },
+        });
         saveWizardConfig('Build rules saved into Settings.', (baseConfig) => {
             const ruleSets = Array.isArray(baseConfig.schedulingRuleSets) ? baseConfig.schedulingRuleSets : [];
             const existingIndex = ruleSets.findIndex((ruleSet: any) => (
@@ -4659,6 +4820,14 @@ const InitialSetupWizard: React.FC<{
             const nextRuleSets = existingIndex >= 0
                 ? ruleSets.map((ruleSet: any, index: number) => index === existingIndex ? nextRule : ruleSet)
                 : [...ruleSets, nextRule];
+            pushWizardStep16_18Trace('save:build-rules-updater-result', {
+                targetUnitCode,
+                existingIndex,
+                existingRule,
+                nextRule,
+                ruleSetsBefore: ruleSets.length,
+                ruleSetsAfter: nextRuleSets.length,
+            });
             return updatePrimaryOrganisationWithSettings({
                 ...baseConfig,
                 schedulingRuleSets: nextRuleSets,
@@ -5405,6 +5574,14 @@ const InitialSetupWizard: React.FC<{
     ];
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
+    useEffect(() => {
+        if (visibleStep?.id === 'crew' || visibleStep?.id === 'build-rules') {
+            pushWizardStep16_18Trace('view:step-opened', {
+                stepId: visibleStep.id,
+                stepTitle: visibleStep.title,
+            });
+        }
+    }, [visibleStep?.id, wizardStep]);
     useEffect(() => {
         if (!wizardPageMenuOpen) return;
         const animationFrameId = window.requestAnimationFrame(() => {
@@ -8843,12 +9020,36 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events.</p>,
                 <div className="space-y-3">
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-900 hover:bg-sky-100"
+                            onClick={() => downloadWizardStep16_18Trace('manual-step-16-crew')}
+                        >
+                            Download Sync Trace
+                        </button>
+                    </div>
                     <div className="grid gap-3 md:grid-cols-2">
-                        {wizardDataListField('Aircraft / resource', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => updateCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'Enter aircraft code')}
+                        {wizardDataListField('Aircraft / resource', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => {
+                            pushWizardStep16_18Trace('edit:crew-aircraft-code', { value });
+                            updateCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() }));
+                        }, Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'Enter aircraft code')}
                     </div>
                     <div className="grid gap-3 xl:grid-cols-2">
-                        {renderCrewCompositionEditor('Normal crew required', crewDraft.standardSeats, (value) => updateCrewDraft((draft) => ({ ...draft, standardSeats: value })))}
-                        {renderCrewCompositionEditor('Other approved crew composition', alternateCrewDraft, setAlternateCrewDraft, 'Add crew role')}
+                        {renderCrewCompositionEditor('Normal crew required', crewDraft.standardSeats, (value) => {
+                            pushWizardStep16_18Trace('edit:crew-normal', {
+                                value,
+                                parsed: parseRoleRequirementsText(value),
+                            });
+                            updateCrewDraft((draft) => ({ ...draft, standardSeats: value }));
+                        })}
+                        {renderCrewCompositionEditor('Other approved crew composition', alternateCrewDraft, (value) => {
+                            pushWizardStep16_18Trace('edit:crew-alternate', {
+                                value,
+                                parsed: parseRoleRequirementsText(value),
+                            });
+                            setAlternateCrewDraft(value);
+                        }, 'Add crew role')}
                     </div>
                 </div>,
             );
@@ -8868,6 +9069,15 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the current values and refine them later in Settings.</p>,
                 <div className="space-y-4">
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-900 hover:bg-sky-100"
+                            onClick={() => downloadWizardStep16_18Trace('manual-step-18-build-rules')}
+                        >
+                            Download Sync Trace
+                        </button>
+                    </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <p className={wizardLabelClass}>Business rules</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -8893,9 +9103,18 @@ const InitialSetupWizard: React.FC<{
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <p className={wizardLabelClass}>Event limits</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-3">
-                            {wizardField('Maximum events per day', buildRulesDraft.maxEventsPerDay, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxEventsPerDay: value })), undefined, 'Optional')}
-                            {wizardField('Maximum flights per day', buildRulesDraft.maxFlightsPerDay, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxFlightsPerDay: value })), undefined, 'Optional')}
-                            {wizardField('Min Gap between events minutes', buildRulesDraft.minGapBetweenEventsMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, minGapBetweenEventsMinutes: value })), undefined, '0')}
+                            {wizardField('Maximum events per day', buildRulesDraft.maxEventsPerDay, (value) => {
+                                pushWizardStep16_18Trace('edit:build-rules-max-events-per-day', { value });
+                                updateBuildRulesDraft((draft) => ({ ...draft, maxEventsPerDay: value }));
+                            }, undefined, 'Optional')}
+                            {wizardField('Maximum flights per day', buildRulesDraft.maxFlightsPerDay, (value) => {
+                                pushWizardStep16_18Trace('edit:build-rules-max-flights-per-day', { value });
+                                updateBuildRulesDraft((draft) => ({ ...draft, maxFlightsPerDay: value }));
+                            }, undefined, 'Optional')}
+                            {wizardField('Min Gap between events minutes', buildRulesDraft.minGapBetweenEventsMinutes, (value) => {
+                                pushWizardStep16_18Trace('edit:build-rules-min-gap-between-events-minutes', { value });
+                                updateBuildRulesDraft((draft) => ({ ...draft, minGapBetweenEventsMinutes: value }));
+                            }, undefined, '0')}
                         </div>
                     </div>
                 </div>,
