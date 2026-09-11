@@ -3250,6 +3250,15 @@ const InitialSetupWizard: React.FC<{
         maxFlightsPerDay: '',
         minGapBetweenEventsMinutes: '0',
     });
+    const buildRulesDraftDirtyRef = useRef(false);
+    const updateBuildRulesDraft = (updater: typeof buildRulesDraft | ((current: typeof buildRulesDraft) => typeof buildRulesDraft)) => {
+        buildRulesDraftDirtyRef.current = true;
+        setBuildRulesDraft((current) => (
+            typeof updater === 'function'
+                ? (updater as (current: typeof buildRulesDraft) => typeof buildRulesDraft)(current)
+                : updater
+        ));
+    };
     const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
     const [staffDraft, setStaffDraft] = useState('Surname, First | UNIT-01 | Pilot | Qualification');
     const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = useState('Course 1');
@@ -3330,6 +3339,15 @@ const InitialSetupWizard: React.FC<{
     };
     const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
     const [currencyDraft, setCurrencyDraft] = useState('PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1');
+    const currencyDraftDirtyRef = useRef(false);
+    const updateCurrencyDraft = (updater: string | ((current: string) => string)) => {
+        currencyDraftDirtyRef.current = true;
+        setCurrencyDraft((current) => (
+            typeof updater === 'function'
+                ? (updater as (current: string) => string)(current)
+                : updater
+        ));
+    };
     const [scoringDraft, setScoringDraft] = useState(defaultWizardScoringDraft);
     const [wizardScoringPhraseBank, setWizardScoringPhraseBank] = useState<PhraseBank>(() => wizardScoringRowsToPhraseBank(defaultWizardScoringDraft));
     const [wizardScoringTab, setWizardScoringTab] = useState<'Airmanship' | 'Preparation' | 'Technique' | 'Elements'>('Airmanship');
@@ -3517,10 +3535,14 @@ const InitialSetupWizard: React.FC<{
         };
     };
     const buildHydratedBuildRulesDraft = () => {
-        const ruleSet = (platformConfig?.schedulingRuleSets || []).find((item: any) => (
-            normaliseUnitSettingsIdentifier(item?.unitCode) === normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode)
+        const targetUnitKey = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+        const ruleSets = Array.isArray(platformConfig?.schedulingRuleSets) ? platformConfig.schedulingRuleSets : [];
+        const ruleSet = ruleSets.find((item: any) => (
+            targetUnitKey
+            && normaliseUnitSettingsIdentifier(item?.unitCode) === targetUnitKey
             && String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
-        )) || (platformConfig?.schedulingRuleSets || [])[0];
+            && item?.isActive !== false
+        ));
         if (!ruleSet) {
             const savedBuildRules = getSavedWizardString('buildRules', 'buildRulesDraft');
             return savedBuildRules ? parseHydratedBuildRulesDraft(savedBuildRules) : null;
@@ -3660,8 +3682,21 @@ const InitialSetupWizard: React.FC<{
         return rows.length > 0 ? formatWizardSharingRows(rows) : '';
     };
     const buildHydratedCurrencyDraft = () => {
-        return crewCompositionSettings.currencyProfiles.length > 0
-            ? formatWizardCurrencyRows(crewCompositionSettings.currencyProfiles.map((profile: any) => ({
+        const targetUnitKey = normaliseUnitSettingsIdentifier(unitDraft.code || currentUnit?.code || unitCode);
+        const targetAircraftKey = normaliseUnitSettingsIdentifier(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || '');
+        const currencyProfiles = Array.isArray(crewCompositionSettings.currencyProfiles) ? crewCompositionSettings.currencyProfiles : [];
+        const matchingProfiles = currencyProfiles.filter((profile: any) => {
+            const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || '');
+            const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || '');
+            const unitMatches = !targetUnitKey || !profileUnitKey || profileUnitKey === targetUnitKey;
+            const aircraftMatches = !targetAircraftKey || !profileAircraftKey || profileAircraftKey === targetAircraftKey;
+            return unitMatches
+                && aircraftMatches
+                && String(profile?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+                && profile?.isActive !== false;
+        });
+        return matchingProfiles.length > 0
+            ? formatWizardCurrencyRows(matchingProfiles.map((profile: any) => ({
                 name: String(profile.name || profile.currency || profile.code || ''),
                 code: String(profile.code || profile.name || ''),
                 crew: String(profile.crew || 'Standard crew'),
@@ -3730,7 +3765,7 @@ const InitialSetupWizard: React.FC<{
         const nextStaffCurrencyEvents = buildHydratedStaffCurrencyEventsDraft();
         if (nextCrewLabels) setCrewLabelsDraft(nextCrewLabels);
         if (nextAlternateCrews) setAlternateCrewDraft(nextAlternateCrews);
-        if (nextBuildRules) setBuildRulesDraft(nextBuildRules);
+        if (nextBuildRules && !buildRulesDraftDirtyRef.current) setBuildRulesDraft(nextBuildRules);
         if (savedStaff) setStaffDraft(savedStaff);
         if (savedTraineeCourses) {
             setTraineeCourseOptionsDraft(savedTraineeCourses);
@@ -3741,7 +3776,7 @@ const InitialSetupWizard: React.FC<{
         if (nextRanksAndLabels) setRankLabelsDraft(nextRanksAndLabels);
         setRankSettingsDraft(nextRankSettings);
         if (nextResourceSharing) setResourceSharingDraft(nextResourceSharing);
-        if (nextCurrencies) setCurrencyDraft(nextCurrencies);
+        if (nextCurrencies && !currencyDraftDirtyRef.current) setCurrencyDraft(nextCurrencies);
         setWizardScoringPhraseBank(nextScoringPhraseBank);
         setScoringDraft(wizardPhraseBankToScoringDraft(nextScoringPhraseBank));
         if (nextStaffCurrencyEvents) setStaffCurrencyEventsDraft(nextStaffCurrencyEvents);
@@ -3945,6 +3980,8 @@ const InitialSetupWizard: React.FC<{
         trainingDraftDirtyRef.current = false;
         unitModulesDraftDirtyRef.current = false;
         crewRolesDraftDirtyRef.current = false;
+        buildRulesDraftDirtyRef.current = false;
+        currencyDraftDirtyRef.current = false;
     }, [currentUnit?.code, unitCode]);
 
     useEffect(() => {
@@ -4599,6 +4636,7 @@ const InitialSetupWizard: React.FC<{
                 targetUnitCode
                 && normaliseUnitSettingsIdentifier(ruleSet?.unitCode) === normaliseUnitSettingsIdentifier(targetUnitCode)
                 && String(ruleSet?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+                && ruleSet?.isActive !== false
             ));
             const existingRule = existingIndex >= 0 ? ruleSets[existingIndex] : null;
             const nextRule = {
@@ -4686,10 +4724,14 @@ const InitialSetupWizard: React.FC<{
     };
 
     const saveCurrencyProfilesDraft = () => {
+        const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
+        const targetAircraftTypeCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || '').trim().toUpperCase();
+        const targetUnitKey = normaliseUnitSettingsIdentifier(targetUnitCode);
+        const targetAircraftKey = normaliseUnitSettingsIdentifier(targetAircraftTypeCode);
         const currencyProfiles = parseWizardCurrencyRows(currencyDraft).map((row, index) => ({
             id: createWizardRecordId('currency-profile'),
-            unitCode: String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase(),
-            aircraftTypeCode: String(resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || '').trim().toUpperCase(),
+            unitCode: targetUnitCode,
+            aircraftTypeCode: targetAircraftTypeCode,
             name: row.name || row.currency || row.code || `Currency ${index + 1}`,
             code: (row.code || row.name || `CUR${index + 1}`).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || `CUR${index + 1}`,
             crew: row.crew || 'Standard crew',
@@ -4698,23 +4740,38 @@ const InitialSetupWizard: React.FC<{
             aircraftCount: Math.max(1, Math.round(Number(row.aircraftCount) || 1)),
             status: 'ACTIVE',
         })).filter((profile) => profile.name || profile.code);
-        saveWizardConfig('Currency profiles saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
-            ...settings,
-            crewCompositionSettings: normaliseCrewCompositionSettings({
-                ...(settings.crewCompositionSettings || {}),
-                currencyProfiles,
-            }),
-            initialSetupWizardDraft: {
-                ...(settings.initialSetupWizardDraft || {}),
-                currencies: currencyDraft,
-                updatedAt: new Date().toISOString(),
-            },
-            initialSetupWizardDrafts: {
-                ...(settings.initialSetupWizardDrafts || {}),
-                currencyDraft,
-                updatedAt: new Date().toISOString(),
-            },
-        })));
+        saveWizardConfig('Currency profiles saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+            const existingProfiles = Array.isArray(settings.crewCompositionSettings?.currencyProfiles)
+                ? settings.crewCompositionSettings.currencyProfiles
+                : [];
+            const shouldReplaceProfile = (profile: any) => {
+                const profileUnitKey = normaliseUnitSettingsIdentifier(profile?.unitCode || profile?.unit || '');
+                const profileAircraftKey = normaliseUnitSettingsIdentifier(profile?.aircraftTypeCode || profile?.aircraftCode || profile?.aircraft || '');
+                const unitMatches = targetUnitKey ? (!profileUnitKey || profileUnitKey === targetUnitKey) : !profileUnitKey;
+                const aircraftMatches = targetAircraftKey ? (!profileAircraftKey || profileAircraftKey === targetAircraftKey) : !profileAircraftKey;
+                return unitMatches && aircraftMatches;
+            };
+            return {
+                ...settings,
+                crewCompositionSettings: normaliseCrewCompositionSettings({
+                    ...(settings.crewCompositionSettings || {}),
+                    currencyProfiles: [
+                        ...existingProfiles.filter((profile: any) => !shouldReplaceProfile(profile)),
+                        ...currencyProfiles,
+                    ],
+                }),
+                initialSetupWizardDraft: {
+                    ...(settings.initialSetupWizardDraft || {}),
+                    currencies: currencyDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+                initialSetupWizardDrafts: {
+                    ...(settings.initialSetupWizardDrafts || {}),
+                    currencyDraft,
+                    updatedAt: new Date().toISOString(),
+                },
+            };
+        }));
     };
 
     const saveScoringMatrixDraft = () => {
@@ -6969,7 +7026,7 @@ const InitialSetupWizard: React.FC<{
         const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {
             const nextRows = [...editableRows];
             nextRows[index] = { ...nextRows[index], [field]: value };
-            setCurrencyDraft(formatWizardCurrencyRows(nextRows));
+            updateCurrencyDraft(formatWizardCurrencyRows(nextRows));
         };
         return (
             <div className="space-y-3">
@@ -6984,12 +7041,12 @@ const InitialSetupWizard: React.FC<{
                         {wizardField('CONFIG', row.config || 'ANY', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
                         {wizardField('Currency', row.currency || '', (value) => updateRow(index, 'currency', value), undefined, 'PIC Currency')}
                         {wizardField('No. aircraft', row.aircraftCount || '1', (value) => updateRow(index, 'aircraftCount', value), undefined, '1')}
-                        <button type="button" className={wizardSmallButtonClass} onClick={() => setCurrencyDraft(formatWizardCurrencyRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
+                        <button type="button" className={wizardSmallButtonClass} onClick={() => updateCurrencyDraft(formatWizardCurrencyRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
                             Delete
                         </button>
                     </div>
                 ))}
-                <button type="button" className={wizardSmallButtonClass} onClick={() => setCurrencyDraft(formatWizardCurrencyRows([...editableRows, { name: '', code: '', crew: '', config: 'ANY', currency: '', aircraftCount: '1' }]))}>
+                <button type="button" className={wizardSmallButtonClass} onClick={() => updateCurrencyDraft(formatWizardCurrencyRows([...editableRows, { name: '', code: '', crew: '', config: 'ANY', currency: '', aircraftCount: '1' }]))}>
                     Add currency
                 </button>
             </div>
@@ -8072,6 +8129,8 @@ const InitialSetupWizard: React.FC<{
         saveCrewDraft();
         saveRankSettingsDraft();
         saveTrainingDraft();
+        saveBuildRulesDraft();
+        saveCurrencyProfilesDraft();
         saveWizardConfig('Setup saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
             ...settings,
             personnelDisplaySettings: buildRankSettingsToSave(settings),
@@ -8800,31 +8859,31 @@ const InitialSetupWizard: React.FC<{
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <p className={wizardLabelClass}>Business rules</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
-                            {wizardField('Rule set', buildRulesDraft.businessRules, (value) => setBuildRulesDraft((draft) => ({ ...draft, businessRules: value })), undefined, 'Use configured rule set')}
-                            {wizardField('Max dispatch per hour', buildRulesDraft.maxDispatchPerHour, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), undefined, '2')}
+                            {wizardField('Rule set', buildRulesDraft.businessRules, (value) => updateBuildRulesDraft((draft) => ({ ...draft, businessRules: value })), undefined, 'Use configured rule set')}
+                            {wizardField('Max dispatch per hour', buildRulesDraft.maxDispatchPerHour, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), undefined, '2')}
                         </div>
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <p className={wizardLabelClass}>Duty limits</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
-                            {wizardField('Maximum crew duty hours', buildRulesDraft.maxCrewDutyHours, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxCrewDutyHours: value })), undefined, '12')}
-                            {wizardField('Preferred duty period hours', buildRulesDraft.preferredDutyHours, (value) => setBuildRulesDraft((draft) => ({ ...draft, preferredDutyHours: value })), undefined, '10')}
+                            {wizardField('Maximum crew duty hours', buildRulesDraft.maxCrewDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxCrewDutyHours: value })), undefined, '12')}
+                            {wizardField('Preferred duty period hours', buildRulesDraft.preferredDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, preferredDutyHours: value })), undefined, '10')}
                         </div>
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <p className={wizardLabelClass}>Turnaround times</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-3 md:items-end">
-                            {wizardField('Aircraft turnaround minutes', buildRulesDraft.aircraftTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, aircraftTurnaroundMinutes: value })), undefined, '60')}
-                            {wizardField('Simulator turnaround minutes', buildRulesDraft.simTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, simTurnaroundMinutes: value })), undefined, '30')}
-                            {wizardField('Trainer turnaround minutes', buildRulesDraft.trainerTurnaroundMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, trainerTurnaroundMinutes: value })), undefined, '30')}
+                            {wizardField('Aircraft turnaround minutes', buildRulesDraft.aircraftTurnaroundMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, aircraftTurnaroundMinutes: value })), undefined, '60')}
+                            {wizardField('Simulator turnaround minutes', buildRulesDraft.simTurnaroundMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, simTurnaroundMinutes: value })), undefined, '30')}
+                            {wizardField('Trainer turnaround minutes', buildRulesDraft.trainerTurnaroundMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, trainerTurnaroundMinutes: value })), undefined, '30')}
                         </div>
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <p className={wizardLabelClass}>Event limits</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-3">
-                            {wizardField('Maximum events per day', buildRulesDraft.maxEventsPerDay, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxEventsPerDay: value })), undefined, 'Optional')}
-                            {wizardField('Maximum flights per day', buildRulesDraft.maxFlightsPerDay, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxFlightsPerDay: value })), undefined, 'Optional')}
-                            {wizardField('Min Gap between events minutes', buildRulesDraft.minGapBetweenEventsMinutes, (value) => setBuildRulesDraft((draft) => ({ ...draft, minGapBetweenEventsMinutes: value })), undefined, '0')}
+                            {wizardField('Maximum events per day', buildRulesDraft.maxEventsPerDay, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxEventsPerDay: value })), undefined, 'Optional')}
+                            {wizardField('Maximum flights per day', buildRulesDraft.maxFlightsPerDay, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxFlightsPerDay: value })), undefined, 'Optional')}
+                            {wizardField('Min Gap between events minutes', buildRulesDraft.minGapBetweenEventsMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, minGapBetweenEventsMinutes: value })), undefined, '0')}
                         </div>
                     </div>
                 </div>,
