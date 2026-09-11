@@ -1191,6 +1191,133 @@ html[data-theme="light"] body {
 .scoring-matrix-inline--wizard .fixed label:hover {
     background: #f8fafc !important;
 }
+
+/* Wizard embedded Settings sections: keep Settings behaviour with the wizard light theme. */
+.wizard-settings-embed {
+    background: #ffffff !important;
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed .bg-gray-950,
+.wizard-settings-embed .bg-gray-950\/55,
+.wizard-settings-embed .bg-gray-900,
+.wizard-settings-embed .bg-gray-900\/50,
+.wizard-settings-embed .bg-gray-900\/70,
+.wizard-settings-embed .bg-gray-800,
+.wizard-settings-embed .bg-gray-800\/50,
+.wizard-settings-embed .bg-slate-950,
+.wizard-settings-embed .bg-slate-950\/55,
+.wizard-settings-embed .bg-slate-900,
+.wizard-settings-embed .bg-slate-900\/70 {
+    background: #ffffff !important;
+}
+
+.wizard-settings-embed section,
+.wizard-settings-embed .rounded-lg,
+.wizard-settings-embed .rounded-xl {
+    background-color: #ffffff !important;
+}
+
+.wizard-settings-embed .border-gray-800,
+.wizard-settings-embed .border-gray-700,
+.wizard-settings-embed .border-gray-700\/30,
+.wizard-settings-embed .border-gray-600,
+.wizard-settings-embed .border-slate-800,
+.wizard-settings-embed .border-slate-700,
+.wizard-settings-embed .border-cyan-500\/20,
+.wizard-settings-embed .border-cyan-500\/30 {
+    border-color: #e2e8f0 !important;
+}
+
+.wizard-settings-embed .bg-cyan-500\/10,
+.wizard-settings-embed .bg-sky-500\/10 {
+    background: #eff6ff !important;
+}
+
+.wizard-settings-embed .text-white,
+.wizard-settings-embed .text-gray-100,
+.wizard-settings-embed .text-gray-200,
+.wizard-settings-embed .text-gray-300,
+.wizard-settings-embed .text-slate-100,
+.wizard-settings-embed .text-slate-200,
+.wizard-settings-embed .text-slate-300 {
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed .text-gray-400,
+.wizard-settings-embed .text-gray-500,
+.wizard-settings-embed .text-slate-400,
+.wizard-settings-embed .text-slate-500 {
+    color: #64748b !important;
+}
+
+.wizard-settings-embed .text-cyan-100,
+.wizard-settings-embed .text-cyan-200,
+.wizard-settings-embed .text-cyan-300,
+.wizard-settings-embed .text-cyan-400,
+.wizard-settings-embed .text-sky-300,
+.wizard-settings-embed .text-sky-400 {
+    color: #1d4ed8 !important;
+}
+
+.wizard-settings-embed input,
+.wizard-settings-embed select,
+.wizard-settings-embed textarea,
+.wizard-settings-embed .bg-gray-950 input,
+.wizard-settings-embed .bg-gray-950 select,
+.wizard-settings-embed .bg-gray-950 textarea {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+.wizard-settings-embed input::placeholder,
+.wizard-settings-embed textarea::placeholder {
+    color: #94a3b8 !important;
+}
+
+.wizard-settings-embed input:focus,
+.wizard-settings-embed select:focus,
+.wizard-settings-embed textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 1px #3b82f6 !important;
+}
+
+.wizard-settings-embed .btn-aluminium-brushed {
+    color: #111827 !important;
+}
+
+.wizard-settings-embed .bg-sky-600,
+.wizard-settings-embed .bg-cyan-600,
+.wizard-settings-embed .bg-blue-600 {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+.wizard-settings-embed .bg-green-600 {
+    background: #16a34a !important;
+    border-color: #16a34a !important;
+    color: #ffffff !important;
+}
+
+.wizard-settings-embed .bg-red-600,
+.wizard-settings-embed .text-red-400,
+.wizard-settings-embed .hover\:text-red-400:hover {
+    color: #dc2626 !important;
+}
+
+.wizard-settings-embed .bg-red-600 {
+    background: #dc2626 !important;
+    border-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+.wizard-settings-embed .shadow,
+.wizard-settings-embed .shadow-lg,
+.wizard-settings-embed .shadow-xl {
+    box-shadow: none !important;
+}
 /* NEO Build Indicator Styles */
 @keyframes neo-build-pulse {
     0%, 100% {
