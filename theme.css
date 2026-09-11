@@ -1685,6 +1685,41 @@ html[data-theme="light"] body {
     background: #f8fafc !important;
     color: #334155 !important;
 }
+
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings {
+    background: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings > .rounded-lg,
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings .overflow-hidden.rounded-lg {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings .border-b.bg-gray-950\/65 {
+    background: #e2e8f0 !important;
+    border-color: #cbd5e1 !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings .grid.p-3,
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings .rounded-lg.border.border-gray-800.bg-gray-900\/80,
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings .rounded-lg.border.border-gray-700.bg-gray-950\/40 {
+    background: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings label.border-gray-800:not(:has(input:checked)) {
+    background: #ffffff !important;
+    border-color: #dbe3ed !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings input:not([type="checkbox"]),
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings select,
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings textarea {
+    background: #ffffff !important;
+    border-color: #d6dee9 !important;
+}
 /* NEO Build Indicator Styles */
 @keyframes neo-build-pulse {
     0%, 100% {
