@@ -36327,28 +36327,135 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         " to finish the wizard."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 text-sm", children: [
-        ["Organisation", `${organisationDraft.name || organisationDraft.code || "Not set"} (${organisationDraft.code || "no code"})`],
-        ["Structure", `${fromLines(organisationDraft.level1Options).length} ${organisationDraft.level1Name || "Level 1"}, ${fromLines(organisationDraft.level2Options).length} ${organisationDraft.level2Name || "Level 2"}, ${fromLines(organisationDraft.level3Options).length} ${organisationDraft.level3Name || "Level 3"} / ${organisationPreviewLinks.length} parent links`],
-        ["Location", `${locationDraft.code || "Not set"} - ${locationDraft.name || "not named"}`],
-        ["Units today", parseWizardUnitRows(unitsTodayDraft).map((unit) => `${unit.code} ${unit.name}`).join("\n") || "Not set"],
-        ["Locations today", parseWizardLocationRows(locationsTodayDraft).map((location) => `${location.icao} / ${location.iata || "-"} / ${location.name}`).join("\n") || "Not set"],
-        ["Unit", `${unitDraft.code || "Not set"} - ${getWizardOperationalModelLabel(unitDraft.operationalModel)}`],
-        ["Resources", `${resourceDraft.aircraftCode || "Not set"} / Aircraft ${resourceDraft.aircraft || "0"} / Sim ${resourceDraft.sim || "0"} / Trainer ${resourceDraft.trainer || "0"} / Standby ${resourceDraft.standby || "0"} / Ground ${resourceDraft.ground || "0"}`],
-        ["Crew", crewDraft.standardSeats || "Not set"],
-        ["Build rules", buildRulesDraftText || "Not set"],
-        ["Staff", staffDraft || "Not set"],
-        ["Trainees", unitDraft.hasTrainees ? traineeDraft || "Not set" : "Trainees off"],
-        ["Master LMP", `${trainingDraft.lmpCode || "Not set"} - ${trainingDraft.lmpName || "not named"}`],
-        ["Modules", unitModulesDraft || "Not set"],
-        ["Ranks and labels", `${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset] || "Australia"} / ${rankSettingsDraft.sortMode === "alphabetical" ? "Alphabetical" : "Rank then name"} / Trainees use staff rank order`],
-        ["Sharing", resourceSharingDraft || "Not set"],
-        ["Currencies", currencyDraft || "Not set"],
-        ["User permissions", activeUserAccess.length > 0 ? `${activeUserAccess.length} active access ${activeUserAccess.length === 1 ? "scope" : "scopes"}` : "Not set"],
-        ["Scoring", scoringDraft || "Not set"],
-        ["Staff currency events", staffCurrencyEventsDraft || "Not set"]
-      ].map(([label, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[120px_minmax(0,1fr)]", children: [
+        {
+          label: "Organisation name",
+          value: organisationDraft.name || organisationDraft.code || "Not set",
+          help: `This is the organisation the ${unitDraft.code || "unit"} belongs to.`
+        },
+        {
+          label: "Organisation levels",
+          value: `${fromLines(organisationDraft.level1Options).length} names at Level 1; ${fromLines(organisationDraft.level2Options).length} names at Level 2; ${fromLines(organisationDraft.level3Options).length} names at Level 3. ${organisationPreviewLinks.length} reporting links set.`,
+          help: "Check that the organisation tree matches how your real organisation is arranged."
+        },
+        {
+          label: "Operating location",
+          value: `${locationDraft.name || "Not named"}${locationDraft.code ? ` (${locationDraft.code})` : ""}`,
+          help: "This is the main airfield or base used by this unit."
+        },
+        {
+          label: "Locations to create",
+          value: parseWizardLocationRows(locationsTodayDraft).map((location) => `${location.name || "Unnamed location"} (${location.icao || "no ICAO"}${location.iata ? `, ${location.iata}` : ""})`).join("\n") || "Not set",
+          help: "These are the bases or airfields available to the organisation."
+        },
+        {
+          label: "Units to create",
+          value: parseWizardUnitRows(unitsTodayDraft).map((unit) => `${unit.name || unit.code || "Unnamed unit"}${unit.code ? ` (${unit.code})` : ""}`).join("\n") || "Not set",
+          help: "These are the squadrons, schools, departments or other units being added now."
+        },
+        {
+          label: "This unit",
+          value: `${unitDraft.name || unitDraft.code || "Not set"} uses the ${getWizardOperationalModelLabel(unitDraft.operationalModel)}.`,
+          help: "Check this is the unit you are configuring and that the operating model is correct."
+        },
+        {
+          label: "Aircraft and rows",
+          value: `${resourceDraft.aircraftCode || "No aircraft type set"}: ${resourceDraft.aircraft || "0"} aircraft rows, ${resourceDraft.sim || "0"} simulator rows, ${resourceDraft.trainer || "0"} trainer rows, ${resourceDraft.standby || "0"} standby rows, ${resourceDraft.ground || "0"} ground rows.`,
+          help: "These numbers control what rows appear on the DFP schedule for this unit."
+        },
+        {
+          label: "Crew roles",
+          value: parseWizardCrewRoleRows(crewRolesDraft).map((row) => `${row.label || row.role || "Crew role"}${row.models ? ` - used by ${row.models}` : ""}`).join("\n") || "Not set",
+          help: "These are the crew position names users can choose from when setting crew rules."
+        },
+        {
+          label: "Normal crew",
+          value: parseRoleRequirementsText(crewDraft.standardSeats).map((row) => `${row.count} x ${row.role}`).join("\n") || "Not set",
+          help: "This tells NEO what a normal crew looks like for the aircraft or resource."
+        },
+        {
+          label: "Scheduling limits",
+          value: buildRulesDraftText || "Not set",
+          help: "These limits help prevent the build from placing too much flying, too close together, or beyond duty limits."
+        },
+        {
+          label: "Resource and staff sharing",
+          value: parseWizardSharingRows(resourceSharingDraft).map((row) => {
+            const sharingName = row.type || "Sharing";
+            const state = /^on$/i.test(row.enabled) ? "On" : "Off";
+            const sharedWith = row.units ? ` Shared with: ${row.units}.` : "";
+            return `${sharingName}: ${state}.${sharedWith} ${row.consequence || ""}`.trim();
+          }).join("\n") || "Not set",
+          help: "This shows whether the unit can share aircraft, resource rows or staff with other units."
+        },
+        {
+          label: "App areas",
+          value: parseWizardUnitModuleDraftRows().map((row) => `${row.module || "App area"}: ${/^on$/i.test(row.enabled) ? "On" : "Off"}`).join("\n") || "Not set",
+          help: "These choices decide which major parts of DFP NEO this unit can use."
+        },
+        {
+          label: "Rank display",
+          value: `Rank preset: ${RANK_EQUIVALENCY_PRESET_LABELS[rankSettingsDraft.preset] || "Australia"}. Lists sort by ${rankSettingsDraft.sortMode === "alphabetical" ? "name only" : "rank, then name"}. Trainees use the staff rank order.`,
+          help: "This controls how names are ordered in staff, trainee and crew selection lists."
+        },
+        {
+          label: "Training report names",
+          value: (() => {
+            const row = parseWizardTrainingReportRows(trainingRecordsDraft)[0];
+            if (!row) return "Not set";
+            return `${row.organisationFormName || row.genericFormName || "Training report"} uses grades ${row.lowestGrade || "0"} to ${row.highestGrade || "5"}. Satisfactory is shown as "${row.satisfactoryLabel || "PASS"}" and unsatisfactory is shown as "${row.unsatisfactoryLabel || "FAIL"}".`;
+          })(),
+          help: "These names and grading labels are what users see when completing training reports."
+        },
+        {
+          label: "Scoring wording",
+          value: (() => {
+            const rows = parseWizardScoringRows(scoringDraft);
+            return rows.length > 0 ? `${rows.length} assessment area${rows.length === 1 ? "" : "s"} set: ${rows.map((row) => row.dimension).filter(Boolean).join(", ") || "names not set"}.` : "Not set";
+          })(),
+          help: "These are the phrases instructors use to describe performance at each grade level."
+        },
+        {
+          label: "Currencies and checks",
+          value: parseWizardCurrencyRows(currencyDraft).map((row) => `${row.name || row.code || "Currency"}${row.code ? ` (${row.code})` : ""}${row.currency ? ` tracks ${row.currency}` : ""}.`).join("\n") || "Not set",
+          help: "These are the currency or qualification records the unit will track."
+        },
+        {
+          label: "Staff currency presets",
+          value: parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).map((row) => `${row.name || row.shortTitle || "Staff currency event"}${row.resourceType ? ` - ${row.resourceType}` : ""}${row.duration ? `, ${row.duration} minutes` : ""}.`).join("\n") || "Not set",
+          help: "These are reusable starting points for common staff currency events."
+        },
+        {
+          label: "User permissions",
+          value: activeUserAccess.length > 0 ? `${activeUserAccess.length} active user access record${activeUserAccess.length === 1 ? "" : "s"} set.` : "Not set",
+          help: "This controls who can open this unit and what they are allowed to do."
+        },
+        {
+          label: "Staff list",
+          value: (() => {
+            const rows = parseWizardStaffRows(staffDraft).filter((row) => row.surname || row.givenNames);
+            return rows.length > 0 ? `${rows.length} staff member${rows.length === 1 ? "" : "s"} ready to add: ${rows.slice(0, 5).map((row) => `${row.givenNames} ${row.surname}`.trim()).join(", ")}${rows.length > 5 ? ", and others" : ""}.` : "Not set";
+          })(),
+          help: "These staff records can be added now or after the wizard is finished."
+        },
+        {
+          label: "Trainee list",
+          value: unitDraft.hasTrainees ? (() => {
+            const rows = parseWizardTraineeRows(traineeDraft).filter((row) => row.surname || row.givenNames);
+            return rows.length > 0 ? `${rows.length} trainee${rows.length === 1 ? "" : "s"} ready to add: ${rows.slice(0, 5).map((row) => `${row.givenNames} ${row.surname}`.trim()).join(", ")}${rows.length > 5 ? ", and others" : ""}.` : "Not set";
+          })() : "Trainees are switched off for this unit.",
+          help: "These trainee records can be added now or after the wizard is finished."
+        },
+        {
+          label: "Training event list",
+          value: `${trainingDraft.lmpName || trainingDraft.lmpCode || "Not set"}${trainingDraft.lmpCode ? ` (${trainingDraft.lmpCode})` : ""}`,
+          help: "This is the training event list the unit will use for syllabus or LMP events."
+        }
+      ].map(({ label, value, help }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[170px_minmax(0,1fr)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black uppercase tracking-[0.12em] text-slate-500", children: label }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-pre-line font-bold text-slate-900", children: value })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-pre-line font-bold text-slate-900", children: value }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs font-semibold leading-5 text-slate-500", children: help })
+        ] })
       ] }, label)) }),
       "Save setup",
       saveAllWizardDrafts
