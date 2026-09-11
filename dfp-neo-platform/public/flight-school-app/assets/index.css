@@ -1720,6 +1720,24 @@ html[data-theme="light"] body {
     background: #ffffff !important;
     border-color: #d6dee9 !important;
 }
+
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings .aircraft-setup-identity-grid {
+    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr) minmax(0, 0.95fr) minmax(0, 0.82fr) minmax(0, 0.82fr) !important;
+    align-items: end !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings .aircraft-setup-identity-grid > * {
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+}
+
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings .aircraft-setup-identity-grid input,
+.wizard-settings-embed #platform-aircraft-setup #platform-aircraft-type-settings .aircraft-setup-identity-grid select {
+    width: 100% !important;
+    min-width: 0 !important;
+}
 /* NEO Build Indicator Styles */
 @keyframes neo-build-pulse {
     0%, 100% {

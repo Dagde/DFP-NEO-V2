@@ -24937,7 +24937,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 p-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[0.7fr_1.25fr_0.9fr_0.8fr_0.8fr]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "aircraft-setup-identity-grid grid gap-3 md:grid-cols-[0.7fr_1.25fr_0.9fr_0.8fr_0.8fr]", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Code", value: aircraft.code, disabled: !canEditResourcePools, onCommit: (value) => updateRow("aircraftTypes", index, { code: value }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Name", value: aircraft.name, disabled: !canEditResourcePools, onCommit: (value) => updateRow("aircraftTypes", index, { name: value }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Category", value: aircraft.category || "Training", disabled: !canEditResourcePools, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) }),

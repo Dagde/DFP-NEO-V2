@@ -10672,7 +10672,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
 
                   <div className="grid gap-3 p-3">
-                    <div className="grid gap-3 md:grid-cols-[0.7fr_1.25fr_0.9fr_0.8fr_0.8fr]">
+                    <div className="aircraft-setup-identity-grid grid gap-3 md:grid-cols-[0.7fr_1.25fr_0.9fr_0.8fr_0.8fr]">
                       <DraftField label="Aircraft Code" value={aircraft.code} disabled={!canEditResourcePools} onCommit={(value) => updateRow('aircraftTypes', index, { code: value })} />
                       <DraftField label="Aircraft Name" value={aircraft.name} disabled={!canEditResourcePools} onCommit={(value) => updateRow('aircraftTypes', index, { name: value })} />
                       <SelectField label="Aircraft Category" value={aircraft.category || 'Training'} disabled={!canEditResourcePools} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
