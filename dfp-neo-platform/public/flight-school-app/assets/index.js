@@ -20999,7 +20999,7 @@ This removes it from the master list and from every user assignment that current
         return (accessUserId || accessUsername) && !platformUserIds.has(accessUserId) && !platformUserIds.has(accessUsername);
       }).map((access) => withSearchText({
         id: access.userId || access.username,
-        name: `${access.displayName || access.username || access.userId || "Unknown user"} (missing user record)`,
+        name: `${access.displayName || access.username || access.userId || "Unknown user"} (access scope has no login account)`,
         username: access.username || access.userId || "",
         email: "",
         personnelId: toIdentifier(access.personnelId || access.staffPersonnelId || access.traineePersonnelId)
@@ -21053,7 +21053,7 @@ This removes it from the master list and from every user assignment that current
           traineeLocation: String(trainee?.location || "").trim()
         });
       });
-      const result = [...platformOptions, ...orphanOptions, ...staffOptions, ...traineeOptions].filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index).sort((a, b) => a.name.localeCompare(b.name));
+      const result = [...platformOptions, ...staffOptions, ...traineeOptions, ...orphanOptions].filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index).sort((a, b) => a.name.localeCompare(b.name));
       recordSettingsTraceTiming("userOptions", traceStartedAt);
       return result;
     },

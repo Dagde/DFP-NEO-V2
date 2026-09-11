@@ -6109,7 +6109,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         })
         .map((access) => withSearchText({
           id: access.userId || access.username,
-          name: `${access.displayName || access.username || access.userId || 'Unknown user'} (missing user record)`,
+          name: `${access.displayName || access.username || access.userId || 'Unknown user'} (access scope has no login account)`,
           username: access.username || access.userId || '',
           email: '',
           personnelId: toIdentifier((access as any).personnelId || (access as any).staffPersonnelId || (access as any).traineePersonnelId),
@@ -6183,7 +6183,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           });
         });
 
-      const result = [...platformOptions, ...orphanOptions, ...staffOptions, ...traineeOptions]
+      const result = [...platformOptions, ...staffOptions, ...traineeOptions, ...orphanOptions]
         .filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index)
         .sort((a, b) => a.name.localeCompare(b.name));
       recordSettingsTraceTiming('userOptions', traceStartedAt);
