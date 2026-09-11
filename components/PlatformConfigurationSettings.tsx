@@ -37,7 +37,7 @@ import {
   type RankEquivalencyConfig,
   type RankEquivalencyPresetKey,
 } from '../utils/personnelDisplaySettings';
-import { formatPersonOptionLabel } from '../utils/personIdentity';
+import { formatPersonDisplayName, formatPersonOptionLabel } from '../utils/personIdentity';
 import {
   SCT_LONG_LABEL_MAX_LENGTH,
   SCT_SHORT_LABEL_MAX_LENGTH,
@@ -6081,19 +6081,42 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     String(value || '').split(' – ')[0].split(' - ')[0].trim();
 
   const displayUserName = (user: any): string => {
-    const fullName = `${stripAccessPersonContext(user.firstName)} ${stripAccessPersonContext(user.lastName)}`.trim();
-    return fullName || stripAccessPersonContext(user.displayName) || user.username || user.userId || 'Unknown User';
+    const formattedName = formatPersonDisplayName({
+      firstName: stripAccessPersonContext(user.firstName),
+      lastName: stripAccessPersonContext(user.lastName),
+      displayName: stripAccessPersonContext(user.displayName),
+      username: user.username,
+      userId: user.userId,
+      email: user.email,
+    }, '');
+    return formattedName || 'Unknown User';
   };
 
   const getAccessPersonDisplayName = (person: any, personType?: 'staff' | 'trainee'): string => {
     if (!person) return '';
     if (personType === 'trainee') {
-      return stripAccessPersonContext(person.traineeName || person.name || person.traineeFullName || person.fullName);
+      return formatPersonDisplayName({
+        firstName: person.firstName,
+        lastName: person.lastName || person.surname,
+        name: stripAccessPersonContext(person.traineeName || person.name || person.traineeFullName || person.fullName),
+        fullName: stripAccessPersonContext(person.traineeFullName || person.fullName),
+      });
     }
     if (personType === 'staff') {
-      return stripAccessPersonContext(person.staffName || person.name || person.staffFullName || person.fullName);
+      return formatPersonDisplayName({
+        firstName: person.firstName,
+        lastName: person.lastName || person.surname,
+        name: stripAccessPersonContext(person.staffName || person.name || person.staffFullName || person.fullName),
+        fullName: stripAccessPersonContext(person.staffFullName || person.fullName),
+      });
     }
-    const linkedName = stripAccessPersonContext(person.staffName || person.traineeName || person.name || person.staffFullName || person.traineeFullName || person.fullName);
+    const linkedName = formatPersonDisplayName({
+      firstName: person.firstName,
+      lastName: person.lastName || person.surname,
+      name: stripAccessPersonContext(person.staffName || person.traineeName || person.name || person.staffFullName || person.traineeFullName || person.fullName),
+      fullName: stripAccessPersonContext(person.staffFullName || person.traineeFullName || person.fullName),
+      displayName: stripAccessPersonContext(person.displayName),
+    });
     return linkedName || displayUserName(person);
   };
 
@@ -6241,6 +6264,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         })
         .map((access) => {
           const orphanLabel = access.displayName || access.username || access.userId || 'Unknown user';
+          const formattedOrphanLabel = formatPersonDisplayName(orphanLabel, orphanLabel);
           const looksLikeRole = uniqueValues([
             access.userId,
             access.username,
@@ -6250,7 +6274,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             id: access.userId || access.username,
             name: looksLikeRole
               ? `${orphanLabel} (role saved as user)`
-              : `${orphanLabel} (access scope has no login account)`,
+              : `${formattedOrphanLabel} (access scope has no login account)`,
             username: access.username || access.userId || '',
             email: '',
             personnelId: toIdentifier((access as any).personnelId || (access as any).staffPersonnelId || (access as any).traineePersonnelId),
@@ -6275,9 +6299,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         })
         .map((staff) => {
           const personnelId = toIdentifier(staff?.idNumber || staff?.personnelId || staff?.serviceNumber);
+          const name = getAccessPersonDisplayName(staff, 'staff');
           return withSearchText({
             id: buildStaffAccessId(staff),
-            name: String(staff?.name || staff?.fullName || '').trim(),
+            name,
             username: personnelId || String(staff?.email || '').trim(),
             email: String(staff?.email || '').trim(),
             personnelId,

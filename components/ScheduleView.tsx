@@ -24,6 +24,7 @@ import {
     type PersonnelDisplaySettings,
     type RankEquivalencyPresetKey,
 } from '../utils/personnelDisplaySettings';
+import { formatPersonDisplayName } from '../utils/personIdentity';
 import {
     getInstructorQualificationDefinitions,
     normaliseStaffQualificationCatalogue,
@@ -1956,7 +1957,13 @@ const OrganisationMyUnitSettings: React.FC<{
                 .map((value) => String(value || '').trim())
                 .includes(userId)
         ));
-        const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+        const fullName = formatPersonDisplayName({
+            firstName: user?.firstName,
+            lastName: user?.lastName,
+            displayName: user?.displayName,
+            username: user?.username,
+            userId,
+        });
         return access?.displayName || access?.userName || fullName || user?.username || userId || 'Unknown user';
     };
     const getAccessProfileLabels = (access: any) => {

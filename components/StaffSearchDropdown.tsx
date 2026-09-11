@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { formatPersonOptionLabel, getPersonStableKey } from '../utils/personIdentity';
+import { formatPersonDisplayName, formatPersonOptionLabel, getPersonStableKey } from '../utils/personIdentity';
 
 interface StaffMember {
   id?: string | number;
@@ -76,12 +76,19 @@ const StaffSearchDropdown: React.FC<StaffSearchDropdownProps> = ({
     if (!searchTerm) return staffByUnit;
 
     const filtered = {} as Record<string, StaffMember[]>;
+    const searchValue = searchTerm.toLowerCase();
     Object.entries(staffByUnit).forEach(([unit, members]) => {
-      const filteredMembers = members.filter(person =>
-        person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        person.rank.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (person.unit && person.unit.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      const filteredMembers = members.filter(person => {
+        const displayName = formatPersonDisplayName(person);
+        const reversedDisplayName = displayName.includes(',')
+          ? displayName.split(',').map(part => part.trim()).filter(Boolean).reverse().join(' ')
+          : '';
+        return person.name.toLowerCase().includes(searchValue) ||
+          displayName.toLowerCase().includes(searchValue) ||
+          reversedDisplayName.toLowerCase().includes(searchValue) ||
+          person.rank.toLowerCase().includes(searchValue) ||
+          (person.unit && person.unit.toLowerCase().includes(searchValue));
+      });
       if (filteredMembers.length > 0) {
         filtered[unit] = filteredMembers;
       }
@@ -89,7 +96,18 @@ const StaffSearchDropdown: React.FC<StaffSearchDropdownProps> = ({
     return filtered;
   }, [staffByUnit, searchTerm]);
 
-  const displayValue = selectedStaff || '';
+  const selectedPerson = useMemo(() => {
+    const selectedName = String(selectedStaff || '').trim().toLowerCase();
+    if (!selectedName) return undefined;
+    return staff.find((person) => (
+      person.name.toLowerCase() === selectedName ||
+      formatPersonDisplayName(person).toLowerCase() === selectedName
+    ));
+  }, [selectedStaff, staff]);
+
+  const displayValue = selectedPerson
+    ? formatPersonDisplayName(selectedPerson)
+    : formatPersonDisplayName(selectedStaff || '');
 
   const handleSelect = (staffName: string) => {
     onSelect(staffName);

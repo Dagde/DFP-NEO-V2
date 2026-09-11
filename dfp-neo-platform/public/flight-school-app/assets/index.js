@@ -5616,6 +5616,44 @@ const getSctTerminology = (config, unitCode) => {
 const normalisePersonName = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
 const getPersonDisplayName = (person) => String(person.fullName || person.name || "").trim();
 const stripPersonContext = (value) => String(value || "").split(" – ")[0].split(" - ")[0].replace(/\s*·\s*\d{1,3}(?=\s*(?:\(|$))/g, "").replace(/\s+\((?:N|F\/S|F\/L|R\/S)\)$/i, "").trim();
+const normaliseDisplayCommaName = (value) => {
+  const [surnamePart, ...givenParts] = value.split(",");
+  const surname = surnamePart.trim();
+  const given = givenParts.join(",").trim().replace(/\s+/g, " ");
+  return given ? `${surname}, ${given}` : surname;
+};
+const shouldPreserveDisplayName = (value) => {
+  const text = value.trim();
+  if (!text) return true;
+  if (/^(TBA|N\/A|UNKNOWN USER)$/i.test(text)) return true;
+  if (/^[A-Z0-9_-]+$/i.test(text) && !/\s/.test(text)) return true;
+  if (/^[^\s@]+@[^\s@]+$/.test(text)) return true;
+  if (/^[^\s]+\.[^\s]+$/.test(text)) return true;
+  if (text.includes(",")) return true;
+  const parts = text.split(/\s+/).filter(Boolean);
+  return parts.length === 2 && /^[A-Z]$/i.test(parts[1]);
+};
+const formatPersonDisplayName = (personOrName, fallback = "") => {
+  if (!personOrName) return fallback;
+  if (typeof personOrName === "string") {
+    const text = stripPersonContext(personOrName);
+    if (!text) return fallback;
+    if (text.includes(",")) return normaliseDisplayCommaName(text);
+    if (shouldPreserveDisplayName(text)) return text;
+    const parts = text.split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return text;
+    return `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(" ")}`;
+  }
+  const firstName = stripPersonContext(personOrName.firstName);
+  const lastName = stripPersonContext(personOrName.lastName || personOrName.surname);
+  if (firstName && lastName) return `${lastName}, ${firstName}`;
+  const rawName = stripPersonContext(
+    personOrName.fullName || personOrName.name || personOrName.displayName || ""
+  );
+  if (rawName) return formatPersonDisplayName(rawName, fallback);
+  const username = stripPersonContext(personOrName.username || personOrName.userId || personOrName.email);
+  return username || fallback;
+};
 const getVisualIdSuffix = (value) => {
   const match = String(value || "").match(/\s·\s*(\d{1,3})(?=\s*(?:\(|$))/);
   return match?.[1] || "";
@@ -5675,7 +5713,7 @@ const getPersonIdentityDedupeKey = (person, fallbackPrefix = "person") => {
   return getPersonStableKey(person, fallbackPrefix);
 };
 const formatPersonOptionLabel = (person) => {
-  const name = getPersonDisplayName(person) || "Unnamed person";
+  const name = formatPersonDisplayName(person, "Unnamed person");
   const parts = [
     person.rank,
     name,
@@ -5842,7 +5880,7 @@ const buildCompactPersonNameResolver = (people = []) => {
     return result.decision === "exact-duplicate" || result.decision === "exact-duplicate-without-id" ? result.output : result.base || result.output;
   };
   const formatList = (person) => {
-    const displayName = stripPersonContext(person.name || getPersonDisplayName(person)) || "Unnamed person";
+    const displayName = formatPersonDisplayName(person, "Unnamed person");
     const { surname, firstName } = getNameParts(displayName);
     const surnameKey = normalisePersonName(surname);
     const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
@@ -20977,18 +21015,41 @@ This removes it from the master list and from every user assignment that current
   };
   const stripAccessPersonContext = (value) => String(value || "").split(" – ")[0].split(" - ")[0].trim();
   const displayUserName = (user) => {
-    const fullName = `${stripAccessPersonContext(user.firstName)} ${stripAccessPersonContext(user.lastName)}`.trim();
-    return fullName || stripAccessPersonContext(user.displayName) || user.username || user.userId || "Unknown User";
+    const formattedName = formatPersonDisplayName({
+      firstName: stripAccessPersonContext(user.firstName),
+      lastName: stripAccessPersonContext(user.lastName),
+      displayName: stripAccessPersonContext(user.displayName),
+      username: user.username,
+      userId: user.userId,
+      email: user.email
+    }, "");
+    return formattedName || "Unknown User";
   };
   const getAccessPersonDisplayName = (person, personType) => {
     if (!person) return "";
     if (personType === "trainee") {
-      return stripAccessPersonContext(person.traineeName || person.name || person.traineeFullName || person.fullName);
+      return formatPersonDisplayName({
+        firstName: person.firstName,
+        lastName: person.lastName || person.surname,
+        name: stripAccessPersonContext(person.traineeName || person.name || person.traineeFullName || person.fullName),
+        fullName: stripAccessPersonContext(person.traineeFullName || person.fullName)
+      });
     }
     if (personType === "staff") {
-      return stripAccessPersonContext(person.staffName || person.name || person.staffFullName || person.fullName);
+      return formatPersonDisplayName({
+        firstName: person.firstName,
+        lastName: person.lastName || person.surname,
+        name: stripAccessPersonContext(person.staffName || person.name || person.staffFullName || person.fullName),
+        fullName: stripAccessPersonContext(person.staffFullName || person.fullName)
+      });
     }
-    const linkedName = stripAccessPersonContext(person.staffName || person.traineeName || person.name || person.staffFullName || person.traineeFullName || person.fullName);
+    const linkedName = formatPersonDisplayName({
+      firstName: person.firstName,
+      lastName: person.lastName || person.surname,
+      name: stripAccessPersonContext(person.staffName || person.traineeName || person.name || person.staffFullName || person.traineeFullName || person.fullName),
+      fullName: stripAccessPersonContext(person.staffFullName || person.traineeFullName || person.fullName),
+      displayName: stripAccessPersonContext(person.displayName)
+    });
     return linkedName || displayUserName(person);
   };
   const getAccessNameSearchAliases = (value) => {
@@ -21126,6 +21187,7 @@ This removes it from the master list and from every user assignment that current
         return (accessUserId || accessUsername) && !platformUserIds.has(accessUserId) && !platformUserIds.has(accessUsername);
       }).map((access) => {
         const orphanLabel = access.displayName || access.username || access.userId || "Unknown user";
+        const formattedOrphanLabel = formatPersonDisplayName(orphanLabel, orphanLabel);
         const looksLikeRole = uniqueValues([
           access.userId,
           access.username,
@@ -21133,7 +21195,7 @@ This removes it from the master list and from every user assignment that current
         ].map((value) => toIdentifier(value).toLowerCase())).some((value) => roleLikeAccessLabels.has(value));
         return withSearchText({
           id: access.userId || access.username,
-          name: looksLikeRole ? `${orphanLabel} (role saved as user)` : `${orphanLabel} (access scope has no login account)`,
+          name: looksLikeRole ? `${orphanLabel} (role saved as user)` : `${formattedOrphanLabel} (access scope has no login account)`,
           username: access.username || access.userId || "",
           email: "",
           personnelId: toIdentifier(access.personnelId || access.staffPersonnelId || access.traineePersonnelId)
@@ -21148,9 +21210,10 @@ This removes it from the master list and from every user assignment that current
         return !(recordId && representedKeys.has(`staff-record:${recordId}`) || personnelId && representedKeys.has(`staff-personnel:${personnelId}`) || email && representedKeys.has(`email:${email}`) || !hasStableIdentity && name && representedKeys.has(`staff-name:${name}`));
       }).map((staff) => {
         const personnelId = toIdentifier(staff?.idNumber || staff?.personnelId || staff?.serviceNumber);
+        const name = getAccessPersonDisplayName(staff, "staff");
         return withSearchText({
           id: buildStaffAccessId(staff),
-          name: String(staff?.name || staff?.fullName || "").trim(),
+          name,
           username: personnelId || String(staff?.email || "").trim(),
           email: String(staff?.email || "").trim(),
           personnelId,
@@ -30607,7 +30670,13 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const getAccessUserLabel = (access) => {
     const userId = String(access?.userId || "").trim();
     const user = platformUsers.find((candidate) => [candidate?.userId, candidate?.username, candidate?.id].map((value) => String(value || "").trim()).includes(userId));
-    const fullName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+    const fullName = formatPersonDisplayName({
+      firstName: user?.firstName,
+      lastName: user?.lastName,
+      displayName: user?.displayName,
+      username: user?.username,
+      userId
+    });
     return access?.displayName || access?.userName || fullName || user?.username || userId || "Unknown user";
   };
   const getAccessProfileLabels = (access) => {
@@ -88219,17 +88288,25 @@ const StaffSearchDropdown = ({
   const filteredStaffByUnit = reactExports.useMemo(() => {
     if (!searchTerm) return staffByUnit;
     const filtered = {};
+    const searchValue = searchTerm.toLowerCase();
     Object.entries(staffByUnit).forEach(([unit, members]) => {
-      const filteredMembers = members.filter(
-        (person) => person.name.toLowerCase().includes(searchTerm.toLowerCase()) || person.rank.toLowerCase().includes(searchTerm.toLowerCase()) || person.unit && person.unit.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const filteredMembers = members.filter((person) => {
+        const displayName = formatPersonDisplayName(person);
+        const reversedDisplayName = displayName.includes(",") ? displayName.split(",").map((part) => part.trim()).filter(Boolean).reverse().join(" ") : "";
+        return person.name.toLowerCase().includes(searchValue) || displayName.toLowerCase().includes(searchValue) || reversedDisplayName.toLowerCase().includes(searchValue) || person.rank.toLowerCase().includes(searchValue) || person.unit && person.unit.toLowerCase().includes(searchValue);
+      });
       if (filteredMembers.length > 0) {
         filtered[unit] = filteredMembers;
       }
     });
     return filtered;
   }, [staffByUnit, searchTerm]);
-  const displayValue = selectedStaff || "";
+  const selectedPerson = reactExports.useMemo(() => {
+    const selectedName = String(selectedStaff || "").trim().toLowerCase();
+    if (!selectedName) return void 0;
+    return staff.find((person) => person.name.toLowerCase() === selectedName || formatPersonDisplayName(person).toLowerCase() === selectedName);
+  }, [selectedStaff, staff]);
+  const displayValue = selectedPerson ? formatPersonDisplayName(selectedPerson) : formatPersonDisplayName(selectedStaff || "");
   const handleSelect = (staffName) => {
     onSelect(staffName);
     setIsOpen(false);

@@ -8,6 +8,7 @@ import {
     normaliseStaffQualificationCatalogue,
     type StaffQualificationCatalogue,
 } from '../utils/staffQualifications';
+import { formatPersonDisplayName } from '../utils/personIdentity';
 import { showDarkConfirm } from './DarkMessageModal';
 
 interface MyDashboardProps {
@@ -285,8 +286,7 @@ const compareDashboardRank = (left?: string, right?: string): number => {
 };
 
 const formatDashboardStaffName = (staff: Instructor): string => {
-    const [lastName, firstName] = String(staff.name || '').split(',').map(part => part.trim());
-    const displayName = firstName ? `${firstName} ${lastName}` : staff.name;
+    const displayName = formatPersonDisplayName(staff, staff.name || '');
     return `${staff.rank || ''} ${displayName}`.trim();
 };
 

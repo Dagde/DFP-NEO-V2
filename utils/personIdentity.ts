@@ -3,6 +3,13 @@ export type PersonIdentityRecord = {
   idNumber?: string | number | null;
   name?: string | null;
   fullName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  surname?: string | null;
+  displayName?: string | null;
+  username?: string | null;
+  userId?: string | null;
+  email?: string | null;
   rank?: string | null;
   role?: string | null;
   course?: string | null;
@@ -41,6 +48,56 @@ const stripPersonContext = (value: unknown): string =>
     .replace(/\s*·\s*\d{1,3}(?=\s*(?:\(|$))/g, '')
     .replace(/\s+\((?:N|F\/S|F\/L|R\/S)\)$/i, '')
     .trim();
+
+const normaliseDisplayCommaName = (value: string): string => {
+  const [surnamePart, ...givenParts] = value.split(',');
+  const surname = surnamePart.trim();
+  const given = givenParts.join(',').trim().replace(/\s+/g, ' ');
+  return given ? `${surname}, ${given}` : surname;
+};
+
+const shouldPreserveDisplayName = (value: string): boolean => {
+  const text = value.trim();
+  if (!text) return true;
+  if (/^(TBA|N\/A|UNKNOWN USER)$/i.test(text)) return true;
+  if (/^[A-Z0-9_-]+$/i.test(text) && !/\s/.test(text)) return true;
+  if (/^[^\s@]+@[^\s@]+$/.test(text)) return true;
+  if (/^[^\s]+\.[^\s]+$/.test(text)) return true;
+  if (text.includes(',')) return true;
+  const parts = text.split(/\s+/).filter(Boolean);
+  return parts.length === 2 && /^[A-Z]$/i.test(parts[1]);
+};
+
+export const formatPersonDisplayName = (
+  personOrName?: Partial<PersonIdentityRecord> | string | null,
+  fallback = '',
+): string => {
+  if (!personOrName) return fallback;
+  if (typeof personOrName === 'string') {
+    const text = stripPersonContext(personOrName);
+    if (!text) return fallback;
+    if (text.includes(',')) return normaliseDisplayCommaName(text);
+    if (shouldPreserveDisplayName(text)) return text;
+    const parts = text.split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return text;
+    return `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(' ')}`;
+  }
+
+  const firstName = stripPersonContext(personOrName.firstName);
+  const lastName = stripPersonContext(personOrName.lastName || personOrName.surname);
+  if (firstName && lastName) return `${lastName}, ${firstName}`;
+
+  const rawName = stripPersonContext(
+    personOrName.fullName ||
+    personOrName.name ||
+    personOrName.displayName ||
+    ''
+  );
+  if (rawName) return formatPersonDisplayName(rawName, fallback);
+
+  const username = stripPersonContext(personOrName.username || personOrName.userId || personOrName.email);
+  return username || fallback;
+};
 
 const getVisualIdSuffix = (value: unknown): string => {
   const match = String(value || '').match(/\s·\s*(\d{1,3})(?=\s*(?:\(|$))/);
@@ -109,7 +166,7 @@ export const getPersonIdentityDedupeKey = (person: PersonIdentityRecord, fallbac
 };
 
 export const formatPersonOptionLabel = (person: PersonIdentityRecord): string => {
-  const name = getPersonDisplayName(person) || 'Unnamed person';
+  const name = formatPersonDisplayName(person, 'Unnamed person');
   const parts = [
     person.rank,
     name,
@@ -290,7 +347,7 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
   };
 
   const formatList = (person: PersonIdentityRecord): string => {
-    const displayName = stripPersonContext(person.name || getPersonDisplayName(person)) || 'Unnamed person';
+    const displayName = formatPersonDisplayName(person, 'Unnamed person');
     const { surname, firstName } = getNameParts(displayName);
     const surnameKey = normalisePersonName(surname);
     const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
