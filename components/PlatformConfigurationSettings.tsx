@@ -7592,16 +7592,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return saved;
   };
 
-  useEffect(() => {
-    if (!wizardEditMode || !onWizardSaveReady) return undefined;
-    if (scrollTarget !== 'platform-dfp-resource-rows' && scrollTarget !== 'platform-aircraft-setup') {
-      onWizardSaveReady(null);
-      return () => onWizardSaveReady(null);
-    }
-    onWizardSaveReady(saveResourcePoolsAndExitEdit);
-    return () => onWizardSaveReady(null);
-  }, [onWizardSaveReady, saveResourcePoolsAndExitEdit, scrollTarget, wizardEditMode]);
-
   const saveCrewCompositionAndExitEdit = async () => {
     const saved = await save(undefined, 'platform-crew-composition');
     if (saved) setCrewCompositionUnlocked(false);
@@ -7660,14 +7650,30 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   );
   const saveSectionAndExitEdit = async (sectionId: string) => {
     const saved = await save(undefined, sectionId);
-    if (saved) {
-      if (wizardEditMode) return;
+    if (saved && !wizardEditMode) {
       setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
       if (sectionId === 'platform-standard-missions') setExpandedStandardMissionIds(new Set());
     }
+    return saved;
   };
+
+  useEffect(() => {
+    if (!wizardEditMode || !onWizardSaveReady) return undefined;
+    if (scrollTarget === 'platform-dfp-resource-rows' || scrollTarget === 'platform-aircraft-setup') {
+      onWizardSaveReady(saveResourcePoolsAndExitEdit);
+      return () => onWizardSaveReady(null);
+    }
+    if (scrollTarget === 'platform-standard-missions') {
+      onWizardSaveReady(() => saveSectionAndExitEdit('platform-standard-missions'));
+      return () => onWizardSaveReady(null);
+    }
+    onWizardSaveReady(null);
+    return () => onWizardSaveReady(null);
+  }, [onWizardSaveReady, saveResourcePoolsAndExitEdit, saveSectionAndExitEdit, scrollTarget, wizardEditMode]);
+
   const renderSectionEditSaveButton = (sectionId: string) => {
     if (!canEdit || !canEditSectionPermission(sectionId)) return null;
+    if (wizardEditMode && sectionId === 'platform-standard-missions') return null;
     const isEditing = isSectionEditActive(sectionId);
     return (
       <button

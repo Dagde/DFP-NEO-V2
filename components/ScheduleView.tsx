@@ -8238,6 +8238,18 @@ const InitialSetupWizard: React.FC<{
                 return;
             }
         }
+        if (visibleStep.id === 'directed-task-setups') {
+            const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
+            if (!saveWizardSettings) {
+                setSaveMessage('Directed task setup is still loading. Try Next again in a moment.');
+                return;
+            }
+            const saved = await saveWizardSettings();
+            if (!saved) {
+                setSaveMessage('Directed task setup changes were not saved. Review the page before continuing.');
+                return;
+            }
+        }
         if (visibleStep.id === 'trainee-courses' && unitDraft.hasTrainees) {
             const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
             if (courseCount === 0) {

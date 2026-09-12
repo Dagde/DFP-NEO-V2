@@ -22253,15 +22253,6 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     }
     return saved;
   };
-  reactExports.useEffect(() => {
-    if (!wizardEditMode || !onWizardSaveReady) return void 0;
-    if (scrollTarget !== "platform-dfp-resource-rows" && scrollTarget !== "platform-aircraft-setup") {
-      onWizardSaveReady(null);
-      return () => onWizardSaveReady(null);
-    }
-    onWizardSaveReady(saveResourcePoolsAndExitEdit);
-    return () => onWizardSaveReady(null);
-  }, [onWizardSaveReady, saveResourcePoolsAndExitEdit, scrollTarget, wizardEditMode]);
   const saveCrewCompositionAndExitEdit = async () => {
     const saved = await save(void 0, "platform-crew-composition");
     if (saved) setCrewCompositionUnlocked(false);
@@ -22305,14 +22296,28 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const canEditSection = (sectionId) => canEdit && canEditSectionPermission(sectionId) && isSectionEditActive(sectionId);
   const saveSectionAndExitEdit = async (sectionId) => {
     const saved = await save(void 0, sectionId);
-    if (saved) {
-      if (wizardEditMode) return;
+    if (saved && !wizardEditMode) {
       setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
       if (sectionId === "platform-standard-missions") setExpandedStandardMissionIds(/* @__PURE__ */ new Set());
     }
+    return saved;
   };
+  reactExports.useEffect(() => {
+    if (!wizardEditMode || !onWizardSaveReady) return void 0;
+    if (scrollTarget === "platform-dfp-resource-rows" || scrollTarget === "platform-aircraft-setup") {
+      onWizardSaveReady(saveResourcePoolsAndExitEdit);
+      return () => onWizardSaveReady(null);
+    }
+    if (scrollTarget === "platform-standard-missions") {
+      onWizardSaveReady(() => saveSectionAndExitEdit("platform-standard-missions"));
+      return () => onWizardSaveReady(null);
+    }
+    onWizardSaveReady(null);
+    return () => onWizardSaveReady(null);
+  }, [onWizardSaveReady, saveResourcePoolsAndExitEdit, saveSectionAndExitEdit, scrollTarget, wizardEditMode]);
   const renderSectionEditSaveButton = (sectionId) => {
     if (!canEdit || !canEditSectionPermission(sectionId)) return null;
+    if (wizardEditMode && sectionId === "platform-standard-missions") return null;
     const isEditing = isSectionEditActive(sectionId);
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
@@ -36085,6 +36090,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const saved = await saveWizardSettings();
       if (!saved) {
         setSaveMessage("Resource row changes were not saved. Review the page before continuing.");
+        return;
+      }
+    }
+    if (visibleStep.id === "directed-task-setups") {
+      const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
+      if (!saveWizardSettings) {
+        setSaveMessage("Directed task setup is still loading. Try Next again in a moment.");
+        return;
+      }
+      const saved = await saveWizardSettings();
+      if (!saved) {
+        setSaveMessage("Directed task setup changes were not saved. Review the page before continuing.");
         return;
       }
     }
