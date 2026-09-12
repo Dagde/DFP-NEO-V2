@@ -7402,13 +7402,13 @@ const InitialSetupWizard: React.FC<{
     };
     const renderWizardPlatformSettingsEmbed = (
         scrollTarget: string,
-        focusSubsectionId = '',
+        _focusSubsectionId = '',
         successMessage = 'Settings saved into Settings.',
         extraProps: Record<string, unknown> = {},
     ) => {
         const activeUnitCodesForSettings = getWizardActiveUnitCodes();
         return (
-            <div ref={wizardSettingsEmbedRef} className="wizard-settings-embed wizard-settings-embed--scroll-stable rounded-lg border border-slate-200 bg-white">
+            <div key={`wizard-settings-${visibleStep.id}-${scrollTarget}`} ref={wizardSettingsEmbedRef} className="wizard-settings-embed wizard-settings-embed--scroll-stable rounded-lg border border-slate-200 bg-white">
                 <PlatformConfigurationSettings
                     currentUserPermission={currentUserPermission}
                     onShowSuccess={(message) => setSaveMessage(message || successMessage)}
@@ -7421,7 +7421,7 @@ const InitialSetupWizard: React.FC<{
                     activeOperationalModel={unitDraft.operationalModel}
                     focusUnitCode={unitDraft.code || unitCode || ''}
                     focusLocationCode={locationDraft.code || locationCode || ''}
-                    focusSubsectionId={focusSubsectionId}
+                    focusSubsectionId=""
                     onNavigateToSettingsSection={onNavigateToSettingsSection}
                     {...extraProps}
                 />

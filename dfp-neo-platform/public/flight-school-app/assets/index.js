@@ -35170,7 +35170,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setWizardPageMenuOpen(false);
     setWizardStep(boundedStep);
   };
-  const renderWizardPlatformSettingsEmbed = (scrollTarget, focusSubsectionId = "", successMessage = "Settings saved into Settings.", extraProps = {}) => {
+  const renderWizardPlatformSettingsEmbed = (scrollTarget, _focusSubsectionId = "", successMessage = "Settings saved into Settings.", extraProps = {}) => {
     const activeUnitCodesForSettings = getWizardActiveUnitCodes();
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: wizardSettingsEmbedRef, className: "wizard-settings-embed wizard-settings-embed--scroll-stable rounded-lg border border-slate-200 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       PlatformConfigurationSettings,
@@ -35186,11 +35186,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         activeOperationalModel: unitDraft.operationalModel,
         focusUnitCode: unitDraft.code || unitCode || "",
         focusLocationCode: locationDraft.code || locationCode || "",
-        focusSubsectionId,
+        focusSubsectionId: "",
         onNavigateToSettingsSection,
         ...extraProps
       }
-    ) });
+    ) }, `wizard-settings-${visibleStep.id}-${scrollTarget}`);
   };
   const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
