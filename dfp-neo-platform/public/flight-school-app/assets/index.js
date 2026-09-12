@@ -35369,6 +35369,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardPrimaryButtonClass = "rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600";
   const wizardInputClass = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200";
   const wizardLabelClass = "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500";
+  const wizardSectionHeadingClass = "text-sm font-black text-slate-950";
   const updateLocationDraft = (updater) => {
     locationDraftDirtyRef.current = true;
     setLocationDraft(updater);
@@ -37844,21 +37845,21 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the current values and refine them later in Settings." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Business rules" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Business rules" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
               wizardField("Rule set", buildRulesDraft.businessRules, (value) => updateBuildRulesDraft((draft) => ({ ...draft, businessRules: value })), void 0, "Use configured rule set"),
               wizardField("Max dispatch per hour", buildRulesDraft.maxDispatchPerHour, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), void 0, "2")
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Duty limits" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Duty limits" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
               wizardField("Maximum crew duty hours", buildRulesDraft.maxCrewDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxCrewDutyHours: value })), void 0, "12"),
               wizardField("Preferred duty period hours", buildRulesDraft.preferredDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, preferredDutyHours: value })), void 0, "10")
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Turnaround times" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Turnaround times" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3 md:items-end", children: [
               wizardField("Aircraft turnaround minutes", buildRulesDraft.aircraftTurnaroundMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, aircraftTurnaroundMinutes: value })), void 0, "60"),
               wizardField("Simulator turnaround minutes", buildRulesDraft.simTurnaroundMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, simTurnaroundMinutes: value })), void 0, "30"),
@@ -37866,7 +37867,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Event limits" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Event limits" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: [
               wizardField("Maximum events per day", buildRulesDraft.maxEventsPerDay, (value) => {
                 updateBuildRulesDraft((draft) => ({ ...draft, maxEventsPerDay: value }));
@@ -37880,7 +37881,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Dispatch spacing" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Dispatch spacing" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
               wizardField("Flight stagger no minimum", buildRulesDraft.flightStaggerNoMinimum, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightStaggerNoMinimum: value })), ["Yes", "No"]),
               wizardField("Flight stagger minutes", buildRulesDraft.flightStaggerMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightStaggerMinutes: value })), void 0, "5"),
@@ -37889,7 +37890,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Flight authorisation warnings" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardSectionHeadingClass, children: "Flight authorisation warnings" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[34px_42px] [&>label]:items-start", children: [
               wizardField("Flight authorisation required", buildRulesDraft.flightAuthorisationRequired, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightAuthorisationRequired: value })), ["Yes", "No"]),
               String(buildRulesDraft.flightAuthorisationRequired || "").trim().toLowerCase() !== "no" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [

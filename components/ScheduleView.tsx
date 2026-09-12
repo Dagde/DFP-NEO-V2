@@ -7329,6 +7329,7 @@ const InitialSetupWizard: React.FC<{
     const wizardPrimaryButtonClass = 'rounded-md bg-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600';
     const wizardInputClass = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-200';
     const wizardLabelClass = 'text-[10px] font-black uppercase tracking-[0.14em] text-slate-500';
+    const wizardSectionHeadingClass = 'text-sm font-black text-slate-950';
     const updateLocationDraft = (updater: React.SetStateAction<typeof locationDraft>) => {
         locationDraftDirtyRef.current = true;
         setLocationDraft(updater);
@@ -10231,21 +10232,21 @@ const InitialSetupWizard: React.FC<{
                 <p>Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the current values and refine them later in Settings.</p>,
                 <div className="space-y-4">
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
-                        <p className={wizardLabelClass}>Business rules</p>
+                        <p className={wizardSectionHeadingClass}>Business rules</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
                             {wizardField('Rule set', buildRulesDraft.businessRules, (value) => updateBuildRulesDraft((draft) => ({ ...draft, businessRules: value })), undefined, 'Use configured rule set')}
                             {wizardField('Max dispatch per hour', buildRulesDraft.maxDispatchPerHour, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), undefined, '2')}
                         </div>
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
-                        <p className={wizardLabelClass}>Duty limits</p>
+                        <p className={wizardSectionHeadingClass}>Duty limits</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
                             {wizardField('Maximum crew duty hours', buildRulesDraft.maxCrewDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, maxCrewDutyHours: value })), undefined, '12')}
                             {wizardField('Preferred duty period hours', buildRulesDraft.preferredDutyHours, (value) => updateBuildRulesDraft((draft) => ({ ...draft, preferredDutyHours: value })), undefined, '10')}
                         </div>
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
-                        <p className={wizardLabelClass}>Turnaround times</p>
+                        <p className={wizardSectionHeadingClass}>Turnaround times</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-3 md:items-end">
                             {wizardField('Aircraft turnaround minutes', buildRulesDraft.aircraftTurnaroundMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, aircraftTurnaroundMinutes: value })), undefined, '60')}
                             {wizardField('Simulator turnaround minutes', buildRulesDraft.simTurnaroundMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, simTurnaroundMinutes: value })), undefined, '30')}
@@ -10253,7 +10254,7 @@ const InitialSetupWizard: React.FC<{
                         </div>
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
-                        <p className={wizardLabelClass}>Event limits</p>
+                        <p className={wizardSectionHeadingClass}>Event limits</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-3">
                             {wizardField('Maximum events per day', buildRulesDraft.maxEventsPerDay, (value) => {
                                 updateBuildRulesDraft((draft) => ({ ...draft, maxEventsPerDay: value }));
@@ -10267,7 +10268,7 @@ const InitialSetupWizard: React.FC<{
                         </div>
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
-                        <p className={wizardLabelClass}>Dispatch spacing</p>
+                        <p className={wizardSectionHeadingClass}>Dispatch spacing</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
                             {wizardField('Flight stagger no minimum', buildRulesDraft.flightStaggerNoMinimum, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightStaggerNoMinimum: value })), ['Yes', 'No'])}
                             {wizardField('Flight stagger minutes', buildRulesDraft.flightStaggerMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightStaggerMinutes: value })), undefined, '5')}
@@ -10276,7 +10277,7 @@ const InitialSetupWizard: React.FC<{
                         </div>
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
-                        <p className={wizardLabelClass}>Flight authorisation warnings</p>
+                        <p className={wizardSectionHeadingClass}>Flight authorisation warnings</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[34px_42px] [&>label]:items-start">
                             {wizardField('Flight authorisation required', buildRulesDraft.flightAuthorisationRequired, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightAuthorisationRequired: value })), ['Yes', 'No'])}
                             {String(buildRulesDraft.flightAuthorisationRequired || '').trim().toLowerCase() !== 'no' ? (
