@@ -7195,24 +7195,24 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const updateAircraftNumberPrefix = (poolIndex: number, prefixIndex: number, value: string) => {
     const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
-    const prefixes = settings.prefixes.map((prefix, index) => (
-      index === prefixIndex ? value.toUpperCase().trim() : prefix
-    )).filter(Boolean);
-    const uniquePrefixes = Array.from(new Set(prefixes));
+    const rawPrefixes = Array.isArray(config.resourcePools[poolIndex]?.settings?.aircraftNumberPrefixes)
+      ? config.resourcePools[poolIndex].settings.aircraftNumberPrefixes.map((prefix: unknown) => String(prefix || '').trim().toUpperCase())
+      : [];
+    const currentPrefixes = rawPrefixes.length > 0 ? rawPrefixes : (settings.prefixes.length > 0 ? settings.prefixes : ['']);
+    const uniquePrefixes = Array.from(new Set(
+      currentPrefixes.map((prefix, index) => index === prefixIndex ? value.toUpperCase().trim() : prefix).filter(Boolean)
+    ));
     updateResourcePoolSettings(poolIndex, {
       aircraftNumberPrefixes: uniquePrefixes,
-      aircraftNumberDefaultPrefix: uniquePrefixes.includes(settings.defaultPrefix)
-        ? settings.defaultPrefix
-        : uniquePrefixes[0] || '',
+      aircraftNumberDefaultPrefix: '',
     });
   };
 
   const addAircraftNumberPrefix = (poolIndex: number) => {
     const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
-    const nextPrefix = `PREFIX-${settings.prefixes.length + 1}`;
     updateResourcePoolSettings(poolIndex, {
-      aircraftNumberPrefixes: [...settings.prefixes, nextPrefix],
-      aircraftNumberDefaultPrefix: settings.defaultPrefix || nextPrefix,
+      aircraftNumberPrefixes: [...settings.prefixes, ''],
+      aircraftNumberDefaultPrefix: '',
     });
   };
 
@@ -7221,9 +7221,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const prefixes = settings.prefixes.filter((_, index) => index !== prefixIndex);
     updateResourcePoolSettings(poolIndex, {
       aircraftNumberPrefixes: prefixes,
-      aircraftNumberDefaultPrefix: prefixes.includes(settings.defaultPrefix)
-        ? settings.defaultPrefix
-        : prefixes[0] || '',
+      aircraftNumberDefaultPrefix: '',
     });
   };
 
@@ -11139,6 +11137,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             {visibleResourcePoolRows.map(({ pool, index }) => {
               const editableDfpRows = getEditableDfpResourceRows(pool, index);
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
+              const aircraftNumberPrefixFields = Array.isArray(pool.settings?.aircraftNumberPrefixes) && pool.settings.aircraftNumberPrefixes.length > 0
+                ? pool.settings.aircraftNumberPrefixes.map((prefix: unknown) => String(prefix || '').trim().toUpperCase())
+                : (aircraftNumberSettings.prefixes.length > 0 ? aircraftNumberSettings.prefixes : ['']);
               const aircraftTypeOptions = (visibleAircraftTypeOptions.length > 0
                 ? visibleAircraftTypeOptions
                 : configAircraftTypes.map((aircraft) => aircraft.code)
@@ -11261,16 +11262,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       </div>
                       {aircraftNumberSettings.usePrefix ? (
-                        <div className="grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-                          <SelectField
-                            label="Default Prefix"
-                            value={aircraftNumberSettings.defaultPrefix}
-                            disabled={!canEditResourcePools}
-                            options={aircraftNumberSettings.prefixes}
-                            onChange={(value) => updateResourcePoolSettings(index, { aircraftNumberDefaultPrefix: value })}
-                          />
+                        <div className="grid gap-3">
                           <div className="grid gap-2">
-                            {aircraftNumberSettings.prefixes.map((prefix, prefixIndex) => (
+                            {aircraftNumberPrefixFields.map((prefix, prefixIndex) => (
                               <div key={`aircraft-number-prefix-${prefixIndex}`} className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                                 <DraftField
                                   label={`Prefix ${prefixIndex + 1}`}
@@ -11280,7 +11274,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 />
                                 <button
                                   type="button"
-                                  disabled={!canEditResourcePools || aircraftNumberSettings.prefixes.length <= 1}
+                                  disabled={!canEditResourcePools || aircraftNumberPrefixFields.length <= 1}
                                   onClick={() => removeAircraftNumberPrefix(index, prefixIndex)}
                                   className="h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                                 >

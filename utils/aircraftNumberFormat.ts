@@ -24,10 +24,10 @@ export const normaliseAircraftNumberSettings = (settings?: Record<string, any> |
     ? settings?.aircraftNumberPrefixes
     : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.prefixes);
   const savedDefaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix);
-  const defaultPrefix = hasExplicitPrefixes && prefixes.length === 0
-    ? ''
-    : savedDefaultPrefix || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
-  const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix) || (hasExplicitPrefixes && prefixes.length === 0)
+  const defaultPrefix = prefixes.includes(savedDefaultPrefix)
+    ? savedDefaultPrefix
+    : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
+  const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix)
     ? prefixes
     : [defaultPrefix, ...prefixes];
 

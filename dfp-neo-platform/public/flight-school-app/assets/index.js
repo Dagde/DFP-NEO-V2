@@ -3949,8 +3949,8 @@ const normaliseAircraftNumberSettings = (settings) => {
   const hasExplicitPrefixes = Array.isArray(settings?.aircraftNumberPrefixes);
   const prefixes = uniqueNonEmpty(hasExplicitPrefixes ? settings?.aircraftNumberPrefixes : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.prefixes);
   const savedDefaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix);
-  const defaultPrefix = hasExplicitPrefixes && prefixes.length === 0 ? "" : savedDefaultPrefix || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
-  const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix) || hasExplicitPrefixes && prefixes.length === 0 ? prefixes : [defaultPrefix, ...prefixes];
+  const defaultPrefix = prefixes.includes(savedDefaultPrefix) ? savedDefaultPrefix : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
+  const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix) ? prefixes : [defaultPrefix, ...prefixes];
   return {
     usePrefix: settings?.aircraftNumberUsePrefix === void 0 ? DEFAULT_AIRCRAFT_NUMBER_SETTINGS.usePrefix : settings.aircraftNumberUsePrefix !== false,
     prefixes: nextPrefixes,
@@ -21904,19 +21904,21 @@ This removes it from the master list and from every user assignment that current
   };
   const updateAircraftNumberPrefix = (poolIndex, prefixIndex, value) => {
     const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
-    const prefixes = settings.prefixes.map((prefix, index) => index === prefixIndex ? value.toUpperCase().trim() : prefix).filter(Boolean);
-    const uniquePrefixes = Array.from(new Set(prefixes));
+    const rawPrefixes = Array.isArray(config.resourcePools[poolIndex]?.settings?.aircraftNumberPrefixes) ? config.resourcePools[poolIndex].settings.aircraftNumberPrefixes.map((prefix) => String(prefix || "").trim().toUpperCase()) : [];
+    const currentPrefixes = rawPrefixes.length > 0 ? rawPrefixes : settings.prefixes.length > 0 ? settings.prefixes : [""];
+    const uniquePrefixes = Array.from(new Set(
+      currentPrefixes.map((prefix, index) => index === prefixIndex ? value.toUpperCase().trim() : prefix).filter(Boolean)
+    ));
     updateResourcePoolSettings(poolIndex, {
       aircraftNumberPrefixes: uniquePrefixes,
-      aircraftNumberDefaultPrefix: uniquePrefixes.includes(settings.defaultPrefix) ? settings.defaultPrefix : uniquePrefixes[0] || ""
+      aircraftNumberDefaultPrefix: ""
     });
   };
   const addAircraftNumberPrefix = (poolIndex) => {
     const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
-    const nextPrefix = `PREFIX-${settings.prefixes.length + 1}`;
     updateResourcePoolSettings(poolIndex, {
-      aircraftNumberPrefixes: [...settings.prefixes, nextPrefix],
-      aircraftNumberDefaultPrefix: settings.defaultPrefix || nextPrefix
+      aircraftNumberPrefixes: [...settings.prefixes, ""],
+      aircraftNumberDefaultPrefix: ""
     });
   };
   const removeAircraftNumberPrefix = (poolIndex, prefixIndex) => {
@@ -21924,7 +21926,7 @@ This removes it from the master list and from every user assignment that current
     const prefixes = settings.prefixes.filter((_, index) => index !== prefixIndex);
     updateResourcePoolSettings(poolIndex, {
       aircraftNumberPrefixes: prefixes,
-      aircraftNumberDefaultPrefix: prefixes.includes(settings.defaultPrefix) ? settings.defaultPrefix : prefixes[0] || ""
+      aircraftNumberDefaultPrefix: ""
     });
   };
   const mergeAircraftConfigurationDefinitions = (primaryDefinitions, legacyDefinitions = []) => {
@@ -25357,6 +25359,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             visibleResourcePoolRows.map(({ pool, index }) => {
               const editableDfpRows = getEditableDfpResourceRows(pool, index);
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
+              const aircraftNumberPrefixFields = Array.isArray(pool.settings?.aircraftNumberPrefixes) && pool.settings.aircraftNumberPrefixes.length > 0 ? pool.settings.aircraftNumberPrefixes.map((prefix) => String(prefix || "").trim().toUpperCase()) : aircraftNumberSettings.prefixes.length > 0 ? aircraftNumberSettings.prefixes : [""];
               const aircraftTypeOptions = (visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code)).filter(Boolean);
               const displayedResourcePoolAircraftTypeCode = pool.aircraftTypeCode || "";
               const aircraftUnavailableReasons = normaliseFlightLineUnavailableReasons$1(pool.settings?.flightLineUnavailableReasonOptions);
@@ -25475,39 +25478,27 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                             )
                           ] })
                         ] }),
-                        aircraftNumberSettings.usePrefix ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]", children: [
+                        aircraftNumberSettings.usePrefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2", children: aircraftNumberPrefixFields.map((prefix, prefixIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            SelectField,
+                            DraftField,
                             {
-                              label: "Default Prefix",
-                              value: aircraftNumberSettings.defaultPrefix,
+                              label: `Prefix ${prefixIndex + 1}`,
+                              value: prefix,
                               disabled: !canEditResourcePools,
-                              options: aircraftNumberSettings.prefixes,
-                              onChange: (value) => updateResourcePoolSettings(index, { aircraftNumberDefaultPrefix: value })
+                              onCommit: (value) => updateAircraftNumberPrefix(index, prefixIndex, value)
                             }
                           ),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2", children: aircraftNumberSettings.prefixes.map((prefix, prefixIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx(
-                              DraftField,
-                              {
-                                label: `Prefix ${prefixIndex + 1}`,
-                                value: prefix,
-                                disabled: !canEditResourcePools,
-                                onCommit: (value) => updateAircraftNumberPrefix(index, prefixIndex, value)
-                              }
-                            ),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx(
-                              "button",
-                              {
-                                type: "button",
-                                disabled: !canEditResourcePools || aircraftNumberSettings.prefixes.length <= 1,
-                                onClick: () => removeAircraftNumberPrefix(index, prefixIndex),
-                                className: "h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
-                                children: "Delete"
-                              }
-                            )
-                          ] }, `aircraft-number-prefix-${prefixIndex}`)) })
-                        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400", children: "Prefixes are off. Aircraft numbers will be entered as plain numbers." }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              disabled: !canEditResourcePools || aircraftNumberPrefixFields.length <= 1,
+                              onClick: () => removeAircraftNumberPrefix(index, prefixIndex),
+                              className: "h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
+                              children: "Delete"
+                            }
+                          )
+                        ] }, `aircraft-number-prefix-${prefixIndex}`)) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400", children: "Prefixes are off. Aircraft numbers will be entered as plain numbers." }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-center justify-between gap-2", children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsx(
