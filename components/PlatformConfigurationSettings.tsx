@@ -8362,6 +8362,32 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     resourcePools: getVisibleResourcePoolRowsForConfig(sourceConfig).map(({ pool }) => pool),
   });
   const visibleResourcePoolRows = getVisibleResourcePoolRowsForConfig(config);
+  const visibleResourcePoolUnitCodeSet = new Set(
+    visibleResourcePoolRows
+      .map(({ pool }) => normaliseUnitCode(pool?.unitCode))
+      .filter(Boolean),
+  );
+  const resourcePoolSharedCoverageRows = activeContextUnitCodes
+    .filter((unitCode) => unitCode && !visibleResourcePoolUnitCodeSet.has(unitCode))
+    .map((unitCode) => {
+      const unit = configUnits.find((row) => normaliseUnitCode(row.code) === unitCode) || null;
+      const unitAircraftCode = getUnitAircraftTypeCode(unitCode);
+      const unitLocationCode = normaliseUnitCode(unit?.locationCode);
+      const matchingPoolRow = visibleResourcePoolRows.find(({ pool }) => (
+        unitAircraftCode
+        && normaliseUnitCode(pool?.aircraftTypeCode) === unitAircraftCode
+        && (!unitLocationCode || !normaliseUnitCode(pool?.locationCode) || normaliseUnitCode(pool?.locationCode) === unitLocationCode)
+      )) || visibleResourcePoolRows[0] || null;
+      if (!matchingPoolRow) return null;
+      return {
+        unitCode,
+        unitName: String(unit?.name || unitCode).trim(),
+        pool: matchingPoolRow.pool,
+        aircraftTypeCode: unitAircraftCode || normaliseUnitCode(matchingPoolRow.pool?.aircraftTypeCode),
+        locationCode: unitLocationCode || normaliseUnitCode(matchingPoolRow.pool?.locationCode),
+      };
+    })
+    .filter(Boolean) as Array<{ unitCode: string; unitName: string; pool: any; aircraftTypeCode: string; locationCode: string }>;
   const visibleAircraftTypeCodes = new Set<string>([
     ...(settingsVisibilityPolicy.filters.includes('unit') ? activeUnitAircraftTypeCodes : []),
     ...(!settingsVisibilityPolicy.filters.includes('unit') ? visibleUnitRows.map(({ unit }) => getUnitAircraftTypeCode(String(unit.code || ''))) : []),
@@ -11342,6 +11368,35 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
               );
             })}
+            {resourcePoolSharedCoverageRows.length > 0 && (
+              <div className="grid gap-2">
+                {resourcePoolSharedCoverageRows.map((coverage) => (
+                  <div
+                    key={`resource-pool-shared-coverage-${coverage.unitCode}`}
+                    className="resource-pool-shared-coverage rounded-lg border-2 border-blue-500/55 bg-blue-950/30 p-3 text-blue-50 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-md border border-blue-300/60 bg-blue-500/15 px-2 py-1 text-xs font-black text-blue-100">{coverage.unitCode}</span>
+                          <span className="text-sm font-black text-blue-50">{coverage.unitName} resource coverage</span>
+                        </div>
+                        <div className="mt-1 text-[11px] font-bold uppercase tracking-wide text-blue-100/75">
+                          Uses {String(coverage.pool?.name || coverage.pool?.code || 'the displayed DFP Resource Rows').trim()} in this combined-unit context
+                        </div>
+                      </div>
+                      <div className="rounded-md border border-blue-300/50 bg-blue-500/10 px-2 py-1 text-right">
+                        <div className="text-[9px] font-black uppercase tracking-wide text-blue-100/70">Shared</div>
+                        <div className="text-sm font-black text-blue-100">Rows</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs font-semibold leading-5 text-blue-50/80">
+                      {coverage.unitCode} has no separate DFP Resource Rows record shown here. DFP-NEO is recognising the unit and applying the displayed resource rows for {coverage.aircraftTypeCode || 'this aircraft'}{coverage.locationCode ? ` at ${coverage.locationCode}` : ''}.
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>

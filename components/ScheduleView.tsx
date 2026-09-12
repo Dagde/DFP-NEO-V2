@@ -8371,6 +8371,27 @@ const InitialSetupWizard: React.FC<{
                     background: #eef6ff !important;
                     border-color: #cbd5e1 !important;
                 }
+                .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div[class*="overflow-hidden"] {
+                    border-color: #2563eb !important;
+                    box-shadow: inset 4px 0 0 #1d4ed8, 0 12px 24px rgba(30, 64, 175, 0.12) !important;
+                }
+                .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div[class*="overflow-hidden"] > div:first-child {
+                    background: #dbeafe !important;
+                }
+                .wizard-settings-embed--resource-rows .resource-pool-shared-coverage {
+                    background: #eff6ff !important;
+                    border-color: #1d4ed8 !important;
+                    color: #0f172a !important;
+                }
+                .wizard-settings-embed--resource-rows .resource-pool-shared-coverage [class*="bg-blue-"] {
+                    background: #ffffff !important;
+                }
+                .wizard-settings-embed--resource-rows .resource-pool-shared-coverage [class*="text-blue-"] {
+                    color: #1e3a8a !important;
+                }
+                .wizard-settings-embed--resource-rows .resource-pool-shared-coverage [class*="border-blue-"] {
+                    border-color: #93c5fd !important;
+                }
                 .wizard-settings-embed--resource-rows [class*="text-white"],
                 .wizard-settings-embed--resource-rows [class*="text-gray-100"],
                 .wizard-settings-embed--resource-rows [class*="text-gray-200"],

@@ -22886,6 +22886,23 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     resourcePools: getVisibleResourcePoolRowsForConfig(sourceConfig).map(({ pool }) => pool)
   });
   const visibleResourcePoolRows = getVisibleResourcePoolRowsForConfig(config);
+  const visibleResourcePoolUnitCodeSet = new Set(
+    visibleResourcePoolRows.map(({ pool }) => normaliseUnitCode2(pool?.unitCode)).filter(Boolean)
+  );
+  const resourcePoolSharedCoverageRows = activeContextUnitCodes.filter((unitCode) => unitCode && !visibleResourcePoolUnitCodeSet.has(unitCode)).map((unitCode) => {
+    const unit = configUnits.find((row) => normaliseUnitCode2(row.code) === unitCode) || null;
+    const unitAircraftCode = getUnitAircraftTypeCode(unitCode);
+    const unitLocationCode = normaliseUnitCode2(unit?.locationCode);
+    const matchingPoolRow = visibleResourcePoolRows.find(({ pool }) => unitAircraftCode && normaliseUnitCode2(pool?.aircraftTypeCode) === unitAircraftCode && (!unitLocationCode || !normaliseUnitCode2(pool?.locationCode) || normaliseUnitCode2(pool?.locationCode) === unitLocationCode)) || visibleResourcePoolRows[0] || null;
+    if (!matchingPoolRow) return null;
+    return {
+      unitCode,
+      unitName: String(unit?.name || unitCode).trim(),
+      pool: matchingPoolRow.pool,
+      aircraftTypeCode: unitAircraftCode || normaliseUnitCode2(matchingPoolRow.pool?.aircraftTypeCode),
+      locationCode: unitLocationCode || normaliseUnitCode2(matchingPoolRow.pool?.locationCode)
+    };
+  }).filter(Boolean);
   const visibleAircraftTypeCodes = new Set([
     ...settingsVisibilityPolicy.filters.includes("unit") ? activeUnitAircraftTypeCodes : [],
     ...!settingsVisibilityPolicy.filters.includes("unit") ? visibleUnitRows.map(({ unit }) => getUnitAircraftTypeCode(String(unit.code || ""))) : [],
@@ -25568,7 +25585,43 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 },
                 pool.id || `platform-resource-pool-${index}`
               );
-            })
+            }),
+            resourcePoolSharedCoverageRows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2", children: resourcePoolSharedCoverageRows.map((coverage) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "div",
+              {
+                className: "resource-pool-shared-coverage rounded-lg border-2 border-blue-500/55 bg-blue-950/30 p-3 text-blue-50 shadow-sm",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-md border border-blue-300/60 bg-blue-500/15 px-2 py-1 text-xs font-black text-blue-100", children: coverage.unitCode }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm font-black text-blue-50", children: [
+                          coverage.unitName,
+                          " resource coverage"
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] font-bold uppercase tracking-wide text-blue-100/75", children: [
+                        "Uses ",
+                        String(coverage.pool?.name || coverage.pool?.code || "the displayed DFP Resource Rows").trim(),
+                        " in this combined-unit context"
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-blue-300/50 bg-blue-500/10 px-2 py-1 text-right", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-black uppercase tracking-wide text-blue-100/70", children: "Shared" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-black text-blue-100", children: "Rows" })
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-xs font-semibold leading-5 text-blue-50/80", children: [
+                    coverage.unitCode,
+                    " has no separate DFP Resource Rows record shown here. DFP-NEO is recognising the unit and applying the displayed resource rows for ",
+                    coverage.aircraftTypeCode || "this aircraft",
+                    coverage.locationCode ? ` at ${coverage.locationCode}` : "",
+                    "."
+                  ] })
+                ]
+              },
+              `resource-pool-shared-coverage-${coverage.unitCode}`
+            )) })
           ] }) })
         ] }),
         shouldRenderSection("platform-unit-modules") && /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-unit-modules", className: getSectionClass("platform-unit-modules"), children: [
@@ -36143,6 +36196,27 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                 .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div[class*="overflow-hidden"] > div:first-child {
                     background: #eef6ff !important;
                     border-color: #cbd5e1 !important;
+                }
+                .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div[class*="overflow-hidden"] {
+                    border-color: #2563eb !important;
+                    box-shadow: inset 4px 0 0 #1d4ed8, 0 12px 24px rgba(30, 64, 175, 0.12) !important;
+                }
+                .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div[class*="overflow-hidden"] > div:first-child {
+                    background: #dbeafe !important;
+                }
+                .wizard-settings-embed--resource-rows .resource-pool-shared-coverage {
+                    background: #eff6ff !important;
+                    border-color: #1d4ed8 !important;
+                    color: #0f172a !important;
+                }
+                .wizard-settings-embed--resource-rows .resource-pool-shared-coverage [class*="bg-blue-"] {
+                    background: #ffffff !important;
+                }
+                .wizard-settings-embed--resource-rows .resource-pool-shared-coverage [class*="text-blue-"] {
+                    color: #1e3a8a !important;
+                }
+                .wizard-settings-embed--resource-rows .resource-pool-shared-coverage [class*="border-blue-"] {
+                    border-color: #93c5fd !important;
                 }
                 .wizard-settings-embed--resource-rows [class*="text-white"],
                 .wizard-settings-embed--resource-rows [class*="text-gray-100"],
