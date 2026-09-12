@@ -1232,6 +1232,16 @@ html[data-theme="light"] body {
     box-shadow: none !important;
 }
 
+.wizard-settings-embed--scroll-stable #platform-rank-terminology > .space-y-4 > div {
+    content-visibility: auto;
+    contain: layout paint style;
+    contain-intrinsic-size: 220px;
+}
+
+.wizard-settings-embed--scroll-stable #platform-rank-terminology > .space-y-4 > .grid {
+    contain-intrinsic-size: 360px;
+}
+
 .wizard-settings-embed .bg-gray-950,
 .wizard-settings-embed .bg-gray-950\/55,
 .wizard-settings-embed .bg-gray-950\/60,

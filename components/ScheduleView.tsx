@@ -2678,10 +2678,6 @@ const InitialSetupWizard: React.FC<{
     const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = useState<SyllabusItemDetail[]>([]);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const lastSetupTestPersonnelSnapshotRef = useRef('');
-    const wizardShellRef = useRef<HTMLDivElement | null>(null);
-    const wizardScrollTraceRef = useRef<any[]>([]);
-    const wizardScrollTraceSequenceRef = useRef(0);
-    const wizardRenderCountRef = useRef(0);
     const wizardDiagnosticStorageKeys = [
         'dfp_setup_wizard_import_diag',
         'dfp_setup_test_lmp_diag',
@@ -5570,118 +5566,6 @@ const InitialSetupWizard: React.FC<{
     ];
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
-    const getWizardTraceRect = (element: Element | null) => {
-        if (!element) return null;
-        const rect = element.getBoundingClientRect();
-        return {
-            top: Math.round(rect.top),
-            left: Math.round(rect.left),
-            right: Math.round(rect.right),
-            bottom: Math.round(rect.bottom),
-            width: Math.round(rect.width),
-            height: Math.round(rect.height),
-        };
-    };
-    const getWizardOuterScrollElement = () => (
-        wizardShellRef.current?.closest('.organisation-slideout-scroll-stable') as HTMLElement | null
-    );
-    const getWizardEmbeddedSettingsElement = () => (
-        wizardShellRef.current?.querySelector('.wizard-settings-embed--scroll-stable') as HTMLElement | null
-    );
-    const summariseWizardScrollElement = (element: HTMLElement | null) => {
-        if (!element) return null;
-        const styles = window.getComputedStyle(element);
-        return {
-            scrollTop: Math.round(element.scrollTop),
-            scrollLeft: Math.round(element.scrollLeft),
-            scrollHeight: Math.round(element.scrollHeight),
-            scrollWidth: Math.round(element.scrollWidth),
-            clientHeight: Math.round(element.clientHeight),
-            clientWidth: Math.round(element.clientWidth),
-            overflowX: styles.overflowX,
-            overflowY: styles.overflowY,
-            className: element.className,
-            rect: getWizardTraceRect(element),
-        };
-    };
-    const pushWizardScrollTrace = useCallback((eventType: string, details: Record<string, any> = {}) => {
-        if (typeof window === 'undefined') return;
-        const shell = wizardShellRef.current;
-        const outerScrollElement = getWizardOuterScrollElement();
-        const embeddedSettingsElement = getWizardEmbeddedSettingsElement();
-        const answerPanel = shell?.querySelector('[data-wizard-answer-panel="true"]') || null;
-        const platformSection = shell?.querySelector('.wizard-settings-embed section') || null;
-        const shellRect = getWizardTraceRect(shell);
-        const entry = {
-            seq: ++wizardScrollTraceSequenceRef.current,
-            timestamp: new Date().toISOString(),
-            performanceMs: Math.round(window.performance?.now?.() || 0),
-            eventType,
-            renderCount: wizardRenderCountRef.current,
-            step: {
-                id: visibleStep?.id || '',
-                title: visibleStep?.title || '',
-                index: currentStep,
-                total: steps.length,
-            },
-            mode,
-            unit: {
-                activeUnitCode: unitCode || '',
-                draftUnitCode: unitDraft.code || '',
-                locationCode: locationCode || '',
-            },
-            outerScrollElement: summariseWizardScrollElement(outerScrollElement),
-            embeddedSettingsElement: summariseWizardScrollElement(embeddedSettingsElement),
-            shell: {
-                exists: Boolean(shell),
-                rect: shellRect,
-                className: shell?.className || '',
-                visibleByGeometry: Boolean(shellRect && shellRect.width > 0 && shellRect.height > 0 && shellRect.bottom > 0 && shellRect.top < window.innerHeight),
-            },
-            answerPanel: {
-                rect: getWizardTraceRect(answerPanel),
-                className: (answerPanel as HTMLElement | null)?.className || '',
-            },
-            platformSection: {
-                rect: getWizardTraceRect(platformSection),
-                className: (platformSection as HTMLElement | null)?.className || '',
-            },
-            viewport: {
-                width: window.innerWidth,
-                height: window.innerHeight,
-                scrollY: Math.round(window.scrollY || 0),
-            },
-            activeElement: document.activeElement ? {
-                tagName: document.activeElement.tagName,
-                id: (document.activeElement as HTMLElement).id || '',
-                className: String((document.activeElement as HTMLElement).className || ''),
-            } : null,
-            details,
-        };
-        wizardScrollTraceRef.current = [...wizardScrollTraceRef.current.slice(-999), entry];
-    }, [currentStep, locationCode, mode, steps.length, unitCode, unitDraft.code, visibleStep?.id, visibleStep?.title]);
-    const downloadWizardScrollTrace = () => {
-        pushWizardScrollTrace('download-clicked');
-        const payload = {
-            traceType: 'initial-setup-wizard-scroll-render-v2',
-            generatedAt: new Date().toISOString(),
-            currentStep,
-            visibleStep,
-            unitCode: unitCode || '',
-            locationCode: locationCode || '',
-            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-            entries: wizardScrollTraceRef.current,
-        };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `dfp-neo-wizard-scroll-trace-${unitCode || unitDraft.code || 'unit'}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
     useEffect(() => {
         if (!wizardPageMenuOpen) return;
         const animationFrameId = window.requestAnimationFrame(() => {
@@ -6189,51 +6073,6 @@ const InitialSetupWizard: React.FC<{
             storedDraft: readStoredOrganisationDraft(),
         });
     }, [currentStep]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        wizardRenderCountRef.current += 1;
-        const animationFrameId = window.requestAnimationFrame(() => {
-            pushWizardScrollTrace('render-committed', {
-                reason: 'wizard render effect',
-            });
-        });
-        return () => window.cancelAnimationFrame(animationFrameId);
-    }, [pushWizardScrollTrace]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const outerScrollElement = getWizardOuterScrollElement();
-        const embeddedSettingsElement = getWizardEmbeddedSettingsElement();
-        let animationFrameId = 0;
-        const recordScroll = (eventType: string) => {
-            if (animationFrameId) return;
-            animationFrameId = window.requestAnimationFrame(() => {
-                animationFrameId = 0;
-                pushWizardScrollTrace(eventType);
-            });
-        };
-        const handleOuterScroll = () => recordScroll('outer-slideout-scroll');
-        const handleEmbeddedScroll = () => recordScroll('embedded-settings-scroll');
-        const handleResize = () => recordScroll('window-resize');
-        const handleVisibility = () => pushWizardScrollTrace('visibility-change', { visibilityState: document.visibilityState });
-        outerScrollElement?.addEventListener('scroll', handleOuterScroll, { passive: true });
-        embeddedSettingsElement?.addEventListener('scroll', handleEmbeddedScroll, { passive: true });
-        window.addEventListener('resize', handleResize);
-        document.addEventListener('visibilitychange', handleVisibility);
-        pushWizardScrollTrace('scroll-listeners-attached', {
-            hasOuterScrollElement: Boolean(outerScrollElement),
-            hasEmbeddedSettingsElement: Boolean(embeddedSettingsElement),
-        });
-        return () => {
-            if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
-            outerScrollElement?.removeEventListener('scroll', handleOuterScroll);
-            embeddedSettingsElement?.removeEventListener('scroll', handleEmbeddedScroll);
-            window.removeEventListener('resize', handleResize);
-            document.removeEventListener('visibilitychange', handleVisibility);
-            pushWizardScrollTrace('scroll-listeners-detached');
-        };
-    }, [currentStep, pushWizardScrollTrace, visibleStep.id]);
 
     useEffect(() => {
         setWizardStep((step) => Math.min(step, steps.length - 1));
@@ -7576,9 +7415,7 @@ const InitialSetupWizard: React.FC<{
     };
     const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Next', saveAction?: () => void) => (
         <div
-            ref={wizardShellRef}
             key={visibleStep.id}
-            data-initial-setup-wizard-shell="true"
             className="max-w-full overflow-visible rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm"
             onKeyDownCapture={stopEditableKeyPropagation}
             onKeyDown={stopEditableKeyPropagation}
@@ -7598,13 +7435,6 @@ const InitialSetupWizard: React.FC<{
                     </div>
                     <h4 className="mt-1 text-lg font-bold leading-tight text-slate-950">{visibleStep.title}</h4>
                     <div className="mt-2 text-sm leading-5 text-slate-700">{question}</div>
-                    <button
-                        type="button"
-                        className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100"
-                        onClick={downloadWizardScrollTrace}
-                    >
-                        Download Scroll Trace
-                    </button>
                 </div>
                 <div
                     className="relative block w-full shrink-0 lg:w-[240px]"
@@ -7651,7 +7481,6 @@ const InitialSetupWizard: React.FC<{
                 </div>
             </div>
             <div
-                data-wizard-answer-panel="true"
                 className="max-w-full overflow-visible rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm"
                 onKeyDownCapture={stopEditableKeyPropagation}
                 onKeyDown={stopEditableKeyPropagation}
