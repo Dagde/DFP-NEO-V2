@@ -30,6 +30,7 @@ import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTerminology';
 import type { EmergencyFreezeAuthoritySettings } from '../utils/emergencyFreezeAuthority';
 import type { StaffQualificationDefinition } from '../utils/staffQualifications';
+import type { AllowedActions } from '../context/SystemFreezeContext';
 import type { PlatformConfig } from '../utils/platformConfigService';
 import {
   AUDIT_RECORDING_ACTIONS,
@@ -135,6 +136,8 @@ interface SettingsViewWithMenuProps {
     trainingReportDisplayName?: string;
     emergencyFreezeAuthority?: EmergencyFreezeAuthoritySettings;
     onUpdateEmergencyFreezeAuthority?: (settings: EmergencyFreezeAuthoritySettings) => void;
+    emergencyFreezeAllowedActions?: AllowedActions;
+    onUpdateEmergencyFreezeAllowedActions?: (settings: AllowedActions) => void;
     qualificationOptions?: StaffQualificationDefinition[];
     currentUserQualificationIds?: string[];
     instructorLabel?: string;
@@ -1639,7 +1642,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             'organisation': collectSelectedSearchDataTerms(props.organisationSettings, unitContextTerms, resourceRowTerms),
             'crew-composition': collectSelectedSearchDataTerms(aircraftTerms, props.aircraftCrewComposition, props.crewPositionTerminology),
             'appearance': collectSelectedSearchDataTerms(props.fixedCrewTileColourMode, props.activeOperationalModel),
-            'emergency': collectSelectedSearchDataTerms(props.emergencyFreezeAuthority, props.qualificationOptions, props.currentUserQualificationIds),
+            'emergency': collectSelectedSearchDataTerms(props.emergencyFreezeAuthority, props.emergencyFreezeAllowedActions, props.qualificationOptions, props.currentUserQualificationIds),
         };
     }, [
         props.platformConfig,
@@ -1698,6 +1701,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         props.organisationSettings,
         props.fixedCrewTileColourMode,
         props.emergencyFreezeAuthority,
+        props.emergencyFreezeAllowedActions,
         props.currentUserQualificationIds,
         isSearchFiltering,
     ]);

@@ -8,6 +8,10 @@ import {
 import type { StaffQualificationDefinition } from '../utils/staffQualifications';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
+import {
+    DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
+    normaliseEmergencyFreezeAllowedActions,
+} from '../utils/emergencyFreezeAllowedActions';
 
 interface EmergencyPageProps {
     currentUserRole?: string;
@@ -15,18 +19,13 @@ interface EmergencyPageProps {
     trainingReportDisplayName?: string;
     emergencyFreezeAuthority?: EmergencyFreezeAuthoritySettings;
     onUpdateEmergencyFreezeAuthority?: (settings: EmergencyFreezeAuthoritySettings) => void;
+    emergencyFreezeAllowedActions?: AllowedActions;
+    onUpdateEmergencyFreezeAllowedActions?: (settings: AllowedActions) => void;
     qualificationOptions?: StaffQualificationDefinition[];
     currentUserQualificationIds?: string[];
     canEditEmergencyAuthority?: boolean;
     flightAuthorisationRequired?: boolean;
 }
-
-const defaultAllowedActions: AllowedActions = {
-    postFlightTimes: false,
-    pt051Entries: false,
-    flightAuthorisation: false,
-    aircraftAvailability: false
-};
 
 const EmergencyPage: React.FC<EmergencyPageProps> = ({
     currentUserRole,
@@ -34,6 +33,8 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     trainingReportDisplayName,
     emergencyFreezeAuthority,
     onUpdateEmergencyFreezeAuthority,
+    emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
+    onUpdateEmergencyFreezeAllowedActions,
     qualificationOptions = [],
     currentUserQualificationIds = [],
     canEditEmergencyAuthority = false,
@@ -46,7 +47,9 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     const [authorityDraft, setAuthorityDraft] = useState<EmergencyFreezeAuthoritySettings>(() => (
         normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority)
     ));
-    const [pendingAllowedActions, setPendingAllowedActions] = useState<AllowedActions>(defaultAllowedActions);
+    const [pendingAllowedActions, setPendingAllowedActions] = useState<AllowedActions>(() => (
+        normaliseEmergencyFreezeAllowedActions(emergencyFreezeAllowedActions)
+    ));
     const reportDisplayName = String(trainingReportDisplayName || '').trim() || 'Training Report';
     const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
     const effectivePendingAllowedActions: AllowedActions = flightAuthorisationRequired
@@ -56,9 +59,18 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
 
     useEffect(() => {
         if (!flightAuthorisationRequired) {
-            setPendingAllowedActions(prev => prev.flightAuthorisation ? { ...prev, flightAuthorisation: false } : prev);
+            setPendingAllowedActions(prev => {
+                if (!prev.flightAuthorisation) return prev;
+                const next = normaliseEmergencyFreezeAllowedActions({ ...prev, flightAuthorisation: false });
+                onUpdateEmergencyFreezeAllowedActions?.(next);
+                return next;
+            });
         }
-    }, [flightAuthorisationRequired]);
+    }, [flightAuthorisationRequired, onUpdateEmergencyFreezeAllowedActions]);
+
+    useEffect(() => {
+        setPendingAllowedActions(normaliseEmergencyFreezeAllowedActions(emergencyFreezeAllowedActions));
+    }, [emergencyFreezeAllowedActions]);
     const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
     const canActivateFreeze = hasEmergencyFreezeAuthority({
         action: 'activate',
@@ -149,14 +161,20 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
 
     const handleAllowedActionChange = (action: keyof AllowedActions) => {
         if (action === 'flightAuthorisation' && !flightAuthorisationRequired) return;
-        setPendingAllowedActions(prev => ({
-            ...prev,
-            [action]: !prev[action]
-        }));
+        setPendingAllowedActions(prev => {
+            const next = normaliseEmergencyFreezeAllowedActions({
+                ...prev,
+                [action]: !prev[action],
+            });
+            onUpdateEmergencyFreezeAllowedActions?.(next);
+            return next;
+        });
     };
 
     const handleFreezeEverything = () => {
-        setPendingAllowedActions(defaultAllowedActions);
+        const next = normaliseEmergencyFreezeAllowedActions(DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS);
+        setPendingAllowedActions(next);
+        onUpdateEmergencyFreezeAllowedActions?.(next);
     };
 
     const isEverythingFrozen = () => {

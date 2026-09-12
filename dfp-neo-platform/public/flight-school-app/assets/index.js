@@ -3405,6 +3405,18 @@ const hasEmergencyFreezeAuthority = ({
   const assigned = new Set(normaliseStringList(userQualificationIds));
   return requiredIds.some((id) => assigned.has(id));
 };
+const DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS = {
+  postFlightTimes: false,
+  pt051Entries: false,
+  flightAuthorisation: false,
+  aircraftAvailability: false
+};
+const normaliseEmergencyFreezeAllowedActions = (value) => ({
+  postFlightTimes: value?.postFlightTimes === true,
+  pt051Entries: value?.pt051Entries === true,
+  flightAuthorisation: value?.flightAuthorisation === true,
+  aircraftAvailability: value?.aircraftAvailability === true
+});
 const SETTINGS_VERSION = "1.0";
 const ORG_ID = "default";
 let saveDebounceTimer = null;
@@ -3548,6 +3560,9 @@ const buildSettingsSnapshot = (state) => {
     tileStatusSettings: normaliseTileStatusSettings(state.tileStatusSettings || DEFAULT_TILE_STATUS_SETTINGS),
     emergencyFreezeAuthority: normaliseEmergencyFreezeAuthoritySettings(
       state.emergencyFreezeAuthority || DEFAULT_EMERGENCY_FREEZE_AUTHORITY
+    ),
+    emergencyFreezeAllowedActions: normaliseEmergencyFreezeAllowedActions(
+      state.emergencyFreezeAllowedActions || DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS
     ),
     sctEvents: state.sctEvents || [],
     formationCallsigns: state.formationCallsigns || [],
@@ -9779,7 +9794,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
 };
 const FREEZE_KEY = "systemFreezeState";
 const FREEZE_EVENT = "systemFreezeChanged";
-const defaultAllowedActions$1 = {
+const defaultAllowedActions = {
   postFlightTimes: false,
   pt051Entries: false,
   flightAuthorisation: false,
@@ -9793,15 +9808,15 @@ const readFreezeFromStorage = () => {
       return {
         isFrozen: freeze.isFrozen === true,
         allowedActions: {
-          ...defaultAllowedActions$1,
+          ...defaultAllowedActions,
           ...freeze.allowedActions || {}
         }
       };
     } catch {
-      return { isFrozen: false, allowedActions: { ...defaultAllowedActions$1 } };
+      return { isFrozen: false, allowedActions: { ...defaultAllowedActions } };
     }
   }
-  return { isFrozen: false, allowedActions: { ...defaultAllowedActions$1 } };
+  return { isFrozen: false, allowedActions: { ...defaultAllowedActions } };
 };
 const useSystemFreeze = () => {
   const [isFrozen, setIsFrozen] = reactExports.useState(() => readFreezeFromStorage().isFrozen);
@@ -13559,18 +13574,14 @@ const DutyTurnaroundSection = ({
     ] })
   ] });
 };
-const defaultAllowedActions = {
-  postFlightTimes: false,
-  pt051Entries: false,
-  flightAuthorisation: false,
-  aircraftAvailability: false
-};
 const EmergencyPage = ({
   currentUserRole: currentUserRole2,
   onShowSuccess,
   trainingReportDisplayName,
   emergencyFreezeAuthority,
   onUpdateEmergencyFreezeAuthority,
+  emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
+  onUpdateEmergencyFreezeAllowedActions,
   qualificationOptions = [],
   currentUserQualificationIds = [],
   canEditEmergencyAuthority = false,
@@ -13581,16 +13592,24 @@ const EmergencyPage = ({
   const [isProcessing, setIsProcessing] = reactExports.useState(false);
   const [isEditingAuthority, setIsEditingAuthority] = reactExports.useState(false);
   const [authorityDraft, setAuthorityDraft] = reactExports.useState(() => normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority));
-  const [pendingAllowedActions, setPendingAllowedActions] = reactExports.useState(defaultAllowedActions);
+  const [pendingAllowedActions, setPendingAllowedActions] = reactExports.useState(() => normaliseEmergencyFreezeAllowedActions(emergencyFreezeAllowedActions));
   const reportDisplayName = String(trainingReportDisplayName || "").trim() || "Training Report";
   const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
   const effectivePendingAllowedActions = flightAuthorisationRequired ? pendingAllowedActions : { ...pendingAllowedActions, flightAuthorisation: false };
   const frozenFlightAuthorisationAllowed = flightAuthorisationRequired && freezeState.allowedActions.flightAuthorisation;
   reactExports.useEffect(() => {
     if (!flightAuthorisationRequired) {
-      setPendingAllowedActions((prev) => prev.flightAuthorisation ? { ...prev, flightAuthorisation: false } : prev);
+      setPendingAllowedActions((prev) => {
+        if (!prev.flightAuthorisation) return prev;
+        const next = normaliseEmergencyFreezeAllowedActions({ ...prev, flightAuthorisation: false });
+        onUpdateEmergencyFreezeAllowedActions?.(next);
+        return next;
+      });
     }
-  }, [flightAuthorisationRequired]);
+  }, [flightAuthorisationRequired, onUpdateEmergencyFreezeAllowedActions]);
+  reactExports.useEffect(() => {
+    setPendingAllowedActions(normaliseEmergencyFreezeAllowedActions(emergencyFreezeAllowedActions));
+  }, [emergencyFreezeAllowedActions]);
   const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
   const canActivateFreeze = hasEmergencyFreezeAuthority({
     settings: authoritySettings,
@@ -13665,13 +13684,19 @@ const EmergencyPage = ({
   };
   const handleAllowedActionChange = (action) => {
     if (action === "flightAuthorisation" && !flightAuthorisationRequired) return;
-    setPendingAllowedActions((prev) => ({
-      ...prev,
-      [action]: !prev[action]
-    }));
+    setPendingAllowedActions((prev) => {
+      const next = normaliseEmergencyFreezeAllowedActions({
+        ...prev,
+        [action]: !prev[action]
+      });
+      onUpdateEmergencyFreezeAllowedActions?.(next);
+      return next;
+    });
   };
   const handleFreezeEverything = () => {
-    setPendingAllowedActions(defaultAllowedActions);
+    const next = normaliseEmergencyFreezeAllowedActions(DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS);
+    setPendingAllowedActions(next);
+    onUpdateEmergencyFreezeAllowedActions?.(next);
   };
   const isEverythingFrozen = () => {
     return !effectivePendingAllowedActions.postFlightTimes && !effectivePendingAllowedActions.pt051Entries && !effectivePendingAllowedActions.flightAuthorisation && !effectivePendingAllowedActions.aircraftAvailability;
@@ -14941,6 +14966,8 @@ const SettingsView = ({
   trainingReportDisplayName = "Training Report",
   emergencyFreezeAuthority,
   onUpdateEmergencyFreezeAuthority,
+  emergencyFreezeAllowedActions,
+  onUpdateEmergencyFreezeAllowedActions,
   qualificationOptions = [],
   currentUserQualificationIds = [],
   aircraftConfigurationDefinitions = [],
@@ -15765,6 +15792,8 @@ const SettingsView = ({
           trainingReportDisplayName,
           emergencyFreezeAuthority,
           onUpdateEmergencyFreezeAuthority,
+          emergencyFreezeAllowedActions,
+          onUpdateEmergencyFreezeAllowedActions,
           qualificationOptions,
           currentUserQualificationIds,
           canEditEmergencyAuthority,
@@ -31446,7 +31475,7 @@ const WizardFlyingWindowTimeInput = React.memo(({
     }
   );
 });
-const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
+const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
   const [mode, setMode] = reactExports.useState("detect");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const configuredContinuationShortLabel = reactExports.useMemo(
@@ -36233,6 +36262,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       onShowSuccess: setSaveMessage,
       emergencyFreezeAuthority,
       onUpdateEmergencyFreezeAuthority: (settings) => onUpdateEmergencyFreezeAuthority?.(normaliseEmergencyFreezeAuthoritySettings(settings, qualificationOptions)),
+      emergencyFreezeAllowedActions: normaliseEmergencyFreezeAllowedActions(emergencyFreezeAllowedActions),
+      onUpdateEmergencyFreezeAllowedActions: (settings) => onUpdateEmergencyFreezeAllowedActions?.(normaliseEmergencyFreezeAllowedActions(settings)),
       qualificationOptions,
       currentUserQualificationIds,
       canEditEmergencyAuthority: ["Super Admin", "Admin"].includes(currentUserPermission),
@@ -38443,7 +38474,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
+const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState("structure");
@@ -38617,6 +38648,8 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         onUpdateTileStatusSettings,
         emergencyFreezeAuthority,
         onUpdateEmergencyFreezeAuthority,
+        emergencyFreezeAllowedActions,
+        onUpdateEmergencyFreezeAllowedActions,
         qualificationOptions,
         currentUserQualificationIds,
         onUpdatePlatformConfig,
@@ -38739,6 +38772,8 @@ const ScheduleView = ({
   onUpdateTileStatusSettings,
   emergencyFreezeAuthority,
   onUpdateEmergencyFreezeAuthority,
+  emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
+  onUpdateEmergencyFreezeAllowedActions,
   qualificationOptions,
   currentUserQualificationIds,
   timezoneOffset = 10
@@ -40311,7 +40346,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950 shadow-[18px_0_36px_rgba(0,0,0,0.38)] transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
@@ -95191,7 +95226,7 @@ const SettingsViewWithMenu = (props) => {
       "organisation": collectSelectedSearchDataTerms(props.organisationSettings, unitContextTerms, resourceRowTerms),
       "crew-composition": collectSelectedSearchDataTerms(aircraftTerms, props.aircraftCrewComposition, props.crewPositionTerminology),
       "appearance": collectSelectedSearchDataTerms(props.fixedCrewTileColourMode, props.activeOperationalModel),
-      "emergency": collectSelectedSearchDataTerms(props.emergencyFreezeAuthority, props.qualificationOptions, props.currentUserQualificationIds)
+      "emergency": collectSelectedSearchDataTerms(props.emergencyFreezeAuthority, props.emergencyFreezeAllowedActions, props.qualificationOptions, props.currentUserQualificationIds)
     };
   }, [
     props.platformConfig,
@@ -95250,6 +95285,7 @@ const SettingsViewWithMenu = (props) => {
     props.organisationSettings,
     props.fixedCrewTileColourMode,
     props.emergencyFreezeAuthority,
+    props.emergencyFreezeAllowedActions,
     props.currentUserQualificationIds,
     isSearchFiltering
   ]);
@@ -127899,6 +127935,9 @@ const App = () => {
   const [emergencyFreezeAuthority, setEmergencyFreezeAuthority] = reactExports.useState(
     DEFAULT_EMERGENCY_FREEZE_AUTHORITY
   );
+  const [emergencyFreezeAllowedActions, setEmergencyFreezeAllowedActions] = reactExports.useState(
+    DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS
+  );
   reactExports.useEffect(() => {
     writeTileStatusSettingsToLocalStorage(tileStatusSettings);
   }, [tileStatusSettings]);
@@ -133414,6 +133453,9 @@ ${"=".repeat(60)}`);
         if (saved.emergencyFreezeAuthority) {
           setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(saved.emergencyFreezeAuthority, activeStaffQualificationCatalogue));
         }
+        if (saved.emergencyFreezeAllowedActions) {
+          setEmergencyFreezeAllowedActions(normaliseEmergencyFreezeAllowedActions(saved.emergencyFreezeAllowedActions));
+        }
         if (Array.isArray(saved.sctEvents)) setSctEvents(saved.sctEvents);
         if (Array.isArray(saved.formationCallsigns)) setFormationCallsigns(saved.formationCallsigns);
         if (saved.courseColors && typeof saved.courseColors === "object") setCourseColors(saved.courseColors);
@@ -133567,6 +133609,7 @@ ${"=".repeat(60)}`);
       showDepartureDensityOverlay: false,
       tileStatusSettings,
       emergencyFreezeAuthority,
+      emergencyFreezeAllowedActions,
       sctEvents,
       formationCallsigns,
       courseColors,
@@ -133625,6 +133668,7 @@ ${"=".repeat(60)}`);
     timezoneOffset,
     tileStatusSettings,
     emergencyFreezeAuthority,
+    emergencyFreezeAllowedActions,
     sctEvents,
     formationCallsigns,
     courseColors,
@@ -147345,6 +147389,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             },
             emergencyFreezeAuthority,
             onUpdateEmergencyFreezeAuthority: (settings) => setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(settings, activeStaffQualificationCatalogue)),
+            emergencyFreezeAllowedActions,
+            onUpdateEmergencyFreezeAllowedActions: (settings) => setEmergencyFreezeAllowedActions(normaliseEmergencyFreezeAllowedActions(settings)),
             qualificationOptions: emergencyQualificationOptions,
             currentUserQualificationIds: currentEmergencyQualificationIds,
             isOracleMode,
@@ -149167,6 +149213,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             trainingReportDisplayName: trainingReportTemplate.displayName,
             emergencyFreezeAuthority,
             onUpdateEmergencyFreezeAuthority: (settings) => setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(settings, activeStaffQualificationCatalogue)),
+            emergencyFreezeAllowedActions,
+            onUpdateEmergencyFreezeAllowedActions: (settings) => setEmergencyFreezeAllowedActions(normaliseEmergencyFreezeAllowedActions(settings)),
             qualificationOptions: emergencyQualificationOptions,
             currentUserQualificationIds: currentEmergencyQualificationIds,
             instructorLabel: instructorLabel2,

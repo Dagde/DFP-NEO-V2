@@ -45,6 +45,11 @@ import { DEFAULT_DISPATCH_STAGGER_SETTINGS, getEffectiveDispatchStaggerMinutes, 
 import { DEFAULT_DISPATCH_RATE_WINDOW_MINUTES, normaliseDispatchRateWindowMinutes } from '../utils/dispatchRate';
 import { DEFAULT_EMERGENCY_FREEZE_AUTHORITY, normaliseEmergencyFreezeAuthoritySettings, type EmergencyFreezeAuthoritySettings } from '../utils/emergencyFreezeAuthority';
 import {
+    DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
+    normaliseEmergencyFreezeAllowedActions,
+} from '../utils/emergencyFreezeAllowedActions';
+import type { AllowedActions } from '../context/SystemFreezeContext';
+import {
     AUDIT_RECORDING_ACTIONS,
     getAuditRecordingSettingsForPage,
     saveAuditRecordingSettingsForPage,
@@ -188,6 +193,8 @@ interface ScheduleViewProps {
   onUpdateTileStatusSettings?: (settings: TileStatusSettings) => void;
   emergencyFreezeAuthority?: EmergencyFreezeAuthoritySettings;
   onUpdateEmergencyFreezeAuthority?: (settings: EmergencyFreezeAuthoritySettings) => void;
+  emergencyFreezeAllowedActions?: AllowedActions;
+  onUpdateEmergencyFreezeAllowedActions?: (settings: AllowedActions) => void;
   qualificationOptions?: StaffQualificationDefinition[];
   currentUserQualificationIds?: string[];
   buildRuleSettings?: {
@@ -2786,6 +2793,8 @@ const InitialSetupWizard: React.FC<{
     onUpdateTileStatusSettings?: (settings: TileStatusSettings) => void;
     emergencyFreezeAuthority?: EmergencyFreezeAuthoritySettings;
     onUpdateEmergencyFreezeAuthority?: (settings: EmergencyFreezeAuthoritySettings) => void;
+    emergencyFreezeAllowedActions?: AllowedActions;
+    onUpdateEmergencyFreezeAllowedActions?: (settings: AllowedActions) => void;
     qualificationOptions?: StaffQualificationDefinition[];
     currentUserQualificationIds?: string[];
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
@@ -2794,7 +2803,7 @@ const InitialSetupWizard: React.FC<{
     canUsePlatformPermission?: (permissionId: string) => boolean;
     isSetupTestMode?: boolean;
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
-}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
+}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS, onUpdateEmergencyFreezeAllowedActions, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
     const configuredContinuationShortLabel = useMemo(
@@ -8391,6 +8400,8 @@ const InitialSetupWizard: React.FC<{
                 onShowSuccess={setSaveMessage}
                 emergencyFreezeAuthority={emergencyFreezeAuthority}
                 onUpdateEmergencyFreezeAuthority={(settings) => onUpdateEmergencyFreezeAuthority?.(normaliseEmergencyFreezeAuthoritySettings(settings, qualificationOptions))}
+                emergencyFreezeAllowedActions={normaliseEmergencyFreezeAllowedActions(emergencyFreezeAllowedActions)}
+                onUpdateEmergencyFreezeAllowedActions={(settings) => onUpdateEmergencyFreezeAllowedActions?.(normaliseEmergencyFreezeAllowedActions(settings))}
                 qualificationOptions={qualificationOptions}
                 currentUserQualificationIds={currentUserQualificationIds}
                 canEditEmergencyAuthority={['Super Admin', 'Admin'].includes(currentUserPermission)}
@@ -10908,6 +10919,8 @@ const OrganisationSlideoutDiagram: React.FC<{
     onUpdateTileStatusSettings?: (settings: TileStatusSettings) => void;
     emergencyFreezeAuthority?: EmergencyFreezeAuthoritySettings;
     onUpdateEmergencyFreezeAuthority?: (settings: EmergencyFreezeAuthoritySettings) => void;
+    emergencyFreezeAllowedActions?: AllowedActions;
+    onUpdateEmergencyFreezeAllowedActions?: (settings: AllowedActions) => void;
     qualificationOptions?: StaffQualificationDefinition[];
     currentUserQualificationIds?: string[];
     onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
@@ -10918,7 +10931,7 @@ const OrganisationSlideoutDiagram: React.FC<{
     onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
     isOpen?: boolean;
     onInitialSetupWizardActiveChange?: (active: boolean) => void;
-}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
+}> = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, emergencyFreezeAllowedActions, onUpdateEmergencyFreezeAllowedActions, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = 'Staff', canUsePlatformPermission, isSetupTestMode = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
     const chart = useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeView, setActiveView] = useState<OrganisationSlideoutView>('structure');
@@ -11092,6 +11105,8 @@ const OrganisationSlideoutDiagram: React.FC<{
                         onUpdateTileStatusSettings={onUpdateTileStatusSettings}
                         emergencyFreezeAuthority={emergencyFreezeAuthority}
                         onUpdateEmergencyFreezeAuthority={onUpdateEmergencyFreezeAuthority}
+                        emergencyFreezeAllowedActions={emergencyFreezeAllowedActions}
+                        onUpdateEmergencyFreezeAllowedActions={onUpdateEmergencyFreezeAllowedActions}
                         qualificationOptions={qualificationOptions}
                         currentUserQualificationIds={currentUserQualificationIds}
                         onUpdatePlatformConfig={onUpdatePlatformConfig}
@@ -11172,6 +11187,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     onUpdateTileStatusSettings,
     emergencyFreezeAuthority,
     onUpdateEmergencyFreezeAuthority,
+    emergencyFreezeAllowedActions = DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
+    onUpdateEmergencyFreezeAllowedActions,
     qualificationOptions,
     currentUserQualificationIds,
     timezoneOffset = 10 // Default to UTC+10 (AEST); location UTC offset overrides this when configured.
@@ -12961,7 +12978,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         style={{ width: 'min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))' }}
                     >
                         <div className={`h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                            <OrganisationSlideoutDiagram platformConfig={platformConfig} organisationSettings={organisationSettings} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} flyingStartTime={flyingStartTime} flyingEndTime={flyingEndTime} ftdStartTime={ftdStartTime} ftdEndTime={ftdEndTime} cptStartTime={cptStartTime} cptEndTime={cptEndTime} allowNightFlying={allowNightFlying} commenceNightFlying={commenceNightFlying} ceaseNightFlying={ceaseNightFlying} onUpdateFlyingStartTime={onUpdateFlyingStartTime} onUpdateFlyingEndTime={onUpdateFlyingEndTime} onUpdateFtdStartTime={onUpdateFtdStartTime} onUpdateFtdEndTime={onUpdateFtdEndTime} onUpdateCptStartTime={onUpdateCptStartTime} onUpdateCptEndTime={onUpdateCptEndTime} onUpdateAllowNightFlying={onUpdateAllowNightFlying} onUpdateCommenceNightFlying={onUpdateCommenceNightFlying} onUpdateCeaseNightFlying={onUpdateCeaseNightFlying} dispatchStaggerSettings={dispatchStaggerSettings} onUpdateDispatchStaggerSettings={onUpdateDispatchStaggerSettings} tileStatusSettings={tileStatusSettings} onUpdateTileStatusSettings={onUpdateTileStatusSettings} emergencyFreezeAuthority={emergencyFreezeAuthority} onUpdateEmergencyFreezeAuthority={onUpdateEmergencyFreezeAuthority} qualificationOptions={qualificationOptions} currentUserQualificationIds={currentUserQualificationIds} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} currentUserPermission={currentUserPermission} canUsePlatformPermission={canUsePlatformPermission} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} />
+                            <OrganisationSlideoutDiagram platformConfig={platformConfig} organisationSettings={organisationSettings} unitCode={unitCode} locationCode={locationCode} formationCallsigns={formationCallsigns} buildRuleSettings={buildRuleSettings} flyingStartTime={flyingStartTime} flyingEndTime={flyingEndTime} ftdStartTime={ftdStartTime} ftdEndTime={ftdEndTime} cptStartTime={cptStartTime} cptEndTime={cptEndTime} allowNightFlying={allowNightFlying} commenceNightFlying={commenceNightFlying} ceaseNightFlying={ceaseNightFlying} onUpdateFlyingStartTime={onUpdateFlyingStartTime} onUpdateFlyingEndTime={onUpdateFlyingEndTime} onUpdateFtdStartTime={onUpdateFtdStartTime} onUpdateFtdEndTime={onUpdateFtdEndTime} onUpdateCptStartTime={onUpdateCptStartTime} onUpdateCptEndTime={onUpdateCptEndTime} onUpdateAllowNightFlying={onUpdateAllowNightFlying} onUpdateCommenceNightFlying={onUpdateCommenceNightFlying} onUpdateCeaseNightFlying={onUpdateCeaseNightFlying} dispatchStaggerSettings={dispatchStaggerSettings} onUpdateDispatchStaggerSettings={onUpdateDispatchStaggerSettings} tileStatusSettings={tileStatusSettings} onUpdateTileStatusSettings={onUpdateTileStatusSettings} emergencyFreezeAuthority={emergencyFreezeAuthority} onUpdateEmergencyFreezeAuthority={onUpdateEmergencyFreezeAuthority} emergencyFreezeAllowedActions={emergencyFreezeAllowedActions} onUpdateEmergencyFreezeAllowedActions={onUpdateEmergencyFreezeAllowedActions} qualificationOptions={qualificationOptions} currentUserQualificationIds={currentUserQualificationIds} onUpdatePlatformConfig={onUpdatePlatformConfig} onNavigateToSettingsSection={onNavigateToSettingsSection} currentUserPermission={currentUserPermission} canUsePlatformPermission={canUsePlatformPermission} isSetupTestMode={isSetupTestMode} onSaveSetupTestPersonnel={onSaveSetupTestPersonnel} isOpen={showResourceUnderlayPanel} onInitialSetupWizardActiveChange={onInitialSetupWizardActiveChange} />
                         </div>
                         <button
                             type="button"

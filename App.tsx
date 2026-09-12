@@ -121,6 +121,11 @@ import {
     normaliseEmergencyFreezeAuthoritySettings,
     type EmergencyFreezeAuthoritySettings,
 } from './utils/emergencyFreezeAuthority';
+import {
+    DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
+    normaliseEmergencyFreezeAllowedActions,
+} from './utils/emergencyFreezeAllowedActions';
+import type { AllowedActions } from './context/SystemFreezeContext';
 import { getInsertEventTimingDefaults, getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
 import {
@@ -27861,6 +27866,9 @@ const App: React.FC = () => {
     const [emergencyFreezeAuthority, setEmergencyFreezeAuthority] = useState<EmergencyFreezeAuthoritySettings>(
         DEFAULT_EMERGENCY_FREEZE_AUTHORITY,
     );
+    const [emergencyFreezeAllowedActions, setEmergencyFreezeAllowedActions] = useState<AllowedActions>(
+        DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
+    );
 
     useEffect(() => {
         writeTileStatusSettingsToLocalStorage(tileStatusSettings);
@@ -34829,6 +34837,9 @@ const App: React.FC = () => {
                 if ((saved as any).emergencyFreezeAuthority) {
                     setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings((saved as any).emergencyFreezeAuthority, activeStaffQualificationCatalogue));
                 }
+                if ((saved as any).emergencyFreezeAllowedActions) {
+                    setEmergencyFreezeAllowedActions(normaliseEmergencyFreezeAllowedActions((saved as any).emergencyFreezeAllowedActions));
+                }
                 if (Array.isArray(saved.sctEvents)) setSctEvents(saved.sctEvents);
                 if (Array.isArray(saved.formationCallsigns)) setFormationCallsigns(saved.formationCallsigns);
                 if (saved.courseColors && typeof saved.courseColors === 'object') setCourseColors(saved.courseColors);
@@ -35006,6 +35017,7 @@ const App: React.FC = () => {
             showDepartureDensityOverlay: false,
             tileStatusSettings,
             emergencyFreezeAuthority,
+            emergencyFreezeAllowedActions,
             sctEvents,
             formationCallsigns,
             courseColors,
@@ -35037,7 +35049,7 @@ const App: React.FC = () => {
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
         flyingWindowExclusions, flyingWindowExclusionsByUnit, activeFlyingWindowExclusionUnitKey,
         availableAircraftCount, neoAvailableAircraftCount, neoAircraftConfigCapacities, neoAircraftCapacityByUnit, activeNeoAircraftCapacityUnitKey, availableFtdCount, availableCptCount,
-        timezoneOffset, tileStatusSettings, emergencyFreezeAuthority,
+        timezoneOffset, tileStatusSettings, emergencyFreezeAuthority, emergencyFreezeAllowedActions,
         sctEvents, formationCallsigns, courseColors,
         phraseBank, cancellationCodes,
         masterCurrencies, currencyRequirements, unitCurrencyDefinitions,
@@ -51982,6 +51994,8 @@ appliedUpdates.forEach(update => {
                            }}
                            emergencyFreezeAuthority={emergencyFreezeAuthority}
                            onUpdateEmergencyFreezeAuthority={(settings) => setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(settings, activeStaffQualificationCatalogue))}
+                           emergencyFreezeAllowedActions={emergencyFreezeAllowedActions}
+                           onUpdateEmergencyFreezeAllowedActions={(settings) => setEmergencyFreezeAllowedActions(normaliseEmergencyFreezeAllowedActions(settings))}
                            qualificationOptions={emergencyQualificationOptions}
                            currentUserQualificationIds={currentEmergencyQualificationIds}
                            isOracleMode={isOracleMode}
@@ -53931,6 +53945,8 @@ appliedUpdates.forEach(update => {
                        trainingReportDisplayName={trainingReportTemplate.displayName}
                        emergencyFreezeAuthority={emergencyFreezeAuthority}
                        onUpdateEmergencyFreezeAuthority={(settings) => setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(settings, activeStaffQualificationCatalogue))}
+                       emergencyFreezeAllowedActions={emergencyFreezeAllowedActions}
+                       onUpdateEmergencyFreezeAllowedActions={(settings) => setEmergencyFreezeAllowedActions(normaliseEmergencyFreezeAllowedActions(settings))}
                        qualificationOptions={emergencyQualificationOptions}
                        currentUserQualificationIds={currentEmergencyQualificationIds}
                        instructorLabel={instructorLabel}

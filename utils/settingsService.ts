@@ -21,6 +21,11 @@ import {
   normaliseEmergencyFreezeAuthoritySettings,
   type EmergencyFreezeAuthoritySettings,
 } from './emergencyFreezeAuthority';
+import {
+  DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
+  normaliseEmergencyFreezeAllowedActions,
+} from './emergencyFreezeAllowedActions';
+import type { AllowedActions } from '../context/SystemFreezeContext';
 import type { FlyingWindowExclusionPeriod } from '../types';
 
 export interface ServiceDefinition {
@@ -79,6 +84,7 @@ export interface AppSettingsData {
   showDepartureDensityOverlay: boolean;
   tileStatusSettings: TileStatusSettings;
   emergencyFreezeAuthority: EmergencyFreezeAuthoritySettings;
+  emergencyFreezeAllowedActions: AllowedActions;
 
   // Continuation and currency events
   sctEvents: any[];
@@ -346,6 +352,9 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     tileStatusSettings: normaliseTileStatusSettings(state.tileStatusSettings || DEFAULT_TILE_STATUS_SETTINGS),
     emergencyFreezeAuthority: normaliseEmergencyFreezeAuthoritySettings(
       state.emergencyFreezeAuthority || DEFAULT_EMERGENCY_FREEZE_AUTHORITY,
+    ),
+    emergencyFreezeAllowedActions: normaliseEmergencyFreezeAllowedActions(
+      state.emergencyFreezeAllowedActions || DEFAULT_EMERGENCY_FREEZE_ALLOWED_ACTIONS,
     ),
     sctEvents: state.sctEvents || [],
     formationCallsigns: state.formationCallsigns || [],

@@ -42,6 +42,7 @@ import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigura
 import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
 import type { EmergencyFreezeAuthoritySettings } from '../utils/emergencyFreezeAuthority';
 import type { StaffQualificationDefinition } from '../utils/staffQualifications';
+import type { AllowedActions } from '../context/SystemFreezeContext';
 import {
     DEFAULT_SCORING_MATRIX_SECTIONS,
     SCORING_MATRIX_ELEMENT_GROUPS_KEY,
@@ -162,6 +163,8 @@ interface SettingsViewProps {
     trainingReportDisplayName?: string;
     emergencyFreezeAuthority?: EmergencyFreezeAuthoritySettings;
     onUpdateEmergencyFreezeAuthority?: (settings: EmergencyFreezeAuthoritySettings) => void;
+    emergencyFreezeAllowedActions?: AllowedActions;
+    onUpdateEmergencyFreezeAllowedActions?: (settings: AllowedActions) => void;
     qualificationOptions?: StaffQualificationDefinition[];
     currentUserQualificationIds?: string[];
     aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
@@ -643,6 +646,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     trainingReportDisplayName = 'Training Report',
     emergencyFreezeAuthority,
     onUpdateEmergencyFreezeAuthority,
+    emergencyFreezeAllowedActions,
+    onUpdateEmergencyFreezeAllowedActions,
     qualificationOptions = [],
     currentUserQualificationIds = [],
     aircraftConfigurationDefinitions = [],
@@ -1633,6 +1638,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        trainingReportDisplayName={trainingReportDisplayName}
                        emergencyFreezeAuthority={emergencyFreezeAuthority}
                        onUpdateEmergencyFreezeAuthority={onUpdateEmergencyFreezeAuthority}
+                       emergencyFreezeAllowedActions={emergencyFreezeAllowedActions}
+                       onUpdateEmergencyFreezeAllowedActions={onUpdateEmergencyFreezeAllowedActions}
                        qualificationOptions={qualificationOptions}
                        currentUserQualificationIds={currentUserQualificationIds}
                        canEditEmergencyAuthority={canEditEmergencyAuthority}
