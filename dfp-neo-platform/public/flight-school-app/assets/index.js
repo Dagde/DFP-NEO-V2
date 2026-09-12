@@ -31508,7 +31508,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const exactCurrentUnit = configuredWizardUnits.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === currentWizardUnitCode);
   const firstCurrentMemberUnit = !exactCurrentUnit && currentWizardUnitCodes.length > 0 ? configuredWizardUnits.find((unit) => currentWizardUnitCodes.includes(normaliseUnitSettingsIdentifier(unit?.code))) : null;
   const currentUnit = exactCurrentUnit || firstCurrentMemberUnit || (!currentWizardUnitCode ? configuredWizardUnits[0] : null);
-  const activeWizardLocationCode = String(locationCode || currentUnit?.locationCode || "").trim().toUpperCase();
+  const activeWizardLocationCode = String(currentUnit?.locationCode || locationCode || "").trim().toUpperCase();
   const currentUnitLocationKey = normaliseUnitSettingsIdentifier(currentUnit?.locationCode || activeWizardLocationCode);
   const currentLocation = (platformConfig?.locations || []).find((location) => [
     location?.code,

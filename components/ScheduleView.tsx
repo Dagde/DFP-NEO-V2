@@ -2931,7 +2931,7 @@ const InitialSetupWizard: React.FC<{
     const currentUnit = exactCurrentUnit
         || firstCurrentMemberUnit
         || (!currentWizardUnitCode ? configuredWizardUnits[0] : null);
-    const activeWizardLocationCode = String(locationCode || currentUnit?.locationCode || '').trim().toUpperCase();
+    const activeWizardLocationCode = String(currentUnit?.locationCode || locationCode || '').trim().toUpperCase();
     const currentUnitLocationKey = normaliseUnitSettingsIdentifier(currentUnit?.locationCode || activeWizardLocationCode);
     const currentLocation = (platformConfig?.locations || []).find((location: any) => (
         [
