@@ -8226,27 +8226,27 @@ const InitialSetupWizard: React.FC<{
         if (visibleStep.id === 'flying-windows') {
             commitFlyingWindowDrafts();
         }
-        if (visibleStep.id === 'resource-row-details') {
+        const wizardSettingsSaveSteps: Record<string, string> = {
+            'resource-row-details': 'Resource row setup',
+            'aircraft-configs': 'Aircraft CONFIG setup',
+            callsigns: 'Callsign settings',
+            'advanced-scheduling-rules': 'Scheduling rule settings',
+            access: 'User permissions',
+            'deployment-readiness': 'Deployment readiness',
+            'operational-runbook': 'Support and recovery details',
+            licensing: 'Licence details',
+            'directed-task-setups': 'Directed task setup',
+        };
+        const settingsSaveLabel = wizardSettingsSaveSteps[visibleStep.id];
+        if (settingsSaveLabel) {
             const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
             if (!saveWizardSettings) {
-                setSaveMessage('Resource row setup is still loading. Try Next again in a moment.');
+                setSaveMessage(`${settingsSaveLabel} is still loading. Try Next again in a moment.`);
                 return;
             }
             const saved = await saveWizardSettings();
             if (!saved) {
-                setSaveMessage('Resource row changes were not saved. Review the page before continuing.');
-                return;
-            }
-        }
-        if (visibleStep.id === 'directed-task-setups') {
-            const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
-            if (!saveWizardSettings) {
-                setSaveMessage('Directed task setup is still loading. Try Next again in a moment.');
-                return;
-            }
-            const saved = await saveWizardSettings();
-            if (!saved) {
-                setSaveMessage('Directed task setup changes were not saved. Review the page before continuing.');
+                setSaveMessage(`${settingsSaveLabel} changes were not saved. Review the page before continuing.`);
                 return;
             }
         }

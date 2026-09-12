@@ -7667,13 +7667,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       onWizardSaveReady(() => saveSectionAndExitEdit('platform-standard-missions'));
       return () => onWizardSaveReady(null);
     }
+    if (scrollTarget) {
+      onWizardSaveReady(() => saveSectionAndExitEdit(scrollTarget));
+      return () => onWizardSaveReady(null);
+    }
     onWizardSaveReady(null);
     return () => onWizardSaveReady(null);
   }, [onWizardSaveReady, saveResourcePoolsAndExitEdit, saveSectionAndExitEdit, scrollTarget, wizardEditMode]);
 
   const renderSectionEditSaveButton = (sectionId: string) => {
     if (!canEdit || !canEditSectionPermission(sectionId)) return null;
-    if (wizardEditMode && sectionId === 'platform-standard-missions') return null;
+    if (wizardEditMode) return null;
     const isEditing = isSectionEditActive(sectionId);
     return (
       <button
