@@ -4546,25 +4546,32 @@ const InitialSetupWizard: React.FC<{
         })));
     };
 
-    const saveLocationDraft = () => {
-        const cleanCode = String(locationDraft.code || '').trim().toUpperCase();
+    const saveLocationDraft = (draftOverride = locationDraft, message = 'Location saved into Settings.') => {
+        const effectiveLocationDraft = draftOverride;
+        const cleanCode = String(effectiveLocationDraft.code || '').trim().toUpperCase();
         if (!cleanCode) {
             setSaveMessage('Enter a location code before saving.');
             return;
         }
         pushWizardLocationScopeTrace('save-location-detail-requested', {
-            locationDraft,
+            locationDraft: effectiveLocationDraft,
             cleanCode,
         });
-        saveWizardConfig('Location saved into Settings.', (baseConfig) => {
+        saveWizardConfig(message, (baseConfig) => {
             const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
             const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
             const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
-            const parsedLatitude = Number(locationDraft.latitude);
-            const parsedLongitude = Number(locationDraft.longitude);
-            const hasLatitude = String(locationDraft.latitude || '').trim() && Number.isFinite(parsedLatitude);
-            const hasLongitude = String(locationDraft.longitude || '').trim() && Number.isFinite(parsedLongitude);
-            const previousLocationCode = normaliseUnitSettingsIdentifier(currentLocation?.code || activeWizardLocationCode);
+            const parsedLatitude = Number(effectiveLocationDraft.latitude);
+            const parsedLongitude = Number(effectiveLocationDraft.longitude);
+            const hasLatitude = String(effectiveLocationDraft.latitude || '').trim() && Number.isFinite(parsedLatitude);
+            const hasLongitude = String(effectiveLocationDraft.longitude || '').trim() && Number.isFinite(parsedLongitude);
+            const previousLocationCodes = new Set(
+                units
+                    .filter((unit: any) => wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code)))
+                    .map((unit: any) => normaliseUnitSettingsIdentifier(unit?.locationCode))
+                    .filter(Boolean),
+            );
+            if (previousLocationCodes.size === 0) previousLocationCodes.add(normaliseUnitSettingsIdentifier(currentLocation?.code || activeWizardLocationCode));
             const existingLocation = locations.find((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
             const mergedLocationUnitCodes = Array.from(new Set([
                 ...getWizardLocationUnitCodes(existingLocation || currentLocation || {}),
@@ -4591,16 +4598,16 @@ const InitialSetupWizard: React.FC<{
             const nextLocation = {
                 id: existingLocation?.id || currentLocation?.id || createWizardRecordId('location'),
                 code: cleanCode,
-                iataCode: String(locationDraft.iataCode || '').trim().toUpperCase(),
-                name: locationDraft.name || cleanCode,
-                timezone: locationDraft.timezone || 'UTC',
+                iataCode: String(effectiveLocationDraft.iataCode || '').trim().toUpperCase(),
+                name: effectiveLocationDraft.name || cleanCode,
+                timezone: effectiveLocationDraft.timezone || 'UTC',
                 latitude: hasLatitude ? parsedLatitude : existingLocation?.latitude ?? currentLocation?.latitude,
                 longitude: hasLongitude ? parsedLongitude : existingLocation?.longitude ?? currentLocation?.longitude,
-                trainingAreas: locationDraft.trainingAreas.split(',').map((item) => item.trim()).filter(Boolean),
+                trainingAreas: effectiveLocationDraft.trainingAreas.split(',').map((item) => item.trim()).filter(Boolean),
                 status: 'ACTIVE',
                 settings: {
                     ...(existingLocation?.settings || currentLocation?.settings || {}),
-                    iataCode: String(locationDraft.iataCode || '').trim().toUpperCase(),
+                    iataCode: String(effectiveLocationDraft.iataCode || '').trim().toUpperCase(),
                     unitCodes: mergedLocationUnitCodes,
                     ...(hasLatitude ? { latitude: parsedLatitude } : {}),
                     ...(hasLongitude ? { longitude: parsedLongitude } : {}),
@@ -4610,7 +4617,7 @@ const InitialSetupWizard: React.FC<{
             const baseLocations = locations.map((location: any) => {
                 const locationCode = normaliseUnitSettingsIdentifier(location?.code);
                 if (locationCode === normaliseUnitSettingsIdentifier(cleanCode)) return location;
-                if (previousLocationCode && locationCode === previousLocationCode) return removeScopedUnitCodesFromLocation(location);
+                if (previousLocationCodes.has(locationCode)) return removeScopedUnitCodesFromLocation(location);
                 return location;
             });
             const nextLocations = exists
@@ -4632,7 +4639,7 @@ const InitialSetupWizard: React.FC<{
                 : resourcePools;
             pushWizardLocationScopeTrace('save-location-detail-returning-config', {
                 cleanCode,
-                previousLocationCode,
+                previousLocationCodes: Array.from(previousLocationCodes),
                 baseUnits: units.map(summariseWizardLocationScopeUnit),
                 baseLocations: locations.map(summariseWizardLocationScopeLocation),
                 baseResourcePools: resourcePools.map((pool: any) => ({
@@ -9857,20 +9864,28 @@ const InitialSetupWizard: React.FC<{
             );
         }
         if (visibleStep.id === 'location-details') {
+            const saveResolvedLocationDraft = (nextDraft: typeof locationDraft, matchedProfile: ReturnType<typeof findWizardLocationProfile> | undefined, value: string, minLength = 0) => {
+                updateLocationDraft(nextDraft);
+                const shouldSave = Boolean(matchedProfile) || (minLength > 0 && String(value || '').trim().length >= minLength);
+                if (shouldSave) saveLocationDraft(nextDraft, 'Location saved into Settings.');
+            };
             return promptShell(
                 <p>Confirm the details for the first locality. You will use the same pattern for every locality listed earlier.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardDataListField('ICAO code', locationDraft.code, (value) => {
                         const matchedProfile = findWizardLocationProfile(value);
-                        updateLocationDraft((draft) => ({ ...draft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || draft.iataCode, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : draft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : draft.longitude }));
+                        const nextDraft = { ...locationDraft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || locationDraft.iataCode, name: matchedProfile?.name || locationDraft.name, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
+                        saveResolvedLocationDraft(nextDraft, matchedProfile, value, 4);
                     }, wizardLocationIcaoOptions, 'ICAO code')}
                     {wizardDataListField('IATA code', locationDraft.iataCode, (value) => {
                         const matchedProfile = findWizardLocationProfile(value);
-                        updateLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || draft.code, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : draft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : draft.longitude }));
+                        const nextDraft = { ...locationDraft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || locationDraft.code, name: matchedProfile?.name || locationDraft.name, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
+                        saveResolvedLocationDraft(nextDraft, matchedProfile, value, 3);
                     }, wizardLocationIataOptions, 'IATA code')}
                     {wizardDataListField('Location name', locationDraft.name, (value) => {
                         const matchedProfile = findWizardLocationProfile(value);
-                        updateLocationDraft((draft) => ({ ...draft, name: value, code: matchedProfile?.icao || draft.code, iataCode: matchedProfile?.iata || draft.iataCode, timezone: matchedProfile?.timezone || draft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : draft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : draft.longitude }));
+                        const nextDraft = { ...locationDraft, name: value, code: matchedProfile?.icao || locationDraft.code, iataCode: matchedProfile?.iata || locationDraft.iataCode, timezone: matchedProfile?.timezone || locationDraft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : locationDraft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : locationDraft.longitude };
+                        saveResolvedLocationDraft(nextDraft, matchedProfile, value);
                     }, wizardLocationNameOptions, 'Location name')}
                     {wizardField('Timezone', locationDraft.timezone, (value) => updateLocationDraft((draft) => ({ ...draft, timezone: value })), undefined, 'UTC')}
                     {wizardField('Latitude', locationDraft.latitude, (value) => updateLocationDraft((draft) => ({ ...draft, latitude: value })), undefined, '-27.3842')}
