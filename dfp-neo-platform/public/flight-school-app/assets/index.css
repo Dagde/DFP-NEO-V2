@@ -1198,6 +1198,14 @@ html[data-theme="light"] body {
     color: #0f172a !important;
 }
 
+.wizard-settings-embed--scroll-stable {
+    max-height: min(64vh, 640px);
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
 .organisation-slideout-scroll-stable {
     background: #0f172a;
     overscroll-behavior: contain;
