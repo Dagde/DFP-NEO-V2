@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSystemFreeze, AllowedActions } from '../context/SystemFreezeContext';
 import {
     hasEmergencyFreezeAuthority,
@@ -19,6 +19,8 @@ interface EmergencyPageProps {
     currentUserQualificationIds?: string[];
     canEditEmergencyAuthority?: boolean;
     flightAuthorisationRequired?: boolean;
+    wizardEditMode?: boolean;
+    onWizardSaveReady?: (save: (() => Promise<boolean>) | null) => void;
 }
 
 const defaultAllowedActions: AllowedActions = {
@@ -38,6 +40,8 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     currentUserQualificationIds = [],
     canEditEmergencyAuthority = false,
     flightAuthorisationRequired = true,
+    wizardEditMode = false,
+    onWizardSaveReady,
 }) => {
     const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze();
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -59,7 +63,8 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
             setPendingAllowedActions(prev => prev.flightAuthorisation ? { ...prev, flightAuthorisation: false } : prev);
         }
     }, [flightAuthorisationRequired]);
-    const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
+    const isAuthorityEditorActive = wizardEditMode || isEditingAuthority;
+    const displayedAuthoritySettings = isAuthorityEditorActive ? authorityDraft : authoritySettings;
     const canActivateFreeze = hasEmergencyFreezeAuthority({
         action: 'activate',
         settings: authoritySettings,
@@ -74,10 +79,10 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     });
 
     useEffect(() => {
-        if (!isEditingAuthority) {
+        if (!isEditingAuthority && !wizardEditMode) {
             setAuthorityDraft(authoritySettings);
         }
-    }, [authoritySettings, isEditingAuthority]);
+    }, [authoritySettings, isEditingAuthority, wizardEditMode]);
 
     const requestPassword = async (message: string, title: string): Promise<boolean> => {
         const password = await showDarkPrompt({
@@ -135,8 +140,8 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
         setIsEditingAuthority(false);
     };
 
-    const handleSaveAuthority = async () => {
-        if (!canEditEmergencyAuthority || !onUpdateEmergencyFreezeAuthority) return;
+    const saveAuthorityDraft = useCallback(async () => {
+        if (!canEditEmergencyAuthority || !onUpdateEmergencyFreezeAuthority) return true;
         onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings({
             activateQualificationIds: authorityDraft.activateQualificationIds,
             deactivateQualificationIds: authorityDraft.activateQualificationIds,
@@ -145,6 +150,17 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
         if (onShowSuccess) {
             onShowSuccess('Emergency freeze authority saved');
         }
+        return true;
+    }, [authorityDraft.activateQualificationIds, canEditEmergencyAuthority, onShowSuccess, onUpdateEmergencyFreezeAuthority]);
+
+    useEffect(() => {
+        if (!wizardEditMode || !onWizardSaveReady) return undefined;
+        onWizardSaveReady(saveAuthorityDraft);
+        return () => onWizardSaveReady(null);
+    }, [onWizardSaveReady, saveAuthorityDraft, wizardEditMode]);
+
+    const handleSaveAuthority = async () => {
+        await saveAuthorityDraft();
     };
 
     const handleAllowedActionChange = (action: keyof AllowedActions) => {
@@ -299,7 +315,7 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                         <h3 className="text-lg font-semibold text-white">Emergency Freeze Authority</h3>
                         <p className="text-sm text-gray-400">Qualifications authorised to activate and deactivate freeze.</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    {!wizardEditMode ? <div className="flex items-center gap-2">
                         {isEditingAuthority ? (
                             <>
                                 <button
@@ -325,10 +341,10 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                         ) : (
                             <span className="rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200">Read-only</span>
                         )}
-                    </div>
+                    </div> : null}
                 </div>
                 {qualificationOptions.length > 0 ? (
-                    isEditingAuthority ? (
+                    isAuthorityEditorActive && canEditEmergencyAuthority ? (
                         <div>
                             <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Activate and Deactivate</h4>
                             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">

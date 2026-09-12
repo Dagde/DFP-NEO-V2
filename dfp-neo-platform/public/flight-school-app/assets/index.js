@@ -13574,7 +13574,9 @@ const EmergencyPage = ({
   qualificationOptions = [],
   currentUserQualificationIds = [],
   canEditEmergencyAuthority = false,
-  flightAuthorisationRequired = true
+  flightAuthorisationRequired = true,
+  wizardEditMode = false,
+  onWizardSaveReady
 }) => {
   const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze$1();
   const [showConfirmDialog, setShowConfirmDialog] = reactExports.useState(false);
@@ -13591,7 +13593,8 @@ const EmergencyPage = ({
       setPendingAllowedActions((prev) => prev.flightAuthorisation ? { ...prev, flightAuthorisation: false } : prev);
     }
   }, [flightAuthorisationRequired]);
-  const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
+  const isAuthorityEditorActive = wizardEditMode || isEditingAuthority;
+  const displayedAuthoritySettings = isAuthorityEditorActive ? authorityDraft : authoritySettings;
   const canActivateFreeze = hasEmergencyFreezeAuthority({
     settings: authoritySettings,
     userQualificationIds: currentUserQualificationIds
@@ -13601,10 +13604,10 @@ const EmergencyPage = ({
     userQualificationIds: currentUserQualificationIds
   });
   reactExports.useEffect(() => {
-    if (!isEditingAuthority) {
+    if (!isEditingAuthority && !wizardEditMode) {
       setAuthorityDraft(authoritySettings);
     }
-  }, [authoritySettings, isEditingAuthority]);
+  }, [authoritySettings, isEditingAuthority, wizardEditMode]);
   const requestPassword = async (message, title) => {
     const password = await showDarkPrompt({
       title,
@@ -13652,8 +13655,8 @@ const EmergencyPage = ({
     setAuthorityDraft(authoritySettings);
     setIsEditingAuthority(false);
   };
-  const handleSaveAuthority = async () => {
-    if (!canEditEmergencyAuthority || !onUpdateEmergencyFreezeAuthority) return;
+  const saveAuthorityDraft = reactExports.useCallback(async () => {
+    if (!canEditEmergencyAuthority || !onUpdateEmergencyFreezeAuthority) return true;
     onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings({
       activateQualificationIds: authorityDraft.activateQualificationIds,
       deactivateQualificationIds: authorityDraft.activateQualificationIds
@@ -13662,6 +13665,15 @@ const EmergencyPage = ({
     if (onShowSuccess) {
       onShowSuccess("Emergency freeze authority saved");
     }
+    return true;
+  }, [authorityDraft.activateQualificationIds, canEditEmergencyAuthority, onShowSuccess, onUpdateEmergencyFreezeAuthority]);
+  reactExports.useEffect(() => {
+    if (!wizardEditMode || !onWizardSaveReady) return void 0;
+    onWizardSaveReady(saveAuthorityDraft);
+    return () => onWizardSaveReady(null);
+  }, [onWizardSaveReady, saveAuthorityDraft, wizardEditMode]);
+  const handleSaveAuthority = async () => {
+    await saveAuthorityDraft();
   };
   const handleAllowedActionChange = (action) => {
     if (action === "flightAuthorisation" && !flightAuthorisationRequired) return;
@@ -13759,7 +13771,7 @@ const EmergencyPage = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Emergency Freeze Authority" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Qualifications authorised to activate and deactivate freeze." })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2", children: isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        !wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2", children: isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -13783,9 +13795,9 @@ const EmergencyPage = ({
             className: "rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
             children: "Edit"
           }
-        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200", children: "Read-only" }) })
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200", children: "Read-only" }) }) : null
       ] }),
-      qualificationOptions.length > 0 ? isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      qualificationOptions.length > 0 ? isAuthorityEditorActive && canEditEmergencyAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate and Deactivate" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 md:grid-cols-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -36088,6 +36100,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         return;
       }
     }
+    if (visibleStep.id === "emergency-settings") {
+      const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
+      if (!saveWizardSettings) {
+        setSaveMessage("Emergency settings are still loading. Try Next again in a moment.");
+        return;
+      }
+      const saved = await saveWizardSettings();
+      if (!saved) {
+        setSaveMessage("Emergency settings were not saved. Review the page before continuing.");
+        return;
+      }
+    }
     if (visibleStep.id === "trainee-courses" && unitDraft.hasTrainees) {
       const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
       if (courseCount === 0) {
@@ -36215,7 +36239,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       qualificationOptions,
       currentUserQualificationIds,
       canEditEmergencyAuthority: ["Super Admin", "Admin"].includes(currentUserPermission),
-      flightAuthorisationRequired: normaliseTileStatusSettings(tileStatusSettings).flightAuthorisationRequired
+      flightAuthorisationRequired: normaliseTileStatusSettings(tileStatusSettings).flightAuthorisationRequired,
+      wizardEditMode: true,
+      onWizardSaveReady: (save) => {
+        wizardPlatformSettingsSaveRef.current = save;
+      }
     }
   ) });
   const renderWizardPlatformSettingsEmbed = (scrollTarget, _focusSubsectionId = "", successMessage = "Settings saved into Settings.", extraProps = {}) => {
