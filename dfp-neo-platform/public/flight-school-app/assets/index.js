@@ -5890,7 +5890,7 @@ const buildCompactPersonNameResolver = (people = []) => {
   };
   return { formatCompact, formatCompactWithInitial, formatList, explainCompact };
 };
-const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "pooled_crew"];
+const SUPPORTED_MODELS = ["flight_school", "air_combat", "fixed_crew", "pooled_crew"];
 const normaliseCode$4 = (value, fallback) => {
   const token = String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, "").slice(0, 3);
   return token || fallback.slice(0, 3);
@@ -31929,7 +31929,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     return fallback;
   };
   const getTargetWizardUnitCode = () => String(unitDraft.code || currentUnit?.code || unitCode || "").trim().toUpperCase();
-  const getTargetWizardAircraftCode = () => String(crewDraft.aircraftCode || resourceDraft.aircraftCode || primaryAircraftType?.code || "").trim().toUpperCase();
+  const getTargetWizardAircraftCode = () => String(resourceDraft.aircraftCode || primaryAircraftType?.code || crewDraft.aircraftCode || "").trim().toUpperCase();
   const findWizardAlternateCrewProfile = (settingsSource = activeOrganisation?.settings) => {
     const targetUnitKey = normaliseUnitSettingsIdentifier(getTargetWizardUnitCode());
     const targetAircraftKey = normaliseUnitSettingsIdentifier(getTargetWizardAircraftCode());
@@ -33994,7 +33994,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (stepId === "crew") {
       saveCrewDraft();
-      saveWizardSupplementaryDrafts("Crew setup synced into Settings.");
       return;
     }
     if (stepId === "master-lmp") {

@@ -3550,7 +3550,7 @@ const InitialSetupWizard: React.FC<{
         return fallback;
     };
     const getTargetWizardUnitCode = () => String(unitDraft.code || currentUnit?.code || unitCode || '').trim().toUpperCase();
-    const getTargetWizardAircraftCode = () => String(crewDraft.aircraftCode || resourceDraft.aircraftCode || primaryAircraftType?.code || '').trim().toUpperCase();
+    const getTargetWizardAircraftCode = () => String(resourceDraft.aircraftCode || primaryAircraftType?.code || crewDraft.aircraftCode || '').trim().toUpperCase();
     const findWizardAlternateCrewProfile = (settingsSource: any = activeOrganisation?.settings) => {
         const targetUnitKey = normaliseUnitSettingsIdentifier(getTargetWizardUnitCode());
         const targetAircraftKey = normaliseUnitSettingsIdentifier(getTargetWizardAircraftCode());
@@ -6001,7 +6001,6 @@ const InitialSetupWizard: React.FC<{
         }
         if (stepId === 'crew') {
             saveCrewDraft();
-            saveWizardSupplementaryDrafts('Crew setup synced into Settings.');
             return;
         }
         if (stepId === 'master-lmp') {

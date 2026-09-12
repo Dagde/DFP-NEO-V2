@@ -42,7 +42,7 @@ export interface CrewCompositionSettings {
   currencyProfiles: CurrencyProfile[];
 }
 
-const SUPPORTED_MODELS: OperationalModelCode[] = ['air_combat', 'fixed_crew', 'pooled_crew'];
+const SUPPORTED_MODELS: OperationalModelCode[] = ['flight_school', 'air_combat', 'fixed_crew', 'pooled_crew'];
 
 const normaliseCode = (value: unknown, fallback: string): string => {
   const token = String(value || '')
