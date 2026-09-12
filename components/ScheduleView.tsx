@@ -2915,8 +2915,14 @@ const InitialSetupWizard: React.FC<{
     const activeMasterLmpAccess = getOrganisationMasterLmpAccessRules(activeOrganisation?.settings)
         .filter((item: any) => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
     const crewCompositionSettings = normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
+    const getAircraftStandardSeats = (aircraft: any) => {
+        const crewComposition = aircraft?.crewComposition && typeof aircraft.crewComposition === 'object'
+            ? aircraft.crewComposition
+            : null;
+        return Array.isArray(crewComposition?.standardSeats) ? crewComposition.standardSeats : [];
+    };
     const standardCrewConfigured = activeAircraftTypes.some((aircraft: any) => {
-        const standardSeats = normaliseAircraftCrewComposition(aircraft?.crewComposition || null)?.standardSeats;
+        const standardSeats = getAircraftStandardSeats(aircraft);
         return Array.isArray(standardSeats) && standardSeats.length > 0;
     }) || crewCompositionSettings.alternateCompositions.length > 0;
     const orgStructureConfigured = organisationStructureLevels.length > 0 && organisationStructureLevels.some((level: any) => (
@@ -3214,7 +3220,7 @@ const InitialSetupWizard: React.FC<{
     });
     const [crewDraft, setCrewDraft] = useState({
         aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || ''),
-        standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || []),
+        standardSeats: formatRoleRequirementsText(getAircraftStandardSeats(primaryAircraftType)),
     });
     const resourceDraftDirtyRef = useRef(false);
     const crewDraftDirtyRef = useRef(false);
@@ -3575,7 +3581,7 @@ const InitialSetupWizard: React.FC<{
         )) || primaryAircraftType || null;
         return {
             aircraftCode: String(aircraftType?.code || getTargetWizardAircraftCode() || resourceDraft.aircraftCode || ''),
-            standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(aircraftType?.crewComposition || null).standardSeats || []),
+            standardSeats: formatRoleRequirementsText(getAircraftStandardSeats(aircraftType)),
         };
     };
     const buildHydratedAlternateCrewDraft = () => {
@@ -4230,7 +4236,7 @@ const InitialSetupWizard: React.FC<{
         });
         setCrewDraft({
             aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
-            standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || []),
+            standardSeats: formatRoleRequirementsText(getAircraftStandardSeats(primaryAircraftType)),
         });
     }, [primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name]);
 
@@ -4620,22 +4626,27 @@ const InitialSetupWizard: React.FC<{
         });
     };
 
-    const saveCrewDraft = () => {
-        const aircraftCode = String(crewDraft.aircraftCode || '').trim().toUpperCase();
+    const saveCrewDraftValues = (
+        aircraftCodeValue: string,
+        standardSeatsText: string,
+        alternateCrewText: string,
+        message = 'Crew composition saved into Settings.',
+    ) => {
+        const aircraftCode = String(aircraftCodeValue || '').trim().toUpperCase();
         pushWizardStep16Trace('save:crew-start', {
             aircraftCode,
-            parsedStandardSeats: parseRoleRequirementsText(crewDraft.standardSeats),
-            parsedAlternateCrew: parseRoleRequirementsText(alternateCrewDraft),
+            parsedStandardSeats: parseRoleRequirementsText(standardSeatsText),
+            parsedAlternateCrew: parseRoleRequirementsText(alternateCrewText),
         });
         if (!aircraftCode) {
             setSaveMessage('Choose an aircraft type before saving crew composition.');
             pushWizardStep16Trace('save:crew-blocked-no-aircraft-code', { aircraftCode });
             return;
         }
-        saveWizardConfig('Crew composition saved into Settings.', (baseConfig) => {
+        saveWizardConfig(message, (baseConfig) => {
             const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
             const existingAircraft = aircraftTypes.find((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode));
-            const standardSeats = parseRoleRequirementsText(crewDraft.standardSeats);
+            const standardSeats = parseRoleRequirementsText(standardSeatsText);
             const nextAircraft = {
                 ...(existingAircraft || {
                     id: createWizardRecordId('aircraft-type'),
@@ -4657,7 +4668,7 @@ const InitialSetupWizard: React.FC<{
             };
             const targetUnitCode = getTargetWizardUnitCode();
             const targetModel = normaliseOperationalModel(unitDraft.operationalModel || getUnitOperationalModel(currentUnit || {}));
-            const alternateRoleRequirements = parseRoleRequirementsText(alternateCrewDraft);
+            const alternateRoleRequirements = parseRoleRequirementsText(alternateCrewText);
             return updatePrimaryOrganisationWithSettings(nextConfig, (settings) => {
                 const compositionSettings = normaliseCrewCompositionSettings(settings.crewCompositionSettings || null);
                 const existingProfile = findWizardAlternateCrewProfile(settings);
@@ -4701,17 +4712,20 @@ const InitialSetupWizard: React.FC<{
                     }),
                     initialSetupWizardDraft: {
                         ...(settings.initialSetupWizardDraft || {}),
-                        alternateCrews: alternateCrewDraft,
+                        alternateCrews: alternateCrewText,
                         updatedAt: new Date().toISOString(),
                     },
                     initialSetupWizardDrafts: {
                         ...(settings.initialSetupWizardDrafts || {}),
-                        alternateCrewDraft,
+                        alternateCrewDraft: alternateCrewText,
                         updatedAt: new Date().toISOString(),
                     },
                 };
             });
         });
+    };
+    const saveCrewDraft = () => {
+        saveCrewDraftValues(crewDraft.aircraftCode, crewDraft.standardSeats, alternateCrewDraft);
     };
 
     const saveAccessDraft = () => {
@@ -9190,8 +9204,10 @@ const InitialSetupWizard: React.FC<{
                     </div>
                     <div className="grid gap-3 md:grid-cols-2">
                         {wizardDataListField('Aircraft / resource', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => {
+                            const nextAircraftCode = value.toUpperCase();
                             pushWizardStep16Trace('edit:crew-aircraft-code', { value });
-                            updateCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() }));
+                            updateCrewDraft((draft) => ({ ...draft, aircraftCode: nextAircraftCode }));
+                            saveCrewDraftValues(nextAircraftCode, crewDraft.standardSeats, alternateCrewDraft, 'Crew aircraft synced into Settings.');
                         }, Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'Enter aircraft code')}
                     </div>
                     <div className="grid gap-3 xl:grid-cols-2">
@@ -9201,6 +9217,7 @@ const InitialSetupWizard: React.FC<{
                                 parsed: parseRoleRequirementsText(value),
                             });
                             updateCrewDraft((draft) => ({ ...draft, standardSeats: value }));
+                            saveCrewDraftValues(crewDraft.aircraftCode || resourceDraft.aircraftCode, value, alternateCrewDraft, 'Normal crew synced into Settings.');
                         })}
                         {renderCrewCompositionEditor('Other approved crew composition', alternateCrewDraft, (value) => {
                             pushWizardStep16Trace('edit:crew-alternate', {
@@ -9209,6 +9226,7 @@ const InitialSetupWizard: React.FC<{
                             });
                             crewDraftDirtyRef.current = true;
                             setAlternateCrewDraft(value);
+                            saveCrewDraftValues(crewDraft.aircraftCode || resourceDraft.aircraftCode, crewDraft.standardSeats, value, 'Alternate crew synced into Settings.');
                         }, 'Add crew role')}
                     </div>
                 </div>,
