@@ -31964,7 +31964,23 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     return "";
   };
-  const buildHydratedLocationsTodayDraft = () => String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || "").trim() ? String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || "").trim() : activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location";
+  const buildWizardLocationsTodayDraftFromLocations = (locations = activeLocations) => formatWizardLocationRows(
+    (Array.isArray(locations) ? locations : []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((location) => {
+      const profile = normaliseWizardLocationProfile(location);
+      return {
+        icao: profile.icao,
+        iata: profile.iata,
+        name: profile.name || profile.icao || profile.iata
+      };
+    }).filter((location) => location.icao || location.iata || location.name)
+  );
+  const buildHydratedLocationsTodayDraft = () => {
+    const settingsLocationsDraft = buildWizardLocationsTodayDraftFromLocations();
+    if (settingsLocationsDraft) return settingsLocationsDraft;
+    const savedWizardLocations = String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || "").trim();
+    if (savedWizardLocations) return savedWizardLocations;
+    return formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location";
+  };
   const getSavedWizardString = (...keys) => {
     const drafts = getSavedInitialSetupWizardDrafts();
     for (const key of keys) {
@@ -32714,6 +32730,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setSaveMessage("Add at least one locality before continuing.");
       return;
     }
+    const normalisedDraftRows = locationRows.map((row) => {
+      const profile = findWizardLocationProfile(row.icao || row.iata || row.name);
+      const icao = String(row.icao || profile?.icao || row.iata || "").trim().toUpperCase();
+      const iata = String(row.iata || profile?.iata || "").trim().toUpperCase();
+      const name = String(row.name || profile?.name || icao || iata || "").trim();
+      return { icao, iata, name };
+    }).filter((row) => row.icao || row.iata || row.name);
+    const normalisedLocationsTodayDraft = formatWizardLocationRows(normalisedDraftRows);
     saveWizardConfig(message, (baseConfig) => {
       const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
       const nextLocations = [...locations];
@@ -32745,10 +32769,24 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         if (existingIndex >= 0) nextLocations[existingIndex] = nextLocation;
         else nextLocations.push(nextLocation);
       });
-      return {
+      const savedLocationsTodayDraft = buildWizardLocationsTodayDraftFromLocations(nextLocations) || normalisedLocationsTodayDraft;
+      return updatePrimaryOrganisationWithSettings({
         ...baseConfig,
         locations: nextLocations
-      };
+      }, (settings) => ({
+        ...settings,
+        initialSetupWizardDraft: {
+          ...settings.initialSetupWizardDraft || {},
+          locationsToday: parseWizardLocationRows(savedLocationsTodayDraft),
+          locationsTodayDraft: savedLocationsTodayDraft,
+          updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+        },
+        initialSetupWizardDrafts: {
+          ...settings.initialSetupWizardDrafts || {},
+          locationsTodayDraft: savedLocationsTodayDraft,
+          updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      }));
     });
   };
   const saveWizardUnitRowsDraft = (message = "Unit list synced into Settings.") => {
