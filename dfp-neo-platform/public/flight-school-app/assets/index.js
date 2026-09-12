@@ -35157,7 +35157,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const renderWizardPlatformSettingsEmbed = (scrollTarget, focusSubsectionId = "", successMessage = "Settings saved into Settings.", extraProps = {}) => {
     const activeUnitCodesForSettings = getWizardActiveUnitCodes();
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "wizard-settings-embed overflow-hidden rounded-lg border border-slate-200 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "wizard-settings-embed wizard-settings-embed--scroll-stable overflow-visible rounded-lg border border-slate-200 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       PlatformConfigurationSettings,
       {
         currentUserPermission,
@@ -35180,7 +35180,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
-      className: "max-w-full overflow-hidden animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm",
+      className: "max-w-full overflow-visible rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm",
       onKeyDownCapture: stopEditableKeyPropagation,
       onKeyDown: stopEditableKeyPropagation,
       children: [
@@ -35267,7 +35267,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
-            className: "max-w-full overflow-hidden rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm",
+            className: "max-w-full overflow-visible rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm",
             onKeyDownCapture: stopEditableKeyPropagation,
             onKeyDown: stopEditableKeyPropagation,
             children: answer

@@ -7393,7 +7393,7 @@ const InitialSetupWizard: React.FC<{
     ) => {
         const activeUnitCodesForSettings = getWizardActiveUnitCodes();
         return (
-            <div className="wizard-settings-embed overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <div className="wizard-settings-embed wizard-settings-embed--scroll-stable overflow-visible rounded-lg border border-slate-200 bg-white">
                 <PlatformConfigurationSettings
                     currentUserPermission={currentUserPermission}
                     onShowSuccess={(message) => setSaveMessage(message || successMessage)}
@@ -7416,7 +7416,7 @@ const InitialSetupWizard: React.FC<{
     const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Next', saveAction?: () => void) => (
         <div
             key={visibleStep.id}
-            className="max-w-full overflow-hidden animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm"
+            className="max-w-full overflow-visible rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm"
             onKeyDownCapture={stopEditableKeyPropagation}
             onKeyDown={stopEditableKeyPropagation}
         >
@@ -7481,7 +7481,7 @@ const InitialSetupWizard: React.FC<{
                 </div>
             </div>
             <div
-                className="max-w-full overflow-hidden rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm"
+                className="max-w-full overflow-visible rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm"
                 onKeyDownCapture={stopEditableKeyPropagation}
                 onKeyDown={stopEditableKeyPropagation}
             >

@@ -1198,6 +1198,26 @@ html[data-theme="light"] body {
     color: #0f172a !important;
 }
 
+.wizard-settings-embed--scroll-stable,
+.wizard-settings-embed--scroll-stable section,
+.wizard-settings-embed--scroll-stable .rounded-lg,
+.wizard-settings-embed--scroll-stable .rounded-xl {
+    isolation: isolate;
+}
+
+.wizard-settings-embed--scroll-stable section {
+    overflow: visible !important;
+    box-shadow: none !important;
+}
+
+.wizard-settings-embed--scroll-stable .shadow,
+.wizard-settings-embed--scroll-stable .shadow-sm,
+.wizard-settings-embed--scroll-stable .shadow-lg,
+.wizard-settings-embed--scroll-stable .shadow-xl,
+.wizard-settings-embed--scroll-stable [class*="shadow-["] {
+    box-shadow: none !important;
+}
+
 .wizard-settings-embed .bg-gray-950,
 .wizard-settings-embed .bg-gray-950\/55,
 .wizard-settings-embed .bg-gray-950\/60,
