@@ -8289,8 +8289,14 @@ const InitialSetupWizard: React.FC<{
         extraProps: Record<string, unknown> = {},
     ) => {
         const activeUnitCodesForSettings = getWizardActiveUnitCodes();
+        const embedClassName = [
+            'wizard-settings-embed',
+            'wizard-settings-embed--scroll-stable',
+            scrollTarget === 'platform-dfp-resource-rows' ? 'wizard-settings-embed--resource-rows' : '',
+            'rounded-lg border border-slate-200 bg-white',
+        ].filter(Boolean).join(' ');
         return (
-            <div key={`wizard-settings-${visibleStep.id}-${scrollTarget}`} ref={wizardSettingsEmbedRef} className="wizard-settings-embed wizard-settings-embed--scroll-stable rounded-lg border border-slate-200 bg-white">
+            <div key={`wizard-settings-${visibleStep.id}-${scrollTarget}`} ref={wizardSettingsEmbedRef} className={embedClassName}>
                 <PlatformConfigurationSettings
                     currentUserPermission={currentUserPermission}
                     onShowSuccess={(message) => setSaveMessage(message || successMessage)}
@@ -8339,6 +8345,79 @@ const InitialSetupWizard: React.FC<{
                 .wizard-emergency-embed [class*="border-gray-"],
                 .wizard-emergency-embed [class*="border-slate-"] {
                     border-color: #cbd5e1 !important;
+                }
+                .wizard-settings-embed--resource-rows,
+                .wizard-settings-embed--resource-rows > div,
+                .wizard-settings-embed--resource-rows section,
+                .wizard-settings-embed--resource-rows article {
+                    background: #ffffff !important;
+                    color: #0f172a !important;
+                }
+                .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings,
+                .wizard-settings-embed--resource-rows [class*="bg-gray-950"],
+                .wizard-settings-embed--resource-rows [class*="bg-gray-900"],
+                .wizard-settings-embed--resource-rows [class*="bg-slate-950"],
+                .wizard-settings-embed--resource-rows [class*="bg-slate-900"],
+                .wizard-settings-embed--resource-rows [class*="bg-black"] {
+                    background: #f8fafc !important;
+                    color: #0f172a !important;
+                }
+                .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings {
+                    border-color: #dbe7f3 !important;
+                    box-shadow: inset 3px 0 0 #38bdf8 !important;
+                }
+                .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div:first-child,
+                .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div[class*="overflow-hidden"] > div:first-child {
+                    background: #eef6ff !important;
+                    border-color: #cbd5e1 !important;
+                }
+                .wizard-settings-embed--resource-rows [class*="text-white"],
+                .wizard-settings-embed--resource-rows [class*="text-gray-100"],
+                .wizard-settings-embed--resource-rows [class*="text-gray-200"],
+                .wizard-settings-embed--resource-rows [class*="text-gray-300"],
+                .wizard-settings-embed--resource-rows [class*="text-slate-100"],
+                .wizard-settings-embed--resource-rows [class*="text-slate-200"] {
+                    color: #0f172a !important;
+                }
+                .wizard-settings-embed--resource-rows [class*="text-gray-400"],
+                .wizard-settings-embed--resource-rows [class*="text-gray-500"],
+                .wizard-settings-embed--resource-rows [class*="text-slate-400"],
+                .wizard-settings-embed--resource-rows [class*="text-slate-500"] {
+                    color: #475569 !important;
+                }
+                .wizard-settings-embed--resource-rows [class*="text-cyan-100"],
+                .wizard-settings-embed--resource-rows [class*="text-cyan-200"],
+                .wizard-settings-embed--resource-rows [class*="text-cyan-50"] {
+                    color: #0369a1 !important;
+                }
+                .wizard-settings-embed--resource-rows [class*="text-emerald-100"],
+                .wizard-settings-embed--resource-rows [class*="text-emerald-200"] {
+                    color: #047857 !important;
+                }
+                .wizard-settings-embed--resource-rows [class*="border-gray-"],
+                .wizard-settings-embed--resource-rows [class*="border-slate-"] {
+                    border-color: #cbd5e1 !important;
+                }
+                .wizard-settings-embed--resource-rows [class*="border-cyan-"] {
+                    border-color: #7dd3fc !important;
+                }
+                .wizard-settings-embed--resource-rows input,
+                .wizard-settings-embed--resource-rows select,
+                .wizard-settings-embed--resource-rows textarea {
+                    background: #ffffff !important;
+                    border-color: #cbd5e1 !important;
+                    color: #0f172a !important;
+                    opacity: 1 !important;
+                }
+                .wizard-settings-embed--resource-rows input:disabled,
+                .wizard-settings-embed--resource-rows select:disabled,
+                .wizard-settings-embed--resource-rows textarea:disabled {
+                    background: #eef2f7 !important;
+                    color: #334155 !important;
+                    -webkit-text-fill-color: #334155 !important;
+                }
+                .wizard-settings-embed--resource-rows button:disabled {
+                    opacity: 0.72 !important;
                 }
             `}</style>
             <div className="mb-4 flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
