@@ -3820,6 +3820,145 @@ const InitialSetupWizard: React.FC<{
         const savedDraft = getSavedWizardString('scoringMatrix', 'scoringDraft');
         return wizardScoringRowsToPhraseBank(savedDraft || defaultWizardScoringDraft);
     };
+    const wizardStep16TraceStorageKey = 'dfp_neo_wizard_step_16_crew_trace';
+    const wizardStep16TraceLimit = 160;
+    const readWizardStep16TraceEntries = () => {
+        if (typeof window === 'undefined') return [];
+        try {
+            const parsed = JSON.parse(window.localStorage.getItem(wizardStep16TraceStorageKey) || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    };
+    const writeWizardStep16TraceEntries = (entries: any[]) => {
+        safeSetWizardLocalStorage(wizardStep16TraceStorageKey, JSON.stringify(entries.slice(-wizardStep16TraceLimit)));
+    };
+    const summariseWizardAircraftTypeForTrace = (aircraft: any) => ({
+        id: aircraft?.id,
+        code: aircraft?.code,
+        name: aircraft?.name,
+        status: aircraft?.status,
+        rawCrewComposition: aircraft?.crewComposition || null,
+        normalisedCrewComposition: normaliseAircraftCrewComposition(aircraft?.crewComposition || null),
+    });
+    const summariseWizardAlternateProfileForTrace = (profile: any) => ({
+        id: profile?.id,
+        code: profile?.code,
+        unitCode: profile?.unitCode,
+        compositeUnitCode: profile?.compositeUnitCode,
+        aircraftTypeCode: profile?.aircraftTypeCode,
+        name: profile?.name,
+        operationalModels: profile?.operationalModels,
+        roleRequirements: profile?.roleRequirements,
+        status: profile?.status,
+    });
+    const buildWizardStep16TraceSnapshot = (details: Record<string, any> = {}) => {
+        const targetUnitCode = getTargetWizardUnitCode();
+        const targetAircraftCode = getTargetWizardAircraftCode();
+        const targetModel = normaliseOperationalModel(unitDraft.operationalModel || getUnitOperationalModel(currentUnit || {}));
+        const allAircraftTypes = Array.isArray(platformConfig?.aircraftTypes) ? platformConfig.aircraftTypes : [];
+        const matchingAircraftTypes = allAircraftTypes
+            .filter((aircraft: any) => (
+                !targetAircraftCode
+                || normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(targetAircraftCode)
+            ))
+            .map(summariseWizardAircraftTypeForTrace);
+        const rawCrewCompositionSettings = activeOrganisation?.settings?.crewCompositionSettings || null;
+        const normalisedCrewCompositionSettings = normaliseCrewCompositionSettings(rawCrewCompositionSettings);
+        const matchingAlternateProfiles = normalisedCrewCompositionSettings.alternateCompositions
+            .filter((profile) => {
+                const profileUnitKey = normaliseUnitSettingsIdentifier(profile.unitCode || '');
+                const profileAircraftKey = normaliseUnitSettingsIdentifier(profile.aircraftTypeCode || '');
+                const unitMatches = !targetUnitCode || !profileUnitKey || profileUnitKey === normaliseUnitSettingsIdentifier(targetUnitCode);
+                const aircraftMatches = !targetAircraftCode || !profileAircraftKey || profileAircraftKey === normaliseUnitSettingsIdentifier(targetAircraftCode);
+                const modelMatches = !profile.operationalModels?.length || profile.operationalModels.includes(targetModel);
+                return unitMatches && aircraftMatches && modelMatches;
+            })
+            .map(summariseWizardAlternateProfileForTrace);
+        const savedDrafts = getSavedInitialSetupWizardDrafts?.() || {};
+        return {
+            timestamp: new Date().toISOString(),
+            wizardStep,
+            visibleStepId: visibleStep?.id,
+            target: {
+                unitCode: targetUnitCode,
+                aircraftCode: targetAircraftCode,
+                operationalModel: targetModel,
+            },
+            currentUnit: {
+                code: currentUnit?.code,
+                name: currentUnit?.name,
+                locationCode: currentUnit?.locationCode,
+                settings: currentUnit?.settings,
+            },
+            primaryAircraftType: primaryAircraftType ? summariseWizardAircraftTypeForTrace(primaryAircraftType) : null,
+            primaryResourcePool: primaryResourcePool ? {
+                id: primaryResourcePool.id,
+                code: primaryResourcePool.code,
+                name: primaryResourcePool.name,
+                unitCode: primaryResourcePool.unitCode,
+                locationCode: primaryResourcePool.locationCode,
+                aircraftTypeCode: primaryResourcePool.aircraftTypeCode,
+                status: primaryResourcePool.status,
+                settings: primaryResourcePool.settings,
+            } : null,
+            unitDraft,
+            resourceDraft,
+            crewDraft,
+            alternateCrewDraft,
+            parsedCrewDraft: {
+                standardSeats: parseRoleRequirementsText(crewDraft.standardSeats),
+                otherApprovedCrewComposition: parseRoleRequirementsText(alternateCrewDraft),
+            },
+            dirtyRefs: {
+                resourceDraftDirty: resourceDraftDirtyRef.current,
+                crewDraftDirty: crewDraftDirtyRef.current,
+            },
+            settingsSnapshot: {
+                aircraftTypesCount: allAircraftTypes.length,
+                activeAircraftTypesCount: activeAircraftTypes.length,
+                matchingAircraftTypes,
+                rawCrewCompositionSettings,
+                normalisedAlternateCompositions: normalisedCrewCompositionSettings.alternateCompositions.map(summariseWizardAlternateProfileForTrace),
+                matchingAlternateProfiles,
+            },
+            savedWizardDrafts: {
+                alternateCrews: savedDrafts.alternateCrews,
+                alternateCrewDraft: savedDrafts.alternateCrewDraft,
+                updatedAt: savedDrafts.updatedAt,
+            },
+            details,
+        };
+    };
+    const pushWizardStep16Trace = (event: string, details: Record<string, any> = {}) => {
+        if (typeof window === 'undefined') return;
+        const nextEntry = {
+            event,
+            ...buildWizardStep16TraceSnapshot(details),
+        };
+        writeWizardStep16TraceEntries([...readWizardStep16TraceEntries(), nextEntry]);
+    };
+    const downloadWizardStep16Trace = (reason: string) => {
+        if (typeof window === 'undefined') return;
+        pushWizardStep16Trace('download:manual-requested', { reason });
+        const payload = {
+            generatedAt: new Date().toISOString(),
+            reason,
+            currentSnapshot: buildWizardStep16TraceSnapshot({ reason, source: 'download' }),
+            traceEntries: readWizardStep16TraceEntries(),
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const safeUnit = String(unitDraft.code || currentUnit?.code || unitCode || 'unit').replace(/[^A-Za-z0-9_-]+/g, '-');
+        link.href = url;
+        link.download = `dfp-neo-wizard-step-16-crew-trace-${safeUnit}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
     const hydrateSupplementaryWizardDrafts = () => {
         const savedTraineeCourses = getSavedWizardString('traineeCourses', 'traineeCourseOptionsDraft');
         const savedTrainees = getSavedWizardString('trainees', 'traineeDraft');
@@ -3834,6 +3973,11 @@ const InitialSetupWizard: React.FC<{
         const nextCurrencies = buildHydratedCurrencyDraft();
         const nextScoringPhraseBank = buildHydratedScoringPhraseBankDraft();
         const nextStaffCurrencyEvents = buildHydratedStaffCurrencyEventsDraft();
+        pushWizardStep16Trace('hydrate:supplementary-drafts', {
+            nextAlternateCrews,
+            crewDraftDirty: crewDraftDirtyRef.current,
+            source: nextAlternateCrews ? 'crew-composition-settings-or-saved-draft' : 'empty',
+        });
         if (nextCrewLabels) setCrewLabelsDraft(nextCrewLabels);
         if (nextAlternateCrews && !crewDraftDirtyRef.current) setAlternateCrewDraft(nextAlternateCrews);
         if (nextBuildRules && !buildRulesDraftDirtyRef.current) setBuildRulesDraft(nextBuildRules);
@@ -3927,6 +4071,10 @@ const InitialSetupWizard: React.FC<{
         const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, hydratedOrganisation);
         const hydratedLocations = buildHydratedLocationsTodayDraft();
         const hydratedCrew = buildHydratedCrewDraft();
+        pushWizardStep16Trace(`hydrate:${stage}-crew-from-settings`, {
+            hydratedCrew,
+            parsedHydratedStandardSeats: parseRoleRequirementsText(hydratedCrew.standardSeats),
+        });
         organisationDraftDirtyRef.current = false;
         locationDraftDirtyRef.current = false;
         unitDraftDirtyRef.current = false;
@@ -4474,8 +4622,14 @@ const InitialSetupWizard: React.FC<{
 
     const saveCrewDraft = () => {
         const aircraftCode = String(crewDraft.aircraftCode || '').trim().toUpperCase();
+        pushWizardStep16Trace('save:crew-start', {
+            aircraftCode,
+            parsedStandardSeats: parseRoleRequirementsText(crewDraft.standardSeats),
+            parsedAlternateCrew: parseRoleRequirementsText(alternateCrewDraft),
+        });
         if (!aircraftCode) {
             setSaveMessage('Choose an aircraft type before saving crew composition.');
+            pushWizardStep16Trace('save:crew-blocked-no-aircraft-code', { aircraftCode });
             return;
         }
         saveWizardConfig('Crew composition saved into Settings.', (baseConfig) => {
@@ -4526,6 +4680,19 @@ const InitialSetupWizard: React.FC<{
                 const alternateCompositions = existingProfile
                     ? compositionSettings.alternateCompositions.map((profile) => profile.id === existingProfile.id ? nextAlternateProfile : profile)
                     : [...compositionSettings.alternateCompositions, nextAlternateProfile];
+                pushWizardStep16Trace('save:crew-updater-result', {
+                    aircraftCode,
+                    targetUnitCode,
+                    targetModel,
+                    baseAircraftTypesCount: aircraftTypes.length,
+                    existingAircraft: existingAircraft ? summariseWizardAircraftTypeForTrace(existingAircraft) : null,
+                    nextAircraft: summariseWizardAircraftTypeForTrace(nextAircraft),
+                    rawSettingsCrewCompositionSettings: settings.crewCompositionSettings || null,
+                    normalisedProfilesBefore: compositionSettings.alternateCompositions.map(summariseWizardAlternateProfileForTrace),
+                    existingProfile: existingProfile ? summariseWizardAlternateProfileForTrace(existingProfile) : null,
+                    nextAlternateProfile: summariseWizardAlternateProfileForTrace(nextAlternateProfile),
+                    alternateCompositionsAfter: alternateCompositions.map(summariseWizardAlternateProfileForTrace),
+                });
                 return {
                     ...settings,
                     crewCompositionSettings: normaliseCrewCompositionSettings({
@@ -5552,6 +5719,14 @@ const InitialSetupWizard: React.FC<{
     ];
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
+    useEffect(() => {
+        if (visibleStep?.id === 'crew') {
+            pushWizardStep16Trace('view:step-opened', {
+                stepId: visibleStep.id,
+                stepTitle: visibleStep.title,
+            });
+        }
+    }, [visibleStep?.id, wizardStep]);
     useEffect(() => {
         if (!wizardPageMenuOpen) return;
         const animationFrameId = window.requestAnimationFrame(() => {
@@ -9004,16 +9179,34 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events.</p>,
                 <div className="space-y-3">
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-900 hover:bg-sky-100"
+                            onClick={() => downloadWizardStep16Trace('manual-step-16-crew')}
+                        >
+                            Download Crew Trace
+                        </button>
+                    </div>
                     <div className="grid gap-3 md:grid-cols-2">
                         {wizardDataListField('Aircraft / resource', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => {
+                            pushWizardStep16Trace('edit:crew-aircraft-code', { value });
                             updateCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() }));
                         }, Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'Enter aircraft code')}
                     </div>
                     <div className="grid gap-3 xl:grid-cols-2">
                         {renderCrewCompositionEditor('Normal crew required', crewDraft.standardSeats, (value) => {
+                            pushWizardStep16Trace('edit:crew-normal', {
+                                value,
+                                parsed: parseRoleRequirementsText(value),
+                            });
                             updateCrewDraft((draft) => ({ ...draft, standardSeats: value }));
                         })}
                         {renderCrewCompositionEditor('Other approved crew composition', alternateCrewDraft, (value) => {
+                            pushWizardStep16Trace('edit:crew-alternate', {
+                                value,
+                                parsed: parseRoleRequirementsText(value),
+                            });
                             crewDraftDirtyRef.current = true;
                             setAlternateCrewDraft(value);
                         }, 'Add crew role')}
