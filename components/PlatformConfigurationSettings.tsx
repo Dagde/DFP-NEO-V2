@@ -11266,12 +11266,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className="grid gap-2">
                             {aircraftNumberPrefixFields.map((prefix, prefixIndex) => (
                               <div key={`aircraft-number-prefix-${prefixIndex}`} className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                                <DraftField
-                                  label={`Prefix ${prefixIndex + 1}`}
-                                  value={prefix}
-                                  disabled={!canEditResourcePools}
-                                  onCommit={(value) => updateAircraftNumberPrefix(index, prefixIndex, value)}
-                                />
+                                <div className="w-[250px] max-w-full">
+                                  <DraftField
+                                    label={prefixIndex === 0 ? 'Aircraft Number prefix' : `Aircraft Number prefix ${prefixIndex + 1}`}
+                                    value={prefix}
+                                    disabled={!canEditResourcePools}
+                                    onCommit={(value) => updateAircraftNumberPrefix(index, prefixIndex, value)}
+                                  />
+                                </div>
                                 <button
                                   type="button"
                                   disabled={!canEditResourcePools || aircraftNumberPrefixFields.length <= 1}

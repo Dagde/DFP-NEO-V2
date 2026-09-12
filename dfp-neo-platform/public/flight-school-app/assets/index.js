@@ -25479,15 +25479,15 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           ] })
                         ] }),
                         aircraftNumberSettings.usePrefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2", children: aircraftNumberPrefixFields.map((prefix, prefixIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[250px] max-w-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                             DraftField,
                             {
-                              label: `Prefix ${prefixIndex + 1}`,
+                              label: prefixIndex === 0 ? "Aircraft Number prefix" : `Aircraft Number prefix ${prefixIndex + 1}`,
                               value: prefix,
                               disabled: !canEditResourcePools,
                               onCommit: (value) => updateAircraftNumberPrefix(index, prefixIndex, value)
                             }
-                          ),
+                          ) }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "button",
                             {
@@ -36190,7 +36190,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                 }
                 .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div[class*="overflow-hidden"] {
                     border-color: #2563eb !important;
-                    box-shadow: inset 4px 0 0 #1d4ed8, 0 12px 24px rgba(30, 64, 175, 0.12) !important;
+                    box-shadow: 0 12px 24px rgba(30, 64, 175, 0.12) !important;
                 }
                 .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div[class*="overflow-hidden"] > div:first-child {
                     background: #dbeafe !important;

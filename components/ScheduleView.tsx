@@ -8373,7 +8373,7 @@ const InitialSetupWizard: React.FC<{
                 }
                 .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div[class*="overflow-hidden"] {
                     border-color: #2563eb !important;
-                    box-shadow: inset 4px 0 0 #1d4ed8, 0 12px 24px rgba(30, 64, 175, 0.12) !important;
+                    box-shadow: 0 12px 24px rgba(30, 64, 175, 0.12) !important;
                 }
                 .wizard-settings-embed--resource-rows #platform-dfp-resource-row-settings > div[class*="overflow-hidden"] > div:first-child {
                     background: #dbeafe !important;
