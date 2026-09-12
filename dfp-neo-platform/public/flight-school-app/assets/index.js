@@ -33543,9 +33543,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     },
     {
       id: "callsigns",
-      title: "Set callsign rules",
-      label: "Callsigns",
-      body: "Set the callsign prefixes and formation callsigns this unit uses when creating or scheduling events.",
+      title: "Set terminology and callsign rules",
+      label: "Terminology/callsigns",
+      body: "Set the terminology, callsign prefixes, and formation callsigns this unit uses when creating or scheduling events.",
       checkIds: ["crew"],
       category: "highly-desirable"
     },
@@ -36592,7 +36592,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     if (visibleStep.id === "callsigns") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the callsign rules this unit uses. This is the same callsign setup used in Settings, so changes made here update Settings directly." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the terminology and callsign rules this unit uses. These are the same Settings records, so changes made here update Settings directly." }),
         renderWizardPlatformSettingsEmbed(
           "platform-rank-terminology",
           "platform-unit-callsigns",

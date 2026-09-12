@@ -5404,9 +5404,9 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'callsigns',
-            title: 'Set callsign rules',
-            label: 'Callsigns',
-            body: 'Set the callsign prefixes and formation callsigns this unit uses when creating or scheduling events.',
+            title: 'Set terminology and callsign rules',
+            label: 'Terminology/callsigns',
+            body: 'Set the terminology, callsign prefixes, and formation callsigns this unit uses when creating or scheduling events.',
             checkIds: ['crew'],
             category: 'highly-desirable',
         },
@@ -9041,7 +9041,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'callsigns') {
             return promptShell(
-                <p>Set the callsign rules this unit uses. This is the same callsign setup used in Settings, so changes made here update Settings directly.</p>,
+                <p>Set the terminology and callsign rules this unit uses. These are the same Settings records, so changes made here update Settings directly.</p>,
                 renderWizardPlatformSettingsEmbed(
                     'platform-rank-terminology',
                     'platform-unit-callsigns',
