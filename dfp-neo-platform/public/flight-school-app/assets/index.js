@@ -31377,6 +31377,63 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     ] })
   ] });
 };
+const formatWizardTimeInputValue = (value) => {
+  const bounded = Math.max(0, Math.min(23.9167, Number(value) || 0));
+  const totalMinutes = Math.round(bounded * 60 / 5) * 5;
+  return `${String(Math.floor(totalMinutes / 60)).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
+};
+const parseWizardTimeInputValue = (value, fallback) => {
+  const match = /^(\d{1,2}):?(\d{2})$/.exec(String(value || "").trim());
+  if (!match) return fallback;
+  const hours = Math.max(0, Math.min(23, Number(match[1]) || 0));
+  const minutes = Math.max(0, Math.min(55, Math.round((Number(match[2]) || 0) / 5) * 5));
+  return hours + minutes / 60;
+};
+const WizardFlyingWindowTimeInput = React.memo(({
+  className,
+  value,
+  enabled,
+  onCommit
+}) => {
+  const formattedValue = formatWizardTimeInputValue(value);
+  const [draft, setDraft] = reactExports.useState(formattedValue);
+  const [focused, setFocused] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!focused) setDraft(formattedValue);
+  }, [focused, formattedValue]);
+  const commitDraft = () => {
+    const nextValue = parseWizardTimeInputValue(draft, value);
+    setFocused(false);
+    setDraft(formatWizardTimeInputValue(nextValue));
+    onCommit?.(nextValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      className,
+      value: focused ? draft : formattedValue,
+      placeholder: "HH:MM",
+      inputMode: "numeric",
+      disabled: !enabled || !onCommit,
+      onFocus: () => {
+        setFocused(true);
+        setDraft(formattedValue);
+      },
+      onChange: (event) => {
+        setDraft(event.target.value.replace(/[^\d:]/g, "").slice(0, 5));
+      },
+      onBlur: commitDraft,
+      onKeyDown: (event) => {
+        stopEditableKeyPropagation(event);
+        if (event.key === "Enter") {
+          event.preventDefault();
+          commitDraft();
+          event.currentTarget.blur();
+        }
+      }
+    }
+  );
+});
 const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
   const [mode, setMode] = reactExports.useState("detect");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
@@ -31405,7 +31462,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [importConfirmations, setImportConfirmations] = reactExports.useState({});
   const [pendingTemplateId, setPendingTemplateId] = reactExports.useState(null);
   const [saveMessage, setSaveMessage] = reactExports.useState("");
-  const [flyingWindowTimeDrafts, setFlyingWindowTimeDrafts] = reactExports.useState({});
   const [uploadedStaffProfileRows, setUploadedStaffProfileRows] = reactExports.useState([]);
   const [uploadedTraineeProfileRows, setUploadedTraineeProfileRows] = reactExports.useState([]);
   const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = reactExports.useState([]);
@@ -36066,56 +36122,6 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setWizardPageMenuOpen(false);
     setWizardStep(boundedStep);
   };
-  const formatWizardDecimalTime = (hours) => {
-    const bounded = Math.max(0, Math.min(23 + 55 / 60, Number(hours) || 0));
-    const totalMinutes = Math.round(bounded * 60 / 5) * 5;
-    return `${String(Math.floor(totalMinutes / 60)).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
-  };
-  const parseWizardDecimalTime = (value, fallback) => {
-    const match = /^(\d{1,2}):?(\d{2})$/.exec(String(value || "").trim());
-    if (!match) return fallback;
-    const hours = Math.max(0, Math.min(23, Number(match[1]) || 0));
-    const minutes = Math.max(0, Math.min(55, Math.round((Number(match[2]) || 0) / 5) * 5));
-    return hours + minutes / 60;
-  };
-  const renderFlyingWindowTimeInput = (draftKey, value, enabled, onCommit) => {
-    const formattedValue = formatWizardDecimalTime(value);
-    const draftValue = flyingWindowTimeDrafts[draftKey];
-    const commitDraft = () => {
-      if (draftValue === void 0) return;
-      const nextValue = parseWizardDecimalTime(draftValue, value);
-      onCommit?.(nextValue);
-      setFlyingWindowTimeDrafts((current) => {
-        const next = { ...current };
-        delete next[draftKey];
-        return next;
-      });
-    };
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "input",
-      {
-        className: wizardInputClass,
-        value: draftValue ?? formattedValue,
-        placeholder: "HH:MM",
-        inputMode: "numeric",
-        disabled: !enabled || !onCommit,
-        onFocus: () => setFlyingWindowTimeDrafts((current) => ({ ...current, [draftKey]: formattedValue })),
-        onChange: (event) => {
-          const nextValue = event.target.value.replace(/[^\d:]/g, "").slice(0, 5);
-          setFlyingWindowTimeDrafts((current) => ({ ...current, [draftKey]: nextValue }));
-        },
-        onBlur: commitDraft,
-        onKeyDown: (event) => {
-          stopEditableKeyPropagation(event);
-          if (event.key === "Enter") {
-            event.preventDefault();
-            commitDraft();
-            event.currentTarget.blur();
-          }
-        }
-      }
-    );
-  };
   const renderFlyingWindowsEditor = () => {
     const rows = [
       { key: "flight", label: "Day flying", enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
@@ -36136,8 +36142,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Yes" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "No" })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800", children: "Yes" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: renderFlyingWindowTimeInput(`${row.key}-start`, row.start, row.enabled, row.setStart) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: renderFlyingWindowTimeInput(`${row.key}-end`, row.end, row.enabled, row.setEnd) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { className: wizardInputClass, value: row.start, enabled: row.enabled, onCommit: row.setStart }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { className: wizardInputClass, value: row.end, enabled: row.enabled, onCommit: row.setEnd }) })
       ] }, row.key)) })
     ] }) });
   };

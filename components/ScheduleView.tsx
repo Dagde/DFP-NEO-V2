@@ -2683,6 +2683,73 @@ const OrganisationMyUnitSettings: React.FC<{
     );
 };
 
+const formatWizardTimeInputValue = (value: number): string => {
+    const bounded = Math.max(0, Math.min(23.9167, Number(value) || 0));
+    const totalMinutes = Math.round(bounded * 60 / 5) * 5;
+    return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
+};
+
+const parseWizardTimeInputValue = (value: string, fallback: number): number => {
+    const match = /^(\d{1,2}):?(\d{2})$/.exec(String(value || '').trim());
+    if (!match) return fallback;
+    const hours = Math.max(0, Math.min(23, Number(match[1]) || 0));
+    const minutes = Math.max(0, Math.min(55, Math.round((Number(match[2]) || 0) / 5) * 5));
+    return hours + minutes / 60;
+};
+
+const WizardFlyingWindowTimeInput = React.memo(({
+    className,
+    value,
+    enabled,
+    onCommit,
+}: {
+    className: string;
+    value: number;
+    enabled: boolean;
+    onCommit?: (value: number) => void;
+}) => {
+    const formattedValue = formatWizardTimeInputValue(value);
+    const [draft, setDraft] = useState(formattedValue);
+    const [focused, setFocused] = useState(false);
+
+    useEffect(() => {
+        if (!focused) setDraft(formattedValue);
+    }, [focused, formattedValue]);
+
+    const commitDraft = () => {
+        const nextValue = parseWizardTimeInputValue(draft, value);
+        setFocused(false);
+        setDraft(formatWizardTimeInputValue(nextValue));
+        onCommit?.(nextValue);
+    };
+
+    return (
+        <input
+            className={className}
+            value={focused ? draft : formattedValue}
+            placeholder="HH:MM"
+            inputMode="numeric"
+            disabled={!enabled || !onCommit}
+            onFocus={() => {
+                setFocused(true);
+                setDraft(formattedValue);
+            }}
+            onChange={(event) => {
+                setDraft(event.target.value.replace(/[^\d:]/g, '').slice(0, 5));
+            }}
+            onBlur={commitDraft}
+            onKeyDown={(event) => {
+                stopEditableKeyPropagation(event);
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    commitDraft();
+                    event.currentTarget.blur();
+                }
+            }}
+        />
+    );
+});
+
 const InitialSetupWizard: React.FC<{
     platformConfig?: any;
     organisationSettings?: any;
@@ -2750,7 +2817,6 @@ const InitialSetupWizard: React.FC<{
     const [importConfirmations, setImportConfirmations] = useState<Record<string, string>>({});
     const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
     const [saveMessage, setSaveMessage] = useState('');
-    const [flyingWindowTimeDrafts, setFlyingWindowTimeDrafts] = useState<Record<string, string>>({});
     const [uploadedStaffProfileRows, setUploadedStaffProfileRows] = useState<any[]>([]);
     const [uploadedTraineeProfileRows, setUploadedTraineeProfileRows] = useState<any[]>([]);
     const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = useState<SyllabusItemDetail[]>([]);
@@ -8206,60 +8272,6 @@ const InitialSetupWizard: React.FC<{
         setWizardPageMenuOpen(false);
         setWizardStep(boundedStep);
     };
-    const formatWizardDecimalTime = (hours: number): string => {
-        const bounded = Math.max(0, Math.min(23 + 55 / 60, Number(hours) || 0));
-        const totalMinutes = Math.round(bounded * 60 / 5) * 5;
-        return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
-    };
-    const parseWizardDecimalTime = (value: string, fallback: number): number => {
-        const match = /^(\d{1,2}):?(\d{2})$/.exec(String(value || '').trim());
-        if (!match) return fallback;
-        const hours = Math.max(0, Math.min(23, Number(match[1]) || 0));
-        const minutes = Math.max(0, Math.min(55, Math.round((Number(match[2]) || 0) / 5) * 5));
-        return hours + minutes / 60;
-    };
-    const renderFlyingWindowTimeInput = (
-        draftKey: string,
-        value: number,
-        enabled: boolean,
-        onCommit?: (value: number) => void,
-    ) => {
-        const formattedValue = formatWizardDecimalTime(value);
-        const draftValue = flyingWindowTimeDrafts[draftKey];
-        const commitDraft = () => {
-            if (draftValue === undefined) return;
-            const nextValue = parseWizardDecimalTime(draftValue, value);
-            onCommit?.(nextValue);
-            setFlyingWindowTimeDrafts((current) => {
-                const next = { ...current };
-                delete next[draftKey];
-                return next;
-            });
-        };
-        return (
-            <input
-                className={wizardInputClass}
-                value={draftValue ?? formattedValue}
-                placeholder="HH:MM"
-                inputMode="numeric"
-                disabled={!enabled || !onCommit}
-                onFocus={() => setFlyingWindowTimeDrafts((current) => ({ ...current, [draftKey]: formattedValue }))}
-                onChange={(event) => {
-                    const nextValue = event.target.value.replace(/[^\d:]/g, '').slice(0, 5);
-                    setFlyingWindowTimeDrafts((current) => ({ ...current, [draftKey]: nextValue }));
-                }}
-                onBlur={commitDraft}
-                onKeyDown={(event) => {
-                    stopEditableKeyPropagation(event);
-                    if (event.key === 'Enter') {
-                        event.preventDefault();
-                        commitDraft();
-                        event.currentTarget.blur();
-                    }
-                }}
-            />
-        );
-    };
     const renderFlyingWindowsEditor = () => {
         const rows = [
             { key: 'flight', label: 'Day flying', enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
@@ -8285,8 +8297,8 @@ const InitialSetupWizard: React.FC<{
                                         </select>
                                     ) : <span className="inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800">Yes</span>}
                                 </td>
-                                <td className="px-3 py-2">{renderFlyingWindowTimeInput(`${row.key}-start`, row.start, row.enabled, row.setStart)}</td>
-                                <td className="px-3 py-2">{renderFlyingWindowTimeInput(`${row.key}-end`, row.end, row.enabled, row.setEnd)}</td>
+                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput className={wizardInputClass} value={row.start} enabled={row.enabled} onCommit={row.setStart} /></td>
+                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput className={wizardInputClass} value={row.end} enabled={row.enabled} onCommit={row.setEnd} /></td>
                             </tr>
                         ))}
                     </tbody>
