@@ -10277,7 +10277,7 @@ const InitialSetupWizard: React.FC<{
                     </div>
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <p className={wizardLabelClass}>Flight authorisation warnings</p>
-                        <div className="mt-3 grid gap-3 md:grid-cols-3">
+                        <div className="mt-3 grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[34px_42px] [&>label]:items-start">
                             {wizardField('Flight authorisation required', buildRulesDraft.flightAuthorisationRequired, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightAuthorisationRequired: value })), ['Yes', 'No'])}
                             {String(buildRulesDraft.flightAuthorisationRequired || '').trim().toLowerCase() !== 'no' ? (
                                 <>

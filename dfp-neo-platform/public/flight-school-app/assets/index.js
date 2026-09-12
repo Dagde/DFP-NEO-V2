@@ -37890,7 +37890,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Flight authorisation warnings" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[34px_42px] [&>label]:items-start", children: [
               wizardField("Flight authorisation required", buildRulesDraft.flightAuthorisationRequired, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightAuthorisationRequired: value })), ["Yes", "No"]),
               String(buildRulesDraft.flightAuthorisationRequired || "").trim().toLowerCase() !== "no" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                 wizardField("Amber warning before start minutes", buildRulesDraft.authorizationWarningMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, authorizationWarningMinutes: value })), void 0, "120"),
