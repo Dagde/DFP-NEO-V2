@@ -4559,15 +4559,35 @@ const InitialSetupWizard: React.FC<{
         saveWizardConfig('Location saved into Settings.', (baseConfig) => {
             const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
             const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
+            const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
             const parsedLatitude = Number(locationDraft.latitude);
             const parsedLongitude = Number(locationDraft.longitude);
             const hasLatitude = String(locationDraft.latitude || '').trim() && Number.isFinite(parsedLatitude);
             const hasLongitude = String(locationDraft.longitude || '').trim() && Number.isFinite(parsedLongitude);
+            const previousLocationCode = normaliseUnitSettingsIdentifier(currentLocation?.code || activeWizardLocationCode);
             const existingLocation = locations.find((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
             const mergedLocationUnitCodes = Array.from(new Set([
                 ...getWizardLocationUnitCodes(existingLocation || currentLocation || {}),
                 ...wizardScopedUnitCodes,
             ].map(normaliseUnitSettingsIdentifier).filter(Boolean)));
+            const removeScopedUnitCodesFromLocation = (location: any) => {
+                if (wizardScopedUnitCodeSet.size === 0) return location;
+                const remainingUnitCodes = getWizardLocationUnitCodes(location)
+                    .filter((unitCode) => !wizardScopedUnitCodeSet.has(unitCode));
+                return {
+                    ...location,
+                    unitCodes: Array.isArray(location?.unitCodes) ? remainingUnitCodes : location?.unitCodes,
+                    assignedUnitCodes: Array.isArray(location?.assignedUnitCodes) ? remainingUnitCodes : location?.assignedUnitCodes,
+                    unitCode: wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(location?.unitCode)) ? '' : location?.unitCode,
+                    unit: wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(location?.unit)) ? '' : location?.unit,
+                    settings: {
+                        ...(location?.settings || {}),
+                        unitCode: wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(location?.settings?.unitCode)) ? '' : location?.settings?.unitCode,
+                        unitCodes: remainingUnitCodes,
+                        assignedUnitCodes: Array.isArray(location?.settings?.assignedUnitCodes) ? remainingUnitCodes : location?.settings?.assignedUnitCodes,
+                    },
+                };
+            };
             const nextLocation = {
                 id: existingLocation?.id || currentLocation?.id || createWizardRecordId('location'),
                 code: cleanCode,
@@ -4587,14 +4607,50 @@ const InitialSetupWizard: React.FC<{
                 },
             };
             const exists = locations.some((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
+            const baseLocations = locations.map((location: any) => {
+                const locationCode = normaliseUnitSettingsIdentifier(location?.code);
+                if (locationCode === normaliseUnitSettingsIdentifier(cleanCode)) return location;
+                if (previousLocationCode && locationCode === previousLocationCode) return removeScopedUnitCodesFromLocation(location);
+                return location;
+            });
             const nextLocations = exists
-                ? locations.map((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode) ? { ...location, ...nextLocation } : location)
-                : [...locations, nextLocation];
+                ? baseLocations.map((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode) ? { ...location, ...nextLocation } : location)
+                : [...baseLocations, nextLocation];
+            const nextUnits = wizardScopedUnitCodeSet.size > 0
+                ? units.map((unit: any) => (
+                    wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code))
+                        ? { ...unit, locationCode: cleanCode }
+                        : unit
+                ))
+                : units;
+            const nextResourcePools = wizardScopedUnitCodeSet.size > 0
+                ? resourcePools.map((pool: any) => (
+                    wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(pool?.unitCode))
+                        ? { ...pool, locationCode: cleanCode }
+                        : pool
+                ))
+                : resourcePools;
             pushWizardLocationScopeTrace('save-location-detail-returning-config', {
                 cleanCode,
+                previousLocationCode,
                 baseUnits: units.map(summariseWizardLocationScopeUnit),
                 baseLocations: locations.map(summariseWizardLocationScopeLocation),
+                baseResourcePools: resourcePools.map((pool: any) => ({
+                    id: pool?.id || '',
+                    code: pool?.code || '',
+                    unitCode: pool?.unitCode || '',
+                    locationCode: pool?.locationCode || '',
+                    status: pool?.status || '',
+                })),
                 nextLocation: summariseWizardLocationScopeLocation(nextLocation),
+                nextUnits: nextUnits.map(summariseWizardLocationScopeUnit),
+                nextResourcePools: nextResourcePools.map((pool: any) => ({
+                    id: pool?.id || '',
+                    code: pool?.code || '',
+                    unitCode: pool?.unitCode || '',
+                    locationCode: pool?.locationCode || '',
+                    status: pool?.status || '',
+                })),
                 nextLocations: nextLocations.map(summariseWizardLocationScopeLocation),
                 visibleByCurrentScopeAfterSave: nextLocations
                     .filter(isWizardLocationScopedToCurrentContext)
@@ -4603,6 +4659,8 @@ const InitialSetupWizard: React.FC<{
             return {
                 ...baseConfig,
                 locations: nextLocations,
+                units: nextUnits,
+                resourcePools: nextResourcePools,
             };
         });
     };
