@@ -230,7 +230,7 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
         qualificationIds.length > 0 ? (
             <div className="flex flex-wrap gap-2">
                 {qualificationIds.map(id => (
-                    <span key={id} className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-200">
+                    <span key={id} className="rounded-md border border-sky-500/50 bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-900">
                         {getQualificationLabel(id)}
                     </span>
                 ))}
