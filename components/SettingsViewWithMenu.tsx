@@ -10,6 +10,7 @@ import AppearanceSettings from './AppearanceSettings';
 import PlatformConfigurationSettings from './PlatformConfigurationSettings';
 import EmailActivationSettings from './EmailActivationSettings';
 import PeopleProfilePage from './PeopleProfilePage';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import CurrencyBuilderView from './CurrencyBuilderView';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CurrencyDefinition, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 import {
@@ -35,6 +36,7 @@ import {
   getAuditRecordingSettingsForPage,
   saveAuditRecordingSettingsForPage,
 } from '../utils/auditLogger';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -1342,6 +1344,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         'NEO Build',
     ];
     const [auditRecordingPage, setAuditRecordingPage] = useState(auditRecordingPageOptions[0]);
+    const [auditRecordingUnlocked, setAuditRecordingUnlocked] = useState(false);
     const [, setAuditRecordingRefreshKey] = useState(0);
     const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
     const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || 'ContT').trim() || 'ContT'} / Currency Events`;
@@ -1399,8 +1402,33 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         }
         return canUseSettingsPermission('settings.view');
     };
-    const canEditAuditRecordingSettings = hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission || canUseSettingsPermission('settings.platform.edit');
+    const canUnlockAuditRecordingSettings = hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission || canUseSettingsPermission('settings.platform.edit');
+    const canEditAuditRecordingSettings = canUnlockAuditRecordingSettings && auditRecordingUnlocked;
     const auditRecordingSettings = getAuditRecordingSettingsForPage(auditRecordingPage);
+    const unlockAuditRecordingSettings = async () => {
+        if (!canUnlockAuditRecordingSettings) return;
+        const password = await showDarkPrompt({
+            title: 'Audit Recording Password Required',
+            message: 'Enter your password to edit Audit Recording controls.',
+            inputLabel: 'Password',
+            inputType: 'password',
+            inputPlaceholder: 'Enter password',
+            confirmText: 'Unlock',
+            cancelText: 'Cancel',
+            variant: 'warning',
+        });
+        if (!password) return;
+        try {
+            const isValid = await verifyCurrentUserPassword(password);
+            if (!isValid) {
+                await showDarkAlert('The password was not accepted.', 'Audit Recording Locked', 'warning');
+                return;
+            }
+            setAuditRecordingUnlocked(true);
+        } catch (error) {
+            await showDarkAlert('The app could not verify your password.', 'Password Check Failed', 'error');
+        }
+    };
     const updateAuditRecordingSetting = (action: typeof AUDIT_RECORDING_ACTIONS[number], checked: boolean) => {
         if (!canEditAuditRecordingSettings) return;
         saveAuditRecordingSettingsForPage(auditRecordingPage, { ...auditRecordingSettings, [action]: checked });
@@ -2215,13 +2243,31 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
                     {activeSection === 'audit-recording' && (
                         <div className="rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
-                            <div className="border-b border-gray-700 px-5 py-4">
-                                <h3 className="text-lg font-bold text-white">Audit Recording Controls</h3>
-                                <p className="mt-1 text-sm text-gray-400">
-                                    Choose which actions are recorded by the Audit Log for each page or module.
-                                </p>
+                            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 px-5 py-4">
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Audit Recording Controls</h3>
+                                    <p className="mt-1 text-sm text-gray-400">
+                                        Choose which actions are recorded by the Audit Log for each page or module.
+                                    </p>
+                                </div>
+                                {canUnlockAuditRecordingSettings ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => auditRecordingUnlocked ? setAuditRecordingUnlocked(false) : void unlockAuditRecordingSettings()}
+                                        className="rounded-md bg-gray-100 px-4 py-2 text-sm font-bold text-gray-900 shadow-sm transition hover:bg-white"
+                                    >
+                                        {auditRecordingUnlocked ? 'Done' : 'Edit'}
+                                    </button>
+                                ) : (
+                                    <span className="rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200">Read-only</span>
+                                )}
                             </div>
                             <div className="space-y-5 p-5">
+                                {!auditRecordingUnlocked ? (
+                                    <div className="rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 text-sm font-semibold text-gray-300">
+                                        Audit Recording controls are locked. Press Edit and confirm your password before changing recorded actions.
+                                    </div>
+                                ) : null}
                                 <label className="block">
                                     <span className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-400">Audit page/module</span>
                                     <select

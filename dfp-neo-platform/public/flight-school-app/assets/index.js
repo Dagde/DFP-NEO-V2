@@ -94920,6 +94920,7 @@ const SettingsViewWithMenu = (props) => {
     "NEO Build"
   ];
   const [auditRecordingPage, setAuditRecordingPage] = reactExports.useState(auditRecordingPageOptions[0]);
+  const [auditRecordingUnlocked, setAuditRecordingUnlocked] = reactExports.useState(false);
   const [, setAuditRecordingRefreshKey] = reactExports.useState(0);
   const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY$1;
   const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel || "ContT").trim() || "ContT"} / Currency Events`;
@@ -94966,8 +94967,33 @@ const SettingsViewWithMenu = (props) => {
     }
     return canUseSettingsPermission("settings.view");
   };
-  const canEditAuditRecordingSettings = hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission || canUseSettingsPermission("settings.platform.edit");
+  const canUnlockAuditRecordingSettings = hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission || canUseSettingsPermission("settings.platform.edit");
+  const canEditAuditRecordingSettings = canUnlockAuditRecordingSettings && auditRecordingUnlocked;
   const auditRecordingSettings = getAuditRecordingSettingsForPage(auditRecordingPage);
+  const unlockAuditRecordingSettings = async () => {
+    if (!canUnlockAuditRecordingSettings) return;
+    const password = await showDarkPrompt({
+      title: "Audit Recording Password Required",
+      message: "Enter your password to edit Audit Recording controls.",
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", "Audit Recording Locked", "warning");
+        return;
+      }
+      setAuditRecordingUnlocked(true);
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+    }
+  };
   const updateAuditRecordingSetting = (action, checked) => {
     if (!canEditAuditRecordingSettings) return;
     saveAuditRecordingSettingsForPage(auditRecordingPage, { ...auditRecordingSettings, [action]: checked });
@@ -95644,11 +95670,23 @@ const SettingsViewWithMenu = (props) => {
           }
         ),
         activeSection === "audit-recording" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 px-5 py-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Audit Recording Controls" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: "Choose which actions are recorded by the Audit Log for each page or module." })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 px-5 py-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Audit Recording Controls" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: "Choose which actions are recorded by the Audit Log for each page or module." })
+            ] }),
+            canUnlockAuditRecordingSettings ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => auditRecordingUnlocked ? setAuditRecordingUnlocked(false) : void unlockAuditRecordingSettings(),
+                className: "rounded-md bg-gray-100 px-4 py-2 text-sm font-bold text-gray-900 shadow-sm transition hover:bg-white",
+                children: auditRecordingUnlocked ? "Done" : "Edit"
+              }
+            ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200", children: "Read-only" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-5", children: [
+            !auditRecordingUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 text-sm font-semibold text-gray-300", children: "Audit Recording controls are locked. Press Edit and confirm your password before changing recorded actions." }) : null,
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-400", children: "Audit page/module" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
