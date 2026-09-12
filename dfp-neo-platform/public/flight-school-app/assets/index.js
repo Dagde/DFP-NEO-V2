@@ -22727,6 +22727,85 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     locationCode: location.code,
     organisationCode: location.organisationCode
   })).filter(({ location }) => isLocationInActiveOrganisationScope(location));
+  const buildSettingsLocationScopeTrace = () => {
+    const summariseLocation = (location) => {
+      const locationCode = normaliseUnitCode2(location?.code);
+      const scopedUnitCodes = locationUnitCodes(location);
+      return {
+        id: location?.id || "",
+        code: location?.code || "",
+        name: location?.name || "",
+        status: location?.status || "",
+        locationCode,
+        isVisibleForSettingsPolicy: isRecordVisibleForSettingsPolicy({
+          locationCode: location?.code,
+          organisationCode: location?.organisationCode
+        }),
+        isLocationInActiveOrganisationScope: isLocationInActiveOrganisationScope(location),
+        includedBecause: {
+          noUnitScope: activeOrganisationLocationUnitSet.size === 0,
+          blankLocationCode: !locationCode,
+          activeOrganisationLocationCodes: activeOrganisationLocationCodes.has(locationCode),
+          matchingUnitCodeTag: scopedUnitCodes.some((unitCode) => activeOrganisationLocationUnitSet.has(unitCode))
+        },
+        topLevelUnitCode: location?.unitCode || "",
+        topLevelUnit: location?.unit || "",
+        topLevelUnitCodes: Array.isArray(location?.unitCodes) ? location.unitCodes : null,
+        topLevelAssignedUnitCodes: Array.isArray(location?.assignedUnitCodes) ? location.assignedUnitCodes : null,
+        settingsUnitCode: location?.settings?.unitCode || "",
+        settingsUnitCodes: Array.isArray(location?.settings?.unitCodes) ? location.settings.unitCodes : null,
+        settingsAssignedUnitCodes: Array.isArray(location?.settings?.assignedUnitCodes) ? location.settings.assignedUnitCodes : null,
+        resolvedUnitCodes: scopedUnitCodes
+      };
+    };
+    return {
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      activeContext: {
+        scrollTarget,
+        sectionOnly,
+        visibleSectionTarget,
+        activeUnitCode,
+        activeUnitCodes,
+        activeCompositeUnitCode,
+        focusUnitCode,
+        focusLocationCode,
+        activePrimaryUnitCode,
+        activeHomeLocationCode,
+        activeOrganisationLocationUnitCodes,
+        activeOrganisationLocationCodes: Array.from(activeOrganisationLocationCodes),
+        settingsVisibilityPolicy
+      },
+      units: config.units.map((unit) => ({
+        id: unit?.id || "",
+        code: unit?.code || "",
+        name: unit?.name || "",
+        status: unit?.status || "",
+        locationCode: unit?.locationCode || ""
+      })),
+      resourcePools: config.resourcePools.map((pool) => ({
+        id: pool?.id || "",
+        code: pool?.code || "",
+        unitCode: pool?.unitCode || "",
+        locationCode: pool?.locationCode || "",
+        status: pool?.status || ""
+      })),
+      locations: config.locations.map(summariseLocation),
+      visibleLocationCodes: visibleLocationRows.map(({ location }) => normaliseUnitCode2(location?.code))
+    };
+  };
+  const downloadSettingsLocationScopeTrace = () => {
+    if (typeof window === "undefined") return;
+    const unitLabel = String(activeCompositeUnitCode || activeUnitCode || activePrimaryUnitCode || "unit").replace(/[^A-Za-z0-9+_-]+/g, "-");
+    const blob = new Blob([JSON.stringify(buildSettingsLocationScopeTrace(), null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dfp-neo-settings-location-scope-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
   const visibleUnitRows = configUnits.map((unit, index) => ({ unit, index })).filter(({ unit, index }) => {
     if (index === editingUnitIndex) return true;
     return isRecordVisibleForSettingsPolicy({
@@ -23428,6 +23507,11 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               title: "Locations",
               subtitle: "Bases, airfields, timezone data and local training areas used by units and scheduling.",
               action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: downloadSettingsLocationScopeTrace, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                  "Download",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Trace"
+                ] }) }),
                 renderSectionEditSaveButton("platform-locations"),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLocation, disabled: !canEditSection("platform-locations"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
                   "Add",
@@ -31266,6 +31350,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardStep24ScrollTraceRef = reactExports.useRef([]);
   const wizardStep24ScrollTraceSequenceRef = reactExports.useRef(0);
   const wizardStep24RenderCountRef = reactExports.useRef(0);
+  const wizardLocationScopeTraceRef = reactExports.useRef([]);
+  const wizardLocationScopeTraceSequenceRef = reactExports.useRef(0);
   const wizardDiagnosticStorageKeys = [
     "dfp_setup_wizard_import_diag",
     "dfp_setup_test_lmp_diag",
@@ -32614,6 +32700,85 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     onUpdatePlatformConfig((current) => updater(current || platformConfig || {}));
     setSaveMessage(message);
   };
+  const summariseWizardLocationScopeLocation = (location) => ({
+    id: location?.id || "",
+    code: location?.code || "",
+    iataCode: location?.iataCode || "",
+    name: location?.name || "",
+    status: location?.status || "",
+    topLevelUnitCode: location?.unitCode || "",
+    topLevelUnit: location?.unit || "",
+    topLevelUnitCodes: Array.isArray(location?.unitCodes) ? location.unitCodes : null,
+    topLevelAssignedUnitCodes: Array.isArray(location?.assignedUnitCodes) ? location.assignedUnitCodes : null,
+    settingsUnitCode: location?.settings?.unitCode || "",
+    settingsUnitCodes: Array.isArray(location?.settings?.unitCodes) ? location.settings.unitCodes : null,
+    settingsAssignedUnitCodes: Array.isArray(location?.settings?.assignedUnitCodes) ? location.settings.assignedUnitCodes : null,
+    locationCodeNormalised: normaliseUnitSettingsIdentifier(location?.code),
+    unitCodesResolved: getWizardLocationUnitCodes(location)
+  });
+  const summariseWizardLocationScopeUnit = (unit) => ({
+    code: unit?.code || "",
+    name: unit?.name || "",
+    status: unit?.status || "",
+    locationCode: unit?.locationCode || "",
+    locationKey: normaliseUnitSettingsIdentifier(unit?.locationCode)
+  });
+  const pushWizardLocationScopeTrace = (eventType, details = {}) => {
+    wizardLocationScopeTraceRef.current = [
+      ...wizardLocationScopeTraceRef.current.slice(-499),
+      {
+        sequence: wizardLocationScopeTraceSequenceRef.current += 1,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        eventType,
+        currentStep,
+        visibleStepId: visibleStep.id,
+        unitContext: {
+          unitCode,
+          locationCode,
+          currentWizardUnitCode,
+          currentWizardUnitCodes,
+          currentUnit: summariseWizardLocationScopeUnit(currentUnit),
+          wizardScopedUnitCodes,
+          wizardScopedLocationCodes: Array.from(wizardScopedLocationCodes),
+          activeWizardLocationCode
+        },
+        draft: {
+          locationsTodayDraft,
+          parsedRows: parseWizardLocationRows(locationsTodayDraft)
+        },
+        settingsSnapshot: {
+          scopedActiveLocations: scopedActiveLocations.map(summariseWizardLocationScopeLocation),
+          units: (platformConfig?.units || []).map(summariseWizardLocationScopeUnit),
+          locations: (platformConfig?.locations || []).map(summariseWizardLocationScopeLocation),
+          resourcePools: (platformConfig?.resourcePools || []).map((pool) => ({
+            id: pool?.id || "",
+            code: pool?.code || "",
+            unitCode: pool?.unitCode || "",
+            locationCode: pool?.locationCode || "",
+            status: pool?.status || ""
+          }))
+        },
+        details
+      }
+    ];
+  };
+  const downloadWizardLocationScopeTrace = () => {
+    if (typeof window === "undefined") return;
+    pushWizardLocationScopeTrace("download-requested");
+    const unitLabel = (unitDraft.code || unitCode || "unit").replace(/[^A-Za-z0-9+_-]+/g, "-");
+    const blob = new Blob([JSON.stringify({
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      trace: wizardLocationScopeTraceRef.current
+    }, null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dfp-neo-wizard-location-scope-trace-${unitLabel}-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
   const updatePrimaryOrganisationWithSettings = (baseConfig, settingsUpdater) => {
     const organisations = Array.isArray(baseConfig.organisations) ? baseConfig.organisations : [];
     const fallbackOrganisation = {
@@ -32814,6 +32979,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       return { icao, iata, name };
     }).filter((row) => row.icao || row.iata || row.name);
     const normalisedLocationsTodayDraft = formatWizardLocationRows(normalisedDraftRows);
+    pushWizardLocationScopeTrace("save-location-rows-requested", {
+      message,
+      draftValue,
+      locationRows,
+      normalisedDraftRows,
+      normalisedLocationsTodayDraft
+    });
     saveWizardConfig(message, (baseConfig) => {
       const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
       const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
@@ -32821,6 +32993,20 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const selectedLocationCodes = new Set(
         normalisedDraftRows.map((row) => normaliseUnitSettingsIdentifier(row.icao)).filter(Boolean)
       );
+      const traceBeforeSave = {
+        selectedLocationCodes: Array.from(selectedLocationCodes),
+        wizardScopedUnitCodes,
+        wizardScopedLocationCodes: Array.from(wizardScopedLocationCodes),
+        baseUnits: units.map(summariseWizardLocationScopeUnit),
+        baseLocations: locations.map(summariseWizardLocationScopeLocation),
+        baseResourcePools: (Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : []).map((pool) => ({
+          id: pool?.id || "",
+          code: pool?.code || "",
+          unitCode: pool?.unitCode || "",
+          locationCode: pool?.locationCode || "",
+          status: pool?.status || ""
+        }))
+      };
       const removeScopedUnitCodesFromLocation = (location) => {
         if (wizardScopedUnitCodeSet.size === 0) return location;
         const remainingUnitCodes = getWizardLocationUnitCodes(location).filter((unitCode2) => !wizardScopedUnitCodeSet.has(unitCode2));
@@ -32875,6 +33061,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const savedLocationsTodayDraft = normalisedLocationsTodayDraft || buildWizardLocationsTodayDraftFromLocations(nextLocations.filter(isWizardLocationScopedToCurrentContext));
       const firstLocationCode = parseWizardLocationRows(savedLocationsTodayDraft)[0]?.icao || normalisedDraftRows[0]?.icao || "";
       const nextUnits = firstLocationCode && wizardScopedUnitCodeSet.size > 0 ? units.map((unit) => wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code)) ? { ...unit, locationCode: firstLocationCode } : unit) : units;
+      pushWizardLocationScopeTrace("save-location-rows-returning-config", {
+        ...traceBeforeSave,
+        savedLocationsTodayDraft,
+        firstLocationCode,
+        nextUnits: nextUnits.map(summariseWizardLocationScopeUnit),
+        nextLocations: nextLocations.map(summariseWizardLocationScopeLocation),
+        visibleByCurrentScopeAfterSave: nextLocations.filter(isWizardLocationScopedToCurrentContext).map(summariseWizardLocationScopeLocation)
+      });
       return updatePrimaryOrganisationWithSettings({
         ...baseConfig,
         locations: nextLocations,
@@ -35882,6 +36076,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                 onClick: downloadWizardStep24ScrollTrace,
                 onKeyDown: stopEditableKeyPropagation,
                 children: "Download Step 24 Trace"
+              }
+            ) : null,
+            visibleStep.id === "locations-today" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                className: "mt-3 ml-2 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100",
+                onClick: downloadWizardLocationScopeTrace,
+                onKeyDown: stopEditableKeyPropagation,
+                children: "Download Location Scope Trace"
               }
             ) : null
           ] }),

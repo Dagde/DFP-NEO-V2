@@ -2761,6 +2761,8 @@ const InitialSetupWizard: React.FC<{
     const wizardStep24ScrollTraceRef = useRef<any[]>([]);
     const wizardStep24ScrollTraceSequenceRef = useRef(0);
     const wizardStep24RenderCountRef = useRef(0);
+    const wizardLocationScopeTraceRef = useRef<any[]>([]);
+    const wizardLocationScopeTraceSequenceRef = useRef(0);
     const wizardDiagnosticStorageKeys = [
         'dfp_setup_wizard_import_diag',
         'dfp_setup_test_lmp_diag',
@@ -4334,6 +4336,85 @@ const InitialSetupWizard: React.FC<{
         onUpdatePlatformConfig((current) => updater(current || platformConfig || {}));
         setSaveMessage(message);
     };
+    const summariseWizardLocationScopeLocation = (location: any) => ({
+        id: location?.id || '',
+        code: location?.code || '',
+        iataCode: location?.iataCode || '',
+        name: location?.name || '',
+        status: location?.status || '',
+        topLevelUnitCode: location?.unitCode || '',
+        topLevelUnit: location?.unit || '',
+        topLevelUnitCodes: Array.isArray(location?.unitCodes) ? location.unitCodes : null,
+        topLevelAssignedUnitCodes: Array.isArray(location?.assignedUnitCodes) ? location.assignedUnitCodes : null,
+        settingsUnitCode: location?.settings?.unitCode || '',
+        settingsUnitCodes: Array.isArray(location?.settings?.unitCodes) ? location.settings.unitCodes : null,
+        settingsAssignedUnitCodes: Array.isArray(location?.settings?.assignedUnitCodes) ? location.settings.assignedUnitCodes : null,
+        locationCodeNormalised: normaliseUnitSettingsIdentifier(location?.code),
+        unitCodesResolved: getWizardLocationUnitCodes(location),
+    });
+    const summariseWizardLocationScopeUnit = (unit: any) => ({
+        code: unit?.code || '',
+        name: unit?.name || '',
+        status: unit?.status || '',
+        locationCode: unit?.locationCode || '',
+        locationKey: normaliseUnitSettingsIdentifier(unit?.locationCode),
+    });
+    const pushWizardLocationScopeTrace = (eventType: string, details: Record<string, any> = {}) => {
+        wizardLocationScopeTraceRef.current = [
+            ...wizardLocationScopeTraceRef.current.slice(-499),
+            {
+                sequence: wizardLocationScopeTraceSequenceRef.current += 1,
+                timestamp: new Date().toISOString(),
+                eventType,
+                currentStep,
+                visibleStepId: visibleStep.id,
+                unitContext: {
+                    unitCode,
+                    locationCode,
+                    currentWizardUnitCode,
+                    currentWizardUnitCodes,
+                    currentUnit: summariseWizardLocationScopeUnit(currentUnit),
+                    wizardScopedUnitCodes,
+                    wizardScopedLocationCodes: Array.from(wizardScopedLocationCodes),
+                    activeWizardLocationCode,
+                },
+                draft: {
+                    locationsTodayDraft,
+                    parsedRows: parseWizardLocationRows(locationsTodayDraft),
+                },
+                settingsSnapshot: {
+                    scopedActiveLocations: scopedActiveLocations.map(summariseWizardLocationScopeLocation),
+                    units: (platformConfig?.units || []).map(summariseWizardLocationScopeUnit),
+                    locations: (platformConfig?.locations || []).map(summariseWizardLocationScopeLocation),
+                    resourcePools: (platformConfig?.resourcePools || []).map((pool: any) => ({
+                        id: pool?.id || '',
+                        code: pool?.code || '',
+                        unitCode: pool?.unitCode || '',
+                        locationCode: pool?.locationCode || '',
+                        status: pool?.status || '',
+                    })),
+                },
+                details,
+            },
+        ];
+    };
+    const downloadWizardLocationScopeTrace = () => {
+        if (typeof window === 'undefined') return;
+        pushWizardLocationScopeTrace('download-requested');
+        const unitLabel = (unitDraft.code || unitCode || 'unit').replace(/[^A-Za-z0-9+_-]+/g, '-');
+        const blob = new Blob([JSON.stringify({
+            exportedAt: new Date().toISOString(),
+            trace: wizardLocationScopeTraceRef.current,
+        }, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `dfp-neo-wizard-location-scope-trace-${unitLabel}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    };
 
     const updatePrimaryOrganisationWithSettings = (baseConfig: any, settingsUpdater: (settings: any, organisation: any) => any) => {
         const organisations = Array.isArray(baseConfig.organisations) ? baseConfig.organisations : [];
@@ -4555,6 +4636,13 @@ const InitialSetupWizard: React.FC<{
             return { icao, iata, name };
         }).filter((row) => row.icao || row.iata || row.name);
         const normalisedLocationsTodayDraft = formatWizardLocationRows(normalisedDraftRows);
+        pushWizardLocationScopeTrace('save-location-rows-requested', {
+            message,
+            draftValue,
+            locationRows,
+            normalisedDraftRows,
+            normalisedLocationsTodayDraft,
+        });
         saveWizardConfig(message, (baseConfig) => {
             const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
             const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
@@ -4562,6 +4650,20 @@ const InitialSetupWizard: React.FC<{
             const selectedLocationCodes = new Set(
                 normalisedDraftRows.map((row) => normaliseUnitSettingsIdentifier(row.icao)).filter(Boolean),
             );
+            const traceBeforeSave = {
+                selectedLocationCodes: Array.from(selectedLocationCodes),
+                wizardScopedUnitCodes,
+                wizardScopedLocationCodes: Array.from(wizardScopedLocationCodes),
+                baseUnits: units.map(summariseWizardLocationScopeUnit),
+                baseLocations: locations.map(summariseWizardLocationScopeLocation),
+                baseResourcePools: (Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : []).map((pool: any) => ({
+                    id: pool?.id || '',
+                    code: pool?.code || '',
+                    unitCode: pool?.unitCode || '',
+                    locationCode: pool?.locationCode || '',
+                    status: pool?.status || '',
+                })),
+            };
             const removeScopedUnitCodesFromLocation = (location: any) => {
                 if (wizardScopedUnitCodeSet.size === 0) return location;
                 const remainingUnitCodes = getWizardLocationUnitCodes(location)
@@ -4627,6 +4729,16 @@ const InitialSetupWizard: React.FC<{
                         : unit
                 ))
                 : units;
+            pushWizardLocationScopeTrace('save-location-rows-returning-config', {
+                ...traceBeforeSave,
+                savedLocationsTodayDraft,
+                firstLocationCode,
+                nextUnits: nextUnits.map(summariseWizardLocationScopeUnit),
+                nextLocations: nextLocations.map(summariseWizardLocationScopeLocation),
+                visibleByCurrentScopeAfterSave: nextLocations
+                    .filter(isWizardLocationScopedToCurrentContext)
+                    .map(summariseWizardLocationScopeLocation),
+            });
             return updatePrimaryOrganisationWithSettings({
                 ...baseConfig,
                 locations: nextLocations,
@@ -8171,6 +8283,16 @@ const InitialSetupWizard: React.FC<{
                             onKeyDown={stopEditableKeyPropagation}
                         >
                             Download Step 24 Trace
+                        </button>
+                    ) : null}
+                    {visibleStep.id === 'locations-today' ? (
+                        <button
+                            type="button"
+                            className="mt-3 ml-2 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100"
+                            onClick={downloadWizardLocationScopeTrace}
+                            onKeyDown={stopEditableKeyPropagation}
+                        >
+                            Download Location Scope Trace
                         </button>
                     ) : null}
                 </div>
