@@ -6,18 +6,26 @@ interface BuildDateWarningFlyoutProps {
   date: string;
 }
 
-const BuildDateWarningFlyout: React.FC<BuildDateWarningFlyoutProps> = ({ onConfirm, onCancel, date }) => {
-    // Robustly parse the date string as UTC to avoid timezone issues.
+const buildDateWarningWeekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const buildDateWarningMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const formatBuildDateWarningDate = (date: string): string => {
     const [year, month, day] = date.split('-').map(Number);
+    if (!year || !month || !day) return date;
+
     const dateObj = new Date(Date.UTC(year, month - 1, day));
-    
-    const formattedDate = dateObj.toLocaleDateString('en-GB', {
-        weekday: 'long',
-        year: '2-digit',
-        month: 'long',
-        day: 'numeric',
-        timeZone: 'UTC'
-    });
+    if (Number.isNaN(dateObj.getTime())) return date;
+
+    const weekday = buildDateWarningWeekdays[dateObj.getUTCDay()];
+    const paddedDay = String(dateObj.getUTCDate()).padStart(2, '0');
+    const monthLabel = buildDateWarningMonths[dateObj.getUTCMonth()];
+    const shortYear = String(dateObj.getUTCFullYear()).slice(-2);
+
+    return `${weekday}  ${paddedDay} ${monthLabel} ${shortYear}`;
+};
+
+const BuildDateWarningFlyout: React.FC<BuildDateWarningFlyoutProps> = ({ onConfirm, onCancel, date }) => {
+    const formattedDate = formatBuildDateWarningDate(date);
 
     return (
         <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center animate-fade-in" onClick={onCancel}>
@@ -33,8 +41,11 @@ const BuildDateWarningFlyout: React.FC<BuildDateWarningFlyoutProps> = ({ onConfi
                         A DFP is normally built for the next working day.
                     </p>
                     <p className="text-gray-300 mt-2">
-                        You are about to build a DFP for <strong className="text-white">{formattedDate}</strong>.
+                        You are about to build a DFP for:
                     </p>
+                    <div className="mt-4 text-center text-3xl font-black tracking-wide text-white">
+                        {formattedDate}
+                    </div>
                     <p className="text-gray-300 mt-4">Are you sure you want to proceed?</p>
                 </div>
                 <div className="px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3">
