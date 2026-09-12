@@ -31390,37 +31390,40 @@ const parseWizardTimeInputValue = (value, fallback) => {
   return hours + minutes / 60;
 };
 const WizardFlyingWindowTimeInput = React.memo(({
+  draftKey,
   className,
   value,
   enabled,
-  onCommit
+  onCommit,
+  onDraftChange
 }) => {
   const formattedValue = formatWizardTimeInputValue(value);
-  const [draft, setDraft] = reactExports.useState(formattedValue);
-  const [focused, setFocused] = reactExports.useState(false);
+  const inputRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
-    if (!focused) setDraft(formattedValue);
-  }, [focused, formattedValue]);
+    if (document.activeElement !== inputRef.current && inputRef.current) {
+      inputRef.current.value = formattedValue;
+    }
+  }, [formattedValue]);
   const commitDraft = () => {
-    const nextValue = parseWizardTimeInputValue(draft, value);
-    setFocused(false);
-    setDraft(formatWizardTimeInputValue(nextValue));
+    const nextValue = parseWizardTimeInputValue(inputRef.current?.value || formattedValue, value);
+    if (inputRef.current) inputRef.current.value = formatWizardTimeInputValue(nextValue);
+    onDraftChange?.(draftKey, null);
     onCommit?.(nextValue);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "input",
     {
+      ref: inputRef,
       className,
-      value: focused ? draft : formattedValue,
+      defaultValue: formattedValue,
       placeholder: "HH:MM",
       inputMode: "numeric",
       disabled: !enabled || !onCommit,
-      onFocus: () => {
-        setFocused(true);
-        setDraft(formattedValue);
-      },
-      onChange: (event) => {
-        setDraft(event.target.value.replace(/[^\d:]/g, "").slice(0, 5));
+      onInput: (event) => {
+        const input = event.currentTarget;
+        const nextValue = input.value.replace(/[^\d:]/g, "").slice(0, 5);
+        if (input.value !== nextValue) input.value = nextValue;
+        onDraftChange?.(draftKey, nextValue);
       },
       onBlur: commitDraft,
       onKeyDown: (event) => {
@@ -31470,6 +31473,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const wizardShellRef = reactExports.useRef(null);
   const wizardSettingsEmbedRef = reactExports.useRef(null);
   const wizardPlatformSettingsSaveRef = reactExports.useRef(null);
+  const flyingWindowDraftRef = reactExports.useRef({});
   const wizardAnswerPanelRef = reactExports.useRef(null);
   const wizardStep24ScrollTraceRef = reactExports.useRef([]);
   const wizardStep24ScrollTraceSequenceRef = reactExports.useRef(0);
@@ -36041,6 +36045,26 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       }
     )
   ] });
+  const commitFlyingWindowDrafts = () => {
+    const draftEntries = Object.entries(flyingWindowDraftRef.current);
+    if (draftEntries.length === 0) return;
+    const timeRows = [
+      { key: "flight-start", value: flyingStartTime, setValue: onUpdateFlyingStartTime },
+      { key: "flight-end", value: flyingEndTime, setValue: onUpdateFlyingEndTime },
+      { key: "ftd-start", value: ftdStartTime, setValue: onUpdateFtdStartTime },
+      { key: "ftd-end", value: ftdEndTime, setValue: onUpdateFtdEndTime },
+      { key: "cpt-start", value: cptStartTime, setValue: onUpdateCptStartTime },
+      { key: "cpt-end", value: cptEndTime, setValue: onUpdateCptEndTime },
+      { key: "night-start", value: commenceNightFlying, setValue: onUpdateCommenceNightFlying },
+      { key: "night-end", value: ceaseNightFlying, setValue: onUpdateCeaseNightFlying }
+    ];
+    timeRows.forEach((row) => {
+      const draft = flyingWindowDraftRef.current[row.key];
+      if (draft === void 0 || !row.setValue) return;
+      row.setValue(parseWizardTimeInputValue(draft, row.value));
+    });
+    flyingWindowDraftRef.current = {};
+  };
   const goToNextWizardStep = async () => {
     pushWizardOrgDiag("wizard:next-clicked", {
       fromStep: visibleStep.id,
@@ -36048,6 +36072,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       draft: summariseOrganisationDraft(organisationDraft),
       activeOrganisation: summariseActiveOrganisation()
     });
+    if (visibleStep.id === "flying-windows") {
+      commitFlyingWindowDrafts();
+    }
     if (visibleStep.id === "resource-row-details") {
       const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
       if (!saveWizardSettings) {
@@ -36142,8 +36169,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Yes" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "No" })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800", children: "Yes" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { className: wizardInputClass, value: row.start, enabled: row.enabled, onCommit: row.setStart }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { className: wizardInputClass, value: row.end, enabled: row.enabled, onCommit: row.setEnd }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { draftKey: `${row.key}-start`, className: wizardInputClass, value: row.start, enabled: row.enabled, onCommit: row.setStart, onDraftChange: (key, value) => {
+          if (value === null) delete flyingWindowDraftRef.current[key];
+          else flyingWindowDraftRef.current[key] = value;
+        } }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WizardFlyingWindowTimeInput, { draftKey: `${row.key}-end`, className: wizardInputClass, value: row.end, enabled: row.enabled, onCommit: row.setEnd, onDraftChange: (key, value) => {
+          if (value === null) delete flyingWindowDraftRef.current[key];
+          else flyingWindowDraftRef.current[key] = value;
+        } }) })
       ] }, row.key)) })
     ] }) });
   };

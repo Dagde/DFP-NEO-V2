@@ -2698,44 +2698,49 @@ const parseWizardTimeInputValue = (value: string, fallback: number): number => {
 };
 
 const WizardFlyingWindowTimeInput = React.memo(({
+    draftKey,
     className,
     value,
     enabled,
     onCommit,
+    onDraftChange,
 }: {
+    draftKey: string;
     className: string;
     value: number;
     enabled: boolean;
     onCommit?: (value: number) => void;
+    onDraftChange?: (key: string, value: string | null) => void;
 }) => {
     const formattedValue = formatWizardTimeInputValue(value);
-    const [draft, setDraft] = useState(formattedValue);
-    const [focused, setFocused] = useState(false);
+    const inputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
-        if (!focused) setDraft(formattedValue);
-    }, [focused, formattedValue]);
+        if (document.activeElement !== inputRef.current && inputRef.current) {
+            inputRef.current.value = formattedValue;
+        }
+    }, [formattedValue]);
 
     const commitDraft = () => {
-        const nextValue = parseWizardTimeInputValue(draft, value);
-        setFocused(false);
-        setDraft(formatWizardTimeInputValue(nextValue));
+        const nextValue = parseWizardTimeInputValue(inputRef.current?.value || formattedValue, value);
+        if (inputRef.current) inputRef.current.value = formatWizardTimeInputValue(nextValue);
+        onDraftChange?.(draftKey, null);
         onCommit?.(nextValue);
     };
 
     return (
         <input
+            ref={inputRef}
             className={className}
-            value={focused ? draft : formattedValue}
+            defaultValue={formattedValue}
             placeholder="HH:MM"
             inputMode="numeric"
             disabled={!enabled || !onCommit}
-            onFocus={() => {
-                setFocused(true);
-                setDraft(formattedValue);
-            }}
-            onChange={(event) => {
-                setDraft(event.target.value.replace(/[^\d:]/g, '').slice(0, 5));
+            onInput={(event) => {
+                const input = event.currentTarget;
+                const nextValue = input.value.replace(/[^\d:]/g, '').slice(0, 5);
+                if (input.value !== nextValue) input.value = nextValue;
+                onDraftChange?.(draftKey, nextValue);
             }}
             onBlur={commitDraft}
             onKeyDown={(event) => {
@@ -2825,6 +2830,7 @@ const InitialSetupWizard: React.FC<{
     const wizardShellRef = useRef<HTMLDivElement | null>(null);
     const wizardSettingsEmbedRef = useRef<HTMLDivElement | null>(null);
     const wizardPlatformSettingsSaveRef = useRef<(() => Promise<boolean>) | null>(null);
+    const flyingWindowDraftRef = useRef<Record<string, string>>({});
     const wizardAnswerPanelRef = useRef<HTMLDivElement | null>(null);
     const wizardStep24ScrollTraceRef = useRef<any[]>([]);
     const wizardStep24ScrollTraceSequenceRef = useRef(0);
@@ -8189,6 +8195,26 @@ const InitialSetupWizard: React.FC<{
             />
         </label>
     );
+    const commitFlyingWindowDrafts = () => {
+        const draftEntries = Object.entries(flyingWindowDraftRef.current);
+        if (draftEntries.length === 0) return;
+        const timeRows = [
+            { key: 'flight-start', value: flyingStartTime, setValue: onUpdateFlyingStartTime },
+            { key: 'flight-end', value: flyingEndTime, setValue: onUpdateFlyingEndTime },
+            { key: 'ftd-start', value: ftdStartTime, setValue: onUpdateFtdStartTime },
+            { key: 'ftd-end', value: ftdEndTime, setValue: onUpdateFtdEndTime },
+            { key: 'cpt-start', value: cptStartTime, setValue: onUpdateCptStartTime },
+            { key: 'cpt-end', value: cptEndTime, setValue: onUpdateCptEndTime },
+            { key: 'night-start', value: commenceNightFlying, setValue: onUpdateCommenceNightFlying },
+            { key: 'night-end', value: ceaseNightFlying, setValue: onUpdateCeaseNightFlying },
+        ];
+        timeRows.forEach((row) => {
+            const draft = flyingWindowDraftRef.current[row.key];
+            if (draft === undefined || !row.setValue) return;
+            row.setValue(parseWizardTimeInputValue(draft, row.value));
+        });
+        flyingWindowDraftRef.current = {};
+    };
     const goToNextWizardStep = async () => {
         pushWizardOrgDiag('wizard:next-clicked', {
             fromStep: visibleStep.id,
@@ -8196,6 +8222,9 @@ const InitialSetupWizard: React.FC<{
             draft: summariseOrganisationDraft(organisationDraft),
             activeOrganisation: summariseActiveOrganisation(),
         });
+        if (visibleStep.id === 'flying-windows') {
+            commitFlyingWindowDrafts();
+        }
         if (visibleStep.id === 'resource-row-details') {
             const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
             if (!saveWizardSettings) {
@@ -8297,8 +8326,14 @@ const InitialSetupWizard: React.FC<{
                                         </select>
                                     ) : <span className="inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800">Yes</span>}
                                 </td>
-                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput className={wizardInputClass} value={row.start} enabled={row.enabled} onCommit={row.setStart} /></td>
-                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput className={wizardInputClass} value={row.end} enabled={row.enabled} onCommit={row.setEnd} /></td>
+                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput draftKey={`${row.key}-start`} className={wizardInputClass} value={row.start} enabled={row.enabled} onCommit={row.setStart} onDraftChange={(key, value) => {
+                                    if (value === null) delete flyingWindowDraftRef.current[key];
+                                    else flyingWindowDraftRef.current[key] = value;
+                                }} /></td>
+                                <td className="px-3 py-2"><WizardFlyingWindowTimeInput draftKey={`${row.key}-end`} className={wizardInputClass} value={row.end} enabled={row.enabled} onCommit={row.setEnd} onDraftChange={(key, value) => {
+                                    if (value === null) delete flyingWindowDraftRef.current[key];
+                                    else flyingWindowDraftRef.current[key] = value;
+                                }} /></td>
                             </tr>
                         ))}
                     </tbody>
