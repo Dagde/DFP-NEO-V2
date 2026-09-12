@@ -30221,7 +30221,14 @@ const formatWizardBuildRulesDraft = (draft) => [
   `Maximum dispatch per hour: ${draft.maxDispatchPerHour || "2"}`,
   `Maximum events per day: ${draft.maxEventsPerDay || "Not set"}`,
   `Maximum flights per day: ${draft.maxFlightsPerDay || "Not set"}`,
-  `Minimum gap between events: ${draft.minGapBetweenEventsMinutes || "0"} minutes`
+  `Minimum gap between events: ${draft.minGapBetweenEventsMinutes || "0"} minutes`,
+  `Flight stagger minutes: ${draft.flightStaggerMinutes || DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes}`,
+  `Flight stagger no minimum: ${draft.flightStaggerNoMinimum || (DEFAULT_DISPATCH_STAGGER_SETTINGS.flightNoMinimum ? "Yes" : "No")}`,
+  `Simulator stagger minutes: ${draft.simulatorStaggerMinutes || DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes}`,
+  `Simulator stagger no minimum: ${draft.simulatorStaggerNoMinimum || (DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum ? "Yes" : "No")}`,
+  `Flight authorisation required: ${draft.flightAuthorisationRequired || (DEFAULT_TILE_STATUS_SETTINGS.flightAuthorisationRequired ? "Yes" : "No")}`,
+  `Authorisation warning minutes: ${draft.authorizationWarningMinutes || DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes}`,
+  `Authorisation urgent minutes: ${draft.authorizationUrgentMinutes || DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes}`
 ].join("\n");
 const parseWizardStaffRows = (value) => String(value || "").split(/\n/).map((line) => {
   const parts = line.split("|").map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
@@ -31175,7 +31182,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     ] })
   ] });
 };
-const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
+const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime = 8, flyingEndTime = 17, ftdStartTime = 8, ftdEndTime = 17, cptStartTime = 8, cptEndTime = 17, allowNightFlying = true, commenceNightFlying = 18.5, ceaseNightFlying = 23.5, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings = DEFAULT_DISPATCH_STAGGER_SETTINGS, onUpdateDispatchStaggerSettings, tileStatusSettings = DEFAULT_TILE_STATUS_SETTINGS, onUpdateTileStatusSettings, emergencyFreezeAuthority = DEFAULT_EMERGENCY_FREEZE_AUTHORITY, onUpdateEmergencyFreezeAuthority, qualificationOptions = [], currentUserQualificationIds = [], onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
   const [mode, setMode] = reactExports.useState("detect");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
   const configuredContinuationShortLabel = reactExports.useMemo(
@@ -31647,6 +31654,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || "LOC"),
     name: String(currentLocation?.name || "Home Location"),
     timezone: String(currentLocation?.timezone || "UTC"),
+    latitude: String(currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ""),
+    longitude: String(currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ""),
     trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
   });
   const locationDraftDirtyRef = reactExports.useRef(false);
@@ -31714,7 +31723,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     maxDispatchPerHour: "2",
     maxEventsPerDay: "",
     maxFlightsPerDay: "",
-    minGapBetweenEventsMinutes: "0"
+    minGapBetweenEventsMinutes: "0",
+    flightStaggerMinutes: String(normaliseDispatchStaggerSettings(dispatchStaggerSettings).flightMinutes),
+    flightStaggerNoMinimum: normaliseDispatchStaggerSettings(dispatchStaggerSettings).flightNoMinimum ? "Yes" : "No",
+    simulatorStaggerMinutes: String(normaliseDispatchStaggerSettings(dispatchStaggerSettings).simulatorMinutes),
+    simulatorStaggerNoMinimum: normaliseDispatchStaggerSettings(dispatchStaggerSettings).simulatorNoMinimum ? "Yes" : "No",
+    flightAuthorisationRequired: normaliseTileStatusSettings(tileStatusSettings).flightAuthorisationRequired ? "Yes" : "No",
+    authorizationWarningMinutes: String(normaliseTileStatusSettings(tileStatusSettings).authorizationWarningMinutes),
+    authorizationUrgentMinutes: String(normaliseTileStatusSettings(tileStatusSettings).authorizationUrgentMinutes)
   });
   const buildRulesDraftDirtyRef = reactExports.useRef(false);
   const updateBuildRulesDraft = (updater) => {
@@ -31753,6 +31769,16 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const [trainingRecordsDraft, setTrainingRecordsDraft] = reactExports.useState("Training Report | Assessment Form | 0 | 5 | Yes | No | Satisfactory | Unsatisfactory");
   const [unitModulesDraft, setUnitModulesDraft] = reactExports.useState(() => buildHydratedUnitModulesDraft());
+  const auditRecordingPageOptions = [
+    "Program Schedule",
+    "Priorities",
+    "Settings - Business Rules",
+    "Settings - Platform Configuration",
+    "Settings - Emergency",
+    "Training Records",
+    "NEO Build"
+  ];
+  const [auditRecordingPageDraft, setAuditRecordingPageDraft] = reactExports.useState(auditRecordingPageOptions[0]);
   const unitModulesDraftDirtyRef = reactExports.useRef(false);
   const [rankLabelsDraft, setRankLabelsDraft] = reactExports.useState("1 | Senior Rank 1 | Highest rank shown first\n2 | Senior Rank 2 | Next senior rank\n3 | Team Lead Rank | Operational supervisor level\n4 | Line Rank | Standard operational rank");
   const [rankSettingsDraft, setRankSettingsDraft] = reactExports.useState(() => ({
@@ -31937,7 +31963,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       maxDispatchPerHour: readRule("Maximum dispatch per hour", "2"),
       maxEventsPerDay: readRule("Maximum events per day", "").replace(/^Not set$/i, ""),
       maxFlightsPerDay: readRule("Maximum flights per day", "").replace(/^Not set$/i, ""),
-      minGapBetweenEventsMinutes: readRule("Minimum gap between events", "0")
+      minGapBetweenEventsMinutes: readRule("Minimum gap between events", "0"),
+      flightStaggerMinutes: readRule("Flight stagger minutes", String(DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes)),
+      flightStaggerNoMinimum: readRule("Flight stagger no minimum", DEFAULT_DISPATCH_STAGGER_SETTINGS.flightNoMinimum ? "Yes" : "No"),
+      simulatorStaggerMinutes: readRule("Simulator stagger minutes", String(DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes)),
+      simulatorStaggerNoMinimum: readRule("Simulator stagger no minimum", DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum ? "Yes" : "No"),
+      flightAuthorisationRequired: readRule("Flight authorisation required", DEFAULT_TILE_STATUS_SETTINGS.flightAuthorisationRequired ? "Yes" : "No"),
+      authorizationWarningMinutes: readRule("Authorisation warning minutes", String(DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes)),
+      authorizationUrgentMinutes: readRule("Authorisation urgent minutes", String(DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes))
     };
   };
   const readPlainWizardObject = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -31992,6 +32025,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const eventLimits = readPlainWizardObject(rules.eventLimits || ruleSet.eventLimits);
     const wizardEventLimits = readPlainWizardObject(rules.wizardEventLimits || ruleSet.wizardEventLimits);
     const dailyEventLimits = readPlainWizardObject(rules.dailyEventLimits || ruleSet.dailyEventLimits);
+    const resolvedDispatchStagger = normaliseDispatchStaggerSettings(buildRuleSettings?.dispatchStaggerSettings || dispatchStaggerSettings);
+    const resolvedTileStatus = normaliseTileStatusSettings(tileStatusSettings);
     return {
       businessRules: String(ruleSet.businessRules || "Use configured rule set"),
       maxCrewDutyHours: String(ruleSet.maxCrewDutyHours ?? "12"),
@@ -32020,7 +32055,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         eventLimits.minGapBetweenEventsMinutes,
         wizardEventLimits.minGapBetweenEventsMinutes,
         dailyEventLimits.minGapBetweenEventsMinutes
-      ], "0", true)
+      ], "0", true),
+      flightStaggerMinutes: String(resolvedDispatchStagger.flightMinutes),
+      flightStaggerNoMinimum: resolvedDispatchStagger.flightNoMinimum ? "Yes" : "No",
+      simulatorStaggerMinutes: String(resolvedDispatchStagger.simulatorMinutes),
+      simulatorStaggerNoMinimum: resolvedDispatchStagger.simulatorNoMinimum ? "Yes" : "No",
+      flightAuthorisationRequired: resolvedTileStatus.flightAuthorisationRequired ? "Yes" : "No",
+      authorizationWarningMinutes: String(resolvedTileStatus.authorizationWarningMinutes),
+      authorizationUrgentMinutes: String(resolvedTileStatus.authorizationUrgentMinutes)
     };
   };
   const buildHydratedRankLabelsDraft = () => {
@@ -32343,9 +32385,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || "LOC"),
       name: String(currentLocation?.name || "Home Location"),
       timezone: String(currentLocation?.timezone || "UTC"),
+      latitude: String(currentLocation?.latitude ?? currentLocation?.settings?.latitude ?? activeWizardLocationProfile?.latitude ?? ""),
+      longitude: String(currentLocation?.longitude ?? currentLocation?.settings?.longitude ?? activeWizardLocationProfile?.longitude ?? ""),
       trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
     });
-  }, [activeWizardLocationCode, currentLocation?.code, currentLocation?.name, currentLocation?.timezone, JSON.stringify(currentLocation?.trainingAreas || [])]);
+  }, [activeWizardLocationCode, currentLocation?.code, currentLocation?.name, currentLocation?.timezone, currentLocation?.latitude, currentLocation?.longitude, currentLocation?.settings?.latitude, currentLocation?.settings?.longitude, activeWizardLocationProfile?.latitude, activeWizardLocationProfile?.longitude, JSON.stringify(currentLocation?.trainingAreas || [])]);
   reactExports.useEffect(() => {
     const firstLocation = parseWizardLocationRows(locationsTodayDraft)[0];
     setLocationDraftRowCount((count) => Math.max(count, parseWizardLocationRows(locationsTodayDraft).length, 1));
@@ -32357,7 +32401,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       code: firstLocation.icao || matchedProfile?.icao || draft.code,
       iataCode: firstLocation.iata || matchedProfile?.iata || draft.iataCode,
       name: firstLocation.name || matchedProfile?.name || draft.name,
-      timezone: matchedProfile?.timezone || draft.timezone
+      timezone: matchedProfile?.timezone || draft.timezone,
+      latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : draft.latitude,
+      longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : draft.longitude
     }));
   }, [locationsTodayDraft]);
   reactExports.useEffect(() => {
@@ -32581,17 +32627,25 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     saveWizardConfig("Location saved into Settings.", (baseConfig) => {
       const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
+      const parsedLatitude = Number(locationDraft.latitude);
+      const parsedLongitude = Number(locationDraft.longitude);
+      const hasLatitude = String(locationDraft.latitude || "").trim() && Number.isFinite(parsedLatitude);
+      const hasLongitude = String(locationDraft.longitude || "").trim() && Number.isFinite(parsedLongitude);
       const nextLocation = {
         id: currentLocation?.id || createWizardRecordId("location"),
         code: cleanCode,
         iataCode: String(locationDraft.iataCode || "").trim().toUpperCase(),
         name: locationDraft.name || cleanCode,
         timezone: locationDraft.timezone || "UTC",
+        latitude: hasLatitude ? parsedLatitude : currentLocation?.latitude,
+        longitude: hasLongitude ? parsedLongitude : currentLocation?.longitude,
         trainingAreas: locationDraft.trainingAreas.split(",").map((item) => item.trim()).filter(Boolean),
         status: "ACTIVE",
         settings: {
           ...currentLocation?.settings || {},
-          iataCode: String(locationDraft.iataCode || "").trim().toUpperCase()
+          iataCode: String(locationDraft.iataCode || "").trim().toUpperCase(),
+          ...hasLatitude ? { latitude: parsedLatitude } : {},
+          ...hasLongitude ? { longitude: parsedLongitude } : {}
         }
       };
       const exists = locations.some((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
@@ -32962,6 +33016,19 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const saveBuildRulesDraft = () => {
     const targetUnitCode = String(unitDraft.code || currentUnit?.code || unitCode || "").trim().toUpperCase();
+    const nextDispatchStaggerSettings = normaliseDispatchStaggerSettings({
+      flightMinutes: parseNumberDraft(buildRulesDraft.flightStaggerMinutes, DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes),
+      flightNoMinimum: /^yes$/i.test(String(buildRulesDraft.flightStaggerNoMinimum || "").trim()),
+      simulatorMinutes: parseNumberDraft(buildRulesDraft.simulatorStaggerMinutes, DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes),
+      simulatorNoMinimum: /^yes$/i.test(String(buildRulesDraft.simulatorStaggerNoMinimum || "").trim())
+    });
+    const nextTileStatusSettings = normaliseTileStatusSettings({
+      flightAuthorisationRequired: !/^no$/i.test(String(buildRulesDraft.flightAuthorisationRequired || "").trim()),
+      authorizationWarningMinutes: parseNumberDraft(buildRulesDraft.authorizationWarningMinutes, DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes),
+      authorizationUrgentMinutes: parseNumberDraft(buildRulesDraft.authorizationUrgentMinutes, DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes)
+    });
+    onUpdateDispatchStaggerSettings?.(nextDispatchStaggerSettings);
+    onUpdateTileStatusSettings?.(nextTileStatusSettings);
     saveWizardConfig("Build rules saved into Settings.", (baseConfig) => {
       const ruleSets = Array.isArray(baseConfig.schedulingRuleSets) ? baseConfig.schedulingRuleSets : [];
       const existingIndex = ruleSets.findIndex((ruleSet) => targetUnitCode && normaliseUnitSettingsIdentifier(ruleSet?.unitCode) === normaliseUnitSettingsIdentifier(targetUnitCode) && String(ruleSet?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && ruleSet?.isActive !== false);
@@ -33546,6 +33613,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       category: "mandatory"
     },
     {
+      id: "resource-row-details",
+      title: "Set aircraft numbering and unavailable reasons",
+      label: "Tail numbers/reasons",
+      body: "Collect aircraft number prefixes and optional unserviceability reasons using the same DFP Resource Rows settings.",
+      checkIds: ["resources"],
+      category: "highly-desirable"
+    },
+    {
       id: "aircraft-configs",
       title: "Set aircraft CONFIG options",
       label: "Aircraft CONFIG",
@@ -33567,6 +33642,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       label: "Terminology/callsigns",
       body: "Set the terminology, callsign prefixes, and formation callsigns this unit uses when creating or scheduling events.",
       checkIds: ["crew"],
+      category: "highly-desirable"
+    },
+    {
+      id: "flying-windows",
+      title: "Set flying windows for all resources",
+      label: "Flying windows",
+      body: "Set the flight, simulator, trainer and night flying windows used by the build pages.",
+      checkIds: ["rules"],
       category: "highly-desirable"
     },
     {
@@ -33618,6 +33701,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       category: "highly-desirable"
     },
     {
+      id: "directed-task-setups",
+      title: "Set directed task setups",
+      label: "Directed tasks",
+      body: "Create reusable directed task setups with crew, aircraft, timing, callsign and formation settings.",
+      checkIds: ["training"],
+      category: "highly-desirable"
+    },
+    {
       id: "scoring",
       title: "Set up the scoring matrix",
       label: "Scoring",
@@ -33631,6 +33722,22 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       label: "User permissions",
       body: "Manage who can use this unit and what each person can do.",
       checkIds: ["access", "training"],
+      category: "highly-desirable"
+    },
+    {
+      id: "audit-recording",
+      title: "Set audit recording controls",
+      label: "Audit recording",
+      body: "Choose which audit actions are recorded for key app pages.",
+      checkIds: ["access"],
+      category: "highly-desirable"
+    },
+    {
+      id: "emergency-settings",
+      title: "Set emergency freeze settings",
+      label: "Emergency",
+      body: "Set the emergency freeze authority and allowed-action controls in the wizard light theme.",
+      checkIds: ["access"],
       category: "highly-desirable"
     },
     {
@@ -34114,12 +34221,27 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           resourceDraft.standby,
           resourceDraft.ground
         ].every(hasPositiveWizardNumber);
+      case "resource-row-details":
+        return Boolean(
+          primaryResourcePool?.settings?.aircraftNumberUsePrefix || Array.isArray(primaryResourcePool?.settings?.aircraftNumberPrefixes) && primaryResourcePool.settings.aircraftNumberPrefixes.length > 0 || Array.isArray(primaryResourcePool?.settings?.flightLineUnavailableReasonOptions) && primaryResourcePool.settings.flightLineUnavailableReasonOptions.length > 0
+        );
       case "aircraft-configs":
         return hasMeaningfulAircraftConfigDefinitions();
       case "crew":
         return parseRoleRequirementsText(crewDraft.standardSeats).some((row) => hasMeaningfulWizardText(row.role, ["Crew"]) && Number(row.count || 0) > 0);
       case "callsigns":
         return hasMeaningfulCallsignSettings();
+      case "flying-windows":
+        return [
+          flyingStartTime,
+          flyingEndTime,
+          ftdStartTime,
+          ftdEndTime,
+          cptStartTime,
+          cptEndTime,
+          commenceNightFlying,
+          ceaseNightFlying
+        ].every((value) => Number.isFinite(Number(value)));
       case "build-rules":
         return hasChangedWizardObject(buildRulesDraft, {
           businessRules: "Use configured rule set",
@@ -34131,7 +34253,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           maxDispatchPerHour: "2",
           maxEventsPerDay: "",
           maxFlightsPerDay: "",
-          minGapBetweenEventsMinutes: "0"
+          minGapBetweenEventsMinutes: "0",
+          flightStaggerMinutes: String(DEFAULT_DISPATCH_STAGGER_SETTINGS.flightMinutes),
+          flightStaggerNoMinimum: DEFAULT_DISPATCH_STAGGER_SETTINGS.flightNoMinimum ? "Yes" : "No",
+          simulatorStaggerMinutes: String(DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorMinutes),
+          simulatorStaggerNoMinimum: DEFAULT_DISPATCH_STAGGER_SETTINGS.simulatorNoMinimum ? "Yes" : "No",
+          flightAuthorisationRequired: DEFAULT_TILE_STATUS_SETTINGS.flightAuthorisationRequired ? "Yes" : "No",
+          authorizationWarningMinutes: String(DEFAULT_TILE_STATUS_SETTINGS.authorizationWarningMinutes),
+          authorizationUrgentMinutes: String(DEFAULT_TILE_STATUS_SETTINGS.authorizationUrgentMinutes)
         });
       case "advanced-scheduling-rules":
         return hasMeaningfulSchedulingRuleSettings();
@@ -34147,10 +34276,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         });
       case "staff-currency-events":
         return parseWizardStandardCurrencyEventRows(staffCurrencyEventsDraft).some((row) => hasMeaningfulWizardText(row.name, ["Annual Instrument Check"]) && hasMeaningfulWizardText(row.shortTitle, ["INST"]) && hasPositiveWizardNumber(row.duration) && hasPositiveWizardNumber(row.aircraftCount));
+      case "directed-task-setups": {
+        const profiles = Array.isArray(activeOrganisation?.settings?.standardMissionProfiles?.profiles) ? activeOrganisation.settings.standardMissionProfiles.profiles : Array.isArray(activeOrganisation?.settings?.standardMissionProfiles) ? activeOrganisation.settings.standardMissionProfiles : [];
+        return profiles.some((profile) => String(profile?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+      }
       case "scoring":
         return Object.entries(wizardScoringPhraseBank || {}).some(([dimension, phrases]) => hasMeaningfulWizardText(dimension, ["Preparation", "Airmanship"]) && Boolean(phrases) && typeof phrases === "object" && !Array.isArray(phrases) && Object.values(phrases).some((gradePhrases) => Array.isArray(gradePhrases) && gradePhrases.some((phrase) => hasMeaningfulWizardText(phrase))));
       case "access":
         return activeUserAccess.some((access) => hasMeaningfulWizardText(access?.userName || access?.userId) && (hasMeaningfulWizardText(access?.accessLevel) || hasMeaningfulWizardText(access?.role) || Array.isArray(access?.profileIds) && access.profileIds.length > 0));
+      case "audit-recording":
+        return Object.keys(getAuditRecordingSettingsForPage(auditRecordingPageDraft)).length > 0;
+      case "emergency-settings":
+        return normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority, qualificationOptions).activateQualificationIds.length > 0;
       case "deployment-readiness":
         return hasMeaningfulDeploymentProfile();
       case "operational-runbook":
@@ -35410,6 +35547,80 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     setWizardPageMenuOpen(false);
     setWizardStep(boundedStep);
   };
+  const formatWizardDecimalTime = (hours) => {
+    const bounded = Math.max(0, Math.min(23 + 55 / 60, Number(hours) || 0));
+    const totalMinutes = Math.round(bounded * 60 / 5) * 5;
+    return `${String(Math.floor(totalMinutes / 60)).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
+  };
+  const parseWizardDecimalTime = (value, fallback) => {
+    const match = /^(\d{1,2}):?(\d{2})$/.exec(String(value || "").trim());
+    if (!match) return fallback;
+    const hours = Math.max(0, Math.min(23, Number(match[1]) || 0));
+    const minutes = Math.max(0, Math.min(55, Math.round((Number(match[2]) || 0) / 5) * 5));
+    return hours + minutes / 60;
+  };
+  const renderFlyingWindowsEditor = () => {
+    const rows = [
+      { key: "flight", label: "Day flying", enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
+      { key: "ftd", label: "Simulator operating", enabled: true, start: ftdStartTime, end: ftdEndTime, setStart: onUpdateFtdStartTime, setEnd: onUpdateFtdEndTime },
+      { key: "cpt", label: "Trainer operating", enabled: true, start: cptStartTime, end: cptEndTime, setStart: onUpdateCptStartTime, setEnd: onUpdateCptEndTime },
+      { key: "night", label: "Night flying", enabled: allowNightFlying, start: commenceNightFlying, end: ceaseNightFlying, setStart: onUpdateCommenceNightFlying, setEnd: onUpdateCeaseNightFlying, setEnabled: onUpdateAllowNightFlying }
+    ];
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-hidden rounded-lg border border-slate-300 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-left text-sm text-slate-900", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-[#e8f3fa] text-xs uppercase tracking-[0.12em] text-slate-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 font-bold", children: "Window" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 font-bold", children: "Enabled" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 font-bold", children: "Start" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 font-bold", children: "End" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-slate-200 bg-[#f8fbfd]", children: rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 font-semibold text-slate-950", children: row.label }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: row.setEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { className: wizardInputClass, value: row.enabled ? "Yes" : "No", onChange: (event) => row.setEnabled?.(event.target.value === "Yes"), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Yes" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "No" })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800", children: "Yes" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: wizardInputClass, value: formatWizardDecimalTime(row.start), disabled: !row.enabled || !row.setStart, onChange: (event) => row.setStart?.(parseWizardDecimalTime(event.target.value, row.start)) }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: wizardInputClass, value: formatWizardDecimalTime(row.end), disabled: !row.enabled || !row.setEnd, onChange: (event) => row.setEnd?.(parseWizardDecimalTime(event.target.value, row.end)) }) })
+      ] }, row.key)) })
+    ] }) });
+  };
+  const renderAuditRecordingEditor = () => {
+    const settings = getAuditRecordingSettingsForPage(auditRecordingPageDraft);
+    const updateAuditSetting = (action, checked) => {
+      saveAuditRecordingSettingsForPage(auditRecordingPageDraft, { ...settings, [action]: checked });
+      setSaveMessage("Audit recording settings saved.");
+    };
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
+      wizardField("Audit page/module", auditRecordingPageDraft, setAuditRecordingPageDraft, auditRecordingPageOptions),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: AUDIT_RECORDING_ACTIONS.map((action) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", className: "h-4 w-4 accent-sky-600", checked: settings[action] !== false, onChange: (event) => updateAuditSetting(action, event.target.checked) }),
+        action
+      ] }, action)) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => {
+          saveAuditRecordingSettingsForPage(auditRecordingPageDraft, Object.fromEntries(AUDIT_RECORDING_ACTIONS.map((action) => [action, true])));
+          setSaveMessage("Audit recording enabled for all actions on this page.");
+        }, children: "Select all" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => {
+          saveAuditRecordingSettingsForPage(auditRecordingPageDraft, Object.fromEntries(AUDIT_RECORDING_ACTIONS.map((action) => [action, false])));
+          setSaveMessage("Audit recording disabled for all actions on this page.");
+        }, children: "Deselect all" })
+      ] })
+    ] });
+  };
+  const renderEmergencySettingsEditor = () => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "wizard-emergency-embed rounded-lg border border-slate-300 bg-white p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    EmergencyPage,
+    {
+      currentUserRole: currentUserPermission,
+      onShowSuccess: setSaveMessage,
+      emergencyFreezeAuthority,
+      onUpdateEmergencyFreezeAuthority: (settings) => onUpdateEmergencyFreezeAuthority?.(normaliseEmergencyFreezeAuthoritySettings(settings, qualificationOptions)),
+      qualificationOptions,
+      currentUserQualificationIds,
+      canEditEmergencyAuthority: ["Super Admin", "Admin"].includes(currentUserPermission),
+      flightAuthorisationRequired: normaliseTileStatusSettings(tileStatusSettings).flightAuthorisationRequired
+    }
+  ) });
   const renderWizardPlatformSettingsEmbed = (scrollTarget, _focusSubsectionId = "", successMessage = "Settings saved into Settings.", extraProps = {}) => {
     const activeUnitCodesForSettings = getWizardActiveUnitCodes();
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: wizardSettingsEmbedRef, className: "wizard-settings-embed wizard-settings-embed--scroll-stable rounded-lg border border-slate-200 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -35440,6 +35651,29 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       onKeyDownCapture: stopEditableKeyPropagation,
       onKeyDown: stopEditableKeyPropagation,
       children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
+                .wizard-emergency-embed,
+                .wizard-emergency-embed > div,
+                .wizard-emergency-embed section,
+                .wizard-emergency-embed article {
+                    background: #ffffff !important;
+                    color: #0f172a !important;
+                }
+                .wizard-emergency-embed [class*="bg-gray-"],
+                .wizard-emergency-embed [class*="bg-slate-"],
+                .wizard-emergency-embed [class*="bg-black"] {
+                    background: #f8fbfd !important;
+                }
+                .wizard-emergency-embed [class*="text-white"],
+                .wizard-emergency-embed [class*="text-gray-"],
+                .wizard-emergency-embed [class*="text-slate-"] {
+                    color: #1e293b !important;
+                }
+                .wizard-emergency-embed [class*="border-gray-"],
+                .wizard-emergency-embed [class*="border-slate-"] {
+                    border-color: #cbd5e1 !important;
+                }
+            ` }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-x-3 gap-y-1", children: [
@@ -36741,17 +36975,19 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardDataListField("ICAO code", locationDraft.code, (value) => {
             const matchedProfile = findWizardLocationProfile(value);
-            updateLocationDraft((draft) => ({ ...draft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || draft.iataCode, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
+            updateLocationDraft((draft) => ({ ...draft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || draft.iataCode, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : draft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : draft.longitude }));
           }, wizardLocationIcaoOptions, "ICAO code"),
           wizardDataListField("IATA code", locationDraft.iataCode, (value) => {
             const matchedProfile = findWizardLocationProfile(value);
-            updateLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || draft.code, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
+            updateLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || draft.code, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : draft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : draft.longitude }));
           }, wizardLocationIataOptions, "IATA code"),
           wizardDataListField("Location name", locationDraft.name, (value) => {
             const matchedProfile = findWizardLocationProfile(value);
-            updateLocationDraft((draft) => ({ ...draft, name: value, code: matchedProfile?.icao || draft.code, iataCode: matchedProfile?.iata || draft.iataCode, timezone: matchedProfile?.timezone || draft.timezone }));
+            updateLocationDraft((draft) => ({ ...draft, name: value, code: matchedProfile?.icao || draft.code, iataCode: matchedProfile?.iata || draft.iataCode, timezone: matchedProfile?.timezone || draft.timezone, latitude: matchedProfile?.latitude != null ? String(matchedProfile.latitude) : draft.latitude, longitude: matchedProfile?.longitude != null ? String(matchedProfile.longitude) : draft.longitude }));
           }, wizardLocationNameOptions, "Location name"),
           wizardField("Timezone", locationDraft.timezone, (value) => updateLocationDraft((draft) => ({ ...draft, timezone: value })), void 0, "UTC"),
+          wizardField("Latitude", locationDraft.latitude, (value) => updateLocationDraft((draft) => ({ ...draft, latitude: value })), void 0, "-27.3842"),
+          wizardField("Longitude", locationDraft.longitude, (value) => updateLocationDraft((draft) => ({ ...draft, longitude: value })), void 0, "153.1175"),
           wizardField("Training areas", locationDraft.trainingAreas, (value) => updateLocationDraft((draft) => ({ ...draft, trainingAreas: value })), void 0, "Area A, Area B")
         ] })
       );
@@ -36823,6 +37059,17 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         ] })
       );
     }
+    if (visibleStep.id === "resource-row-details") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set aircraft numbering and optional unserviceability reasons. This uses the same DFP Resource Rows controls as Settings." }),
+        renderWizardPlatformSettingsEmbed(
+          "platform-dfp-resource-rows",
+          "platform-resource-pool-records",
+          "Aircraft numbering and unavailable reasons saved into Settings.",
+          { focusAircraftTypeCode: resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || "" }
+        )
+      );
+    }
     if (visibleStep.id === "aircraft-configs") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the aircraft CONFIG records this unit uses. This is the same Aircraft Setup section used in Settings, so changes made here update Settings directly." }),
@@ -36868,6 +37115,12 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         )
       );
     }
+    if (visibleStep.id === "flying-windows") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the windows used by the build pages for flights, simulators, trainers and night flying. These values save through the same app settings as Priorities." }),
+        renderFlyingWindowsEditor()
+      );
+    }
     if (visibleStep.id === "build-rules") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the current values and refine them later in Settings." }),
@@ -36906,6 +37159,25 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
               wizardField("Min Gap between events minutes", buildRulesDraft.minGapBetweenEventsMinutes, (value) => {
                 updateBuildRulesDraft((draft) => ({ ...draft, minGapBetweenEventsMinutes: value }));
               }, void 0, "0")
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Dispatch spacing" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
+              wizardField("Flight stagger no minimum", buildRulesDraft.flightStaggerNoMinimum, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightStaggerNoMinimum: value })), ["Yes", "No"]),
+              wizardField("Flight stagger minutes", buildRulesDraft.flightStaggerMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightStaggerMinutes: value })), void 0, "5"),
+              wizardField("Simulator stagger no minimum", buildRulesDraft.simulatorStaggerNoMinimum, (value) => updateBuildRulesDraft((draft) => ({ ...draft, simulatorStaggerNoMinimum: value })), ["Yes", "No"]),
+              wizardField("Simulator stagger minutes", buildRulesDraft.simulatorStaggerMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, simulatorStaggerMinutes: value })), void 0, "0")
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Flight authorisation warnings" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: [
+              wizardField("Flight authorisation required", buildRulesDraft.flightAuthorisationRequired, (value) => updateBuildRulesDraft((draft) => ({ ...draft, flightAuthorisationRequired: value })), ["Yes", "No"]),
+              String(buildRulesDraft.flightAuthorisationRequired || "").trim().toLowerCase() !== "no" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                wizardField("Amber warning before start minutes", buildRulesDraft.authorizationWarningMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, authorizationWarningMinutes: value })), void 0, "120"),
+                wizardField("Red urgent before start minutes", buildRulesDraft.authorizationUrgentMinutes, (value) => updateBuildRulesDraft((draft) => ({ ...draft, authorizationUrgentMinutes: value })), void 0, "15")
+              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600", children: "Authorisation warnings are hidden because flight authorisation is optional." })
             ] })
           ] })
         ] })
@@ -37122,6 +37394,29 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           " and currency event settings for this unit. These become reusable starting points for staff checks and currency events."
         ] }),
         renderStandardCurrencyEventsEditor()
+      );
+    }
+    if (visibleStep.id === "directed-task-setups") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Create full reusable directed task setups. This is the same Directed Task Setups editor used in Settings." }),
+        renderWizardPlatformSettingsEmbed(
+          "platform-standard-missions",
+          "platform-standard-mission-records",
+          "Directed task setups saved into Settings.",
+          { focusAircraftTypeCode: resourceDraft.aircraftCode || crewDraft.aircraftCode || primaryAircraftType?.code || "" }
+        )
+      );
+    }
+    if (visibleStep.id === "audit-recording") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose which audit actions are recorded for the selected page or module. These are the same recording preferences used by the Audit Log flyout." }),
+        renderAuditRecordingEditor()
+      );
+    }
+    if (visibleStep.id === "emergency-settings") {
+      return promptShell(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set emergency freeze authority and allowed actions. Flight authorisation options follow the authorisation setting configured in build rules." }),
+        renderEmergencySettingsEditor()
       );
     }
     return promptShell(
@@ -37408,7 +37703,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
+const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission = "Staff", canUsePlatformPermission, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
   const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState("structure");
@@ -37558,6 +37853,32 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
         locationCode,
         formationCallsigns,
         buildRuleSettings,
+        flyingStartTime,
+        flyingEndTime,
+        ftdStartTime,
+        ftdEndTime,
+        cptStartTime,
+        cptEndTime,
+        allowNightFlying,
+        commenceNightFlying,
+        ceaseNightFlying,
+        onUpdateFlyingStartTime,
+        onUpdateFlyingEndTime,
+        onUpdateFtdStartTime,
+        onUpdateFtdEndTime,
+        onUpdateCptStartTime,
+        onUpdateCptEndTime,
+        onUpdateAllowNightFlying,
+        onUpdateCommenceNightFlying,
+        onUpdateCeaseNightFlying,
+        dispatchStaggerSettings,
+        onUpdateDispatchStaggerSettings,
+        tileStatusSettings,
+        onUpdateTileStatusSettings,
+        emergencyFreezeAuthority,
+        onUpdateEmergencyFreezeAuthority,
+        qualificationOptions,
+        currentUserQualificationIds,
         onUpdatePlatformConfig,
         onNavigateToSettingsSection,
         currentUserPermission,
@@ -37654,6 +37975,32 @@ const ScheduleView = ({
   onInitialSetupWizardActiveChange,
   formationCallsigns = [],
   buildRuleSettings,
+  flyingStartTime,
+  flyingEndTime,
+  ftdStartTime,
+  ftdEndTime,
+  cptStartTime,
+  cptEndTime,
+  allowNightFlying,
+  commenceNightFlying,
+  ceaseNightFlying,
+  onUpdateFlyingStartTime,
+  onUpdateFlyingEndTime,
+  onUpdateFtdStartTime,
+  onUpdateFtdEndTime,
+  onUpdateCptStartTime,
+  onUpdateCptEndTime,
+  onUpdateAllowNightFlying,
+  onUpdateCommenceNightFlying,
+  onUpdateCeaseNightFlying,
+  dispatchStaggerSettings,
+  onUpdateDispatchStaggerSettings,
+  tileStatusSettings,
+  onUpdateTileStatusSettings,
+  emergencyFreezeAuthority,
+  onUpdateEmergencyFreezeAuthority,
+  qualificationOptions,
+  currentUserQualificationIds,
   timezoneOffset = 10
   // Default to UTC+10 (AEST); location UTC offset overrides this when configured.
 }) => {
@@ -39224,7 +39571,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950 shadow-[18px_0_36px_rgba(0,0,0,0.38)] transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime, cptStartTime, cptEndTime, allowNightFlying, commenceNightFlying, ceaseNightFlying, onUpdateFlyingStartTime, onUpdateFlyingEndTime, onUpdateFtdStartTime, onUpdateFtdEndTime, onUpdateCptStartTime, onUpdateCptEndTime, onUpdateAllowNightFlying, onUpdateCommenceNightFlying, onUpdateCeaseNightFlying, dispatchStaggerSettings, onUpdateDispatchStaggerSettings, tileStatusSettings, onUpdateTileStatusSettings, emergencyFreezeAuthority, onUpdateEmergencyFreezeAuthority, qualificationOptions, currentUserQualificationIds, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
@@ -146093,6 +146440,36 @@ ${error instanceof Error ? error.message : String(error)}`,
               cptTurnaround,
               eventLimits
             },
+            flyingStartTime,
+            flyingEndTime,
+            ftdStartTime,
+            ftdEndTime,
+            cptStartTime,
+            cptEndTime,
+            allowNightFlying,
+            commenceNightFlying,
+            ceaseNightFlying,
+            onUpdateFlyingStartTime: setFlyingStartTime,
+            onUpdateFlyingEndTime: setFlyingEndTime,
+            onUpdateFtdStartTime: setFtdStartTime,
+            onUpdateFtdEndTime: setFtdEndTime,
+            onUpdateCptStartTime: setCptStartTime,
+            onUpdateCptEndTime: setCptEndTime,
+            onUpdateAllowNightFlying: setAllowNightFlying,
+            onUpdateCommenceNightFlying: setCommenceNightFlying,
+            onUpdateCeaseNightFlying: setCeaseNightFlying,
+            dispatchStaggerSettings,
+            onUpdateDispatchStaggerSettings: (settings) => setDispatchStaggerSettings(normaliseDispatchStaggerSettings(settings)),
+            tileStatusSettings: effectiveTileStatusSettings,
+            onUpdateTileStatusSettings: (settings) => {
+              const normalisedSettings = normaliseTileStatusSettings(settings);
+              setTileStatusSettings(normalisedSettings);
+              writeTileStatusSettingsToLocalStorage(normalisedSettings);
+            },
+            emergencyFreezeAuthority,
+            onUpdateEmergencyFreezeAuthority: (settings) => setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(settings, activeStaffQualificationCatalogue)),
+            qualificationOptions: emergencyQualificationOptions,
+            currentUserQualificationIds: currentEmergencyQualificationIds,
             isOracleMode,
             oraclePreviewEvent,
             onOracleMouseDown: handleOracleMouseDown,

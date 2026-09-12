@@ -51954,6 +51954,36 @@ appliedUpdates.forEach(update => {
                                cptTurnaround,
                                eventLimits,
                            }}
+                           flyingStartTime={flyingStartTime}
+                           flyingEndTime={flyingEndTime}
+                           ftdStartTime={ftdStartTime}
+                           ftdEndTime={ftdEndTime}
+                           cptStartTime={cptStartTime}
+                           cptEndTime={cptEndTime}
+                           allowNightFlying={allowNightFlying}
+                           commenceNightFlying={commenceNightFlying}
+                           ceaseNightFlying={ceaseNightFlying}
+                           onUpdateFlyingStartTime={setFlyingStartTime}
+                           onUpdateFlyingEndTime={setFlyingEndTime}
+                           onUpdateFtdStartTime={setFtdStartTime}
+                           onUpdateFtdEndTime={setFtdEndTime}
+                           onUpdateCptStartTime={setCptStartTime}
+                           onUpdateCptEndTime={setCptEndTime}
+                           onUpdateAllowNightFlying={setAllowNightFlying}
+                           onUpdateCommenceNightFlying={setCommenceNightFlying}
+                           onUpdateCeaseNightFlying={setCeaseNightFlying}
+                           dispatchStaggerSettings={dispatchStaggerSettings}
+                           onUpdateDispatchStaggerSettings={(settings) => setDispatchStaggerSettings(normaliseDispatchStaggerSettings(settings))}
+                           tileStatusSettings={effectiveTileStatusSettings}
+                           onUpdateTileStatusSettings={(settings) => {
+                               const normalisedSettings = normaliseTileStatusSettings(settings);
+                               setTileStatusSettings(normalisedSettings);
+                               writeTileStatusSettingsToLocalStorage(normalisedSettings);
+                           }}
+                           emergencyFreezeAuthority={emergencyFreezeAuthority}
+                           onUpdateEmergencyFreezeAuthority={(settings) => setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(settings, activeStaffQualificationCatalogue))}
+                           qualificationOptions={emergencyQualificationOptions}
+                           currentUserQualificationIds={currentEmergencyQualificationIds}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}
