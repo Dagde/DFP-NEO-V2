@@ -93650,6 +93650,7 @@ const sectionLabels = {
   "platform-settings-visibility": "Settings Visibility",
   "platform-deployment-readiness": "Deployment Readiness",
   "platform-operational-runbook": "Operational Runbook",
+  "audit-recording": "Audit Recording",
   "platform-licensing": "Licensing & Deployment",
   "platform-permission-profiles": "Master Permission Profiles",
   "platform-rank-terminology": "Rank, Terminology & Labels",
@@ -93757,6 +93758,7 @@ const sectionIcons = {
   "platform-settings-visibility": platformConfigurationIcon,
   "platform-deployment-readiness": platformConfigurationIcon,
   "platform-operational-runbook": platformConfigurationIcon,
+  "audit-recording": platformConfigurationIcon,
   "platform-licensing": platformConfigurationIcon,
   "platform-permission-profiles": platformConfigurationIcon,
   "platform-user-access": platformConfigurationIcon,
@@ -93799,6 +93801,7 @@ const sectionDescriptions = {
   "platform-settings-visibility": "Control which settings records are visible using unit, location, aircraft type and organisation filters",
   "platform-deployment-readiness": "SaaS, on-premise, offline and hybrid readiness checks",
   "platform-operational-runbook": "Support, backup, restore, update and accreditation records",
+  "audit-recording": "Choose which actions are recorded by the Audit Log",
   "platform-licensing": "Licence model, entitlements and validation status",
   "platform-permission-profiles": "Single master list of role and exception permission profiles",
   "platform-rank-terminology": "Rank ordering and local instructor terminology",
@@ -94222,6 +94225,15 @@ const sectionSearchKeywords = {
     "maintenance",
     "operations record"
   ],
+  "audit-recording": [
+    "audit",
+    "audit recording",
+    "audit log",
+    "recording settings",
+    "audit settings",
+    "record actions",
+    "view add edit delete save build publish sync"
+  ],
   "platform-licensing": [
     "licensing",
     "licence",
@@ -94456,6 +94468,7 @@ const sectionColors = {
   "platform-settings-visibility": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-deployment-readiness": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-operational-runbook": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
+  "audit-recording": "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400",
   "platform-licensing": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-permission-profiles": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-rank-terminology": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -94571,7 +94584,7 @@ const sectionGroups = [
     description: "Support records, cancellation codes, blank templates and saved operational evidence.",
     accent: "emerald",
     defaultSection: "platform-operational-runbook",
-    sections: ["platform-operational-runbook", "validation", "data-loaders"]
+    sections: ["platform-operational-runbook", "audit-recording", "validation", "data-loaders"]
   },
   {
     label: "Emergency",
@@ -94897,6 +94910,17 @@ const SettingsViewWithMenu = (props) => {
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [settingsSearchFocus, setSettingsSearchFocus] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
+  const auditRecordingPageOptions = [
+    "Program Schedule",
+    "Priorities",
+    "Settings - Business Rules",
+    "Settings - Platform Configuration",
+    "Settings - Emergency",
+    "Training Records",
+    "NEO Build"
+  ];
+  const [auditRecordingPage, setAuditRecordingPage] = reactExports.useState(auditRecordingPageOptions[0]);
+  const [, setAuditRecordingRefreshKey] = reactExports.useState(0);
   const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY$1;
   const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel || "ContT").trim() || "ContT"} / Currency Events`;
   const isContinuationCurrencySection = (section) => section === "sct-events" || section === "currency-profiles";
@@ -94925,6 +94949,7 @@ const SettingsViewWithMenu = (props) => {
       "crew-composition",
       "standard-missions",
       "currency-profiles",
+      "audit-recording",
       "appearance",
       "email-activation",
       "emergency"
@@ -94940,6 +94965,23 @@ const SettingsViewWithMenu = (props) => {
       return Boolean(requiredPermission && canUseSettingsPermission(requiredPermission));
     }
     return canUseSettingsPermission("settings.view");
+  };
+  const canEditAuditRecordingSettings = hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission || canUseSettingsPermission("settings.platform.edit");
+  const auditRecordingSettings = getAuditRecordingSettingsForPage(auditRecordingPage);
+  const updateAuditRecordingSetting = (action, checked) => {
+    if (!canEditAuditRecordingSettings) return;
+    saveAuditRecordingSettingsForPage(auditRecordingPage, { ...auditRecordingSettings, [action]: checked });
+    setAuditRecordingRefreshKey((current) => current + 1);
+    props.onShowSuccess("Audit recording settings saved.");
+  };
+  const setAllAuditRecordingSettings = (enabled) => {
+    if (!canEditAuditRecordingSettings) return;
+    saveAuditRecordingSettingsForPage(
+      auditRecordingPage,
+      Object.fromEntries(AUDIT_RECORDING_ACTIONS.map((action) => [action, enabled]))
+    );
+    setAuditRecordingRefreshKey((current) => current + 1);
+    props.onShowSuccess(enabled ? "Audit recording enabled for all actions on this page." : "Audit recording disabled for all actions on this page.");
   };
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
@@ -95601,7 +95643,62 @@ const SettingsViewWithMenu = (props) => {
             onOpenCurrencyRequirements: () => changeActiveSection("currencies")
           }
         ),
-        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "trainee-reallocation" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "email-activation" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        activeSection === "audit-recording" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 shadow-lg", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 px-5 py-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Audit Recording Controls" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: "Choose which actions are recorded by the Audit Log for each page or module." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-400", children: "Audit page/module" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: auditRecordingPage,
+                  onChange: (event) => setAuditRecordingPage(event.target.value),
+                  className: "w-full rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-semibold text-white outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400",
+                  children: auditRecordingPageOptions.map((page) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: page, children: page }, page))
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: AUDIT_RECORDING_ACTIONS.map((action) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 text-sm font-semibold text-gray-100 ${canEditAuditRecordingSettings ? "cursor-pointer hover:border-emerald-500/70" : "opacity-70"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  className: "h-4 w-4 accent-emerald-500",
+                  checked: auditRecordingSettings[action] !== false,
+                  disabled: !canEditAuditRecordingSettings,
+                  onChange: (event) => updateAuditRecordingSetting(action, event.target.checked)
+                }
+              ),
+              action
+            ] }, action)) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  disabled: !canEditAuditRecordingSettings,
+                  onClick: () => setAllAuditRecordingSettings(true),
+                  className: "rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-100 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50",
+                  children: "Select all"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  disabled: !canEditAuditRecordingSettings,
+                  onClick: () => setAllAuditRecordingSettings(false),
+                  className: "rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-100 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50",
+                  children: "Deselect all"
+                }
+              )
+            ] })
+          ] })
+        ] }),
+        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "audit-recording" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "trainee-reallocation" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "email-activation" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           CurrencyBuilderView,
           {
             onBack: () => setEmbeddedCurrencyBuilderOpen(false),
