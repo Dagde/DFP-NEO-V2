@@ -31194,6 +31194,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = reactExports.useState([]);
   const fileInputRef = reactExports.useRef(null);
   const lastSetupTestPersonnelSnapshotRef = reactExports.useRef("");
+  const wizardShellRef = reactExports.useRef(null);
+  const wizardSettingsEmbedRef = reactExports.useRef(null);
   const wizardDiagnosticStorageKeys = [
     "dfp_setup_wizard_import_diag",
     "dfp_setup_test_lmp_diag",
@@ -33704,6 +33706,19 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const currentStep = Math.min(wizardStep, steps.length - 1);
   const visibleStep = steps[currentStep];
   reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const resetScroll = () => {
+      const outerScrollElement = wizardShellRef.current?.closest(".organisation-slideout-scroll-stable");
+      if (outerScrollElement) outerScrollElement.scrollTop = 0;
+      if (wizardSettingsEmbedRef.current) wizardSettingsEmbedRef.current.scrollTop = 0;
+    };
+    const animationFrameId = window.requestAnimationFrame(() => {
+      resetScroll();
+      window.setTimeout(resetScroll, 0);
+    });
+    return () => window.cancelAnimationFrame(animationFrameId);
+  }, [currentStep, visibleStep.id]);
+  reactExports.useEffect(() => {
     if (!wizardPageMenuOpen) return;
     const animationFrameId = window.requestAnimationFrame(() => {
       wizardCurrentStepMenuItemRef.current?.scrollIntoView({
@@ -35157,7 +35172,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   };
   const renderWizardPlatformSettingsEmbed = (scrollTarget, focusSubsectionId = "", successMessage = "Settings saved into Settings.", extraProps = {}) => {
     const activeUnitCodesForSettings = getWizardActiveUnitCodes();
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "wizard-settings-embed wizard-settings-embed--scroll-stable rounded-lg border border-slate-200 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: wizardSettingsEmbedRef, className: "wizard-settings-embed wizard-settings-embed--scroll-stable rounded-lg border border-slate-200 bg-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       PlatformConfigurationSettings,
       {
         currentUserPermission,
@@ -35180,6 +35195,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
+      ref: wizardShellRef,
       className: "max-w-full overflow-visible rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm",
       onKeyDownCapture: stopEditableKeyPropagation,
       onKeyDown: stopEditableKeyPropagation,

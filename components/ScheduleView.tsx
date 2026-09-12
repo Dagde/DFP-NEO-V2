@@ -2678,6 +2678,8 @@ const InitialSetupWizard: React.FC<{
     const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = useState<SyllabusItemDetail[]>([]);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const lastSetupTestPersonnelSnapshotRef = useRef('');
+    const wizardShellRef = useRef<HTMLDivElement | null>(null);
+    const wizardSettingsEmbedRef = useRef<HTMLDivElement | null>(null);
     const wizardDiagnosticStorageKeys = [
         'dfp_setup_wizard_import_diag',
         'dfp_setup_test_lmp_diag',
@@ -5567,6 +5569,19 @@ const InitialSetupWizard: React.FC<{
     const currentStep = Math.min(wizardStep, steps.length - 1);
     const visibleStep = steps[currentStep];
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const resetScroll = () => {
+            const outerScrollElement = wizardShellRef.current?.closest('.organisation-slideout-scroll-stable') as HTMLElement | null;
+            if (outerScrollElement) outerScrollElement.scrollTop = 0;
+            if (wizardSettingsEmbedRef.current) wizardSettingsEmbedRef.current.scrollTop = 0;
+        };
+        const animationFrameId = window.requestAnimationFrame(() => {
+            resetScroll();
+            window.setTimeout(resetScroll, 0);
+        });
+        return () => window.cancelAnimationFrame(animationFrameId);
+    }, [currentStep, visibleStep.id]);
+    useEffect(() => {
         if (!wizardPageMenuOpen) return;
         const animationFrameId = window.requestAnimationFrame(() => {
             wizardCurrentStepMenuItemRef.current?.scrollIntoView({
@@ -7393,7 +7408,7 @@ const InitialSetupWizard: React.FC<{
     ) => {
         const activeUnitCodesForSettings = getWizardActiveUnitCodes();
         return (
-            <div className="wizard-settings-embed wizard-settings-embed--scroll-stable rounded-lg border border-slate-200 bg-white">
+            <div ref={wizardSettingsEmbedRef} className="wizard-settings-embed wizard-settings-embed--scroll-stable rounded-lg border border-slate-200 bg-white">
                 <PlatformConfigurationSettings
                     currentUserPermission={currentUserPermission}
                     onShowSuccess={(message) => setSaveMessage(message || successMessage)}
@@ -7415,6 +7430,7 @@ const InitialSetupWizard: React.FC<{
     };
     const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Next', saveAction?: () => void) => (
         <div
+            ref={wizardShellRef}
             key={visibleStep.id}
             className="max-w-full overflow-visible rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm"
             onKeyDownCapture={stopEditableKeyPropagation}
