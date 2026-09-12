@@ -4541,8 +4541,8 @@ const InitialSetupWizard: React.FC<{
         });
     };
 
-    const saveWizardLocationRowsDraft = (message = 'Location list synced into Settings.') => {
-        const locationRows = parseWizardLocationRows(locationsTodayDraft);
+    const saveWizardLocationRowsDraft = (message = 'Location list synced into Settings.', draftValue = locationsTodayDraft) => {
+        const locationRows = parseWizardLocationRows(draftValue);
         if (locationRows.length === 0) {
             setSaveMessage('Add at least one locality before continuing.');
             return;
@@ -4557,6 +4557,7 @@ const InitialSetupWizard: React.FC<{
         const normalisedLocationsTodayDraft = formatWizardLocationRows(normalisedDraftRows);
         saveWizardConfig(message, (baseConfig) => {
             const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
+            const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
             const nextLocations = [...locations];
             locationRows.forEach((row) => {
                 const profile = findWizardLocationProfile(row.icao || row.iata || row.name);
@@ -4592,9 +4593,18 @@ const InitialSetupWizard: React.FC<{
                 else nextLocations.push(nextLocation);
             });
             const savedLocationsTodayDraft = buildWizardLocationsTodayDraftFromLocations(nextLocations.filter(isWizardLocationScopedToCurrentContext)) || normalisedLocationsTodayDraft;
+            const firstLocationCode = parseWizardLocationRows(savedLocationsTodayDraft)[0]?.icao || normalisedDraftRows[0]?.icao || '';
+            const nextUnits = firstLocationCode && wizardScopedUnitCodeSet.size > 0
+                ? units.map((unit: any) => (
+                    wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code))
+                        ? { ...unit, locationCode: firstLocationCode }
+                        : unit
+                ))
+                : units;
             return updatePrimaryOrganisationWithSettings({
                 ...baseConfig,
                 locations: nextLocations,
+                units: nextUnits,
             }, (settings) => ({
                 ...settings,
                 initialSetupWizardDraft: {
@@ -7129,7 +7139,16 @@ const InitialSetupWizard: React.FC<{
                 name: matchedProfile.name || nextRows[rowIndex].name,
             } : {}),
         };
-        setLocationsTodayDraft(formatWizardLocationRows(nextRows));
+        const nextDraft = formatWizardLocationRows(nextRows);
+        setLocationsTodayDraft(nextDraft);
+        const completedLocationValue = (
+            Boolean(matchedProfile)
+            || (field === 'icao' && formattedValue.trim().length >= 4)
+            || (field === 'iata' && formattedValue.trim().length >= 3)
+        );
+        if (completedLocationValue) {
+            saveWizardLocationRowsDraft('Location list synced into Settings.', nextDraft);
+        }
     };
     const renderCrewCompositionEditor = (
         title: string,
