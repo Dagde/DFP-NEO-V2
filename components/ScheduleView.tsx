@@ -8238,18 +8238,6 @@ const InitialSetupWizard: React.FC<{
                 return;
             }
         }
-        if (visibleStep.id === 'emergency-settings') {
-            const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
-            if (!saveWizardSettings) {
-                setSaveMessage('Emergency settings are still loading. Try Next again in a moment.');
-                return;
-            }
-            const saved = await saveWizardSettings();
-            if (!saved) {
-                setSaveMessage('Emergency settings were not saved. Review the page before continuing.');
-                return;
-            }
-        }
         if (visibleStep.id === 'trainee-courses' && unitDraft.hasTrainees) {
             const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
             if (courseCount === 0) {
@@ -8395,10 +8383,6 @@ const InitialSetupWizard: React.FC<{
                 currentUserQualificationIds={currentUserQualificationIds}
                 canEditEmergencyAuthority={['Super Admin', 'Admin'].includes(currentUserPermission)}
                 flightAuthorisationRequired={normaliseTileStatusSettings(tileStatusSettings).flightAuthorisationRequired}
-                wizardEditMode
-                onWizardSaveReady={(save) => {
-                    wizardPlatformSettingsSaveRef.current = save;
-                }}
             />
         </div>
     );
