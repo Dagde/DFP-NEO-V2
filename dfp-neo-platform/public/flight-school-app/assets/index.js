@@ -31405,6 +31405,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [importConfirmations, setImportConfirmations] = reactExports.useState({});
   const [pendingTemplateId, setPendingTemplateId] = reactExports.useState(null);
   const [saveMessage, setSaveMessage] = reactExports.useState("");
+  const [flyingWindowTimeDrafts, setFlyingWindowTimeDrafts] = reactExports.useState({});
   const [uploadedStaffProfileRows, setUploadedStaffProfileRows] = reactExports.useState([]);
   const [uploadedTraineeProfileRows, setUploadedTraineeProfileRows] = reactExports.useState([]);
   const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = reactExports.useState([]);
@@ -36077,6 +36078,44 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const minutes = Math.max(0, Math.min(55, Math.round((Number(match[2]) || 0) / 5) * 5));
     return hours + minutes / 60;
   };
+  const renderFlyingWindowTimeInput = (draftKey, value, enabled, onCommit) => {
+    const formattedValue = formatWizardDecimalTime(value);
+    const draftValue = flyingWindowTimeDrafts[draftKey];
+    const commitDraft = () => {
+      if (draftValue === void 0) return;
+      const nextValue = parseWizardDecimalTime(draftValue, value);
+      onCommit?.(nextValue);
+      setFlyingWindowTimeDrafts((current) => {
+        const next = { ...current };
+        delete next[draftKey];
+        return next;
+      });
+    };
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: wizardInputClass,
+        value: draftValue ?? formattedValue,
+        placeholder: "HH:MM",
+        inputMode: "numeric",
+        disabled: !enabled || !onCommit,
+        onFocus: () => setFlyingWindowTimeDrafts((current) => ({ ...current, [draftKey]: formattedValue })),
+        onChange: (event) => {
+          const nextValue = event.target.value.replace(/[^\d:]/g, "").slice(0, 5);
+          setFlyingWindowTimeDrafts((current) => ({ ...current, [draftKey]: nextValue }));
+        },
+        onBlur: commitDraft,
+        onKeyDown: (event) => {
+          stopEditableKeyPropagation(event);
+          if (event.key === "Enter") {
+            event.preventDefault();
+            commitDraft();
+            event.currentTarget.blur();
+          }
+        }
+      }
+    );
+  };
   const renderFlyingWindowsEditor = () => {
     const rows = [
       { key: "flight", label: "Day flying", enabled: true, start: flyingStartTime, end: flyingEndTime, setStart: onUpdateFlyingStartTime, setEnd: onUpdateFlyingEndTime },
@@ -36097,8 +36136,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Yes" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "No" })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800", children: "Yes" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: wizardInputClass, value: formatWizardDecimalTime(row.start), disabled: !row.enabled || !row.setStart, onChange: (event) => row.setStart?.(parseWizardDecimalTime(event.target.value, row.start)) }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: wizardInputClass, value: formatWizardDecimalTime(row.end), disabled: !row.enabled || !row.setEnd, onChange: (event) => row.setEnd?.(parseWizardDecimalTime(event.target.value, row.end)) }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: renderFlyingWindowTimeInput(`${row.key}-start`, row.start, row.enabled, row.setStart) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: renderFlyingWindowTimeInput(`${row.key}-end`, row.end, row.enabled, row.setEnd) })
       ] }, row.key)) })
     ] }) });
   };
