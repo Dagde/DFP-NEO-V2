@@ -4552,8 +4552,13 @@ const InitialSetupWizard: React.FC<{
             setSaveMessage('Enter a location code before saving.');
             return;
         }
+        pushWizardLocationScopeTrace('save-location-detail-requested', {
+            locationDraft,
+            cleanCode,
+        });
         saveWizardConfig('Location saved into Settings.', (baseConfig) => {
             const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
+            const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
             const parsedLatitude = Number(locationDraft.latitude);
             const parsedLongitude = Number(locationDraft.longitude);
             const hasLatitude = String(locationDraft.latitude || '').trim() && Number.isFinite(parsedLatitude);
@@ -4582,11 +4587,22 @@ const InitialSetupWizard: React.FC<{
                 },
             };
             const exists = locations.some((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
+            const nextLocations = exists
+                ? locations.map((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode) ? { ...location, ...nextLocation } : location)
+                : [...locations, nextLocation];
+            pushWizardLocationScopeTrace('save-location-detail-returning-config', {
+                cleanCode,
+                baseUnits: units.map(summariseWizardLocationScopeUnit),
+                baseLocations: locations.map(summariseWizardLocationScopeLocation),
+                nextLocation: summariseWizardLocationScopeLocation(nextLocation),
+                nextLocations: nextLocations.map(summariseWizardLocationScopeLocation),
+                visibleByCurrentScopeAfterSave: nextLocations
+                    .filter(isWizardLocationScopedToCurrentContext)
+                    .map(summariseWizardLocationScopeLocation),
+            });
             return {
                 ...baseConfig,
-                locations: exists
-                    ? locations.map((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode) ? { ...location, ...nextLocation } : location)
-                    : [...locations, nextLocation],
+                locations: nextLocations,
             };
         });
     };
@@ -8285,7 +8301,7 @@ const InitialSetupWizard: React.FC<{
                             Download Step 24 Trace
                         </button>
                     ) : null}
-                    {visibleStep.id === 'locations-today' ? (
+                    {['locations-today', 'location-code', 'location-details'].includes(visibleStep.id) ? (
                         <button
                             type="button"
                             className="mt-3 ml-2 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-sm hover:bg-amber-100"

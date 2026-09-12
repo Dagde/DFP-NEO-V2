@@ -32901,8 +32901,13 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       setSaveMessage("Enter a location code before saving.");
       return;
     }
+    pushWizardLocationScopeTrace("save-location-detail-requested", {
+      locationDraft,
+      cleanCode
+    });
     saveWizardConfig("Location saved into Settings.", (baseConfig) => {
       const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
+      const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
       const parsedLatitude = Number(locationDraft.latitude);
       const parsedLongitude = Number(locationDraft.longitude);
       const hasLatitude = String(locationDraft.latitude || "").trim() && Number.isFinite(parsedLatitude);
@@ -32931,9 +32936,18 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         }
       };
       const exists = locations.some((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
+      const nextLocations = exists ? locations.map((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode) ? { ...location, ...nextLocation } : location) : [...locations, nextLocation];
+      pushWizardLocationScopeTrace("save-location-detail-returning-config", {
+        cleanCode,
+        baseUnits: units.map(summariseWizardLocationScopeUnit),
+        baseLocations: locations.map(summariseWizardLocationScopeLocation),
+        nextLocation: summariseWizardLocationScopeLocation(nextLocation),
+        nextLocations: nextLocations.map(summariseWizardLocationScopeLocation),
+        visibleByCurrentScopeAfterSave: nextLocations.filter(isWizardLocationScopedToCurrentContext).map(summariseWizardLocationScopeLocation)
+      });
       return {
         ...baseConfig,
-        locations: exists ? locations.map((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode) ? { ...location, ...nextLocation } : location) : [...locations, nextLocation]
+        locations: nextLocations
       };
     });
   };
@@ -36078,7 +36092,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                 children: "Download Step 24 Trace"
               }
             ) : null,
-            visibleStep.id === "locations-today" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            ["locations-today", "location-code", "location-details"].includes(visibleStep.id) ? /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
