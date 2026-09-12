@@ -1513,6 +1513,24 @@ html[data-theme="light"] body {
     color: #ffffff !important;
 }
 
+.wizard-settings-embed #platform-scheduling-rule-sets button.text-red-200:not(:disabled) {
+    background: #fef2f2 !important;
+    border-color: #fca5a5 !important;
+    color: #b91c1c !important;
+}
+
+.wizard-settings-embed #platform-scheduling-rule-sets button.text-red-200:not(:disabled):hover {
+    background: #fee2e2 !important;
+    border-color: #ef4444 !important;
+    color: #991b1b !important;
+}
+
+.wizard-settings-embed #platform-scheduling-rule-sets button.text-red-200:disabled {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    color: #94a3b8 !important;
+}
+
 .wizard-settings-embed .shadow,
 .wizard-settings-embed .shadow-lg,
 .wizard-settings-embed .shadow-xl {
