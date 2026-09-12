@@ -1531,6 +1531,30 @@ html[data-theme="light"] body {
     color: #94a3b8 !important;
 }
 
+.wizard-settings-embed #platform-licensing .text-emerald-100 {
+    color: #047857 !important;
+}
+
+.wizard-settings-embed #platform-licensing .text-green-100 {
+    color: #15803d !important;
+}
+
+.wizard-settings-embed #platform-licensing .text-yellow-100 {
+    color: #92400e !important;
+}
+
+.wizard-settings-embed #platform-licensing .text-red-100 {
+    color: #b91c1c !important;
+}
+
+.wizard-settings-embed #platform-licensing .text-blue-100 {
+    color: #1d4ed8 !important;
+}
+
+.wizard-settings-embed #platform-licensing .text-gray-200 {
+    color: #334155 !important;
+}
+
 .wizard-settings-embed .shadow,
 .wizard-settings-embed .shadow-lg,
 .wizard-settings-embed .shadow-xl {

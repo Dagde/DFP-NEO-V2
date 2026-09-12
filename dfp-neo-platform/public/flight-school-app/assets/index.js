@@ -16646,6 +16646,14 @@ const normaliseDeploymentMode = (value) => {
   if (/^private\s+defence\s+network$/i.test(trimmed)) return "Private Network";
   return DEPLOYMENT_MODE_OPTIONS.includes(trimmed) ? trimmed : "Online SaaS";
 };
+const getDeploymentModeDisplayLabel = (value) => {
+  const mode = normaliseDeploymentMode(value);
+  if (mode === "Online SaaS") return "Online cloud service";
+  if (mode === "Private Network") return "Private network deployment";
+  if (mode === "Fully Offline") return "Fully offline deployment";
+  if (mode === "Hybrid Offline Sync") return "Hybrid offline sync";
+  return mode;
+};
 const LICENSE_VALIDATION_OPTIONS = [
   "Online licence check",
   "Private network licence server",
@@ -25878,14 +25886,20 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               const signatureStatus = licenseStatus?.licenseSummaries?.find((summary) => summary.id === license.id || summary.licenseKey === license.licenseKey);
               const licensedActiveModuleCount = moduleCodes.filter((code) => activeModules.some((module) => module.code === code)).length;
               const offlineMode = ["Fully Offline", "Hybrid Offline Sync"].includes(license.deploymentMode || "");
+              const deploymentModeLabel = getDeploymentModeDisplayLabel(license.deploymentMode);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 xl:grid-cols-[1fr,230px,230px,230px]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: formatCommercialLicenceDisplayName(license) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-400", children: [
-                      license.licenseKey || "No licence key",
-                      " / ",
-                      license.deploymentMode || "Deployment model not set"
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap gap-2 text-[11px] font-semibold", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-gray-200", children: [
+                        "Licence key: ",
+                        license.licenseKey || "Not set"
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-cyan-100", children: [
+                        "Deployment: ",
+                        deploymentModeLabel
+                      ] })
                     ] })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border px-3 py-2 ${licenceStatus.toneClass}`, children: [

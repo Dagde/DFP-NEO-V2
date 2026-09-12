@@ -567,6 +567,15 @@ const normaliseDeploymentMode = (value?: string | null): string => {
   return DEPLOYMENT_MODE_OPTIONS.includes(trimmed) ? trimmed : 'Online SaaS';
 };
 
+const getDeploymentModeDisplayLabel = (value?: string | null): string => {
+  const mode = normaliseDeploymentMode(value);
+  if (mode === 'Online SaaS') return 'Online cloud service';
+  if (mode === 'Private Network') return 'Private network deployment';
+  if (mode === 'Fully Offline') return 'Fully offline deployment';
+  if (mode === 'Hybrid Offline Sync') return 'Hybrid offline sync';
+  return mode;
+};
+
 const LICENSE_VALIDATION_OPTIONS = [
   'Online licence check',
   'Private network licence server',
@@ -11682,14 +11691,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               activeModules.some((module) => module.code === code)
             )).length;
             const offlineMode = ['Fully Offline', 'Hybrid Offline Sync'].includes(license.deploymentMode || '');
+            const deploymentModeLabel = getDeploymentModeDisplayLabel(license.deploymentMode);
             return (
               <div key={license.id || `platform-license-${index}`} className="rounded-lg border border-gray-700 bg-gray-900 p-4">
                 <div className="mb-4 grid gap-3 xl:grid-cols-[1fr,230px,230px,230px]">
                   <div>
                     <h5 className="text-sm font-bold text-white">{formatCommercialLicenceDisplayName(license)}</h5>
-                    <p className="mt-1 text-xs text-gray-400">
-                      {license.licenseKey || 'No licence key'} / {license.deploymentMode || 'Deployment model not set'}
-                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold">
+                      <span className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-gray-200">
+                        Licence key: {license.licenseKey || 'Not set'}
+                      </span>
+                      <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-cyan-100">
+                        Deployment: {deploymentModeLabel}
+                      </span>
+                    </div>
                   </div>
                   <div className={`rounded border px-3 py-2 ${licenceStatus.toneClass}`}>
                     <div className="text-xs font-semibold uppercase tracking-wide opacity-80">Licence Status</div>
