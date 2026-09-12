@@ -30354,10 +30354,12 @@ const parseWizardLocationRows = (value) => String(value || "").split(/\n/).map((
 }).filter((row) => row.icao || row.iata || row.name);
 const formatWizardLocationRows = (rows) => rows.filter((row) => row.icao || row.iata || row.name).map((row) => [String(row.icao || "").trim().toUpperCase(), String(row.iata || "").trim().toUpperCase(), String(row.name || "")].join("|")).join("\n");
 const normaliseWizardLocationProfile = (location) => ({
-  icao: String(location?.icao || location?.code || "").trim().toUpperCase(),
-  iata: String(location?.iataCode || location?.settings?.iataCode || location?.iata || "").trim().toUpperCase(),
-  name: String(location?.name || location?.label || location?.code || "").trim(),
-  timezone: String(location?.timezone || "UTC").trim()
+  icao: String(location?.icao || location?.icaoCode || location?.code || location?.c || "").trim().toUpperCase(),
+  iata: String(location?.iataCode || location?.settings?.iataCode || location?.iata || location?.i || "").trim().toUpperCase(),
+  name: String(location?.name || location?.label || location?.n || location?.code || location?.c || "").trim(),
+  timezone: String(location?.timezone || location?.t || "UTC").trim(),
+  latitude: location?.latitude ?? location?.lat ?? location?.a ?? null,
+  longitude: location?.longitude ?? location?.lon ?? location?.lng ?? location?.o ?? null
 });
 const parseWizardUnitRows = (value) => String(value || "").split(/\n/).map((line) => {
   const parts = line.split(/[|,]/).map((part, index) => index === 0 ? part : part.replace(/^\s/, ""));
@@ -31392,6 +31394,28 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   ].some((value) => normaliseUnitSettingsIdentifier(value) === currentUnitLocationKey)) || (platformConfig?.locations || [])[0];
   const organisationStructureLevels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
   const activeLocations = (platformConfig?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const [wizardAirfieldCatalogueProfiles, setWizardAirfieldCatalogueProfiles] = reactExports.useState([]);
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    const loadWizardAirfieldCatalogue = async () => {
+      try {
+        const baseUrl = new URL("./", window.location.href);
+        const response = await fetch(new URL("airfield-location-catalog.json", baseUrl).toString());
+        if (!response.ok) return;
+        const entries = await response.json();
+        if (!cancelled && Array.isArray(entries)) {
+          setWizardAirfieldCatalogueProfiles(entries.map(normaliseWizardLocationProfile).filter((profile) => profile.icao || profile.iata || profile.name));
+        }
+      } catch {
+        if (!cancelled) setWizardAirfieldCatalogueProfiles([]);
+      }
+    };
+    loadWizardAirfieldCatalogue();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const configuredWizardLocationProfiles = Array.from(new Map([
     ...activeLocations.map(normaliseWizardLocationProfile)
   ].filter((profile) => profile.icao || profile.iata || profile.name).map((profile) => [
@@ -31404,10 +31428,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     normaliseUnitSettingsIdentifier(profile.icao || profile.iata || profile.name),
     profile
   ])).values());
-  const wizardLocationLookupProfiles = [...configuredWizardLocationProfiles, ...fallbackWizardLocationProfiles];
-  const wizardLocationIcaoOptions = configuredWizardLocationProfiles.map((profile) => profile.icao).filter(Boolean);
-  const wizardLocationIataOptions = configuredWizardLocationProfiles.map((profile) => profile.iata).filter(Boolean);
-  const wizardLocationNameOptions = configuredWizardLocationProfiles.map((profile) => profile.name).filter(Boolean);
+  const wizardLocationLookupProfiles = [...configuredWizardLocationProfiles, ...fallbackWizardLocationProfiles, ...wizardAirfieldCatalogueProfiles];
+  const wizardLocationOptionProfiles = [...configuredWizardLocationProfiles, ...fallbackWizardLocationProfiles, ...wizardAirfieldCatalogueProfiles].slice(0, 2e3);
+  const wizardLocationIcaoOptions = wizardLocationOptionProfiles.map((profile) => profile.icao).filter(Boolean);
+  const wizardLocationIataOptions = wizardLocationOptionProfiles.map((profile) => profile.iata).filter(Boolean);
+  const wizardLocationNameOptions = wizardLocationOptionProfiles.map((profile) => profile.name).filter(Boolean);
   const findWizardLocationProfile = (value) => {
     const key = normaliseUnitSettingsIdentifier(value);
     return wizardLocationLookupProfiles.find((profile) => normaliseUnitSettingsIdentifier(profile.icao) === key || normaliseUnitSettingsIdentifier(profile.iata) === key || normaliseUnitSettingsIdentifier(profile.name) === key);
@@ -32693,20 +32718,28 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
       const nextLocations = [...locations];
       locationRows.forEach((row) => {
-        const code = String(row.icao || row.iata || "").trim().toUpperCase();
+        const profile = findWizardLocationProfile(row.icao || row.iata || row.name);
+        const code = String(row.icao || profile?.icao || row.iata || "").trim().toUpperCase();
         if (!code) return;
         const existingIndex = nextLocations.findIndex((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(code));
         const existingLocation = existingIndex >= 0 ? nextLocations[existingIndex] : null;
+        const iataCode = String(row.iata || profile?.iata || existingLocation?.iataCode || existingLocation?.settings?.iataCode || "").trim().toUpperCase();
+        const latitude = profile?.latitude ?? existingLocation?.latitude ?? existingLocation?.settings?.latitude;
+        const longitude = profile?.longitude ?? existingLocation?.longitude ?? existingLocation?.settings?.longitude;
         const nextLocation = {
           ...existingLocation || { id: createWizardRecordId("location") },
           code,
-          iataCode: String(row.iata || existingLocation?.iataCode || existingLocation?.settings?.iataCode || "").trim().toUpperCase(),
-          name: row.name || existingLocation?.name || code,
-          timezone: existingLocation?.timezone || "UTC",
+          iataCode,
+          name: row.name || profile?.name || existingLocation?.name || code,
+          timezone: profile?.timezone || existingLocation?.timezone || "UTC",
+          latitude,
+          longitude,
           status: existingLocation?.status || "ACTIVE",
           settings: {
             ...existingLocation?.settings || {},
-            iataCode: String(row.iata || existingLocation?.iataCode || existingLocation?.settings?.iataCode || "").trim().toUpperCase()
+            iataCode,
+            ...latitude != null && latitude !== "" ? { latitude } : {},
+            ...longitude != null && longitude !== "" ? { longitude } : {}
           }
         };
         if (existingIndex >= 0) nextLocations[existingIndex] = nextLocation;
