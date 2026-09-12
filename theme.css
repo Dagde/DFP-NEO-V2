@@ -1048,7 +1048,7 @@ html[data-theme="light"] body {
 .scoring-matrix-inline--wizard {
     background: #ffffff !important;
     color: #0f172a !important;
-    overscroll-behavior: contain;
+    overscroll-behavior: auto;
     contain: layout paint style;
 }
 
@@ -1063,7 +1063,8 @@ html[data-theme="light"] body {
 .scoring-matrix-inline--wizard > .flex-1 {
     background: #ffffff !important;
     padding: 1rem !important;
-    overscroll-behavior: contain;
+    overscroll-behavior: auto;
+    overflow-y: visible !important;
 }
 
 .scoring-matrix-inline--wizard .w-56 {
