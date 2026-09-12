@@ -8477,6 +8477,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setEditingUnitIndex(firstVisibleRow.index);
   };
   const visibleLocationOptions = visibleLocationRows.map(({ location }) => location.code).filter(Boolean);
+  const allActiveLocationOptions = configLocations
+    .filter((location) => isActiveRecord(location))
+    .map((location) => String(location.code || '').trim())
+    .filter(Boolean);
   const visibleUnitOptions = visibleUnitRows.map(({ unit }) => unit.code).filter(Boolean);
   const visibleOperationalModelValues = new Set(
     visibleUnitRows
@@ -9634,7 +9638,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
                 </label>
                 <div>
-                  <SelectField label="Location" value={unit.locationCode || ''} disabled={!isUnitEditing} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
+                  <SelectField label="Location" value={unit.locationCode || ''} disabled={!isUnitEditing} options={Array.from(new Set([unit.locationCode || '', ...allActiveLocationOptions].filter(Boolean)))} onChange={(value) => updateRow('units', index, { locationCode: value })} />
                 </div>
                 <div>
                   <SelectField label="Unit Type" value={unit.unitType || ''} disabled={!isUnitEditing} options={unitTypeOptions} onChange={(value) => updateRow('units', index, { unitType: value })} />

@@ -22989,6 +22989,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     setEditingUnitIndex(firstVisibleRow.index);
   };
   const visibleLocationOptions = visibleLocationRows.map(({ location }) => location.code).filter(Boolean);
+  const allActiveLocationOptions = configLocations.filter((location) => isActiveRecord(location)).map((location) => String(location.code || "").trim()).filter(Boolean);
   const visibleUnitOptions = visibleUnitRows.map(({ unit }) => unit.code).filter(Boolean);
   const visibleOperationalModelValues = new Set(
     visibleUnitRows.map(({ unit }) => getUnitOperationalModel(unit)).map((model) => String(model || "").trim()).filter(Boolean)
@@ -23924,7 +23925,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         ) : null
                       ] })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !isUnitEditing, options: visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !isUnitEditing, options: Array.from(new Set([unit.locationCode || "", ...allActiveLocationOptions].filter(Boolean))), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || "", disabled: !isUnitEditing, options: unitTypeOptions, onChange: (value) => updateRow("units", index, { unitType: value }) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
