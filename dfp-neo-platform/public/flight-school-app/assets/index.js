@@ -37167,7 +37167,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, organisationSettings, uni
   const unitCount = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").length;
   const levelHeights = chart ? getOrganisationChartLevelHeights(chart) : /* @__PURE__ */ new Map();
   const chartMetrics = chart ? getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds) : { width: 560, height: 320 };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `h-full overflow-y-auto px-5 py-4 text-slate-100 ${activeView === "structure" ? "overflow-x-auto" : "overflow-x-hidden"}`, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `organisation-slideout-scroll-stable h-full overflow-y-auto px-5 py-4 text-slate-100 ${activeView === "structure" ? "overflow-x-auto" : "overflow-x-hidden"}`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
                 /* Keep connector rules aligned with docs/organisation-chart-rendering.md. */
                 .org-chart { display: inline-flex; min-width: 100%; justify-content: center; padding: 10px 18px 22px; }
@@ -38954,10 +38954,10 @@ const ScheduleView = ({
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "aside",
           {
-            className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full"}`,
+            className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950 shadow-[18px_0_36px_rgba(0,0,0,0.38)] transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-hidden border-r border-white/5 bg-slate-950 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, organisationSettings, unitCode, locationCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, currentUserPermission, canUsePlatformPermission, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {

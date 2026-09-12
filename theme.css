@@ -1198,6 +1198,12 @@ html[data-theme="light"] body {
     color: #0f172a !important;
 }
 
+.organisation-slideout-scroll-stable {
+    background: #0f172a;
+    overscroll-behavior: contain;
+    isolation: isolate;
+}
+
 .wizard-settings-embed--scroll-stable,
 .wizard-settings-embed--scroll-stable section,
 .wizard-settings-embed--scroll-stable .rounded-lg,
