@@ -20311,14 +20311,24 @@ This permanently removes the organisation record from platform configuration and
     const newLocationId = createClientRecordId("location");
     pendingLocationScrollIdRef.current = newLocationId;
     setConfig((prev) => {
-      const referenceLocation = prev.locations[0] || {};
+      const normaliseCode2 = (value) => String(value || "").trim().toUpperCase();
+      const scopedUnitCodes = Array.from(new Set(
+        (Array.isArray(activeUnitCodes) && activeUnitCodes.length > 0 ? activeUnitCodes : [
+          ...String(activeCompositeUnitCode || "").split(/[+/]/),
+          ...String(activeUnitCode || "").split(/[+/]/)
+        ]).map(normaliseCode2).filter(Boolean)
+      ));
+      const scopedUnitSet = new Set(scopedUnitCodes);
+      const scopedReferenceCode = String(prev.units.find((unit) => scopedUnitSet.size === 0 || scopedUnitSet.has(normaliseCode2(unit?.code)))?.locationCode || "").trim().toUpperCase();
+      const referenceLocation = prev.locations.find((location) => normaliseCode2(location?.code) === scopedReferenceCode) || prev.locations[0] || {};
+      const referenceUnit = prev.units.find((unit) => scopedUnitSet.has(normaliseCode2(unit?.code))) || null;
       return {
         ...prev,
         locations: [
           ...prev.locations,
           {
             id: newLocationId,
-            organisationCode: prev.organisations[0]?.code || "",
+            organisationCode: referenceUnit?.organisationCode || prev.organisations[0]?.code || "",
             code: "",
             iataCode: "",
             name: "",
@@ -20328,7 +20338,9 @@ This permanently removes the organisation record from platform configuration and
             timezone: "",
             trainingAreas: [],
             status: "ACTIVE",
-            settings: {}
+            settings: {
+              unitCodes: scopedUnitCodes
+            }
           }
         ]
       };
@@ -22638,6 +22650,37 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const activeSettingsVisibilityLocationCode = String(activePlatformUnit?.locationCode || activeHomeLocationCode || "").trim().toUpperCase();
   const activeSettingsVisibilityAircraftTypes = activeUnitAircraftTypeCodes.length > 0 ? activeUnitAircraftTypeCodes : [activeMissionAircraftTypeCode].filter(Boolean);
   const activeSettingsVisibilityParentOrgCode = getUnitParentOrganisationCode(activePlatformUnit);
+  const activeOrganisationLocationUnitCodes = getActiveScopedUnitCodes().map(normaliseUnitCode2).filter(Boolean);
+  const activeOrganisationLocationUnitSet = new Set(activeOrganisationLocationUnitCodes);
+  const activeOrganisationLocationCodes = new Set([
+    ...config.units.filter((unit) => {
+      const unitCode = normaliseUnitCode2(unit.code);
+      return activeOrganisationLocationUnitSet.size === 0 || activeOrganisationLocationUnitSet.has(unitCode);
+    }).map((unit) => normaliseUnitCode2(unit.locationCode)).filter(Boolean),
+    ...config.resourcePools.filter((pool) => {
+      const poolUnitCode = normaliseUnitCode2(pool.unitCode);
+      return activeOrganisationLocationUnitSet.size === 0 || activeOrganisationLocationUnitSet.has(poolUnitCode);
+    }).map((pool) => normaliseUnitCode2(pool.locationCode)).filter(Boolean),
+    normaliseUnitCode2(focusLocationCode),
+    normaliseUnitCode2(activeHomeLocationCode)
+  ].filter(Boolean));
+  const locationUnitCodes = (location) => Array.from(new Set([
+    location?.unitCode,
+    location?.unit,
+    ...Array.isArray(location?.unitCodes) ? location.unitCodes : [],
+    ...Array.isArray(location?.assignedUnitCodes) ? location.assignedUnitCodes : [],
+    location?.settings?.unitCode,
+    ...Array.isArray(location?.settings?.unitCodes) ? location.settings.unitCodes : [],
+    ...Array.isArray(location?.settings?.assignedUnitCodes) ? location.settings.assignedUnitCodes : []
+  ].map(normaliseUnitCode2).filter(Boolean)));
+  const isLocationInActiveOrganisationScope = (location) => {
+    if (activeOrganisationLocationUnitSet.size === 0) return true;
+    const locationCode = normaliseUnitCode2(location?.code);
+    if (!locationCode) return true;
+    if (activeOrganisationLocationCodes.has(locationCode)) return true;
+    const scopedUnitCodes = locationUnitCodes(location);
+    return scopedUnitCodes.some((unitCode) => activeOrganisationLocationUnitSet.has(unitCode));
+  };
   const settingsVisibilityEnabled = settingsVisibilityPolicy.enabled && settingsVisibilityPolicy.filters.length > 0;
   const visibilityUnitSet = new Set(activeSettingsVisibilityUnitCodes.map(normaliseUnitCode2).filter(Boolean));
   const visibilityAircraftTypeSet = new Set(activeSettingsVisibilityAircraftTypes.map(normaliseUnitCode2).filter(Boolean));
@@ -22683,7 +22726,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const visibleLocationRows = config.locations.map((location, index) => ({ location, index })).filter(({ location }) => isRecordVisibleForSettingsPolicy({
     locationCode: location.code,
     organisationCode: location.organisationCode
-  }));
+  })).filter(({ location }) => isLocationInActiveOrganisationScope(location));
   const visibleUnitRows = configUnits.map((unit, index) => ({ unit, index })).filter(({ unit, index }) => {
     if (index === editingUnitIndex) return true;
     return isRecordVisibleForSettingsPolicy({
@@ -31446,6 +31489,33 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const activeUnits = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const activeAircraftTypes = (platformConfig?.aircraftTypes || []).filter((aircraft) => String(aircraft?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const activeResourcePools = (platformConfig?.resourcePools || []).filter((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const wizardScopedUnitCodes = Array.from(new Set([
+    ...currentWizardUnitCodes,
+    currentUnit?.code
+  ].map(normaliseUnitSettingsIdentifier).filter(Boolean)));
+  const wizardScopedUnitCodeSet = new Set(wizardScopedUnitCodes);
+  const getWizardLocationUnitCodes = (location) => Array.from(new Set([
+    location?.unitCode,
+    location?.unit,
+    ...Array.isArray(location?.unitCodes) ? location.unitCodes : [],
+    ...Array.isArray(location?.assignedUnitCodes) ? location.assignedUnitCodes : [],
+    location?.settings?.unitCode,
+    ...Array.isArray(location?.settings?.unitCodes) ? location.settings.unitCodes : [],
+    ...Array.isArray(location?.settings?.assignedUnitCodes) ? location.settings.assignedUnitCodes : []
+  ].map(normaliseUnitSettingsIdentifier).filter(Boolean)));
+  const wizardScopedLocationCodes = new Set([
+    ...activeUnits.filter((unit) => wizardScopedUnitCodeSet.size === 0 || wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code))).map((unit) => normaliseUnitSettingsIdentifier(unit?.locationCode)),
+    ...activeResourcePools.filter((pool) => wizardScopedUnitCodeSet.size === 0 || wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(pool?.unitCode))).map((pool) => normaliseUnitSettingsIdentifier(pool?.locationCode)),
+    normaliseUnitSettingsIdentifier(activeWizardLocationCode)
+  ].filter(Boolean));
+  const isWizardLocationScopedToCurrentContext = (location) => {
+    if (wizardScopedUnitCodeSet.size === 0) return true;
+    const locationCode2 = normaliseUnitSettingsIdentifier(location?.code);
+    if (!locationCode2) return true;
+    if (wizardScopedLocationCodes.has(locationCode2)) return true;
+    return getWizardLocationUnitCodes(location).some((unitCode2) => wizardScopedUnitCodeSet.has(unitCode2));
+  };
+  const scopedActiveLocations = wizardScopedUnitCodeSet.size === 0 ? activeLocations : activeLocations.filter(isWizardLocationScopedToCurrentContext);
   const activeUserAccess = (platformConfig?.userAccess || []).filter((access) => String(access?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const activeMasterLmpCatalogue = Array.isArray(activeOrganisation?.settings?.masterLmpCatalogue) ? activeOrganisation.settings.masterLmpCatalogue.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
   const activeMasterLmpAccess = getOrganisationMasterLmpAccessRules(activeOrganisation?.settings).filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
@@ -31686,9 +31756,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const locationDraftDirtyRef = reactExports.useRef(false);
   const [unitsTodayDraft, setUnitsTodayDraft] = reactExports.useState("");
   const [unitParentDraft, setUnitParentDraft] = reactExports.useState("");
-  const [locationsTodayDraft, setLocationsTodayDraft] = reactExports.useState(() => activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location");
+  const [locationsTodayDraft, setLocationsTodayDraft] = reactExports.useState(() => scopedActiveLocations.length > 0 ? scopedActiveLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location");
   const [locationDraftRowCount, setLocationDraftRowCount] = reactExports.useState(() => Math.max(1, parseWizardLocationRows(
-    activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location"
+    scopedActiveLocations.length > 0 ? scopedActiveLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location"
   ).length));
   const [unitDraft, setUnitDraft] = reactExports.useState({
     code: String(currentUnit?.code || unitCode || "UNIT-01"),
@@ -31964,7 +32034,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     }
     return "";
   };
-  const buildWizardLocationsTodayDraftFromLocations = (locations = activeLocations) => formatWizardLocationRows(
+  const buildWizardLocationsTodayDraftFromLocations = (locations = scopedActiveLocations) => formatWizardLocationRows(
     (Array.isArray(locations) ? locations : []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((location) => {
       const profile = normaliseWizardLocationProfile(location);
       return {
@@ -32672,19 +32742,25 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const parsedLongitude = Number(locationDraft.longitude);
       const hasLatitude = String(locationDraft.latitude || "").trim() && Number.isFinite(parsedLatitude);
       const hasLongitude = String(locationDraft.longitude || "").trim() && Number.isFinite(parsedLongitude);
+      const existingLocation = locations.find((location) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
+      const mergedLocationUnitCodes = Array.from(new Set([
+        ...getWizardLocationUnitCodes(existingLocation || currentLocation || {}),
+        ...wizardScopedUnitCodes
+      ].map(normaliseUnitSettingsIdentifier).filter(Boolean)));
       const nextLocation = {
-        id: currentLocation?.id || createWizardRecordId("location"),
+        id: existingLocation?.id || currentLocation?.id || createWizardRecordId("location"),
         code: cleanCode,
         iataCode: String(locationDraft.iataCode || "").trim().toUpperCase(),
         name: locationDraft.name || cleanCode,
         timezone: locationDraft.timezone || "UTC",
-        latitude: hasLatitude ? parsedLatitude : currentLocation?.latitude,
-        longitude: hasLongitude ? parsedLongitude : currentLocation?.longitude,
+        latitude: hasLatitude ? parsedLatitude : existingLocation?.latitude ?? currentLocation?.latitude,
+        longitude: hasLongitude ? parsedLongitude : existingLocation?.longitude ?? currentLocation?.longitude,
         trainingAreas: locationDraft.trainingAreas.split(",").map((item) => item.trim()).filter(Boolean),
         status: "ACTIVE",
         settings: {
-          ...currentLocation?.settings || {},
+          ...existingLocation?.settings || currentLocation?.settings || {},
           iataCode: String(locationDraft.iataCode || "").trim().toUpperCase(),
+          unitCodes: mergedLocationUnitCodes,
           ...hasLatitude ? { latitude: parsedLatitude } : {},
           ...hasLongitude ? { longitude: parsedLongitude } : {}
         }
@@ -32750,6 +32826,10 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         const iataCode = String(row.iata || profile?.iata || existingLocation?.iataCode || existingLocation?.settings?.iataCode || "").trim().toUpperCase();
         const latitude = profile?.latitude ?? existingLocation?.latitude ?? existingLocation?.settings?.latitude;
         const longitude = profile?.longitude ?? existingLocation?.longitude ?? existingLocation?.settings?.longitude;
+        const mergedLocationUnitCodes = Array.from(new Set([
+          ...getWizardLocationUnitCodes(existingLocation || {}),
+          ...wizardScopedUnitCodes
+        ].map(normaliseUnitSettingsIdentifier).filter(Boolean)));
         const nextLocation = {
           ...existingLocation || { id: createWizardRecordId("location") },
           code,
@@ -32762,6 +32842,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           settings: {
             ...existingLocation?.settings || {},
             iataCode,
+            unitCodes: mergedLocationUnitCodes,
             ...latitude != null && latitude !== "" ? { latitude } : {},
             ...longitude != null && longitude !== "" ? { longitude } : {}
           }
@@ -32769,7 +32850,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         if (existingIndex >= 0) nextLocations[existingIndex] = nextLocation;
         else nextLocations.push(nextLocation);
       });
-      const savedLocationsTodayDraft = buildWizardLocationsTodayDraftFromLocations(nextLocations) || normalisedLocationsTodayDraft;
+      const savedLocationsTodayDraft = buildWizardLocationsTodayDraftFromLocations(nextLocations.filter(isWizardLocationScopedToCurrentContext)) || normalisedLocationsTodayDraft;
       return updatePrimaryOrganisationWithSettings({
         ...baseConfig,
         locations: nextLocations
@@ -33498,8 +33579,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       id: "locations",
       label: "Locations",
       mandatory: true,
-      complete: activeLocations.length > 0,
-      summary: activeLocations.length > 0 ? `${activeLocations.length} locations configured` : "At least one base or airfield is needed.",
+      complete: scopedActiveLocations.length > 0,
+      summary: scopedActiveLocations.length > 0 ? `${scopedActiveLocations.length} location${scopedActiveLocations.length === 1 ? "" : "s"} configured for this unit context` : "At least one base or airfield is needed for this unit context.",
       settingsSection: "platform-organisation-locations",
       focusSubsectionId: "platform-locations"
     },
@@ -36115,7 +36196,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       return;
     }
     const rawLocationRows = parseWizardLocationRows(locationsTodayDraft);
-    const singleLocationDraftDoesNotMatchContext = rawLocationRows.length === 1 && activeLocations.length === 0 && activeWizardLocationCode && ![
+    const singleLocationDraftDoesNotMatchContext = rawLocationRows.length === 1 && scopedActiveLocations.length === 0 && activeWizardLocationCode && ![
       rawLocationRows[0]?.icao,
       rawLocationRows[0]?.iata,
       rawLocationRows[0]?.name

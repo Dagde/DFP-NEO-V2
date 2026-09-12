@@ -3012,6 +3012,39 @@ const InitialSetupWizard: React.FC<{
     const activeResourcePools = (platformConfig?.resourcePools || []).filter((pool: any) => (
         String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
     ));
+    const wizardScopedUnitCodes = Array.from(new Set([
+        ...currentWizardUnitCodes,
+        currentUnit?.code,
+    ].map(normaliseUnitSettingsIdentifier).filter(Boolean)));
+    const wizardScopedUnitCodeSet = new Set(wizardScopedUnitCodes);
+    const getWizardLocationUnitCodes = (location: any): string[] => Array.from(new Set([
+        location?.unitCode,
+        location?.unit,
+        ...(Array.isArray(location?.unitCodes) ? location.unitCodes : []),
+        ...(Array.isArray(location?.assignedUnitCodes) ? location.assignedUnitCodes : []),
+        location?.settings?.unitCode,
+        ...(Array.isArray(location?.settings?.unitCodes) ? location.settings.unitCodes : []),
+        ...(Array.isArray(location?.settings?.assignedUnitCodes) ? location.settings.assignedUnitCodes : []),
+    ].map(normaliseUnitSettingsIdentifier).filter(Boolean)));
+    const wizardScopedLocationCodes = new Set([
+        ...activeUnits
+            .filter((unit: any) => wizardScopedUnitCodeSet.size === 0 || wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code)))
+            .map((unit: any) => normaliseUnitSettingsIdentifier(unit?.locationCode)),
+        ...activeResourcePools
+            .filter((pool: any) => wizardScopedUnitCodeSet.size === 0 || wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(pool?.unitCode)))
+            .map((pool: any) => normaliseUnitSettingsIdentifier(pool?.locationCode)),
+        normaliseUnitSettingsIdentifier(activeWizardLocationCode),
+    ].filter(Boolean));
+    const isWizardLocationScopedToCurrentContext = (location: any): boolean => {
+        if (wizardScopedUnitCodeSet.size === 0) return true;
+        const locationCode = normaliseUnitSettingsIdentifier(location?.code);
+        if (!locationCode) return true;
+        if (wizardScopedLocationCodes.has(locationCode)) return true;
+        return getWizardLocationUnitCodes(location).some((unitCode) => wizardScopedUnitCodeSet.has(unitCode));
+    };
+    const scopedActiveLocations = wizardScopedUnitCodeSet.size === 0
+        ? activeLocations
+        : activeLocations.filter(isWizardLocationScopedToCurrentContext);
     const activeUserAccess = (platformConfig?.userAccess || []).filter((access: any) => (
         String(access?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
     ));
@@ -3296,13 +3329,13 @@ const InitialSetupWizard: React.FC<{
     const [unitsTodayDraft, setUnitsTodayDraft] = useState('');
     const [unitParentDraft, setUnitParentDraft] = useState('');
     const [locationsTodayDraft, setLocationsTodayDraft] = useState(() => (
-        activeLocations.length > 0
-            ? activeLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
+        scopedActiveLocations.length > 0
+            ? scopedActiveLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
             : formatWizardLocationRows([activeWizardLocationRow]) || 'LOC1 | LOC | Home Location'
     ));
     const [locationDraftRowCount, setLocationDraftRowCount] = useState(() => Math.max(1, parseWizardLocationRows(
-        activeLocations.length > 0
-            ? activeLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
+        scopedActiveLocations.length > 0
+            ? scopedActiveLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
             : formatWizardLocationRows([activeWizardLocationRow]) || 'LOC1 | LOC | Home Location',
     ).length));
     const [unitDraft, setUnitDraft] = useState({
@@ -3633,7 +3666,7 @@ const InitialSetupWizard: React.FC<{
         }
         return '';
     };
-    const buildWizardLocationsTodayDraftFromLocations = (locations: any[] = activeLocations) => formatWizardLocationRows(
+    const buildWizardLocationsTodayDraftFromLocations = (locations: any[] = scopedActiveLocations) => formatWizardLocationRows(
         (Array.isArray(locations) ? locations : [])
             .filter((location: any) => String(location?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
             .map((location: any) => {
@@ -4444,19 +4477,25 @@ const InitialSetupWizard: React.FC<{
             const parsedLongitude = Number(locationDraft.longitude);
             const hasLatitude = String(locationDraft.latitude || '').trim() && Number.isFinite(parsedLatitude);
             const hasLongitude = String(locationDraft.longitude || '').trim() && Number.isFinite(parsedLongitude);
+            const existingLocation = locations.find((location: any) => normaliseUnitSettingsIdentifier(location?.code) === normaliseUnitSettingsIdentifier(cleanCode));
+            const mergedLocationUnitCodes = Array.from(new Set([
+                ...getWizardLocationUnitCodes(existingLocation || currentLocation || {}),
+                ...wizardScopedUnitCodes,
+            ].map(normaliseUnitSettingsIdentifier).filter(Boolean)));
             const nextLocation = {
-                id: currentLocation?.id || createWizardRecordId('location'),
+                id: existingLocation?.id || currentLocation?.id || createWizardRecordId('location'),
                 code: cleanCode,
                 iataCode: String(locationDraft.iataCode || '').trim().toUpperCase(),
                 name: locationDraft.name || cleanCode,
                 timezone: locationDraft.timezone || 'UTC',
-                latitude: hasLatitude ? parsedLatitude : currentLocation?.latitude,
-                longitude: hasLongitude ? parsedLongitude : currentLocation?.longitude,
+                latitude: hasLatitude ? parsedLatitude : existingLocation?.latitude ?? currentLocation?.latitude,
+                longitude: hasLongitude ? parsedLongitude : existingLocation?.longitude ?? currentLocation?.longitude,
                 trainingAreas: locationDraft.trainingAreas.split(',').map((item) => item.trim()).filter(Boolean),
                 status: 'ACTIVE',
                 settings: {
-                    ...(currentLocation?.settings || {}),
+                    ...(existingLocation?.settings || currentLocation?.settings || {}),
                     iataCode: String(locationDraft.iataCode || '').trim().toUpperCase(),
+                    unitCodes: mergedLocationUnitCodes,
                     ...(hasLatitude ? { latitude: parsedLatitude } : {}),
                     ...(hasLongitude ? { longitude: parsedLongitude } : {}),
                 },
@@ -4528,6 +4567,10 @@ const InitialSetupWizard: React.FC<{
                 const iataCode = String(row.iata || profile?.iata || existingLocation?.iataCode || existingLocation?.settings?.iataCode || '').trim().toUpperCase();
                 const latitude = profile?.latitude ?? existingLocation?.latitude ?? existingLocation?.settings?.latitude;
                 const longitude = profile?.longitude ?? existingLocation?.longitude ?? existingLocation?.settings?.longitude;
+                const mergedLocationUnitCodes = Array.from(new Set([
+                    ...getWizardLocationUnitCodes(existingLocation || {}),
+                    ...wizardScopedUnitCodes,
+                ].map(normaliseUnitSettingsIdentifier).filter(Boolean)));
                 const nextLocation = {
                     ...(existingLocation || { id: createWizardRecordId('location') }),
                     code,
@@ -4540,6 +4583,7 @@ const InitialSetupWizard: React.FC<{
                     settings: {
                         ...(existingLocation?.settings || {}),
                         iataCode,
+                        unitCodes: mergedLocationUnitCodes,
                         ...(latitude != null && latitude !== '' ? { latitude } : {}),
                         ...(longitude != null && longitude !== '' ? { longitude } : {}),
                     },
@@ -4547,7 +4591,7 @@ const InitialSetupWizard: React.FC<{
                 if (existingIndex >= 0) nextLocations[existingIndex] = nextLocation;
                 else nextLocations.push(nextLocation);
             });
-            const savedLocationsTodayDraft = buildWizardLocationsTodayDraftFromLocations(nextLocations) || normalisedLocationsTodayDraft;
+            const savedLocationsTodayDraft = buildWizardLocationsTodayDraftFromLocations(nextLocations.filter(isWizardLocationScopedToCurrentContext)) || normalisedLocationsTodayDraft;
             return updatePrimaryOrganisationWithSettings({
                 ...baseConfig,
                 locations: nextLocations,
@@ -5409,8 +5453,8 @@ const InitialSetupWizard: React.FC<{
             id: 'locations',
             label: 'Locations',
             mandatory: true,
-            complete: activeLocations.length > 0,
-            summary: activeLocations.length > 0 ? `${activeLocations.length} locations configured` : 'At least one base or airfield is needed.',
+            complete: scopedActiveLocations.length > 0,
+            summary: scopedActiveLocations.length > 0 ? `${scopedActiveLocations.length} location${scopedActiveLocations.length === 1 ? '' : 's'} configured for this unit context` : 'At least one base or airfield is needed for this unit context.',
             settingsSection: 'platform-organisation-locations',
             focusSubsectionId: 'platform-locations',
         },
@@ -8517,7 +8561,7 @@ const InitialSetupWizard: React.FC<{
         }
         const rawLocationRows = parseWizardLocationRows(locationsTodayDraft);
         const singleLocationDraftDoesNotMatchContext = rawLocationRows.length === 1
-            && activeLocations.length === 0
+            && scopedActiveLocations.length === 0
             && activeWizardLocationCode
             && ![
                 rawLocationRows[0]?.icao,

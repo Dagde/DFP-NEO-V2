@@ -5182,14 +5182,32 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const newLocationId = createClientRecordId('location');
     pendingLocationScrollIdRef.current = newLocationId;
     setConfig((prev) => {
-      const referenceLocation = prev.locations[0] || {};
+      const normaliseCode = (value: unknown) => String(value || '').trim().toUpperCase();
+      const scopedUnitCodes = Array.from(new Set(
+        (Array.isArray(activeUnitCodes) && activeUnitCodes.length > 0
+          ? activeUnitCodes
+          : [
+              ...String(activeCompositeUnitCode || '').split(/[+/]/),
+              ...String(activeUnitCode || '').split(/[+/]/),
+            ])
+          .map(normaliseCode)
+          .filter(Boolean),
+      ));
+      const scopedUnitSet = new Set(scopedUnitCodes);
+      const scopedReferenceCode = String(prev.units.find((unit) => (
+        scopedUnitSet.size === 0 || scopedUnitSet.has(normaliseCode(unit?.code))
+      ))?.locationCode || '').trim().toUpperCase();
+      const referenceLocation = prev.locations.find((location) => normaliseCode(location?.code) === scopedReferenceCode)
+        || prev.locations[0]
+        || {};
+      const referenceUnit = prev.units.find((unit) => scopedUnitSet.has(normaliseCode(unit?.code))) || null;
       return {
         ...prev,
         locations: [
           ...prev.locations,
           {
             id: newLocationId,
-            organisationCode: prev.organisations[0]?.code || '',
+            organisationCode: referenceUnit?.organisationCode || prev.organisations[0]?.code || '',
             code: '',
             iataCode: '',
             name: '',
@@ -5199,7 +5217,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             timezone: '',
             trainingAreas: [],
             status: 'ACTIVE',
-            settings: {},
+            settings: {
+              unitCodes: scopedUnitCodes,
+            },
           },
         ],
       };
@@ -8069,6 +8089,43 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     ? activeUnitAircraftTypeCodes
     : [activeMissionAircraftTypeCode].filter(Boolean);
   const activeSettingsVisibilityParentOrgCode = getUnitParentOrganisationCode(activePlatformUnit);
+  const activeOrganisationLocationUnitCodes = getActiveScopedUnitCodes().map(normaliseUnitCode).filter(Boolean);
+  const activeOrganisationLocationUnitSet = new Set(activeOrganisationLocationUnitCodes);
+  const activeOrganisationLocationCodes = new Set<string>([
+    ...config.units
+      .filter((unit) => {
+        const unitCode = normaliseUnitCode(unit.code);
+        return activeOrganisationLocationUnitSet.size === 0 || activeOrganisationLocationUnitSet.has(unitCode);
+      })
+      .map((unit) => normaliseUnitCode(unit.locationCode))
+      .filter(Boolean),
+    ...config.resourcePools
+      .filter((pool) => {
+        const poolUnitCode = normaliseUnitCode(pool.unitCode);
+        return activeOrganisationLocationUnitSet.size === 0 || activeOrganisationLocationUnitSet.has(poolUnitCode);
+      })
+      .map((pool) => normaliseUnitCode(pool.locationCode))
+      .filter(Boolean),
+    normaliseUnitCode(focusLocationCode),
+    normaliseUnitCode(activeHomeLocationCode),
+  ].filter(Boolean));
+  const locationUnitCodes = (location: any): string[] => Array.from(new Set([
+    location?.unitCode,
+    location?.unit,
+    ...(Array.isArray(location?.unitCodes) ? location.unitCodes : []),
+    ...(Array.isArray(location?.assignedUnitCodes) ? location.assignedUnitCodes : []),
+    location?.settings?.unitCode,
+    ...(Array.isArray(location?.settings?.unitCodes) ? location.settings.unitCodes : []),
+    ...(Array.isArray(location?.settings?.assignedUnitCodes) ? location.settings.assignedUnitCodes : []),
+  ].map(normaliseUnitCode).filter(Boolean)));
+  const isLocationInActiveOrganisationScope = (location: any): boolean => {
+    if (activeOrganisationLocationUnitSet.size === 0) return true;
+    const locationCode = normaliseUnitCode(location?.code);
+    if (!locationCode) return true;
+    if (activeOrganisationLocationCodes.has(locationCode)) return true;
+    const scopedUnitCodes = locationUnitCodes(location);
+    return scopedUnitCodes.some((unitCode) => activeOrganisationLocationUnitSet.has(unitCode));
+  };
   const settingsVisibilityEnabled = settingsVisibilityPolicy.enabled && settingsVisibilityPolicy.filters.length > 0;
   const visibilityUnitSet = new Set(activeSettingsVisibilityUnitCodes.map(normaliseUnitCode).filter(Boolean));
   const visibilityAircraftTypeSet = new Set(activeSettingsVisibilityAircraftTypes.map(normaliseUnitCode).filter(Boolean));
@@ -8128,7 +8185,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     .filter(({ location }) => isRecordVisibleForSettingsPolicy({
       locationCode: location.code,
       organisationCode: location.organisationCode,
-    }));
+    }))
+    .filter(({ location }) => isLocationInActiveOrganisationScope(location));
   const visibleUnitRows = configUnits
     .map((unit, index) => ({ unit, index }))
     .filter(({ unit, index }) => {
