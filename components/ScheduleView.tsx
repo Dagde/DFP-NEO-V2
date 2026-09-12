@@ -8302,6 +8302,7 @@ const InitialSetupWizard: React.FC<{
                     onShowSuccess={(message) => setSaveMessage(message || successMessage)}
                     scrollTarget={scrollTarget}
                     sectionOnly
+                    wizardEditMode
                     canUsePlatformPermission={canUsePlatformPermission}
                     activeUnitCode={unitCode || unitDraft.code || ''}
                     activeUnitCodes={activeUnitCodesForSettings}

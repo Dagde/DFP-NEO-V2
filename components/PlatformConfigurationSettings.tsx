@@ -2407,6 +2407,7 @@ interface PlatformConfigurationSettingsProps {
   onShowSuccess: (message: string) => void;
   scrollTarget?: string;
   sectionOnly?: boolean;
+  wizardEditMode?: boolean;
   canUsePlatformPermission?: (permissionId: string) => boolean;
   activeUnitCode?: string;
   activeUnitCodes?: string[];
@@ -2440,6 +2441,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   onShowSuccess,
   scrollTarget,
   sectionOnly = false,
+  wizardEditMode = false,
   canUsePlatformPermission,
   activeUnitCode = '',
   activeUnitCodes = [],
@@ -2638,7 +2640,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const canEditTrainingReportTemplate = canEdit && !!trainingReportTemplateUnlocked;
   const canEditTrainingReportTemplateSection = (sectionId: string) => canEdit && trainingReportTemplateUnlocked === sectionId;
-  const canEditResourcePools = canEdit && resourcePoolsUnlocked;
+  const resourcePoolsEditActive = resourcePoolsUnlocked || wizardEditMode;
+  const canEditResourcePools = canEdit && resourcePoolsEditActive;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const canEditTaskProfiles = canEdit && taskProfilesUnlocked;
   const configOrganisations = Array.isArray(config.organisations) ? config.organisations : [];
@@ -7020,6 +7023,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setResourcePoolsUnlocked(true);
   };
 
+  useEffect(() => {
+    if (!wizardEditMode || loading || resourcePoolsUnlocked) return;
+    if (scrollTarget !== 'platform-dfp-resource-rows' && scrollTarget !== 'platform-aircraft-setup') return;
+    enterResourcePoolsEditMode();
+  }, [loading, resourcePoolsUnlocked, scrollTarget, wizardEditMode]);
+
   const buildResourceRowSavePlan = (
     candidateConfig: PlatformConfig = config,
     baselineConfig: PlatformConfig = loadedConfigRef.current,
@@ -7573,8 +7582,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const saved = await save(undefined, scrollTarget === 'platform-aircraft-setup' ? 'platform-aircraft-setup' : 'platform-dfp-resource-rows');
     if (saved) {
       setNewAircraftTypeVisibleIds(new Set());
-      setResourcePoolsUnlocked(false);
-      resourcePoolEditBaselineRef.current = null;
+      if (!wizardEditMode) {
+        setResourcePoolsUnlocked(false);
+        resourcePoolEditBaselineRef.current = null;
+      }
     }
   };
 
@@ -7618,7 +7629,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const isSectionEditActive = (sectionId: string): boolean => (
-    !sectionOnly || sectionEditUnlocked[sectionId] === true
+    wizardEditMode || !sectionOnly || sectionEditUnlocked[sectionId] === true
   );
   const getRequiredSettingsEditPermission = (sectionId: string): string => {
     if (sectionId === 'platform-user-access' || sectionId === 'platform-permission-profiles') return 'settings.userAccess.edit';
@@ -7637,6 +7648,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const saveSectionAndExitEdit = async (sectionId: string) => {
     const saved = await save(undefined, sectionId);
     if (saved) {
+      if (wizardEditMode) return;
       setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
       if (sectionId === 'platform-standard-missions') setExpandedStandardMissionIds(new Set());
     }
@@ -10739,12 +10751,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-aircraft-setup" className={getSectionClass('platform-aircraft-setup')}>
         <SectionHeader
           title="Aircraft Setup"
-          subtitle={resourcePoolsUnlocked
-            ? 'Editing is active. Press Save to apply aircraft setup changes, then return this section to read-only mode.'
+          subtitle={resourcePoolsEditActive
+            ? (wizardEditMode ? 'Setup entry is active. Press Save to apply aircraft setup changes.' : 'Editing is active. Press Save to apply aircraft setup changes, then return this section to read-only mode.')
             : 'Define aircraft identity, capability, cruise planning values and crew-seat eligibility. Click Edit before making changes.'}
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
-              {resourcePoolsUnlocked ? (
+              {resourcePoolsEditActive ? (
                 <>
                   <button
                     type="button"
@@ -10762,14 +10774,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   >
                     Save
                   </button>
-                  <button
-                    type="button"
-                    onClick={exitResourcePoolsEditMode}
-                    disabled={saving || applyingChanges}
-                    className={platformActionButtonClass}
-                  >
-                    Exit
-                  </button>
+                  {!wizardEditMode ? (
+                    <button
+                      type="button"
+                      onClick={exitResourcePoolsEditMode}
+                      disabled={saving || applyingChanges}
+                      className={platformActionButtonClass}
+                    >
+                      Exit
+                    </button>
+                  ) : null}
                 </>
               ) : (
                 <button
@@ -11039,12 +11053,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-dfp-resource-rows" className={getSectionClass('platform-dfp-resource-rows')}>
         <SectionHeader
           title="DFP Resource Rows"
-          subtitle={resourcePoolsUnlocked
-            ? 'Editing is active. Press Save to apply DFP row changes, then return this section to read-only mode.'
+          subtitle={resourcePoolsEditActive
+            ? (wizardEditMode ? 'Setup entry is active. Press Save to apply DFP row changes.' : 'Editing is active. Press Save to apply DFP row changes, then return this section to read-only mode.')
             : 'Define row counts shown on the DFP, then connect those rows to location, unit, aircraft type, labels and numbering. Click Edit before making changes.'}
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
-              {resourcePoolsUnlocked ? (
+              {resourcePoolsEditActive ? (
                 <>
                   <button
                     type="button"
@@ -11070,14 +11084,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   >
                     Save
                   </button>
-                  <button
-                    type="button"
-                    onClick={exitResourcePoolsEditMode}
-                    disabled={saving || applyingChanges}
-                    className={platformActionButtonClass}
-                  >
-                    Exit
-                  </button>
+                  {!wizardEditMode ? (
+                    <button
+                      type="button"
+                      onClick={exitResourcePoolsEditMode}
+                      disabled={saving || applyingChanges}
+                      className={platformActionButtonClass}
+                    >
+                      Exit
+                    </button>
+                  ) : null}
                 </>
               ) : (
                 <button

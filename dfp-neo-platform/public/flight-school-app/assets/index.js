@@ -18107,6 +18107,7 @@ const PlatformConfigurationSettings = ({
   onShowSuccess,
   scrollTarget,
   sectionOnly = false,
+  wizardEditMode = false,
   canUsePlatformPermission,
   activeUnitCode = "",
   activeUnitCodes = [],
@@ -18280,7 +18281,8 @@ const PlatformConfigurationSettings = ({
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const canEditTrainingReportTemplateSection = (sectionId) => canEdit && trainingReportTemplateUnlocked === sectionId;
-  const canEditResourcePools = canEdit && resourcePoolsUnlocked;
+  const resourcePoolsEditActive = resourcePoolsUnlocked || wizardEditMode;
+  const canEditResourcePools = canEdit && resourcePoolsEditActive;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const canEditTaskProfiles = canEdit && taskProfilesUnlocked;
   const configOrganisations = Array.isArray(config.organisations) ? config.organisations : [];
@@ -21768,6 +21770,11 @@ This removes it from the master list and from every user assignment that current
     setConfig(editConfig);
     setResourcePoolsUnlocked(true);
   };
+  reactExports.useEffect(() => {
+    if (!wizardEditMode || loading || resourcePoolsUnlocked) return;
+    if (scrollTarget !== "platform-dfp-resource-rows" && scrollTarget !== "platform-aircraft-setup") return;
+    enterResourcePoolsEditMode();
+  }, [loading, resourcePoolsUnlocked, scrollTarget, wizardEditMode]);
   const buildResourceRowSavePlan = (candidateConfig = config, baselineConfig = loadedConfigRef.current) => {
     const today = getLocalDateString();
     const tomorrow = getLocalDateString(1);
@@ -22238,8 +22245,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     const saved = await save(void 0, scrollTarget === "platform-aircraft-setup" ? "platform-aircraft-setup" : "platform-dfp-resource-rows");
     if (saved) {
       setNewAircraftTypeVisibleIds(/* @__PURE__ */ new Set());
-      setResourcePoolsUnlocked(false);
-      resourcePoolEditBaselineRef.current = null;
+      if (!wizardEditMode) {
+        setResourcePoolsUnlocked(false);
+        resourcePoolEditBaselineRef.current = null;
+      }
     }
   };
   const saveCrewCompositionAndExitEdit = async () => {
@@ -22274,7 +22283,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       setTaskProfileAbbreviationDrafts({});
     }
   };
-  const isSectionEditActive = (sectionId) => !sectionOnly || sectionEditUnlocked[sectionId] === true;
+  const isSectionEditActive = (sectionId) => wizardEditMode || !sectionOnly || sectionEditUnlocked[sectionId] === true;
   const getRequiredSettingsEditPermission = (sectionId) => {
     if (sectionId === "platform-user-access" || sectionId === "platform-permission-profiles") return "settings.userAccess.edit";
     if (sectionId.includes("rank") || sectionId.includes("terminology")) return "settings.rankTerminology.edit";
@@ -22286,6 +22295,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
   const saveSectionAndExitEdit = async (sectionId) => {
     const saved = await save(void 0, sectionId);
     if (saved) {
+      if (wizardEditMode) return;
       setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
       if (sectionId === "platform-standard-missions") setExpandedStandardMissionIds(/* @__PURE__ */ new Set());
     }
@@ -24980,8 +24990,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             SectionHeader,
             {
               title: "Aircraft Setup",
-              subtitle: resourcePoolsUnlocked ? "Editing is active. Press Save to apply aircraft setup changes, then return this section to read-only mode." : "Define aircraft identity, capability, cruise planning values and crew-seat eligibility. Click Edit before making changes.",
-              action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: resourcePoolsUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              subtitle: resourcePoolsEditActive ? wizardEditMode ? "Setup entry is active. Press Save to apply aircraft setup changes." : "Editing is active. Press Save to apply aircraft setup changes, then return this section to read-only mode." : "Define aircraft identity, capability, cruise planning values and crew-seat eligibility. Click Edit before making changes.",
+              action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: resourcePoolsEditActive ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
@@ -25008,7 +25018,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     children: "Save"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                !wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
                     type: "button",
@@ -25017,7 +25027,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     className: platformActionButtonClass,
                     children: "Exit"
                   }
-                )
+                ) : null
               ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -25256,8 +25266,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             SectionHeader,
             {
               title: "DFP Resource Rows",
-              subtitle: resourcePoolsUnlocked ? "Editing is active. Press Save to apply DFP row changes, then return this section to read-only mode." : "Define row counts shown on the DFP, then connect those rows to location, unit, aircraft type, labels and numbering. Click Edit before making changes.",
-              action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: resourcePoolsUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              subtitle: resourcePoolsEditActive ? wizardEditMode ? "Setup entry is active. Press Save to apply DFP row changes." : "Editing is active. Press Save to apply DFP row changes, then return this section to read-only mode." : "Define row counts shown on the DFP, then connect those rows to location, unit, aircraft type, labels and numbering. Click Edit before making changes.",
+              action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: resourcePoolsEditActive ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
@@ -25296,7 +25306,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     children: "Save"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                !wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
                     type: "button",
@@ -25305,7 +25315,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     className: platformActionButtonClass,
                     children: "Exit"
                   }
-                )
+                ) : null
               ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
@@ -36120,6 +36130,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         onShowSuccess: (message) => setSaveMessage(message || successMessage),
         scrollTarget,
         sectionOnly: true,
+        wizardEditMode: true,
         canUsePlatformPermission,
         activeUnitCode: unitCode || unitDraft.code || "",
         activeUnitCodes: activeUnitCodesForSettings,
