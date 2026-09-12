@@ -1351,7 +1351,13 @@ html[data-theme="light"] body {
 }
 
 .wizard-settings-embed .text-cyan-100,
+.wizard-settings-embed .text-cyan-100\/60,
+.wizard-settings-embed .text-cyan-100\/70,
+.wizard-settings-embed .text-cyan-100\/75,
+.wizard-settings-embed .text-cyan-100\/80,
 .wizard-settings-embed .text-cyan-200,
+.wizard-settings-embed .text-cyan-200\/75,
+.wizard-settings-embed .text-cyan-200\/80,
 .wizard-settings-embed .text-cyan-300,
 .wizard-settings-embed .text-cyan-400,
 .wizard-settings-embed .text-sky-300,
@@ -1359,8 +1365,9 @@ html[data-theme="light"] body {
     color: #1d4ed8 !important;
 }
 
-.wizard-settings-embed .text-cyan-100\/70,
-.wizard-settings-embed .text-cyan-100\/80 {
+.wizard-settings-embed p.text-cyan-100\/70,
+.wizard-settings-embed p.text-cyan-100\/75,
+.wizard-settings-embed p.text-cyan-100\/80 {
     color: #475569 !important;
 }
 
