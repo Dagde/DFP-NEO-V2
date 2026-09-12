@@ -1212,7 +1212,7 @@ html[data-theme="light"] body {
     max-height: min(64vh, 640px);
     overflow-x: hidden !important;
     overflow-y: auto !important;
-    overscroll-behavior: contain;
+    overscroll-behavior: auto;
     scrollbar-gutter: stable;
 }
 

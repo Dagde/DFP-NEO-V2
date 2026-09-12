@@ -5772,6 +5772,47 @@ const InitialSetupWizard: React.FC<{
         };
     }, [pushWizardStep24ScrollTrace, shouldTraceWizardStep24Scroll, visibleStep.id]);
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const shell = wizardShellRef.current;
+        const outerScrollElement = getWizardOuterScrollElement();
+        if (!shell || !outerScrollElement) return;
+        const isVerticallyScrollable = (element: HTMLElement) => {
+            if (element === outerScrollElement) return false;
+            const styles = window.getComputedStyle(element);
+            const overflowY = styles.overflowY;
+            return (
+                (overflowY === 'auto' || overflowY === 'scroll')
+                && element.scrollHeight > element.clientHeight + 1
+            );
+        };
+        const findNestedScrollable = (target: EventTarget | null) => {
+            let element = target instanceof HTMLElement ? target : null;
+            while (element && element !== shell && element !== outerScrollElement) {
+                if (isVerticallyScrollable(element)) return element;
+                element = element.parentElement;
+            }
+            return null;
+        };
+        const handleNestedWheel = (event: WheelEvent) => {
+            if (!event.deltaY) return;
+            const nestedScrollElement = findNestedScrollable(event.target);
+            if (!nestedScrollElement) return;
+            const maxScrollTop = nestedScrollElement.scrollHeight - nestedScrollElement.clientHeight;
+            const atTop = nestedScrollElement.scrollTop <= 0;
+            const atBottom = nestedScrollElement.scrollTop >= maxScrollTop - 1;
+            const shouldHandOff = (event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom);
+            if (!shouldHandOff) return;
+            const outerMaxScrollTop = outerScrollElement.scrollHeight - outerScrollElement.clientHeight;
+            const outerCanMoveUp = event.deltaY < 0 && outerScrollElement.scrollTop > 0;
+            const outerCanMoveDown = event.deltaY > 0 && outerScrollElement.scrollTop < outerMaxScrollTop - 1;
+            if (!outerCanMoveUp && !outerCanMoveDown) return;
+            event.preventDefault();
+            outerScrollElement.scrollTop = Math.max(0, Math.min(outerMaxScrollTop, outerScrollElement.scrollTop + event.deltaY));
+        };
+        shell.addEventListener('wheel', handleNestedWheel, { capture: true, passive: false });
+        return () => shell.removeEventListener('wheel', handleNestedWheel, { capture: true });
+    }, [currentStep, visibleStep.id]);
+    useEffect(() => {
         if (!wizardPageMenuOpen) return;
         const animationFrameId = window.requestAnimationFrame(() => {
             wizardCurrentStepMenuItemRef.current?.scrollIntoView({
