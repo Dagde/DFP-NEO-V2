@@ -32817,7 +32817,28 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     saveWizardConfig(message, (baseConfig) => {
       const locations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
       const units = Array.isArray(baseConfig.units) ? baseConfig.units : [];
-      const nextLocations = [...locations];
+      let nextLocations = [...locations];
+      const selectedLocationCodes = new Set(
+        normalisedDraftRows.map((row) => normaliseUnitSettingsIdentifier(row.icao)).filter(Boolean)
+      );
+      const removeScopedUnitCodesFromLocation = (location) => {
+        if (wizardScopedUnitCodeSet.size === 0) return location;
+        const remainingUnitCodes = getWizardLocationUnitCodes(location).filter((unitCode2) => !wizardScopedUnitCodeSet.has(unitCode2));
+        return {
+          ...location,
+          unitCodes: Array.isArray(location?.unitCodes) ? remainingUnitCodes : location?.unitCodes,
+          assignedUnitCodes: Array.isArray(location?.assignedUnitCodes) ? remainingUnitCodes : location?.assignedUnitCodes,
+          unitCode: wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(location?.unitCode)) ? "" : location?.unitCode,
+          unit: wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(location?.unit)) ? "" : location?.unit,
+          settings: {
+            ...location?.settings || {},
+            unitCode: wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(location?.settings?.unitCode)) ? "" : location?.settings?.unitCode,
+            unitCodes: remainingUnitCodes,
+            assignedUnitCodes: Array.isArray(location?.settings?.assignedUnitCodes) ? remainingUnitCodes : location?.settings?.assignedUnitCodes
+          }
+        };
+      };
+      nextLocations = nextLocations.map((location) => selectedLocationCodes.has(normaliseUnitSettingsIdentifier(location?.code)) ? location : removeScopedUnitCodesFromLocation(location));
       locationRows.forEach((row) => {
         const profile = findWizardLocationProfile(row.icao || row.iata || row.name);
         const code = String(row.icao || profile?.icao || row.iata || "").trim().toUpperCase();
@@ -32851,7 +32872,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         if (existingIndex >= 0) nextLocations[existingIndex] = nextLocation;
         else nextLocations.push(nextLocation);
       });
-      const savedLocationsTodayDraft = buildWizardLocationsTodayDraftFromLocations(nextLocations.filter(isWizardLocationScopedToCurrentContext)) || normalisedLocationsTodayDraft;
+      const savedLocationsTodayDraft = normalisedLocationsTodayDraft || buildWizardLocationsTodayDraftFromLocations(nextLocations.filter(isWizardLocationScopedToCurrentContext));
       const firstLocationCode = parseWizardLocationRows(savedLocationsTodayDraft)[0]?.icao || normalisedDraftRows[0]?.icao || "";
       const nextUnits = firstLocationCode && wizardScopedUnitCodeSet.size > 0 ? units.map((unit) => wizardScopedUnitCodeSet.has(normaliseUnitSettingsIdentifier(unit?.code)) ? { ...unit, locationCode: firstLocationCode } : unit) : units;
       return updatePrimaryOrganisationWithSettings({
