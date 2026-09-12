@@ -2757,6 +2757,7 @@ const InitialSetupWizard: React.FC<{
     const lastSetupTestPersonnelSnapshotRef = useRef('');
     const wizardShellRef = useRef<HTMLDivElement | null>(null);
     const wizardSettingsEmbedRef = useRef<HTMLDivElement | null>(null);
+    const wizardPlatformSettingsSaveRef = useRef<(() => Promise<boolean>) | null>(null);
     const wizardAnswerPanelRef = useRef<HTMLDivElement | null>(null);
     const wizardStep24ScrollTraceRef = useRef<any[]>([]);
     const wizardStep24ScrollTraceSequenceRef = useRef(0);
@@ -8121,13 +8122,25 @@ const InitialSetupWizard: React.FC<{
             />
         </label>
     );
-    const goToNextWizardStep = () => {
+    const goToNextWizardStep = async () => {
         pushWizardOrgDiag('wizard:next-clicked', {
             fromStep: visibleStep.id,
             currentStep,
             draft: summariseOrganisationDraft(organisationDraft),
             activeOrganisation: summariseActiveOrganisation(),
         });
+        if (visibleStep.id === 'resource-row-details') {
+            const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
+            if (!saveWizardSettings) {
+                setSaveMessage('Resource row setup is still loading. Try Next again in a moment.');
+                return;
+            }
+            const saved = await saveWizardSettings();
+            if (!saved) {
+                setSaveMessage('Resource row changes were not saved. Review the page before continuing.');
+                return;
+            }
+        }
         if (visibleStep.id === 'trainee-courses' && unitDraft.hasTrainees) {
             const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
             if (courseCount === 0) {
@@ -8303,6 +8316,9 @@ const InitialSetupWizard: React.FC<{
                     scrollTarget={scrollTarget}
                     sectionOnly
                     wizardEditMode
+                    onWizardSaveReady={(save) => {
+                        wizardPlatformSettingsSaveRef.current = save;
+                    }}
                     canUsePlatformPermission={canUsePlatformPermission}
                     activeUnitCode={unitCode || unitDraft.code || ''}
                     activeUnitCodes={activeUnitCodesForSettings}

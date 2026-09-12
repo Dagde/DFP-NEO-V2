@@ -18108,6 +18108,7 @@ const PlatformConfigurationSettings = ({
   scrollTarget,
   sectionOnly = false,
   wizardEditMode = false,
+  onWizardSaveReady,
   canUsePlatformPermission,
   activeUnitCode = "",
   activeUnitCodes = [],
@@ -22250,7 +22251,17 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         resourcePoolEditBaselineRef.current = null;
       }
     }
+    return saved;
   };
+  reactExports.useEffect(() => {
+    if (!wizardEditMode || !onWizardSaveReady) return void 0;
+    if (scrollTarget !== "platform-dfp-resource-rows" && scrollTarget !== "platform-aircraft-setup") {
+      onWizardSaveReady(null);
+      return () => onWizardSaveReady(null);
+    }
+    onWizardSaveReady(saveResourcePoolsAndExitEdit);
+    return () => onWizardSaveReady(null);
+  }, [onWizardSaveReady, saveResourcePoolsAndExitEdit, scrollTarget, wizardEditMode]);
   const saveCrewCompositionAndExitEdit = async () => {
     const saved = await save(void 0, "platform-crew-composition");
     if (saved) setCrewCompositionUnlocked(false);
@@ -25008,7 +25019,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     ] })
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                !wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
                     type: "button",
@@ -25017,7 +25028,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     className: platformActionButtonClass,
                     children: "Save"
                   }
-                ),
+                ) : null,
                 !wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
@@ -25296,7 +25307,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     ] })
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                !wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
                     type: "button",
@@ -25305,7 +25316,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     className: platformActionButtonClass,
                     children: "Save"
                   }
-                ),
+                ) : null,
                 !wizardEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
@@ -31401,6 +31412,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const lastSetupTestPersonnelSnapshotRef = reactExports.useRef("");
   const wizardShellRef = reactExports.useRef(null);
   const wizardSettingsEmbedRef = reactExports.useRef(null);
+  const wizardPlatformSettingsSaveRef = reactExports.useRef(null);
   const wizardAnswerPanelRef = reactExports.useRef(null);
   const wizardStep24ScrollTraceRef = reactExports.useRef([]);
   const wizardStep24ScrollTraceSequenceRef = reactExports.useRef(0);
@@ -35972,13 +35984,25 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       }
     )
   ] });
-  const goToNextWizardStep = () => {
+  const goToNextWizardStep = async () => {
     pushWizardOrgDiag("wizard:next-clicked", {
       fromStep: visibleStep.id,
       currentStep,
       draft: summariseOrganisationDraft(organisationDraft),
       activeOrganisation: summariseActiveOrganisation()
     });
+    if (visibleStep.id === "resource-row-details") {
+      const saveWizardSettings = wizardPlatformSettingsSaveRef.current;
+      if (!saveWizardSettings) {
+        setSaveMessage("Resource row setup is still loading. Try Next again in a moment.");
+        return;
+      }
+      const saved = await saveWizardSettings();
+      if (!saved) {
+        setSaveMessage("Resource row changes were not saved. Review the page before continuing.");
+        return;
+      }
+    }
     if (visibleStep.id === "trainee-courses" && unitDraft.hasTrainees) {
       const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
       if (courseCount === 0) {
@@ -36131,6 +36155,9 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         scrollTarget,
         sectionOnly: true,
         wizardEditMode: true,
+        onWizardSaveReady: (save) => {
+          wizardPlatformSettingsSaveRef.current = save;
+        },
         canUsePlatformPermission,
         activeUnitCode: unitCode || unitDraft.code || "",
         activeUnitCodes: activeUnitCodesForSettings,

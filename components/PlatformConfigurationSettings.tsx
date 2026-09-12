@@ -2408,6 +2408,7 @@ interface PlatformConfigurationSettingsProps {
   scrollTarget?: string;
   sectionOnly?: boolean;
   wizardEditMode?: boolean;
+  onWizardSaveReady?: (save: (() => Promise<boolean>) | null) => void;
   canUsePlatformPermission?: (permissionId: string) => boolean;
   activeUnitCode?: string;
   activeUnitCodes?: string[];
@@ -2442,6 +2443,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   scrollTarget,
   sectionOnly = false,
   wizardEditMode = false,
+  onWizardSaveReady,
   canUsePlatformPermission,
   activeUnitCode = '',
   activeUnitCodes = [],
@@ -7587,7 +7589,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         resourcePoolEditBaselineRef.current = null;
       }
     }
+    return saved;
   };
+
+  useEffect(() => {
+    if (!wizardEditMode || !onWizardSaveReady) return undefined;
+    if (scrollTarget !== 'platform-dfp-resource-rows' && scrollTarget !== 'platform-aircraft-setup') {
+      onWizardSaveReady(null);
+      return () => onWizardSaveReady(null);
+    }
+    onWizardSaveReady(saveResourcePoolsAndExitEdit);
+    return () => onWizardSaveReady(null);
+  }, [onWizardSaveReady, saveResourcePoolsAndExitEdit, scrollTarget, wizardEditMode]);
 
   const saveCrewCompositionAndExitEdit = async () => {
     const saved = await save(undefined, 'platform-crew-composition');
@@ -10766,14 +10779,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   >
                     <span className="text-[8px] leading-[0.7rem]">Add<br />Aircraft<br />Type</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={saveResourcePoolsAndExitEdit}
-                    disabled={saving || applyingChanges}
-                    className={platformActionButtonClass}
-                  >
-                    Save
-                  </button>
+                  {!wizardEditMode ? (
+                    <button
+                      type="button"
+                      onClick={saveResourcePoolsAndExitEdit}
+                      disabled={saving || applyingChanges}
+                      className={platformActionButtonClass}
+                    >
+                      Save
+                    </button>
+                  ) : null}
                   {!wizardEditMode ? (
                     <button
                       type="button"
@@ -11076,14 +11091,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   >
                     <span className="text-[9px] leading-tight">Add<br />Rows</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={saveResourcePoolsAndExitEdit}
-                    disabled={saving || applyingChanges}
-                    className={platformActionButtonClass}
-                  >
-                    Save
-                  </button>
+                  {!wizardEditMode ? (
+                    <button
+                      type="button"
+                      onClick={saveResourcePoolsAndExitEdit}
+                      disabled={saving || applyingChanges}
+                      className={platformActionButtonClass}
+                    >
+                      Save
+                    </button>
+                  ) : null}
                   {!wizardEditMode ? (
                     <button
                       type="button"
