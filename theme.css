@@ -1048,6 +1048,11 @@ html[data-theme="light"] body {
 .scoring-matrix-inline--wizard {
     background: #ffffff !important;
     color: #0f172a !important;
+    max-height: min(64vh, 640px);
+    min-height: min(64vh, 640px) !important;
+    overflow: hidden !important;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
 
 .scoring-matrix-inline--wizard .bg-gray-900,
@@ -1061,6 +1066,8 @@ html[data-theme="light"] body {
 .scoring-matrix-inline--wizard > .flex-1 {
     background: #ffffff !important;
     padding: 1rem !important;
+    min-height: 0 !important;
+    overscroll-behavior: contain;
 }
 
 .scoring-matrix-inline--wizard .w-56 {
@@ -1190,6 +1197,12 @@ html[data-theme="light"] body {
 
 .scoring-matrix-inline--wizard .fixed label:hover {
     background: #f8fafc !important;
+}
+
+.scoring-matrix-inline--wizard > .flex-1 > div {
+    content-visibility: auto;
+    contain: layout paint style;
+    contain-intrinsic-size: 220px;
 }
 
 /* Wizard embedded Settings sections: keep Settings behaviour with a polished wizard light theme. */
