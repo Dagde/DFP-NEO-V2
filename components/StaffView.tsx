@@ -281,6 +281,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             platformConfig={props.platformConfig}
             crewPositionTerminology={props.crewPositionTerminology}
             staffQualificationCatalogue={props.staffQualificationCatalogue}
+            unitCallsignSettings={props.platformConfig?.organisations?.[0]?.settings?.unitCallsignSettings || null}
             sctTerminology={props.sctTerminology}
             canUsePlatformPermission={props.canUsePlatformPermission}
             defaultUnitCode={shouldShowUnitTabs ? activeUnitTab : props.activeUnitCode}

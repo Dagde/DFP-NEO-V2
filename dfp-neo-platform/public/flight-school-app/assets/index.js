@@ -83299,6 +83299,41 @@ const applyRoleAssignments = (parsedData, rolesValue, crewPositionTerminology) =
     parsedData.role = "Pilot";
   }
 };
+const normaliseCallsignPrefixToken = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+const parseImportedCallsign = (rawValue, unitCode, unitCallsignSettings) => {
+  if (rawValue === void 0 || rawValue === null || String(rawValue).trim() === "") return null;
+  const raw = String(rawValue).trim().toUpperCase();
+  const compact = raw.replace(/[\s-]+/g, "");
+  const numberOnly = compact.match(/^\d{1,3}$/);
+  const defaultPrefix = getDefaultUnitCallsign(normaliseUnitCallsignSettings(unitCallsignSettings || null), unitCode);
+  const normalisedDefaultPrefix = normaliseCallsignPrefixToken(defaultPrefix);
+  if (numberOnly) {
+    if (!normalisedDefaultPrefix) {
+      throw new Error(`Callsign "${raw}" only provides a number, but unit ${unitCode || "(blank)"} has no default callsign prefix configured.`);
+    }
+    const callsignNumber2 = Number(numberOnly[0]);
+    return {
+      callsignNumber: callsignNumber2,
+      callsign: `${normalisedDefaultPrefix}${String(callsignNumber2).padStart(3, "0")}`
+    };
+  }
+  const fullCallsign = compact.match(/^([A-Z][A-Z0-9]*?)(\d{1,3})$/);
+  if (!fullCallsign) {
+    throw new Error(`Callsign "${raw}" must be a 1-3 digit number or a prefix followed by a 1-3 digit number, such as VIPR003.`);
+  }
+  const [, prefix, numberText] = fullCallsign;
+  if (normalisedDefaultPrefix && prefix !== normalisedDefaultPrefix) {
+    throw new Error(`Callsign "${raw}" uses prefix ${prefix}, but unit ${unitCode || "(blank)"} is configured for ${normalisedDefaultPrefix}.`);
+  }
+  if (!normalisedDefaultPrefix) {
+    throw new Error(`Callsign "${raw}" includes prefix ${prefix}, but unit ${unitCode || "(blank)"} has no default callsign prefix configured to validate against.`);
+  }
+  const callsignNumber = Number(numberText);
+  return {
+    callsignNumber,
+    callsign: `${prefix}${String(callsignNumber).padStart(3, "0")}`
+  };
+};
 const BulkUpdateFlyout = ({
   onClose,
   onBulkUpdateInstructors,
@@ -83308,6 +83343,7 @@ const BulkUpdateFlyout = ({
   onBulkUpdateTrainees,
   crewPositionTerminology,
   staffQualificationCatalogue: staffQualificationCatalogue2,
+  unitCallsignSettings,
   defaultUnitCode = ""
 }) => {
   const [selectedLocalFile, setSelectedLocalFile] = reactExports.useState(null);
@@ -83353,7 +83389,7 @@ const BulkUpdateFlyout = ({
       let createdCount = 0;
       let updatedCount = 0;
       let skippedCount = 0;
-      for (const row of json) {
+      for (const [rowIndex, row] of json.entries()) {
         const idValue = getValueFromRow(row, ["PMKeys/ID", "PMKeys", "Personnel ID", "Service ID", "Employee ID", "Employee Number", "Personnel Number", "Staff ID", "ID", "ID Number", "IDNumber"]);
         if (idValue === null || idValue === void 0 || String(idValue).trim() === "") {
           skippedCount++;
@@ -83385,8 +83421,6 @@ const BulkUpdateFlyout = ({
         const role = getStringFromRow(row, ["Role", "Crew Position", "Crew Role", "Aircrew Role", "Seat Role"]);
         const normalisedRole = normaliseImportedStaffRole(role, crewPositionTerminology);
         if (normalisedRole) parsedData.role = normalisedRole;
-        const callsign = getValueFromRow(row, ["callsign number", "callsignnumber", "Callsign No", "Callsign Number"]);
-        if (callsign !== void 0) parsedData.callsignNumber = Number(callsign) || 0;
         const service = getStringFromRow(row, ["Service"]);
         const normalisedService = normaliseService(service);
         if (normalisedService) parsedData.service = normalisedService;
@@ -83402,6 +83436,26 @@ const BulkUpdateFlyout = ({
         } else {
           const fallbackUnit = normaliseImportedUnit(defaultUnitCode);
           if (fallbackUnit) parsedData.unit = fallbackUnit;
+        }
+        const smartCallsign = getValueFromRow(row, ["Callsign", "Call Sign"]);
+        const callsignNumber = getValueFromRow(row, ["callsign number", "callsignnumber", "Callsign No", "Callsign Number"]);
+        if (smartCallsign !== void 0 && smartCallsign !== null && String(smartCallsign).trim() !== "") {
+          try {
+            const parsedCallsign = parseImportedCallsign(smartCallsign, String(parsedData.unit || ""), unitCallsignSettings);
+            if (parsedCallsign) {
+              parsedData.callsignNumber = parsedCallsign.callsignNumber;
+              parsedData.callsign = parsedCallsign.callsign;
+              parsedData.preferences = {
+                ...existingInstructor?.preferences || {},
+                ...parsedData.preferences || {},
+                callsign: parsedCallsign.callsign || null
+              };
+            }
+          } catch (error) {
+            throw new Error(`Row ${rowIndex + 2}: ${error instanceof Error ? error.message : "Invalid callsign."}`);
+          }
+        } else if (callsignNumber !== void 0) {
+          parsedData.callsignNumber = Number(callsignNumber) || 0;
         }
         const flight = getStringFromRow(row, ["Flight", "Flight/Sqn", "Section"]);
         if (flight) parsedData.flight = flight;
@@ -83782,6 +83836,7 @@ const InstructorListView = ({
   platformConfig = null,
   crewPositionTerminology,
   staffQualificationCatalogue: staffQualificationCatalogue2,
+  unitCallsignSettings = null,
   sctTerminology,
   trainingReportDisplayName = "Training Report",
   trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status",
@@ -84399,6 +84454,7 @@ const InstructorListView = ({
         instructorsData,
         crewPositionTerminology,
         staffQualificationCatalogue: staffQualificationCatalogue2,
+        unitCallsignSettings,
         defaultUnitCode
       }
     ),
@@ -84905,6 +84961,7 @@ const StaffView = (props) => {
           platformConfig: props.platformConfig,
           crewPositionTerminology: props.crewPositionTerminology,
           staffQualificationCatalogue: props.staffQualificationCatalogue,
+          unitCallsignSettings: props.platformConfig?.organisations?.[0]?.settings?.unitCallsignSettings || null,
           sctTerminology: props.sctTerminology,
           canUsePlatformPermission: props.canUsePlatformPermission,
           defaultUnitCode: shouldShowUnitTabs ? activeUnitTab : props.activeUnitCode,

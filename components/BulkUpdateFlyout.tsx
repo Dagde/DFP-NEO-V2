@@ -12,6 +12,11 @@ import {
     qualificationMatches,
     type StaffQualificationCatalogue,
 } from '../utils/staffQualifications';
+import {
+    getDefaultUnitCallsign,
+    normaliseUnitCallsignSettings,
+    type UnitCallsignSettings,
+} from '../utils/unitCallsigns';
 
 declare var XLSX: any;
 
@@ -24,6 +29,7 @@ interface BulkUpdateFlyoutProps {
   onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
+  unitCallsignSettings?: UnitCallsignSettings | null;
   defaultUnitCode?: string;
 }
 
@@ -173,6 +179,54 @@ const applyRoleAssignments = (
     }
 };
 
+const normaliseCallsignPrefixToken = (value: unknown): string => (
+    String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+);
+
+const parseImportedCallsign = (
+    rawValue: unknown,
+    unitCode: string,
+    unitCallsignSettings?: UnitCallsignSettings | null,
+): { callsignNumber: number; callsign?: string } | null => {
+    if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') return null;
+
+    const raw = String(rawValue).trim().toUpperCase();
+    const compact = raw.replace(/[\s-]+/g, '');
+    const numberOnly = compact.match(/^\d{1,3}$/);
+    const defaultPrefix = getDefaultUnitCallsign(normaliseUnitCallsignSettings(unitCallsignSettings || null), unitCode);
+    const normalisedDefaultPrefix = normaliseCallsignPrefixToken(defaultPrefix);
+
+    if (numberOnly) {
+        if (!normalisedDefaultPrefix) {
+            throw new Error(`Callsign "${raw}" only provides a number, but unit ${unitCode || '(blank)'} has no default callsign prefix configured.`);
+        }
+        const callsignNumber = Number(numberOnly[0]);
+        return {
+            callsignNumber,
+            callsign: `${normalisedDefaultPrefix}${String(callsignNumber).padStart(3, '0')}`,
+        };
+    }
+
+    const fullCallsign = compact.match(/^([A-Z][A-Z0-9]*?)(\d{1,3})$/);
+    if (!fullCallsign) {
+        throw new Error(`Callsign "${raw}" must be a 1-3 digit number or a prefix followed by a 1-3 digit number, such as VIPR003.`);
+    }
+
+    const [, prefix, numberText] = fullCallsign;
+    if (normalisedDefaultPrefix && prefix !== normalisedDefaultPrefix) {
+        throw new Error(`Callsign "${raw}" uses prefix ${prefix}, but unit ${unitCode || '(blank)'} is configured for ${normalisedDefaultPrefix}.`);
+    }
+    if (!normalisedDefaultPrefix) {
+        throw new Error(`Callsign "${raw}" includes prefix ${prefix}, but unit ${unitCode || '(blank)'} has no default callsign prefix configured to validate against.`);
+    }
+
+    const callsignNumber = Number(numberText);
+    return {
+        callsignNumber,
+        callsign: `${prefix}${String(callsignNumber).padStart(3, '0')}`,
+    };
+};
+
 
 const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({ 
   onClose, 
@@ -183,6 +237,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
   onBulkUpdateTrainees,
   crewPositionTerminology,
   staffQualificationCatalogue,
+  unitCallsignSettings,
   defaultUnitCode = '',
 }) => {
     const [selectedLocalFile, setSelectedLocalFile] = useState<File | null>(null);
@@ -240,7 +295,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
             let updatedCount = 0;
             let skippedCount = 0;
 
-            for (const row of json) {
+            for (const [rowIndex, row] of json.entries()) {
                 const idValue = getValueFromRow(row, ['PMKeys/ID', 'PMKeys', 'Personnel ID', 'Service ID', 'Employee ID', 'Employee Number', 'Personnel Number', 'Staff ID', 'ID', 'ID Number', 'IDNumber']);
 
                 if (idValue === null || idValue === undefined || String(idValue).trim() === '') {
@@ -279,9 +334,6 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 const normalisedRole = normaliseImportedStaffRole(role, crewPositionTerminology);
                 if (normalisedRole) parsedData.role = normalisedRole;
                 
-                const callsign = getValueFromRow(row, ['callsign number', 'callsignnumber', 'Callsign No', 'Callsign Number']);
-                if (callsign !== undefined) parsedData.callsignNumber = Number(callsign) || 0;
-
                 const service = getStringFromRow(row, ['Service']);
                 const normalisedService = normaliseService(service);
                 if (normalisedService) parsedData.service = normalisedService;
@@ -300,6 +352,27 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 } else {
                     const fallbackUnit = normaliseImportedUnit(defaultUnitCode);
                     if (fallbackUnit) parsedData.unit = fallbackUnit;
+                }
+
+                const smartCallsign = getValueFromRow(row, ['Callsign', 'Call Sign']);
+                const callsignNumber = getValueFromRow(row, ['callsign number', 'callsignnumber', 'Callsign No', 'Callsign Number']);
+                if (smartCallsign !== undefined && smartCallsign !== null && String(smartCallsign).trim() !== '') {
+                    try {
+                        const parsedCallsign = parseImportedCallsign(smartCallsign, String(parsedData.unit || ''), unitCallsignSettings);
+                        if (parsedCallsign) {
+                            parsedData.callsignNumber = parsedCallsign.callsignNumber;
+                            parsedData.callsign = parsedCallsign.callsign;
+                            parsedData.preferences = {
+                                ...(existingInstructor?.preferences || {}),
+                                ...(parsedData.preferences || {}),
+                                callsign: parsedCallsign.callsign || null,
+                            };
+                        }
+                    } catch (error) {
+                        throw new Error(`Row ${rowIndex + 2}: ${error instanceof Error ? error.message : 'Invalid callsign.'}`);
+                    }
+                } else if (callsignNumber !== undefined) {
+                    parsedData.callsignNumber = Number(callsignNumber) || 0;
                 }
 
                 const flight = getStringFromRow(row, ['Flight', 'Flight/Sqn', 'Section']);

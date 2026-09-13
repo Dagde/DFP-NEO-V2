@@ -31,6 +31,7 @@ import {
     personHasInstructorQualification,
     type StaffQualificationCatalogue,
 } from '../utils/staffQualifications';
+import type { UnitCallsignSettings } from '../utils/unitCallsigns';
 import type { SctTerminology } from '../utils/sctTerminology';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 import { buildCompactPersonNameResolver, getPersonDomIdSuffix, getPersonStableKey, samePersonRecord } from '../utils/personIdentity';
@@ -189,6 +190,7 @@ interface InstructorListViewProps {
   platformConfig?: PlatformConfig | null;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
+  unitCallsignSettings?: UnitCallsignSettings | null;
   sctTerminology?: SctTerminology;
   trainingReportDisplayName?: string;
   trainingReportStatusFieldLabel?: string;
@@ -244,6 +246,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     platformConfig = null,
     crewPositionTerminology,
     staffQualificationCatalogue,
+    unitCallsignSettings = null,
     sctTerminology,
     trainingReportDisplayName = 'Training Report',
     trainingReportStatusFieldLabel = 'Mission Status',
@@ -997,6 +1000,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             instructorsData={instructorsData}
             crewPositionTerminology={crewPositionTerminology}
             staffQualificationCatalogue={staffQualificationCatalogue}
+            unitCallsignSettings={unitCallsignSettings}
             defaultUnitCode={defaultUnitCode}
         />
       )}
