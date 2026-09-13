@@ -9,7 +9,6 @@ const prisma = new PrismaClient();
 const db = prisma as any;
 
 const REQUIRED_COLUMNS = [
-  'Event description',
   'Type',
 ];
 
@@ -56,6 +55,9 @@ const getNumber = (row: Record<string, any>, aliases: string[]): number | undefi
   return Number.isFinite(numericValue) ? numericValue : undefined;
 };
 
+const hasAnyString = (row: Record<string, any>, aliases: string[]): boolean =>
+  Boolean(getString(row, aliases));
+
 const getList = (row: Record<string, any>, aliases: string[]): string[] => {
   const value = getValue(row, aliases);
   if (value === undefined || value === null || value === '') return [];
@@ -79,6 +81,10 @@ const getRequiredUploadDataErrors = (row: Record<string, any>): string[] => {
   const errors: string[] = [];
   const missingColumns = REQUIRED_COLUMNS.filter(column => !getString(row, [column]));
   if (missingColumns.length > 0) errors.push(`Missing required fields: ${missingColumns.join(', ')}`);
+
+  if (!hasAnyString(row, ['Event description', 'Event Description', 'Event Title', 'Title', 'Description'])) {
+    errors.push('Missing required fields: Event description or Event Title');
+  }
 
   const typeValue = getString(row, ['Type']);
   if (typeValue && !UPLOAD_TYPE_LABELS.has(typeValue.trim().toLowerCase())) {
@@ -151,6 +157,54 @@ const getUnitScopedCollectionCode = (baseCode: string, unitCode: string): string
 
 const rowHasContent = (row: Record<string, any>): boolean =>
   Object.values(row).some(value => value !== undefined && value !== null && String(value).trim() !== '');
+
+const getWorksheetCellText = (cell: any): string => String(cell?.w ?? cell?.v ?? '').trim();
+
+const getColourKey = (color: any): string => {
+  if (!color) return '';
+  if (color.rgb) return `rgb:${String(color.rgb).toUpperCase()}`;
+  if (color.indexed !== undefined) return `indexed:${color.indexed}`;
+  if (color.theme !== undefined) return `theme:${color.theme}`;
+  return '';
+};
+
+const getStyleColourKey = (cell: any): string => {
+  const fontColour = getColourKey(cell?.s?.font?.color);
+  if (fontColour) return `font:${fontColour}`;
+  const fillColour = getColourKey(cell?.s?.fgColor);
+  if (fillColour) return `fill:${fillColour}`;
+  if (cell?.s?.fillId !== undefined) return `fillid:${cell.s.fillId}`;
+  if (cell?.s?.fillid !== undefined) return `fillid:${cell.s.fillid}`;
+  return '';
+};
+
+const workbookHasItalicFont = (workbook: any): boolean =>
+  Array.isArray(workbook?.Styles?.Fonts) && workbook.Styles.Fonts.some((font: any) => Boolean(font?.italic));
+
+const isStyledExampleSecondRow = (worksheet: any, workbook: any): boolean => {
+  const range = worksheet?.['!ref'] ? XLSX.utils.decode_range(worksheet['!ref']) : null;
+  if (!range) return false;
+  const headerRow = range.s.r;
+  const exampleRow = headerRow + 1;
+  let populatedCellCount = 0;
+  let italicCellCount = 0;
+  let differingColourCellCount = 0;
+  const hasWorkbookItalicStyle = workbookHasItalicFont(workbook);
+
+  for (let column = range.s.c; column <= range.e.c; column += 1) {
+    const headerCell = worksheet[XLSX.utils.encode_cell({ r: headerRow, c: column })];
+    const exampleCell = worksheet[XLSX.utils.encode_cell({ r: exampleRow, c: column })];
+    if (!getWorksheetCellText(exampleCell)) continue;
+    populatedCellCount += 1;
+    if (exampleCell?.s?.font?.italic || hasWorkbookItalicStyle) italicCellCount += 1;
+    const headerColour = getStyleColourKey(headerCell);
+    const exampleColour = getStyleColourKey(exampleCell);
+    if (headerColour && headerColour !== exampleColour) differingColourCellCount += 1;
+  }
+
+  if (populatedCellCount === 0) return false;
+  return italicCellCount / populatedCellCount >= 0.75 && differingColourCellCount / populatedCellCount >= 0.5;
+};
 
 const normaliseContextCode = (value: unknown): string => String(value || '').trim().toUpperCase();
 const lmpTypeIsNotStaffCat = (value: unknown): boolean => getNormalisedLmpType(String(value || '')) !== 'Staff CAT';
@@ -248,7 +302,7 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const workbook = XLSX.read(buffer, { type: 'buffer', cellStyles: true });
     const worksheetName = workbook.SheetNames.includes('Syllabus_LMP')
       ? 'Syllabus_LMP'
       : workbook.SheetNames[0];
@@ -261,7 +315,9 @@ export async function POST(request: NextRequest) {
     }
 
     const worksheet = workbook.Sheets[worksheetName];
-    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
+    const skipStyledExampleRow = isStyledExampleSecondRow(worksheet, workbook);
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' })
+      .filter((_, index) => !(skipStyledExampleRow && index === 0));
     const created: any[] = [];
     const updated: any[] = [];
     const errors: Array<{ row: number; error: string; duplicateSource?: any }> = [];
@@ -275,7 +331,7 @@ export async function POST(request: NextRequest) {
       let contentRows = 0;
       for (let index = 0; index < rows.length; index++) {
         const row = rows[index];
-        const rowNumber = index + 2;
+        const rowNumber = index + (skipStyledExampleRow ? 3 : 2);
         if (!rowHasContent(row)) continue;
         contentRows += 1;
 
@@ -292,7 +348,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        const explicitCode = getString(row, ['Code']);
+        const explicitCode = getString(row, ['Event Code', 'Code', 'Event ID', 'Event Number']);
         const code = explicitCode || getGeneratedEventCode(courseCode, preflightSequence++);
         const existing = await db.syllabusItem.findUnique({ where: { code } });
         if (existing && !belongsToDestination(existing, courseCode, lmpType, operationalModel, locationCode, unitCode)) {
@@ -366,7 +422,7 @@ export async function POST(request: NextRequest) {
 
     for (let index = 0; index < rows.length; index++) {
       const row = rows[index];
-      const rowNumber = index + 2;
+      const rowNumber = index + (skipStyledExampleRow ? 3 : 2);
       if (!rowHasContent(row)) continue;
 
       const requiredDataErrors = getRequiredUploadDataErrors(row);
@@ -384,7 +440,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const explicitCode = getString(row, ['Code']);
+      const explicitCode = getString(row, ['Event Code', 'Code', 'Event ID', 'Event Number']);
       const code = explicitCode || getGeneratedEventCode(courseCode, generatedCodeSequence++);
 
       const type = normaliseType(getString(row, ['Type']));
@@ -393,7 +449,7 @@ export async function POST(request: NextRequest) {
       const totalEventHours = getNumber(row, ['Total Event Hours', 'totalEventHours']) ?? 0;
       const itemData = {
         code,
-        eventDescription: getString(row, ['Event description', 'eventDescription']),
+        eventDescription: getString(row, ['Event description', 'Event Description', 'Event Title', 'Title', 'Description', 'eventDescription']),
         phase: getString(row, ['Phase']) || courseCode,
         module: getString(row, ['Module']) || packageName || courseCode,
         type,
@@ -409,8 +465,8 @@ export async function POST(request: NextRequest) {
         flightOrSimHours: flightOrSimHours ?? 0,
         totalEventHours,
         duration: flightOrSimHours ?? totalEventHours,
-        preFlightTime: getNumber(row, ['Pre-flight', 'preFlightTime']) ?? 0,
-        postFlightTime: getNumber(row, ['Post-flight', 'postFlightTime']) ?? 0,
+        preFlightTime: getNumber(row, ['Preflight Time', 'Pre Flight Time', 'Pre-flight', 'Pre Flight Minutes', 'preFlightTime']) ?? 0,
+        postFlightTime: getNumber(row, ['Post Flight Time', 'Post-flight Time', 'Post-flight', 'Post Flight Minutes', 'postFlightTime']) ?? 0,
         prerequisites: getList(row, ['prerequisites', 'Prerequisites']),
         prerequisitesGround: getList(row, ['Pre-requisite Events (Ground School)', 'prerequisitesGround']),
         prerequisitesFlying: getList(row, ['Pre-requisite Events (Sim/Flying)', 'prerequisitesFlying']),

@@ -60,6 +60,10 @@ import { getAdaptiveContextMenuPosition } from '../utils/contextMenuPosition';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
 import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
 import {
+    detectStyledExampleRow,
+    type ExampleRowDetection,
+} from '../utils/importExampleRow';
+import {
     isSetupTestMode as isSetupTestBrowserMode,
     readSetupTestPlatformConfig,
     readSetupTestSyllabus,
@@ -757,13 +761,14 @@ type InitialSetupWizardTemplate = {
 };
 
 type InitialSetupWizardUploadResult = {
-    status: 'idle' | 'valid' | 'error';
+    status: 'idle' | 'valid' | 'error' | 'needs-confirmation';
     fileName?: string;
     rowCount?: number;
     message: string;
     issues?: string[];
     headers?: string[];
     dataRows?: string[][];
+    exampleRowDetection?: ExampleRowDetection;
 };
 
 type InitialSetupWizardCheck = {
@@ -892,10 +897,10 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         id: 'courses',
         label: 'Courses and LMP events',
         fileName: 'DFP_NEO_Courses_Template.csv',
-        requiredHeaders: ['Master LMP', 'Event Code', 'Event Title', 'Type', 'Duration Minutes'],
-        optionalHeaders: ['Aircraft Type', 'Crew Required', 'Pre Flight Minutes', 'Post Flight Minutes'],
+        requiredHeaders: ['Event Code', 'Event Title', 'Type', 'Flight or Sim Hours'],
+        optionalHeaders: ['Course', 'Master LMP', 'Event description', 'Phase', 'Module', 'Day/Night', 'Dual/Solo', 'Config', 'Resource Number', 'Total Event Hours', 'Preflight Time', 'Post Flight Time', 'Method/s of Delivery', 'Type/s and Method/s of Assessment', 'Resources Required (physical)', 'Resources Required (Human)', 'Pre-requisite Events (Ground School)', 'Pre-requisite Events (Sim/Flying)', 'Aircraft Type', 'Crew Required', 'Duration Minutes'],
         exampleRows: [
-            ['Master LMP Name', 'EVENT-001', 'Training event', 'Flight', '90', 'Aircraft Type', 'Crew Role 1, Crew Role 2', '90', '60'],
+            ['EVENT-001', 'Training event', 'Flight', '1.5', 'Master LMP Name', 'Event description', 'Phase 1', 'Module A', 'Day', 'Dual', 'ANY', '1', '2.5', '1', '0.5', 'Flight', 'Visual observation', 'Aircraft Type', 'Crew Role 1, Crew Role 2', '', '', 'Aircraft Type', 'Crew Role 1, Crew Role 2', '90'],
         ],
         settingsSection: 'platform-master-lmp-access',
     },
@@ -930,12 +935,24 @@ const wizardRequiredHeaderAliases: Record<string, string[]> = {
     personnelId: ['personnelid', 'personid', 'staffid', 'employeeid', 'serviceid', 'employeenumber', 'personnelnumber'],
     code: ['icao', 'locationcode', 'basecode'],
     aircrafttype: ['aircraft', 'resource'],
-    course: ['courseallocation', 'allocatedcourse', 'courseassigned', 'trainingcourse'],
+    course: ['courseallocation', 'allocatedcourse', 'courseassigned', 'trainingcourse', 'package', 'masterlmp', 'masterlmpname', 'lmp', 'lmpname'],
     coursenumber: ['courseno', 'coursenum', 'courseid', 'coursecode'],
     masterlmp: ['masterlmpname', 'lmp', 'lmpname'],
     eventcode: ['code', 'eventid', 'eventnumber'],
     eventtitle: ['eventdescription', 'description', 'eventname', 'title'],
-    durationminutes: ['duration', 'durationmins', 'durationmin', 'totaldurationminutes', 'totaldurationmins'],
+    durationminutes: ['duration', 'durationmins', 'durationmin', 'totaldurationminutes', 'totaldurationmins', 'totaleventhours', 'flightorsimhours', 'flightsimhours', 'flightorsimhrs', 'fltsimhrs'],
+    flightorsimhours: ['flightorsimhrs', 'flightsimhours', 'fltsimhrs', 'totaleventhours', 'totalhours', 'duration', 'durationhours', 'durationminutes', 'durationmins'],
+    totaleventhours: ['totalhours', 'duration', 'durationhours', 'durationminutes', 'durationmins'],
+    preflighttime: ['preflight', 'preflightminutes', 'preeventtime', 'preeventminutes', 'preflightmins'],
+    postflighttime: ['postflight', 'postflightminutes', 'posteventtime', 'posteventminutes', 'postflightmins'],
+    methodsofdelivery: ['methodofdelivery', 'deliverymethod', 'deliverymethods'],
+    typesandmethodsofassessment: ['methodofassessment', 'methodsofassessment', 'assessmentmethod', 'assessmentmethods'],
+    resourcesrequiredphysical: ['resourcesphysical', 'physicalresources', 'aircrafttype', 'aircraft', 'resource'],
+    resourcesrequiredhuman: ['resourceshuman', 'humanresources', 'crewrequired', 'crewrequirements'],
+    prerequisiteeventsgroundschool: ['prerequisitesground', 'groundprerequisites', 'groundschoolprerequisites'],
+    prerequisiteeventssimflying: ['prerequisitesflying', 'flyingprerequisites', 'simflyingprerequisites', 'simulatorflyingprerequisites'],
+    eventdetailscommon: ['commondetails', 'eventcommon', 'common'],
+    eventdetailssortie: ['sortiedetails', 'eventsortie', 'sortie'],
     startdate: ['start', 'coursestart', 'startdt'],
 };
 
@@ -1040,30 +1057,57 @@ const parseWizardCsvRows = (text: string): string[][] => {
     return rows;
 };
 
-const readWizardTemplateRows = async (file: File): Promise<string[][]> => {
+type WizardTemplateReadResult = {
+    rows: string[][];
+    worksheet?: any;
+    workbook?: any;
+};
+
+const readWizardTemplateRows = async (file: File): Promise<WizardTemplateReadResult> => {
     const extension = file.name.split('.').pop()?.toLowerCase();
     if (['xlsx', 'xls'].includes(extension || '')) {
         if (typeof XLSX === 'undefined') throw new Error('Excel support is not available in this browser session.');
         const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellStyles: true });
         const firstSheet = workbook.SheetNames[0];
-        if (!firstSheet) return [];
-        return XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { header: 1, defval: '' });
+        if (!firstSheet) return { rows: [] };
+        const worksheet = workbook.Sheets[firstSheet];
+        return {
+            rows: XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }),
+            worksheet,
+            workbook,
+        };
     }
     const text = await file.text();
-    return parseWizardCsvRows(text);
+    return { rows: parseWizardCsvRows(text) };
 };
 
 const validateWizardTemplateFile = async (
     template: InitialSetupWizardTemplate,
     file: File,
+    skipConfirmedExampleRow = false,
 ): Promise<InitialSetupWizardUploadResult> => {
-    const rows = await readWizardTemplateRows(file);
+    const { rows, worksheet, workbook } = await readWizardTemplateRows(file);
     const headerRowIndex = findWizardTemplateHeaderRowIndex(rows, template);
-    const headers = (rows[headerRowIndex] || []).map((cell) => String(cell || '').trim()).filter(Boolean);
+    const rawHeaderRow = rows[headerRowIndex] || [];
+    const headerEntries = rawHeaderRow
+        .map((cell, index) => ({ header: String(cell || '').trim(), index }))
+        .filter((entry) => Boolean(entry.header));
+    const headers = headerEntries.map((entry) => entry.header);
     const headerKeys = new Set(headers.map(normaliseWizardHeader));
     const missingHeaders = template.requiredHeaders.filter((header) => !wizardHeaderMatchesRequired(headerKeys, header));
-    const dataRows = rows.slice(headerRowIndex + 1).filter((row) => row.some((cell) => String(cell || '').trim()));
+    const exampleRowDetection = worksheet && headers.length > 0
+        ? detectStyledExampleRow(worksheet, headerRowIndex + 1, rawHeaderRow.length, workbook)
+        : null;
+    const dataRows = rows
+        .slice(headerRowIndex + 1)
+        .map((row, index) => ({
+            excelRowNumber: headerRowIndex + index + 2,
+            values: headerEntries.map((entry) => String(row[entry.index] || '').trim()),
+        }))
+        .filter((record) => !(skipConfirmedExampleRow && exampleRowDetection?.isStyledExampleRow && record.excelRowNumber === exampleRowDetection.rowNumber))
+        .map((record) => record.values)
+        .filter((row) => row.some((cell) => String(cell || '').trim()));
     const issues: string[] = [];
     if (headers.length === 0) issues.push('The first row needs column headers.');
     if (missingHeaders.length > 0) issues.push(`Missing required column${missingHeaders.length === 1 ? '' : 's'}: ${missingHeaders.join(', ')}.`);
@@ -1080,6 +1124,17 @@ const validateWizardTemplateFile = async (
             ],
         };
     }
+    if (exampleRowDetection?.isStyledExampleRow && !skipConfirmedExampleRow) {
+        return {
+            status: 'needs-confirmation',
+            fileName: file.name,
+            rowCount: dataRows.length,
+            message: `Row ${exampleRowDetection.rowNumber} appears to be the styled example row. Confirm it is only an example so I can skip it before importing.`,
+            headers,
+            dataRows,
+            exampleRowDetection,
+        };
+    }
     return {
         status: 'valid',
         fileName: file.name,
@@ -1087,6 +1142,7 @@ const validateWizardTemplateFile = async (
         message: `${file.name} looks ready. ${dataRows.length} row${dataRows.length === 1 ? '' : 's'} passed the basic format check.`,
         headers,
         dataRows,
+        exampleRowDetection: exampleRowDetection || undefined,
     };
 };
 
@@ -2835,6 +2891,7 @@ const InitialSetupWizard: React.FC<{
     const [uploadedTraineeProfileRows, setUploadedTraineeProfileRows] = useState<any[]>([]);
     const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = useState<SyllabusItemDetail[]>([]);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const pendingWizardTemplateFilesRef = useRef<Record<string, File>>({});
     const lastSetupTestPersonnelSnapshotRef = useRef('');
     const wizardShellRef = useRef<HTMLDivElement | null>(null);
     const wizardSettingsEmbedRef = useRef<HTMLDivElement | null>(null);
@@ -6971,21 +7028,24 @@ const InitialSetupWizard: React.FC<{
         fileInputRef.current?.click();
     };
 
-    const handleTemplateFile = async (templateId: string, file?: File | null) => {
+    const handleTemplateFile = async (templateId: string, file?: File | null, skipConfirmedExampleRow = false) => {
         if (!file) return;
         const template = initialSetupTemplates.find((item) => item.id === templateId);
         if (!template) return;
-        setImportConfirmations((current) => {
-            const next = { ...current };
-            delete next[templateId];
-            return next;
-        });
+        pendingWizardTemplateFilesRef.current[templateId] = file;
+        if (!skipConfirmedExampleRow) {
+            setImportConfirmations((current) => {
+                const next = { ...current };
+                delete next[templateId];
+                return next;
+            });
+        }
         setUploadResults((current) => ({
             ...current,
             [templateId]: { status: 'idle', fileName: file.name, message: `Checking ${file.name}...` },
         }));
         try {
-            const result = await validateWizardTemplateFile(template, file);
+            const result = await validateWizardTemplateFile(template, file, skipConfirmedExampleRow);
             setUploadResults((current) => ({ ...current, [templateId]: result }));
             pushWizardImportDiag('template:validated', {
                 templateId,
@@ -6994,6 +7054,7 @@ const InitialSetupWizard: React.FC<{
                 headers: result.headers || [],
                 dataRows: result.dataRows?.length || 0,
                 issues: result.issues || [],
+                exampleRowDetection: result.exampleRowDetection,
             });
             if (template.id === 'courses') {
                 pushWizardLmpDiag('upload:validated', {
@@ -7003,6 +7064,7 @@ const InitialSetupWizard: React.FC<{
                     headers: result.headers || [],
                     dataRows: result.dataRows?.length || 0,
                     issues: result.issues || [],
+                    exampleRowDetection: result.exampleRowDetection,
                     sampleRows: (result.dataRows || []).slice(0, 5),
                 });
             }
@@ -7034,8 +7096,17 @@ const InitialSetupWizard: React.FC<{
         }
     };
 
+    const confirmWizardTemplateExampleRow = (templateId: string) => {
+        const pendingFile = pendingWizardTemplateFilesRef.current[templateId];
+        if (!pendingFile) {
+            setSaveMessage('Upload the file again so I can confirm and skip the example row.');
+            return;
+        }
+        void handleTemplateFile(templateId, pendingFile, true);
+    };
+
     const parseWizardTemplateList = (value: string): string[] => String(value || '')
-        .split(/[;,]/)
+        .split(/\r?\n|[;,]/)
         .map((item) => item.trim())
         .filter(Boolean);
 
@@ -7057,14 +7128,15 @@ const InitialSetupWizard: React.FC<{
         const defaultMasterLmp = String(trainingDraft.lmpCode || trainingDraft.lmpName || '').trim();
         return (result.dataRows || []).map((row, index) => {
             const code = getWizardCellByHeader(headers, row, 'Event Code');
-            const title = getWizardCellByHeader(headers, row, 'Event Title') || code;
+            const title = getWizardCellByAnyHeader(headers, row, ['Event Title', 'Event description', 'Description']) || code;
             const masterLmp = getWizardCellByHeader(headers, row, 'Master LMP') || defaultMasterLmp || 'Master LMP';
             const courses = parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Courses', 'Course', 'Package']))
                 .filter(Boolean);
             const itemCourses = courses.length > 0 ? courses : [masterLmp];
             const eventType = normaliseWizardTemplateEventType(getWizardCellByHeader(headers, row, 'Type'));
-            const durationValue = getWizardCellByHeader(headers, row, 'Duration Minutes');
-            const duration = parseWizardTemplateNumber(durationValue, 0);
+            const flightOrSimHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Flight or Sim Hours', 'Flight Or Sim Hours', 'Flight/Sim Hours', 'Flight Sim Hours']), 0);
+            const totalEventHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Total Event Hours', 'Total Hours']), flightOrSimHours);
+            const duration = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Duration Minutes', 'Duration', 'Total Event Hours', 'Flight or Sim Hours']), flightOrSimHours || totalEventHours || 0);
             return {
                 id: `setup-lmp-${normaliseUnitSettingsIdentifier(masterLmp).replace(/[^A-Z0-9]+/g, '-')}-${normaliseUnitSettingsIdentifier(code).replace(/[^A-Z0-9]+/g, '-')}-${index + 1}`,
                 code,
@@ -7073,23 +7145,25 @@ const InitialSetupWizard: React.FC<{
                 dayNight: (getWizardCellByAnyHeader(headers, row, ['Day Night', 'Day/Night']) || 'Day') as SyllabusItemDetail['dayNight'],
                 eventDescription: title,
                 prerequisites: parseWizardTemplateList(getWizardCellByHeader(headers, row, 'Prerequisites')),
-                prerequisitesGround: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Prerequisites Ground', 'Ground Prerequisites'])),
-                prerequisitesFlying: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Prerequisites Flying', 'Flying Prerequisites'])),
-                eventDetailsCommon: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Event Details Common', 'Common Details'])),
-                eventDetailsSortie: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Event Details Sortie', 'Sortie Details', 'Event Title'])),
-                totalEventHours: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Total Event Hours', 'Total Hours']), duration),
-                flightOrSimHours: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Flight Or Sim Hours', 'Flight/Sim Hours', 'Flight Sim Hours']), eventType === 'Flight' || eventType === 'FTD' ? duration : 0),
+                prerequisitesGround: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Pre-requisite Events (Ground School)', 'Prerequisites Ground', 'Ground Prerequisites'])),
+                prerequisitesFlying: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Pre-requisite Events (Sim/Flying)', 'Prerequisites Flying', 'Flying Prerequisites'])),
+                eventDetailsCommon: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Event Details - Common', 'Event Details Common', 'Common Details'])),
+                eventDetailsSortie: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Event Details - Sortie', 'Event Details Sortie', 'Sortie Details', 'Event Title', 'Event description'])),
+                totalEventHours,
+                flightOrSimHours: flightOrSimHours || (eventType === 'Flight' || eventType === 'FTD' ? duration : 0),
                 duration,
-                preFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Pre Flight Time', 'Pre Flight Minutes']), 0),
-                postFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Post Flight Time', 'Post Flight Minutes']), 0),
+                preFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Preflight Time', 'Pre Flight Time', 'Pre Flight Minutes']), 0),
+                postFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Post Flight Time', 'Post-flight Time', 'Post Flight Minutes']), 0),
                 type: eventType,
                 sortieType: (getWizardCellByAnyHeader(headers, row, ['Sortie Type', 'Dual/Solo']) || undefined) as SyllabusItemDetail['sortieType'],
                 twrDiReqd: (getWizardCellByAnyHeader(headers, row, ['Twr Di Reqd', 'TWR DI Required']) || 'NO') as SyllabusItemDetail['twrDiReqd'],
                 cctOnly: (getWizardCellByAnyHeader(headers, row, ['Cct Only', 'CCT Only']) || 'NO') as SyllabusItemDetail['cctOnly'],
-                methodOfDelivery: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Method Of Delivery', 'Delivery Method'])),
-                methodOfAssessment: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Method Of Assessment', 'Assessment Method'])),
-                resourcesPhysical: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Resources Physical', 'Aircraft Type', 'Resource'])),
-                resourcesHuman: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Resources Human', 'Crew Required'])),
+                methodOfDelivery: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Method/s of Delivery', 'Method Of Delivery', 'Delivery Method'])),
+                methodOfAssessment: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Type/s and Method/s of Assessment', 'Method Of Assessment', 'Assessment Method'])),
+                resourcesPhysical: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Resources Required (physical)', 'Resources Physical', 'Aircraft Type', 'Resource'])),
+                resourceNumber: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ['Resource Number', 'Resources Required Number']), 0),
+                acceptableAircraftConfigs: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Config', 'CONFIG', 'Acceptable CONFIG', 'Acceptable Aircraft CONFIG'])),
+                resourcesHuman: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ['Resources Required (Human)', 'Resources Human', 'Crew Required'])),
                 location: getWizardCellByHeader(headers, row, 'Location') || locationDraft.code || unitDraft.locationCode || '',
                 unit: getWizardCellByHeader(headers, row, 'Unit') || unitDraft.code || '',
                 courses: itemCourses,
@@ -10771,11 +10845,12 @@ const InitialSetupWizard: React.FC<{
                     const importConfirmation = importConfirmations[template.id];
                     const isValid = result?.status === 'valid';
                     const isError = result?.status === 'error';
+                    const needsConfirmation = result?.status === 'needs-confirmation';
                     return (
                         <div
                             key={template.id}
                             className={`rounded-lg border bg-white p-3 shadow-sm ${
-                                isValid ? 'border-emerald-300' : isError ? 'border-red-300' : 'border-slate-300'
+                                isValid ? 'border-emerald-300' : isError ? 'border-red-300' : needsConfirmation ? 'border-amber-300' : 'border-slate-300'
                             }`}
                             onDragOver={(event) => {
                                 event.preventDefault();
@@ -10806,13 +10881,27 @@ const InitialSetupWizard: React.FC<{
                             </button>
                             {result ? (
                                 <div className={`mt-3 rounded-md px-3 py-2 text-xs leading-5 ${
-                                    isValid ? 'bg-emerald-50 text-emerald-800' : isError ? 'bg-red-50 text-red-800' : 'bg-slate-100 text-slate-600'
+                                    isValid ? 'bg-emerald-50 text-emerald-800' : isError ? 'bg-red-50 text-red-800' : needsConfirmation ? 'bg-amber-50 text-amber-900' : 'bg-slate-100 text-slate-600'
                                 }`}>
                                     <p className="font-bold">{result.message}</p>
                                     {result.issues?.length ? (
                                         <ul className="mt-1 list-disc space-y-1 pl-4">
                                             {result.issues.map((issue) => <li key={issue}>{issue}</li>)}
                                         </ul>
+                                    ) : null}
+                                    {needsConfirmation ? (
+                                        <div className="mt-3 rounded-md border border-amber-300 bg-white px-3 py-2">
+                                            <p className="font-semibold text-amber-900">
+                                                Confirm row {result.exampleRowDetection?.rowNumber || 2} is an example row only and should not be imported.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                className={`${wizardPrimaryButtonClass} mt-3`}
+                                                onClick={() => confirmWizardTemplateExampleRow(template.id)}
+                                            >
+                                                Confirm and skip example row
+                                            </button>
+                                        </div>
                                     ) : null}
                                     {isValid ? (
                                         <>

@@ -29685,6 +29685,78 @@ const endDfpDragDiagnostic = (sessionId) => {
   if (report.activeSessionId === sessionId) report.activeSessionId = null;
   persistReport(report);
 };
+const getCell = (worksheet, rowNumber, columnNumber) => {
+  const address = `${columnToName(columnNumber)}${rowNumber}`;
+  return worksheet?.[address];
+};
+const columnToName = (columnNumber) => {
+  let name = "";
+  let column = columnNumber;
+  while (column > 0) {
+    const remainder = (column - 1) % 26;
+    name = String.fromCharCode(65 + remainder) + name;
+    column = Math.floor((column - 1) / 26);
+  }
+  return name;
+};
+const normaliseCellText = (value) => String(value ?? "").trim();
+const getCellText = (cell) => normaliseCellText(cell?.w ?? cell?.v);
+const getColourKey = (color) => {
+  if (!color) return "";
+  if (color.rgb) return `rgb:${color.rgb.toUpperCase()}`;
+  if (color.indexed !== void 0) return `indexed:${color.indexed}`;
+  if (color.theme !== void 0) return `theme:${color.theme}`;
+  return "";
+};
+const getStyleColourKey = (cell) => {
+  const fontColour = getColourKey(cell?.s?.font?.color);
+  if (fontColour) return `font:${fontColour}`;
+  const fillColour = getColourKey(cell?.s?.fgColor);
+  if (fillColour) return `fill:${fillColour}`;
+  if (cell?.s?.fillId !== void 0) return `fillid:${cell.s.fillId}`;
+  if (cell?.s?.fillid !== void 0) return `fillid:${cell.s.fillid}`;
+  if (cell?.s?.patternType) return `pattern:${cell.s.patternType}`;
+  return "";
+};
+const workbookHasItalicFont = (workbook) => Array.isArray(workbook?.Styles?.Fonts) && workbook.Styles.Fonts.some((font) => Boolean(font?.italic));
+const detectStyledExampleRow = (worksheet, headerRowNumber, headerColumnCount, workbook) => {
+  const rowNumber = headerRowNumber + 1;
+  let populatedCellCount = 0;
+  let italicCellCount = 0;
+  let differingColourCellCount = 0;
+  const hasWorkbookItalicStyle = workbookHasItalicFont(workbook);
+  for (let column = 1; column <= headerColumnCount; column += 1) {
+    const headerCell = getCell(worksheet, headerRowNumber, column);
+    const exampleCell = getCell(worksheet, rowNumber, column);
+    if (!getCellText(exampleCell)) continue;
+    populatedCellCount += 1;
+    if (exampleCell?.s?.font?.italic || hasWorkbookItalicStyle) italicCellCount += 1;
+    const headerColour = getStyleColourKey(headerCell);
+    const exampleColour = getStyleColourKey(exampleCell);
+    if (headerColour && headerColour !== exampleColour) differingColourCellCount += 1;
+  }
+  const hasExampleCandidate = populatedCellCount > 0;
+  const italicRatio = populatedCellCount > 0 ? italicCellCount / populatedCellCount : 0;
+  const colourRatio = populatedCellCount > 0 ? differingColourCellCount / populatedCellCount : 0;
+  return {
+    hasExampleCandidate,
+    isStyledExampleRow: hasExampleCandidate && italicRatio >= 0.75 && colourRatio >= 0.5,
+    rowNumber,
+    populatedCellCount,
+    italicCellCount,
+    differingColourCellCount
+  };
+};
+const buildRowRecords = (rawRows, headerRowIndex, skipExampleRow) => {
+  const header = rawRows[headerRowIndex].map((cell) => String(cell || "").trim());
+  return rawRows.slice(headerRowIndex + 1).map((row, index) => ({
+    excelRowNumber: headerRowIndex + index + 2,
+    row: header.reduce((record, key, columnIndex) => {
+      if (key) record[key] = row[columnIndex];
+      return record;
+    }, {})
+  })).filter((record) => !skipExampleRow || record.excelRowNumber !== headerRowIndex + 2).filter((record) => Object.values(record.row).some((value) => normaliseCellText(value)));
+};
 const PIXELS_PER_HOUR$6 = 200;
 const ROW_HEIGHT$6 = 32;
 const START_HOUR$6 = 0;
@@ -30185,10 +30257,10 @@ const initialSetupTemplates = [
     id: "courses",
     label: "Courses and LMP events",
     fileName: "DFP_NEO_Courses_Template.csv",
-    requiredHeaders: ["Master LMP", "Event Code", "Event Title", "Type", "Duration Minutes"],
-    optionalHeaders: ["Aircraft Type", "Crew Required", "Pre Flight Minutes", "Post Flight Minutes"],
+    requiredHeaders: ["Event Code", "Event Title", "Type", "Flight or Sim Hours"],
+    optionalHeaders: ["Course", "Master LMP", "Event description", "Phase", "Module", "Day/Night", "Dual/Solo", "Config", "Resource Number", "Total Event Hours", "Preflight Time", "Post Flight Time", "Method/s of Delivery", "Type/s and Method/s of Assessment", "Resources Required (physical)", "Resources Required (Human)", "Pre-requisite Events (Ground School)", "Pre-requisite Events (Sim/Flying)", "Aircraft Type", "Crew Required", "Duration Minutes"],
     exampleRows: [
-      ["Master LMP Name", "EVENT-001", "Training event", "Flight", "90", "Aircraft Type", "Crew Role 1, Crew Role 2", "90", "60"]
+      ["EVENT-001", "Training event", "Flight", "1.5", "Master LMP Name", "Event description", "Phase 1", "Module A", "Day", "Dual", "ANY", "1", "2.5", "1", "0.5", "Flight", "Visual observation", "Aircraft Type", "Crew Role 1, Crew Role 2", "", "", "Aircraft Type", "Crew Role 1, Crew Role 2", "90"]
     ],
     settingsSection: "platform-master-lmp-access"
   },
@@ -30218,12 +30290,24 @@ const wizardRequiredHeaderAliases = {
   personnelId: ["personnelid", "personid", "staffid", "employeeid", "serviceid", "employeenumber", "personnelnumber"],
   code: ["icao", "locationcode", "basecode"],
   aircrafttype: ["aircraft", "resource"],
-  course: ["courseallocation", "allocatedcourse", "courseassigned", "trainingcourse"],
+  course: ["courseallocation", "allocatedcourse", "courseassigned", "trainingcourse", "package", "masterlmp", "masterlmpname", "lmp", "lmpname"],
   coursenumber: ["courseno", "coursenum", "courseid", "coursecode"],
   masterlmp: ["masterlmpname", "lmp", "lmpname"],
   eventcode: ["code", "eventid", "eventnumber"],
   eventtitle: ["eventdescription", "description", "eventname", "title"],
-  durationminutes: ["duration", "durationmins", "durationmin", "totaldurationminutes", "totaldurationmins"],
+  durationminutes: ["duration", "durationmins", "durationmin", "totaldurationminutes", "totaldurationmins", "totaleventhours", "flightorsimhours", "flightsimhours", "flightorsimhrs", "fltsimhrs"],
+  flightorsimhours: ["flightorsimhrs", "flightsimhours", "fltsimhrs", "totaleventhours", "totalhours", "duration", "durationhours", "durationminutes", "durationmins"],
+  totaleventhours: ["totalhours", "duration", "durationhours", "durationminutes", "durationmins"],
+  preflighttime: ["preflight", "preflightminutes", "preeventtime", "preeventminutes", "preflightmins"],
+  postflighttime: ["postflight", "postflightminutes", "posteventtime", "posteventminutes", "postflightmins"],
+  methodsofdelivery: ["methodofdelivery", "deliverymethod", "deliverymethods"],
+  typesandmethodsofassessment: ["methodofassessment", "methodsofassessment", "assessmentmethod", "assessmentmethods"],
+  resourcesrequiredphysical: ["resourcesphysical", "physicalresources", "aircrafttype", "aircraft", "resource"],
+  resourcesrequiredhuman: ["resourceshuman", "humanresources", "crewrequired", "crewrequirements"],
+  prerequisiteeventsgroundschool: ["prerequisitesground", "groundprerequisites", "groundschoolprerequisites"],
+  prerequisiteeventssimflying: ["prerequisitesflying", "flyingprerequisites", "simflyingprerequisites", "simulatorflyingprerequisites"],
+  eventdetailscommon: ["commondetails", "eventcommon", "common"],
+  eventdetailssortie: ["sortiedetails", "eventsortie", "sortie"],
   startdate: ["start", "coursestart", "startdt"]
 };
 const wizardHeaderMatchesRequired = (headerKeys, requiredHeader) => {
@@ -30321,21 +30405,32 @@ const readWizardTemplateRows = async (file) => {
   if (["xlsx", "xls"].includes(extension || "")) {
     if (typeof XLSX === "undefined") throw new Error("Excel support is not available in this browser session.");
     const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data, { type: "array" });
+    const workbook = XLSX.read(data, { type: "array", cellStyles: true });
     const firstSheet = workbook.SheetNames[0];
-    if (!firstSheet) return [];
-    return XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { header: 1, defval: "" });
+    if (!firstSheet) return { rows: [] };
+    const worksheet = workbook.Sheets[firstSheet];
+    return {
+      rows: XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" }),
+      worksheet,
+      workbook
+    };
   }
   const text = await file.text();
-  return parseWizardCsvRows(text);
+  return { rows: parseWizardCsvRows(text) };
 };
-const validateWizardTemplateFile = async (template, file) => {
-  const rows = await readWizardTemplateRows(file);
+const validateWizardTemplateFile = async (template, file, skipConfirmedExampleRow = false) => {
+  const { rows, worksheet, workbook } = await readWizardTemplateRows(file);
   const headerRowIndex = findWizardTemplateHeaderRowIndex(rows, template);
-  const headers = (rows[headerRowIndex] || []).map((cell) => String(cell || "").trim()).filter(Boolean);
+  const rawHeaderRow = rows[headerRowIndex] || [];
+  const headerEntries = rawHeaderRow.map((cell, index) => ({ header: String(cell || "").trim(), index })).filter((entry) => Boolean(entry.header));
+  const headers = headerEntries.map((entry) => entry.header);
   const headerKeys = new Set(headers.map(normaliseWizardHeader));
   const missingHeaders = template.requiredHeaders.filter((header) => !wizardHeaderMatchesRequired(headerKeys, header));
-  const dataRows = rows.slice(headerRowIndex + 1).filter((row) => row.some((cell) => String(cell || "").trim()));
+  const exampleRowDetection = worksheet && headers.length > 0 ? detectStyledExampleRow(worksheet, headerRowIndex + 1, rawHeaderRow.length, workbook) : null;
+  const dataRows = rows.slice(headerRowIndex + 1).map((row, index) => ({
+    excelRowNumber: headerRowIndex + index + 2,
+    values: headerEntries.map((entry) => String(row[entry.index] || "").trim())
+  })).filter((record) => !(skipConfirmedExampleRow && exampleRowDetection?.isStyledExampleRow && record.excelRowNumber === exampleRowDetection.rowNumber)).map((record) => record.values).filter((row) => row.some((cell) => String(cell || "").trim()));
   const issues = [];
   if (headers.length === 0) issues.push("The first row needs column headers.");
   if (missingHeaders.length > 0) issues.push(`Missing required column${missingHeaders.length === 1 ? "" : "s"}: ${missingHeaders.join(", ")}.`);
@@ -30352,13 +30447,25 @@ const validateWizardTemplateFile = async (template, file) => {
       ]
     };
   }
+  if (exampleRowDetection?.isStyledExampleRow && !skipConfirmedExampleRow) {
+    return {
+      status: "needs-confirmation",
+      fileName: file.name,
+      rowCount: dataRows.length,
+      message: `Row ${exampleRowDetection.rowNumber} appears to be the styled example row. Confirm it is only an example so I can skip it before importing.`,
+      headers,
+      dataRows,
+      exampleRowDetection
+    };
+  }
   return {
     status: "valid",
     fileName: file.name,
     rowCount: dataRows.length,
     message: `${file.name} looks ready. ${dataRows.length} row${dataRows.length === 1 ? "" : "s"} passed the basic format check.`,
     headers,
-    dataRows
+    dataRows,
+    exampleRowDetection: exampleRowDetection || void 0
   };
 };
 const normaliseUnitSettingsIdentifier = (value) => String(value || "").trim().toUpperCase();
@@ -31507,6 +31614,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
   const [uploadedTraineeProfileRows, setUploadedTraineeProfileRows] = reactExports.useState([]);
   const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = reactExports.useState([]);
   const fileInputRef = reactExports.useRef(null);
+  const pendingWizardTemplateFilesRef = reactExports.useRef({});
   const lastSetupTestPersonnelSnapshotRef = reactExports.useRef("");
   const wizardShellRef = reactExports.useRef(null);
   const wizardSettingsEmbedRef = reactExports.useRef(null);
@@ -35063,21 +35171,24 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     if (fileInputRef.current) fileInputRef.current.value = "";
     fileInputRef.current?.click();
   };
-  const handleTemplateFile = async (templateId, file) => {
+  const handleTemplateFile = async (templateId, file, skipConfirmedExampleRow = false) => {
     if (!file) return;
     const template = initialSetupTemplates.find((item) => item.id === templateId);
     if (!template) return;
-    setImportConfirmations((current) => {
-      const next = { ...current };
-      delete next[templateId];
-      return next;
-    });
+    pendingWizardTemplateFilesRef.current[templateId] = file;
+    if (!skipConfirmedExampleRow) {
+      setImportConfirmations((current) => {
+        const next = { ...current };
+        delete next[templateId];
+        return next;
+      });
+    }
     setUploadResults((current) => ({
       ...current,
       [templateId]: { status: "idle", fileName: file.name, message: `Checking ${file.name}...` }
     }));
     try {
-      const result = await validateWizardTemplateFile(template, file);
+      const result = await validateWizardTemplateFile(template, file, skipConfirmedExampleRow);
       setUploadResults((current) => ({ ...current, [templateId]: result }));
       pushWizardImportDiag("template:validated", {
         templateId,
@@ -35085,7 +35196,8 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         status: result.status,
         headers: result.headers || [],
         dataRows: result.dataRows?.length || 0,
-        issues: result.issues || []
+        issues: result.issues || [],
+        exampleRowDetection: result.exampleRowDetection
       });
       if (template.id === "courses") {
         pushWizardLmpDiag("upload:validated", {
@@ -35095,6 +35207,7 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
           headers: result.headers || [],
           dataRows: result.dataRows?.length || 0,
           issues: result.issues || [],
+          exampleRowDetection: result.exampleRowDetection,
           sampleRows: (result.dataRows || []).slice(0, 5)
         });
       }
@@ -35125,7 +35238,15 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       }));
     }
   };
-  const parseWizardTemplateList = (value) => String(value || "").split(/[;,]/).map((item) => item.trim()).filter(Boolean);
+  const confirmWizardTemplateExampleRow = (templateId) => {
+    const pendingFile = pendingWizardTemplateFilesRef.current[templateId];
+    if (!pendingFile) {
+      setSaveMessage("Upload the file again so I can confirm and skip the example row.");
+      return;
+    }
+    void handleTemplateFile(templateId, pendingFile, true);
+  };
+  const parseWizardTemplateList = (value) => String(value || "").split(/\r?\n|[;,]/).map((item) => item.trim()).filter(Boolean);
   const parseWizardTemplateNumber = (value, fallback = 0) => {
     const parsed = Number(String(value || "").replace(/[^0-9.-]/g, ""));
     return Number.isFinite(parsed) ? parsed : fallback;
@@ -35142,13 +35263,14 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
     const defaultMasterLmp = String(trainingDraft.lmpCode || trainingDraft.lmpName || "").trim();
     return (result.dataRows || []).map((row, index) => {
       const code = getWizardCellByHeader(headers, row, "Event Code");
-      const title = getWizardCellByHeader(headers, row, "Event Title") || code;
+      const title = getWizardCellByAnyHeader(headers, row, ["Event Title", "Event description", "Description"]) || code;
       const masterLmp = getWizardCellByHeader(headers, row, "Master LMP") || defaultMasterLmp || "Master LMP";
       const courses = parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Courses", "Course", "Package"])).filter(Boolean);
       const itemCourses = courses.length > 0 ? courses : [masterLmp];
       const eventType = normaliseWizardTemplateEventType(getWizardCellByHeader(headers, row, "Type"));
-      const durationValue = getWizardCellByHeader(headers, row, "Duration Minutes");
-      const duration = parseWizardTemplateNumber(durationValue, 0);
+      const flightOrSimHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Flight or Sim Hours", "Flight Or Sim Hours", "Flight/Sim Hours", "Flight Sim Hours"]), 0);
+      const totalEventHours = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Total Event Hours", "Total Hours"]), flightOrSimHours);
+      const duration = parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Duration Minutes", "Duration", "Total Event Hours", "Flight or Sim Hours"]), flightOrSimHours || totalEventHours || 0);
       return {
         id: `setup-lmp-${normaliseUnitSettingsIdentifier(masterLmp).replace(/[^A-Z0-9]+/g, "-")}-${normaliseUnitSettingsIdentifier(code).replace(/[^A-Z0-9]+/g, "-")}-${index + 1}`,
         code,
@@ -35157,23 +35279,25 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
         dayNight: getWizardCellByAnyHeader(headers, row, ["Day Night", "Day/Night"]) || "Day",
         eventDescription: title,
         prerequisites: parseWizardTemplateList(getWizardCellByHeader(headers, row, "Prerequisites")),
-        prerequisitesGround: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Prerequisites Ground", "Ground Prerequisites"])),
-        prerequisitesFlying: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Prerequisites Flying", "Flying Prerequisites"])),
-        eventDetailsCommon: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Event Details Common", "Common Details"])),
-        eventDetailsSortie: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Event Details Sortie", "Sortie Details", "Event Title"])),
-        totalEventHours: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Total Event Hours", "Total Hours"]), duration),
-        flightOrSimHours: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Flight Or Sim Hours", "Flight/Sim Hours", "Flight Sim Hours"]), eventType === "Flight" || eventType === "FTD" ? duration : 0),
+        prerequisitesGround: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Pre-requisite Events (Ground School)", "Prerequisites Ground", "Ground Prerequisites"])),
+        prerequisitesFlying: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Pre-requisite Events (Sim/Flying)", "Prerequisites Flying", "Flying Prerequisites"])),
+        eventDetailsCommon: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Event Details - Common", "Event Details Common", "Common Details"])),
+        eventDetailsSortie: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Event Details - Sortie", "Event Details Sortie", "Sortie Details", "Event Title", "Event description"])),
+        totalEventHours,
+        flightOrSimHours: flightOrSimHours || (eventType === "Flight" || eventType === "FTD" ? duration : 0),
         duration,
-        preFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Pre Flight Time", "Pre Flight Minutes"]), 0),
-        postFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Post Flight Time", "Post Flight Minutes"]), 0),
+        preFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Preflight Time", "Pre Flight Time", "Pre Flight Minutes"]), 0),
+        postFlightTime: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Post Flight Time", "Post-flight Time", "Post Flight Minutes"]), 0),
         type: eventType,
         sortieType: getWizardCellByAnyHeader(headers, row, ["Sortie Type", "Dual/Solo"]) || void 0,
         twrDiReqd: getWizardCellByAnyHeader(headers, row, ["Twr Di Reqd", "TWR DI Required"]) || "NO",
         cctOnly: getWizardCellByAnyHeader(headers, row, ["Cct Only", "CCT Only"]) || "NO",
-        methodOfDelivery: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Method Of Delivery", "Delivery Method"])),
-        methodOfAssessment: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Method Of Assessment", "Assessment Method"])),
-        resourcesPhysical: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Resources Physical", "Aircraft Type", "Resource"])),
-        resourcesHuman: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Resources Human", "Crew Required"])),
+        methodOfDelivery: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Method/s of Delivery", "Method Of Delivery", "Delivery Method"])),
+        methodOfAssessment: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Type/s and Method/s of Assessment", "Method Of Assessment", "Assessment Method"])),
+        resourcesPhysical: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Resources Required (physical)", "Resources Physical", "Aircraft Type", "Resource"])),
+        resourceNumber: parseWizardTemplateNumber(getWizardCellByAnyHeader(headers, row, ["Resource Number", "Resources Required Number"]), 0),
+        acceptableAircraftConfigs: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Config", "CONFIG", "Acceptable CONFIG", "Acceptable Aircraft CONFIG"])),
+        resourcesHuman: parseWizardTemplateList(getWizardCellByAnyHeader(headers, row, ["Resources Required (Human)", "Resources Human", "Crew Required"])),
         location: getWizardCellByHeader(headers, row, "Location") || locationDraft.code || unitDraft.locationCode || "",
         unit: getWizardCellByHeader(headers, row, "Unit") || unitDraft.code || "",
         courses: itemCourses,
@@ -38395,10 +38519,11 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
       const importConfirmation = importConfirmations[template.id];
       const isValid = result?.status === "valid";
       const isError = result?.status === "error";
+      const needsConfirmation = result?.status === "needs-confirmation";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
-          className: `rounded-lg border bg-white p-3 shadow-sm ${isValid ? "border-emerald-300" : isError ? "border-red-300" : "border-slate-300"}`,
+          className: `rounded-lg border bg-white p-3 shadow-sm ${isValid ? "border-emerald-300" : isError ? "border-red-300" : needsConfirmation ? "border-amber-300" : "border-slate-300"}`,
           onDragOver: (event) => {
             event.preventDefault();
             event.dataTransfer.dropEffect = "copy";
@@ -38427,9 +38552,25 @@ const InitialSetupWizard = ({ platformConfig, organisationSettings, unitCode, lo
                 children: "Drop file here or click to upload"
               }
             ),
-            result ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 rounded-md px-3 py-2 text-xs leading-5 ${isValid ? "bg-emerald-50 text-emerald-800" : isError ? "bg-red-50 text-red-800" : "bg-slate-100 text-slate-600"}`, children: [
+            result ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 rounded-md px-3 py-2 text-xs leading-5 ${isValid ? "bg-emerald-50 text-emerald-800" : isError ? "bg-red-50 text-red-800" : needsConfirmation ? "bg-amber-50 text-amber-900" : "bg-slate-100 text-slate-600"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold", children: result.message }),
               result.issues?.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 list-disc space-y-1 pl-4", children: result.issues.map((issue) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: issue }, issue)) }) : null,
+              needsConfirmation ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-md border border-amber-300 bg-white px-3 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "font-semibold text-amber-900", children: [
+                  "Confirm row ",
+                  result.exampleRowDetection?.rowNumber || 2,
+                  " is an example row only and should not be imported."
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    className: `${wizardPrimaryButtonClass} mt-3`,
+                    onClick: () => confirmWizardTemplateExampleRow(template.id),
+                    children: "Confirm and skip example row"
+                  }
+                )
+              ] }) : null,
               isValid ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
@@ -51850,78 +51991,6 @@ const resolveImportedLocationCode = (rawLocation, configuredLocations = [], airf
     return String(configuredCatalogueMatch.code || configuredCatalogueMatch.icaoCode || configuredCatalogueMatch.icao || rawText).trim().toUpperCase();
   }
   throw new Error(`Location "${rawText}" was recognised as ${describeCatalogueEntry(catalogueMatch)}, but that airfield is not configured in Settings > Organisation, Bases & Areas.`);
-};
-const getCell = (worksheet, rowNumber, columnNumber) => {
-  const address = `${columnToName(columnNumber)}${rowNumber}`;
-  return worksheet?.[address];
-};
-const columnToName = (columnNumber) => {
-  let name = "";
-  let column = columnNumber;
-  while (column > 0) {
-    const remainder = (column - 1) % 26;
-    name = String.fromCharCode(65 + remainder) + name;
-    column = Math.floor((column - 1) / 26);
-  }
-  return name;
-};
-const normaliseCellText = (value) => String(value ?? "").trim();
-const getCellText = (cell) => normaliseCellText(cell?.w ?? cell?.v);
-const getColourKey = (color) => {
-  if (!color) return "";
-  if (color.rgb) return `rgb:${color.rgb.toUpperCase()}`;
-  if (color.indexed !== void 0) return `indexed:${color.indexed}`;
-  if (color.theme !== void 0) return `theme:${color.theme}`;
-  return "";
-};
-const getStyleColourKey = (cell) => {
-  const fontColour = getColourKey(cell?.s?.font?.color);
-  if (fontColour) return `font:${fontColour}`;
-  const fillColour = getColourKey(cell?.s?.fgColor);
-  if (fillColour) return `fill:${fillColour}`;
-  if (cell?.s?.fillId !== void 0) return `fillid:${cell.s.fillId}`;
-  if (cell?.s?.fillid !== void 0) return `fillid:${cell.s.fillid}`;
-  if (cell?.s?.patternType) return `pattern:${cell.s.patternType}`;
-  return "";
-};
-const workbookHasItalicFont = (workbook) => Array.isArray(workbook?.Styles?.Fonts) && workbook.Styles.Fonts.some((font) => Boolean(font?.italic));
-const detectStyledExampleRow = (worksheet, headerRowNumber, headerColumnCount, workbook) => {
-  const rowNumber = headerRowNumber + 1;
-  let populatedCellCount = 0;
-  let italicCellCount = 0;
-  let differingColourCellCount = 0;
-  const hasWorkbookItalicStyle = workbookHasItalicFont(workbook);
-  for (let column = 1; column <= headerColumnCount; column += 1) {
-    const headerCell = getCell(worksheet, headerRowNumber, column);
-    const exampleCell = getCell(worksheet, rowNumber, column);
-    if (!getCellText(exampleCell)) continue;
-    populatedCellCount += 1;
-    if (exampleCell?.s?.font?.italic || hasWorkbookItalicStyle) italicCellCount += 1;
-    const headerColour = getStyleColourKey(headerCell);
-    const exampleColour = getStyleColourKey(exampleCell);
-    if (headerColour && headerColour !== exampleColour) differingColourCellCount += 1;
-  }
-  const hasExampleCandidate = populatedCellCount > 0;
-  const italicRatio = populatedCellCount > 0 ? italicCellCount / populatedCellCount : 0;
-  const colourRatio = populatedCellCount > 0 ? differingColourCellCount / populatedCellCount : 0;
-  return {
-    hasExampleCandidate,
-    isStyledExampleRow: hasExampleCandidate && italicRatio >= 0.75 && colourRatio >= 0.5,
-    rowNumber,
-    populatedCellCount,
-    italicCellCount,
-    differingColourCellCount
-  };
-};
-const buildRowRecords = (rawRows, headerRowIndex, skipExampleRow) => {
-  const header = rawRows[headerRowIndex].map((cell) => String(cell || "").trim());
-  return rawRows.slice(headerRowIndex + 1).map((row, index) => ({
-    excelRowNumber: headerRowIndex + index + 2,
-    row: header.reduce((record, key, columnIndex) => {
-      if (key) record[key] = row[columnIndex];
-      return record;
-    }, {})
-  })).filter((record) => !skipExampleRow || record.excelRowNumber !== headerRowIndex + 2).filter((record) => Object.values(record.row).some((value) => normaliseCellText(value)));
 };
 const normaliseCallsignPrefixToken = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 const parseImportedCallsign = (rawValue, unitCode, unitCallsignSettings) => {
