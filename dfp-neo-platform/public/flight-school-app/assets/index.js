@@ -83209,6 +83209,14 @@ const getStringFromRow = (row, possibleKeys) => {
   const value = getValueFromRow(row, possibleKeys);
   return value === void 0 || value === null ? "" : String(value).trim();
 };
+const hasAnyHeader = (row, possibleKeys) => {
+  const rowKeys = Object.keys(row);
+  return possibleKeys.some((key) => {
+    if (row[key] !== void 0) return true;
+    const lowerKey = key.toLowerCase().replace(/[\s/]/g, "");
+    return rowKeys.some((rowKey) => rowKey.toLowerCase().replace(/[\s/]/g, "") === lowerKey);
+  });
+};
 const splitListValue = (value) => value.split(/\r?\n|;|,/).map((item) => item.trim()).filter(Boolean);
 const normaliseService = (value) => {
   const cleanValue = value.trim();
@@ -83247,28 +83255,34 @@ const normaliseImportedStaffRole = (value, crewPositionTerminology) => {
   if (["pilot", "aircrew pilot", "captain"].includes(cleanLower)) return "Pilot";
   return cleanValue;
 };
-const applyQualificationRoles = (parsedData, rolesValue, crewPositionTerminology, staffQualificationCatalogue2) => {
+const applyQualificationFlags = (parsedData, qualificationsValue, staffQualificationCatalogue2) => {
+  if (!qualificationsValue) return;
+  const qualificationTokens = splitListValue(qualificationsValue);
+  const qualificationsLower = qualificationTokens.join(" ").toLowerCase();
+  const instructorQualifications = getInstructorQualificationDefinitions(staffQualificationCatalogue2);
+  const matchedQualificationIds = normaliseAssignedQualificationIds(qualificationsValue, staffQualificationCatalogue2, false);
+  const hasLinkedInstructorQualification = qualificationTokens.some((token) => instructorQualifications.some((qualification) => qualificationMatches(token, qualification)));
+  const hasLegacyInstructorQualification = qualificationsLower.includes("qfi") || qualificationsLower.includes("instructor");
+  const hasQualificationId = (id) => matchedQualificationIds.some((value) => normaliseQualificationToken(value) === id);
+  const hasQualificationToken = (id) => qualificationTokens.some((token) => normaliseQualificationToken(token) === id);
+  const hasCoToken = /\bco\b/i.test(qualificationsValue);
+  parsedData.isCommandingOfficer = hasCoToken || hasQualificationToken("co") || qualificationsLower.includes("commanding officer") || hasQualificationId("co");
+  parsedData.isCFI = qualificationsLower.includes("cfi") || hasQualificationId("cfi");
+  parsedData.isExecutive = qualificationsLower.includes("exec") || qualificationsLower.includes("executive") || hasQualificationId("executive");
+  parsedData.isFlyingSupervisor = qualificationsLower.includes("fly sup") || qualificationsLower.includes("flying supervisor") || qualificationsLower.includes("supervisor") || hasQualificationId("flying-supervisor");
+  parsedData.isTestingOfficer = qualificationsLower.includes("testing") || qualificationsLower.includes("test officer") || hasQualificationId("testing-officer");
+  parsedData.isIRE = qualificationsLower.includes("ire") || hasQualificationId("ire");
+  parsedData.isOFI = qualificationsLower.includes("ofi") || hasQualificationId("ofi");
+  parsedData.isQFI = hasLegacyInstructorQualification || hasLinkedInstructorQualification || hasQualificationId("qfi");
+  parsedData.isDeputyFlightCommander = qualificationsLower.includes("dfc") || qualificationsLower.includes("deputy flight commander") || hasQualificationId("dfc");
+  parsedData.isContractor = qualificationsLower.includes("contractor") || hasQualificationId("contractor");
+  parsedData.isAdminStaff = qualificationsLower.includes("admin") || hasQualificationId("admin-staff");
+};
+const applyRoleAssignments = (parsedData, rolesValue, crewPositionTerminology) => {
   if (!rolesValue) return;
   const roleTokens = splitListValue(rolesValue);
   const rolesLower = roleTokens.join(" ").toLowerCase();
-  const instructorQualifications = getInstructorQualificationDefinitions(staffQualificationCatalogue2);
-  const matchedQualificationIds = roleTokens.flatMap((role) => role.split(/[,\s/]+/)).map((role) => role.trim()).filter(Boolean).reduce((ids, token) => {
-    const match = normaliseStaffQualificationCatalogue(staffQualificationCatalogue2).qualifications.find((qualification) => qualificationMatches(token, qualification));
-    if (match && !ids.includes(match.id)) ids.push(match.id);
-    return ids;
-  }, []);
-  const hasLinkedInstructorQualification = roleTokens.some((token) => instructorQualifications.some((qualification) => qualificationMatches(token, qualification)));
-  const hasLegacyInstructorQualification = rolesLower.includes("qfi") || rolesLower.includes("instructor");
-  const hasQualificationId = (id) => matchedQualificationIds.some((value) => normaliseQualificationToken(value) === id);
   const importedCrewRole = roleTokens.map((role) => normaliseImportedStaffRole(role, crewPositionTerminology)).find((role) => role && role !== "QFI");
-  parsedData.isExecutive = rolesLower.includes("exec") || rolesLower.includes("executive");
-  parsedData.isFlyingSupervisor = rolesLower.includes("fly sup") || rolesLower.includes("flying supervisor") || rolesLower.includes("supervisor");
-  parsedData.isTestingOfficer = rolesLower.includes("testing") || rolesLower.includes("test officer");
-  parsedData.isIRE = rolesLower.includes("ire") || hasQualificationId("ire");
-  parsedData.isCFI = rolesLower.includes("cfi") || hasQualificationId("cfi");
-  parsedData.isOFI = rolesLower.includes("ofi") || hasQualificationId("ofi");
-  parsedData.isQFI = hasLegacyInstructorQualification || hasLinkedInstructorQualification;
-  parsedData.isAdminStaff = rolesLower.includes("admin");
   if (importedCrewRole) {
     parsedData.role = importedCrewRole;
     if (rolesLower.includes("sim ip") || rolesLower.includes("contractor staff")) {
@@ -83281,7 +83295,7 @@ const applyQualificationRoles = (parsedData, rolesValue, crewPositionTerminology
     parsedData.isContractor = true;
   } else if (rolesLower.includes("pilot")) {
     parsedData.role = "Pilot";
-  } else if (hasLegacyInstructorQualification || hasLinkedInstructorQualification) {
+  } else if (rolesLower.includes("instructor")) {
     parsedData.role = "Pilot";
   }
 };
@@ -83340,7 +83354,7 @@ const BulkUpdateFlyout = ({
       let updatedCount = 0;
       let skippedCount = 0;
       for (const row of json) {
-        const idValue = getValueFromRow(row, ["Personnel ID", "Service ID", "Employee ID", "Employee Number", "Personnel Number", "Staff ID", "ID", "ID Number", "IDNumber"]);
+        const idValue = getValueFromRow(row, ["PMKeys/ID", "PMKeys", "Personnel ID", "Service ID", "Employee ID", "Employee Number", "Personnel Number", "Staff ID", "ID", "ID Number", "IDNumber"]);
         if (idValue === null || idValue === void 0 || String(idValue).trim() === "") {
           skippedCount++;
           continue;
@@ -83402,9 +83416,14 @@ const BulkUpdateFlyout = ({
         if (email) parsedData.email = email;
         const permissions = getStringFromRow(row, ["Permissions", "Permission"]);
         if (permissions) parsedData.permissions = splitListValue(permissions);
-        const rolesStr = getStringFromRow(row, ["Roles", "Qualifications and Roles", "Qualifications & Roles", "Qualifications"]);
-        applyQualificationRoles(parsedData, rolesStr, crewPositionTerminology, staffQualificationCatalogue2);
-        const importedQualificationIds = normaliseAssignedQualificationIds(rolesStr, staffQualificationCatalogue2, false);
+        const rolesStr = getStringFromRow(row, ["Roles", "Staff Role", "Staff Roles"]);
+        const qualificationsStr = getStringFromRow(row, ["Qualifications", "Qualification"]);
+        const combinedQualificationsAndRolesStr = getStringFromRow(row, ["Qualifications and Roles", "Qualifications & Roles"]);
+        const hasDedicatedQualificationsColumn = hasAnyHeader(row, ["Qualifications", "Qualification"]);
+        const qualificationSource = qualificationsStr || combinedQualificationsAndRolesStr || (!hasDedicatedQualificationsColumn ? rolesStr : "");
+        applyRoleAssignments(parsedData, rolesStr || (!qualificationsStr ? combinedQualificationsAndRolesStr : ""), crewPositionTerminology);
+        applyQualificationFlags(parsedData, qualificationSource, staffQualificationCatalogue2);
+        const importedQualificationIds = normaliseAssignedQualificationIds(qualificationSource, staffQualificationCatalogue2, false);
         if (importedQualificationIds.length > 0) {
           parsedData.preferences = {
             ...existingInstructor?.preferences || {},
@@ -83516,7 +83535,7 @@ const BulkUpdateFlyout = ({
           ]
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Expected columns include Personnel ID or Service ID, Name or Srname/First name, Service, Rank, callsign number, Roles, Category, Seat config." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Expected columns include PMKeys/ID or Personnel ID, Name or Srname/First name, Service, Rank, callsign number, Roles, Qualifications, Crew, Category, Seat config." }),
       statusMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-amber-300", children: statusMessage })
     ] }) }),
     !isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
