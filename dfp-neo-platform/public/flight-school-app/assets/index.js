@@ -129033,6 +129033,113 @@ const App = () => {
     const mockTrainees = contextFilteredTrainees.filter((t) => t._dataSource === "mockdata" && !dbCourses.has(t.course));
     return [...mockTrainees, ...dbTrainees];
   }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation, pushSetupTestPersonnelDiag, setupTestProfile]);
+  const scopedPublishedEventsForDate = reactExports.useMemo(() => {
+    const rawEvents = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
+    if (rawEvents.length === 0) return rawEvents;
+    const activeUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+").map((unit) => normalisePersonnelUnitCode(unit)).filter(Boolean);
+    const activeUnitSet = new Set(activeUnitCodes.map((unit) => normalisePersonnelUnitCode(unit)).filter(Boolean));
+    const activeLocationAliases = new Set(getConfiguredLocationAliasesForValue(platformConfig, school));
+    const normalisedActiveModel = normaliseOperationalModel(activeOperationalModel);
+    const activePeople = [
+      ...instructorsData.map((person) => ({ ...person, personType: "staff" })),
+      ...traineesData.map((person) => ({ ...person, personType: "trainee" }))
+    ];
+    const allPeople = [
+      ...allInstructorsData.map((person) => ({ ...person, personType: "staff" })),
+      ...allTraineesData.map((person) => ({ ...person, personType: "trainee" }))
+    ];
+    const personDisplayNames = (person) => [
+      person?.name,
+      person?.fullName,
+      getPersonDisplayName(person)
+    ].map((value) => String(value || "").trim()).filter(Boolean);
+    const matchesPerson = (person, label) => personDisplayNames(person).some((personName) => personnelNamesMatch(personName, label));
+    const personUnitCode = (person) => normalisePersonnelUnitCode(person?.unit);
+    const personLocationMatchesActive = (person) => {
+      const personLocation = person?.location;
+      if (personLocation && locationValueMatchesAliases(platformConfig, personLocation, activeLocationAliases)) return true;
+      const unitLocation = getConfiguredUnitLocationCode(platformConfig, person?.unit);
+      if (unitLocation && locationValueMatchesAliases(platformConfig, unitLocation, activeLocationAliases)) return true;
+      return false;
+    };
+    const collectCodes = (event, fields) => {
+      const values = fields.flatMap((field) => {
+        const value = event?.[field];
+        return Array.isArray(value) ? value : [value];
+      });
+      return Array.from(new Set(values.map((value) => normalisePersonnelUnitCode(value)).filter(Boolean)));
+    };
+    const collectLocationCodes = (event) => {
+      const values = [
+        event?.locationCode,
+        event?.location,
+        event?.baseCode,
+        event?.base,
+        event?.school,
+        event?.homeLocation,
+        event?.homeBase
+      ];
+      return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean)));
+    };
+    const getEventPersonnelLabels = (event) => Array.from(new Set([
+      ...getPersonnel(event),
+      ...Array.isArray(event.personnelRefs) ? event.personnelRefs.map((ref) => ref?.label || ref?.name) : []
+    ].map((label) => String(label || "").trim()).filter((label) => label && !isPlaceholderPersonnelName(label))));
+    const eventMatchesActiveDfpContext = (event) => {
+      const explicitModel = event?.operationalModel || event?.model || event?.operatingModel;
+      if (explicitModel && normaliseOperationalModel(explicitModel) !== normalisedActiveModel) return false;
+      const explicitUnitCodes = collectCodes(event, [
+        "taskingUnitCode",
+        "taskingUnitCodes",
+        "unitCode",
+        "unit",
+        "fixedCrewUnitCode",
+        "fixedCrewUnit",
+        "crewUnitCode",
+        "ownerUnitCode",
+        "owningUnitCode"
+      ]);
+      const explicitUnitMatch = explicitUnitCodes.length > 0 && explicitUnitCodes.some((unit) => activeUnitSet.has(unit));
+      if (explicitUnitCodes.length > 0 && !explicitUnitMatch) return false;
+      const personnelRefs = Array.isArray(event.personnelRefs) ? event.personnelRefs : [];
+      const refUnitCodes = Array.from(new Set(personnelRefs.flatMap((ref) => [ref?.unit, ref?.unitCode, ref?.fixedCrewUnit, ref?.fixedCrewUnitCode]).map((value) => normalisePersonnelUnitCode(value)).filter(Boolean)));
+      const refUnitMatch = refUnitCodes.length > 0 && refUnitCodes.some((unit) => activeUnitSet.has(unit));
+      if (refUnitCodes.length > 0 && !refUnitMatch) return false;
+      const personnelLabels = getEventPersonnelLabels(event);
+      const activePersonnelMatch = personnelLabels.some((label) => activePeople.some((person) => matchesPerson(person, label)));
+      if (activePersonnelMatch) return true;
+      if (explicitUnitMatch || refUnitMatch) return true;
+      const knownPersonnelMatches = personnelLabels.map((label) => allPeople.find((person) => matchesPerson(person, label))).filter(Boolean);
+      if (knownPersonnelMatches.length > 0) {
+        const anyKnownActiveUnit = knownPersonnelMatches.some((person) => {
+          const unit = personUnitCode(person);
+          return unit && activeUnitSet.has(unit);
+        });
+        if (anyKnownActiveUnit) return true;
+        const anyKnownActiveLocation = knownPersonnelMatches.some(personLocationMatchesActive);
+        if (anyKnownActiveLocation) return true;
+        return false;
+      }
+      const locationCodes = collectLocationCodes(event);
+      if (locationCodes.length > 0 && !locationCodes.some((location) => locationValueMatchesAliases(platformConfig, location, activeLocationAliases))) {
+        return false;
+      }
+      return true;
+    };
+    return rawEvents.filter(eventMatchesActiveDfpContext);
+  }, [
+    activeContextUnitCodes,
+    activeOperationalModel,
+    activeUnitCode,
+    allInstructorsData,
+    allTraineesData,
+    date,
+    instructorsData,
+    platformConfig,
+    publishedSchedules,
+    school,
+    traineesData
+  ]);
   const [isAuthenticated, setIsAuthenticated] = reactExports.useState(false);
   const [authUser, setAuthUser] = reactExports.useState(null);
   const [authSessionToken, setAuthSessionToken] = reactExports.useState("");
@@ -133788,7 +133895,7 @@ ${"=".repeat(60)}`);
     const aircraftRowCount = configuredAirframeCount;
     let deploymentCount = 0;
     if (activeView === "Program Schedule" || activeView === "DailyFlyingProgram" || activeView === "InstructorSchedule" || activeView === "TraineeSchedule") {
-      const currentDateEvents = publishedSchedules[date] || [];
+      const currentDateEvents = scopedPublishedEventsForDate;
       const deploymentIds = /* @__PURE__ */ new Set();
       currentDateEvents.forEach((event) => {
         if (!event.date || typeof event.date !== "string" || !event.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -133824,7 +133931,7 @@ ${"=".repeat(60)}`);
         stbyLineCount = Math.max(configuredStandbyCount, maxStbyLine);
       }
     } else {
-      const eventsForDate2 = publishedSchedules[date] || [];
+      const eventsForDate2 = scopedPublishedEventsForDate;
       const stbyEvents = eventsForDate2.filter(
         (e) => e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")
       );
@@ -133836,7 +133943,7 @@ ${"=".repeat(60)}`);
         stbyLineCount = Math.max(configuredStandbyCount, maxStbyLine);
       }
     }
-    const resourceEventsForView = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "BuildAnalysis"].includes(activeView) ? nextDayBuildEvents : publishedSchedules[date] || [];
+    const resourceEventsForView = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "BuildAnalysis"].includes(activeView) ? nextDayBuildEvents : scopedPublishedEventsForDate;
     const hasDutySupervisorEvent = resourceEventsForView.some((event) => event.resourceId === "Duty Sup");
     const hasTowerDutyInstructorEvent = resourceEventsForView.some((event) => event.resourceId === "TWR DI" || event.flightNumber === "TWR DI");
     const allResources = [
@@ -133863,6 +133970,7 @@ ${"=".repeat(60)}`);
     date,
     activeView,
     publishedSchedules,
+    scopedPublishedEventsForDate,
     nextDayBuildEvents
   ]);
   reactExports.useCallback((events2, allResources) => {
@@ -133929,7 +134037,7 @@ ${"=".repeat(60)}`);
     if (buildDfpDate !== date) setBuildDfpDate(date);
   }, [buildDfpDate, date]);
   const eventsForDate = reactExports.useMemo(() => {
-    const events2 = publishedSchedules[date] || [];
+    const events2 = scopedPublishedEventsForDate;
     if (shouldRecordDfpRenderDiagnostics()) {
       pushDfpDataDiag("render:events-for-date", {
         renderedDate: date,
@@ -133951,7 +134059,7 @@ ${"=".repeat(60)}`);
       });
     }
     return events2;
-  }, [date, publishedSchedules, snapshotDates]);
+  }, [date, publishedSchedules, scopedPublishedEventsForDate, snapshotDates]);
   reactExports.useEffect(() => {
     if (!isAuthenticated || !date) {
       setEventCompletionsForDate([]);
@@ -146657,12 +146765,12 @@ ${error instanceof Error ? error.message : String(error)}`,
   const buildIntelligenceHasPendingBuildEvents = nextDayBuildEvents.length > 0;
   const buildIntelligenceDate = buildIntelligenceHasPendingBuildEvents ? buildDfpDate : date;
   const buildIntelligenceEvents = reactExports.useMemo(() => {
-    const sourceEvents = buildIntelligenceHasPendingBuildEvents ? nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate })) : (publishedSchedules[date] || []).map((event) => ({
+    const sourceEvents = buildIntelligenceHasPendingBuildEvents ? nextDayBuildEvents.map((event) => ({ ...event, date: buildDfpDate })) : scopedPublishedEventsForDate.map((event) => ({
       ...event,
       date: event.date || date
     }));
     return sourceEvents.filter(eventMatchesBuildIntelligenceScope);
-  }, [buildDfpDate, buildIntelligenceHasPendingBuildEvents, date, eventMatchesBuildIntelligenceScope, nextDayBuildEvents, publishedSchedules]);
+  }, [buildDfpDate, buildIntelligenceHasPendingBuildEvents, date, eventMatchesBuildIntelligenceScope, nextDayBuildEvents, scopedPublishedEventsForDate]);
   const buildIntelligenceAnalysis = reactExports.useMemo(() => {
     const baseAnalysis = buildIntelligenceHasPendingBuildEvents && lastBuildAnalysis || (buildIntelligenceEvents.length > 0 ? analyzeBuildResults(
       buildIntelligenceEvents.map(({ date: _date, ...event }) => event),
@@ -146764,8 +146872,8 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, []);
   const getContextMenuEvent = reactExports.useCallback((eventId) => {
     if (!eventId) return null;
-    return (eventSegmentsForDate || []).find((event) => event.id === eventId) || (publishedSchedules[date] || []).find((event) => event.id === eventId) || null;
-  }, [date, eventSegmentsForDate, publishedSchedules]);
+    return (eventSegmentsForDate || []).find((event) => event.id === eventId) || scopedPublishedEventsForDate.find((event) => event.id === eventId) || null;
+  }, [eventSegmentsForDate, scopedPublishedEventsForDate]);
   const hasChangeBarNotification = reactExports.useCallback((candidateEvent) => {
     if (!candidateEvent) return false;
     const baselineEvents = baselineSchedules[activeBaselineKey];
@@ -146845,7 +146953,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const pauseDate = date;
     setBuildDfpDate(pauseDate);
-    const activeDfpEventsForPause = (publishedSchedules[pauseDate] || []).map((e) => {
+    const activeDfpEventsForPause = scopedPublishedEventsForDate.map((e) => {
       const { date: _d, ...rest } = e;
       return rest;
     });
@@ -146857,7 +146965,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     setPauseStagedEvents([]);
     handleNavigation("NextDayBuild");
     setShowPausePanel(true);
-  }, [canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, publishedSchedules]);
+  }, [canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, scopedPublishedEventsForDate]);
   const contextSettingsSections = reactExports.useMemo(() => [
     { label: "Configuration Health", sectionId: "platform-configuration-health" },
     { label: "Organisation, Bases & Areas", sectionId: "platform-organisation-locations" },
@@ -146915,7 +147023,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     let kind = contextKind || "workspace";
     const allEventsForContextActions = [
       ...eventSegmentsForDate || [],
-      ...publishedSchedules[date] || []
+      ...scopedPublishedEventsForDate
     ].filter((candidateEvent, index, events2) => candidateEvent?.id && events2.findIndex((event2) => event2.id === candidateEvent.id) === index);
     const selectedContextEvents = selectedEvent2 && selectedEventIds.has(selectedEvent2.id) && selectedEventIds.size > 1 ? allEventsForContextActions.filter((candidateEvent) => selectedEventIds.has(candidateEvent.id)) : selectedEvent2 ? [selectedEvent2] : [];
     const selectedChangeBarEvents = selectedContextEvents.filter((candidateEvent) => hasChangeBarNotification(candidateEvent));
@@ -150388,7 +150496,7 @@ Do you want to replace the existing entry?`,
               }
               const pauseDate = date;
               setBuildDfpDate(pauseDate);
-              const activeDfpEventsForPause = (publishedSchedules[pauseDate] || []).map(
+              const activeDfpEventsForPause = scopedPublishedEventsForDate.map(
                 (e) => {
                   const { date: _d, ...rest } = e;
                   return rest;
@@ -150497,7 +150605,7 @@ Do you want to replace the existing entry?`,
                         flyingWindowExclusions,
                         onUpdateFlyingWindowExclusions: handleUpdateFlyingWindowExclusions,
                         date,
-                        activeDfpEvents: publishedSchedules[date] || [],
+                        activeDfpEvents: scopedPublishedEventsForDate,
                         resources: buildResources,
                         instructors: instructorsData,
                         syllabusDetails: visibleSyllabusDetails,
@@ -150674,7 +150782,7 @@ Do you want to replace the existing entry?`,
                   eventsForDate: (() => {
                     const seenIds = /* @__PURE__ */ new Set();
                     const seenSlots = /* @__PURE__ */ new Set();
-                    return (publishedSchedules[date] || []).filter((e) => {
+                    return scopedPublishedEventsForDate.filter((e) => {
                       if (seenIds.has(e.id)) return false;
                       if (!e.date || typeof e.date !== "string" || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
                       if (e.resourceId && (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY"))) return false;

@@ -29183,6 +29183,145 @@ const App: React.FC = () => {
         return [...mockTrainees, ...dbTrainees];
     }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation, pushSetupTestPersonnelDiag, setupTestProfile]);
 
+    const scopedPublishedEventsForDate = useMemo<ScheduleEvent[]>(() => {
+        const rawEvents: ScheduleEvent[] = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
+        if (rawEvents.length === 0) return rawEvents;
+
+        const activeUnitCodes = activeContextUnitCodes.length > 0
+            ? activeContextUnitCodes
+            : String(activeUnitCode || '').split('+').map(unit => normalisePersonnelUnitCode(unit)).filter(Boolean);
+        const activeUnitSet = new Set(activeUnitCodes.map(unit => normalisePersonnelUnitCode(unit)).filter(Boolean));
+        const activeLocationAliases = new Set(getConfiguredLocationAliasesForValue(platformConfig, school));
+        const normalisedActiveModel = normaliseOperationalModel(activeOperationalModel);
+
+        const activePeople = [
+            ...instructorsData.map(person => ({ ...(person as any), personType: 'staff' })),
+            ...traineesData.map(person => ({ ...(person as any), personType: 'trainee' })),
+        ];
+        const allPeople = [
+            ...allInstructorsData.map(person => ({ ...(person as any), personType: 'staff' })),
+            ...allTraineesData.map(person => ({ ...(person as any), personType: 'trainee' })),
+        ];
+
+        const personDisplayNames = (person: any): string[] => [
+            person?.name,
+            person?.fullName,
+            getPersonDisplayName(person),
+        ].map(value => String(value || '').trim()).filter(Boolean);
+
+        const matchesPerson = (person: any, label: string): boolean =>
+            personDisplayNames(person).some(personName => personnelNamesMatch(personName, label));
+
+        const personUnitCode = (person: any): string => normalisePersonnelUnitCode(person?.unit);
+
+        const personLocationMatchesActive = (person: any): boolean => {
+            const personLocation = person?.location;
+            if (personLocation && locationValueMatchesAliases(platformConfig, personLocation, activeLocationAliases)) return true;
+            const unitLocation = getConfiguredUnitLocationCode(platformConfig, person?.unit);
+            if (unitLocation && locationValueMatchesAliases(platformConfig, unitLocation, activeLocationAliases)) return true;
+            return false;
+        };
+
+        const collectCodes = (event: ScheduleEvent, fields: string[]): string[] => {
+            const values = fields.flatMap(field => {
+                const value = (event as any)?.[field];
+                return Array.isArray(value) ? value : [value];
+            });
+            return Array.from(new Set(values
+                .map(value => normalisePersonnelUnitCode(value))
+                .filter(Boolean)));
+        };
+
+        const collectLocationCodes = (event: ScheduleEvent): string[] => {
+            const values = [
+                (event as any)?.locationCode,
+                (event as any)?.location,
+                (event as any)?.baseCode,
+                (event as any)?.base,
+                (event as any)?.school,
+                (event as any)?.homeLocation,
+                (event as any)?.homeBase,
+            ];
+            return Array.from(new Set(values
+                .map(value => String(value || '').trim())
+                .filter(Boolean)));
+        };
+
+        const getEventPersonnelLabels = (event: ScheduleEvent): string[] => Array.from(new Set([
+            ...getPersonnel(event),
+            ...(Array.isArray((event as any).personnelRefs)
+                ? (event as any).personnelRefs.map((ref: any) => ref?.label || ref?.name)
+                : []),
+        ].map(label => String(label || '').trim()).filter(label => label && !isPlaceholderPersonnelName(label))));
+
+        const eventMatchesActiveDfpContext = (event: ScheduleEvent): boolean => {
+            const explicitModel = (event as any)?.operationalModel || (event as any)?.model || (event as any)?.operatingModel;
+            if (explicitModel && normaliseOperationalModel(explicitModel) !== normalisedActiveModel) return false;
+
+            const explicitUnitCodes = collectCodes(event, [
+                'taskingUnitCode',
+                'taskingUnitCodes',
+                'unitCode',
+                'unit',
+                'fixedCrewUnitCode',
+                'fixedCrewUnit',
+                'crewUnitCode',
+                'ownerUnitCode',
+                'owningUnitCode',
+            ]);
+            const explicitUnitMatch = explicitUnitCodes.length > 0 && explicitUnitCodes.some(unit => activeUnitSet.has(unit));
+            if (explicitUnitCodes.length > 0 && !explicitUnitMatch) return false;
+
+            const personnelRefs = Array.isArray((event as any).personnelRefs) ? (event as any).personnelRefs : [];
+            const refUnitCodes = Array.from(new Set(personnelRefs
+                .flatMap((ref: any) => [ref?.unit, ref?.unitCode, ref?.fixedCrewUnit, ref?.fixedCrewUnitCode])
+                .map(value => normalisePersonnelUnitCode(value))
+                .filter(Boolean)));
+            const refUnitMatch = refUnitCodes.length > 0 && refUnitCodes.some(unit => activeUnitSet.has(unit));
+            if (refUnitCodes.length > 0 && !refUnitMatch) return false;
+
+            const personnelLabels = getEventPersonnelLabels(event);
+            const activePersonnelMatch = personnelLabels.some(label => activePeople.some(person => matchesPerson(person, label)));
+            if (activePersonnelMatch) return true;
+            if (explicitUnitMatch || refUnitMatch) return true;
+
+            const knownPersonnelMatches = personnelLabels
+                .map(label => allPeople.find(person => matchesPerson(person, label)))
+                .filter(Boolean) as any[];
+            if (knownPersonnelMatches.length > 0) {
+                const anyKnownActiveUnit = knownPersonnelMatches.some(person => {
+                    const unit = personUnitCode(person);
+                    return unit && activeUnitSet.has(unit);
+                });
+                if (anyKnownActiveUnit) return true;
+                const anyKnownActiveLocation = knownPersonnelMatches.some(personLocationMatchesActive);
+                if (anyKnownActiveLocation) return true;
+                return false;
+            }
+
+            const locationCodes = collectLocationCodes(event);
+            if (locationCodes.length > 0 && !locationCodes.some(location => locationValueMatchesAliases(platformConfig, location, activeLocationAliases))) {
+                return false;
+            }
+
+            return true;
+        };
+
+        return rawEvents.filter(eventMatchesActiveDfpContext);
+    }, [
+        activeContextUnitCodes,
+        activeOperationalModel,
+        activeUnitCode,
+        allInstructorsData,
+        allTraineesData,
+        date,
+        instructorsData,
+        platformConfig,
+        publishedSchedules,
+        school,
+        traineesData,
+    ]);
+
     // ============================================================
     // AUTHENTICATION STATE
     // ============================================================
@@ -35079,7 +35218,7 @@ const App: React.FC = () => {
             // Match the rendered schedule source: deployment rows come from the
             // current date's saved events so stale/deleted deployments on other
             // dates cannot leave phantom Deployed rows behind.
-            const currentDateEvents: ScheduleEvent[] = publishedSchedules[date] || [];
+            const currentDateEvents: ScheduleEvent[] = scopedPublishedEventsForDate;
             const deploymentIds = new Set<string>();
             currentDateEvents.forEach(event => {
                 if (!event.date || typeof event.date !== 'string' || !event.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -35129,7 +35268,7 @@ const App: React.FC = () => {
             }
         } else {
             // For published schedules, check the events for that date
-            const eventsForDate = publishedSchedules[date] || [];
+            const eventsForDate = scopedPublishedEventsForDate;
             const stbyEvents = eventsForDate.filter(e =>
                 e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')
             );
@@ -35146,7 +35285,7 @@ const App: React.FC = () => {
 
         const resourceEventsForView = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'BuildAnalysis'].includes(activeView)
             ? nextDayBuildEvents
-            : (publishedSchedules[date] || []);
+            : scopedPublishedEventsForDate;
         const hasDutySupervisorEvent = resourceEventsForView.some(event => event.resourceId === 'Duty Sup');
         const hasTowerDutyInstructorEvent = resourceEventsForView.some(event => event.resourceId === 'TWR DI' || event.flightNumber === 'TWR DI');
 
@@ -35174,6 +35313,7 @@ const App: React.FC = () => {
         date,
         activeView,
         publishedSchedules,
+        scopedPublishedEventsForDate,
         nextDayBuildEvents,
     ]);
 
@@ -35269,7 +35409,7 @@ const App: React.FC = () => {
 
     const eventsForDate = useMemo(() => {
         // This is used for LOGIC (like conflict checks), not rendering.
-        const events = publishedSchedules[date] || [];
+        const events = scopedPublishedEventsForDate;
         if (shouldRecordDfpRenderDiagnostics()) {
             pushDfpDataDiag('render:events-for-date', {
                 renderedDate: date,
@@ -35291,7 +35431,7 @@ const App: React.FC = () => {
             });
         }
         return events;
-    }, [date, publishedSchedules, snapshotDates]);
+    }, [date, publishedSchedules, scopedPublishedEventsForDate, snapshotDates]);
 
     useEffect(() => {
         if (!isAuthenticated || !date) {
@@ -51068,12 +51208,12 @@ appliedUpdates.forEach(update => {
     const buildIntelligenceEvents = useMemo(() => {
         const sourceEvents = buildIntelligenceHasPendingBuildEvents
             ? nextDayBuildEvents.map(event => ({ ...event, date: buildDfpDate }))
-            : (publishedSchedules[date] || []).map(event => ({
+            : scopedPublishedEventsForDate.map(event => ({
                 ...event,
                 date: event.date || date,
             }));
         return sourceEvents.filter(eventMatchesBuildIntelligenceScope);
-    }, [buildDfpDate, buildIntelligenceHasPendingBuildEvents, date, eventMatchesBuildIntelligenceScope, nextDayBuildEvents, publishedSchedules]);
+    }, [buildDfpDate, buildIntelligenceHasPendingBuildEvents, date, eventMatchesBuildIntelligenceScope, nextDayBuildEvents, scopedPublishedEventsForDate]);
 
     const buildIntelligenceAnalysis = useMemo<BuildAnalysis | null>(() => {
         const baseAnalysis = (buildIntelligenceHasPendingBuildEvents && lastBuildAnalysis) || (
@@ -51196,10 +51336,10 @@ appliedUpdates.forEach(update => {
         if (!eventId) return null;
         return (
             (eventSegmentsForDate || []).find((event: any) => event.id === eventId) ||
-            (publishedSchedules[date] || []).find((event: ScheduleEvent) => event.id === eventId) ||
+            scopedPublishedEventsForDate.find((event: ScheduleEvent) => event.id === eventId) ||
             null
         ) as ScheduleEvent | null;
-    }, [date, eventSegmentsForDate, publishedSchedules]);
+    }, [eventSegmentsForDate, scopedPublishedEventsForDate]);
 
     const hasChangeBarNotification = useCallback((candidateEvent: ScheduleEvent | null): boolean => {
         if (!candidateEvent) return false;
@@ -51304,7 +51444,7 @@ appliedUpdates.forEach(update => {
         }
         const pauseDate = date;
         setBuildDfpDate(pauseDate);
-        const activeDfpEventsForPause = (publishedSchedules[pauseDate] || []).map((e: ScheduleEvent) => {
+        const activeDfpEventsForPause = scopedPublishedEventsForDate.map((e: ScheduleEvent) => {
             const { date: _d, ...rest } = e as any;
             return rest as Omit<ScheduleEvent, 'date'>;
         });
@@ -51316,7 +51456,7 @@ appliedUpdates.forEach(update => {
         setPauseStagedEvents([]);
         handleNavigation('NextDayBuild');
         setShowPausePanel(true);
-    }, [canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, publishedSchedules]);
+    }, [canEditDfpTiles, canRunNeoBuildForActiveModel, date, denyPlatformAction, handleNavigation, isViewingPastDfp, scopedPublishedEventsForDate]);
 
     const contextSettingsSections = useMemo(() => ([
         { label: 'Configuration Health', sectionId: 'platform-configuration-health' },
@@ -51379,7 +51519,7 @@ appliedUpdates.forEach(update => {
 
         const allEventsForContextActions = [
             ...(eventSegmentsForDate || []),
-            ...(publishedSchedules[date] || []),
+            ...scopedPublishedEventsForDate,
         ].filter((candidateEvent, index, events) => (
             candidateEvent?.id && events.findIndex((event) => event.id === candidateEvent.id) === index
         ));
@@ -55186,7 +55326,7 @@ appliedUpdates.forEach(update => {
                            const pauseDate = date; // active DFP date
                            setBuildDfpDate(pauseDate);
                            // Load the active DFP events into the NEO Build schedule
-                           const activeDfpEventsForPause = (publishedSchedules[pauseDate] || []).map(
+                           const activeDfpEventsForPause = scopedPublishedEventsForDate.map(
                                (e: ScheduleEvent) => { const { date: _d, ...rest } = e as any; return rest as Omit<ScheduleEvent, 'date'>; }
                            );
                            setNextDayBuildEvents(activeDfpEventsForPause);
@@ -55281,7 +55421,7 @@ appliedUpdates.forEach(update => {
                                     flyingWindowExclusions={flyingWindowExclusions}
                                     onUpdateFlyingWindowExclusions={handleUpdateFlyingWindowExclusions}
                                     date={date}
-                                    activeDfpEvents={publishedSchedules[date] || []}
+                                    activeDfpEvents={scopedPublishedEventsForDate}
                                     resources={buildResources}
                                     instructors={instructorsData}
                                     syllabusDetails={visibleSyllabusDetails}
@@ -55458,7 +55598,7 @@ appliedUpdates.forEach(update => {
                             eventsForDate={(() => {
                                 const seenIds = new Set<string>();
                                 const seenSlots = new Set<string>();
-                                return (publishedSchedules[date] || []).filter((e: ScheduleEvent) => {
+                                return scopedPublishedEventsForDate.filter((e: ScheduleEvent) => {
                                     if (seenIds.has(e.id)) return false;
                                     if (!e.date || typeof e.date !== 'string' || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
                                     if (e.resourceId && (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY'))) return false;
