@@ -129033,113 +129033,6 @@ const App = () => {
     const mockTrainees = contextFilteredTrainees.filter((t) => t._dataSource === "mockdata" && !dbCourses.has(t.course));
     return [...mockTrainees, ...dbTrainees];
   }, [activeContextUnitCodeSet, allTraineesData, dataSourceSettings, personMatchesActiveLocation, pushSetupTestPersonnelDiag, setupTestProfile]);
-  const scopedPublishedEventsForDate = reactExports.useMemo(() => {
-    const rawEvents = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
-    if (rawEvents.length === 0) return rawEvents;
-    const activeUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+").map((unit) => normalisePersonnelUnitCode(unit)).filter(Boolean);
-    const activeUnitSet = new Set(activeUnitCodes.map((unit) => normalisePersonnelUnitCode(unit)).filter(Boolean));
-    const activeLocationAliases = new Set(getConfiguredLocationAliasesForValue(platformConfig, school));
-    const normalisedActiveModel = normaliseOperationalModel(activeOperationalModel);
-    const activePeople = [
-      ...instructorsData.map((person) => ({ ...person, personType: "staff" })),
-      ...traineesData.map((person) => ({ ...person, personType: "trainee" }))
-    ];
-    const allPeople = [
-      ...allInstructorsData.map((person) => ({ ...person, personType: "staff" })),
-      ...allTraineesData.map((person) => ({ ...person, personType: "trainee" }))
-    ];
-    const personDisplayNames = (person) => [
-      person?.name,
-      person?.fullName,
-      getPersonDisplayName(person)
-    ].map((value) => String(value || "").trim()).filter(Boolean);
-    const matchesPerson = (person, label) => personDisplayNames(person).some((personName) => personnelNamesMatch(personName, label));
-    const personUnitCode = (person) => normalisePersonnelUnitCode(person?.unit);
-    const personLocationMatchesActive = (person) => {
-      const personLocation = person?.location;
-      if (personLocation && locationValueMatchesAliases(platformConfig, personLocation, activeLocationAliases)) return true;
-      const unitLocation = getConfiguredUnitLocationCode(platformConfig, person?.unit);
-      if (unitLocation && locationValueMatchesAliases(platformConfig, unitLocation, activeLocationAliases)) return true;
-      return false;
-    };
-    const collectCodes = (event, fields) => {
-      const values = fields.flatMap((field) => {
-        const value = event?.[field];
-        return Array.isArray(value) ? value : [value];
-      });
-      return Array.from(new Set(values.map((value) => normalisePersonnelUnitCode(value)).filter(Boolean)));
-    };
-    const collectLocationCodes = (event) => {
-      const values = [
-        event?.locationCode,
-        event?.location,
-        event?.baseCode,
-        event?.base,
-        event?.school,
-        event?.homeLocation,
-        event?.homeBase
-      ];
-      return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean)));
-    };
-    const getEventPersonnelLabels = (event) => Array.from(new Set([
-      ...getPersonnel(event),
-      ...Array.isArray(event.personnelRefs) ? event.personnelRefs.map((ref) => ref?.label || ref?.name) : []
-    ].map((label) => String(label || "").trim()).filter((label) => label && !isPlaceholderPersonnelName(label))));
-    const eventMatchesActiveDfpContext = (event) => {
-      const explicitModel = event?.operationalModel || event?.model || event?.operatingModel;
-      if (explicitModel && normaliseOperationalModel(explicitModel) !== normalisedActiveModel) return false;
-      const explicitUnitCodes = collectCodes(event, [
-        "taskingUnitCode",
-        "taskingUnitCodes",
-        "unitCode",
-        "unit",
-        "fixedCrewUnitCode",
-        "fixedCrewUnit",
-        "crewUnitCode",
-        "ownerUnitCode",
-        "owningUnitCode"
-      ]);
-      const explicitUnitMatch = explicitUnitCodes.length > 0 && explicitUnitCodes.some((unit) => activeUnitSet.has(unit));
-      if (explicitUnitCodes.length > 0 && !explicitUnitMatch) return false;
-      const personnelRefs = Array.isArray(event.personnelRefs) ? event.personnelRefs : [];
-      const refUnitCodes = Array.from(new Set(personnelRefs.flatMap((ref) => [ref?.unit, ref?.unitCode, ref?.fixedCrewUnit, ref?.fixedCrewUnitCode]).map((value) => normalisePersonnelUnitCode(value)).filter(Boolean)));
-      const refUnitMatch = refUnitCodes.length > 0 && refUnitCodes.some((unit) => activeUnitSet.has(unit));
-      if (refUnitCodes.length > 0 && !refUnitMatch) return false;
-      const personnelLabels = getEventPersonnelLabels(event);
-      const activePersonnelMatch = personnelLabels.some((label) => activePeople.some((person) => matchesPerson(person, label)));
-      if (activePersonnelMatch) return true;
-      if (explicitUnitMatch || refUnitMatch) return true;
-      const knownPersonnelMatches = personnelLabels.map((label) => allPeople.find((person) => matchesPerson(person, label))).filter(Boolean);
-      if (knownPersonnelMatches.length > 0) {
-        const anyKnownActiveUnit = knownPersonnelMatches.some((person) => {
-          const unit = personUnitCode(person);
-          return unit && activeUnitSet.has(unit);
-        });
-        if (anyKnownActiveUnit) return true;
-        const anyKnownActiveLocation = knownPersonnelMatches.some(personLocationMatchesActive);
-        if (anyKnownActiveLocation) return true;
-        return false;
-      }
-      const locationCodes = collectLocationCodes(event);
-      if (locationCodes.length > 0 && !locationCodes.some((location) => locationValueMatchesAliases(platformConfig, location, activeLocationAliases))) {
-        return false;
-      }
-      return true;
-    };
-    return rawEvents.filter(eventMatchesActiveDfpContext);
-  }, [
-    activeContextUnitCodes,
-    activeOperationalModel,
-    activeUnitCode,
-    allInstructorsData,
-    allTraineesData,
-    date,
-    instructorsData,
-    platformConfig,
-    publishedSchedules,
-    school,
-    traineesData
-  ]);
   const [isAuthenticated, setIsAuthenticated] = reactExports.useState(false);
   const [authUser, setAuthUser] = reactExports.useState(null);
   const [authSessionToken, setAuthSessionToken] = reactExports.useState("");
@@ -131838,6 +131731,113 @@ const App = () => {
   reactExports.useEffect(() => {
     publishedSchedulesRef.current = publishedSchedules;
   }, [publishedSchedules]);
+  const scopedPublishedEventsForDate = reactExports.useMemo(() => {
+    const rawEvents = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
+    if (rawEvents.length === 0) return rawEvents;
+    const activeUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+").map((unit) => normalisePersonnelUnitCode(unit)).filter(Boolean);
+    const activeUnitSet = new Set(activeUnitCodes.map((unit) => normalisePersonnelUnitCode(unit)).filter(Boolean));
+    const activeLocationAliases = new Set(getConfiguredLocationAliasesForValue(platformConfig, school));
+    const normalisedActiveModel = normaliseOperationalModel(activeOperationalModel);
+    const activePeople = [
+      ...instructorsData.map((person) => ({ ...person, personType: "staff" })),
+      ...traineesData.map((person) => ({ ...person, personType: "trainee" }))
+    ];
+    const allPeople = [
+      ...allInstructorsData.map((person) => ({ ...person, personType: "staff" })),
+      ...allTraineesData.map((person) => ({ ...person, personType: "trainee" }))
+    ];
+    const personDisplayNames = (person) => [
+      person?.name,
+      person?.fullName,
+      getPersonDisplayName(person)
+    ].map((value) => String(value || "").trim()).filter(Boolean);
+    const matchesPerson = (person, label) => personDisplayNames(person).some((personName) => personnelNamesMatch(personName, label));
+    const personUnitCode = (person) => normalisePersonnelUnitCode(person?.unit);
+    const personLocationMatchesActive = (person) => {
+      const personLocation = person?.location;
+      if (personLocation && locationValueMatchesAliases(platformConfig, personLocation, activeLocationAliases)) return true;
+      const unitLocation = getConfiguredUnitLocationCode(platformConfig, person?.unit);
+      if (unitLocation && locationValueMatchesAliases(platformConfig, unitLocation, activeLocationAliases)) return true;
+      return false;
+    };
+    const collectCodes = (event, fields) => {
+      const values = fields.flatMap((field) => {
+        const value = event?.[field];
+        return Array.isArray(value) ? value : [value];
+      });
+      return Array.from(new Set(values.map((value) => normalisePersonnelUnitCode(value)).filter(Boolean)));
+    };
+    const collectLocationCodes = (event) => {
+      const values = [
+        event?.locationCode,
+        event?.location,
+        event?.baseCode,
+        event?.base,
+        event?.school,
+        event?.homeLocation,
+        event?.homeBase
+      ];
+      return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean)));
+    };
+    const getEventPersonnelLabels = (event) => Array.from(new Set([
+      ...getPersonnel(event),
+      ...Array.isArray(event.personnelRefs) ? event.personnelRefs.map((ref) => ref?.label || ref?.name) : []
+    ].map((label) => String(label || "").trim()).filter((label) => label && !isPlaceholderPersonnelName(label))));
+    const eventMatchesActiveDfpContext = (event) => {
+      const explicitModel = event?.operationalModel || event?.model || event?.operatingModel;
+      if (explicitModel && normaliseOperationalModel(explicitModel) !== normalisedActiveModel) return false;
+      const explicitUnitCodes = collectCodes(event, [
+        "taskingUnitCode",
+        "taskingUnitCodes",
+        "unitCode",
+        "unit",
+        "fixedCrewUnitCode",
+        "fixedCrewUnit",
+        "crewUnitCode",
+        "ownerUnitCode",
+        "owningUnitCode"
+      ]);
+      const explicitUnitMatch = explicitUnitCodes.length > 0 && explicitUnitCodes.some((unit) => activeUnitSet.has(unit));
+      if (explicitUnitCodes.length > 0 && !explicitUnitMatch) return false;
+      const personnelRefs = Array.isArray(event.personnelRefs) ? event.personnelRefs : [];
+      const refUnitCodes = Array.from(new Set(personnelRefs.flatMap((ref) => [ref?.unit, ref?.unitCode, ref?.fixedCrewUnit, ref?.fixedCrewUnitCode]).map((value) => normalisePersonnelUnitCode(value)).filter(Boolean)));
+      const refUnitMatch = refUnitCodes.length > 0 && refUnitCodes.some((unit) => activeUnitSet.has(unit));
+      if (refUnitCodes.length > 0 && !refUnitMatch) return false;
+      const personnelLabels = getEventPersonnelLabels(event);
+      const activePersonnelMatch = personnelLabels.some((label) => activePeople.some((person) => matchesPerson(person, label)));
+      if (activePersonnelMatch) return true;
+      if (explicitUnitMatch || refUnitMatch) return true;
+      const knownPersonnelMatches = personnelLabels.map((label) => allPeople.find((person) => matchesPerson(person, label))).filter(Boolean);
+      if (knownPersonnelMatches.length > 0) {
+        const anyKnownActiveUnit = knownPersonnelMatches.some((person) => {
+          const unit = personUnitCode(person);
+          return unit && activeUnitSet.has(unit);
+        });
+        if (anyKnownActiveUnit) return true;
+        const anyKnownActiveLocation = knownPersonnelMatches.some(personLocationMatchesActive);
+        if (anyKnownActiveLocation) return true;
+        return false;
+      }
+      const locationCodes = collectLocationCodes(event);
+      if (locationCodes.length > 0 && !locationCodes.some((location) => locationValueMatchesAliases(platformConfig, location, activeLocationAliases))) {
+        return false;
+      }
+      return true;
+    };
+    return rawEvents.filter(eventMatchesActiveDfpContext);
+  }, [
+    activeContextUnitCodes,
+    activeOperationalModel,
+    activeUnitCode,
+    allInstructorsData,
+    allTraineesData,
+    date,
+    instructorsData,
+    platformConfig,
+    publishedSchedules,
+    school,
+    traineesData
+  ]);
   const publishedScheduleHistoryEvents = reactExports.useMemo(
     () => Object.values(publishedSchedules).flat(),
     [publishedSchedules]
