@@ -83457,6 +83457,22 @@ const BulkUpdateFlyout = ({
         } else if (callsignNumber !== void 0) {
           parsedData.callsignNumber = Number(callsignNumber) || 0;
         }
+        const secondaryCallsign = getValueFromRow(row, ["Secondary Callsign", "Secondary Call Sign", "Alt Callsign", "Alternate Callsign", "Alternative Callsign"]);
+        if (secondaryCallsign !== void 0 && secondaryCallsign !== null && String(secondaryCallsign).trim() !== "") {
+          try {
+            const parsedSecondaryCallsign = parseImportedCallsign(secondaryCallsign, String(parsedData.unit || ""), unitCallsignSettings);
+            if (parsedSecondaryCallsign?.callsign) {
+              parsedData.secondaryCallsign = parsedSecondaryCallsign.callsign;
+              parsedData.preferences = {
+                ...existingInstructor?.preferences || {},
+                ...parsedData.preferences || {},
+                secondaryCallsign: parsedSecondaryCallsign.callsign
+              };
+            }
+          } catch (error) {
+            throw new Error(`Row ${rowIndex + 2}: Secondary callsign ${error instanceof Error ? error.message : "is invalid."}`);
+          }
+        }
         const flight = getStringFromRow(row, ["Flight", "Flight/Sqn", "Section"]);
         if (flight) parsedData.flight = flight;
         const crew = getStringFromRow(row, ["Crew", "Fixed Crew", "Crew Group", "Fixed Crew Group", "Crew Name"]);
