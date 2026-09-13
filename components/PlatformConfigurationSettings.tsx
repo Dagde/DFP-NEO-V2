@@ -80,7 +80,6 @@ import {
   type AlternateCrewCompositionProfile,
   type CurrencyProfile,
 } from '../utils/crewCompositionProfiles';
-import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
 import {
   DEFAULT_STAFF_QUALIFICATIONS,
   normaliseStaffQualificationCatalogue,
@@ -3419,10 +3418,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const startOrganisationStructureEdit = () => {
     setOrganisationStructureImportError('');
     setOrganisationStructureUnlocked(true);
-  };
-
-  const downloadOrganisationStructureTemplate = () => {
-    downloadOrganisationStructureTemplateFile();
   };
 
   const applyImportedOrganisationStructure = (
@@ -9140,13 +9135,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <p className="mt-1 text-xs text-gray-400">{organisationStructure.levelCount} levels · {organisationStructure.levels.reduce((sum, level) => sum + (Array.isArray(level?.options) ? level.options.length : 0), 0)} options</p>
               </div>
               <div className="flex flex-wrap items-center gap-[1px]">
-                <button
-                  type="button"
-                  className={platformActionButtonClass}
-                  onClick={downloadOrganisationStructureTemplate}
-                >
-                  <span className="leading-tight">Download<br />Template</span>
-                </button>
                 <button
                   type="button"
                   className={platformActionButtonClass}

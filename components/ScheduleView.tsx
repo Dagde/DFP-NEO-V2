@@ -58,7 +58,6 @@ import { endDfpDragDiagnostic, recordDfpDragFlushDiagnostic, recordDfpDragMoveDi
 import { appendDfpMoveChangeTrace, isWatchingDfpMoveChangeEvent, summariseDfpMoveEvent, watchDfpMoveChangeEvents } from '../utils/dfpMoveChangeTrace';
 import { getAdaptiveContextMenuPosition } from '../utils/contextMenuPosition';
 import { DEFAULT_AIRFIELD_SOLAR_PROFILES } from '../utils/sunTimes';
-import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
 import {
     detectStyledExampleRow,
     type ExampleRowDetection,
@@ -822,20 +821,6 @@ const createSetupTestRecordId = (prefix: string, key = ''): string => {
 
 const initialSetupTemplates: InitialSetupWizardTemplate[] = [
     {
-        id: 'organisation',
-        label: 'Organisation structure',
-        fileName: 'DFP_NEO_Organisation_Structure_Template.csv',
-        requiredHeaders: ['Level', 'Name'],
-        optionalHeaders: ['Parent', 'Notes'],
-        exampleRows: [
-            ['0', 'Organisation', '', 'Top level organisation'],
-            ['1', 'Organisation Level 1', 'Organisation', 'Branch, command, region, division, or equivalent'],
-            ['2', 'Organisation Level 2', 'Organisation Level 1', 'Operating group, department, wing, team, or equivalent'],
-        ],
-        settingsSection: 'platform-organisation-locations',
-        focusSubsectionId: 'platform-organisation-structure',
-    },
-    {
         id: 'locations',
         label: 'Locations and bases',
         fileName: 'DFP_NEO_Locations_Template.csv',
@@ -997,10 +982,6 @@ const findWizardTemplateHeaderRowIndex = (rows: string[][], template: InitialSet
 };
 
 const downloadWizardTemplate = (template: InitialSetupWizardTemplate) => {
-    if (template.id === 'organisation') {
-        downloadOrganisationStructureTemplateFile(template.fileName);
-        return;
-    }
     const rows = [
         getWizardTemplateHeaders(template),
         ...template.exampleRows,
@@ -6479,7 +6460,6 @@ const InitialSetupWizard: React.FC<{
         return () => window.cancelAnimationFrame(animationFrameId);
     }, [currentStep, wizardPageMenuOpen]);
     const templateIdsByStep: Record<string, string[]> = {
-        'org-name': ['organisation'],
         'units-today': ['units'],
         'locations-today': ['locations'],
         'staff': ['staff'],
