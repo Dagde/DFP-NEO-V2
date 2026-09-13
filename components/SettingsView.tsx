@@ -39,7 +39,6 @@ import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTerminology';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
-import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
 import type { EmergencyFreezeAuthoritySettings } from '../utils/emergencyFreezeAuthority';
 import type { StaffQualificationDefinition } from '../utils/staffQualifications';
 import type { AllowedActions } from '../context/SystemFreezeContext';
@@ -54,9 +53,6 @@ import {
     getConfiguredScoringMatrixElements,
     getScoringMatrixElementGroup,
 } from '../utils/scoringMatrixElements';
-
-
-declare var XLSX: any;
 
 const TEMPLATE_OVERRIDE_FOLDER_ID = 'template_overrides';
 
@@ -965,26 +961,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         downloadPublicTemplate('/LMP_Syllabus_Template.xlsx', 'LMP_Syllabus_Template.xlsx');
     };
 
-    const handleDownloadLogbookTemplate = async () => {
-        if (await downloadStoredTemplate('logbook')) return;
-        const headers = ['Date', 'Aircraft', 'Pilot', 'Student', 'Sortie', 'Duration', 'Result'];
-        const ws = XLSX.utils.json_to_sheet([{}], { header: headers });
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Logbook");
-        XLSX.writeFile(wb, "Logbook_Template.xlsx");
-    };
-
-    const handleDownloadOrganisationStructureTemplate = async () => {
-        if (await downloadStoredTemplate('organisation-structure')) return;
-        downloadOrganisationStructureTemplateFile();
-    };
-
     const dataLoaderTemplateRows = [
         { key: 'staff', label: 'Staff', downloadLabel: 'Staff Template (.xlsx)', onDownload: handleDownloadInstructorTemplate },
         { key: 'trainee', label: 'Trainee', downloadLabel: 'Trainee Template (.xlsx)', onDownload: handleDownloadTraineeTemplate },
         { key: 'lmp', label: 'LMP', downloadLabel: 'LMP Template (.xlsx)', onDownload: handleDownloadLmpTemplate },
-        { key: 'logbook', label: 'Logbook', downloadLabel: 'Logbook Template (.xlsx)', onDownload: handleDownloadLogbookTemplate },
-        { key: 'organisation-structure', label: 'Organisational Structure', downloadLabel: 'Organisational Structure Template (.xlsx)', onDownload: handleDownloadOrganisationStructureTemplate },
     ];
     
     return (
@@ -1435,7 +1415,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <legend className="px-2 text-sm font-semibold text-gray-300">Blank Template Downloads</legend>
                                 <div className="mt-2 space-y-2">
                                     <p className="text-xs text-gray-400">
-                                        Download blank templates for bulk uploads in the relevant Staff, Trainee, LMP and Organisation pages. Completed files are selected or dropped into those pages, not stored here.
+                                        Download blank templates for bulk uploads in the relevant Staff, Trainee and LMP pages. Completed files are selected or dropped into those pages, not stored here.
                                     </p>
                                     <input
                                         ref={templateOverrideInputRef}
