@@ -17,6 +17,12 @@ import {
     normaliseUnitCallsignSettings,
     type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
+import {
+    loadImportAirfieldCatalogue,
+    resolveImportedLocationCode,
+    type AirfieldCatalogueEntry,
+} from '../utils/importLocationResolver';
+import type { PlatformLocation } from '../utils/platformConfigService';
 
 declare var XLSX: any;
 
@@ -31,6 +37,7 @@ interface BulkUpdateFlyoutProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   unitCallsignSettings?: UnitCallsignSettings | null;
   defaultUnitCode?: string;
+  configuredLocations?: PlatformLocation[] | any[];
 }
 
 // Helper to get a value from a row with fuzzy key matching
@@ -239,6 +246,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
   staffQualificationCatalogue,
   unitCallsignSettings,
   defaultUnitCode = '',
+  configuredLocations = [],
 }) => {
     const [selectedLocalFile, setSelectedLocalFile] = useState<File | null>(null);
     const [isDragActive, setIsDragActive] = useState(false);
@@ -286,6 +294,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
             const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+            const airfieldCatalogue: AirfieldCatalogueEntry[] = await loadImportAirfieldCatalogue();
 
             setStatusMessage(`Processing ${json.length} rows...`);
             
@@ -343,7 +352,13 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 if (normalisedCategory) parsedData.category = normalisedCategory;
 
                 const location = getStringFromRow(row, ['Location', 'Base', 'Location Code']);
-                if (location) parsedData.location = location;
+                if (location) {
+                    try {
+                        parsedData.location = resolveImportedLocationCode(location, configuredLocations, airfieldCatalogue);
+                    } catch (error) {
+                        throw new Error(`Row ${rowIndex + 2}: ${error instanceof Error ? error.message : 'Invalid location.'}`);
+                    }
+                }
 
                 const unit = getStringFromRow(row, ['Unit', 'Unit Code']);
                 const normalisedUnit = normaliseImportedUnit(unit);

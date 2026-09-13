@@ -1002,6 +1002,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             staffQualificationCatalogue={staffQualificationCatalogue}
             unitCallsignSettings={unitCallsignSettings}
             defaultUnitCode={defaultUnitCode}
+            configuredLocations={platformConfig?.locations || []}
         />
       )}
       {instructorToArchive && (

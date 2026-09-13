@@ -6,6 +6,12 @@ import UpdateSummaryFlyout from './UpdateSummaryFlyout';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { getAppApiBase } from '../utils/externalDataControls';
+import {
+    loadImportAirfieldCatalogue,
+    resolveImportedLocationCode,
+    type AirfieldCatalogueEntry,
+} from '../utils/importLocationResolver';
+import type { PlatformLocation } from '../utils/platformConfigService';
 
 declare var XLSX: any;
 
@@ -20,6 +26,7 @@ interface TraineeBulkUploadFlyoutProps {
     onReplaceTrainees: (trainees: Trainee[], replacedCourse?: string) => void | Promise<void>;
     onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, SyllabusItemDetail[]>) => Map<string, SyllabusItemDetail[]>) => void;
     currentUserRole?: string;
+    configuredLocations?: PlatformLocation[] | any[];
 }
 
 type UploadActivationSummary = {
@@ -74,7 +81,10 @@ const parseBoolean = (value: any): boolean => {
     return Boolean(value);
 };
 
-const parseTraineeRow = (row: any): Partial<Trainee> | null => {
+const parseTraineeRow = (
+    row: any,
+    options: { configuredLocations?: PlatformLocation[] | any[]; airfieldCatalogue?: AirfieldCatalogueEntry[]; rowNumber?: number } = {},
+): Partial<Trainee> | null => {
     const idValue = getNum(row, ['Personnel ID', 'Service ID', 'Employee ID', 'Employee Number', 'Personnel Number', 'Staff ID', 'ID', 'ID Number', 'IDNumber', 'idNumber']);
     if (idValue === undefined) return null;
 
@@ -119,8 +129,15 @@ const parseTraineeRow = (row: any): Partial<Trainee> | null => {
     if (unit) parsed.unit = unit;
     const flight = getStr(row, ['Flight', 'flight']);
     if (flight) parsed.flight = flight;
-    const location = getStr(row, ['Location']);
-    if (location) parsed.location = location;
+    const location = getStr(row, ['Location', 'Base', 'Location Code']);
+    if (location) {
+        try {
+            parsed.location = resolveImportedLocationCode(location, options.configuredLocations || [], options.airfieldCatalogue || []);
+        } catch (error) {
+            const rowPrefix = options.rowNumber ? `Row ${options.rowNumber}: ` : '';
+            throw new Error(`${rowPrefix}${error instanceof Error ? error.message : 'Invalid location.'}`);
+        }
+    }
     const seatConfigRaw = getStr(row, ['Seat Config', 'seatConfig', 'Seat config']);
     if (seatConfigRaw) {
         const sc = seatConfigRaw.trim().toLowerCase();
@@ -189,6 +206,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     onReplaceTrainees,
     onUpdateTraineeLMPs,
     currentUserRole,
+    configuredLocations = [],
 }) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
     const [file, setFile] = useState<File | null>(null);
@@ -263,8 +281,12 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         return Array.from(courses);
     };
 
-    const buildUploadPreview = (selectedFile: File, jsonRows: any[]): CourseUploadPreview => {
-        const parsedRows = jsonRows.map(parseTraineeRow);
+    const buildUploadPreview = (selectedFile: File, jsonRows: any[], airfieldCatalogue: AirfieldCatalogueEntry[]): CourseUploadPreview => {
+        const parsedRows = jsonRows.map((row, index) => parseTraineeRow(row, {
+            configuredLocations,
+            airfieldCatalogue,
+            rowNumber: index + 2,
+        }));
         const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
         const courses = extractCourses(jsonRows).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
         return {
@@ -294,7 +316,8 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         if (!file) return;
         try {
             const jsonRows = await readWorkbookRows(file);
-            const preview = buildUploadPreview(file, jsonRows);
+            const airfieldCatalogue = await loadImportAirfieldCatalogue();
+            const preview = buildUploadPreview(file, jsonRows, airfieldCatalogue);
             setRows(jsonRows);
             setCoursesFromFile(preview.courses);
             setUploadPreview(preview);
@@ -375,7 +398,12 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     };
 
     const processRows = async (course: string) => {
-        const parsedRows = rows.map(parseTraineeRow);
+        const airfieldCatalogue = await loadImportAirfieldCatalogue();
+        const parsedRows = rows.map((row, index) => parseTraineeRow(row, {
+            configuredLocations,
+            airfieldCatalogue,
+            rowNumber: index + 2,
+        }));
         const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
         const skipped = rows.length - validRows.length;
         const uploadedCourses = Array.from(new Set(validRows.map(trainee => String(trainee.course || '').trim()).filter(Boolean)));

@@ -51737,6 +51737,83 @@ const UpdateSummaryFlyout = ({ summary, onClose }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "OK" }) })
   ] }) });
 };
+let airfieldCatalogueCache = null;
+const normaliseImportLocationToken = (value) => String(value || "").trim().toUpperCase().replace(/&/g, "AND").replace(/[^A-Z0-9]/g, "");
+const removeCommonAirfieldWords = (value) => String(value || "").trim().toUpperCase().replace(/\b(RAAF|BASE|AIR|FORCE|AIRFORCE|AIRFIELD|AIRPORT|AERODROME|INTERNATIONAL|REGIONAL)\b/g, " ").replace(/&/g, "AND").replace(/[^A-Z0-9]/g, "");
+const getLocationTokens = (location) => {
+  const values = [
+    location?.code,
+    location?.iataCode,
+    location?.iata,
+    location?.icao,
+    location?.icaoCode,
+    location?.name,
+    location?.settings?.legacyCode,
+    location?.settings?.runtimeCode,
+    location?.settings?.iataCode,
+    location?.settings?.icaoCode,
+    ...Array.isArray(location?.aliases) ? location.aliases : [],
+    ...Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []
+  ];
+  const tokens = values.flatMap((value) => [
+    normaliseImportLocationToken(value),
+    removeCommonAirfieldWords(value)
+  ]).filter(Boolean);
+  return Array.from(new Set(tokens));
+};
+const getCatalogueTokens = (entry) => {
+  const values = [entry.c, entry.i, entry.l, entry.n, entry.m];
+  const tokens = values.flatMap((value) => [
+    normaliseImportLocationToken(value),
+    removeCommonAirfieldWords(value)
+  ]).filter(Boolean);
+  return Array.from(new Set(tokens));
+};
+const describeCatalogueEntry = (entry) => {
+  const code = String(entry.c || "").trim();
+  const iata = String(entry.i || "").trim();
+  const name = String(entry.n || entry.m || "").trim();
+  return [code, iata ? `/${iata}` : "", name ? ` ${name}` : ""].join("").trim() || "airfield catalogue entry";
+};
+const loadImportAirfieldCatalogue = async () => {
+  if (airfieldCatalogueCache) return airfieldCatalogueCache;
+  try {
+    const baseUrl = new URL("./", window.location.href);
+    const response = await fetch(new URL("airfield-location-catalog.json", baseUrl).toString());
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    airfieldCatalogueCache = Array.isArray(payload) ? payload : [];
+  } catch (error) {
+    airfieldCatalogueCache = [];
+  }
+  return airfieldCatalogueCache;
+};
+const resolveImportedLocationCode = (rawLocation, configuredLocations = [], airfieldCatalogue = []) => {
+  const rawText = String(rawLocation || "").trim();
+  const token = normaliseImportLocationToken(rawText);
+  const looseToken = removeCommonAirfieldWords(rawText);
+  if (!token && !looseToken) return "";
+  const activeConfiguredLocations = configuredLocations.filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const findConfiguredMatch = (tokens) => {
+    const tokenSet = new Set(tokens.filter(Boolean));
+    if (tokenSet.size === 0) return null;
+    return activeConfiguredLocations.find((location) => getLocationTokens(location).some((candidate) => tokenSet.has(candidate))) || null;
+  };
+  const directConfiguredMatch = findConfiguredMatch([token, looseToken]);
+  if (directConfiguredMatch) {
+    return String(directConfiguredMatch.code || directConfiguredMatch.icaoCode || directConfiguredMatch.icao || rawText).trim().toUpperCase();
+  }
+  const catalogueMatches = airfieldCatalogue.filter((entry) => getCatalogueTokens(entry).some((candidate) => candidate === token || candidate === looseToken));
+  const catalogueMatch = catalogueMatches[0];
+  if (!catalogueMatch) {
+    throw new Error(`Location "${rawText}" is not configured in Settings and was not recognised in the offline airfield catalogue.`);
+  }
+  const configuredCatalogueMatch = findConfiguredMatch(getCatalogueTokens(catalogueMatch));
+  if (configuredCatalogueMatch) {
+    return String(configuredCatalogueMatch.code || configuredCatalogueMatch.icaoCode || configuredCatalogueMatch.icao || rawText).trim().toUpperCase();
+  }
+  throw new Error(`Location "${rawText}" was recognised as ${describeCatalogueEntry(catalogueMatch)}, but that airfield is not configured in Settings > Organisation, Bases & Areas.`);
+};
 const getValueFromRow$1 = (row, possibleKeys) => {
   for (const key of possibleKeys) {
     if (row[key] !== void 0) return row[key];
@@ -51774,7 +51851,7 @@ const parseBoolean = (value) => {
   if (typeof value === "string") return value.trim().toLowerCase() === "true";
   return Boolean(value);
 };
-const parseTraineeRow = (row) => {
+const parseTraineeRow = (row, options = {}) => {
   const idValue = getNum(row, ["Personnel ID", "Service ID", "Employee ID", "Employee Number", "Personnel Number", "Staff ID", "ID", "ID Number", "IDNumber", "idNumber"]);
   if (idValue === void 0) return null;
   const parsed = { idNumber: idValue };
@@ -51816,8 +51893,15 @@ const parseTraineeRow = (row) => {
   if (unit) parsed.unit = unit;
   const flight = getStr(row, ["Flight", "flight"]);
   if (flight) parsed.flight = flight;
-  const location = getStr(row, ["Location"]);
-  if (location) parsed.location = location;
+  const location = getStr(row, ["Location", "Base", "Location Code"]);
+  if (location) {
+    try {
+      parsed.location = resolveImportedLocationCode(location, options.configuredLocations || [], options.airfieldCatalogue || []);
+    } catch (error) {
+      const rowPrefix = options.rowNumber ? `Row ${options.rowNumber}: ` : "";
+      throw new Error(`${rowPrefix}${error instanceof Error ? error.message : "Invalid location."}`);
+    }
+  }
   const seatConfigRaw = getStr(row, ["Seat Config", "seatConfig", "Seat config"]);
   if (seatConfigRaw) {
     const sc = seatConfigRaw.trim().toLowerCase();
@@ -51879,7 +51963,8 @@ const TraineeBulkUploadFlyout = ({
   onBulkUpdateTrainees,
   onReplaceTrainees,
   onUpdateTraineeLMPs,
-  currentUserRole: currentUserRole2
+  currentUserRole: currentUserRole2,
+  configuredLocations = []
 }) => {
   const inputRef = reactExports.useRef(null);
   const [file, setFile] = reactExports.useState(null);
@@ -51949,8 +52034,12 @@ const TraineeBulkUploadFlyout = ({
     });
     return Array.from(courses2);
   };
-  const buildUploadPreview = (selectedFile, jsonRows) => {
-    const parsedRows = jsonRows.map(parseTraineeRow);
+  const buildUploadPreview = (selectedFile, jsonRows, airfieldCatalogue) => {
+    const parsedRows = jsonRows.map((row, index) => parseTraineeRow(row, {
+      configuredLocations,
+      airfieldCatalogue,
+      rowNumber: index + 2
+    }));
     const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
     const courses2 = extractCourses(jsonRows).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
     return {
@@ -51979,7 +52068,8 @@ const TraineeBulkUploadFlyout = ({
     if (!file) return;
     try {
       const jsonRows = await readWorkbookRows(file);
-      const preview = buildUploadPreview(file, jsonRows);
+      const airfieldCatalogue = await loadImportAirfieldCatalogue();
+      const preview = buildUploadPreview(file, jsonRows, airfieldCatalogue);
       setRows(jsonRows);
       setCoursesFromFile(preview.courses);
       setUploadPreview(preview);
@@ -52047,7 +52137,12 @@ const TraineeBulkUploadFlyout = ({
     }
   };
   const processRows = async (course) => {
-    const parsedRows = rows.map(parseTraineeRow);
+    const airfieldCatalogue = await loadImportAirfieldCatalogue();
+    const parsedRows = rows.map((row, index) => parseTraineeRow(row, {
+      configuredLocations,
+      airfieldCatalogue,
+      rowNumber: index + 2
+    }));
     const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
     const skipped = rows.length - validRows.length;
     const uploadedCourses = Array.from(new Set(validRows.map((trainee) => String(trainee.course || "").trim()).filter(Boolean)));
@@ -52798,7 +52893,8 @@ const CourseRosterView = ({
         onBulkUpdateTrainees,
         onReplaceTrainees,
         onUpdateTraineeLMPs,
-        currentUserRole: currentUserRole2
+        currentUserRole: currentUserRole2,
+        configuredLocations: platformConfig?.locations || []
       }
     )
   ] });
@@ -83344,7 +83440,8 @@ const BulkUpdateFlyout = ({
   crewPositionTerminology,
   staffQualificationCatalogue: staffQualificationCatalogue2,
   unitCallsignSettings,
-  defaultUnitCode = ""
+  defaultUnitCode = "",
+  configuredLocations = []
 }) => {
   const [selectedLocalFile, setSelectedLocalFile] = reactExports.useState(null);
   const [isDragActive, setIsDragActive] = reactExports.useState(false);
@@ -83383,6 +83480,7 @@ const BulkUpdateFlyout = ({
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const json = XLSX.utils.sheet_to_json(worksheet);
+      const airfieldCatalogue = await loadImportAirfieldCatalogue();
       setStatusMessage(`Processing ${json.length} rows...`);
       const instructorsToProcess = [];
       const existingInstructorsMap = new Map(instructorsData.map((i) => [i.idNumber, i]));
@@ -83428,7 +83526,13 @@ const BulkUpdateFlyout = ({
         const normalisedCategory = normaliseCategory(category);
         if (normalisedCategory) parsedData.category = normalisedCategory;
         const location = getStringFromRow(row, ["Location", "Base", "Location Code"]);
-        if (location) parsedData.location = location;
+        if (location) {
+          try {
+            parsedData.location = resolveImportedLocationCode(location, configuredLocations, airfieldCatalogue);
+          } catch (error) {
+            throw new Error(`Row ${rowIndex + 2}: ${error instanceof Error ? error.message : "Invalid location."}`);
+          }
+        }
         const unit = getStringFromRow(row, ["Unit", "Unit Code"]);
         const normalisedUnit = normaliseImportedUnit(unit);
         if (normalisedUnit) {
@@ -84471,7 +84575,8 @@ const InstructorListView = ({
         crewPositionTerminology,
         staffQualificationCatalogue: staffQualificationCatalogue2,
         unitCallsignSettings,
-        defaultUnitCode
+        defaultUnitCode,
+        configuredLocations: platformConfig?.locations || []
       }
     ),
     instructorToArchive && /* @__PURE__ */ jsxRuntimeExports.jsx(
