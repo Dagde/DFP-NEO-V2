@@ -786,6 +786,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onUpdateTraineeLMPs={onUpdateTraineeLMPs}
                     currentUserRole={currentUserRole}
                     configuredLocations={platformConfig?.locations || []}
+                    unitCallsignSettings={platformConfig?.organisations?.[0]?.settings?.unitCallsignSettings || null}
+                    defaultUnitCode={units[0] || ''}
                 />
             )}
         </>

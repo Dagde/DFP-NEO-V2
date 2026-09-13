@@ -17,7 +17,9 @@ import {
     type ExampleRowDetection,
     type ImportRowRecord,
 } from '../utils/importExampleRow';
+import { parseImportedCallsign } from '../utils/importCallsign';
 import type { PlatformLocation } from '../utils/platformConfigService';
+import type { UnitCallsignSettings } from '../utils/unitCallsigns';
 
 declare var XLSX: any;
 
@@ -33,6 +35,8 @@ interface TraineeBulkUploadFlyoutProps {
     onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, SyllabusItemDetail[]>) => Map<string, SyllabusItemDetail[]>) => void;
     currentUserRole?: string;
     configuredLocations?: PlatformLocation[] | any[];
+    unitCallsignSettings?: UnitCallsignSettings | null;
+    defaultUnitCode?: string;
 }
 
 type UploadActivationSummary = {
@@ -86,6 +90,17 @@ const parsePersonList = (value?: string): string[] => {
     return [clean];
 };
 
+const getCourseNumberFromRow = (row: any): string | undefined => getStr(row, [
+    'Course Number',
+    'Course number',
+    'Course number {include prefix]',
+    'Course number [include prefix]',
+    'Course No',
+    'Course No.',
+    'Course ID',
+    'courseNumber',
+]);
+
 const parseBoolean = (value: any): boolean => {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') return value.trim().toLowerCase() === 'true';
@@ -94,7 +109,13 @@ const parseBoolean = (value: any): boolean => {
 
 const parseTraineeRow = (
     row: any,
-    options: { configuredLocations?: PlatformLocation[] | any[]; airfieldCatalogue?: AirfieldCatalogueEntry[]; rowNumber?: number } = {},
+    options: {
+        configuredLocations?: PlatformLocation[] | any[];
+        airfieldCatalogue?: AirfieldCatalogueEntry[];
+        rowNumber?: number;
+        unitCallsignSettings?: UnitCallsignSettings | null;
+        defaultUnitCode?: string;
+    } = {},
 ): Partial<Trainee> | null => {
     const idValue = getNum(row, ['Personnel ID', 'Service ID', 'Employee ID', 'Employee Number', 'Personnel Number', 'Staff ID', 'ID', 'ID Number', 'IDNumber', 'idNumber']);
     if (idValue === undefined) return null;
@@ -116,9 +137,11 @@ const parseTraineeRow = (
     }
 
     const coursePrefix = getStr(row, ['Course Prefix', 'coursePrefix']);
-    const courseNumber = getStr(row, ['Course Number', 'courseNumber']);
+    const courseNumber = getCourseNumberFromRow(row);
     if (coursePrefix && courseNumber) {
         parsed.course = `${coursePrefix}${courseNumber}`;
+    } else if (courseNumber) {
+        parsed.course = courseNumber;
     } else {
         const course = getStr(row, ['Course']);
         if (course) parsed.course = course;
@@ -130,14 +153,25 @@ const parseTraineeRow = (
     if (academicLmpType) parsed.academicLmpType = academicLmpType;
     const rank = getStr(row, ['Rank']);
     if (rank) parsed.rank = rank as TraineeRank;
-    const callsign = getStr(row, ['Callsign', 'Trainee Callsign', 'traineeCallsign', 'callsign']);
-    if (callsign) parsed.traineeCallsign = callsign;
     const serviceRaw = getStr(row, ['Service']);
     if (serviceRaw) {
         parsed.service = serviceRaw.trim();
     }
     const unit = getStr(row, ['Unit']);
     if (unit) parsed.unit = unit;
+    else if (options.defaultUnitCode) parsed.unit = String(options.defaultUnitCode).trim().toUpperCase().replace(/[\s-]+/g, '');
+    const role = getStr(row, ['Role', 'Trainee Role', 'Crew Role', 'Aircrew Role']);
+    if (role) parsed.role = role.trim();
+    const callsign = getValueFromRow(row, ['Callsign', 'Call Sign', 'Trainee Callsign', 'Trainee Call Sign', 'traineeCallsign', 'callsign']);
+    if (callsign !== undefined && callsign !== null && String(callsign).trim() !== '') {
+        try {
+            const parsedCallsign = parseImportedCallsign(callsign, String(parsed.unit || options.defaultUnitCode || ''), options.unitCallsignSettings);
+            if (parsedCallsign?.callsign) parsed.traineeCallsign = parsedCallsign.callsign;
+        } catch (error) {
+            const rowPrefix = options.rowNumber ? `Row ${options.rowNumber}: ` : '';
+            throw new Error(`${rowPrefix}${error instanceof Error ? error.message : 'Invalid callsign.'}`);
+        }
+    }
     const flight = getStr(row, ['Flight', 'flight']);
     if (flight) parsed.flight = flight;
     const location = getStr(row, ['Location', 'Base', 'Location Code']);
@@ -174,6 +208,7 @@ const parseTraineeRow = (
     if (!parsed.isPaused) parsed.isPaused = false;
     if (!parsed.unit) parsed.unit = '';
     if (!parsed.rank) parsed.rank = 'FLGOFF' as TraineeRank;
+    if (!parsed.role) parsed.role = 'Trainee';
     if (!parsed.seatConfig) parsed.seatConfig = 'Normal' as SeatConfig;
     if (!parsed.unavailability) parsed.unavailability = [];
     if (parsed.name && parsed.course) parsed.fullName = `${parsed.name} – ${parsed.course}`;
@@ -191,7 +226,7 @@ const readWorkbookRows = async (file: File, skipExampleRow = false): Promise<Wor
         const cells = row.map(cell => String(cell || '').trim().toLowerCase().replace(/[\s/]/g, ''));
         const hasName = cells.some(cell => ['name', 'fullname', 'name[surname,firstname]', 'name[surname,firstname]'].includes(cell));
         const hasId = cells.some(cell => ['personnelid', 'serviceid', 'employeeid', 'employeenumber', 'personnelnumber', 'staffid', 'id', 'idnumber'].includes(cell));
-        const hasCourse = cells.includes('course') || (cells.includes('courseprefix') && cells.includes('coursenumber'));
+        const hasCourse = cells.includes('course') || cells.some(cell => cell.startsWith('coursenumber')) || (cells.includes('courseprefix') && cells.includes('coursenumber'));
         return hasName && hasId && hasCourse;
     });
     if (headerRowIndex < 0) {
@@ -222,6 +257,8 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     onUpdateTraineeLMPs,
     currentUserRole,
     configuredLocations = [],
+    unitCallsignSettings = null,
+    defaultUnitCode = '',
 }) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
     const [file, setFile] = useState<File | null>(null);
@@ -288,8 +325,9 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         const courses = new Set<string>();
         rowRecords.forEach(({ row }) => {
             const coursePrefix = getStr(row, ['Course Prefix', 'coursePrefix']);
-            const courseNumber = getStr(row, ['Course Number', 'courseNumber']);
+            const courseNumber = getCourseNumberFromRow(row);
             if (coursePrefix && courseNumber) courses.add(`${coursePrefix}${courseNumber}`);
+            else if (courseNumber) courses.add(courseNumber);
             else {
                 const course = getStr(row, ['Course']);
                 if (course) courses.add(course);
@@ -303,6 +341,8 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             configuredLocations,
             airfieldCatalogue,
             rowNumber: excelRowNumber,
+            unitCallsignSettings,
+            defaultUnitCode,
         }));
         const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
         const courses = extractCourses(rowRecords).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
@@ -424,6 +464,8 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             configuredLocations,
             airfieldCatalogue,
             rowNumber: excelRowNumber,
+            unitCallsignSettings,
+            defaultUnitCode,
         }));
         const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
         const skipped = rows.length - validRows.length;

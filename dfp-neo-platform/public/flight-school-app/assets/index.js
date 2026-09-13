@@ -51923,6 +51923,41 @@ const buildRowRecords = (rawRows, headerRowIndex, skipExampleRow) => {
     }, {})
   })).filter((record) => !skipExampleRow || record.excelRowNumber !== headerRowIndex + 2).filter((record) => Object.values(record.row).some((value) => normaliseCellText(value)));
 };
+const normaliseCallsignPrefixToken = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+const parseImportedCallsign = (rawValue, unitCode, unitCallsignSettings) => {
+  if (rawValue === void 0 || rawValue === null || String(rawValue).trim() === "") return null;
+  const raw = String(rawValue).trim().toUpperCase();
+  const compact = raw.replace(/[\s-]+/g, "");
+  const numberOnly = compact.match(/^\d{1,3}$/);
+  const defaultPrefix = getDefaultUnitCallsign(normaliseUnitCallsignSettings(unitCallsignSettings || null), unitCode);
+  const normalisedDefaultPrefix = normaliseCallsignPrefixToken(defaultPrefix);
+  if (numberOnly) {
+    if (!normalisedDefaultPrefix) {
+      throw new Error(`Callsign "${raw}" only provides a number, but unit ${unitCode || "(blank)"} has no default callsign prefix configured.`);
+    }
+    const callsignNumber2 = Number(numberOnly[0]);
+    return {
+      callsignNumber: callsignNumber2,
+      callsign: `${normalisedDefaultPrefix}${String(callsignNumber2).padStart(3, "0")}`
+    };
+  }
+  const fullCallsign = compact.match(/^([A-Z][A-Z0-9]*?)(\d{1,3})$/);
+  if (!fullCallsign) {
+    throw new Error(`Callsign "${raw}" must be a 1-3 digit number or a prefix followed by a 1-3 digit number, such as VIPR003.`);
+  }
+  const [, prefix, numberText] = fullCallsign;
+  if (normalisedDefaultPrefix && prefix !== normalisedDefaultPrefix) {
+    throw new Error(`Callsign "${raw}" uses prefix ${prefix}, but unit ${unitCode || "(blank)"} is configured for ${normalisedDefaultPrefix}.`);
+  }
+  if (!normalisedDefaultPrefix) {
+    throw new Error(`Callsign "${raw}" includes prefix ${prefix}, but unit ${unitCode || "(blank)"} has no default callsign prefix configured to validate against.`);
+  }
+  const callsignNumber = Number(numberText);
+  return {
+    callsignNumber,
+    callsign: `${prefix}${String(callsignNumber).padStart(3, "0")}`
+  };
+};
 const getValueFromRow$1 = (row, possibleKeys) => {
   for (const key of possibleKeys) {
     if (row[key] !== void 0) return row[key];
@@ -51955,6 +51990,16 @@ const parsePersonList = (value) => {
   if (clean.includes("\n")) return clean.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
   return [clean];
 };
+const getCourseNumberFromRow = (row) => getStr(row, [
+  "Course Number",
+  "Course number",
+  "Course number {include prefix]",
+  "Course number [include prefix]",
+  "Course No",
+  "Course No.",
+  "Course ID",
+  "courseNumber"
+]);
 const parseBoolean = (value) => {
   if (typeof value === "boolean") return value;
   if (typeof value === "string") return value.trim().toLowerCase() === "true";
@@ -51979,9 +52024,11 @@ const parseTraineeRow = (row, options = {}) => {
     if (surname && firstname) parsed.name = `${surname}, ${firstname}`;
   }
   const coursePrefix = getStr(row, ["Course Prefix", "coursePrefix"]);
-  const courseNumber = getStr(row, ["Course Number", "courseNumber"]);
+  const courseNumber = getCourseNumberFromRow(row);
   if (coursePrefix && courseNumber) {
     parsed.course = `${coursePrefix}${courseNumber}`;
+  } else if (courseNumber) {
+    parsed.course = courseNumber;
   } else {
     const course = getStr(row, ["Course"]);
     if (course) parsed.course = course;
@@ -51992,14 +52039,25 @@ const parseTraineeRow = (row, options = {}) => {
   if (academicLmpType) parsed.academicLmpType = academicLmpType;
   const rank = getStr(row, ["Rank"]);
   if (rank) parsed.rank = rank;
-  const callsign = getStr(row, ["Callsign", "Trainee Callsign", "traineeCallsign", "callsign"]);
-  if (callsign) parsed.traineeCallsign = callsign;
   const serviceRaw = getStr(row, ["Service"]);
   if (serviceRaw) {
     parsed.service = serviceRaw.trim();
   }
   const unit = getStr(row, ["Unit"]);
   if (unit) parsed.unit = unit;
+  else if (options.defaultUnitCode) parsed.unit = String(options.defaultUnitCode).trim().toUpperCase().replace(/[\s-]+/g, "");
+  const role = getStr(row, ["Role", "Trainee Role", "Crew Role", "Aircrew Role"]);
+  if (role) parsed.role = role.trim();
+  const callsign = getValueFromRow$1(row, ["Callsign", "Call Sign", "Trainee Callsign", "Trainee Call Sign", "traineeCallsign", "callsign"]);
+  if (callsign !== void 0 && callsign !== null && String(callsign).trim() !== "") {
+    try {
+      const parsedCallsign = parseImportedCallsign(callsign, String(parsed.unit || options.defaultUnitCode || ""), options.unitCallsignSettings);
+      if (parsedCallsign?.callsign) parsed.traineeCallsign = parsedCallsign.callsign;
+    } catch (error) {
+      const rowPrefix = options.rowNumber ? `Row ${options.rowNumber}: ` : "";
+      throw new Error(`${rowPrefix}${error instanceof Error ? error.message : "Invalid callsign."}`);
+    }
+  }
   const flight = getStr(row, ["Flight", "flight"]);
   if (flight) parsed.flight = flight;
   const location = getStr(row, ["Location", "Base", "Location Code"]);
@@ -52035,6 +52093,7 @@ const parseTraineeRow = (row, options = {}) => {
   if (!parsed.isPaused) parsed.isPaused = false;
   if (!parsed.unit) parsed.unit = "";
   if (!parsed.rank) parsed.rank = "FLGOFF";
+  if (!parsed.role) parsed.role = "Trainee";
   if (!parsed.seatConfig) parsed.seatConfig = "Normal";
   if (!parsed.unavailability) parsed.unavailability = [];
   if (parsed.name && parsed.course) parsed.fullName = `${parsed.name} – ${parsed.course}`;
@@ -52050,7 +52109,7 @@ const readWorkbookRows = async (file, skipExampleRow = false) => {
     const cells = row.map((cell) => String(cell || "").trim().toLowerCase().replace(/[\s/]/g, ""));
     const hasName = cells.some((cell) => ["name", "fullname", "name[surname,firstname]", "name[surname,firstname]"].includes(cell));
     const hasId = cells.some((cell) => ["personnelid", "serviceid", "employeeid", "employeenumber", "personnelnumber", "staffid", "id", "idnumber"].includes(cell));
-    const hasCourse = cells.includes("course") || cells.includes("courseprefix") && cells.includes("coursenumber");
+    const hasCourse = cells.includes("course") || cells.some((cell) => cell.startsWith("coursenumber")) || cells.includes("courseprefix") && cells.includes("coursenumber");
     return hasName && hasId && hasCourse;
   });
   if (headerRowIndex < 0) {
@@ -52078,7 +52137,9 @@ const TraineeBulkUploadFlyout = ({
   onReplaceTrainees,
   onUpdateTraineeLMPs,
   currentUserRole: currentUserRole2,
-  configuredLocations = []
+  configuredLocations = [],
+  unitCallsignSettings = null,
+  defaultUnitCode = ""
 }) => {
   const inputRef = reactExports.useRef(null);
   const [file, setFile] = reactExports.useState(null);
@@ -52141,8 +52202,9 @@ const TraineeBulkUploadFlyout = ({
     const courses2 = /* @__PURE__ */ new Set();
     rowRecords.forEach(({ row }) => {
       const coursePrefix = getStr(row, ["Course Prefix", "coursePrefix"]);
-      const courseNumber = getStr(row, ["Course Number", "courseNumber"]);
+      const courseNumber = getCourseNumberFromRow(row);
       if (coursePrefix && courseNumber) courses2.add(`${coursePrefix}${courseNumber}`);
+      else if (courseNumber) courses2.add(courseNumber);
       else {
         const course = getStr(row, ["Course"]);
         if (course) courses2.add(course);
@@ -52154,7 +52216,9 @@ const TraineeBulkUploadFlyout = ({
     const parsedRows = rowRecords.map(({ row, excelRowNumber }) => parseTraineeRow(row, {
       configuredLocations,
       airfieldCatalogue,
-      rowNumber: excelRowNumber
+      rowNumber: excelRowNumber,
+      unitCallsignSettings,
+      defaultUnitCode
     }));
     const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
     const courses2 = extractCourses(rowRecords).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
@@ -52261,7 +52325,9 @@ const TraineeBulkUploadFlyout = ({
     const parsedRows = rows.map(({ row, excelRowNumber }) => parseTraineeRow(row, {
       configuredLocations,
       airfieldCatalogue,
-      rowNumber: excelRowNumber
+      rowNumber: excelRowNumber,
+      unitCallsignSettings,
+      defaultUnitCode
     }));
     const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
     const skipped = rows.length - validRows.length;
@@ -53016,7 +53082,9 @@ const CourseRosterView = ({
         onReplaceTrainees,
         onUpdateTraineeLMPs,
         currentUserRole: currentUserRole2,
-        configuredLocations: platformConfig?.locations || []
+        configuredLocations: platformConfig?.locations || [],
+        unitCallsignSettings: platformConfig?.organisations?.[0]?.settings?.unitCallsignSettings || null,
+        defaultUnitCode: units[0] || ""
       }
     )
   ] });
@@ -83526,41 +83594,6 @@ const applyRoleAssignments = (parsedData, rolesValue, crewPositionTerminology) =
   } else if (rolesLower.includes("instructor")) {
     parsedData.role = "Pilot";
   }
-};
-const normaliseCallsignPrefixToken = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-const parseImportedCallsign = (rawValue, unitCode, unitCallsignSettings) => {
-  if (rawValue === void 0 || rawValue === null || String(rawValue).trim() === "") return null;
-  const raw = String(rawValue).trim().toUpperCase();
-  const compact = raw.replace(/[\s-]+/g, "");
-  const numberOnly = compact.match(/^\d{1,3}$/);
-  const defaultPrefix = getDefaultUnitCallsign(normaliseUnitCallsignSettings(unitCallsignSettings || null), unitCode);
-  const normalisedDefaultPrefix = normaliseCallsignPrefixToken(defaultPrefix);
-  if (numberOnly) {
-    if (!normalisedDefaultPrefix) {
-      throw new Error(`Callsign "${raw}" only provides a number, but unit ${unitCode || "(blank)"} has no default callsign prefix configured.`);
-    }
-    const callsignNumber2 = Number(numberOnly[0]);
-    return {
-      callsignNumber: callsignNumber2,
-      callsign: `${normalisedDefaultPrefix}${String(callsignNumber2).padStart(3, "0")}`
-    };
-  }
-  const fullCallsign = compact.match(/^([A-Z][A-Z0-9]*?)(\d{1,3})$/);
-  if (!fullCallsign) {
-    throw new Error(`Callsign "${raw}" must be a 1-3 digit number or a prefix followed by a 1-3 digit number, such as VIPR003.`);
-  }
-  const [, prefix, numberText] = fullCallsign;
-  if (normalisedDefaultPrefix && prefix !== normalisedDefaultPrefix) {
-    throw new Error(`Callsign "${raw}" uses prefix ${prefix}, but unit ${unitCode || "(blank)"} is configured for ${normalisedDefaultPrefix}.`);
-  }
-  if (!normalisedDefaultPrefix) {
-    throw new Error(`Callsign "${raw}" includes prefix ${prefix}, but unit ${unitCode || "(blank)"} has no default callsign prefix configured to validate against.`);
-  }
-  const callsignNumber = Number(numberText);
-  return {
-    callsignNumber,
-    callsign: `${prefix}${String(callsignNumber).padStart(3, "0")}`
-  };
 };
 const BulkUpdateFlyout = ({
   onClose,
