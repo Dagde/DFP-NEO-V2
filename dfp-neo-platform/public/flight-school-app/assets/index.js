@@ -51447,9 +51447,16 @@ const CourseEditFlyout = ({
     ) })
   ] });
 };
-const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
+const UpdateConfirmationFlyout = ({
+  fileName,
+  onConfirm,
+  onClose,
+  requiresExampleRowConfirmation = false,
+  exampleRowNumber = 2
+}) => {
   const passwordInputRef = reactExports.useRef(null);
   const [updateType, setUpdateType] = reactExports.useState("minor");
+  const [exampleRowConfirmed, setExampleRowConfirmed] = reactExports.useState(false);
   const [error, setError] = reactExports.useState("");
   const [isSubmitting, setIsSubmitting] = reactExports.useState(false);
   const handleSubmit = async (e) => {
@@ -51459,9 +51466,13 @@ const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
       setError("Enter your password.");
       return;
     }
+    if (requiresExampleRowConfirmation && !exampleRowConfirmed) {
+      setError(`Confirm row ${exampleRowNumber} is an example row before importing.`);
+      return;
+    }
     setIsSubmitting(true);
     try {
-      const result = await onConfirm(password, updateType);
+      const result = await onConfirm(password, updateType, { skipExampleRow: requiresExampleRowConfirmation && exampleRowConfirmed });
       if (typeof result === "string" && result.trim()) {
         setError(result);
       }
@@ -51493,6 +51504,32 @@ const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
           }
         ),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm text-center mt-1", children: error })
+      ] }),
+      requiresExampleRowConfirmation && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-3 rounded-md border border-amber-400/40 bg-amber-950/30 p-3 text-sm text-amber-100", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "checkbox",
+            checked: exampleRowConfirmed,
+            onChange: (event) => {
+              setExampleRowConfirmed(event.target.checked);
+              if (error) setError("");
+            },
+            className: "mt-1 h-4 w-4 rounded border-amber-300 bg-gray-900 text-amber-500 focus:ring-amber-500"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block font-semibold text-amber-200", children: [
+            "Row ",
+            exampleRowNumber,
+            " is an example row only"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-1 block text-xs text-amber-100/80", children: [
+            "The importer detected the expected italic and colour-different example styling. Tick this to skip row ",
+            exampleRowNumber,
+            "; it will not be imported."
+          ] })
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "text-sm font-medium text-gray-400 mb-2", children: "Select Update Type" }),
@@ -51814,6 +51851,78 @@ const resolveImportedLocationCode = (rawLocation, configuredLocations = [], airf
   }
   throw new Error(`Location "${rawText}" was recognised as ${describeCatalogueEntry(catalogueMatch)}, but that airfield is not configured in Settings > Organisation, Bases & Areas.`);
 };
+const getCell = (worksheet, rowNumber, columnNumber) => {
+  const address = `${columnToName(columnNumber)}${rowNumber}`;
+  return worksheet?.[address];
+};
+const columnToName = (columnNumber) => {
+  let name = "";
+  let column = columnNumber;
+  while (column > 0) {
+    const remainder = (column - 1) % 26;
+    name = String.fromCharCode(65 + remainder) + name;
+    column = Math.floor((column - 1) / 26);
+  }
+  return name;
+};
+const normaliseCellText = (value) => String(value ?? "").trim();
+const getCellText = (cell) => normaliseCellText(cell?.w ?? cell?.v);
+const getColourKey = (color) => {
+  if (!color) return "";
+  if (color.rgb) return `rgb:${color.rgb.toUpperCase()}`;
+  if (color.indexed !== void 0) return `indexed:${color.indexed}`;
+  if (color.theme !== void 0) return `theme:${color.theme}`;
+  return "";
+};
+const getStyleColourKey = (cell) => {
+  const fontColour = getColourKey(cell?.s?.font?.color);
+  if (fontColour) return `font:${fontColour}`;
+  const fillColour = getColourKey(cell?.s?.fgColor);
+  if (fillColour) return `fill:${fillColour}`;
+  if (cell?.s?.fillId !== void 0) return `fillid:${cell.s.fillId}`;
+  if (cell?.s?.fillid !== void 0) return `fillid:${cell.s.fillid}`;
+  if (cell?.s?.patternType) return `pattern:${cell.s.patternType}`;
+  return "";
+};
+const workbookHasItalicFont = (workbook) => Array.isArray(workbook?.Styles?.Fonts) && workbook.Styles.Fonts.some((font) => Boolean(font?.italic));
+const detectStyledExampleRow = (worksheet, headerRowNumber, headerColumnCount, workbook) => {
+  const rowNumber = headerRowNumber + 1;
+  let populatedCellCount = 0;
+  let italicCellCount = 0;
+  let differingColourCellCount = 0;
+  const hasWorkbookItalicStyle = workbookHasItalicFont(workbook);
+  for (let column = 1; column <= headerColumnCount; column += 1) {
+    const headerCell = getCell(worksheet, headerRowNumber, column);
+    const exampleCell = getCell(worksheet, rowNumber, column);
+    if (!getCellText(exampleCell)) continue;
+    populatedCellCount += 1;
+    if (exampleCell?.s?.font?.italic || hasWorkbookItalicStyle) italicCellCount += 1;
+    const headerColour = getStyleColourKey(headerCell);
+    const exampleColour = getStyleColourKey(exampleCell);
+    if (headerColour && headerColour !== exampleColour) differingColourCellCount += 1;
+  }
+  const hasExampleCandidate = populatedCellCount > 0;
+  const italicRatio = populatedCellCount > 0 ? italicCellCount / populatedCellCount : 0;
+  const colourRatio = populatedCellCount > 0 ? differingColourCellCount / populatedCellCount : 0;
+  return {
+    hasExampleCandidate,
+    isStyledExampleRow: hasExampleCandidate && italicRatio >= 0.75 && colourRatio >= 0.5,
+    rowNumber,
+    populatedCellCount,
+    italicCellCount,
+    differingColourCellCount
+  };
+};
+const buildRowRecords = (rawRows, headerRowIndex, skipExampleRow) => {
+  const header = rawRows[headerRowIndex].map((cell) => String(cell || "").trim());
+  return rawRows.slice(headerRowIndex + 1).map((row, index) => ({
+    excelRowNumber: headerRowIndex + index + 2,
+    row: header.reduce((record, key, columnIndex) => {
+      if (key) record[key] = row[columnIndex];
+      return record;
+    }, {})
+  })).filter((record) => !skipExampleRow || record.excelRowNumber !== headerRowIndex + 2).filter((record) => Object.values(record.row).some((value) => normaliseCellText(value)));
+};
 const getValueFromRow$1 = (row, possibleKeys) => {
   for (const key of possibleKeys) {
     if (row[key] !== void 0) return row[key];
@@ -51932,9 +52041,9 @@ const parseTraineeRow = (row, options = {}) => {
   else if (parsed.name) parsed.fullName = parsed.name;
   return parsed;
 };
-const readWorkbookRows = async (file) => {
+const readWorkbookRows = async (file, skipExampleRow = false) => {
   const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data, { type: "buffer" });
+  const workbook = XLSX.read(data, { type: "array", cellStyles: true });
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
   const headerRowIndex = rawRows.findIndex((row) => {
@@ -51947,11 +52056,16 @@ const readWorkbookRows = async (file) => {
   if (headerRowIndex < 0) {
     throw new Error("No valid trainee header row was found. The file must include Name, Personnel ID or ID Number, and Course columns.");
   }
-  const header = rawRows[headerRowIndex].map((cell) => String(cell || "").trim());
-  return rawRows.slice(headerRowIndex + 1).filter((row) => row.some((cell) => String(cell || "").trim())).map((row) => header.reduce((record, key, index) => {
-    if (key) record[key] = row[index];
-    return record;
-  }, {}));
+  const exampleRowDetection = detectStyledExampleRow(worksheet, headerRowIndex + 1, rawRows[headerRowIndex].length, workbook);
+  if (exampleRowDetection.hasExampleCandidate && !exampleRowDetection.isStyledExampleRow) {
+    throw new Error(
+      `Row ${exampleRowDetection.rowNumber} contains data but does not match the expected example-row styling. Use the official template example row styling, or remove row 2 before importing real trainee data.`
+    );
+  }
+  return {
+    records: buildRowRecords(rawRows, headerRowIndex, skipExampleRow && exampleRowDetection.isStyledExampleRow),
+    exampleRowDetection
+  };
 };
 const TraineeBulkUploadFlyout = ({
   onClose,
@@ -51974,6 +52088,7 @@ const TraineeBulkUploadFlyout = ({
   const [showCourseSelection, setShowCourseSelection] = reactExports.useState(false);
   const [updateType, setUpdateType] = reactExports.useState("minor");
   const [rows, setRows] = reactExports.useState([]);
+  const [exampleRowDetection, setExampleRowDetection] = reactExports.useState(null);
   const [coursesFromFile, setCoursesFromFile] = reactExports.useState([]);
   const [uploadPreview, setUploadPreview] = reactExports.useState(null);
   const [summary, setSummary] = reactExports.useState(null);
@@ -52013,6 +52128,7 @@ const TraineeBulkUploadFlyout = ({
     setSummary(null);
     setShowConfirm(false);
     setShowCourseSelection(false);
+    setExampleRowDetection(null);
     if (!/\.(xlsx|xls|csv)$/i.test(selectedFile.name)) {
       setStatus("Please select an .xlsx, .xls or .csv file.");
       setFile(null);
@@ -52021,9 +52137,9 @@ const TraineeBulkUploadFlyout = ({
     setFile(selectedFile);
     setStatus("");
   };
-  const extractCourses = (jsonRows) => {
+  const extractCourses = (rowRecords) => {
     const courses2 = /* @__PURE__ */ new Set();
-    jsonRows.forEach((row) => {
+    rowRecords.forEach(({ row }) => {
       const coursePrefix = getStr(row, ["Course Prefix", "coursePrefix"]);
       const courseNumber = getStr(row, ["Course Number", "courseNumber"]);
       if (coursePrefix && courseNumber) courses2.add(`${coursePrefix}${courseNumber}`);
@@ -52034,19 +52150,19 @@ const TraineeBulkUploadFlyout = ({
     });
     return Array.from(courses2);
   };
-  const buildUploadPreview = (selectedFile, jsonRows, airfieldCatalogue) => {
-    const parsedRows = jsonRows.map((row, index) => parseTraineeRow(row, {
+  const buildUploadPreview = (selectedFile, rowRecords, airfieldCatalogue) => {
+    const parsedRows = rowRecords.map(({ row, excelRowNumber }) => parseTraineeRow(row, {
       configuredLocations,
       airfieldCatalogue,
-      rowNumber: index + 2
+      rowNumber: excelRowNumber
     }));
     const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
-    const courses2 = extractCourses(jsonRows).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
+    const courses2 = extractCourses(rowRecords).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
     return {
       fileName: selectedFile.name,
-      rowCount: jsonRows.length,
+      rowCount: rowRecords.length,
       validRowCount: validRows.length,
-      skippedRowCount: jsonRows.length - validRows.length,
+      skippedRowCount: rowRecords.length - validRows.length,
       courses: courses2,
       sampleRows: validRows.slice(0, 10).map((trainee) => ({
         name: String(trainee.name || ""),
@@ -52056,7 +52172,7 @@ const TraineeBulkUploadFlyout = ({
       }))
     };
   };
-  const handleConfirm = async (password, selectedUpdateType) => {
+  const handleConfirm = async (password, selectedUpdateType, options) => {
     try {
       const isValidPassword = await verifyCurrentUserPassword(password);
       if (!isValidPassword) {
@@ -52067,10 +52183,14 @@ const TraineeBulkUploadFlyout = ({
     }
     if (!file) return;
     try {
-      const jsonRows = await readWorkbookRows(file);
+      const { records: rowRecords, exampleRowDetection: detectedExampleRow } = await readWorkbookRows(file, Boolean(options?.skipExampleRow));
+      if (detectedExampleRow.isStyledExampleRow && !options?.skipExampleRow) {
+        setExampleRowDetection(detectedExampleRow);
+        return `Confirm row ${detectedExampleRow.rowNumber} is an example row before importing.`;
+      }
       const airfieldCatalogue = await loadImportAirfieldCatalogue();
-      const preview = buildUploadPreview(file, jsonRows, airfieldCatalogue);
-      setRows(jsonRows);
+      const preview = buildUploadPreview(file, rowRecords, airfieldCatalogue);
+      setRows(rowRecords);
       setCoursesFromFile(preview.courses);
       setUploadPreview(preview);
       setUpdateType(selectedUpdateType);
@@ -52138,10 +52258,10 @@ const TraineeBulkUploadFlyout = ({
   };
   const processRows = async (course) => {
     const airfieldCatalogue = await loadImportAirfieldCatalogue();
-    const parsedRows = rows.map((row, index) => parseTraineeRow(row, {
+    const parsedRows = rows.map(({ row, excelRowNumber }) => parseTraineeRow(row, {
       configuredLocations,
       airfieldCatalogue,
-      rowNumber: index + 2
+      rowNumber: excelRowNumber
     }));
     const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
     const skipped = rows.length - validRows.length;
@@ -52273,7 +52393,9 @@ const TraineeBulkUploadFlyout = ({
       {
         fileName: file.name,
         onConfirm: handleConfirm,
-        onClose: () => setShowConfirm(false)
+        onClose: () => setShowConfirm(false),
+        requiresExampleRowConfirmation: Boolean(exampleRowDetection?.isStyledExampleRow),
+        exampleRowNumber: exampleRowDetection?.rowNumber || 2
       }
     ),
     showCourseSelection && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -83313,6 +83435,16 @@ const hasAnyHeader = (row, possibleKeys) => {
     return rowKeys.some((rowKey) => rowKey.toLowerCase().replace(/[\s/]/g, "") === lowerKey);
   });
 };
+const findStaffHeaderRowIndex = (rawRows) => {
+  const idHeaders = ["pmkeysid", "pmkeys", "personnelid", "serviceid", "employeeid", "employeenumber", "personnelnumber", "staffid", "id", "idnumber"];
+  const nameHeaders = ["name", "fullname", "namesurname,firstname", "namesurname.firstname", "namesurnamefirstname", "srname", "surname"];
+  return rawRows.findIndex((row) => {
+    const cells = row.map((cell) => String(cell || "").trim().toLowerCase().replace(/[\s/().-]/g, ""));
+    const hasId = cells.some((cell) => idHeaders.includes(cell));
+    const hasName = cells.some((cell) => nameHeaders.includes(cell));
+    return hasId && hasName;
+  });
+};
 const splitListValue = (value) => value.split(/\r?\n|;|,/).map((item) => item.trim()).filter(Boolean);
 const normaliseService = (value) => {
   const cleanValue = value.trim();
@@ -83447,6 +83579,7 @@ const BulkUpdateFlyout = ({
   const [isDragActive, setIsDragActive] = reactExports.useState(false);
   const [isLoading, setIsLoading] = reactExports.useState(false);
   const [statusMessage, setStatusMessage] = reactExports.useState("");
+  const [pendingExampleRowConfirmation, setPendingExampleRowConfirmation] = reactExports.useState(null);
   const fileInputRef = reactExports.useRef(null);
   const isSpreadsheetFile = (file) => /\.(xlsx|xls|csv)$/i.test(file.name);
   const handleLocalFile = (file) => {
@@ -83457,6 +83590,7 @@ const BulkUpdateFlyout = ({
       return;
     }
     setSelectedLocalFile(file);
+    setPendingExampleRowConfirmation(null);
     setStatusMessage("");
   };
   const handleDrop = (event) => {
@@ -83465,7 +83599,7 @@ const BulkUpdateFlyout = ({
     setIsDragActive(false);
     handleLocalFile(event.dataTransfer.files?.[0]);
   };
-  const handleConfirm = async () => {
+  const handleConfirm = async (exampleRowConfirmed = false) => {
     if (!selectedLocalFile) {
       setStatusMessage("Please select a file.");
       return;
@@ -83476,18 +83610,38 @@ const BulkUpdateFlyout = ({
     try {
       const data = await selectedLocalFile.arrayBuffer();
       setStatusMessage("Parsing spreadsheet...");
-      const workbook = XLSX.read(data, { type: "buffer" });
+      const workbook = XLSX.read(data, { type: "array", cellStyles: true });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(worksheet);
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+      const headerRowIndex = findStaffHeaderRowIndex(rawRows);
+      if (headerRowIndex < 0) {
+        throw new Error("No valid staff header row was found. The file must include ID Number or Personnel ID, and Name or Surname columns.");
+      }
+      const headerColumnCount = rawRows[headerRowIndex].length;
+      const exampleDetection = detectStyledExampleRow(worksheet, headerRowIndex + 1, headerColumnCount, workbook);
+      if (exampleDetection.hasExampleCandidate && !exampleDetection.isStyledExampleRow) {
+        throw new Error(
+          `Row ${exampleDetection.rowNumber} contains data but does not match the expected example-row styling. Use the official template example row styling, or remove row 2 before importing real staff data.`
+        );
+      }
+      if (exampleDetection.isStyledExampleRow && !exampleRowConfirmed) {
+        setPendingExampleRowConfirmation(exampleDetection);
+        setStatusMessage("");
+        setIsLoading(false);
+        return;
+      }
+      setPendingExampleRowConfirmation(null);
+      const rowRecords = buildRowRecords(rawRows, headerRowIndex, exampleDetection.isStyledExampleRow && exampleRowConfirmed);
       const airfieldCatalogue = await loadImportAirfieldCatalogue();
-      setStatusMessage(`Processing ${json.length} rows...`);
+      setStatusMessage(`Processing ${rowRecords.length} rows...`);
       const instructorsToProcess = [];
       const existingInstructorsMap = new Map(instructorsData.map((i) => [i.idNumber, i]));
       let createdCount = 0;
       let updatedCount = 0;
       let skippedCount = 0;
-      for (const [rowIndex, row] of json.entries()) {
+      for (const record of rowRecords) {
+        const { row, excelRowNumber } = record;
         const idValue = getValueFromRow(row, ["PMKeys/ID", "PMKeys", "Personnel ID", "Service ID", "Employee ID", "Employee Number", "Personnel Number", "Staff ID", "ID", "ID Number", "IDNumber"]);
         if (idValue === null || idValue === void 0 || String(idValue).trim() === "") {
           skippedCount++;
@@ -83530,7 +83684,7 @@ const BulkUpdateFlyout = ({
           try {
             parsedData.location = resolveImportedLocationCode(location, configuredLocations, airfieldCatalogue);
           } catch (error) {
-            throw new Error(`Row ${rowIndex + 2}: ${error instanceof Error ? error.message : "Invalid location."}`);
+            throw new Error(`Row ${excelRowNumber}: ${error instanceof Error ? error.message : "Invalid location."}`);
           }
         }
         const unit = getStringFromRow(row, ["Unit", "Unit Code"]);
@@ -83556,7 +83710,7 @@ const BulkUpdateFlyout = ({
               };
             }
           } catch (error) {
-            throw new Error(`Row ${rowIndex + 2}: ${error instanceof Error ? error.message : "Invalid callsign."}`);
+            throw new Error(`Row ${excelRowNumber}: ${error instanceof Error ? error.message : "Invalid callsign."}`);
           }
         } else if (callsignNumber !== void 0) {
           parsedData.callsignNumber = Number(callsignNumber) || 0;
@@ -83574,7 +83728,7 @@ const BulkUpdateFlyout = ({
               };
             }
           } catch (error) {
-            throw new Error(`Row ${rowIndex + 2}: Secondary callsign ${error instanceof Error ? error.message : "is invalid."}`);
+            throw new Error(`Row ${excelRowNumber}: Secondary callsign ${error instanceof Error ? error.message : "is invalid."}`);
           }
         }
         const flight = getStringFromRow(row, ["Flight", "Flight/Sqn", "Section"]);
@@ -83661,57 +83815,96 @@ const BulkUpdateFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Bulk Upload Staff" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 space-y-4", children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center p-8", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sky-400 font-semibold", children: statusMessage }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Upload a spreadsheet to create or update staff. The system will match by Personnel ID." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          ref: fileInputRef,
-          type: "file",
-          accept: ".xlsx,.xls,.csv",
-          className: "hidden",
-          onChange: (event) => handleLocalFile(event.target.files?.[0])
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "div",
-        {
-          onDragEnter: (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setIsDragActive(true);
-          },
-          onDragOver: (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            event.dataTransfer.dropEffect = "copy";
-            setIsDragActive(true);
-          },
-          onDragLeave: (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setIsDragActive(false);
-          },
-          onDrop: handleDrop,
-          className: `rounded-lg border border-dashed p-5 text-center transition-colors ${isDragActive ? "border-sky-300 bg-sky-500/15" : selectedLocalFile ? "border-emerald-400/70 bg-emerald-500/10" : "border-gray-500 bg-gray-900/40"}`,
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-white", children: selectedLocalFile ? selectedLocalFile.name : "Drag and drop a spreadsheet here" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Accepted formats: .xlsx, .xls, .csv" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => fileInputRef.current?.click(),
-                className: "mt-4 px-4 py-2 bg-gray-100 text-gray-900 rounded-md hover:bg-white font-semibold",
-                children: "Add File"
-              }
-            )
-          ]
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Expected columns include PMKeys/ID or Personnel ID, Name or Srname/First name, Service, Rank, callsign number, Roles, Qualifications, Crew, Category, Seat config." }),
-      statusMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-amber-300", children: statusMessage })
-    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-4", children: [
+      pendingExampleRowConfirmation && !isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-amber-400/50 bg-amber-950/30 p-4 text-sm text-amber-100", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-amber-200", children: "Confirm example row" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1", children: [
+          "Row ",
+          pendingExampleRowConfirmation.rowNumber,
+          " appears to be the styled example row. It has ",
+          pendingExampleRowConfirmation.italicCellCount,
+          " italic cells and ",
+          pendingExampleRowConfirmation.differingColourCellCount,
+          " cells with different header/example styling."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2", children: [
+          "Confirm row ",
+          pendingExampleRowConfirmation.rowNumber,
+          " is example data only and should not be imported."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex justify-end gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setPendingExampleRowConfirmation(null),
+              className: "rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
+              children: "Cancel"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => handleConfirm(true),
+              className: "rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-gray-950 hover:bg-amber-400",
+              children: "Skip Row 2 and Import"
+            }
+          )
+        ] })
+      ] }),
+      isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center p-8", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sky-400 font-semibold", children: statusMessage }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Upload a spreadsheet to create or update staff. The system will match by Personnel ID." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            ref: fileInputRef,
+            type: "file",
+            accept: ".xlsx,.xls,.csv",
+            className: "hidden",
+            onChange: (event) => handleLocalFile(event.target.files?.[0])
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            onDragEnter: (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setIsDragActive(true);
+            },
+            onDragOver: (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              event.dataTransfer.dropEffect = "copy";
+              setIsDragActive(true);
+            },
+            onDragLeave: (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setIsDragActive(false);
+            },
+            onDrop: handleDrop,
+            className: `rounded-lg border border-dashed p-5 text-center transition-colors ${isDragActive ? "border-sky-300 bg-sky-500/15" : selectedLocalFile ? "border-emerald-400/70 bg-emerald-500/10" : "border-gray-500 bg-gray-900/40"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-white", children: selectedLocalFile ? selectedLocalFile.name : "Drag and drop a spreadsheet here" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Accepted formats: .xlsx, .xls, .csv" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => fileInputRef.current?.click(),
+                  className: "mt-4 px-4 py-2 bg-gray-100 text-gray-900 rounded-md hover:bg-white font-semibold",
+                  children: "Add File"
+                }
+              )
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Expected columns include PMKeys/ID or Personnel ID, Name or Srname/First name, Service, Rank, callsign number, Roles, Qualifications, Crew, Category, Seat config." }),
+        statusMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-amber-300", children: statusMessage })
+      ] })
+    ] }),
     !isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700", children: "Cancel" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleConfirm, disabled: !selectedLocalFile, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Upload" })

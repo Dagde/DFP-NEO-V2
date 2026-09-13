@@ -11,6 +11,12 @@ import {
     resolveImportedLocationCode,
     type AirfieldCatalogueEntry,
 } from '../utils/importLocationResolver';
+import {
+    buildRowRecords,
+    detectStyledExampleRow,
+    type ExampleRowDetection,
+    type ImportRowRecord,
+} from '../utils/importExampleRow';
 import type { PlatformLocation } from '../utils/platformConfigService';
 
 declare var XLSX: any;
@@ -37,6 +43,11 @@ type UploadActivationSummary = {
     failed: number;
     error?: string;
     details?: string[];
+};
+
+type WorkbookRowsResult = {
+    records: ImportRowRecord[];
+    exampleRowDetection: ExampleRowDetection;
 };
 
 const getValueFromRow = (row: any, possibleKeys: string[]): any => {
@@ -171,9 +182,9 @@ const parseTraineeRow = (
     return parsed;
 };
 
-const readWorkbookRows = async (file: File): Promise<any[]> => {
+const readWorkbookRows = async (file: File, skipExampleRow = false): Promise<WorkbookRowsResult> => {
     const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data, { type: 'buffer' });
+    const workbook = XLSX.read(data, { type: 'array', cellStyles: true });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
     const headerRowIndex = rawRows.findIndex(row => {
@@ -186,13 +197,17 @@ const readWorkbookRows = async (file: File): Promise<any[]> => {
     if (headerRowIndex < 0) {
         throw new Error('No valid trainee header row was found. The file must include Name, Personnel ID or ID Number, and Course columns.');
     }
-    const header = rawRows[headerRowIndex].map(cell => String(cell || '').trim());
-    return rawRows.slice(headerRowIndex + 1)
-        .filter(row => row.some(cell => String(cell || '').trim()))
-        .map(row => header.reduce((record: any, key, index) => {
-            if (key) record[key] = row[index];
-            return record;
-        }, {}));
+    const exampleRowDetection = detectStyledExampleRow(worksheet, headerRowIndex + 1, rawRows[headerRowIndex].length, workbook);
+    if (exampleRowDetection.hasExampleCandidate && !exampleRowDetection.isStyledExampleRow) {
+        throw new Error(
+            `Row ${exampleRowDetection.rowNumber} contains data but does not match the expected example-row styling. ` +
+            'Use the official template example row styling, or remove row 2 before importing real trainee data.'
+        );
+    }
+    return {
+        records: buildRowRecords(rawRows, headerRowIndex, skipExampleRow && exampleRowDetection.isStyledExampleRow),
+        exampleRowDetection,
+    };
 };
 
 const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
@@ -216,6 +231,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     const [showCourseSelection, setShowCourseSelection] = useState(false);
     const [updateType, setUpdateType] = useState<'bulk' | 'minor'>('minor');
     const [rows, setRows] = useState<any[]>([]);
+    const [exampleRowDetection, setExampleRowDetection] = useState<ExampleRowDetection | null>(null);
     const [coursesFromFile, setCoursesFromFile] = useState<string[]>([]);
     const [uploadPreview, setUploadPreview] = useState<CourseUploadPreview | null>(null);
     const [summary, setSummary] = useState<{ added: number; updated: number; replaced: number; skipped: number; type: string; activation?: UploadActivationSummary } | null>(null);
@@ -258,6 +274,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         setSummary(null);
         setShowConfirm(false);
         setShowCourseSelection(false);
+        setExampleRowDetection(null);
         if (!/\.(xlsx|xls|csv)$/i.test(selectedFile.name)) {
             setStatus('Please select an .xlsx, .xls or .csv file.');
             setFile(null);
@@ -267,9 +284,9 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         setStatus('');
     };
 
-    const extractCourses = (jsonRows: any[]) => {
+    const extractCourses = (rowRecords: ImportRowRecord[]) => {
         const courses = new Set<string>();
-        jsonRows.forEach(row => {
+        rowRecords.forEach(({ row }) => {
             const coursePrefix = getStr(row, ['Course Prefix', 'coursePrefix']);
             const courseNumber = getStr(row, ['Course Number', 'courseNumber']);
             if (coursePrefix && courseNumber) courses.add(`${coursePrefix}${courseNumber}`);
@@ -281,19 +298,19 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         return Array.from(courses);
     };
 
-    const buildUploadPreview = (selectedFile: File, jsonRows: any[], airfieldCatalogue: AirfieldCatalogueEntry[]): CourseUploadPreview => {
-        const parsedRows = jsonRows.map((row, index) => parseTraineeRow(row, {
+    const buildUploadPreview = (selectedFile: File, rowRecords: ImportRowRecord[], airfieldCatalogue: AirfieldCatalogueEntry[]): CourseUploadPreview => {
+        const parsedRows = rowRecords.map(({ row, excelRowNumber }) => parseTraineeRow(row, {
             configuredLocations,
             airfieldCatalogue,
-            rowNumber: index + 2,
+            rowNumber: excelRowNumber,
         }));
         const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
-        const courses = extractCourses(jsonRows).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+        const courses = extractCourses(rowRecords).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
         return {
             fileName: selectedFile.name,
-            rowCount: jsonRows.length,
+            rowCount: rowRecords.length,
             validRowCount: validRows.length,
-            skippedRowCount: jsonRows.length - validRows.length,
+            skippedRowCount: rowRecords.length - validRows.length,
             courses,
             sampleRows: validRows.slice(0, 10).map(trainee => ({
                 name: String(trainee.name || ''),
@@ -304,7 +321,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         };
     };
 
-    const handleConfirm = async (password: string, selectedUpdateType: 'bulk' | 'minor'): Promise<string | void> => {
+    const handleConfirm = async (password: string, selectedUpdateType: 'bulk' | 'minor', options?: { skipExampleRow: boolean }): Promise<string | void> => {
         try {
             const isValidPassword = await verifyCurrentUserPassword(password);
             if (!isValidPassword) {
@@ -315,10 +332,14 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         }
         if (!file) return;
         try {
-            const jsonRows = await readWorkbookRows(file);
+            const { records: rowRecords, exampleRowDetection: detectedExampleRow } = await readWorkbookRows(file, Boolean(options?.skipExampleRow));
+            if (detectedExampleRow.isStyledExampleRow && !options?.skipExampleRow) {
+                setExampleRowDetection(detectedExampleRow);
+                return `Confirm row ${detectedExampleRow.rowNumber} is an example row before importing.`;
+            }
             const airfieldCatalogue = await loadImportAirfieldCatalogue();
-            const preview = buildUploadPreview(file, jsonRows, airfieldCatalogue);
-            setRows(jsonRows);
+            const preview = buildUploadPreview(file, rowRecords, airfieldCatalogue);
+            setRows(rowRecords);
             setCoursesFromFile(preview.courses);
             setUploadPreview(preview);
             setUpdateType(selectedUpdateType);
@@ -399,10 +420,10 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
 
     const processRows = async (course: string) => {
         const airfieldCatalogue = await loadImportAirfieldCatalogue();
-        const parsedRows = rows.map((row, index) => parseTraineeRow(row, {
+        const parsedRows = (rows as ImportRowRecord[]).map(({ row, excelRowNumber }) => parseTraineeRow(row, {
             configuredLocations,
             airfieldCatalogue,
-            rowNumber: index + 2,
+            rowNumber: excelRowNumber,
         }));
         const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
         const skipped = rows.length - validRows.length;
@@ -541,6 +562,8 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
                     fileName={file.name}
                     onConfirm={handleConfirm}
                     onClose={() => setShowConfirm(false)}
+                    requiresExampleRowConfirmation={Boolean(exampleRowDetection?.isStyledExampleRow)}
+                    exampleRowNumber={exampleRowDetection?.rowNumber || 2}
                 />
             )}
             {showCourseSelection && (

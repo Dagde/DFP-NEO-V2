@@ -22,6 +22,12 @@ import {
     resolveImportedLocationCode,
     type AirfieldCatalogueEntry,
 } from '../utils/importLocationResolver';
+import {
+    buildRowRecords,
+    detectStyledExampleRow,
+    type ExampleRowDetection,
+    type ImportRowRecord,
+} from '../utils/importExampleRow';
 import type { PlatformLocation } from '../utils/platformConfigService';
 
 declare var XLSX: any;
@@ -70,6 +76,17 @@ const hasAnyHeader = (row: any, possibleKeys: string[]): boolean => {
         if (row[key] !== undefined) return true;
         const lowerKey = key.toLowerCase().replace(/[\s/]/g, '');
         return rowKeys.some(rowKey => rowKey.toLowerCase().replace(/[\s/]/g, '') === lowerKey);
+    });
+};
+
+const findStaffHeaderRowIndex = (rawRows: any[][]): number => {
+    const idHeaders = ['pmkeysid', 'pmkeys', 'personnelid', 'serviceid', 'employeeid', 'employeenumber', 'personnelnumber', 'staffid', 'id', 'idnumber'];
+    const nameHeaders = ['name', 'fullname', 'namesurname,firstname', 'namesurname.firstname', 'namesurnamefirstname', 'srname', 'surname'];
+    return rawRows.findIndex(row => {
+        const cells = row.map(cell => String(cell || '').trim().toLowerCase().replace(/[\s/().-]/g, ''));
+        const hasId = cells.some(cell => idHeaders.includes(cell));
+        const hasName = cells.some(cell => nameHeaders.includes(cell));
+        return hasId && hasName;
     });
 };
 
@@ -252,6 +269,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
     const [isDragActive, setIsDragActive] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
+    const [pendingExampleRowConfirmation, setPendingExampleRowConfirmation] = useState<ExampleRowDetection | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const isSpreadsheetFile = (file: File): boolean => (
@@ -266,6 +284,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
             return;
         }
         setSelectedLocalFile(file);
+        setPendingExampleRowConfirmation(null);
         setStatusMessage('');
     };
 
@@ -276,7 +295,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
         handleLocalFile(event.dataTransfer.files?.[0]);
     };
 
-    const handleConfirm = async () => {
+    const handleConfirm = async (exampleRowConfirmed = false) => {
         if (!selectedLocalFile) {
             setStatusMessage('Please select a file.');
             return;
@@ -290,13 +309,33 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
             const data = await selectedLocalFile.arrayBuffer();
 
             setStatusMessage('Parsing spreadsheet...');
-            const workbook = XLSX.read(data, { type: 'buffer' });
+            const workbook = XLSX.read(data, { type: 'array', cellStyles: true });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+            const rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            const headerRowIndex = findStaffHeaderRowIndex(rawRows);
+            if (headerRowIndex < 0) {
+                throw new Error('No valid staff header row was found. The file must include ID Number or Personnel ID, and Name or Surname columns.');
+            }
+            const headerColumnCount = rawRows[headerRowIndex].length;
+            const exampleDetection = detectStyledExampleRow(worksheet, headerRowIndex + 1, headerColumnCount, workbook);
+            if (exampleDetection.hasExampleCandidate && !exampleDetection.isStyledExampleRow) {
+                throw new Error(
+                    `Row ${exampleDetection.rowNumber} contains data but does not match the expected example-row styling. ` +
+                    'Use the official template example row styling, or remove row 2 before importing real staff data.'
+                );
+            }
+            if (exampleDetection.isStyledExampleRow && !exampleRowConfirmed) {
+                setPendingExampleRowConfirmation(exampleDetection);
+                setStatusMessage('');
+                setIsLoading(false);
+                return;
+            }
+            setPendingExampleRowConfirmation(null);
+            const rowRecords: ImportRowRecord[] = buildRowRecords(rawRows, headerRowIndex, exampleDetection.isStyledExampleRow && exampleRowConfirmed);
             const airfieldCatalogue: AirfieldCatalogueEntry[] = await loadImportAirfieldCatalogue();
 
-            setStatusMessage(`Processing ${json.length} rows...`);
+            setStatusMessage(`Processing ${rowRecords.length} rows...`);
             
             const instructorsToProcess: Instructor[] = [];
             const existingInstructorsMap = new Map<number, Instructor>(instructorsData.map(i => [i.idNumber, i]));
@@ -304,7 +343,8 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
             let updatedCount = 0;
             let skippedCount = 0;
 
-            for (const [rowIndex, row] of json.entries()) {
+            for (const record of rowRecords) {
+                const { row, excelRowNumber } = record;
                 const idValue = getValueFromRow(row, ['PMKeys/ID', 'PMKeys', 'Personnel ID', 'Service ID', 'Employee ID', 'Employee Number', 'Personnel Number', 'Staff ID', 'ID', 'ID Number', 'IDNumber']);
 
                 if (idValue === null || idValue === undefined || String(idValue).trim() === '') {
@@ -356,7 +396,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                     try {
                         parsedData.location = resolveImportedLocationCode(location, configuredLocations, airfieldCatalogue);
                     } catch (error) {
-                        throw new Error(`Row ${rowIndex + 2}: ${error instanceof Error ? error.message : 'Invalid location.'}`);
+                        throw new Error(`Row ${excelRowNumber}: ${error instanceof Error ? error.message : 'Invalid location.'}`);
                     }
                 }
 
@@ -384,7 +424,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                             };
                         }
                     } catch (error) {
-                        throw new Error(`Row ${rowIndex + 2}: ${error instanceof Error ? error.message : 'Invalid callsign.'}`);
+                        throw new Error(`Row ${excelRowNumber}: ${error instanceof Error ? error.message : 'Invalid callsign.'}`);
                     }
                 } else if (callsignNumber !== undefined) {
                     parsedData.callsignNumber = Number(callsignNumber) || 0;
@@ -403,7 +443,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                             };
                         }
                     } catch (error) {
-                        throw new Error(`Row ${rowIndex + 2}: Secondary callsign ${error instanceof Error ? error.message : 'is invalid.'}`);
+                        throw new Error(`Row ${excelRowNumber}: Secondary callsign ${error instanceof Error ? error.message : 'is invalid.'}`);
                     }
                 }
 
@@ -511,6 +551,31 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 </div>
 
                 <div className="p-6 space-y-4">
+                    {pendingExampleRowConfirmation && !isLoading && (
+                        <div className="rounded-md border border-amber-400/50 bg-amber-950/30 p-4 text-sm text-amber-100">
+                            <p className="font-semibold text-amber-200">Confirm example row</p>
+                            <p className="mt-1">
+                                Row {pendingExampleRowConfirmation.rowNumber} appears to be the styled example row. It has {pendingExampleRowConfirmation.italicCellCount} italic cells and {pendingExampleRowConfirmation.differingColourCellCount} cells with different header/example styling.
+                            </p>
+                            <p className="mt-2">Confirm row {pendingExampleRowConfirmation.rowNumber} is example data only and should not be imported.</p>
+                            <div className="mt-3 flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setPendingExampleRowConfirmation(null)}
+                                    className="rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleConfirm(true)}
+                                    className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-gray-950 hover:bg-amber-400"
+                                >
+                                    Skip Row 2 and Import
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     {isLoading ? (
                         <div className="text-center p-8">
                             <p className="text-sky-400 font-semibold">{statusMessage}</p>
