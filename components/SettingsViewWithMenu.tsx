@@ -1011,7 +1011,7 @@ const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = Reac
     };
 
     return (
-        <aside className="hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
+        <aside className="hidden w-[258px] flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 lg:block">
             <div className="mb-4">
                 <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
                 <input
@@ -1995,118 +1995,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         props.canUsePlatformPermission,
     ]);
     const hasSettingsMatches = visibleSettingGroups.length > 0;
-    const downloadSettingsMenuTrace = () => {
-        const permissionResults = sectionGroups.map(group => ({
-            label: group.label,
-            defaultSection: group.defaultSection,
-            sections: group.sections.map(section => ({
-                section,
-                label: getSectionLabel(section),
-                requiredPermission: getRequiredSettingsSectionPermission(section),
-                canAccess: canAccessSettingsSection(section),
-                matchesSearch: matchesSettingsSearch(section, group.label),
-            })),
-            searchSections: (group.searchSections || []).map(section => ({
-                section,
-                label: getSectionLabel(section),
-                requiredPermission: getRequiredSettingsSectionPermission(section),
-                canAccess: canAccessSettingsSection(section),
-                matchesSearch: matchesSettingsSearch(section, group.label),
-            })),
-        }));
-        const platformOrganisations = Array.isArray(props.platformConfig?.organisations) ? props.platformConfig?.organisations || [] : [];
-        const platformUnits = platformOrganisations.flatMap((organisation: any) => Array.isArray(organisation?.units) ? organisation.units : []);
-        const platformLocations = platformOrganisations.flatMap((organisation: any) => Array.isArray(organisation?.locations) ? organisation.locations : []);
-        const trace = {
-            traceName: 'dfp-neo-settings-menu-trace',
-            generatedAt: new Date().toISOString(),
-            url: window.location.href,
-            host: window.location.host,
-            activeSection,
-            search: {
-                settingsSearch,
-                settingsSearchQuery,
-                deferredSettingsSearchQuery,
-                isSearchActive,
-                isSearchFiltering,
-                searchQueryTokens,
-                hasSettingsMatches,
-            },
-            permissions: {
-                rawCurrentUserPermission: props.currentUserPermission,
-                currentSettingsPermission,
-                hasLegacySettingsAdminRole,
-                hasSpecificSettingsEditPermission,
-                hasGeneralSettingsEditPermission,
-                testingFunctionsAvailable,
-                canUsePlatformPermissionProvided: typeof props.canUsePlatformPermission === 'function',
-                permissionProbe: {
-                    settingsView: canUseSettingsPermission('settings.view'),
-                    settingsEdit: canUseSettingsPermission('settings.edit'),
-                    platformEdit: canUseSettingsPermission('settings.platform.edit'),
-                    userAccessEdit: canUseSettingsPermission('settings.userAccess.edit'),
-                    rankTerminologyEdit: canUseSettingsPermission('settings.rankTerminology.edit'),
-                    schedulingRulesEdit: canUseSettingsPermission('settings.schedulingRules.edit'),
-                },
-            },
-            context: {
-                activeUnitCode: props.activeUnitCode,
-                activeUnitCodes: props.activeUnitCodes,
-                activeCompositeUnitCode: props.activeCompositeUnitCode,
-                activeAircraftTypeCode: props.activeAircraftTypeCode,
-                activeOperationalModel: props.activeOperationalModel,
-                activeUnitHasTrainees: props.activeUnitHasTrainees,
-                settingsLoaded: props.settingsLoaded,
-                locations: props.locations,
-                units: props.units,
-                platformUnits: props.platformUnits,
-                platformUnitContexts: props.platformUnitContexts,
-                settingsVisibilityPolicy: props.settingsVisibilityPolicy,
-            },
-            platformConfigSummary: {
-                hasPlatformConfig: Boolean(props.platformConfig),
-                organisationCount: platformOrganisations.length,
-                organisations: platformOrganisations.map((organisation: any) => ({
-                    id: organisation?.id,
-                    code: organisation?.code,
-                    name: organisation?.name,
-                    status: organisation?.status,
-                    unitCount: Array.isArray(organisation?.units) ? organisation.units.length : 0,
-                    locationCount: Array.isArray(organisation?.locations) ? organisation.locations.length : 0,
-                    settingsKeys: Object.keys(organisation?.settings || {}),
-                })),
-                platformUnitCount: platformUnits.length,
-                platformLocationCount: platformLocations.length,
-            },
-            menu: {
-                sectionGroupCount: sectionGroups.length,
-                visibleSettingGroupCount: visibleSettingGroups.length,
-                visibleSettingGroups: visibleSettingGroups.map(group => ({
-                    label: group.label,
-                    defaultSection: group.defaultSection,
-                    visibleSections: group.visibleSections.map(section => ({
-                        section,
-                        label: getSectionLabel(section),
-                    })),
-                })),
-                permissionResults,
-            },
-            localState: {
-                hasSessionToken: Boolean(localStorage.getItem('dfp_session_token')),
-                selectedProfile: localStorage.getItem('dfp_selected_profile'),
-                currentUserName: localStorage.getItem('dfp_current_user_name'),
-            },
-        };
-        const blob = new Blob([JSON.stringify(trace, null, 2)], { type: 'application/json' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        const unitLabel = String(props.activeCompositeUnitCode || props.activeUnitCode || currentSettingsPermission || 'unknown').replace(/[^A-Za-z0-9+_-]+/g, '-');
-        link.download = `dfp-neo-settings-menu-trace-${unitLabel}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    };
     useEffect(() => {
         if (activeSection === 'home') return;
         if (Object.prototype.hasOwnProperty.call(sectionLabels, activeSection) && canAccessSettingsSection(activeSection as SettingsMenuSection)) return;
@@ -2177,18 +2065,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                 Read-Only Mode
                                             </span>
                                         )}
-                                        <button
-                                            type="button"
-                                            onClick={downloadSettingsMenuTrace}
-                                            className="btn-aluminium-brushed rounded-md px-3 py-2 text-xs font-bold text-gray-900"
-                                        >
-                                            Download Settings Trace
-                                        </button>
                                         <AuditButton pageName="Settings" />
                                     </div>
                                 </div>
-                                <div className="border-t border-gray-700 p-4 lg:p-5 xl:hidden">
-                                    <div className="mb-4 rounded-lg border border-gray-700 bg-gray-900/45 p-4 xl:hidden">
+                                <div className="border-t border-gray-700 p-4 lg:p-5 lg:hidden">
+                                    <div className="mb-4 rounded-lg border border-gray-700 bg-gray-900/45 p-4 lg:hidden">
                                         <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
                                         <input
                                             type="search"
@@ -2247,13 +2128,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         <strong>Read-Only Mode</strong>
                                     </div>
                                 )}
-                                <button
-                                    type="button"
-                                    onClick={downloadSettingsMenuTrace}
-                                    className="btn-aluminium-brushed rounded-md px-3 py-2 text-xs font-bold text-gray-900"
-                                >
-                                    Download Settings Trace
-                                </button>
                                 <AuditButton pageName={`Settings - ${getSectionLabel(activeSection as SettingsMenuSection)}`} />
                             </div>
                         </div>
