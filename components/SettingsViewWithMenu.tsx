@@ -971,6 +971,17 @@ interface SettingsNavigationSidebarProps {
 
 const getSettingsGroupId = (label: string) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
+const normaliseSettingsPermissionLabel = (permission: string): SettingsViewWithMenuProps['currentUserPermission'] => {
+    const normalised = String(permission || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+    if (normalised === 'SUPER_ADMIN' || normalised === 'SUPERADMIN') return 'Super Admin';
+    if (normalised === 'ADMIN' || normalised === 'ADMINISTRATOR') return 'Admin';
+    if (normalised === 'SCHEDULER') return 'Scheduler';
+    if (normalised === 'COURSE_SUPERVISOR') return 'Course Supervisor';
+    if (normalised === 'OPS') return 'Ops';
+    if (normalised === 'TRAINEE') return 'Trainee';
+    return 'Staff';
+};
+
 const SettingsNavigationSidebar: React.FC<SettingsNavigationSidebarProps> = React.memo(({
     activeSection,
     settingsSearch,
@@ -1365,6 +1376,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || 'ContT').trim() || 'ContT'} / Currency Events`;
     const isContinuationCurrencySection = (section: SettingsMenuSection): boolean =>
         section === 'sct-events' || section === 'currency-profiles';
+    const currentSettingsPermission = normaliseSettingsPermissionLabel(props.currentUserPermission);
     const getSectionLabel = (section: SettingsMenuSection): string => (
         isContinuationCurrencySection(section)
             ? continuationCurrencyLabel
@@ -1375,7 +1387,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             ? `Configure ${continuationCurrencyLabel} settings`
             : sectionDescriptions[section]
     );
-    const hasLegacySettingsAdminRole = ['Super Admin', 'Admin'].includes(props.currentUserPermission);
+    const hasLegacySettingsAdminRole = ['Super Admin', 'Admin'].includes(currentSettingsPermission);
     const canUseSettingsPermission = (permissionId: string): boolean => (
         hasLegacySettingsAdminRole || Boolean(props.canUsePlatformPermission?.(permissionId))
     );
@@ -1411,7 +1423,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     };
     const canAccessSettingsSection = (section: SettingsMenuSection): boolean => {
         if (section === 'testing-functions') {
-            return props.currentUserPermission === 'Super Admin' && testingFunctionsAvailable;
+            return currentSettingsPermission === 'Super Admin' && testingFunctionsAvailable;
         }
         if (hasLegacySettingsAdminRole || hasGeneralSettingsEditPermission) return true;
         if (hasSpecificSettingsEditPermission) {
@@ -1465,7 +1477,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
     // TESTING FUNCTIONS START - temporary customer-testbed reset tools.
     useEffect(() => {
-        if (props.currentUserPermission !== 'Super Admin') {
+        if (currentSettingsPermission !== 'Super Admin') {
             setTestingFunctionsAvailable(false);
             return;
         }
@@ -1492,7 +1504,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return () => {
             cancelled = true;
         };
-    }, [props.currentUserPermission]);
+    }, [currentSettingsPermission]);
     // TESTING FUNCTIONS END
 
     const changeActiveSection = (section: ActiveSection) => {
@@ -1979,7 +1991,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         searchQueryTokens,
         settingsDataSearchTermsBySection,
         continuationCurrencyLabel,
-        props.currentUserPermission,
+        currentSettingsPermission,
         props.canUsePlatformPermission,
     ]);
     const hasSettingsMatches = visibleSettingGroups.length > 0;
@@ -2048,7 +2060,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">Settings</h1>
                                     </div>
                                     <div className="ml-auto flex items-center gap-[10px]">
-                                        {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
+                                        {!['Super Admin', 'Admin', 'Scheduler'].includes(currentSettingsPermission) && (
                                             <span className="text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap">
                                                 Read-Only Mode
                                             </span>
@@ -2070,7 +2082,45 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                             className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                                         />
                                     </div>
-                                    {!hasSettingsMatches && (
+                                </div>
+                                <div className="border-t border-gray-700 p-4 lg:p-5">
+                                    {hasSettingsMatches ? (
+                                        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                                            {visibleSettingGroups.map(group => {
+                                                const accentClasses = getAccentClasses(group.accent);
+                                                const defaultSection = group.visibleSections.includes(group.defaultSection)
+                                                    ? group.defaultSection
+                                                    : group.visibleSections[0];
+                                                return (
+                                                    <button
+                                                        key={group.label}
+                                                        type="button"
+                                                        onClick={() => selectSettingsSectionFromMenu(defaultSection, group.label)}
+                                                        className={`group flex min-h-[120px] items-stretch overflow-hidden rounded-lg border ${accentClasses.border} bg-gray-900/55 text-left shadow-lg transition hover:-translate-y-0.5 hover:bg-gray-900 ${accentClasses.shadow}`}
+                                                    >
+                                                        <span className={`w-1.5 flex-shrink-0 ${accentClasses.rail}`} />
+                                                        <span className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+                                                            <span className="flex items-center gap-3">
+                                                                <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border ${accentClasses.badge} ${accentClasses.text}`}>
+                                                                    <span className="h-5 w-5">{sectionIcons[defaultSection]}</span>
+                                                                </span>
+                                                                <span className="min-w-0">
+                                                                    <span className="block text-base font-bold text-white">{group.label}</span>
+                                                                    <span className={`block text-[11px] font-semibold uppercase tracking-[0.16em] ${accentClasses.text}`}>
+                                                                        {group.visibleSections.length} page{group.visibleSections.length === 1 ? '' : 's'}
+                                                                    </span>
+                                                                </span>
+                                                            </span>
+                                                            <span className="text-sm leading-5 text-gray-300">{group.description}</span>
+                                                            <span className="mt-auto text-xs font-semibold text-gray-400 group-hover:text-white">
+                                                                Open {getSectionLabel(defaultSection)}
+                                                            </span>
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
                                         <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center">
                                             <p className="font-semibold text-gray-300">No settings match that search.</p>
                                             <button
@@ -2111,7 +2161,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 {getSectionLabel(activeSection as SettingsMenuSection)}
                             </h2>
                             <div className="ml-auto flex items-center gap-[10px]">
-                                {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
+                                {!['Super Admin', 'Admin', 'Scheduler'].includes(currentSettingsPermission) && (
                                     <div className="text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2">
                                         <strong>Read-Only Mode</strong>
                                     </div>
@@ -2143,7 +2193,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 </div>
                                 {/* Right side: read-only badge */}
                                 <div className="flex items-center space-x-3">
-                                    {!['Super Admin', 'Admin'].includes(props.currentUserPermission) && (
+                                    {!['Super Admin', 'Admin'].includes(currentSettingsPermission) && (
                                         <span className="text-xs text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-2 py-1">
                                             <strong>Read-Only</strong>
                                         </span>
@@ -2154,9 +2204,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             <div className="p-4">
                                 <SettingsView
                                     {...props}
+                                    currentUserPermission={currentSettingsPermission}
                                     activeSection="scoring-matrix"
                                     scoringMatrixActiveTab={scoringMatrixTab}
-                                    scoringMatrixReadOnly={!['Super Admin', 'Admin'].includes(props.currentUserPermission)}
+                                    scoringMatrixReadOnly={!['Super Admin', 'Admin'].includes(currentSettingsPermission)}
                                 />
                             </div>
                         </div>
@@ -2164,11 +2215,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
                     {activeSection === 'scheduling-rules' && (
                         <div className="space-y-5">
-                            <SettingsView {...props} activeSection="event-limits" />
-                            <SettingsView {...props} activeSection="duty-turnaround" />
-                            <SettingsView {...props} activeSection="business-rules" />
+                            <SettingsView {...props} currentUserPermission={currentSettingsPermission} activeSection="event-limits" />
+                            <SettingsView {...props} currentUserPermission={currentSettingsPermission} activeSection="duty-turnaround" />
+                            <SettingsView {...props} currentUserPermission={currentSettingsPermission} activeSection="business-rules" />
                             <PlatformConfigurationSettings
-                                currentUserPermission={props.currentUserPermission}
+                                currentUserPermission={currentSettingsPermission}
                                 onShowSuccess={props.onShowSuccess}
                                 scrollTarget="platform-scheduling-rule-sets"
                                 sectionOnly={true}
@@ -2198,7 +2249,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
                     {activeSection === 'training-report-template' && (
                         <PlatformConfigurationSettings
-                            currentUserPermission={props.currentUserPermission}
+                            currentUserPermission={currentSettingsPermission}
                             onShowSuccess={props.onShowSuccess}
                             scrollTarget="platform-training-report-template"
                             sectionOnly={true}
@@ -2227,7 +2278,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
                     {activeSection === 'crew-composition' && (
                         <PlatformConfigurationSettings
-                            currentUserPermission={props.currentUserPermission}
+                            currentUserPermission={currentSettingsPermission}
                             onShowSuccess={props.onShowSuccess}
                             scrollTarget="platform-crew-composition"
                             sectionOnly={true}
@@ -2257,7 +2308,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
                     {activeSection === 'standard-missions' && (
                         <PlatformConfigurationSettings
-                            currentUserPermission={props.currentUserPermission}
+                            currentUserPermission={currentSettingsPermission}
                             onShowSuccess={props.onShowSuccess}
                             scrollTarget="platform-standard-missions"
                             sectionOnly={true}
@@ -2288,6 +2339,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {activeSection === 'currency-profiles' && (
                         <SettingsView
                             {...props}
+                            currentUserPermission={currentSettingsPermission}
                             activeSection="sct-events"
                             onOpenCurrencyRequirements={() => changeActiveSection('currencies')}
                         />
@@ -2411,6 +2463,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         ) : (
                             <SettingsView
                                 {...props}
+                                currentUserPermission={currentSettingsPermission}
                                 activeSection={activeSection as SettingsSection}
                                 onOpenCurrencyBuilder={() => setEmbeddedCurrencyBuilderOpen(true)}
                                 onOpenCurrencyRequirements={() => changeActiveSection('currencies')}
@@ -2421,7 +2474,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {/* Sections rendered directly (not via SettingsView) */}
                     {activeSection === 'user-list' && (
                         <UserListSection
-                            currentUserPermission={props.currentUserPermission}
+                            currentUserPermission={currentSettingsPermission}
                             onShowSuccess={props.onShowSuccess}
                             onNavigateToProfile={props.onNavigateToProfile}
                             instructorsData={props.instructorsData}
@@ -2430,7 +2483,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     )}
                     {activeSection === 'staff-database' && (
                         <StaffDatabaseTable 
-                            currentUserPermission={props.currentUserPermission}
+                            currentUserPermission={currentSettingsPermission}
                             onShowSuccess={props.onShowSuccess}
                             onDataChanged={props.onDatabaseDataChanged}
                             onNavigateToProfile={props.onNavigateToProfile}
@@ -2439,7 +2492,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     )}
                     {activeSection === 'trainee-database' && (
                         <TraineeDatabaseTable 
-                            currentUserPermission={props.currentUserPermission}
+                            currentUserPermission={currentSettingsPermission}
                             onShowSuccess={props.onShowSuccess}
                             onDataChanged={props.onDatabaseDataChanged}
                             onNavigateToProfile={props.onNavigateToProfile}
@@ -2465,7 +2518,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     )}
                     {isPlatformConfigurationActive && (
                         <PlatformConfigurationSettings
-                            currentUserPermission={props.currentUserPermission}
+                            currentUserPermission={currentSettingsPermission}
                             onShowSuccess={props.onShowSuccess}
                             scrollTarget={activePlatformTarget}
                             sectionOnly={true}
@@ -2505,7 +2558,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     )}
                     {activeSection === 'email-activation' && (
                         <EmailActivationSettings
-                            currentUserPermission={props.currentUserPermission}
+                            currentUserPermission={currentSettingsPermission}
                             onShowSuccess={props.onShowSuccess}
                         />
                     )}
@@ -2520,7 +2573,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             excludedCourses={props.excludedCourses || []}
                             onUpdateExcludedCourses={props.onUpdateExcludedCourses || (() => {})}
                             onShowSuccess={props.onShowSuccess}
-                            currentUserPermission={props.currentUserPermission}
+                            currentUserPermission={currentSettingsPermission}
                             courseColors={props.courseColors}
                         />
                     )}
